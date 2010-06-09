@@ -51,6 +51,6 @@ class get_gid(Method):
         certificate = Certificate(string=cert) 
         if not certificate.is_pubkey(gid.get_pubkey()):
             raise ConnectionKeyGIDMismatch(gid.get_subject())
-
+        
         return record['gid'] 
         

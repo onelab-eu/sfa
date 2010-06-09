@@ -16,7 +16,6 @@ from lxml import etree
 def GetVersion():
     version = {}
     version['geni_api'] = 1
-    version['geni_stitching'] = False
     return version
 
 
