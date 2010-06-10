@@ -25,7 +25,7 @@ from sfa.util.faults import *
 from sfa.plc.api import SfaAPI
 from sfa.util.cache import Cache 
 from sfa.util.debug import log
-
+from sfa.util.sfalogging import logger
 ##
 # Verification callback for pyOpenSSL. We do our own checking of keys because
 # we have our own authentication spec. Thus we disable several of the normal
@@ -36,10 +36,7 @@ def verify_callback(conn, x509, err, depth, preverify):
     if preverify:
        #print "  preverified"
        return 1
-    # we're only passing single certificates, not chains
-#    if depth > 0:
-#       #print "  depth > 0 in verify_callback"
-#       return 1
+
 
     # the certificate verification done by openssl checks a number of things
     # that we aren't interested in, so we look out for those error messages
@@ -61,6 +58,10 @@ def verify_callback(conn, x509, err, depth, preverify):
        #print "  X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT_LOCALLY"
        return 1
 
+    # allow chained certs with self-signed roots
+    if err == 19:
+        return 1
+    
     # allow certs that are untrusted
     if err == 21:
        #print "  X509_V_ERR_UNABLE_TO_VERIFY_LEAF_SIGNATURE"
@@ -150,6 +151,7 @@ class SecureXMLRPCServer(BaseHTTPServer.HTTPServer,SimpleXMLRPCServer.SimpleXMLR
         ctx = SSL.Context(SSL.SSLv23_METHOD)
         ctx.use_privatekey_file(key_file)        
         ctx.use_certificate_file(cert_file)
+        # If you wanted to verify certs against known CAs.. this is how you would do it
         #ctx.load_verify_locations('/etc/sfa/trusted_roots/plc.gpo.gid')
         ctx.set_verify(SSL.VERIFY_PEER | SSL.VERIFY_FAIL_IF_NO_PEER_CERT, verify_callback)
         ctx.set_verify_depth(5)
