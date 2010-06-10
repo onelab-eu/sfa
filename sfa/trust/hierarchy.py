@@ -251,6 +251,7 @@ class Hierarchy:
             parent_auth_info = self.get_auth_info(parent_hrn)
             gid.set_issuer(parent_auth_info.get_pkey_object(), parent_auth_info.hrn)
             gid.set_parent(parent_auth_info.get_gid_object())
+            gid.set_intermediate_ca(True)
 
         gid.set_pubkey(pkey)
         gid.encode()

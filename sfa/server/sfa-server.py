@@ -62,7 +62,7 @@ def daemon():
     os.dup2(crashlog, 2)
 
 def init_server_key(server_key_file, server_cert_file, config, hierarchy):
-
+    
     subject = config.SFA_INTERFACE_HRN
     # check if the server's private key exists. If it doesnt,
     # get the right one from the authorities directory. If it cant be

@@ -36,11 +36,10 @@ def verify_callback(conn, x509, err, depth, preverify):
     if preverify:
        #print "  preverified"
        return 1
-
     # we're only passing single certificates, not chains
-    if depth > 0:
-       #print "  depth > 0 in verify_callback"
-       return 0
+#    if depth > 0:
+#       #print "  depth > 0 in verify_callback"
+#       return 1
 
     # the certificate verification done by openssl checks a number of things
     # that we aren't interested in, so we look out for those error messages
@@ -149,9 +148,11 @@ class SecureXMLRPCServer(BaseHTTPServer.HTTPServer,SimpleXMLRPCServer.SimpleXMLR
            SimpleXMLRPCServer.SimpleXMLRPCDispatcher.__init__(self, True, None)
         SocketServer.BaseServer.__init__(self, server_address, HandlerClass)
         ctx = SSL.Context(SSL.SSLv23_METHOD)
-        ctx.use_privatekey_file(key_file)
+        ctx.use_privatekey_file(key_file)        
         ctx.use_certificate_file(cert_file)
+        #ctx.load_verify_locations('/etc/sfa/trusted_roots/plc.gpo.gid')
         ctx.set_verify(SSL.VERIFY_PEER | SSL.VERIFY_FAIL_IF_NO_PEER_CERT, verify_callback)
+        ctx.set_verify_depth(5)
         ctx.set_app_data(self)
         self.socket = SSL.Connection(ctx, socket.socket(self.address_family,
                                                         self.socket_type))
