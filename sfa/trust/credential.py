@@ -709,8 +709,8 @@ class Credential(object):
         return list
     
     ##
-    # Make sure the credential's target gid was signed by (or is the same) as the entity that signed
-    # the original credential.  
+    # Make sure the credential's target gid was signed by (or is the same) the entity that signed
+    # the original credential or an authority over that namespace.
     def verify_issuer(self):                
         root_cred = self.get_credential_list()[-1]
         root_target_gid = root_cred.get_gid_object()

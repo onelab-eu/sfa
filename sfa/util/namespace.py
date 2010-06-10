@@ -2,7 +2,6 @@
 ### $URL$
 
 from sfa.util.faults import *
-
 URN_PREFIX = "urn:publicid:IDN"
 
 def get_leaf(hrn):
@@ -75,6 +74,9 @@ def urn_to_hrn(urn):
     # replace ':' with '.'
     # join list elements using '.'
     hrn = '.'.join([part.replace(':', '.') for part in hrn_parts if part]) 
+    
+    if type == 'authority':
+        hrn = hrn.replace ('.sa', '')
    
     return str(hrn), str(type) 
     
@@ -89,6 +91,10 @@ def hrn_to_urn(hrn, type=None):
 
     authority = get_authority(hrn)
     name = get_leaf(hrn)
+     
+    if type == 'authority':
+        authority = hrn
+        name = 'sa'   
     
     if authority.startswith("plc"):
         if type == None:
