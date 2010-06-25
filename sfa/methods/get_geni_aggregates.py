@@ -32,9 +32,12 @@ class get_geni_aggregates(Method):
         hrn, type = urn_to_hrn(xrn)
         self.api.auth.check(cred, 'list')
         
-        geni_aggs = Aggregates(self.api, '/etc/sfa/geni_aggregates.xml')        
+        geni_aggs = Aggregates(self.api, '/etc/sfa/geni_aggregates.xml').interfaces
+        geni_aggs[self.api.hrn]['port'] = 12348
+        geni_aggs[self.api.hrn]['urn'] = 'http://%s:12348' % geni_aggs[self.api.hrn]['addr']
+        geni_aggs = geni_aggs.values()
 
-        geni_aggs = geni_aggs.interfaces.values()
+
 
         hrn_list = [] 
         if hrn:
@@ -48,11 +51,6 @@ class get_geni_aggregates(Method):
         else:
             interfaces = [interface for interface in geni_aggs if interface['hrn'] in hrn_list]
 
-
-        # Remove Aggregate's default sfa-aggregate 
-        interfaces = interfaces[:-1]
-
-        
         # Add urns
         for interface in interfaces:
             interface['urn'] = hrn_to_urn(interface['hrn'], 'authority')
