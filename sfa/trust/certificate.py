@@ -1,3 +1,26 @@
+#----------------------------------------------------------------------
+# Copyright (c) 2008 Board of Trustees, Princeton University
+#
+# Permission is hereby granted, free of charge, to any person obtaining
+# a copy of this software and/or hardware specification (the "Work") to
+# deal in the Work without restriction, including without limitation the
+# rights to use, copy, modify, merge, publish, distribute, sublicense,
+# and/or sell copies of the Work, and to permit persons to whom the Work
+# is furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be
+# included in all copies or substantial portions of the Work.
+#
+# THE WORK IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS 
+# OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF 
+# MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND 
+# NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT 
+# HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, 
+# WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
+# OUT OF OR IN CONNECTION WITH THE WORK OR THE USE OR OTHER DEALINGS 
+# IN THE WORK.
+#----------------------------------------------------------------------
+
 ##
 # SFA uses two crypto libraries: pyOpenSSL and M2Crypto to implement
 # the necessary crypto functionality. Ideally just one of these libraries
@@ -448,7 +471,7 @@ class Certificate:
         # pyOpenSSL only allows us to add extensions, so if we try to set the
         # same extension more than once, it will not work
         if self.data.has_key(field):
-            raise "cannot set ", field, " more than once"
+            raise "Cannot set ", field, " more than once"
         self.data[field] = str
         self.add_extension(field, 0, str)
 
@@ -552,7 +575,6 @@ class Certificate:
         # Verify a chain of certificates. Each certificate must be signed by
         # the public key contained in it's parent. The chain is recursed
         # until a certificate is found that is signed by a trusted root.
-
         # TODO: verify expiration time
         #print "====Verify Chain====="
         # if this cert is signed by a trusted_cert, then we are set
@@ -563,6 +585,7 @@ class Certificate:
             #print "TRUSTED CERT", trusted_cert.dump()
             #print "Client is signed by Trusted?", self.is_signed_by_cert(trusted_cert)
             if self.is_signed_by_cert(trusted_cert):
+                logger.debug("Cert %s signed by trusted cert %s", self.get_subject(), trusted_cert.get_subject())
                 return trusted_cert
 
         # if there is no parent, then no way to verify the chain
