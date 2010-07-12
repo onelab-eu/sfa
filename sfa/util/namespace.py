@@ -75,8 +75,9 @@ def urn_to_hrn(urn):
     # join list elements using '.'
     hrn = '.'.join([part.replace(':', '.') for part in hrn_parts if part]) 
     
+    # Remove the authority name (e.g. '.sa')
     if type == 'authority':
-        hrn = hrn.replace ('.sa', '')
+        hrn = hrn[:hrn.rindex('.')]        
    
     return str(hrn), str(type) 
     
