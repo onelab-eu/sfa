@@ -51,7 +51,7 @@ from sfa.util.namespace import urn_to_hrn
 from sfa.util.faults import *
 
 def convert_public_key(key):
-    keyconvert_path = "/usr/bin/keyconvert"
+    keyconvert_path = "/usr/bin/keyconvert.py"
     if not os.path.isfile(keyconvert_path):
         raise IOError, "Could not find keyconvert in %s" % keyconvert_path
 
