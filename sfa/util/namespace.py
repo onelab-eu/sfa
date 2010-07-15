@@ -66,8 +66,7 @@ def urn_to_hrn(urn):
     name = urn[len(URN_PREFIX):]
     hrn_parts = name.split("+")
     
-    # type is always the second to last element in the list
-    type = hrn_parts.pop(-2)
+    type = hrn_parts.pop(2)
 
     # convert hrn_parts (list) into hrn (str) by doing the following    
     # remove blank elements
