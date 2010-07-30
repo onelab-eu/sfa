@@ -1,29 +1,16 @@
-- Tutorial
- * make a tutorial for sfa
- 
-- Tag
+- Build/Tags
 * test rpm build/install
-
-- Geni Aggregate
- * are we going to deploy a geni aggregate
- * test
-
-- Trunk
-* use PLC shell instead of xmlrpc when communicating with local plc aggregate
-
-- Client
-  * update getNodes to use lxml.etree for parsing the rspec
 
 - Stop invalid users
 * a recently disabled/deleted user may still have a valid cred. Keep a list of valid/invalid users on the aggregate and check callers against this list
 
 - Component manager
   * GetGids - make this work for peer slices
-  * GetTicket - must verify_{site,slice,person,keys} on remote aggregate 
   * Redeem ticket - RedeemTicket/AdminTicket not working. Why?
   * install the slice and node gid when the slice is created (create NM plugin to execute sfa_component_setup.py ?) 
 
 - Registry
+* fix legacy credential support
 * move db tables into db with less overhead (tokyocabinet?)
 
 - GUI/Auth Service
@@ -32,13 +19,7 @@
   * service manages users key/cert,creds
   * gui requires user's cred (depends on Auth Service above)
       
--  SM call routing
-* sfi -a option should send request to sm with an extra argument to 
-  specify which am to contact instead of connecting directly to the am 
-  (am may not trust client directly)
-
 - Protogeni
-* merger josh's branch with trunk
 * agree on standard set of functon calls
 * agree on standard set of privs
 * on permission error, return priv needed to make call

@@ -217,6 +217,10 @@ class Credential(object):
                 self.xmlsec_path = path + '/' + 'xmlsec1'
                 break
 
+    def get_subject(self):
+        if not self.gidObject:
+            self.decode()
+        return self.gidObject.get_subject()   
 
     def get_signature(self):
         if not self.signature:
@@ -781,9 +785,7 @@ class Credential(object):
     # @param dump_parents If true, also dump the parent certificates
 
     def dump(self, dump_parents=False):
-# FIXME: get_subject doesnt exist
-#        print "CREDENTIAL", self.get_subject()
-        print "CREDENTIAL"
+        print "CREDENTIAL", self.get_subject()
 
         print "      privs:", self.get_privileges().save_to_string()
 

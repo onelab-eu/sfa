@@ -87,8 +87,8 @@ class Interfaces(dict):
         hrns_current = [gid.get_hrn() for gid in gids_current] 
         hrns_expected = self.interfaces.keys() 
         new_hrns = set(hrns_expected).difference(hrns_current)
-        gids = self.get_peer_gids(new_hrns)
-        # update the local db records for these registries
+        gids = self.get_peer_gids(new_hrns) + gids_current
+        # make sure there is a record for every gid
         self.update_db_records(self.type, gids)
         
     def get_peer_gids(self, new_hrns):
@@ -145,20 +145,19 @@ class Interfaces(dict):
         """
         if not gids: 
             return
-        # get hrns we expect to find
-        # ignore records for local interfaces
-        ignore_interfaces = [self.api.config.SFA_INTERFACE_HRN]
-        hrns_expected = [gid.get_hrn() for gid in gids \
-                         if gid.get_hrn() not in ignore_interfaces]
+        
+        # hrns that should have a record
+        hrns_expected = [gid.get_hrn() for gid in gids]
 
         # get hrns that actually exist in the db
         table = SfaTable()
-        records = table.find({'type': type})
+        records = table.find({'type': type, 'pointer': -1})
         hrns_found = [record['hrn'] for record in records]
-       
+      
         # remove old records
         for record in records:
-            if record['hrn'] not in hrns_expected:
+            if record['hrn'] not in hrns_expected and \
+                record['hrn'] != self.api.config.SFA_INTERFACE_HRN:
                 table.remove(record)
 
         # add new records

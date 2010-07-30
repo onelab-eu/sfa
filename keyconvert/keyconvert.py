@@ -4,7 +4,21 @@ import sys
 import base64
 import struct
 import binascii
-from M2Crypto import RSA, DSA
+from M2Crypto import RSA, DSA, m2
+
+
+###### Workaround for bug in m2crypto-0.18 (on Fedora 8)
+class RSA_pub_fix(RSA.RSA_pub):
+    def save_key_bio(self, bio, *args, **kw):
+        return self.save_pub_key_bio(bio)
+
+def rsa_new_pub_key((e, n)):
+    rsa = m2.rsa_new()
+    m2.rsa_set_e(rsa, e)
+    m2.rsa_set_n(rsa, n)
+    return RSA_pub_fix(rsa, 1)
+######
+#rsa_new_pub_key = RSA.new_pub_key
 
 
 def decode_key(fname):
@@ -78,7 +92,7 @@ def convert(fin, fout):
 
     if key_type == "ssh-rsa":
         e, n = ret[1:]
-        rsa = RSA.new_pub_key((e, n))
+        rsa = rsa_new_pub_key((e, n))
         rsa.save_pem(fout)
 
     elif key_type == "ssh-dss":

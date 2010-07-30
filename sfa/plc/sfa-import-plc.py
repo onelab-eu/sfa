@@ -118,7 +118,7 @@ def main():
         sites_dict[site['login_base']] = site 
     
     # Get all plc users
-    persons = shell.GetPersons(plc_auth, {'peer_id': None}, ['person_id', 'email', 'key_ids', 'site_ids'])
+    persons = shell.GetPersons(plc_auth, {'peer_id': None, 'enabled': True}, ['person_id', 'email', 'key_ids', 'site_ids'])
     persons_dict = {}
     for person in persons:
         persons_dict[person['person_id']] = person

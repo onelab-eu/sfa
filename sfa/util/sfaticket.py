@@ -79,13 +79,13 @@ class SfaTicket(Certificate):
             dict["gidCaller"] = self.gidCaller.save_to_string(save_parents=True)
         if self.gidObject:
             dict["gidObject"] = self.gidObject.save_to_string(save_parents=True)
-        str = xmlrpclib.dumps((dict,), allow_none=True)
+        str = "URI:" + xmlrpclib.dumps((dict,), allow_none=True)
         self.set_data(str)
 
     def decode(self):
         data = self.get_data()
         if data:
-            dict = xmlrpclib.loads(self.get_data())[0][0]
+            dict = xmlrpclib.loads(self.get_data()[4:])[0][0]
         else:
             dict = {}
 

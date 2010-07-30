@@ -96,13 +96,25 @@ def create_slice(api, xrn, xml, reg_objects=None):
     return True
 
 
-def get_ticket(api, xrn, rspec, origin_hrn=None):
+def get_ticket(api, xrn, rspec, origin_hrn=None, reg_objects=None):
+
     slice_hrn, type = urn_to_hrn(xrn)
-    # the the slice record
+    slices = Slices(api)
+    peer = slices.get_peer(slice_hrn)
+    sfa_peer = slices.get_sfa_peer(slice_hrn)
+    
+    # get the slice record
     registry = api.registries[api.hrn]
     credential = api.getCredential()
     records = registry.resolve(credential, xrn)
-    
+
+    # similar to create_slice, we must verify that the required records exist
+    # at this aggregate before we can issue a ticket   
+    site_id, remote_site_id = slices.verify_site(registry, credential, slice_hrn,
+                                                 peer, sfa_peer, reg_objects)
+    slice = slices.verify_slice(registry, credential, slice_hrn, site_id,
+                                remote_site_id, peer, sfa_peer, reg_objects)
+
     # make sure we get a local slice record
     record = None  
     for tmp_record in records:

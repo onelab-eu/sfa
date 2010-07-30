@@ -9,6 +9,7 @@ import tempfile
 import traceback
 import socket
 import random
+import datetime
 from lxml import etree
 from StringIO import StringIO
 from types import StringTypes, ListType
@@ -23,6 +24,8 @@ import sfa.util.xmlrpcprotocol as xmlrpcprotocol
 from sfa.util.config import Config
 import zlib
 
+AGGREGATE_PORT=12346
+CM_PORT=12346
 
 # utility methods here
 # display methods
@@ -171,12 +174,12 @@ class Sfi:
             parser.add_option("-f", "--format", dest="format", type="choice",
                              help="display format ([xml]|dns|ip)", default="xml",
                              choices=("xml", "dns", "ip"))
+                                
+        if command in ("resources", "slices", "create", "delete", "start", "stop", "get_ticket"):
             parser.add_option("-a", "--aggregate", dest="aggregate",
-                             default=None, help="aggregate hrn")
-
-        if command in ("create", "get_ticket"):
-            parser.add_option("-a", "--aggregate", dest="aggregate", default=None,
-                             help="aggregate hrn")
+                             default=None, help="aggregate host")
+            parser.add_option("-p", "--port", dest="port",
+                             default=AGGREGATE_PORT, help="aggregate port")
 
         if command in ("start", "stop", "reset", "delete", "slices"):
             parser.add_option("-c", "--component", dest="component", default=None,
@@ -203,7 +206,7 @@ class Sfi:
                             help="delegate user credential")
            parser.add_option("-s", "--slice", dest="delegate_slice",
                             help="delegate slice credential", metavar="HRN", default=None)
-
+        
         return parser
 
         
@@ -378,12 +381,25 @@ class Sfi:
                 print "Writing user gid to", file
             gid.save_to_file(file, save_parents=True)
             return gid       
+
+    def get_cached_credential(self, file):
+        """
+        Return a cached credential only if it hasn't expired.
+        """
+        if (os.path.isfile(file)):
+            credential = Credential(filename=file)
+            # make sure it isnt expired 
+            if not credential.get_lifetime or \
+               datetime.datetime.today() < credential.get_lifefime():
+                return credential
+        return None 
  
     def get_user_cred(self):
         #file = os.path.join(self.options.sfi_dir, get_leaf(self.user) + ".cred")
         file = os.path.join(self.options.sfi_dir, self.user.replace(self.authority + '.', '') + ".cred")
-        if (os.path.isfile(file)):
-            user_cred = Credential(filename=file)
+
+        user_cred = self.get_cached_credential(file)
+        if user_cred:
             return user_cred
         else:
             # bootstrap user credential
@@ -410,8 +426,8 @@ class Sfi:
             sys.exit(-1)
     
         file = os.path.join(self.options.sfi_dir, get_leaf("authority") + ".cred")
-        if (os.path.isfile(file)):
-            auth_cred = Credential(filename=file)
+        auth_cred = self.get_cached_credential(file)
+        if auth_cred:
             return auth_cred
         else:
             # bootstrap authority credential from user credential
@@ -429,8 +445,8 @@ class Sfi:
     
     def get_slice_cred(self, name):
         file = os.path.join(self.options.sfi_dir, "slice_" + get_leaf(name) + ".cred")
-        if (os.path.isfile(file)):
-            slice_cred = Credential(filename=file)
+        slice_cred = self.get_cached_credential(file)
+        if slice_cred:
             return slice_cred
         else:
             # bootstrap slice credential from user credential
@@ -538,15 +554,22 @@ class Sfi:
         if not records:
             print "No such component:", opts.component
         record = records[0]
-        cm_port = "12346"
-        url = "https://%s:%s" % (record['hostname'], cm_port)
-        return xmlrpcprotocol.get_server(url, self.key_file, self.cert_file, self.options.debug)
-    
-    #
+  
+        return self.get_server(record['hostname'], CM_PORT, self.key_file, \
+                               self.cert_file, self.options.debug)
+ 
+    def get_server(self, host, port, keyfile, certfile, debug):
+        """
+        Return an instnace of an xmlrpc server connection    
+        """
+        url = "http://%s:%s" % (host, port)
+        return xmlrpcprotocol.get_server(url, keyfile, certfile, debug)
+ 
+    #==========================================================================
     # Following functions implement the commands
     #
     # Registry-related commands
-    #
+    #==========================================================================
   
     def dispatch(self, command, cmd_opts, cmd_args):
         getattr(self, command)(cmd_opts, cmd_args)
@@ -761,16 +784,21 @@ class Sfi:
         return
 
  
-    #
+    # ==================================================================
     # Slice-related commands
-    #
+    # ==================================================================
     
-    # list available nodes -- use 'resources' w/ no argument instead
 
     # list instantiated slices
     def slices(self, opts, args):
+        """
+        list instantiated slices
+        """
         user_cred = self.get_user_cred().save_to_string(save_parents=True)
         server = self.slicemgr
+        if opts.aggregate:
+            server = self.get_server(opts.aggregate, opts.port, self.key_file, \
+                                     self.cert_file, self.options.debug)
         # direct connection to the nodes component manager interface
         if opts.component:
             server = self.get_component_server_from_hrn(opts.component)
@@ -783,13 +811,8 @@ class Sfi:
         user_cred = self.get_user_cred().save_to_string(save_parents=True)
         server = self.slicemgr
         if opts.aggregate:
-            agg_hrn = opts.aggregate
-            aggregates = self.registry.get_aggregates(user_cred, agg_hrn)
-            if not aggregates:
-                raise Exception, "No such aggregate %s" % agg_hrn
-            aggregate = aggregates[0]
-            url = "http://%s:%s" % (aggregate['addr'], aggregate['port'])     
-            server = xmlrpcprotocol.get_server(url, self.key_file, self.cert_file, self.options.debug)
+            server = self.get_server(opts.aggregate, opts.port, self.key_file, \
+                                     self.cert_file, self.options.debug)
         if args:
             cred = self.get_slice_cred(args[0]).save_to_string(save_parents=True)
             hrn = args[0]
@@ -816,13 +839,11 @@ class Sfi:
         rspec_file = self.get_rspec_file(args[1])
         rspec = open(rspec_file).read()
         server = self.slicemgr
+
         if opts.aggregate:
-            aggregates = self.registry.get_aggregates(user_cred, opts.aggregate)
-            if not aggregates:
-                raise Exception, "No such aggregate %s" % opts.aggregate
-            aggregate = aggregates[0]
-            url = "http://%s:%s" % (aggregate['addr'], aggregate['port'])
-            server = xmlrpcprotocol.get_server(url, self.key_file, self.cert_file, self.options.debug)
+            server = self.get_server(opts.aggregate, opts.port, self.key_file, \
+                                     self.cert_file, self.options.debug)
+
         return server.create_slice(slice_cred, slice_hrn, rspec)
 
     # get a ticket for the specified slice
@@ -834,12 +855,8 @@ class Sfi:
         rspec = open(rspec_file).read()
         server = self.slicemgr
         if opts.aggregate:
-            aggregates = self.registry.get_aggregates(user_cred, opts.aggregate)
-            if not aggregates:
-                raise Exception, "No such aggregate %s" % opts.aggregate
-            aggregate = aggregates[0]
-            url = "http://%s:%s" % (aggregate['addr'], aggregate['port'])
-            server = xmlrpcprotocol.get_server(url, self.key_file, self.cert_file, self.options.debug)
+            server = self.get_server(opts.aggregate, opts.port, self.key_file, \
+                                     self.cert_file, self.options.debug)
         ticket_string = server.get_ticket(slice_cred, slice_hrn, rspec)
         file = os.path.join(self.options.sfi_dir, get_leaf(slice_hrn) + ".ticket")
         print "writing ticket to ", file        
@@ -853,7 +870,7 @@ class Sfi:
         # use this to get the right slice credential 
         ticket = SfaTicket(filename=ticket_file)
         ticket.decode()
-	slice_hrn = ticket.gidObject.get_hrn()
+        slice_hrn = ticket.gidObject.get_hrn()
         #slice_hrn = ticket.attributes['slivers'][0]['hrn']
         user_cred = self.get_user_cred()
         slice_cred = self.get_slice_cred(slice_hrn).save_to_string(save_parents=True)
@@ -868,28 +885,28 @@ class Sfi:
         connections = {}
         for hostname in hostnames:
             try:
-                cm_port = "12346" 
-                url = "https://%(hostname)s:%(cm_port)s" % locals() 
-                print "Calling redeem_ticket at %(url)s " % locals(),
-                cm = xmlrpcprotocol.get_server(url, self.key_file, self.cert_file, self.options.debug)
-                cm.redeem_ticket(slice_cred, ticket.save_to_string(save_parents=True))
+                print "Calling redeem_ticket at %(hostname)s " % locals(),
+                server = self.get_server(hostname, CM_PORT, self.key_file, \
+                                         self.cert_file, self.options.debug)
+                server.redeem_ticket(slice_cred, ticket.save_to_string(save_parents=True))
                 print "Success"
             except socket.gaierror:
                 print "Failed:",
                 print "Componet Manager not accepting requests" 
             except Exception, e:
                 print "Failed:", e.message
-             
         return
  
     # delete named slice
     def delete(self, opts, args):
         slice_hrn = args[0]
         server = self.slicemgr
+        if opts.aggregate:
+            server = self.get_server(opts.aggregate, opts.port, self.key_file, \
+                                     self.cert_file, self.options.debug)
         # direct connection to the nodes component manager interface
         if opts.component:
             server = self.get_component_server_from_hrn(opts.component)
- 
         slice_cred = self.get_slice_cred(slice_hrn).save_to_string(save_parents=True)
         return server.delete_slice(slice_cred, slice_hrn)
     
@@ -897,10 +914,12 @@ class Sfi:
     def start(self, opts, args):
         slice_hrn = args[0]
         server = self.slicemgr
-        # direct connection to the nodes component manager interface
+        # direct connection to an aggregagte
+        if opts.aggregate:
+            server = self.get_server(opts.aggregate, opts.port, self.key_file, \
+                                     self.cert_file, self.options.debug)
         if opts.component:
             server = self.get_component_server_from_hrn(opts.component)
- 
         slice_cred = self.get_slice_cred(args[0]).save_to_string(save_parents=True)
         return server.start_slice(slice_cred, slice_hrn)
     
@@ -908,10 +927,13 @@ class Sfi:
     def stop(self, opts, args):
         slice_hrn = args[0]
         server = self.slicemgr
+        # direct connection to an aggregate
+        if opts.aggregate:
+            server = self.get_server(opts.aggregate, opts.port, self.key_file, \
+                                     self.cert_file, self.options.debug)
         # direct connection to the nodes component manager interface
         if opts.component:
             server = self.get_component_server_from_hrn(opts.component)
-
         slice_cred = self.get_slice_cred(args[0]).save_to_string(save_parents=True)
         return server.stop_slice(slice_cred, slice_hrn)
     
@@ -926,7 +948,9 @@ class Sfi:
         return server.reset_slice(slice_cred, slice_hrn)
 
 
+    # =====================================================================
     # GENI AM related calls
+    # =====================================================================
 
     def GetVersion(self, opts, args):
         server = self.geni_am
