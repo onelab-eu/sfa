@@ -57,6 +57,10 @@ class CreateSliver(Method):
             rspec = self.__run_sfatables(manager, SFATablesRules('INCOMING'),
                                          hrn, origin_hrn, rspec)
 
-            return manager.CreateSliver(self.api, slice_xrn, ValidCreds, rspec, users)            
+            
+            allocated = manager.CreateSliver(self.api, slice_xrn, ValidCreds, rspec, users)
+            if allocated:
+                return rspec
+
         return ''
     
