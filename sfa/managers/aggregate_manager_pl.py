@@ -54,7 +54,7 @@ def __get_registry_objects(slice_xrn, creds, users):
         reg_objects['site'] = site
 
         slice = {}
-        slice['expires'] = int(mktime(Credential(string=creds[0]).get_lifetime().timetuple()))
+        slice['expires'] = int(time.mktime(Credential(string=creds[0]).get_lifetime().timetuple()))
         slice['hrn'] = hrn
         slice['name'] = site['login_base'] + "_" +  get_leaf(hrn)
         slice['url'] = hrn
