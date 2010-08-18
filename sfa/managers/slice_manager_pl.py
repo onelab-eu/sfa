@@ -23,6 +23,7 @@ from sfa.util.threadmanager import ThreadManager
 import sfa.util.xmlrpcprotocol as xmlrpcprotocol     
 from sfa.util.debug import log
 import sfa.plc.peers as peers
+from copy import copy
 
 def get_version():
     version = {}
@@ -108,7 +109,7 @@ def get_ticket(api, xrn, creds, rspec, users):
             # we may have a peer that knows about this aggregate
             for agg in api.aggregates:
                 target_aggs = api.aggregates[agg].get_aggregates(credential, net_urn)
-                if not target_aggs or not 'hrn' not target_aggs[0]:
+                if not target_aggs or not 'hrn' in target_aggs[0]:
                     continue
                 # send the request to this address 
                 url = target_aggs[0]['url']
@@ -263,7 +264,9 @@ def get_rspec(api, creds, options):
         if aggregate not in [api.auth.client_cred.get_gid_caller().get_hrn()]:   
             # get the rspec from the aggregate
             server = api.aggregates[aggregate]
-            threads.run(server.ListResources, cred, options)
+            my_opts = copy(options)
+            my_opts['geni_compressed'] = False
+            threads.run(server.ListResources, cred, my_opts)
             #threads.run(server.get_resources, cred, xrn, origin_hrn)
                     
 
