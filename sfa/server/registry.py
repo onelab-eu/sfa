@@ -7,6 +7,7 @@
 
 from sfa.util.server import SfaServer
 from sfa.util.faults import *
+from sfa.util.namespace import hrn_to_urn
 from sfa.server.interface import Interfaces
 import sfa.util.xmlrpcprotocol as xmlrpcprotocol
 import sfa.util.soapprotocol as soapprotocol
@@ -41,7 +42,11 @@ class Registries(Interfaces):
         address = self.api.config.SFA_REGISTRY_HOST
         port = self.api.config.SFA_REGISTRY_PORT
         url = 'http://%(address)s:%(port)s' % locals()
-        local_registry = {'hrn': self.api.hrn, 'addr': address, 'port': port}
+        local_registry = {'hrn': self.api.hrn,
+                           'urn': hrn_to_urn(self.api.hrn, 'authority'),
+                           'addr': address,
+                           'port': port,
+                           'url': url}
         self.interfaces[self.api.hrn] = local_registry
        
         # get connections

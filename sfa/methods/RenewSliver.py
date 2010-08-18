@@ -13,7 +13,7 @@ class RenewSliver(Method):
     @param expiration_time (string) requested time of expiration
     
     """
-    interfaces = ['geni_am']
+    interfaces = ['aggregate', 'slicemgr']
     accepts = [
         Parameter(str, "Slice URN"),
         Parameter(type([str]), "List of credentials"),
@@ -27,20 +27,15 @@ class RenewSliver(Method):
         self.api.logger.info("interface: %s\ttarget-hrn: %s\tcaller-creds: %s\tmethod-name: %s"%(self.api.interface, hrn, creds, self.name))
 
         # Find the valid credentials
-        ValidCreds = self.api.auth.checkCredentials(creds, 'renewsliver', hrn)
+        valid_creds = self.api.auth.checkCredentials(creds, 'renewsliver', hrn)
 
         # Validate that the time does not go beyond the credential's expiration time
         requested_time = parse(expiration_time)
-        if requested_time > Credential(string=ValidCreds[0]).get_lifetime():
+        if requested_time > Credential(string=valid_creds[0]).get_lifetime():
             raise InsufficientRights('SliverStatus: Credential expires before requested expiration time')
-        
-        manager_base = 'sfa.managers'
-
-        if self.api.interface in ['geni_am']:
-            mgr_type = self.api.config.SFA_GENI_AGGREGATE_TYPE
-            manager_module = manager_base + ".geni_am_%s" % mgr_type
-            manager = __import__(manager_module, fromlist=[manager_base])
-            return manager.RenewSliver(self.api, slice_xrn, ValidCreds, expiration_time)
-
-        return ''
+       
+        manager = self.api.get_interface_manager()
+        manager.renew_slice(self.api, xrn, valid_creds, requested_time)    
+ 
+        return 1
     

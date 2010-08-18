@@ -55,8 +55,10 @@ class SfaPermissionDenied(SfaFault):
         SfaFault.__init__(self, 108, faultString, extra)
 
 class SfaNotImplemented(SfaFault):
-    def __init__(self, extra = None):
-        faultString = "Not fully implemented"
+    def __init__(self, interface=None, extra = None):
+        faultString = "Not implemented"
+        if interface:
+            faultString += " at interface " + interface 
         SfaFault.__init__(self, 109, faultString, extra)
 
 class SfaAPIError(SfaFault):

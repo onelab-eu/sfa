@@ -10,35 +10,6 @@ from types import StringTypes, ListType
 from lxml import etree
 from StringIO import StringIO
 
-def merge_rspecs(rspecs):
-    """
-    Merge merge a set of RSpecs into 1 RSpec, and return the result.
-    rspecs must be a valid RSpec string or list of rspec strings. 
-    """
-    if not rspecs or not isinstance(rspecs, list):
-        return rspecs
-    
-    rspec = None
-    for tmp_rspec in rspecs:
-        try:
-            tree = etree.parse(StringIO(tmp_rspec))
-        except etree.XMLSyntaxError:
-            # consider failing silently here
-            message = str(agg_rspec) + ": " + str(sys.exc_info()[1])
-            raise InvalidRSpec(message)
-
-        root = tree.getroot()
-        if root.get("type") in ["SFA"]:
-            if rspec == None:
-                rspec = root
-            else:
-                for network in root.iterfind("./network"):
-                    rspec.append(deepcopy(network))
-                for request in root.iterfind("./request"):
-                    rspec.append(deepcopy(request))    
-    return etree.tostring(rspec, xml_declaration=True, pretty_print=True)
-        
-
 
 class RSpec:
 

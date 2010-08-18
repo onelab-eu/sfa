@@ -248,8 +248,10 @@ def create_slice_max_aggregate(api, hrn, nodes):
     return 1
 
 
-def get_rspec(api, xrn):
-    hrn = urn_to_hrn(xrn)[0]
+def get_rspec(api, creds, options):
+    # get slice's hrn from options
+    xrn = options.get('geni_slice_urn', None)
+    hrn, type = urn_to_hrn(xrn)
     # Eg. config line:
     # plc.princeton.sapan vlan23,vlan45
 
@@ -262,7 +264,7 @@ def get_rspec(api, xrn):
     return (ret_rspec)
 
 
-def create_slice(api, xrn, rspec_xml):
+def create_slice(api, xrn, creds, rspec_xml, users):
     global topology
     hrn = urn_to_hrn(xrn)[0]
     topology = get_interface_map()

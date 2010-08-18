@@ -30,17 +30,7 @@ class get_registries(Method):
     def call(self, cred, xrn = None):
         hrn, type = urn_to_hrn(xrn)
         self.api.auth.check(cred, 'list')
-        registries = Registries(self.api)
-        hrn_list = []
+        registries = Registries(self.api).interfaces.values()
         if hrn:
-            if isinstance(hrn, StringTypes):
-                hrn_list = [hrn]
-            elif isinstance(hrn, list):
-                hrn_list = hrn
-
-        if not hrn_list:
-            interfaces = registries.interfaces.keys()
-        else:
-            interfaces = [interface for interface in registries.interfaces if interface in hrn_list]
-
-        return interfaces
+            registries = [reg for reg in registries if reg['hrn'] == hrn] 
+        return registries

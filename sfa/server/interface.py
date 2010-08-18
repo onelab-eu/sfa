@@ -60,6 +60,13 @@ class Interfaces(dict):
         interfaces = self.interface_info.values()[0].values()[0]
         if not isinstance(interfaces, list):
             interfaces = [self.interfaces]
+        # set the url and urn 
+        for interface in interfaces:
+            hrn, address, port = interface['hrn'], interface['addr'], interface['port']
+            url = 'http://%(address)s:%(port)s' % locals()
+            interface['url'] = url
+            interface['urn'] = hrn_to_urn(hrn, 'authority')
+    
         self.interfaces = {}
         required_fields = self.default_fields.keys()
         for interface in interfaces:
@@ -183,12 +190,8 @@ class Interfaces(dict):
         required_fields = self.default_fields.keys()
         for interface in self.interfaces.values():
             # make sure the required fields are present and not null
-            if not all([interface.get(key) for key in required_fields]):
-                continue
             
-            hrn, address, port = interface['hrn'], interface['addr'], interface['port']
-            url = 'http://%(address)s:%(port)s' % locals()
-            
+            url = interface['url']
             # check which client we should use
             # sfa.util.xmlrpcprotocol is default
             client_type = 'xmlrpcprotocol'
@@ -198,6 +201,6 @@ class Interfaces(dict):
                 client_type = 'geniclientlight'
                 connections[hrn] = GeniClientLight(url, self.api.key_file, self.api.cert_file) 
             else:
-                connections[hrn] = xmlrpcprotocol.get_server(url, self.api.key_file, self.api.cert_file)
+                connections[interface['hrn']] = xmlrpcprotocol.get_server(url, self.api.key_file, self.api.cert_file)
 
         return connections 

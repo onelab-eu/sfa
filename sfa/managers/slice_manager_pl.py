@@ -9,7 +9,7 @@ from copy import deepcopy
 from lxml import etree
 from StringIO import StringIO
 from types import StringTypes
-from sfa.util.rspec import merge_rspecs
+from sfa.util.rspecHelper import merge_rspecs
 from sfa.util.namespace import *
 from sfa.util.rspec import *
 from sfa.util.specdict import *
@@ -18,21 +18,26 @@ from sfa.util.record import SfaRecord
 from sfa.util.policy import Policy
 from sfa.util.prefixTree import prefixTree
 from sfa.util.sfaticket import *
+from sfa.trust.credential import Credential
 from sfa.util.threadmanager import ThreadManager
 import sfa.util.xmlrpcprotocol as xmlrpcprotocol     
 from sfa.util.debug import log
 import sfa.plc.peers as peers
 
-def delete_slice(api, xrn, origin_hrn=None):
-    credential = api.getCredential()
-    threads = ThreadManager()
-    for aggregate in api.aggregates:
-        server = api.aggregates[aggregate] 
-        threads.run(server.delete_slice, credential, xrn, origin_hrn)
-    threads.get_results()
-    return 1
+def get_version():
+    version = {}
+    version['geni_api'] = 1
+    version['sfa'] = 1
+    return version
 
-def create_slice(api, xrn, rspec, origin_hrn=None):
+def slice_status(api, slice_xrn, creds ):
+    result = {}
+    result['geni_urn'] = slice_xrn
+    result['geni_status'] = 'unknown'
+    result['geni_resources'] = {}
+    return result
+
+def create_slice(api, xrn, creds, rspec, users):
     hrn, type = urn_to_hrn(xrn)
 
     # Validate the RSpec against PlanetLab's schema --disabled for now
@@ -54,17 +59,34 @@ def create_slice(api, xrn, rspec, origin_hrn=None):
             message = "%s (line %s)" % (error.message, error.line)
             raise InvalidRSpec(message)
 
+    # XX
+    # XX TODO: Should try to use delegated credential first
+    # XX
     cred = api.getCredential()
     threads = ThreadManager()
     for aggregate in api.aggregates:
         if aggregate not in [api.auth.client_cred.get_gid_caller().get_hrn()]:
             server = api.aggregates[aggregate]
             # Just send entire RSpec to each aggregate
-            threads.run(server.create_slice, cred, xrn, rspec, origin_hrn)
-    threads.get_results() 
+            threads.run(server.CreateSliver, xrn, cred, rspec, users)
+            
+    results = threads.get_results() 
+    merged_rspec = merge_rspecs(results)
+    return merged_rspec
+
+def renew_slice(api, xrn, creds, expiration_time):
+    # XX
+    # XX TODO: Should try to use delegated credential first
+    # XX
+    credential = api.getCredential()
+    threads = ThreadManager()
+    for aggregate in api.aggregates:
+        server = api.aggregates[aggregate]
+        threads.run(server.RenewSliver, xrn, credential, expiration_time)
+    threads.get_results()
     return 1
 
-def get_ticket(api, xrn, rspec, origin_hrn=None):
+def get_ticket(api, xrn, creds, rspec, users):
     slice_hrn, type = urn_to_hrn(xrn)
     # get the netspecs contained within the clients rspec
     aggregate_rspecs = {}
@@ -85,15 +107,18 @@ def get_ticket(api, xrn, rspec, origin_hrn=None):
             net_urn = hrn_to_urn(aggregate, 'authority')     
             # we may have a peer that knows about this aggregate
             for agg in api.aggregates:
-                agg_info = api.aggregates[agg].get_aggregates(credential, net_urn)
-                if agg_info:
-                    # send the request to this address 
-                    url = 'http://%s:%s' % (agg_info['addr'], agg_info['port'])
-                    server = xmlrpcprotocol.get_server(url, api.key_file, api.cert_file)
-                    break   
+                target_aggs = api.aggregates[agg].get_aggregates(credential, net_urn)
+                if not target_aggs or not 'hrn' not target_aggs[0]:
+                    continue
+                # send the request to this address 
+                url = target_aggs[0]['url']
+                server = xmlrpcprotocol.get_server(url, api.key_file, api.cert_file)
+                # aggregate found, no need to keep looping
+                break   
         if server is None:
             continue 
-        threads.run(server.get_ticket, credential, xrn, aggregate_rspec, origin_hrn)
+        threads.run(server.GetTicket, xrn, credential, aggregate_rspec, users)
+
     results = threads.get_results()
     
     # gather information from each ticket 
@@ -106,7 +131,6 @@ def get_ticket(api, xrn, rspec, origin_hrn=None):
         attrs = agg_ticket.get_attributes()
         if not object_gid:
             object_gid = agg_ticket.get_gid_object()
-        print object_gid
         rspecs.append(agg_ticket.get_rspec())
         initscripts.extend(attrs.get('initscripts', [])) 
         slivers.extend(attrs.get('slivers', [])) 
@@ -129,29 +153,62 @@ def get_ticket(api, xrn, rspec, origin_hrn=None):
     ticket.sign()          
     return ticket.save_to_string(save_parents=True)
 
-def start_slice(api, xrn):
+
+def delete_slice(api, xrn, origin_hrn=None):
+    # XX
+    # XX TODO: Should try to use delegated credential first
+    # XX
     credential = api.getCredential()
     threads = ThreadManager()
     for aggregate in api.aggregates:
         server = api.aggregates[aggregate]
-        threads.run(server.stop_slice, credential, xrn)
+        threads.run(server.DeleteSliver, xrn, credential)
+    threads.get_results()
+    return 1
+
+def start_slice(api, xrn, creds):
+    # XX
+    # XX TODO: Should try to use delegated credential first
+    # XX
+    credential = api.getCredential()
+    threads = ThreadManager()
+    for aggregate in api.aggregates:
+        server = api.aggregates[aggregate]
+        threads.run(server.Start, xrn, credential)
     threads.get_results()    
     return 1
  
-def stop_slice(api, xrn):
+def stop_slice(api, xrn, creds):
+    # XX
+    # XX TODO: Should try to use delegated credential first
+    # XX
     credential = api.getCredential()
     threads = ThreadManager()
     for aggregate in api.aggregates:
         server = api.aggregates[aggregate]
-        threads.run(server.stop_slice, credential, xrn)
+        threads.run(server.Stop, xrn, credential)
     threads.get_results()    
     return 1
 
 def reset_slice(api, xrn):
-    # XX not implemented at this interface
+    """
+    Not implemented
+    """
     return 1
 
-def get_slices(api):
+def shutdown(api, xrn, creds):
+    """
+    Not implemented   
+    """
+    return 1
+
+def status(api, xrn, creds):
+    """
+    Not implemented 
+    """
+    return 1
+
+def get_slices(api, creds):
     # look in cache first
     if api.cache:
         slices = api.cache.get('slices')
@@ -164,7 +221,7 @@ def get_slices(api):
     threads = ThreadManager()
     for aggregate in api.aggregates:
         server = api.aggregates[aggregate]
-        threads.run(server.get_slices, credential)
+        threads.run(server.ListSlices, credential)
 
     # combime results
     results = threads.get_results()
@@ -178,7 +235,16 @@ def get_slices(api):
 
     return slices
  
-def get_rspec(api, xrn=None, origin_hrn=None):
+def get_rspec(api, creds, options):
+    # get slice's hrn from options
+    xrn = options.get('geni_slice_urn', None)
+    hrn, type = urn_to_hrn(xrn)
+
+    # get hrn of the original caller
+    origin_hrn = options.get('origin_hrn', None)
+    if not origin_hrn:
+        origin_hrn = Credential(string=creds[0]).get_gid_caller().get_hrn()
+    
     # look in cache first 
     if api.cache and not xrn:
         rspec =  api.cache.get('nodes')
@@ -187,13 +253,19 @@ def get_rspec(api, xrn=None, origin_hrn=None):
 
     hrn, type = urn_to_hrn(xrn)
     rspec = None
+    # XX
+    # XX TODO: Should try to use delegated credential first 
+    # XX
     cred = api.getCredential()
     threads = ThreadManager()
+    
     for aggregate in api.aggregates:
-        if aggregate not in [api.auth.client_cred.get_gid_caller().get_hrn()]:      
+        if aggregate not in [api.auth.client_cred.get_gid_caller().get_hrn()]:   
             # get the rspec from the aggregate
             server = api.aggregates[aggregate]
-            threads.run(server.get_resources, cred, xrn, origin_hrn)
+            threads.run(server.ListResources, cred, options)
+            #threads.run(server.get_resources, cred, xrn, origin_hrn)
+                    
 
     results = threads.get_results()
     # combine the rspecs into a single rspec 
@@ -213,25 +285,13 @@ def get_rspec(api, xrn=None, origin_hrn=None):
                     rspec.append(deepcopy(network))
                 for request in root.iterfind("./request"):
                     rspec.append(deepcopy(request))
-
+    
     rspec =  etree.tostring(rspec, xml_declaration=True, pretty_print=True)
     # cache the result
     if api.cache and not xrn:
         api.cache.add('nodes', rspec)
  
     return rspec
-
-"""
-Returns the request context required by sfatables. At some point, this
-mechanism should be changed to refer to "contexts", which is the
-information that sfatables is requesting. But for now, we just return
-the basic information needed in a dict.
-"""
-def fetch_context(slice_hrn, user_hrn, contexts):
-    #slice_hrn = urn_to_hrn(slice_xrn)[0]
-    #user_hrn = urn_to_hrn(user_xrn)[0]
-    base_context = {'sfa':{'user':{'hrn':user_hrn}, 'slice':{'hrn':slice_hrn}}}
-    return base_context
 
 def main():
     r = RSpec()

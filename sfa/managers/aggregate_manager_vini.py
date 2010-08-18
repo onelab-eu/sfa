@@ -22,8 +22,30 @@ import sfa.plc.peers as peers
 from sfa.managers.vini.vini_network import *
 from sfa.plc.api import SfaAPI
 from sfa.plc.slices import *
+from sfa.managers.aggregate_manager_pl import __get_registry_objects, __get_hostnames
 
-def delete_slice(api, xrn):
+# VINI aggregate is almost identical to PLC aggregate for many operations, 
+# so lets just import the methods form the PLC manager
+
+from sfa.managers.aggregate_manager_pl import (
+start_slice, stop_slice, renew_slice, reset_slice, get_slices, get_ticket)
+
+
+def get_version():
+    version = {}
+    version['geni_api'] = 1
+    version['sfa'] = 1
+    return version
+
+def slice_status(api, slice_xrn, creds):
+    result = {}
+    result['geni_urn'] = slice_xrn
+    result['geni_status'] = 'unknown'
+    result['geni_resources'] = {}
+    return result
+
+
+def delete_slice(api, xrn, creds):
     hrn, type = urn_to_hrn(xrn)
     slicename = hrn_to_pl_slicename(hrn)
     slices = api.plshell.GetSlices(api.plauth, {'name': slicename})
@@ -40,19 +62,14 @@ def delete_slice(api, xrn):
         api.plshell.BindObjectToPeer(api.plauth, 'slice', slice['slice_id'], peer, slice['peer_slice_id'])
     return 1
 
-def __get_hostnames(nodes):
-    hostnames = []
-    for node in nodes:
-        hostnames.append(node.hostname)
-    return hostnames
-    
-def create_slice(api, xrn, xml):
-    hrn, type = urn_to_hrn(xrn)
-    peer = None
-
+def create_slice(api, xrn, creds, xml, users):
     """
     Verify HRN and initialize the slice record in PLC if necessary.
     """
+
+    hrn, type = urn_to_hrn(xrn)
+    peer = None
+    reg_objects = __get_registry_objects(slice_xrn, creds, users)
     slices = Slices(api)
     peer = slices.get_peer(hrn)
     sfa_peer = slices.get_sfa_peer(hrn)
@@ -60,9 +77,9 @@ def create_slice(api, xrn, xml):
     registry = registries[api.hrn]
     credential = api.getCredential()
     site_id, remote_site_id = slices.verify_site(registry, credential, hrn, 
-                                                 peer, sfa_peer)
+                                                 peer, sfa_peer, reg_objects)
     slice = slices.verify_slice(registry, credential, hrn, site_id, 
-                                remote_site_id, peer, sfa_peer)
+                                remote_site_id, peer, sfa_peer, reg_objects)
 
     network = ViniNetwork(api)
 
@@ -95,90 +112,6 @@ def create_slice(api, xrn, xml):
 
     return True
 
-
-def get_ticket(api, xrn, rspec, origin_hrn=None):
-    slice_hrn, type = urn_to_hrn(xrn)
-    # the the slice record
-    registries = Registries(api)
-    registry = registries[api.hrn]
-    credential = api.getCredential()
-    records = registry.resolve(credential, xrn)
-    
-    # make sure we get a local slice record
-    record = None  
-    for tmp_record in records:
-        if tmp_record['type'] == 'slice' and \
-           not tmp_record['peer_authority']:
-            record = SliceRecord(dict=tmp_record)
-    if not record:
-        raise RecordNotFound(slice_hrn)
-
-    # get sliver info
-    slivers = Slices(api).get_slivers(slice_hrn)
-    if not slivers:
-        raise SliverDoesNotExist(slice_hrn)
-    
-    # get initscripts
-    initscripts = []
-    data = {
-        'timestamp': int(time.time()),
-        'initscripts': initscripts,
-        'slivers': slivers
-    }
-
-    # create the ticket
-    object_gid = record.get_gid_object()
-    new_ticket = SfaTicket(subject = object_gid.get_subject())
-    new_ticket.set_gid_caller(api.auth.client_gid)
-    new_ticket.set_gid_object(object_gid)
-    new_ticket.set_issuer(key=api.key, subject=api.hrn)
-    new_ticket.set_pubkey(object_gid.get_pubkey())
-    new_ticket.set_attributes(data)
-    new_ticket.set_rspec(rspec)
-    #new_ticket.set_parent(api.auth.hierarchy.get_auth_ticket(auth_hrn))
-    new_ticket.encode()
-    new_ticket.sign()
-    
-    return new_ticket.save_to_string(save_parents=True)
-
-def start_slice(api, xrn):
-    hrn, type = urn_to_hrn(xrn)
-    slicename = hrn_to_pl_slicename(hrn)
-    slices = api.plshell.GetSlices(api.plauth, {'name': slicename}, ['slice_id'])
-    if not slices:
-        raise RecordNotFound(hrn)
-    slice_id = slices[0]
-    attributes = api.plshell.GetSliceTags(api.plauth, {'slice_id': slice_id, 'name': 'enabled'}, ['slice_attribute_id'])
-    attribute_id = attreibutes[0]['slice_attribute_id']
-    api.plshell.UpdateSliceTag(api.plauth, attribute_id, "1" )
-
-    return 1
- 
-def stop_slice(api, xrn):
-    hrn, type = urn_to_hrn(xrn)
-    slicename = hrn_to_pl_slicename(hrn)
-    slices = api.plshell.GetSlices(api.plauth, {'name': slicename}, ['slice_id'])
-    if not slices:
-        raise RecordNotFound(hrn)
-    slice_id = slices[0]['slice_id']
-    attributes = api.plshell.GetSliceTags(api.plauth, {'slice_id': slice_id, 'name': 'enabled'}, ['slice_attribute_id'])
-    attribute_id = attributes[0]['slice_attribute_id']
-    api.plshell.UpdateSliceTag(api.plauth, attribute_id, "0")
-    return 1
-
-def reset_slice(api, xrn):
-    # XX not implemented at this interface
-    return 1
-
-def get_slices(api):
-    # XX just import the legacy module and excute that until
-    # we transition the code to this module
-    from sfa.plc.slices import Slices
-    slices = Slices(api)
-    slices.refresh()
-    return [hrn_to_urn(slice_hrn, 'slice') for slice_hrn in slices['hrn']]
-     
- 
 def get_rspec(api, xrn=None, origin_hrn=None):
     hrn, type = urn_to_hrn(xrn)
     network = ViniNetwork(api)
@@ -187,18 +120,6 @@ def get_rspec(api, xrn=None, origin_hrn=None):
             network.addSlice()
 
     return network.toxml()
-
-"""
-Returns the request context required by sfatables. At some point, this
-mechanism should be changed to refer to "contexts", which is the
-information that sfatables is requesting. But for now, we just return
-the basic information needed in a dict.
-"""
-def fetch_context(slice_xrn, user_xrn, contexts):
-    slice_hrn, type = urn_to_hrn(slice_xrn)
-    user_hrn, type = urn_to_hrn(user_xrn)
-    base_context = {'sfa':{'user':{'hrn':user_hrn}, 'slice':{'hrn':slice_hrn}}}
-    return base_context
 
 def main():
     api = SfaAPI()

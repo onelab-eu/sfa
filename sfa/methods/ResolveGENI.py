@@ -4,12 +4,12 @@ from sfa.util.method import Method
 from sfa.util.parameter import Parameter
 from sfa.trust.credential import Credential
 
-class ResolveGENI(Method):
+class Resolve(Method):
     """
     Lookup a URN and return information about the corresponding object.
     @param urn
-    
     """
+
     interfaces = ['registry']
     accepts = [
         Parameter(str, "URN"),

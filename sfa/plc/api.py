@@ -476,6 +476,8 @@ class SfaAPI(BaseAPI):
                 for person_id in pi_ids:
                     hrns = [person['hrn'] for person in persons[person_id]]
                     record['PI'].extend(hrns)
+                record['geni_urn'] = hrn_to_urn(record['hrn'], 'slice')
+                record['geni_creator'] = record['PI'] 
                 
             elif (type == "authority"):
                 record['PI'] = []
@@ -500,6 +502,8 @@ class SfaAPI(BaseAPI):
     
             elif (type == "user"):
                 sfa_info['email'] = record.get("email", "")
+                sfa_info['geni_urn'] = hrn_to_urn(record['hrn'], 'user')
+                sfa_info['geni_certificate'] = record['gid'] 
                 # xxx TODO: PostalAddress, Phone
             record.update(sfa_info)
 
@@ -586,3 +590,71 @@ class ComponentAPI(BaseAPI):
             return True
         else:
             return False
+
+    def get_registry(self):
+        addr, port = self.config.SFA_REGISTRY_HOST, self.config.SFA_REGISTRY_PORT
+        url = "http://%(addr)s:%(port)s" % locals()
+        server = xmlrpcprotocol.get_server(url, self.key_file, self.cert_file)
+        return server
+
+    def get_node_key(self):
+        # this call requires no authentication,
+        # so we can generate a random keypair here
+        subject="component"
+        (kfd, keyfile) = tempfile.mkstemp()
+        (cfd, certfile) = tempfile.mkstemp()
+        key = Keypair(create=True)
+        key.save_to_file(keyfile)
+        cert = Certificate(subject=subject)
+        cert.set_issuer(key=key, subject=subject)
+        cert.set_pubkey(key)
+        cert.sign()
+        cert.save_to_file(certfile)
+        registry = self.get_registry()
+        # the registry will scp the key onto the node
+        registry.get_key()        
+
+    def getCredential(self):
+        """
+        Get our credential from a remote registry
+        """
+        path = self.config.SFA_DATA_DIR
+        config_dir = self.config.config_path
+        credfile = path + os.sep + 'node.cred'
+        try:
+            credential = Credential(filename = cred_filename)
+            return credential.save_to_string(save_parents=True)
+        except IOError:
+            node_pkey_file = config_dir + os.sep + "node.key"
+            node_gid_file = config_dir + os.sep + "node.gid"
+            if not os.path.exists(node_pkey_file) or \
+               not os.path.exists(node_gid_file):
+                self.get_node_key()
+
+            # get node's hrn
+            gid = GID(filename=node_gid_file)
+            hrn = gid.get_hrn()
+            # get credential from registry
+            registry = self.get_registry()
+            cred = registry.get_self_credential(cert_str, 'node', hrn)
+            Credential(string=cred).save_to_file(credfile, save_parents=True)            
+
+            return cred
+
+    def clean_key_cred(self):
+        """
+        remove the existing keypair and cred  and generate new ones
+        """
+        files = ["server.key", "server.cert", "node.cred"]
+        for f in files:
+            filepath = KEYDIR + os.sep + f
+            if os.path.isfile(filepath):
+                os.unlink(f)
+
+        # install the new key pair
+        # get_credential will take care of generating the new keypair
+        # and credential
+        self.get_node_key()
+        self.getCredential()
+
+    

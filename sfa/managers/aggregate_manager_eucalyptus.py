@@ -333,9 +333,17 @@ class ZoneResultParser(object):
 
         return clusterList
 
-def get_rspec(api, xrn, origin_hrn):
+def get_rspec(api, creds, options): 
     global cloud
-    hrn = urn_to_hrn(xrn)[0]
+    # get slice's hrn from options
+    xrn = options.get('geni_slice_urn', None)
+    hrn, type = urn_to_hrn(xrn)
+
+    # get hrn of the original caller
+    origin_hrn = options.get('origin_hrn', None)
+    if not origin_hrn:
+        origin_hrn = Credential(string=creds[0]).get_gid_caller().get_hrn()
+
     conn = getEucaConnection()
 
     if not conn:
@@ -414,7 +422,7 @@ def get_rspec(api, xrn, origin_hrn):
 """
 Hook called via 'sfi.py create'
 """
-def create_slice(api, xrn, xml):
+def create_slice(api, xrn, creds, xml, users):
     global cloud
     hrn = urn_to_hrn(xrn)[0]
 

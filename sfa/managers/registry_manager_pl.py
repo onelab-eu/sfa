@@ -10,7 +10,11 @@ from sfa.trust.credential import *
 from sfa.trust.certificate import *
 from sfa.util.faults import *
 
-    
+def get_version(api):
+    version = {}
+    version['geni_api'] = 1
+    version['sfa'] = 1
+    return version
 
 def get_credential(api, xrn, type, is_self=False):
     # convert xrn to hrn     
@@ -76,24 +80,7 @@ def GetVersion():
     version['geni_api'] = 1
     return version
 
-
-
-# The GENI resolve call
-def Resolve(api, xrn, creds):
-    records = resolve(api, xrn)
-    
-    if len(records) == 0:
-        return {}
-    
-    record = records[0]
-    if record.type == 'slice':
-        return {'geni_urn': xrn, 'geni_creator': " ".join(record.PI)}
-    if record.type == 'user':
-        return {'geni_urn': xrn, 'geni_certificate': record.gid}
-    
-    
-
-def resolve(api, xrns, type=None, origin_hrn=None, full=True):
+def resolve(api, xrns, type=None, full=True):
 
     # load all know registry names into a prefix tree and attempt to find
     # the longest matching prefix
@@ -125,7 +112,7 @@ def resolve(api, xrns, type=None, origin_hrn=None, full=True):
         xrns = xrn_dict[registry_hrn]
         if registry_hrn != api.hrn:
             credential = api.getCredential()
-            peer_records = registries[registry_hrn].resolve(credential, xrns, origin_hrn)
+            peer_records = registries[registry_hrn].Resolve(xrns, credential)
             records.extend([SfaRecord(dict=record).as_dict() for record in peer_records])
 
     # try resolving the remaining unfound records at the local registry
@@ -385,7 +372,7 @@ def remove(api, xrn, type, origin_hrn=None):
 
     table = SfaTable()
     filter = {'hrn': hrn}
-    if type not in ['all', '*']:
+    if type and type not in ['all', '*']:
         filter['type'] = type
     records = table.find(filter)
     if not records:

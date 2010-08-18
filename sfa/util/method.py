@@ -74,7 +74,7 @@ class Method (object):
             start = time.time()
             methodname = self.name
             if not self.api.interface or self.api.interface not in self.interfaces:
-                raise SfaInvalidAPIMethod, methodname, self.api.interface 
+                raise SfaInvalidAPIMethod(methodname, self.api.interface) 
 
             # legacy code cannot be type-checked, due to the way Method.args() works
             if not hasattr(self,"skip_typecheck"):

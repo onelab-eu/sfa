@@ -50,7 +50,6 @@ def display_list(results):
     for result in results:
         print result
 
-
 def display_records(recordList, dump=False):
     ''' Print all fields in the record'''
     for record in recordList:
@@ -118,7 +117,6 @@ def load_record_from_file(filename):
 
 class Sfi:
 
-    geni_am = None
     slicemgr = None
     registry = None
     user = None
@@ -127,18 +125,18 @@ class Sfi:
     hashrequest = False
    
     def create_cmd_parser(self, command, additional_cmdargs=None):
-        cmdargs = {"gid": "",
-                  "list": "name",
+        cmdargs = {"list": "name",
                   "show": "name",
                   "remove": "name",
                   "add": "record",
                   "update": "record",
                   "aggregates": "[name]",
                   "registries": "[name]",
+                  "get_gid": [],  
+                  "get_trusted_certs": "cred",
                   "slices": "",
                   "resources": "[name]",
                   "create": "name rspec",
-                  "get_trusted_certs": "cred",
                   "get_ticket": "name rspec",
                   "redeem_ticket": "ticket",
                   "delete": "name",
@@ -146,14 +144,10 @@ class Sfi:
                   "start": "name",
                   "stop": "name",
                   "delegate": "name",
-                  "GetVersion": "name",
-                  "ListResources": "name",
-                  "CreateSliver": "name",
-                  "get_geni_aggregates": "name",
-                  "DeleteSliver": "name",
-                  "SliverStatus": "name",
-                  "RenewSliver": "name",
-                  "Shutdown": "name"
+                  "status": "name",
+                  "renew": "name",
+                  "shutdown": "name",
+                  "version": "",  
                  }
 
         if additional_cmdargs:
@@ -170,26 +164,26 @@ class Sfi:
         parser = OptionParser(usage="sfi [sfi_options] %s [options] %s" \
                                      % (command, cmdargs[command]))
 
-        if command in ("resources"):
-            parser.add_option("-f", "--format", dest="format", type="choice",
-                             help="display format ([xml]|dns|ip)", default="xml",
-                             choices=("xml", "dns", "ip"))
-                                
-        if command in ("resources", "slices", "create", "delete", "start", "stop", "get_ticket"):
+        # user specifies remote aggregate/sm/component                          
+        if command in ("resources", "slices", "create", "delete", "start", "stop", "restart", "get_ticket", "redeem_ticket"):
             parser.add_option("-a", "--aggregate", dest="aggregate",
                              default=None, help="aggregate host")
             parser.add_option("-p", "--port", dest="port",
                              default=AGGREGATE_PORT, help="aggregate port")
-
-        if command in ("start", "stop", "reset", "delete", "slices"):
             parser.add_option("-c", "--component", dest="component", default=None,
                              help="component hrn")
-            
+        
+        # registy filter option    
         if command in ("list", "show", "remove"):
             parser.add_option("-t", "--type", dest="type", type="choice",
-                            help="type filter ([all]|user|slice|sa|ma|node|aggregate)",
-                            choices=("all", "user", "slice", "sa", "ma", "node", "aggregate"),
+                            help="type filter ([all]|user|slice|authority|node|aggregate)",
+                            choices=("all", "user", "slice", "authority", "node", "aggregate"),
                             default="all")
+        # display formats
+        if command in ("resources"):
+            parser.add_option("-f", "--format", dest="format", type="choice",
+                             help="display format ([xml]|dns|ip)", default="xml",
+                             choices=("xml", "dns", "ip"))
 
         if command in ("resources", "show", "list"):
            parser.add_option("-o", "--output", dest="file",
@@ -215,8 +209,6 @@ class Sfi:
         # Generate command line parser
         parser = OptionParser(usage="sfi [options] command [command_options] [command_args]",
                              description="Commands: gid,list,show,remove,add,update,nodes,slices,resources,create,delete,start,stop,reset")
-        parser.add_option("-g", "--geni_am", dest="geni_am",
-                          help="geni am", metavar="URL", default=None)
         parser.add_option("-r", "--registry", dest="registry",
                          help="root registry", metavar="URL", default=None)
         parser.add_option("-s", "--slicemgr", dest="sm",
@@ -282,11 +274,6 @@ class Sfi:
           errors += 1 
           
 
-       if (self.options.geni_am is not None):
-           geni_am_url = self.options.geni_am
-       elif hasattr(config, "SFI_GENI_AM"):
-           geni_am_url = config.SFI_GENI_AM
-           
        # Set user HRN
        if (self.options.user is not None):
           self.user = self.options.user
@@ -322,7 +309,6 @@ class Sfi:
        # Establish connection to server(s)
        self.registry = xmlrpcprotocol.get_server(reg_url, key_file, cert_file, self.options.debug)  
        self.slicemgr = xmlrpcprotocol.get_server(sm_url, key_file, cert_file, self.options.debug)
-       self.geni_am = xmlrpcprotocol.get_server(geni_am_url, key_file, cert_file, self.options.debug)
 
        return
     
@@ -366,22 +352,42 @@ class Sfi:
              print "Writing self-signed certificate to", file
           cert.save_to_file(file)
           return file
-   
-    def get_gid(self):
-        #file = os.path.join(self.options.sfi_dir, get_leaf(self.user) + ".gid")
-        file = os.path.join(self.options.sfi_dir, self.user.replace(self.authority + '.', '') + ".gid")
+
+    def get_cached_gid(self, file):
+        """
+        Return a cached gid    
+        """
+        gid = None 
         if (os.path.isfile(file)):
             gid = GID(filename=file)
-            return gid
-        else:
-            cert_str = self.cert.save_to_string(save_parents=True)
-            gid_str = self.registry.get_gid(cert_str, self.user, "user")
-            gid = GID(string=gid_str)
-            if self.options.verbose:
-                print "Writing user gid to", file
-            gid.save_to_file(file, save_parents=True)
-            return gid       
+        return gid
 
+    def get_gid(self, opts, args):
+        hrn = None
+        if args:
+            hrn = args[0]
+        gid = self._get_gid(hrn)
+        print gid.save_to_string(save_parents=True)
+        return gid
+
+    def _get_gid(self, hrn=None):
+        if not hrn:
+            hrn = self.user
+ 
+        gidfile = os.path.join(self.options.sfi_dir, hrn + ".gid")
+        gid = self.get_cached_gid(gidfile)
+        if not gid:
+            user_cred = self.get_user_cred()
+            records = self.registry.Resolve(hrn, user_cred.save_to_string(save_parents=True))
+            if not records:
+                raise RecordNotFound(args[0])
+            gid = GID(string=records[0]['gid'])
+            if self.options.verbose:
+                print "Writing gid to ", gidfile 
+            gid.save_to_file(filename=gidfile)
+        return gid   
+                
+     
     def get_cached_credential(self, file):
         """
         Return a cached credential only if it hasn't expired.
@@ -390,124 +396,53 @@ class Sfi:
             credential = Credential(filename=file)
             # make sure it isnt expired 
             if not credential.get_lifetime or \
-               datetime.datetime.today() < credential.get_lifefime():
+               datetime.datetime.today() < credential.get_lifetime():
                 return credential
         return None 
  
     def get_user_cred(self):
         #file = os.path.join(self.options.sfi_dir, get_leaf(self.user) + ".cred")
         file = os.path.join(self.options.sfi_dir, self.user.replace(self.authority + '.', '') + ".cred")
+        return self.get_cred(file, 'user', self.user)
 
-        user_cred = self.get_cached_credential(file)
-        if user_cred:
-            return user_cred
-        else:
-            # bootstrap user credential
-            cert_string = self.cert.save_to_string(save_parents=True)
-            user_name = self.user.replace(self.authority + ".", '')
-            if user_name.count(".") > 0:
-                user_name = user_name.replace(".", '_')
-                self.user = self.authority + "." + user_name
-
-            user_cred = self.registry.get_self_credential(cert_string, "user", self.user)
-            if user_cred:
-               cred = Credential(string=user_cred)
-               cred.save_to_file(file, save_parents=True)
-               if self.options.verbose:
-                    print "Writing user credential to", file
-               return cred
-            else:
-               print "Failed to get user credential"
-               sys.exit(-1)
-  
     def get_auth_cred(self):
         if not self.authority:
             print "no authority specified. Use -a or set SF_AUTH"
             sys.exit(-1)
-    
         file = os.path.join(self.options.sfi_dir, get_leaf("authority") + ".cred")
-        auth_cred = self.get_cached_credential(file)
-        if auth_cred:
-            return auth_cred
-        else:
-            # bootstrap authority credential from user credential
-            user_cred = self.get_user_cred().save_to_string(save_parents=True)
-            auth_cred = self.registry.get_credential(user_cred, "authority", self.authority)
-            if auth_cred:
-                cred = Credential(string=auth_cred)
-                cred.save_to_file(file, save_parents=True)
-                if self.options.verbose:
-                    print "Writing authority credential to", file
-                return cred
-            else:
-                print "Failed to get authority credential"
-                sys.exit(-1)
-    
+        return self.get_cred(file, 'authority', self.authority)
+
     def get_slice_cred(self, name):
         file = os.path.join(self.options.sfi_dir, "slice_" + get_leaf(name) + ".cred")
-        slice_cred = self.get_cached_credential(file)
-        if slice_cred:
-            return slice_cred
-        else:
-            # bootstrap slice credential from user credential
-            user_cred = self.get_user_cred().save_to_string(save_parents=True)
-            arg_list = [user_cred, "slice", name]
-            slice_cred_str = self.registry.get_credential(user_cred, "slice", name)
-            if slice_cred_str:
-                slice_cred = Credential(string=slice_cred_str)
-                slice_cred.save_to_file(file, save_parents=True)
-                if self.options.verbose:
-                    print "Writing slice credential to", file
-                return slice_cred
+        return self.get_cred(file, 'slice', name)
+ 
+    def get_cred(self, file, type, hrn):
+        # attempt to load a cached credential 
+        cred = self.get_cached_credential(file)    
+        if not cred:
+            if type in ['user']:
+                cert_string = self.cert.save_to_string(save_parents=True)
+                user_name = self.user.replace(self.authority + ".", '')
+                if user_name.count(".") > 0:
+                    user_name = user_name.replace(".", '_')
+                    self.user = self.authority + "." + user_name
+                cred_str = self.registry.get_self_credential(cert_string, "user", hrn)
             else:
-                print "Failed to get slice credential"
+                # bootstrap slice credential from user credential
+                user_cred = self.get_user_cred().save_to_string(save_parents=True)
+                cred_str = self.registry.get_credential(user_cred, type, hrn)
+            
+            if not cred_str:
+                print "Failed to get %s credential" % (type)
                 sys.exit(-1)
-    
-    def delegate_cred(self, cred, hrn, type='authority'):
-        # the gid and hrn of the object we are delegating
-        user_cred = Credential(string=cred)
-        object_gid = user_cred.get_gid_object()
-        object_hrn = object_gid.get_hrn()
-        #cred.set_delegate(True)
-        #if not cred.get_delegate():
-        #    raise Exception, "Error: Object credential %(object_hrn)s does not have delegate bit set" % locals()
-           
-    
-        records = self.registry.resolve(cred, hrn)
-        records = filter_records(type, records)
-        
-        if not records:
-            raise Exception, "Error: Didn't find a %(type)s record for %(hrn)s" % locals()
-    
-        # the gid of the user who will be delegated too
-        record = SfaRecord(dict=records[0])
-        delegee_gid = record.get_gid_object()
-        delegee_hrn = delegee_gid.get_hrn()
-        
-        # the key and hrn of the user who will be delegating
-        user_key = Keypair(filename=self.get_key_file())
-        user_hrn = user_cred.get_gid_caller().get_hrn()
-    
-        dcred = Credential(subject=object_hrn + " delegated to " + delegee_hrn)
-        dcred.set_gid_caller(delegee_gid)
-        dcred.set_gid_object(object_gid)
-        dcred.set_privileges(user_cred.get_privileges())
-        dcred.get_privileges().delegate_all_privileges(True)
-        
+                
+            cred = Credential(string=cred_str)
+            cred.save_to_file(file, save_parents=True)
+            if self.options.verbose:
+                print "Writing %s credential to %s" %(type, file)
 
-        # Save the issuer's gid to a file
-        fname = self.options.sfi_dir + os.sep + "gid_%d" % random.randint(0, 999999999)
-        f = open(fname, "w")
-        f.write(user_cred.get_gid_caller().save_to_string())
-        f.close()
-        dcred.set_issuer_keys(self.get_key_file(), fname)
-        os.remove(fname)
-        
-        dcred.set_parent(user_cred)
-        dcred.encode()
-        dcred.sign()
-    
-        return dcred.save_to_string(save_parents=True)
+        return cred
+ 
     
     def get_rspec_file(self, rspec):
        if (os.path.isabs(rspec)):
@@ -549,7 +484,7 @@ class Sfi:
     def get_component_server_from_hrn(self, hrn):
         # direct connection to the nodes component manager interface
         user_cred = self.get_user_cred().save_to_string(save_parents=True)
-        records = self.registry.resolve(user_cred, hrn)
+        records = self.registry.Resolve(hrn, user_cred)
         records = filter_records('node', records)
         if not records:
             print "No such component:", opts.component
@@ -564,7 +499,22 @@ class Sfi:
         """
         url = "http://%s:%s" % (host, port)
         return xmlrpcprotocol.get_server(url, keyfile, certfile, debug)
+
+    def get_server_from_opts(self, opts):
+        """
+        Return instance of an xmlrpc connection to a slice manager, aggregate
+        or component server depending on the specified opts
+        """
+        server = self.slicemgr
+        # direct connection to an aggregate
+        if hasattr(opts, 'aggregate') and opts.aggregate:
+            server = self.get_server(opts.aggregate, opts.port, self.key_file, \
+                                     self.cert_file, self.options.debug)
+        # direct connection to the nodes component manager interface
+        if hasattr(opts, 'component') and opts.component:
+            server = self.get_component_server_from_hrn(opts.component)    
  
+        return server
     #==========================================================================
     # Following functions implement the commands
     #
@@ -574,17 +524,12 @@ class Sfi:
     def dispatch(self, command, cmd_opts, cmd_args):
         getattr(self, command)(cmd_opts, cmd_args)
  
-    def gid(self, opts, args):
-        gid = self.get_gid()
-        print "GID: %s" % (gid.save_to_string(save_parents=True))
-        return   
- 
     # list entires in named authority registry
     def list(self, opts, args):
         user_cred = self.get_user_cred().save_to_string(save_parents=True)
         hrn = args[0]
         try:
-            list = self.registry.list(user_cred, hrn)
+            list = self.registry.List(hrn, user_cred)
         except IndexError:
             raise Exception, "Not enough parameters for the 'list' command"
           
@@ -604,7 +549,7 @@ class Sfi:
     def show(self, opts, args):
         user_cred = self.get_user_cred().save_to_string(save_parents=True)
         hrn = args[0]
-        records = self.registry.resolve(user_cred, hrn)
+        records = self.registry.Resolve(hrn, user_cred)
         records = filter_records(opts.type, records)
         if not records:
             print "No record of type", opts.type
@@ -632,61 +577,49 @@ class Sfi:
         return
     
     def delegate(self, opts, args):
-       user_cred = self.get_user_cred()
-       if opts.delegate_user:
-           object_cred = user_cred
-       elif opts.delegate_slice:
-           object_cred = self.get_slice_cred(opts.delegate_slice)
-       else:
-           print "Must specify either --user or --slice <hrn>"
-           return
-    
-       # the gid and hrn of the object we are delegating
-       object_gid = object_cred.get_gid_object()
-       object_hrn = object_gid.get_hrn()
-    
-       if not object_cred.get_privileges().get_all_delegate():
-           print "Error: Object credential", object_hrn, "does not have delegate bit set"
-           return
-    
-       records = self.registry.resolve(user_cred.save_to_string(save_parents=True), args[0])
-       records = filter_records("user", records)
-    
-       if not records:
-           print "Error: Didn't find a user record for", args[0]
-           return
-    
-       # the gid of the user who will be delegated to
-       delegee_gid = GID(string=records[0]['gid'])
-       delegee_hrn = delegee_gid.get_hrn()
-   
-       # the key and hrn of the user who will be delegating
-       user_key = Keypair(filename=self.get_key_file())
-       user_hrn = user_cred.get_gid_caller().get_hrn()
-       subject_string = "%s delegated to %s" % (object_hrn, delegee_hrn)
-       dcred = Credential(subject=subject_string)
-       dcred.set_gid_caller(delegee_gid)
-       dcred.set_gid_object(object_gid)
-       privs = object_cred.get_privileges()
-       dcred.set_privileges(object_cred.get_privileges())
-       dcred.get_privileges().delegate_all_privileges(True)
-       dcred.set_pubkey(object_gid.get_pubkey())
-       dcred.set_issuer(user_key, user_hrn)
-       dcred.set_parent(object_cred)
-       dcred.encode()
-       dcred.sign()
-    
-       if opts.delegate_user:
-           dest_fn = os.path.join(self.options.sfi_dir, get_leaf(delegee_hrn) + "_" 
+
+        delegee_hrn = args[0]
+        if opts.delegate_user:
+            user_cred = self.get_user_cred()
+            cred = self.delegate_cred(user_cred, delegee_hrn)
+        elif opts.delegate_slice:
+            slice_cred = self.get_slice_cred(opts.delegate_slice)
+            cred = self.delegate_cred(slice_cred, delegee_hrn)
+        else:
+            print "Must specify either --user or --slice <hrn>"
+            return
+        delegated_cred = Credential(string=cred)
+        object_hrn = delegated_cred.get_gid_object().get_hrn()
+        if opts.delegate_user:
+            dest_fn = os.path.join(self.options.sfi_dir, get_leaf(delegee_hrn) + "_"
                                   + get_leaf(object_hrn) + ".cred")
-       elif opts.delegate_slice:
-           dest_fn = os.path_join(self.options.sfi_dir, get_leaf(delegee_hrn) + "_slice_" 
+        elif opts.delegate_slice:
+            dest_fn = os.path.join(self.options.sfi_dir, get_leaf(delegee_hrn) + "_slice_"
                                   + get_leaf(object_hrn) + ".cred")
+
+        delegated_cred.save_to_file(dest_fn, save_parents=True)
+
+        print "delegated credential for", object_hrn, "to", delegee_hrn, "and wrote to", dest_fn
     
-       dcred.save_to_file(dest_fn, save_parents=True)
+    def delegate_cred(self, object_cred, hrn):
+        # the gid and hrn of the object we are delegating
+        if isinstance(object_cred, str):
+            object_cred = Credential(string=object_cred) 
+        object_gid = object_cred.get_gid_object()
+        object_hrn = object_gid.get_hrn()
     
-       print "delegated credential for", object_hrn, "to", delegee_hrn, "and wrote to", dest_fn
+        if not object_cred.get_privileges().get_all_delegate():
+            print "Error: Object credential", object_hrn, "does not have delegate bit set"
+            return
     
+        # the gid of the user who will be delegated to
+        delegee_gid = self._get_gid(hrn)
+        delegee_hrn = delegee_gid.get_hrn()
+        delegee_gidfile = os.path.join(self.options.sfi_dir, delegee_hrn + ".gid")
+        delegee_gid.save_to_file(filename=delegee_gidfile)
+        dcred = object_cred.delegate(delegee_gidfile, self.get_key_file())
+        return dcred.save_to_string(save_parents=True)
+     
     # removed named registry record
     #   - have to first retrieve the record to be removed
     def remove(self, opts, args):
@@ -695,7 +628,7 @@ class Sfi:
         type = opts.type 
         if type in ['all']:
             type = '*'
-        return self.registry.remove(auth_cred, type, hrn)
+        return self.registry.Remove(hrn, auth_cred, type)
     
     # add named registry record
     def add(self, opts, args):
@@ -703,7 +636,7 @@ class Sfi:
         record_filepath = args[0]
         rec_file = self.get_record_file(record_filepath)
         record = load_record_from_file(rec_file).as_dict()
-        return self.registry.register(auth_cred, record)
+        return self.registry.Register(record, auth_cred)
     
     # update named registry entry
     def update(self, opts, args):
@@ -732,11 +665,11 @@ class Sfi:
         else:
             raise "unknown record type" + record.get_type()
         record = record.as_dict()
-        return self.registry.update(cred, record)
+        return self.registry.Update(record, cred)
   
     def get_trusted_certs(self, opts, args):
         """
-        return the trusted certs at this interface 
+        return uhe trusted certs at this interface 
         """ 
         trusted_certs = self.registry.get_trusted_certs()
         for trusted_cert in trusted_certs:
@@ -757,20 +690,6 @@ class Sfi:
         display_list(result)
         return 
 
-    def get_geni_aggregates(self, opts, args):
-        """
-        return a list of details about known aggregates
-        """
-        user_cred = self.get_user_cred().save_to_string(save_parents=True)
-        hrn = None
-        if args:
-            hrn = args[0]
-
-        result = self.registry.get_geni_aggregates(user_cred, hrn)
-        display_list(result)
-        return 
-
-
     def registries(self, opts, args):
         """
         return a list of details about known registries
@@ -789,20 +708,19 @@ class Sfi:
     # ==================================================================
     
 
+    def version(self, opts, args):
+        server = self.get_server_from_opts(opts)
+        
+        print server.GetVersion()
+
     # list instantiated slices
     def slices(self, opts, args):
         """
         list instantiated slices
         """
         user_cred = self.get_user_cred().save_to_string(save_parents=True)
-        server = self.slicemgr
-        if opts.aggregate:
-            server = self.get_server(opts.aggregate, opts.port, self.key_file, \
-                                     self.cert_file, self.options.debug)
-        # direct connection to the nodes component manager interface
-        if opts.component:
-            server = self.get_component_server_from_hrn(opts.component)
-        results = server.get_slices(user_cred)
+        server = self.get_server_from_opts(opts)
+        results = server.ListSlices([user_cred])
         display_list(results)
         return
     
@@ -810,19 +728,22 @@ class Sfi:
     def resources(self, opts, args):
         user_cred = self.get_user_cred().save_to_string(save_parents=True)
         server = self.slicemgr
-        if opts.aggregate:
-            server = self.get_server(opts.aggregate, opts.port, self.key_file, \
-                                     self.cert_file, self.options.debug)
+        call_options = {}
+        server = self.get_server_from_opts(opts)
+        
         if args:
             cred = self.get_slice_cred(args[0]).save_to_string(save_parents=True)
             hrn = args[0]
+            call_options = {'geni_slice_urn': hrn_to_urn(hrn, 'slice')}
         else:
             cred = user_cred
             hrn = None
-
-        result = server.get_resources(cred, hrn)
+     
+        delegated_cred = self.delegate_cred(cred, get_authority(self.authority))
+        creds = [cred, delegated_cred] 
+        #creds = [delegated_cred] 
+        result = server.ListResources(creds, call_options)
         format = opts.format
-       
         display_rspec(result, format)
         if (opts.file is not None):
             file = opts.file
@@ -834,30 +755,26 @@ class Sfi:
     # created named slice with given rspec
     def create(self, opts, args):
         slice_hrn = args[0]
+        slice_urn = hrn_to_urn(slice_hrn, 'slice') 
         user_cred = self.get_user_cred()
         slice_cred = self.get_slice_cred(slice_hrn).save_to_string(save_parents=True)
         rspec_file = self.get_rspec_file(args[1])
         rspec = open(rspec_file).read()
-        server = self.slicemgr
-
-        if opts.aggregate:
-            server = self.get_server(opts.aggregate, opts.port, self.key_file, \
-                                     self.cert_file, self.options.debug)
-
-        return server.create_slice(slice_cred, slice_hrn, rspec)
+        server = self.get_server_from_opts(opts)
+        result =  server.CreateSliver(slice_urn, [slice_cred], rspec, [])
+        print result
+        return result
 
     # get a ticket for the specified slice
     def get_ticket(self, opts, args):
         slice_hrn, rspec_path = args[0], args[1]
+        slice_urn = hrn_to_urn(slice_hrn, 'slice')
         user_cred = self.get_user_cred()
         slice_cred = self.get_slice_cred(slice_hrn).save_to_string(save_parents=True)
         rspec_file = self.get_rspec_file(rspec_path) 
         rspec = open(rspec_file).read()
-        server = self.slicemgr
-        if opts.aggregate:
-            server = self.get_server(opts.aggregate, opts.port, self.key_file, \
-                                     self.cert_file, self.options.debug)
-        ticket_string = server.get_ticket(slice_cred, slice_hrn, rspec)
+        server = self.get_server_from_opts(opts)
+        ticket_string = server.GetTicket(slice_urn, [slice_cred], rspec, [])
         file = os.path.join(self.options.sfi_dir, get_leaf(slice_hrn) + ".ticket")
         print "writing ticket to ", file        
         ticket = SfaTicket(string=ticket_string)
@@ -871,6 +788,7 @@ class Sfi:
         ticket = SfaTicket(filename=ticket_file)
         ticket.decode()
         slice_hrn = ticket.gidObject.get_hrn()
+        slice_urn = hrn_to_urn(slice_hrn, 'slice') 
         #slice_hrn = ticket.attributes['slivers'][0]['hrn']
         user_cred = self.get_user_cred()
         slice_cred = self.get_slice_cred(slice_hrn).save_to_string(save_parents=True)
@@ -888,7 +806,7 @@ class Sfi:
                 print "Calling redeem_ticket at %(hostname)s " % locals(),
                 server = self.get_server(hostname, CM_PORT, self.key_file, \
                                          self.cert_file, self.options.debug)
-                server.redeem_ticket(slice_cred, ticket.save_to_string(save_parents=True))
+                server.RedeemTicket(ticket.save_to_string(save_parents=True), slice_cred)
                 print "Success"
             except socket.gaierror:
                 print "Failed:",
@@ -900,111 +818,58 @@ class Sfi:
     # delete named slice
     def delete(self, opts, args):
         slice_hrn = args[0]
-        server = self.slicemgr
-        if opts.aggregate:
-            server = self.get_server(opts.aggregate, opts.port, self.key_file, \
-                                     self.cert_file, self.options.debug)
-        # direct connection to the nodes component manager interface
-        if opts.component:
-            server = self.get_component_server_from_hrn(opts.component)
+        slice_urn = hrn_to_urn(slice_hrn, 'slice') 
         slice_cred = self.get_slice_cred(slice_hrn).save_to_string(save_parents=True)
-        return server.delete_slice(slice_cred, slice_hrn)
+        server = self.get_server_from_opts(opts)
+        return server.DeleteSliver(slice_urn, [slice_cred])
     
     # start named slice
     def start(self, opts, args):
         slice_hrn = args[0]
-        server = self.slicemgr
-        # direct connection to an aggregagte
-        if opts.aggregate:
-            server = self.get_server(opts.aggregate, opts.port, self.key_file, \
-                                     self.cert_file, self.options.debug)
-        if opts.component:
-            server = self.get_component_server_from_hrn(opts.component)
+        slice_urn = hrn_to_urn(slice_hrn, 'slice') 
         slice_cred = self.get_slice_cred(args[0]).save_to_string(save_parents=True)
-        return server.start_slice(slice_cred, slice_hrn)
+        server = self.get_server_from_opts(opts)
+        return server.Start(slice_urn, [slice_cred])
     
     # stop named slice
     def stop(self, opts, args):
         slice_hrn = args[0]
-        server = self.slicemgr
-        # direct connection to an aggregate
-        if opts.aggregate:
-            server = self.get_server(opts.aggregate, opts.port, self.key_file, \
-                                     self.cert_file, self.options.debug)
-        # direct connection to the nodes component manager interface
-        if opts.component:
-            server = self.get_component_server_from_hrn(opts.component)
+        slice_urn = hrn_to_urn(slice_hrn, 'slice') 
         slice_cred = self.get_slice_cred(args[0]).save_to_string(save_parents=True)
-        return server.stop_slice(slice_cred, slice_hrn)
+        server = self.get_server_from_opts(opts)
+        return server.Stop(slice_urn, [slice_cred])
     
     # reset named slice
     def reset(self, opts, args):
         slice_hrn = args[0]
-        server = self.slicemgr
-        # direct connection to the nodes component manager interface
-        if opts.component:
-            server = self.get_component_server_from_hrn(opts.component)
+        slice_urn = hrn_to_urn(slice_hrn, 'slice') 
+        server = self.get_server_from_opts(opts)
         slice_cred = self.get_slice_cred(args[0]).save_to_string(save_parents=True)
-        return server.reset_slice(slice_cred, slice_hrn)
+        return server.reset_slice(slice_cred, slice_urn)
 
-
-    # =====================================================================
-    # GENI AM related calls
-    # =====================================================================
-
-    def GetVersion(self, opts, args):
-        server = self.geni_am
-        print server.GetVersion()
-
-    def ListResources(self, opts, args):
-        user_cred = self.get_user_cred().save_to_string(save_parents=True)
-        server = self.geni_am
-        call_options = {'geni_compressed': True}
-        xrn = None
-        cred = user_cred
-        if args:
-            xrn = args[0]
-            cred = self.get_slice_cred(xrn).save_to_string(save_parents=True)
-
-        if xrn:
-            call_options['geni_slice_urn'] = xrn
-            
-        rspec = server.ListResources([cred], call_options)
-        rspec = zlib.decompress(rspec.decode('base64'))
-        print rspec
-        
-    def CreateSliver(self, opts, args):
-        slice_xrn = args[0]
-        slice_cred = self.get_slice_cred(slice_xrn).save_to_string(save_parents=True)
-        rspec_file = self.get_rspec_file(args[1])
-        rspec = open(rspec_file).read()
-        server = self.geni_am
-        return server.CreateSliver(slice_xrn, [slice_cred], rspec, [])
-    
-    def DeleteSliver(self, opts, args):
-        slice_xrn = args[0]
-        slice_cred = self.get_slice_cred(slice_xrn).save_to_string(save_parents=True)
-        server = self.geni_am
-        return server.DeleteSliver(slice_xrn, [slice_cred])    
-
-    def SliverStatus(self, opts, args):
-        slice_xrn = args[0]
-        slice_cred = self.get_slice_cred(slice_xrn).save_to_string(save_parents=True)
-        server = self.geni_am
-        print server.SliverStatus(slice_xrn, [slice_cred])
-    
-    def RenewSliver(self, opts, args):
-        slice_xrn = args[0]
-        slice_cred = self.get_slice_cred(slice_xrn).save_to_string(save_parents=True)
+    def renew(self, opts, args):
+        slice_hrn = args[0]
+        slice_urn = hrn_to_urn(slice_hrn, 'slice') 
+        server = self.get_server_from_opts(opts)
+        slice_cred = self.get_slice_cred(args[0]).save_to_string(save_parents=True)
         time = args[1]
-        server = self.geni_am
-        return server.RenewSliver(slice_xrn, [slice_cred], time)   
+        return server.RenewSliver(slice_urn, [slice_cred], time)
 
-    def Shutdown(self, opts, args):
-        slice_xrn = args[0]
-        slice_cred = self.get_slice_cred(slice_xrn).save_to_string(save_parents=True)
-        server = self.geni_am
-        return server.Shutdown(slice_xrn, [slice_cred])         
+
+    def status(self, opts, args):
+        slice_hrn = args[0]
+        slice_urn = hrn_to_urn(slice_hrn, 'slice') 
+        slice_cred = self.get_slice_cred(slice_hrn).save_to_string(save_parents=True)
+        server = self.get_server_from_opts(opts)
+        print server.SliverStatus(slice_urn, [slice_cred])
+
+
+    def shutdown(self, opts, args):
+        slice_hrn = args[0]
+        slice_urn = hrn_to_urn(slice_hrn, 'slice') 
+        slice_cred = self.get_slice_cred(slice_hrn).save_to_string(save_parents=True)
+        server = self.get_server_from_opts(opts)
+        return server.Shutdown(slice_urn, [slice_cred])         
     
     #
     # Main: parse arguments and dispatch to command

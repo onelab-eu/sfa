@@ -175,7 +175,7 @@ class Slices:
         if reg_objects:
             site = reg_objects['site']
         else:
-            site_records = registry.resolve(credential, authority_urn)
+            site_records = registry.Resolve(authority_urn, [credential])
             site = {}            
             for site_record in site_records:            
                 if site_record['type'] == 'authority':
@@ -215,7 +215,7 @@ class Slices:
         if reg_objects:
             slice_record = reg_objects['slice_record']
         else:
-            slice_records = registry.resolve(credential, slice_hrn)
+            slice_records = registry.Resolve(slice_hrn, [credential])
     
             for record in slice_records:
                 if record['type'] in ['slice']:
@@ -273,7 +273,7 @@ class Slices:
             if reg_objects:
                 person_dict = reg_objects['users'][researcher]
             else:
-                person_records = registry.resolve(credential, researcher)
+                person_records = registry.Resolve(researcher, [credential])
                 for record in person_records:
                     if record['type'] in ['user'] and record['enabled']:
                         person_record = record

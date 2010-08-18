@@ -15,7 +15,6 @@ class NodeManager:
     
     def __call__(self, *args):
         method = self.method
-        ### WARNING -- hardwired name needs to be computed
         sfa_slice_prefix = self.config.SFA_CM_SLICE_PREFIX 
         sfa_slice = sfa_slice_prefix + "_sfacm"
         python = "/usr/bin/python"

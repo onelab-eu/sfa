@@ -4,10 +4,17 @@
 - Stop invalid users
 * a recently disabled/deleted user may still have a valid cred. Keep a list of valid/invalid users on the aggregate and check callers against this list
 
+- Aggregate/SM
+* Why do some aggregate managers fail implement all Slice operations (delete, stop, etc)
+
+ 
 - Component manager
-  * GetGids - make this work for peer slices
   * Redeem ticket - RedeemTicket/AdminTicket not working. Why?
+  ** This may be replaced by sfa + credentials  
   * install the slice and node gid when the slice is created (create NM plugin to execute sfa_component_setup.py ?) 
+
+- SFI
+* Update sfi to use the new methods. I've left this for last because its been useful to make sure the old methods are forwarding the request to the new methods correctly. Once Im sure there are no more changes to be made, ill update sfi to use the new methods.
 
 - Registry
 * fix legacy credential support
@@ -20,7 +27,6 @@
   * gui requires user's cred (depends on Auth Service above)
       
 - Protogeni
-* agree on standard set of functon calls
 * agree on standard set of privs
 * on permission error, return priv needed to make call
 * cache slice resource states (if aggregate goes down, how do we know what

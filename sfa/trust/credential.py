@@ -33,7 +33,7 @@ import os
 import datetime
 from xml.dom.minidom import Document, parseString
 from tempfile import mkstemp
-
+from sfa.trust.certificate import Keypair
 from sfa.trust.credential_legacy import CredentialLegacy
 from sfa.trust.rights import *
 from sfa.trust.gid import *
@@ -779,6 +779,35 @@ class Credential(object):
         if parent_cred.parent:
             parent_cred.verify_parent(parent_cred.parent)
 
+
+    def delegate(self, delegee_gidfile, keyfile):
+        """
+        Return a delegated copy of this credential, delegated to the 
+        specified gid's user.    
+        """
+        # get the gid of the object we are delegating
+        object_gid = self.get_gid_object()
+        object_hrn = object_gid.get_hrn()        
+ 
+        # the hrn of the user who will be delegated to
+        delegee_gid = GID(filename=delegee_gidfile)
+        delegee_hrn = delegee_gid.get_hrn()
+   
+        user_key = Keypair(filename=keyfile)
+        user_hrn = self.get_gid_caller().get_hrn()
+        subject_string = "%s delegated to %s" % (object_hrn, delegee_hrn)
+        dcred = Credential(subject=subject_string)
+        dcred.set_gid_caller(delegee_gid)
+        dcred.set_gid_object(object_gid)
+        privs = self.get_privileges()
+        dcred.set_privileges(self.get_privileges())
+        dcred.get_privileges().delegate_all_privileges(True)
+        dcred.set_issuer_keys(keyfile, delegee_gidfile)
+        dcred.set_parent(self)
+        dcred.encode()
+        dcred.sign()
+
+        return dcred 
     ##
     # Dump the contents of a credential to stdout in human-readable format
     #

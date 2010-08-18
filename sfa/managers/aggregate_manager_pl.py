@@ -17,40 +17,90 @@ from sfa.util.record import *
 from sfa.util.sfaticket import SfaTicket
 from sfa.util.debug import log
 from sfa.plc.slices import Slices
+from sfa.trust.credential import Credential
 import sfa.plc.peers as peers
 from sfa.plc.network import *
 from sfa.plc.api import SfaAPI
 from sfa.plc.slices import *
 
-def delete_slice(api, xrn):
-    hrn, type = urn_to_hrn(xrn)
-    slicename = hrn_to_pl_slicename(hrn)
-    slices = api.plshell.GetSlices(api.plauth, {'name': slicename})
-    if not slices:
-        return 1
-    slice = slices[0]
 
-    # determine if this is a peer slice
-    peer = peers.get_peer(api, hrn)
-    if peer:
-        api.plshell.UnBindObjectFromPeer(api.plauth, 'slice', slice['slice_id'], peer)
-    api.plshell.DeleteSliceFromNodes(api.plauth, slicename, slice['node_ids'])
-    if peer:
-        api.plshell.BindObjectToPeer(api.plauth, 'slice', slice['slice_id'], peer, slice['peer_slice_id'])
-    return 1
+def __get_registry_objects(slice_xrn, creds, users):
+    """
+
+    """
+    hrn, type = urn_to_hrn(slice_xrn)
+
+    hrn_auth = get_authority(hrn)
+
+    # Build up objects that an SFA registry would return if SFA
+    # could contact the slice's registry directly
+    reg_objects = None
+
+    if users:
+        reg_objects = {}
+
+        site = {}
+        site['site_id'] = 0
+        site['name'] = 'geni.%s' % hrn_auth
+        site['enabled'] = True
+        site['max_slices'] = 100
+
+        # Note:
+        # Is it okay if this login base is the same as one already at this myplc site?
+        # Do we need uniqueness?  Should use hrn_auth instead of just the leaf perhaps?
+        site['login_base'] = get_leaf(hrn_auth)
+        site['abbreviated_name'] = hrn
+        site['max_slivers'] = 1000
+        reg_objects['site'] = site
+
+        slice = {}
+        slice['expires'] = int(mktime(Credential(string=creds[0]).get_lifetime().timetuple()))
+        slice['hrn'] = hrn
+        slice['name'] = site['login_base'] + "_" +  get_leaf(hrn)
+        slice['url'] = hrn
+        slice['description'] = hrn
+        slice['pointer'] = 0
+        reg_objects['slice_record'] = slice
+
+        reg_objects['users'] = {}
+        for user in users:
+            user['key_ids'] = []
+            hrn, _ = urn_to_hrn(user['urn'])
+            user['email'] = hrn + "@geni.net"
+            user['first_name'] = hrn
+            user['last_name'] = hrn
+            reg_objects['users'][user['email']] = user
+
+        return reg_objects
 
 def __get_hostnames(nodes):
     hostnames = []
     for node in nodes:
         hostnames.append(node.hostname)
     return hostnames
-    
-def create_slice(api, xrn, xml, reg_objects=None):
+
+def get_version():
+    version = {}
+    version['geni_api'] = 1
+    version['sfa'] = 1
+    return version
+
+def slice_status(api, slice_xrn, creds):
+    result = {}
+    result['geni_urn'] = slice_xrn
+    result['geni_status'] = 'unknown'
+    result['geni_resources'] = {}
+    return result
+
+def create_slice(api, slice_xrn, creds, rspec, users):
     """
+    Create the sliver[s] (slice) at this aggregate.    
     Verify HRN and initialize the slice record in PLC if necessary.
     """
 
-    hrn, type = urn_to_hrn(xrn)
+    reg_objects = __get_registry_objects(slice_xrn, creds, users)
+
+    hrn, type = urn_to_hrn(slice_xrn)
     peer = None
     slices = Slices(api)
     peer = slices.get_peer(hrn)
@@ -68,7 +118,7 @@ def create_slice(api, xrn, xml, reg_objects=None):
     slice = network.get_slice(api, hrn)
     current = __get_hostnames(slice.get_nodes())
     
-    network.addRSpec(xml, api.config.SFA_AGGREGATE_RSPEC_SCHEMA)
+    network.addRSpec(rspec, api.config.SFA_AGGREGATE_RSPEC_SCHEMA)
     request = __get_hostnames(network.nodesWithSlivers())
     
     # remove nodes not in rspec
@@ -77,8 +127,6 @@ def create_slice(api, xrn, xml, reg_objects=None):
     # add nodes from rspec
     added_nodes = list(set(request).difference(current))
     
-
-
     if peer:
         api.plshell.UnBindObjectFromPeer(api.plauth, 'slice', slice.id, peer)
 
@@ -96,27 +144,138 @@ def create_slice(api, xrn, xml, reg_objects=None):
     return True
 
 
-def get_ticket(api, xrn, rspec, origin_hrn=None, reg_objects=None):
+def renew_slice(api, xrn, creds, exipration_time):
+    hrn, type = urn_to_hrn(xrn)
+    slicename = hrn_to_pl_slicename(hrn)
+    slices = api.plshell.GetSlices(api.plauth, {'name': slicename}, ['slice_id'])
+    if not slices:
+        raise RecordNotFound(hrn)
+    slice = slices[0]
+    slice['expires'] = expiration_time
+    api.plshell.UpdateSlice(api.plauth, slice['slice_id'], slice)
+    return 1         
+
+def start_slice(api, xrn, creds):
+    hrn, type = urn_to_hrn(xrn)
+    slicename = hrn_to_pl_slicename(hrn)
+    slices = api.plshell.GetSlices(api.plauth, {'name': slicename}, ['slice_id'])
+    if not slices:
+        raise RecordNotFound(hrn)
+    slice_id = slices[0]['slice_id']
+    slice_tags = api.plshell.GetSliceTags(api.plauth, {'slice_id': slice_id, 'tagname': 'enabled'}, ['slice_tag_id'])
+    # just remove the tag if it exists
+    if slice_tags:
+        api.plshell.DeleteSliceTag(api.plauth, slice_tags[0]['slice_tag_id'])
+
+    return 1
+ 
+def stop_slice(api, xrn, creds):
+    hrn, type = urn_to_hrn(xrn)
+    slicename = hrn_to_pl_slicename(hrn)
+    slices = api.plshell.GetSlices(api.plauth, {'name': slicename}, ['slice_id'])
+    if not slices:
+        raise RecordNotFound(hrn)
+    slice_id = slices[0]['slice_id']
+    slice_tags = api.plshell.GetSliceTags(api.plauth, {'slice_id': slice_id, 'tagname': 'enabled'})
+    if not slice_tags:
+        api.plshell.AddSliceTag(api.plauth, slice_id, 'enabled', '0')
+    elif slice_tags[0]['value'] != "0":
+        tag_id = attributes[0]['slice_tag_id']
+        api.plshell.UpdateSliceTag(api.plauth, tag_id, '0')
+    return 1
+
+def reset_slice(api, xrn):
+    # XX not implemented at this interface
+    return 1
+
+def delete_slice(api, xrn, creds):
+    hrn, type = urn_to_hrn(xrn)
+    slicename = hrn_to_pl_slicename(hrn)
+    slices = api.plshell.GetSlices(api.plauth, {'name': slicename})
+    if not slices:
+        return 1
+    slice = slices[0]
+
+    # determine if this is a peer slice
+    peer = peers.get_peer(api, hrn)
+    if peer:
+        api.plshell.UnBindObjectFromPeer(api.plauth, 'slice', slice['slice_id'], peer)
+    api.plshell.DeleteSliceFromNodes(api.plauth, slicename, slice['node_ids'])
+    if peer:
+        api.plshell.BindObjectToPeer(api.plauth, 'slice', slice['slice_id'], peer, slice['peer_slice_id'])
+    return 1
+
+def get_slices(api, creds):
+    # look in cache first
+    if api.cache:
+        slices = api.cache.get('slices')
+        if slices:
+            return slices
+
+    # get data from db 
+    slices = api.plshell.GetSlices(api.plauth, {'peer_id': None}, ['name'])
+    slice_hrns = [slicename_to_hrn(api.hrn, slice['name']) for slice in slices]
+    slice_urns = [hrn_to_urn(slice_hrn, 'slice') for slice_hrn in slice_hrns]
+
+    # cache the result
+    if api.cache:
+        api.cache.add('slices', slice_urns) 
+
+    return slice_urns
+    
+def get_rspec(api, creds, options):
+    # get slice's hrn from options
+    xrn = options.get('geni_slice_urn', None)
+    hrn, type = urn_to_hrn(xrn)
+
+    # get hrn of the original caller
+    origin_hrn = options.get('origin_hrn', None)
+    if not origin_hrn:
+        origin_hrn = Credential(string=creds[0]).get_gid_caller().get_hrn()
+    
+    # look in cache first
+    if api.cache and not xrn:
+        rspec = api.cache.get('nodes')
+        if rspec:
+            return rspec 
+
+    network = Network(api)
+    if (hrn):
+        if network.get_slice(api, hrn):
+            network.addSlice()
+
+    rspec = network.toxml()
+
+    # cache the result
+    if api.cache and not xrn:
+        api.cache.add('nodes', rspec)
+
+    return rspec
+
+
+def get_ticket(api, xrn, creds, rspec, users):
+
+    reg_objects = __get_registry_objects(xrn, creds, users)
 
     slice_hrn, type = urn_to_hrn(xrn)
     slices = Slices(api)
     peer = slices.get_peer(slice_hrn)
     sfa_peer = slices.get_sfa_peer(slice_hrn)
-    
+
     # get the slice record
     registry = api.registries[api.hrn]
     credential = api.getCredential()
-    records = registry.resolve(credential, xrn)
+    records = registry.Resolve(xrn, credential)
 
     # similar to create_slice, we must verify that the required records exist
-    # at this aggregate before we can issue a ticket   
+    # at this aggregate before we can issue a ticket
     site_id, remote_site_id = slices.verify_site(registry, credential, slice_hrn,
                                                  peer, sfa_peer, reg_objects)
     slice = slices.verify_slice(registry, credential, slice_hrn, site_id,
                                 remote_site_id, peer, sfa_peer, reg_objects)
 
     # make sure we get a local slice record
-    record = None  
+    record = None
     for tmp_record in records:
         if tmp_record['type'] == 'slice' and \
            not tmp_record['peer_authority']:
@@ -128,7 +287,7 @@ def get_ticket(api, xrn, rspec, origin_hrn=None, reg_objects=None):
     slivers = Slices(api).get_slivers(slice_hrn)
     if not slivers:
         raise SliverDoesNotExist(slice_hrn)
-    
+
     # get initscripts
     initscripts = []
     data = {
@@ -149,88 +308,10 @@ def get_ticket(api, xrn, rspec, origin_hrn=None, reg_objects=None):
     #new_ticket.set_parent(api.auth.hierarchy.get_auth_ticket(auth_hrn))
     new_ticket.encode()
     new_ticket.sign()
-    
+
     return new_ticket.save_to_string(save_parents=True)
 
-def start_slice(api, xrn):
-    hrn, type = urn_to_hrn(xrn)
-    slicename = hrn_to_pl_slicename(hrn)
-    slices = api.plshell.GetSlices(api.plauth, {'name': slicename}, ['slice_id'])
-    if not slices:
-        raise RecordNotFound(hrn)
-    slice_id = slices[0]
-    attributes = api.plshell.GetSliceTags(api.plauth, {'slice_id': slice_id, 'name': 'enabled'}, ['slice_attribute_id'])
-    attribute_id = attributes[0]['slice_attribute_id']
-    api.plshell.UpdateSliceTag(api.plauth, attribute_id, "1" )
 
-    return 1
- 
-def stop_slice(api, xrn):
-    hrn, type = urn_to_hrn(xrn)
-    slicename = hrn_to_pl_slicename(hrn)
-    slices = api.plshell.GetSlices(api.plauth, {'name': slicename}, ['slice_id'])
-    if not slices:
-        raise RecordNotFound(hrn)
-    slice_id = slices[0]['slice_id']
-    attributes = api.plshell.GetSliceTags(api.plauth, {'slice_id': slice_id, 'name': 'enabled'}, ['slice_attribute_id'])
-    attribute_id = attributes[0]['slice_attribute_id']
-    api.plshell.UpdateSliceTag(api.plauth, attribute_id, "0")
-    return 1
-
-def reset_slice(api, xrn):
-    # XX not implemented at this interface
-    return 1
-
-def get_slices(api):
-    # look in cache first
-    if api.cache:
-        slices = api.cache.get('slices')
-        if slices:
-            return slices
-
-    # get data from db 
-    slices = api.plshell.GetSlices(api.plauth, {'peer_id': None}, ['name'])
-    slice_hrns = [slicename_to_hrn(api.hrn, slice['name']) for slice in slices]
-    slice_urns = [hrn_to_urn(slice_hrn, 'slice') for slice_hrn in slice_hrns]
-
-    # cache the result
-    if api.cache:
-        api.cache.add('slices', slice_urns) 
-
-    return slice_urns
-    
-def get_rspec(api, xrn=None, origin_hrn=None):
-    # look in cache first
-    if api.cache and not xrn:
-        rspec = api.cache.get('nodes')
-        if rspec:
-            return rspec 
-
-    hrn, type = urn_to_hrn(xrn)
-    network = Network(api)
-    if (hrn):
-        if network.get_slice(api, hrn):
-            network.addSlice()
-
-    rspec = network.toxml()
-
-    # cache the result
-    if api.cache and not xrn:
-        api.cache.add('nodes', rspec)
-
-    return rspec
-
-"""
-Returns the request context required by sfatables. At some point, this
-mechanism should be changed to refer to "contexts", which is the
-information that sfatables is requesting. But for now, we just return
-the basic information needed in a dict.
-"""
-def fetch_context(slice_xrn, user_xrn, contexts):
-    slice_hrn, type = urn_to_hrn(slice_xrn)
-    user_hrn, type = urn_to_hrn(user_xrn)
-    base_context = {'sfa':{'user':{'hrn':user_hrn}, 'slice':{'hrn':slice_hrn}}}
-    return base_context
 
 def main():
     api = SfaAPI()
