@@ -41,14 +41,14 @@ def __get_registry_objects(slice_xrn, creds, users):
 
         site = {}
         site['site_id'] = 0
-        site['name'] = 'geni.%s' % hrn_auth
+        site['name'] = 'geni.%s' % hrn[:20]
         site['enabled'] = True
         site['max_slices'] = 100
 
         # Note:
         # Is it okay if this login base is the same as one already at this myplc site?
         # Do we need uniqueness?  Should use hrn_auth instead of just the leaf perhaps?
-        site['login_base'] = get_leaf(hrn_auth)
+        site['login_base'] = hrn[:20]
         site['abbreviated_name'] = hrn
         site['max_slivers'] = 1000
         reg_objects['site'] = site
