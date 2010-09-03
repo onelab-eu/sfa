@@ -10,6 +10,7 @@ import os
 import traceback
 import string
 import xmlrpclib
+import sfa.util.xmlrpcprotocol as xmlrpcprotocol
 from sfa.trust.auth import Auth
 from sfa.util.config import *
 from sfa.util.faults import *
@@ -124,11 +125,26 @@ class SfaAPI(BaseAPI):
         return shell
 
     def getCredential(self):
+        """
+        Retrun a valid credential for this interface. 
+        """
         if self.interface in ['registry']:
             return self.getCredentialFromLocalRegistry()
         else:
             return self.getCredentialFromRegistry()
-    
+
+    def getDelegatedCredential(self, creds):
+        """
+        Attempt to find a credential delegated to us in
+        the specified list of creds.
+        """
+        if creds and not isinstance(creds, list): 
+            creds = [creds]
+        delegated_creds = filter_creds_by_caller(creds,self.hrn)
+        if not delegated_creds:
+            return None
+        return delegated_creds[0]
+ 
     def getCredentialFromRegistry(self):
         """ 
         Get our credential from a remote registry 
@@ -620,7 +636,7 @@ class ComponentAPI(BaseAPI):
         """
         path = self.config.SFA_DATA_DIR
         config_dir = self.config.config_path
-        credfile = path + os.sep + 'node.cred'
+        cred_filename = path + os.sep + 'node.cred'
         try:
             credential = Credential(filename = cred_filename)
             return credential.save_to_string(save_parents=True)

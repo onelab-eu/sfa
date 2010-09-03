@@ -1,6 +1,7 @@
 #! /usr/bin/env python
 
 import sys
+from copy import deepcopy
 from lxml import etree
 from StringIO import StringIO
 from optparse import OptionParser

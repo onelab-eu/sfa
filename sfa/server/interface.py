@@ -7,7 +7,6 @@ from sfa.util.faults import *
 from sfa.util.storage import *
 from sfa.util.namespace import *
 from sfa.trust.gid import GID
-from sfa.util.table import SfaTable
 from sfa.util.record import SfaRecord
 import traceback
 import sfa.util.xmlrpcprotocol as xmlrpcprotocol
@@ -150,6 +149,8 @@ class Interfaces(dict):
         defined in the config file (registries.xml). Removes old records from
         the db.         
         """
+        # import SfaTable here so this module can be loaded by CompoenetAPI 
+        from sfa.util.table import SfaTable
         if not gids: 
             return
         

@@ -16,7 +16,6 @@ import inspect
 from types import *
 from optparse import OptionParser
 
-from sfa.trust.auth import Auth
 from sfa.util.parameter import Parameter,Mixed
 
 import globals

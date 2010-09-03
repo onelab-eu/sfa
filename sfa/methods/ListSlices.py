@@ -33,5 +33,5 @@ class ListSlices(Method):
         self.api.logger.info("interface: %s\tcaller-hrn: %s\tmethod-name: %s"%(self.api.interface, origin_hrn, self.name))
 
         manager = self.api.get_interface_manager() 
-        return manager.get_slices(self.api, valid_creds)
+        return manager.get_slices(self.api, creds)
  

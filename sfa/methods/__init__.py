@@ -36,12 +36,10 @@ ListResources
 ListSlices
 CreateSliver
 UpdateSliver
-get_geni_aggregates
 DeleteSliver
 SliverStatus
 RenewSliver
 Start
 Stop
 Shutdown
-ResolveGENI
 """.split()

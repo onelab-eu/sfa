@@ -110,12 +110,13 @@ def create_slice(api, slice_xrn, creds, rspec, users):
     site_id, remote_site_id = slices.verify_site(registry, credential, hrn, 
                                                  peer, sfa_peer, reg_objects)
 
-    slice = slices.verify_slice(registry, credential, hrn, site_id, 
+    slice_record = slices.verify_slice(registry, credential, hrn, site_id, 
                                 remote_site_id, peer, sfa_peer, reg_objects)
-
+     
     network = Network(api)
 
     slice = network.get_slice(api, hrn)
+    slice.peer_id = slice_record['peer_slice_id']
     current = __get_hostnames(slice.get_nodes())
     
     network.addRSpec(rspec, api.config.SFA_AGGREGATE_RSPEC_SCHEMA)
@@ -228,11 +229,6 @@ def get_rspec(api, creds, options):
     xrn = options.get('geni_slice_urn', None)
     hrn, type = urn_to_hrn(xrn)
 
-    # get hrn of the original caller
-    origin_hrn = options.get('origin_hrn', None)
-    if not origin_hrn:
-        origin_hrn = Credential(string=creds[0]).get_gid_caller().get_hrn()
-    
     # look in cache first
     if api.cache and not xrn:
         rspec = api.cache.get('nodes')

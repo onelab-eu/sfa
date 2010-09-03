@@ -36,6 +36,6 @@ class Start(Method):
         self.api.logger.info("interface: %s\tcaller-hrn: %s\ttarget-hrn: %s\tmethod-name: %s"%(self.api.interface, origin_hrn, hrn, self.name))
 
         manager = self.api.get_interface_manager() 
-        manager.start_slice(self.api, xrn, valid_creds)
+        manager.start_slice(self.api, xrn, creds)
  
         return 1 

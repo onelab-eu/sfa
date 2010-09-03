@@ -75,10 +75,6 @@ start() {
         action "SFA SliceMgr" daemon /usr/bin/sfa-server.py -s -d $OPTIONS
     fi
 
-		if [ "$SFA_GENI_AGGREGATE_ENABLED" ]; then
-				action $"SFA GENI Aggregate" daemon /usr/bin/sfa-server.py -g -d $OPTIONS
-		fi
-
     RETVAL=$?
     [ $RETVAL -eq 0 ] && touch /var/lock/subsys/sfa
 

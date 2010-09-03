@@ -34,7 +34,6 @@ registry_port=12345
 aggregate_port=12346
 slicemgr_port=12347
 component_port=12346
-geni_am_port=12348
 import os, os.path
 import sys
 from optparse import OptionParser
@@ -148,14 +147,6 @@ def init_server(options, config):
         except: manager = None
         if manager and hasattr(manager, 'init_server'):
             manager.init_server()
-    if options.gam:
-        mgr_type = config.SFA_GENI_AGGREGATE_TYPE
-        manager_module = manager_base + ".geni_am_%s" % mgr_type
-        try: manager = __import__(manager_module, fromlist=[manager_base])
-        except: manager = None
-        if manager and hasattr(manager, 'init_server'):
-            manager.init_server()
-            
 
 def sync_interfaces(server_key_file, server_cert_file):
     """
@@ -186,8 +177,6 @@ def main():
          help="run aggregate manager", default=False)
     parser.add_option("-c", "--component", dest="cm", action="store_true",
          help="run component server", default=False)
-    parser.add_option("-g", "--geniam", dest="gam", action="store_true",
-         help="run GENI aggregate manager", default=False)
     parser.add_option("-v", "--verbose", dest="verbose", action="store_true", 
          help="verbose mode", default=False)
     parser.add_option("-d", "--daemon", dest="daemon", action="store_true",
@@ -227,12 +216,6 @@ def main():
         from sfa.server.component import Component
         c = Component("", component_port, server_key_file, server_cert_file)
         c.start()
-
-    # start GENI aggregate manager
-    if (options.gam):
-        from sfa.server.geni_aggregate import GENIAggregate
-        g = GENIAggregate("", geni_am_port, server_key_file, server_cert_file)
-        g.start()
 
 if __name__ == "__main__":
     main()

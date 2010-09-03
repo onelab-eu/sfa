@@ -15,7 +15,6 @@ from sfa.util.config import *
 from sfa.util.namespace import *
 from sfa.util.sfaticket import *
 from sfa.util.sfalogging import logger
-
 import sys
 
 class Auth:
@@ -303,3 +302,20 @@ class Auth:
 
     def get_authority(self, hrn):
         return get_authority(hrn)
+
+    def filter_creds_by_caller(self, creds, caller_hrn):
+        """
+        Returns a list of creds who's gid caller matches the 
+        specified caller hrn
+        """
+        if not isinstance(creds, list):
+            creds = [creds]
+        creds = []
+        for cred in creds:
+            try:
+                tmp_cred = Credential(string=cred)
+                if tmp_cred.get_gid_caller().get_hrn() == caller_hrn:
+                    creds.append(cred)
+            except: pass
+        return creds
+

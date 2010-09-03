@@ -58,7 +58,7 @@ def main():
             records = []
             target_hrns = hrn_dict[registry_hrn]    
             try:
-                records = registries[registry_hrn].resolve(credential, target_hrns)
+                records = registries[registry_hrn].Resolve(target_hrns, credential)
                 found_records.extend([record['hrn'] for record in records])
             except ServerException:
                 # an exception will be thrown if the record doenst exist
@@ -73,7 +73,7 @@ def main():
     # remove what wasnt found 
     for peer_record in peer_records:
         if peer_record['hrn'] not in found_records:
-            registries[sfa_api.hrn].remove(credential, peer_record)
+            registries[sfa_api.hrn].Remove(peer_record['hrn'], credential, peer_record['type'])
                 
 if __name__ == '__main__':
     main()

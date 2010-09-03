@@ -146,7 +146,7 @@ def get_credential(registry=None, force=False, verbose=False):
         registry = get_server(url=registry, keyfile=keyfile, certfile=certfile)
         cert = Certificate(filename=certfile)
         cert_str = cert.save_to_string(save_parents=True)
-        cred = registry.get_self_credential(cert_str, 'node', hrn)    
+        cred = registry.GetSelfCredential(cert_str, hrn, 'node')    
         Credential(string=cred).save_to_file(credfile, save_parents=True)
     
     return cred
@@ -238,7 +238,6 @@ def get_gids(registry=None, verbose=False):
             for slicename in slices_without_gids]
     
     # exit if there are no gids to install
-    print hrns
     if not hrns:
         return
         
@@ -246,7 +245,7 @@ def get_gids(registry=None, verbose=False):
         print "Getting gids for slices on this node from registry"  
     # get the gids
     # and save them in the right palce
-    records = registry.get_gids(cred, hrns)
+    records = registry.GetGids(hrns, cred)
     for record in records:
         # if this isnt a slice record skip it
         if not record['type'] == 'slice':
