@@ -202,8 +202,17 @@ class SfaRSpec(RSpec):
                         bwlimit = etree.SubElement(node_tag, 'bw_limit', units='kbps').text = str(interface['bwlimit']/1000)
             if 'tags' in node:
                 for tag in node['tags']:
-                   # expose this hard wired list of tags, plus the ones that are marked 'sfa' in their category 
-                   if tag['tagname'] in ['fcdistro', 'arch'] or 'sfa' in tag['category'].split('/'):
+                    #expose this hard wired list of tags, plus the ones that are marked 'sfa' in their category 
+                    #if tag['tagname'] in ['fcdistro', 'arch'] or 'sfa' in tag['category'].split('/'):
+                        #tag_element = etree.SubElement(node_tag, tag['tagname'], value=tag['value'])
+
+		    #panos expose tags only if requested by the user using the -i option
+		    if self.user_options:
+		    	#print "[sfa rspec] found tag ",tag," and have info ",self.user_options.get('info')
+		    	if self.user_options.get('info') and tag['tagname'] in self.user_options.get('info'):
+                            tag_element = etree.SubElement(node_tag, tag['tagname'], value=tag['value'])
+
+                    if 'sfa' in tag['category'].split('/'):
                         tag_element = etree.SubElement(node_tag, tag['tagname'], value=tag['value'])
 
             if 'site' in node:

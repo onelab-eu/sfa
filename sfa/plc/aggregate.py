@@ -14,9 +14,14 @@ class Aggregate:
     links = {}
     node_tags = {}
     prepared=False
+    #panos new user options variable
+    user_options = {}
 
-    def __init__(self, api):
+    def __init__(self, api, user_options={}):
         self.api = api
+	#panos 
+	self.user_options = user_options
+	print "[aggregate] options = ",self.user_options
 
     def prepare_sites(self, force=False):
         if not self.sites or force:  
@@ -71,10 +76,12 @@ class Aggregate:
         rspec_version = RSpecVersion(version)
         if rspec_version['type'].lower() == 'protogeni':
             rspec = PGRSpec()
+	#panos pass user options to SfaRSpec
         elif rspec_version['type'].lower() == 'sfa':
-            rspec = SfaRSpec()
+            rspec = SfaRSpec("",{},self.user_options)
         else:
-            rspec = SfaRSpec()
+            rspec = SfaRSpec("",{},self.user_options)
+
 
         rspec.add_nodes(self.nodes.values())
         rspec.add_interfaces(self.interfaces.values()) 

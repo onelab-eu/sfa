@@ -209,6 +209,10 @@ class Sfi:
             parser.add_option("-f", "--format", dest="format", type="choice",
                              help="display format ([xml]|dns|ip)", default="xml",
                              choices=("xml", "dns", "ip"))
+            #panos: a new option to define the type of information about resources a user is interested in
+	    parser.add_option("-i", "--info", dest="info",
+                                help="optional component information", default=None)
+
 
         if command in ("resources", "show", "list"):
            parser.add_option("-o", "--output", dest="file",
@@ -831,7 +835,7 @@ class Sfi:
         if args:
             cred = self.get_slice_cred(args[0]).save_to_string(save_parents=True)
             hrn = args[0]
-            call_options = {'geni_slice_urn': hrn_to_urn(hrn, 'slice')}
+	    call_options = {'geni_slice_urn': hrn_to_urn(hrn, 'slice')}
         else:
             cred = user_cred
             hrn = None
@@ -842,6 +846,9 @@ class Sfi:
             creds.append(delegated_cred)
         if opts.rspec_version:
             call_options['rspec_version'] = opts.rspec_version 
+        #panos add info options
+        if opts.info:
+            call_options['info'] = opts.info 
         result = server.ListResources(creds, call_options,unique_call_id())
         format = opts.format
         if opts.file is None:

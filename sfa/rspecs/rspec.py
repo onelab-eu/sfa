@@ -15,8 +15,10 @@ class RSpec:
     type = None
     version = None
     namespaces = None    
+    user_options = {}
   
-    def __init__(self, rspec="", namespaces={}):
+    def __init__(self, rspec="", namespaces={}, user_options={}):
+	self.user_options = user_options
         if rspec:
             self.parse_rspec(rspec, namespaces)
         else:

@@ -283,8 +283,8 @@ def DeleteSliver(api, xrn, creds, call_id):
     return 1
 
 # xxx Thierry : caching at the aggregate level sounds wrong...
-caching=True
-#caching=False
+#caching=True
+caching=False
 def ListSlices(api, creds, call_id):
     if Callids().already_handled(call_id): return []
     # look in cache first
@@ -313,6 +313,12 @@ def ListResources(api, creds, options,call_id):
     # get the rspec's return format from options
     rspec_version = RSpecVersion(options.get('rspec_version'))
     version_string = "rspec_%s" % (rspec_version.get_version_name())
+
+    #panos adding the info option to the caching key (can be improved)
+    if options.get('info'):
+	version_string = version_string + "_"+options.get('info')
+
+    print "[aggregate] version string = ",version_string
     
     # look in cache first
     if caching and api.cache and not xrn:
@@ -321,7 +327,10 @@ def ListResources(api, creds, options,call_id):
             api.logger.info("aggregate.ListResources: returning cached value for hrn %s"%hrn)
             return rspec 
 
-    aggregate = Aggregate(api)
+    #aggregate = Aggregate(api)
+    #panos: passing user-defined options
+    #print "manager options = ",options
+    aggregate = Aggregate(api, options)
 
     rspec =  aggregate.get_rspec(slice_xrn=xrn, version=rspec_version)
 

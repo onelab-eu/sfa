@@ -362,6 +362,12 @@ def ListResources(api, creds, options, call_id):
     rspec_version = RSpecVersion(options.get('rspec_version'))
     version_string = "rspec_%s" % (rspec_version.get_version_name())
 
+    #panos adding the info option to the caching key (can be improved)
+    if options.get('info'):
+	version_string = version_string + "_"+options.get('info')
+   
+    print "version string = ",version_string
+
     # look in cache first
     if caching and api.cache and not xrn:
         rspec =  api.cache.get(version_string)
