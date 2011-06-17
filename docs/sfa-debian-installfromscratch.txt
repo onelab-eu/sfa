@@ -1,0 +1,84 @@
+Install on debian
+
+apt-get install python-openssl python-m2crypto python-dateutil python-lxml  python-libxml2 python-libxslt1 python-pygresql python-psycopg2 python-zsi 
+easy_install xmlbuilder   
+apt-get install xmlsec1 libxmlsec1-dev (not sure about latter)
+/etc/postgresql/8.4/main/pg_hba.conf
+
+
+planetlab-europe-01:/etc/sfa/configs# su postgres
+postgres@planetlab-europe-01:/etc/sfa/configs$ psql -d template1
+template1=# create user pgsqluser password 'XXX';
+ou ALTER USER pgsqluser WITH PASSWORD 'XXX';
+template1=# create database planetlab5;
+template1=# grant all on database planetlab5 to pgsqluser;
+
+scp root@dev.top-hat.info:/etc/init.d/functions: /etc/init.d
+planetlab-europe-01:~/jordan/sfa# scp root@dev.top-hat.info:/usr/bin/plc-config* /usr/bin
+plc-config
+plc-config-tty
+
+scp root@dev.top-hat.info:/sbin/consoletype /sbin
+
+scp root@dev.top-hat.info:/usr/lib/python2.5/site-packages/plc_config.py /usr/lib/python2.5/site-packages/
+ou
+scp root@dev.top-hat.info:/usr/lib/python2.5/site-packages/plc_config.py /usr/lib/python2.6/
+
+mkdir /var/lock/subsys
+
+mkdir /etc/planetlab
+scp root@dev.top-hat.info:/etc/planetlab/plc_config /etc/planetlab
+
+harcoded in /etc/init.d/sfa
+planetlab-europe-01:~# ln -s /usr/local/bin/sfa-server.py /usr/bin
+planetlab-europe-01:~# ln -s /usr/local/bin/gen-sfa-cm-config.py /usr/bin
+planetlab-europe-01:~# ln -s /usr/local/bin/sfa_flashpolicy.py /usr/bin
+
+* when starting sfa without the import...
+IOError: [Errno 2] No such file or directory: '/var/lib/sfa/authorities/server.key'
+2011-06-03 20:12:21,086 - CRITICAL - SFA server is exiting END TRACEBACK
+
+THINK OF NAMING RESOURCES FOR NEW TESTBED
+
+packages installed in ./local/lib/python2.6/dist-packages/sfa/
+
+mkdir /var/log/httpd for crashlog
+ln -s /usr/local/bin/keyconvert.py /usr/bin
+
+ISSUES RESOLVED
+
+planetlab-europe-01:~/jordan/sfa# sfa-config-tty 
+Traceback (most recent call last):
+ File "/usr/local/bin/sfa-config-tty", line 5, in 
+   import plc_config
+ImportError: No module named plc_config
+
+util/server.py has a dependency on plc !!!!!!!!
+
+util/api.py +146
+      self.logger=sfa_logger() # XXX jordan missing ()
+
+baseAPI
+    fill_record_info
+
+getDelegatedCredential
+
+
+
+--------------------------------------------------------------------------------
+
+
+planetlab-europe-01:/etc/sfa# /etc/init.d/sfa restart
+/etc/init.d/sfa: line 17: /etc/init.d/functions: No such file or directory
+/etc/init.d/sfa: line 88: action: command not found
+/etc/init.d/sfa: line 34: plc-config: command not found
+SFA: Warning: Invalid configuration file(s) detected
+Traceback (most recent call last):
+ File "/usr/local/bin/gen-sfa-cm-config.py", line 9, in 
+   sfa_config = SfaConfig()
+ File "/usr/local/lib/python2.6/dist-packages/sfa/util/config.py", line 33, in __init__
+   self.load(config_file)
+ File "/usr/local/lib/python2.6/dist-packages/sfa/util/config.py", line 79, in load
+   raise IOError, "Could not find the configuration file: %s" % config_file
+IOError: Could not find the configuration file: /etc/sfa/sfa_config.py
+touch: cannot touch `/var/lock/subsys/sfa-server.py': No such file or directory
