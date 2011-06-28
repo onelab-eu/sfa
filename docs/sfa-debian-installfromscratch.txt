@@ -1,4 +1,4 @@
-Install on debian
+Install on debian without prior myplc install
 
 apt-get install python-openssl python-m2crypto python-dateutil python-lxml  python-libxml2 python-libxslt1 python-pygresql python-psycopg2 python-zsi 
 easy_install xmlbuilder   
