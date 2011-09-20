@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<grammar xmlns="http://relaxng.org/ns/structure/1.0" datatypeLibrary="http://www.w3.org/2001/XMLSchema-datatypes">
+  <start>
+    <ref name="RSpec"/>
+  </start>
+  <define name="RSpec">
+    <element name="RSpec">
+      <attribute name="type">
+        <data type="NMTOKEN"/>
+      </attribute>
+      <choice>
+        <ref name="network"/>
+        <ref name="request"/>
+      </choice>
+    </element>
+  </define>
+  <define name="network">
+    <element name="network">
+      <attribute name="name">
+        <data type="NMTOKEN"/>
+      </attribute>
+      <optional>
+        <attribute name="slice">
+          <data type="NMTOKEN"/>
+        </attribute>
+      </optional>
+      <optional>
+        <ref name="sliver_defaults"/>
+      </optional>
+      <oneOrMore>
+        <ref name="site"/>
+      </oneOrMore>
+    </element>
+  </define>
+  <define name="sliver_defaults">
+    <element name="sliver_defaults">
+      <ref name="sliver_elements"/>
+    </element>
+  </define>
+  <define name="site">
+    <element name="site">
+      <attribute name="id">
+        <data type="ID"/>
+      </attribute>
+      <element name="name">
+        <text/>
+      </element>
+      <zeroOrMore>
+        <ref name="node"/>
+      </zeroOrMore>
+    </element>
+  </define>
+  <define name="node">
+    <element name="node">
+      <attribute name="node_id">
+        <data type="ID"/>
+      </attribute>
+      <element name="hostname">
+        <text/>
+      </element> 
+      <attribute name="reservable">
+        <data type="boolean"/>
+      </attribute>
+      <element name="ip_address">
+        <text/>
+      </element>
+      <optional>
+        <element name="urn">
+            <text/>
+        </element>
+      </optional>
+      <optional>
+        <ref name="leases"/>
+       </optional>
+      <optional>
+        <ref name="sliver"/>
+       </optional>
+    </element>
+  </define>
+  <define name="request">
+    <element name="request">
+      <attribute name="name">
+        <data type="NMTOKEN"/>
+      </attribute>
+      <optional>
+        <ref name="sliver_defaults"/>
+      </optional>
+      <oneOrMore>
+        <ref name="sliver"/>
+      </oneOrMore>
+    </element>
+  </define>
+  <define name="sliver">
+    <element name="sliver">
+      <optional>
+        <attribute name="nodeid">
+          <data type="ID"/>
+        </attribute>
+      </optional>
+      <ref name="sliver_elements"/>
+    </element>
+  </define>
+  <define name="sliver_elements">
+    <interleave>
+      <optional>
+        <element name="capabilities">
+          <text/>
+        </element>
+      </optional>
+      <optional>
+        <element name="delegations">
+          <text/>
+        </element>
+      </optional>
+      <optional>
+        <element name="program">
+          <text/>
+        </element>
+      </optional>     
+      </interleave>
+  </define>
+ <define name="leases">
+    <element name="leases">
+      <zeroOrMore>
+       <group>
+        <attribute name="slot"/>
+          <data type="dateTime"/>
+        </attribute>
+        <attribute name="slice">
+          <data type="NMTOKEN"/>
+        </attribute>
+       </group>
+      </zeroOrMore>
+</grammar>
