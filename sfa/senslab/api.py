@@ -141,6 +141,7 @@ class SfaAPI(BaseAPI):
         path = self.config.SFA_DATA_DIR
         filename = ".".join([self.interface, self.hrn, type, "cred"])
         cred_filename = path + os.sep + filename
+	print>>sys.stderr, "|\r\n \r\n API.pPY getCredential  cred_filename %s" %(cred_filename)
         cred = None
         if os.path.isfile(cred_filename):
             cred = Credential(filename = cred_filename)
@@ -299,7 +300,7 @@ class SfaAPI(BaseAPI):
         @param record: record to fill in field (in/out param)     
         """
         # get ids by type
-	print>>sys.stderr, "\r\n \t\t \t fill_record_pl_info : entering... \r\n"
+	print>>sys.stderr, "\r\n \r\rn \t\t >>>>>>>>>>fill_record_pl_info  records %s : "%(records)
         node_ids, site_ids, slice_ids = [], [], [] 
         person_ids, key_ids = [], []
         type_map = {'node': node_ids, 'authority': site_ids,
@@ -307,7 +308,7 @@ class SfaAPI(BaseAPI):
                   
         for record in records:
             for type in type_map:
-		print>>sys.stderr, "\r\n \t\t \t fill_record_pl_info : type %s. record['pointer'] %s "%(type,record['pointer'])   
+		#print>>sys.stderr, "\r\n \t\t \t fill_record_pl_info : type %s. record['pointer'] %s "%(type,record['pointer'])   
                 if type == record['type']:
                     type_map[type].append(record['pointer'])
 	print>>sys.stderr, "\r\n \t\t \t fill_record_pl_info : records %s... \r\n \t\t \t fill_record_pl_info : type_map   %s"%(records,type_map)
@@ -315,16 +316,17 @@ class SfaAPI(BaseAPI):
         nodes, sites, slices, persons, keys = {}, {}, {}, {}, {}
         if node_ids:
             node_list = self.oar.GetNodes( node_ids)
-	    print>>sys.stderr, " \r\n \t\t\t BEFORE LIST_TO_DICT_NODES node_ids : %s" %(node_ids)
+	    #print>>sys.stderr, " \r\n \t\t\t BEFORE LIST_TO_DICT_NODES node_ids : %s" %(node_ids)
             nodes = list_to_dict(node_list, 'node_id')
         if site_ids:
             site_list = self.oar.GetSites( site_ids)
             sites = list_to_dict(site_list, 'site_id')
+	    #print>>sys.stderr, " \r\n \t\t\t  site_ids %s sites  : %s" %(site_ids,sites)	    
         if slice_ids:
-            slice_list = self.oar.GetSlices( slice_ids)
+            slice_list = self.users.GetSlices( slice_ids)
             slices = list_to_dict(slice_list, 'slice_id')
         if person_ids:
-            print>>sys.stderr, " \r\n \t\t \t fill_record_pl_info BEFORE GetPersons  person_ids: %s" %(person_ids)
+            #print>>sys.stderr, " \r\n \t\t \t fill_record_pl_info BEFORE GetPersons  person_ids: %s" %(person_ids)
             person_list = self.users.GetPersons( person_ids)
             persons = list_to_dict(person_list, 'person_id')
 	    print>>sys.stderr, "\r\n  fill_record_pl_info persons %s \r\n \t\t person_ids %s " %(persons, person_ids) 
@@ -359,20 +361,22 @@ class SfaAPI(BaseAPI):
                  else:
 			pubkeys = [keys[key_id]['key'] for key_id in record['key_ids'] if key_id in keys] 
 			record['keys'] = pubkeys
-
+			
+  	print>>sys.stderr, "\r\n \r\rn \t\t <<<<<<<<<<<<<<<<<< fill_record_pl_info  records %s : "%(records)
         # fill in record hrns
         records = self.fill_record_hrns(records)   
- 
+
         return records
 
     def fill_record_hrns(self, records):
         """
         convert pl ids to hrns
         """
-
+	print>>sys.stderr, "\r\n \r\rn \t\t \t >>>>>>>>>>>>>>>>>>>>>> fill_record_hrns records %s : "%(records)  
         # get ids
         slice_ids, person_ids, site_ids, node_ids = [], [], [], []
         for record in records:
+            print>>sys.stderr, "\r\n \r\rn \t\t \t record %s : "%(record)
             if 'site_id' in record:
                 site_ids.append(record['site_id'])
             if 'site_ids' in records:
@@ -389,12 +393,13 @@ class SfaAPI(BaseAPI):
         if site_ids:
             site_list = self.oar.GetSites( site_ids, ['site_id', 'login_base'])
             sites = list_to_dict(site_list, 'site_id')
-	    print>>sys.stderr, " \r\n \r\n \t\t ____ site_list %s \r\n \t\t____ sites %s " % (site_list,sites)
+	    #print>>sys.stderr, " \r\n \r\n \t\t ____ site_list %s \r\n \t\t____ sites %s " % (site_list,sites)
         if person_ids:
             person_list = self.users.GetPersons( person_ids, ['person_id', 'email'])
+	    print>>sys.stderr, " \r\n \r\n   \t\t____ person_lists %s " %(person_list) 
             persons = list_to_dict(person_list, 'person_id')
         if slice_ids:
-            slice_list = self.oar.GetSlices( slice_ids, ['slice_id', 'name'])
+            slice_list = self.users.GetSlices( slice_ids, ['slice_id', 'name'])
             slices = list_to_dict(slice_list, 'slice_id')       
         if node_ids:
             node_list = self.oar.GetNodes( node_ids, ['node_id', 'hostname'])
@@ -411,10 +416,10 @@ class SfaAPI(BaseAPI):
             if pointer == -1:
                 continue
 
-            print>>sys.stderr, " \r\n \r\n \t\t fill_record_hrns : sites %s \r\n \t\t record %s " %(sites, record)
+            #print>>sys.stderr, " \r\n \r\n \t\t fill_record_hrns : sites %s \r\n \t\t record %s " %(sites, record)
             if 'site_id' in record:
                 site = sites[record['site_id']]
-		print>>sys.stderr, " \r\n \r\n \t\t \t fill_record_hrns : sites %s \r\n \t\t\t site sites[record['site_id']] %s " %(sites,site)	
+		#print>>sys.stderr, " \r\n \r\n \t\t \t fill_record_hrns : sites %s \r\n \t\t\t site sites[record['site_id']] %s " %(sites,site)	
                 login_base = site['login_base']
                 record['site'] = ".".join([auth_hrn, login_base])
             if 'person_ids' in record:
@@ -422,6 +427,7 @@ class SfaAPI(BaseAPI):
                           if person_id in  persons]
                 usernames = [email.split('@')[0] for email in emails]
                 person_hrns = [".".join([auth_hrn, login_base, username]) for username in usernames]
+		print>>sys.stderr, " \r\n \r\n \t\t ____ person_hrns : %s " %(person_hrns)
                 record['persons'] = person_hrns 
             if 'slice_ids' in record:
                 slicenames = [slices[slice_id]['name'] for slice_id in record['slice_ids'] \
@@ -438,7 +444,7 @@ class SfaAPI(BaseAPI):
                                if site_id in sites]
                 site_hrns = [".".join([auth_hrn, lbase]) for lbase in login_bases]
                 record['sites'] = site_hrns
-
+	print>>sys.stderr, "\r\n \r\rn \t\t \t <<<<<<<<<<<<<<<<<<<<<<<<  fill_record_hrns records %s : "%(records)  
         return records   
 
     def fill_record_sfa_info(self, records):
@@ -497,8 +503,9 @@ class SfaAPI(BaseAPI):
         pl_person_list, pl_persons = [], {}
         pl_person_list = SenslabUsers.GetPersons(person_ids, ['person_id', 'roles'])
         pl_persons = list_to_dict(pl_person_list, 'person_id')
-        print>>sys.stderr, "\r\n \r\n _fill_record_sfa_info ___  _list %s \r\n \t\tplshell.GetPersons ['person_id', 'roles'] pl_persons %s " %(pl_person_list, pl_persons) 
+        print>>sys.stderr, "\r\n \r\n _fill_record_sfa_info ___  _list %s \r\n \t\t SenslabUsers.GetPersons ['person_id', 'roles'] pl_persons %s \r\n records %s" %(pl_person_list, pl_persons,records) 
         # fill sfa info
+	
         for record in records:
             # skip records with no pl info (top level authorities)
             if record['pointer'] == -1:
@@ -548,6 +555,8 @@ class SfaAPI(BaseAPI):
                  sfa_info['geni_urn'] = hrn_to_urn(record['hrn'], 'user')
                  sfa_info['geni_certificate'] = record['gid'] 
                 # xxx TODO: PostalAddress, Phone
+		
+            print>>sys.stderr, "\r\n \r\rn \t\t \t <<<<<<<<<<<<<<<<<<<<<<<<  fill_record_sfa_info sfa_info %s  \r\n record %s : "%(sfa_info,record)  
             record.update(sfa_info)
 
     def fill_record_info(self, records):
@@ -607,8 +616,8 @@ class SfaAPI(BaseAPI):
     def update_membership(self, oldRecord, record):
         if record.type == "slice":
             self.update_membership_list(oldRecord, record, 'researcher',
-                                        self.plshell.AddPersonToSlice,
-                                        self.plshell.DeletePersonFromSlice)
+                                        self.users.AddPersonToSlice,
+                                        self.users.DeletePersonFromSlice)
         elif record.type == "authority":
             # xxx TODO
             pass
