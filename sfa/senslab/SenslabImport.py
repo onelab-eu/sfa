@@ -1,3 +1,4 @@
+
 #
 # The import tool assumes that the existing PLC hierarchy should all be part
 # of "planetlab.us" (see the root_auth and level1_auth variables below).
@@ -23,6 +24,7 @@ from sfa.trust.certificate import convert_public_key, Keypair
 from sfa.trust.trustedroot import *
 from sfa.trust.hierarchy import *
 from sfa.trust.gid import create_uuid
+
 
 
 def _un_unicode(str):
@@ -59,6 +61,7 @@ class SenslabImport:
        self.TrustedRoots = TrustedRootList(Config.get_trustedroots_dir(self.config))
        print>>sys.stderr, "\r\n ========= \t\t SenslabImport TrustedRoots\r\n" ,  self.TrustedRoots
        self.plc_auth = self.config.get_plc_auth()
+       print>>sys.stderr, "\r\n ========= \t\t SenslabImport  self.plc_auth %s \r\n" %(self.plc_auth ) 
        self.root_auth = self.config.SFA_REGISTRY_ROOT_AUTH
 
 
@@ -164,8 +167,9 @@ class SenslabImport:
             table.update(person_record)
 
     def import_slice(self, parent_hrn, slice):
-        slicename = slice['name'].split("_",1)[-1]
-        slicename = _cleanup_string(slicename)
+        #slicename = slice['name'].split("_",1)[-1]
+	
+        slicename = _cleanup_string(slice['name'])
 
         if not slicename:
             self.logger.error("Import: failed to parse slice name %s" %slice['name'])

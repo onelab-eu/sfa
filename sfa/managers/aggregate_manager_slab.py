@@ -28,18 +28,19 @@ from sfa.plc.slices import *
 from sfa.util.version import version_core
 from sfa.rspecs.rspec_version import RSpecVersion
 from sfa.rspecs.sfa_rspec import sfa_rspec_version
-from sfa.rspecs.pg_rspec import pg_rspec_version
+from sfa.rspecs.pl_rspec_version import *
+#from sfa.rspecs.pg_rspec import pg_rspec_version
+from sfa.rspecs.pg_rspec import pg_rspec_ad_version, pg_rspec_request_version 
 from sfa.rspecs.rspec_parser import parse_rspec 
 from sfa.util.sfatime import utcparse
 from sfa.util.callids import Callids
-
-
-from sfa.plc.OARrspec import *
+from sfa.senslab.OARrspec import *
 #from sfa.plc.aggregate import Aggregate
 
 def GetVersion(api):
+    print>>sys.stderr, "\r\n AGGREGATE GET_VERSION "
     xrn=Xrn(api.hrn)
-    supported_rspecs = [dict(pg_rspec__request_version), dict(sfa_rspec_version)]
+    supported_rspecs = [dict(pg_rspec_request_version), dict(sfa_rspec_version)]
     ad_rspec_versions = [dict(pg_rspec_ad_version), dict(sfa_rspec_version)]
     version_more = {'interface':'aggregate',
                     'testbed':'senslab',
@@ -48,6 +49,7 @@ def GetVersion(api):
                     'ad_rspec_versions': ad_rspec_versions,
                     'default_ad_rspec': dict(sfa_rspec_version)
                     }
+    print>>sys.stderr, "\r\n AGGREGATE GET_VERSION : %s  \r\n \r\n" %(version_core(version_more))	    
     return version_core(version_more)
 
 def __get_registry_objects(slice_xrn, creds, users):
@@ -85,10 +87,10 @@ def __get_registry_objects(slice_xrn, creds, users):
 
         slice = {}
         
-        extime = Credential(string=creds[0]).get_expiration()
-        # If the expiration time is > 60 days from now, set the expiration time to 60 days from now
-        if extime > datetime.datetime.utcnow() + datetime.timedelta(days=60):
-            extime = datetime.datetime.utcnow() + datetime.timedelta(days=60)
+        #extime = Credential(string=creds[0]).get_expiration()
+        ## If the expiration time is > 60 days from now, set the expiration time to 60 days from now
+        #if extime > datetime.datetime.utcnow() + datetime.timedelta(days=60):
+        extime = datetime.datetime.utcnow() + datetime.timedelta(days=60)
         slice['expires'] = int(time.mktime(extime.timetuple()))
         slice['hrn'] = hrn
         slice['name'] = hrn_to_pl_slicename(hrn)
@@ -173,6 +175,7 @@ def CreateSliver(api, slice_xrn, creds, rspec_string, users, call_id):
     Create the sliver[s] (slice) at this aggregate.    
     Verify HRN and initialize the slice record in PLC if necessary.
     """
+    print>>sys.stderr, " \r\n AGGREGATE CreateSliver-----------------> "
     if Callids().already_handled(call_id): return ""
 
     reg_objects = __get_registry_objects(slice_xrn, creds, users)
@@ -191,7 +194,7 @@ def CreateSliver(api, slice_xrn, creds, rspec_string, users, call_id):
     slice = slices.verify_slice(registry, credential, hrn, site_id, 
                                        remote_site_id, peer, sfa_peer, reg_objects)
      
-    nodes = api.plshell.GetNodes(api.plauth, slice['node_ids'], ['hostname'])
+    nodes = api.oar.GetNodes(slice['node_ids'], ['hostname'])
     current_slivers = [node['hostname'] for node in nodes] 
     rspec = parse_rspec(rspec_string)
     requested_slivers = [str(host) for host in rspec.get_nodes_with_slivers()]

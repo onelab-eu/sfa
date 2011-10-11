@@ -31,13 +31,14 @@ class OARrspec:
     #panos new user options variable
     user_options = {}
 
-    def __init__(self):
+    def __init__(self ,api, user_options={}):
 	self.OARImporter = OARapi()	
 	print >>sys.stderr,'\r\n \r\n \t\t__INIT OARRSPEC__'
+	self.user_options = user_options
 
 
     def prepare_sites(self, force=False):
-	print >>sys.stderr,'\r\n \r\n ++++++++++++++\t\t',  self.OARImporter.GetSites()
+	print >>sys.stderr,'\r\n \r\n ++++++++++++++\t\t prepare_sites'
         if not self.sites or force:  
              for site in self.OARImporter.GetSites():
 		print >>sys.stderr,'prepare_sites : site ', site		    
@@ -50,31 +51,41 @@ class OARrspec:
                 self.nodes[node['node_id']] = node
 		print >>sys.stderr,'prepare_nodes:node', node
 
-
+    #def prepare_interfaces(self, force=False):
+        #if not self.interfaces or force:
+            #for interface in self.api.plshell.GetInterfaces(self.api.plauth):
+                #self.interfaces[interface['interface_id']] = interface
 
     #def prepare_node_tags(self, force=False):
         #if not self.node_tags or force:
             #for node_tag in self.api.plshell.GetNodeTags(self.api.plauth):
                 #self.node_tags[node_tag['node_tag_id']] = node_tag
-
+		
+    def prepare_links(self, force=False):
+        if not self.links or force:
+            pass
 
     def prepare(self, force=False):
         if not self.prepared or force:
             self.prepare_sites(force)
             self.prepare_nodes(force)
-        
+            self.prepare_links(force)
+            #self.prepare_interfaces(force)
+            #self.prepare_node_tags(force)	    
             # add site/interface info to nodes
             for node_id in self.nodes:
                 node = self.nodes[node_id]
                 site = self.sites[node['site_id']]
-              
-		node['network'] = "grenoble-senslab"	
-                node['network_urn'] = hrn_to_urn(node['network'], 'authority+sa')
+                #interfaces = [self.interfaces[interface_id] for interface_id in node['interface_ids']]
+                #tags = [self.node_tags[tag_id] for tag_id in node['node_tag_ids']]
+		node['network'] = "senslab"	
+                node['network_urn'] = hrn_to_urn(node['network'], 'authority+am')
                 node['urn'] = hostname_to_urn(node['network'], site['login_base'], node['hostname'])
-                node['site_urn'] = hrn_to_urn(PlXrn.site_hrn(node['network'], site['login_base']), 'authority') 
+                node['site_urn'] = hrn_to_urn(PlXrn.site_hrn(node['network'], site['login_base']), 'authority+sa') 
                 node['site'] = site
-             
+                #node['interfaces'] = interfaces
                 #node['tags'] = tags
+
 	print >>sys.stderr, "\r\n OAR  prepare ", node 
         self.prepared = True  
 

@@ -21,7 +21,7 @@ from sfa.rspecs.rspec_converter import RSpecConverter
 from sfa.rspecs.rspec_parser import parse_rspec    
 from sfa.rspecs.rspec_version import RSpecVersion
 from sfa.rspecs.sfa_rspec import sfa_rspec_version
-from sfa.rspecs.pg_rspec import pg_rspec_version    
+from sfa.rspecs.pg_rspec import pg_rspec_ad_version, pg_rspec_request_version   
 from sfa.util.policy import Policy
 from sfa.util.prefixTree import prefixTree
 from sfa.util.sfaticket import *
@@ -38,21 +38,22 @@ def get_serverproxy_url (server):
     try:
         return server.url
     except:
-        sfa_logger().warning("ParseVersion, falling back to xmlrpclib.ServerProxy internals")
+        sfa_logger().warning("GetVersion, falling back to xmlrpclib.ServerProxy internals")
         return server._ServerProxy__host + server._ServerProxy__handler 
 
-def ParseVersion(api):
+def GetVersion(api):
     # peers explicitly in aggregates.xml
     peers =dict ([ (peername,get_serverproxy_url(v)) for (peername,v) in api.aggregates.iteritems() 
                    if peername != api.hrn])
     xrn=Xrn (api.hrn)
-    supported_rspecs = [dict(pg_rspec_version), dict(sfa_rspec_version)]
+    request_rspec_versions = [dict(pg_rspec_request_version), dict(sfa_rspec_version)]
+    ad_rspec_versions = [dict(pg_rspec_ad_version), dict(sfa_rspec_version)]
     version_more = {'interface':'slicemgr',
                     'hrn' : xrn.get_hrn(),
                     'urn' : xrn.get_urn(),
                     'peers': peers,
-                    'request_rspec_versions': supported_rspecs,
-                    'ad_rspec_versions': supported_rspecs,
+                    'request_rspec_versions': request_rspec_versions,
+                    'ad_rspec_versions': ad_rspec_versions,
                     'default_ad_rspec': dict(sfa_rspec_version)
                     }
     sm_version=version_core(version_more)
@@ -61,20 +62,25 @@ def ParseVersion(api):
         local_am_url=get_serverproxy_url(api.aggregates[api.hrn])
         sm_version['peers'][api.hrn]=local_am_url.replace('localhost',sm_version['hostname'])
     return sm_version
-
+ 
 def CreateSliver(api, xrn, creds, rspec_str, users, call_id):
 
     def _CreateSliver(aggregate, xrn, credential, rspec, users, call_id):
             # Need to call ParseVersion at an aggregate to determine the supported 
             # rspec type/format beofre calling CreateSliver at an Aggregate. 
             # The Aggregate's verion info is cached 
+	    print>>sys.stderr, " \r\n \t\t =======SLICE MANAGER _CreateSliver "
+	    
             server = api.aggregates[aggregate]
             # get cached aggregate version
             aggregate_version_key = 'version_'+ aggregate
             aggregate_version = api.cache.get(aggregate_version_key)
-            if not aggregate_version:
-                # get current aggregate version anc cache it for 24 hours
-                aggregate_version = server.ParseVersion()
+	    print>>sys.stderr, " \r\n \t\t =======SLICE MANAGER _CreateSliver aggregate_version WTF ? %s"%(aggregate_version )  
+            if aggregate_version is None:
+                # get current aggregate version anc cache it for 24 hours 
+		print>>sys.stderr, " \r\n \t\t =======SLICE MANAGER It s browwwwwn server"  
+		aggregate_version = server.GetVersion()
+		print>>sys.stderr, " \r\n \t\t =======SLICE MANAGER _CreateSliver GET aggregate_version %s"%(aggregate_version )  		
                 api.cache.add(aggregate_version_key, aggregate_version, 60 * 60 * 24)
                 
             if 'sfa' not in aggregate_version and 'geni_api' in aggregate_version:

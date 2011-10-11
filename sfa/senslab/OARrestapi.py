@@ -2,8 +2,10 @@
 import sys
 import httplib
 import json
+from sfa.senslab.parsing import *
+from sfa.senslab.SenslabImportUsers import *
 
-OARIP='192.168.0.109'
+OARIP='10.127.255.254'
 
 OARrequests_list = ["GET_version", "GET_timezone", "GET_jobs", "GET_jobs_table", "GET_jobs_details",
 "GET_resources_full", "GET_resources"]
@@ -100,7 +102,8 @@ class OARGETParser:
 	
 	
 	def AddMobility(self,tuplelist,value):
-		tuplelist.append(('mobile',int(value)))	
+		if value :
+			tuplelist.append(('mobile',int(value)))	
 		return 0
 	
 	
@@ -115,11 +118,11 @@ class OARGETParser:
 	
 	def ParseVersion(self) : 
 		print self.raw_json
-		self.version_json_dict.update(api_version=self.raw_json['oar'] ,
-				    apilib_version=self.raw_json['apilib'],
+		self.version_json_dict.update(api_version=self.raw_json['oar_version'] ,
+				    apilib_version=self.raw_json['apilib_version'],
 				    api_timezone=self.raw_json['api_timezone'],
 				    api_timestamp=self.raw_json['api_timestamp'],
-				    oar_version=self.raw_json['oar'] )
+				    oar_version=self.raw_json['oar_version'] )
 		print self.version_json_dict['apilib_version']
 		
 	def ParseTimezone(self) : 
@@ -135,7 +138,8 @@ class OARGETParser:
 	def ParseJobsDetails (self): 
 		print "ParseJobsDetails"
 		
-	def ParseResources(self) : 
+	def ParseResources(self) :
+		print>>sys.stderr, " \r\n  \t\t\t ParseResources__________________________ " 
 		#resources are listed inside the 'items' list from the json
 		self.raw_json = self.raw_json['items']
 		self.ParseNodes()
@@ -144,7 +148,8 @@ class OARGETParser:
 		
 		
 	def ParseResourcesFull(self ) :
-		print self.raw_json[1]
+		print>>sys.stderr, " \r\n \t\t\t  ParseResourcesFull_____________________________ "
+		#print self.raw_json[1]
 		#resources are listed inside the 'items' list from the json
 		if self.version_json_dict['apilib_version'] != "0.2.10" :
 			self.raw_json = self.raw_json['items']
@@ -195,9 +200,16 @@ class OARGETParser:
 									 ('login_base', node['site_login_base']),\
 									('node_ids',nodes_per_site[node['site_id']]),\
 									('latitude',"48.83726"),\
-									('longitude',"- 2.10336")]
+									('longitude',"- 2.10336"),('name',"demolab"),\
+									('pcu_ids', []), ('max_slices', None), ('ext_consortium_id', None),\
+									('max_slivers', None), ('is_public', True), ('peer_site_id', None),\
+									('abbreviated_name', "demolab"), ('address_ids', []),\
+									('url', "http,//www.sdemolab.fr"), ('person_ids', []),\
+									('site_tag_ids', []), ('enabled', True),  ('slice_ids', []),\
+									('date_created', None), ('peer_id', None),]
 				self.site_dict[node['site_login_base']] = dict(self.site_dict[node['site_login_base']])
-		print self.site_dict
+				
+		print>>sys.stderr, "\r\n \r\n =============\t\t ParseSites site dict %s \r\n"%(self.site_dict)
 		
 		
 	def GetNodesFromOARParse(self):
@@ -269,11 +281,26 @@ class OARapi:
 
 		
 	def GetSites(self, site_filter= None, return_fields=None):
-		print>>sys.stderr, " \r\n GetSites" 
+		print>>sys.stderr, " \r\n GetSites+++++++++++++++++" 
 		self.parser.SendRequest("GET_resources_full")	
 		site_dict = self.parser.GetSitesFromOARParse()
 		return_site_list = []
-		print>>sys.stderr, " \r\n  GetSites sites_dict %s" %(site_dict) 
+		site = site_dict.values()[0]
+		Users = SenslabImportUsers()
+			
+		print>>sys.stderr, " \r\n  GetSites sites_dict %s site_filter %s  \r\n \r\n  \r\n \r\n------site %s" %(site_dict,site_filter,site ) 
+		admins_dict ={'person_ids': Users.GetPIs(site['site_id'])}
+		site.update(admins_dict)	
+		
+		slice_list = Users.GetSlices()
+		for sl in slice_list:
+			print>>sys.stderr, " \r\n  GetSites sl %s" %(sl)
+			if sl['site_id'] == site['site_id']:
+				site['slice_ids'].append(sl['slice_id'])
+		print>>sys.stderr, " \r\n  GetSites -site['site_id'] %s --slice_list %s" %(site['site_id'],slice_list ) 
+		
+		
+		print>>sys.stderr, " \r\n  GetSites -site['site_id'] %s --admins_dict %s---site %s" %(site['site_id'],admins_dict,site ) 		
 		if not (site_filter or return_fields):
 			return_site_list = site_dict.values()
 			return return_site_list

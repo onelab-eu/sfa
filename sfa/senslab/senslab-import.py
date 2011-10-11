@@ -126,9 +126,7 @@ def main():
         existing_records[(result['hrn'], result['type'])] = result
         existing_hrns.append(result['hrn'])   
      
-    # Get all Senslab sites
-    sites_dict  = OARImporter.GetSites()
-    print "\r\n sSITES_DICT" , sites_dict
+
 
 
     #Get Senslab nodes 
@@ -140,6 +138,13 @@ def main():
 
     keys_list = SenslabUsers.GetKeys()
     print "\r\n KEYSS_LIST ",keys_list
+    
+    slices_list = SenslabUsers.GetSlices()
+    print "\r\n SLICES_LIST ",slices_list
+    
+        # Get all Senslab sites
+    sites_dict  = OARImporter.GetSites()
+    print "\r\n sSITES_DICT" , sites_dict
     
  # start importing 
     for site in sites_dict:
@@ -153,7 +158,7 @@ def main():
              print "SITE HRN UNKNOWN" , site, site_hrn
              site_hrn = sfaImporter.import_site(interface_hrn, site)
 	     
- 	print "\r\n \r\n ===========IMPORT NODE8RECORDS ==========\r\n site %s \r\n \t nodes_dict %s" %(site,nodes_dict)	         
+ 	print "\r\n \r\n ===========IMPORT NODE_RECORDS ==========\r\n site %s \r\n \t nodes_dict %s" %(site,nodes_dict)	         
         # import node records
     	for node_id in site['node_ids']:
 		#for[node['node_id'] for node in nodes_dict]:
@@ -171,12 +176,26 @@ def main():
 			print "\t\t NODE HRN NOT in existing records!" ,hrn
     			sfaImporter.import_node(hrn, node)
 
-
+   # import persons
 	for person in persons_list:
 		hrn = email_to_hrn(site_hrn, person['email'])
 		print >>sys.stderr, "\r\n\r\n^^^^^^^^^^^^^PERSON hrn %s person %s site hrn %s" %(hrn,person,site_hrn)    
 		sfaImporter.import_person( site_hrn, person,keys_list)
+		
+# import slices
+        for slice_id in site['slice_ids']:
+		print >>sys.stderr, "\r\n\r\n \t ^^^^^^^\\\\\\\\\\\\\\\^^^^^^ slice_id  %s  " %(slice_id)    		
+		for sl in slices_list:
+			if slice_id is sl['slice_id']:
+				#hrn = slicename_to_hrn(interface_hrn, sl['name'])
+				hrn = email_to_hrn(site_hrn, sl['name'])
+				print >>sys.stderr, "\r\n\r\n^^^^^^^^^^^^^SLICE ID hrn %s  site_hrn %s" %(hrn,site_hrn)    				
+				if hrn not in existing_hrns or \
+				(hrn, 'slice') not in existing_records:
+					sfaImporter.import_slice(site_hrn, sl)	
 
+					
+					
  # remove stale records    
     for (record_hrn, type) in existing_records.keys():
         record = existing_records[(record_hrn, type)]
