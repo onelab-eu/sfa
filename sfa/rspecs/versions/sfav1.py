@@ -285,7 +285,7 @@ class SFAv1(BaseVersion):
         # remove all nodes without slivers
         if not append:
             for node in nodes_without_slivers:
-                node_elem = self.get_node_element(node, network)
+                node_elem = self.get_node_element(node)
                 parent = node_elem.getparent()
                 parent.remove(node_elem)
 
