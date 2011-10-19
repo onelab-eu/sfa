@@ -176,7 +176,7 @@ class BaseAPI:
         else:
             raise SfaAPIError("No manager for interface: %s" % self.interface)  
         manager = __import__(manager_module, fromlist=[manager_base])
-        # this isnt necessary but will hlep to produce better error messages
+        # this isnt necessary but will help to produce better error messages
         # if someone tries to access an operation this manager doesn't implement  
         manager = ManagerWrapper(manager, self.interface)
 

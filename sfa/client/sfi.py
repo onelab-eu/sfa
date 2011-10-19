@@ -266,7 +266,7 @@ class Sfi:
                              help="output file format ([xml]|xmllist|hrnlist)", default="xml",
                              choices=("xml", "xmllist", "hrnlist"))
 
-        if command in ("status"):
+        if command in ("status", "version"):
            parser.add_option("-o", "--output", dest="file",
                             help="output dictionary to file", metavar="FILE", default=None)
            parser.add_option("-F", "--fileformat", dest="fileformat", type="choice",
@@ -915,6 +915,8 @@ class Sfi:
             version=server.GetVersion()
         for (k,v) in version.iteritems():
             print "%-20s: %s"%(k,v)
+        if opts.file:
+            save_variable_to_file(version, opts.file, opts.fileformat)
 
     # list instantiated slices
     def slices(self, opts, args):
@@ -974,13 +976,13 @@ class Sfi:
         else:
             save_rspec_to_file(result, opts.file)
         return
-    
+
     # created named slice with given rspec
     def create(self, opts, args):
         server = self.get_server_from_opts(opts)
         server_version = self.get_cached_server_version(server)
         slice_hrn = args[0]
-        slice_urn = hrn_to_urn(slice_hrn, 'slice') 
+        slice_urn = hrn_to_urn(slice_hrn, 'slice')
         user_cred = self.get_user_cred()
         slice_cred = self.get_slice_cred(slice_hrn).save_to_string(save_parents=True)
         # delegate the cred to the callers root authority
@@ -990,10 +992,10 @@ class Sfi:
         rspec_file = self.get_rspec_file(args[1])
         rspec = open(rspec_file).read()
 
-        # need to pass along user keys to the aggregate.  
+        # need to pass along user keys to the aggregate.
         # users = [
         #  { urn: urn:publicid:IDN+emulab.net+user+alice
-        #    keys: [<ssh key A>, <ssh key B>] 
+        #    keys: [<ssh key A>, <ssh key B>]
         #  }]
         users = []
         slice_records = self.registry.Resolve(slice_urn, [user_cred.save_to_string(save_parents=True)])
@@ -1002,7 +1004,7 @@ class Sfi:
             user_hrns = slice_record['researcher']
             user_urns = [hrn_to_urn(hrn, 'user') for hrn in user_hrns]
             user_records = self.registry.Resolve(user_urns, [user_cred.save_to_string(save_parents=True)])
-            
+
             if 'sfa' not in server_version:
                 users = pg_users_arg(user_records)
                 rspec = RSpec(rspec)
