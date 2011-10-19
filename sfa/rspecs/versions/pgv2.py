@@ -149,7 +149,7 @@ class PGv2(BaseVersion):
         # this is untested
         self.xml.root.append(deepcopy(source_node_tag))
 
-    def add_slivers(self, slivers, sliver_urn=None, no_dupes=False):
+    def add_slivers(self, slivers, sliver_urn=None, no_dupes=False, append=False):
 
         # all nodes hould already be present in the rspec. Remove all
         # nodes that done have slivers
@@ -200,10 +200,12 @@ class PGv2(BaseVersion):
                         elif tag['tagname'] == 'initscript':
                             e = etree.SubElement(sliver_elem, '{%s}initscript' % self.namespaces['planetlab'], attrib={'name': tag['value']})                
                 else:
-                    # node isn't usable. just remove it from the request     
-                    parent = node.getparent()
-                    parent.remove(node)
+                    if not append:                   
+                        # node isn't usable. just remove it from the request     
+                        parent = node.getparent()
+                        parent.remove(node)
 
+    
 
     def remove_slivers(self, slivers, network=None, no_dupes=False):
         for sliver in slivers:

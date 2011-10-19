@@ -262,7 +262,7 @@ class SFAv1(BaseVersion):
             description = etree.SubElement(link_elem, 'description').text = link.description
             bw_unallocated = etree.SubElement(link_elem, 'bw_unallocated', units='kbps').text = link.capacity  
 
-    def add_slivers(self, slivers, network=None, sliver_urn=None, no_dupes=False):
+    def add_slivers(self, slivers, network=None, sliver_urn=None, no_dupes=False, append=False):
         # add slice name to network tag
         network_tags = self.xml.xpath('//network')
         if network_tags:
@@ -283,10 +283,11 @@ class SFAv1(BaseVersion):
                     etree.SubElement(sliver_elem, tag['tagname']).text = value=tag['value']
             
         # remove all nodes without slivers
-        for node in nodes_without_slivers:
-            node_elem = self.get_node_element(node, network)
-            parent = node_elem.getparent()
-            parent.remove(node_elem)
+        if not append:
+            for node in nodes_without_slivers:
+                node_elem = self.get_node_element(node, network)
+                parent = node_elem.getparent()
+                parent.remove(node_elem)
 
     def remove_slivers(self, slivers, network=None, no_dupes=False):
         for sliver in slivers:
