@@ -39,6 +39,7 @@ package_dirs = [
     'sfa/client',
     'sfa/methods',
     'sfa/plc',
+    'sfa/senslab',
     'sfa/server',
     'sfa/trust',
     'sfa/util', 

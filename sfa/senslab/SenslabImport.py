@@ -12,8 +12,8 @@
 import getopt
 import sys
 import tempfile
-
-from sfa.util.sfalogging import sfa_logger_goes_to_import,sfa_logger
+from sfa.util.sfalogging import _SfaLogger
+#from sfa.util.sfalogging import sfa_logger_goes_to_import,sfa_logger
 
 from sfa.util.record import *
 from sfa.util.table import SfaTable
@@ -21,7 +21,7 @@ from sfa.util.xrn import get_authority, hrn_to_urn
 from sfa.util.plxrn import email_to_hrn
 from sfa.util.config import Config
 from sfa.trust.certificate import convert_public_key, Keypair
-from sfa.trust.trustedroot import *
+from sfa.trust.trustedroots import *
 from sfa.trust.hierarchy import *
 from sfa.trust.gid import create_uuid
 
@@ -54,11 +54,13 @@ def _cleanup_string(str):
 class SenslabImport:
 
     def __init__(self):
-       sfa_logger_goes_to_import()
-       self.logger = sfa_logger()
+       self.logger = _SfaLogger(logfile='/var/log/sfa_import.log', loggername='importlog')
+    
+       #sfa_logger_goes_to_import()
+       #self.logger = sfa_logger()
        self.AuthHierarchy = Hierarchy()
        self.config = Config()
-       self.TrustedRoots = TrustedRootList(Config.get_trustedroots_dir(self.config))
+       self.TrustedRoots = TrustedRoots(Config.get_trustedroots_dir(self.config))
        print>>sys.stderr, "\r\n ========= \t\t SenslabImport TrustedRoots\r\n" ,  self.TrustedRoots
        self.plc_auth = self.config.get_plc_auth()
        print>>sys.stderr, "\r\n ========= \t\t SenslabImport  self.plc_auth %s \r\n" %(self.plc_auth ) 
