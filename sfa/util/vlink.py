@@ -56,3 +56,31 @@ def format_tc_rate(rate):
         return "%.0fkbit" % (rate / 1000.)
     else:
         return "%.0fbit" % rate
+
+def get_virt_ip(self, remote):
+        link = self.get_link_id(remote)
+        iface = self.get_iface_id(remote)
+        first = link >> 6
+        second = ((link & 0x3f)<<2) + iface
+        return "192.168.%d.%d" % (first, second)
+
+def get_virt_net(self, remote):
+    link = self.get_link_id(remote)
+    first = link >> 6
+    second = (link & 0x3f)<<2
+    return "192.168.%d.%d/30" % (first, second)
+
+def get_topo_rspec(self, link):
+    if link.end1 == self:
+        remote = link.end2
+    elif link.end2 == self:
+        remote = link.end1
+    else:
+        raise Error("Link does not connect to Node")
+
+    my_ip = self.get_virt_ip(remote)
+    remote_ip = remote.get_virt_ip(self)
+    net = self.get_virt_net(remote)
+    bw = format_tc_rate(link.bps)
+    ipaddr = remote.get_primary_iface().ipv4
+    return (remote.id, ipaddr, bw, my_ip, remote_ip, net) 
