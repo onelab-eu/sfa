@@ -1,14 +1,22 @@
-from sfa.rspec.elements.interface import Interface
+from sfa.rspecs.elements.interface import Interface
 
-class Link:
-    def __init__(self):
-        self.component_id = None
-        self.component_name = None
-        self.component_manager_id = None
-        self.type = None
-        self.endpoint1 = Interface()
-        self.endpoint2 = Interface()
-        self.capacity = None
-        self.latency = None
-        self.packet_loss = None
-        self.description = None
+class Link(dict):
+    
+    fields = {
+        'client_id': None, 
+        'component_id': None,
+        'component_name': None,
+        'component_manager': None,
+        'type': None,
+        'interface1': None,
+        'interface2': None,
+        'capacity': None,
+        'latency': None,
+        'packet_loss': None,
+        'description': None,
+    }
+    
+    def __init__(self, fields={}):
+        dict.__init__(self, Link.fields)
+        self.update(fields)
+

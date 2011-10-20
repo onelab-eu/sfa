@@ -5,7 +5,8 @@ from sfa.util.xrn import *
 from sfa.util.plxrn import hostname_to_urn, xrn_to_hostname 
 from sfa.rspecs.rspec_version import BaseVersion
 from sfa.rspecs.rspec_elements import RSpecElement, RSpecElements
-
+from sfa.rspecs.elements.versions.pgv2Link import PGv2Link
+ 
 class PGv2(BaseVersion):
     type = 'ProtoGENI'
     content_type = 'ad'
@@ -94,6 +95,13 @@ class PGv2(BaseVersion):
                     slice_attributes.append(attribute)
 
         return slice_attributes
+
+    def get_links(self, network=None):
+        links = PGv2Link.get_links(self.xml, self.namespaces)
+        return links
+
+    def add_links(self, links):
+        PGv2Link.add_links(self.xml, links)
 
     def attributes_list(self, elem):
         opts = []
