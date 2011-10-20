@@ -49,6 +49,8 @@ from sfa.server.aggregate import Aggregates
 from sfa.util.xrn import get_authority, hrn_to_urn
 from sfa.util.sfalogging import logger
 
+from sfa.managers.import_manager import import_manager
+
 # after http://www.erlenstar.demon.co.uk/unix/faq_2.html
 def daemon():
     """Daemonize the current process."""
@@ -137,31 +139,25 @@ def init_self_signed_cert(hrn, key, server_cert_file):
 
 def init_server(options, config):
     """
-    Execute the init method defined in the manager file 
+    Locate the manager based on config.*TYPE
+    Execute the init_server method (well in fact function, sigh) if defined in that module
+    In order to migrate to a more generic approach:
+    * search for <>_manager_<type>.py
+    * if not found, try <>_manager.py (and issue a warning if <type>!='pl')
     """
-    def init_manager(manager_module, manager_base):
-        try: manager = __import__(manager_module, fromlist=[manager_base])
-        except: manager = None
-        if manager and hasattr(manager, 'init_server'):
-            manager.init_server()
-    
-    manager_base = 'sfa.managers'
     if options.registry:
-        mgr_type = config.SFA_REGISTRY_TYPE
-        manager_module = manager_base + ".registry_manager_%s" % mgr_type
-        init_manager(manager_module, manager_base)    
-    if options.am:
-        mgr_type = config.SFA_AGGREGATE_TYPE
-        manager_module = manager_base + ".aggregate_manager_%s" % mgr_type
-        init_manager(manager_module, manager_base)    
+        manager=import_manager ("registry",       config.SFA_REGISTRY_TYPE)
+        if manager and hasattr(manager, 'init_server'): manager.init_server()
+    if options.am:      
+        manager=import_manager ("aggregate",      config.SFA_AGGREGATE_TYPE)
+        if manager and hasattr(manager, 'init_server'): manager.init_server()
     if options.sm:
-        mgr_type = config.SFA_SM_TYPE
-        manager_module = manager_base + ".slice_manager_%s" % mgr_type
-        init_manager(manager_module, manager_base)    
+        manager=import_manager ("slice",          config.SFA_SM_TYPE)
+        if manager and hasattr(manager, 'init_server'): manager.init_server()
     if options.cm:
-        mgr_type = config.SFA_CM_TYPE
-        manager_module = manager_base + ".component_manager_%s" % mgr_type
-        init_manager(manager_module, manager_base)    
+        manager=import_manager ("component",      config.SFA_CM_TYPE)
+        if manager and hasattr(manager, 'init_server'): manager.init_server()
+
 
 def install_peer_certs(server_key_file, server_cert_file):
     """

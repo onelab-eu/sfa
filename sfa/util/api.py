@@ -7,14 +7,18 @@ import os
 import traceback
 import string
 import xmlrpclib
+
+from sfa.util.faults import *
+from sfa.util.config import *
 import sfa.util.xmlrpcprotocol as xmlrpcprotocol
 from sfa.util.sfalogging import logger
 from sfa.trust.auth import Auth
-from sfa.util.config import *
-from sfa.util.faults import *
 from sfa.util.cache import Cache
 from sfa.trust.credential import *
 from sfa.trust.certificate import *
+
+# this is wrong all right, but temporary 
+from sfa.managers.import_manager import import_manager
 
 # See "2.2 Characters" in the XML specification:
 #
@@ -95,7 +99,7 @@ class ManagerWrapper:
     """
     This class acts as a wrapper around an SFA interface manager module, but
     can be used with any python module. The purpose of this class is raise a 
-    SfaNotImplemented exception if the a someone attepmts to use an attribute 
+    SfaNotImplemented exception if someone attempts to use an attribute 
     (could be a callable) thats not available in the library by checking the
     library using hasattr. This helps to communicate better errors messages 
     to the users and developers in the event that a specifiec operation 
@@ -107,7 +111,6 @@ class ManagerWrapper:
         self.interface = interface
         
     def __getattr__(self, method):
-        
         if not hasattr(self.manager, method):
             raise SfaNotImplemented(method, self.interface)
         return getattr(self.manager, method)
@@ -160,22 +163,18 @@ class BaseAPI:
         Returns the appropriate manager module for this interface.
         Modules are usually found in sfa/managers/
         """
-        
+        manager=None
         if self.interface in ['registry']:
-            mgr_type = self.config.SFA_REGISTRY_TYPE
-            manager_module = manager_base + ".registry_manager_%s" % mgr_type
+            manager=import_manager ("registry",  self.config.SFA_REGISTRY_TYPE)
         elif self.interface in ['aggregate']:
-            mgr_type = self.config.SFA_AGGREGATE_TYPE
-            manager_module = manager_base + ".aggregate_manager_%s" % mgr_type 
+            manager=import_manager ("aggregate", self.config.SFA_AGGREGATE_TYPE)
         elif self.interface in ['slicemgr', 'sm']:
-            mgr_type = self.config.SFA_SM_TYPE
-            manager_module = manager_base + ".slice_manager_%s" % mgr_type
+            manager=import_manager ("slice",     self.config.SFA_SM_TYPE)
         elif self.interface in ['component', 'cm']:
-            mgr_type = self.config.SFA_CM_TYPE
-            manager_module = manager_base + ".component_manager_%s" % mgr_type
-        else:
+            manager=import_manager ("component", self.config.SFA_CM_TYPE)
+        if not manager:
             raise SfaAPIError("No manager for interface: %s" % self.interface)  
-        manager = __import__(manager_module, fromlist=[manager_base])
+            
         # this isnt necessary but will help to produce better error messages
         # if someone tries to access an operation this manager doesn't implement  
         manager = ManagerWrapper(manager, self.interface)
