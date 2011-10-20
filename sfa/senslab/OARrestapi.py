@@ -5,7 +5,9 @@ import json
 from sfa.senslab.parsing import *
 from sfa.senslab.SenslabImportUsers import *
 
-OARIP='10.127.255.254'
+#OARIP='10.127.255.254'
+OARIP='192.168.0.109'
+
 
 OARrequests_list = ["GET_version", "GET_timezone", "GET_jobs", "GET_jobs_table", "GET_jobs_details",
 "GET_resources_full", "GET_resources"]
@@ -118,11 +120,20 @@ class OARGETParser:
 	
 	def ParseVersion(self) : 
 		print self.raw_json
-		self.version_json_dict.update(api_version=self.raw_json['oar_version'] ,
-				    apilib_version=self.raw_json['apilib_version'],
-				    api_timezone=self.raw_json['api_timezone'],
-				    api_timestamp=self.raw_json['api_timestamp'],
-				    oar_version=self.raw_json['oar_version'] )
+		print >>sys.stderr, self.raw_json
+		if 'oar_version' in self.raw_json :
+			self.version_json_dict.update(api_version=self.raw_json['api_version'] ,
+					apilib_version=self.raw_json['apilib_version'],
+					api_timezone=self.raw_json['api_timezone'],
+				    	api_timestamp=self.raw_json['api_timestamp'],
+				    	oar_version=self.raw_json['oar_version'] )
+		else :
+			self.version_json_dict.update(api_version=self.raw_json['api'] ,
+					apilib_version=self.raw_json['apilib'],
+					api_timezone=self.raw_json['api_timezone'],
+				    	api_timestamp=self.raw_json['api_timestamp'],
+				    	oar_version=self.raw_json['oar'] )
+					
 		print self.version_json_dict['apilib_version']
 		
 	def ParseTimezone(self) : 
