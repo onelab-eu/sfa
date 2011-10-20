@@ -47,17 +47,23 @@ class PGv2Link:
                 if 'name' in link_type.attrib:
                     link['type'] = link_type.attrib['name']
           
-            # get capacity, latency and packet_loss and interfaces from first property  
+            # get capacity, latency and packet_loss from first property  
             props = link_elem.xpath('./default:property', namespaces=namespaces)
             if len(props) > 0:
                 prop = props[0]
-                if 'source_id' in prop.attrib:
-                    link['interface1'] = Interface({'component_id': prop.attrib['source_id']}) 
-                if 'dest_id' in prop.attrib:
-                    link['interface2'] = Interface({'component_id': prop.attrib['dest_id']})
                 for attrib in ['capacity', 'latency', 'packet_loss']:
                     if attrib in prop.attrib:
                         link[attrib] = prop.attrib[attrib]
+                             
+            # get interfaces 
+            if_elems = link_elem.xpath('./default:interface_ref', namespaces=namespaces)
+            ifs = []
+            for if_elem in if_elems:
+                if_ref = Interface(if_elem.attrib)                 
+                ifs.append(if_ref)
+            if len(ifs) > 1:
+                link['interface1'] = ifs[0]
+                link['interface2'] = ifs[1] 
             links.append(link)
         return links 
             
