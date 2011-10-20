@@ -12,7 +12,7 @@ import xmlrpclib
 from sfa.util.faults import *
 from sfa.util.api import *
 from sfa.util.config import *
-from sfa.util.sfalogging import sfa_logger
+from sfa.util.sfalogging import logger
 import sfa.util.xmlrpcprotocol as xmlrpcprotocol
 from sfa.trust.auth import Auth
 from sfa.trust.rights import Right, Rights, determine_rights
@@ -109,7 +109,7 @@ class SfaAPI(BaseAPI):
 	self.users = SenslabImportUsers()
         self.hrn = self.config.SFA_INTERFACE_HRN
         self.time_format = "%Y-%m-%d %H:%M:%S"
-        self.logger=sfa_logger()
+        #self.logger=sfa_logger()
 	print >>sys.stderr, "\r\n \t\t___________PLC/API.PY  __init__ STOP ",self.interface #dir(self)
 	
 	
@@ -358,6 +358,7 @@ class SfaAPI(BaseAPI):
             if record['type'] == 'user':
 		 if 'key_ids' not in record:
                     	print>>sys.stderr, " NO_KEY_IDS fill_record_pl_info key_ids record: %s" %(record)
+			logger.info("user record has no 'key_ids' - need to import  ?")
                  else:
 			pubkeys = [keys[key_id]['key'] for key_id in record['key_ids'] if key_id in keys] 
 			record['keys'] = pubkeys

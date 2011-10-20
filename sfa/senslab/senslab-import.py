@@ -25,7 +25,7 @@ from sfa.util.xrn import get_leaf, get_authority
 from sfa.util.plxrn import hostname_to_hrn, slicename_to_hrn, email_to_hrn, hrn_to_pl_slicename
 from sfa.util.config import Config
 from sfa.trust.certificate import convert_public_key, Keypair
-from sfa.trust.trustedroot import *
+from sfa.trust.trustedroots import *
 from sfa.trust.hierarchy import *
 from sfa.util.xrn import Xrn
 from sfa.trust.gid import create_uuid
