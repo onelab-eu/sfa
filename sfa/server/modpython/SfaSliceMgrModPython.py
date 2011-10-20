@@ -13,7 +13,7 @@ import xmlrpclib
 from mod_python import apache
 
 from sfa.plc.api import SfaAPI
-from sfa.util.sfalogging import sfa_logger
+from sfa.util.sfalogging import logger
 
 api = SfaAPI(interface='slicemgr')
 
@@ -53,5 +53,5 @@ def handler(req):
 
     except Exception, err:
         # Log error in /var/log/httpd/(ssl_)?error_log
-        sfa_logger().log_exc('%r'%err)
+        logger.log_exc('%r'%err)
         return apache.HTTP_INTERNAL_SERVER_ERROR

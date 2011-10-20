@@ -24,12 +24,12 @@ from sfa.util.xrn import get_leaf, get_authority
 from sfa.util.plxrn import hostname_to_hrn, slicename_to_hrn, email_to_hrn, hrn_to_pl_slicename
 from sfa.util.config import Config
 from sfa.trust.certificate import convert_public_key, Keypair
-from sfa.trust.trustedroot import *
+from sfa.trust.trustedroots import *
 from sfa.trust.hierarchy import *
 from sfa.util.xrn import Xrn
 from sfa.plc.api import *
 from sfa.trust.gid import create_uuid
-from sfa.plc.sfaImport import sfaImport
+from sfa.plc.sfaImport import sfaImport, _cleanup_string
 
 def process_options():
 
@@ -55,6 +55,16 @@ def save_keys(filename, keys):
     f.write("keys = %s" % str(keys))
     f.close()
 
+def _get_site_hrn(interface_hrn, site):
+    # Hardcode 'internet2' into the hrn for sites hosting
+    # internet2 nodes. This is a special operation for some vini
+    # sites only
+    hrn = ".".join([interface_hrn, site['login_base']]) 
+    if ".vini" in interface_hrn and interface_hrn.endswith('vini'):
+        if site['login_base'].startswith("i2") or site['login_base'].startswith("nlr"):
+            hrn = ".".join([interface_hrn, "internet2", site['login_base']])
+    return hrn
+
 def main():
 
     process_options()
@@ -78,6 +88,9 @@ def main():
     sfaImporter.create_top_level_auth_records(root_auth)
     if not root_auth == interface_hrn:
         sfaImporter.create_top_level_auth_records(interface_hrn)
+
+    # create s user record for the slice manager
+    sfaImporter.create_sm_client_record()
 
     # create interface records
     sfaImporter.logger.info("Import: creating interface records")
@@ -145,21 +158,23 @@ def main():
         slices_dict[slice['slice_id']] = slice
     # start importing 
     for site in sites:
-        site_hrn = interface_hrn + "." + site['login_base']
-        sfa_logger().info("Importing site: %s" % site_hrn)
+        site_hrn = _get_site_hrn(interface_hrn, site)
+        sfaImporter.logger.info("Importing site: %s" % site_hrn)
 
         # import if hrn is not in list of existing hrns or if the hrn exists
         # but its not a site record
         if site_hrn not in existing_hrns or \
            (site_hrn, 'authority') not in existing_records:
-            site_hrn = sfaImporter.import_site(interface_hrn, site)
+            sfaImporter.import_site(site_hrn, site)
              
         # import node records
         for node_id in site['node_ids']:
             if node_id not in nodes_dict:
                 continue 
             node = nodes_dict[node_id]
-            hrn =  hostname_to_hrn(interface_hrn, site['login_base'], node['hostname'])
+            site_auth = get_authority(site_hrn)
+            site_name = get_leaf(site_hrn)
+            hrn =  hostname_to_hrn(site_auth, site_name, node['hostname'])
             if hrn not in existing_hrns or \
                (hrn, 'node') not in existing_records:
                 sfaImporter.import_node(hrn, node)
@@ -195,14 +210,17 @@ def main():
                (hrn, 'user') not in existing_records or update_record:
                 sfaImporter.import_person(site_hrn, person)
 
+    
     # remove stale records    
+    system_records = [interface_hrn, root_auth, interface_hrn + '.slicemanager']
     for (record_hrn, type) in existing_records.keys():
-        record = existing_records[(record_hrn, type)]
-        # if this is the interface name dont do anything
-        if record_hrn == interface_hrn or \
-           record_hrn == root_auth or \
-           record['peer_authority']:
+        if record_hrn in system_records:
             continue
+        
+        record = existing_records[(record_hrn, type)]
+        if record['peer_authority']:
+            continue
+
         # dont delete vini's internet2 placeholdder record
         # normally this would be deleted becuase it does not have a plc record 
         if ".vini" in interface_hrn and interface_hrn.endswith('vini') and \

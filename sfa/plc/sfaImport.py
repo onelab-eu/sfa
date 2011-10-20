@@ -12,7 +12,7 @@ import getopt
 import sys
 import tempfile
 
-from sfa.util.sfalogging import sfa_logger_goes_to_import,sfa_logger
+from sfa.util.sfalogging import _SfaLogger
 
 from sfa.util.record import *
 from sfa.util.table import SfaTable
@@ -20,7 +20,7 @@ from sfa.util.xrn import get_authority, hrn_to_urn
 from sfa.util.plxrn import email_to_hrn
 from sfa.util.config import Config
 from sfa.trust.certificate import convert_public_key, Keypair
-from sfa.trust.trustedroot import *
+from sfa.trust.trustedroots import TrustedRoots
 from sfa.trust.hierarchy import *
 from sfa.trust.gid import create_uuid
 
@@ -52,11 +52,10 @@ def _cleanup_string(str):
 class sfaImport:
 
     def __init__(self):
-       sfa_logger_goes_to_import()
-       self.logger = sfa_logger()
+       self.logger = _SfaLogger(logfile='/var/log/sfa_import.log', loggername='importlog')
        self.AuthHierarchy = Hierarchy()
        self.config = Config()
-       self.TrustedRoots = TrustedRootList(Config.get_trustedroots_dir(self.config))
+       self.TrustedRoots = TrustedRoots(Config.get_trustedroots_dir(self.config))
        self.plc_auth = self.config.get_plc_auth()
        self.root_auth = self.config.SFA_REGISTRY_ROOT_AUTH
         
@@ -97,6 +96,24 @@ class sfaImport:
             self.logger.info("Import: inserting authority record for %s"%hrn)
             table.insert(auth_record)
 
+    def create_sm_client_record(self):
+        """
+        Create a user record for the Slicemanager service.
+        """
+        hrn = self.config.SFA_INTERFACE_HRN + '.slicemanager'
+        urn = hrn_to_urn(hrn, 'user')
+        if not self.AuthHierarchy.auth_exists(urn):
+            self.logger.info("Import: creating Slice Manager user")
+            self.AuthHierarchy.create_auth(urn)
+
+        auth_info = self.AuthHierarchy.get_auth_info(hrn)
+        table = SfaTable()
+        sm_user_record = table.find({'type': 'user', 'hrn': hrn})
+        if not sm_user_record:
+            record = SfaRecord(hrn=hrn, gid=auth_info.get_gid_object(), type="user", pointer=-1)
+            record['authority'] = get_authority(record['hrn'])
+            table.insert(record)    
+
     def create_interface_records(self):
         """
         Create a record for each SFA interface
@@ -117,7 +134,9 @@ class sfaImport:
                 record = SfaRecord(hrn=interface_hrn, gid=gid, type=interface, pointer=-1)  
                 record['authority'] = get_authority(interface_hrn)
                 table.insert(record) 
+                                
 
+    
     def import_person(self, parent_hrn, person):
         """
         Register a user record 
@@ -136,12 +155,16 @@ class sfaImport:
             # to planetlab
             keys = self.shell.GetKeys(self.plc_auth, key_ids)
             key = keys[0]['key']
-            pkey = convert_public_key(key)
+            pkey = None
+            try:
+                pkey = convert_public_key(key)
+            except:
+                self.logger.warn('unable to convert public key for %s' % hrn) 
             if not pkey:
                 pkey = Keypair(create=True)
         else:
             # the user has no keys
-            self.logger.warning("Import: person %s does not have a PL public key"%hrn)
+            self.logger.warn("Import: person %s does not have a PL public key"%hrn)
             # if a key is unavailable, then we still need to put something in the
             # user's GID. So make one up.
             pkey = Keypair(create=True)
@@ -210,23 +233,9 @@ class sfaImport:
             table.update(node_record)
 
     
-    def import_site(self, parent_hrn, site):
+    def import_site(self, hrn, site):
         shell = self.shell
         plc_auth = self.plc_auth
-        sitename = site['login_base']
-        sitename = _cleanup_string(sitename)
-        hrn = parent_hrn + "." + sitename
-        # Hardcode 'internet2' into the hrn for sites hosting
-        # internet2 nodes. This is a special operation for some vini
-        # sites only
-        if ".vini" in parent_hrn and parent_hrn.endswith('vini'):
-            if sitename.startswith("i2"):
-                #sitename = sitename.replace("ii", "")
-                hrn = ".".join([parent_hrn, "internet2", sitename])
-            elif sitename.startswith("nlr"):
-                #sitename = sitename.replace("nlr", "")
-                hrn = ".".join([parent_hrn, "internet2", sitename])
-
         urn = hrn_to_urn(hrn, 'authority')
         self.logger.info("Import: site %s"%hrn)
 

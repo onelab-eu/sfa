@@ -1,10 +1,12 @@
 start = RSpec
 RSpec = element RSpec {
+    attribute expires { xsd:NMTOKEN },
+    attribute generated { xsd:NMTOKEN },
     attribute type { xsd:NMTOKEN },
-    cloud
+    network
 }
-cloud = element cloud {
-    attribute id { xsd:NMTOKEN },
+network = element network {
+    attribute name { xsd:NMTOKEN },
     user_info?,
     ipv4,
     bundles,

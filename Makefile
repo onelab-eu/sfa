@@ -15,7 +15,7 @@ uninstall: python-uninstall tests-uninstall
 
 .PHONY: all install clean uninstall
 
-VERSIONTAG=should-be-redefined-by-specfile
+VERSIONTAG=0.0-0-should.be-redefined-by-specfile
 SCMURL=should-be-redefined-by-specfile
 
 ##########

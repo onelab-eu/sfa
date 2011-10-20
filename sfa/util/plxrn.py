@@ -17,7 +17,8 @@ def hrn_to_pl_login_base (hrn):
     return PlXrn(xrn=hrn,type='slice').pl_login_base()
 def hrn_to_pl_authname (hrn):
     return PlXrn(xrn=hrn,type='any').pl_authname()
-
+def xrn_to_hostname(hrn):
+    return Xrn.unescape(PlXrn(xrn=hrn, type='node').get_leaf())
 
 class PlXrn (Xrn):
 

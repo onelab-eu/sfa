@@ -61,6 +61,9 @@ start() {
     
     reload
 
+    # install peer certs
+    action $"SFA installing peer certs" daemon /usr/bin/sfa-server.py -t -d $OPTIONS 
+
     if [ "$SFA_REGISTRY_ENABLED" -eq 1 ]; then
         action $"SFA Registry" daemon /usr/bin/sfa-server.py -r -d $OPTIONS
     fi

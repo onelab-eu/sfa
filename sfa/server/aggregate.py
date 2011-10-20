@@ -1,7 +1,8 @@
 from sfa.util.faults import *
 from sfa.util.server import SfaServer
 from sfa.util.xrn import hrn_to_urn
-from sfa.server.interface import Interfaces
+from sfa.server.interface import Interfaces, Interface
+from sfa.util.config import Config     
 
 class Aggregate(SfaServer):
 
@@ -22,19 +23,13 @@ class Aggregates(Interfaces):
 
     default_dict = {'aggregates': {'aggregate': [Interfaces.default_fields]}}
  
-    def __init__(self, api, conf_file = "/etc/sfa/aggregates.xml"):
-        Interfaces.__init__(self, api, conf_file)
+    def __init__(self, conf_file = "/etc/sfa/aggregates.xml"):
+        Interfaces.__init__(self, conf_file)
+        sfa_config = Config() 
         # set up a connection to the local aggregate
-        if self.api.config.SFA_AGGREGATE_ENABLED:
-            address = self.api.config.SFA_AGGREGATE_HOST
-            port = self.api.config.SFA_AGGREGATE_PORT
-            url = 'http://%(address)s:%(port)s' % locals()
-            local_aggregate = {'hrn': self.api.hrn,
-                               'urn': hrn_to_urn(self.api.hrn, 'authority'),
-                               'addr': address,
-                               'port': port,
-                               'url': url}
-            self.interfaces[self.api.hrn] = local_aggregate
-
-        # get connections
-        self.update(self.get_connections())
+        if sfa_config.SFA_AGGREGATE_ENABLED:
+            addr = sfa_config.SFA_AGGREGATE_HOST
+            port = sfa_config.SFA_AGGREGATE_PORT
+            hrn = sfa_config.SFA_INTERFACE_HRN
+            interface = Interface(hrn, addr, port)
+            self[hrn] = interface

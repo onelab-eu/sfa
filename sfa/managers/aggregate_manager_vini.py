@@ -17,6 +17,8 @@ from sfa.server.registry import Registries
 from sfa.plc.slices import Slices
 import sfa.plc.peers as peers
 from sfa.managers.vini.vini_network import *
+from sfa.plc.vini_aggregate import ViniAggregate
+from sfa.rspecs.version_manager import VersionManager
 from sfa.plc.api import SfaAPI
 from sfa.plc.slices import *
 from sfa.managers.aggregate_manager_pl import __get_registry_objects, __get_hostnames
@@ -96,20 +98,22 @@ def ListResources(api, creds, options,call_id):
     # get slice's hrn from options
     xrn = options.get('geni_slice_urn', '')
     hrn, type = urn_to_hrn(xrn)
+
+    version_manager = VersionManager()
+    # get the rspec's return format from options
+    rspec_version = version_manager.get_version(options.get('rspec_version'))
+    version_string = "rspec_%s" % (rspec_version.to_string())
     
     # look in cache first
     if api.cache and not xrn:
-        rspec = api.cache.get('nodes')
+        rspec = api.cache.get(version_string)
         if rspec:
+            api.logger.info("aggregate.ListResources: returning cached value for hrn %s"%hrn)
             return rspec
 
-    network = ViniNetwork(api)
-    if (hrn):
-        if network.get_slice(api, hrn):
-            network.addSlice()
-
-    rspec =  network.toxml()
-
+    aggregate = ViniAggregate(api, options) 
+    rspec =  aggregate.get_rspec(slice_xrn=xrn, version=rspec_version)
+           
     # cache the result
     if api.cache and not xrn:
         api.cache.add('nodes', rspec)

@@ -7,7 +7,6 @@ from lxml import etree
 from xmlbuilder import XMLBuilder
 
 from sfa.util.faults import *
-#from sfa.util.sfalogging import sfa_logger
 from sfa.util.xrn import get_authority
 from sfa.util.plxrn import hrn_to_pl_slicename, hostname_to_urn
 

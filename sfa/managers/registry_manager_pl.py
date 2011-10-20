@@ -174,6 +174,18 @@ def list(api, xrn, origin_hrn=None):
     return records
 
 
+def create_gid(api, xrn, cert):
+    # get the authority
+    authority = Xrn(xrn=xrn).get_authority_hrn()
+    auth_info = api.auth.get_auth_info(authority)
+    if not cert:
+        pkey = Keypair(create=True)
+    else:
+        certificate = Certificate(string=cert)
+        pkey = certificate.get_pubkey()    
+    gid = api.auth.hierarchy.create_gid(xrn, create_uuid(), pkey) 
+    return gid.save_to_string(save_parents=True)
+    
 def register(api, record):
 
     hrn, type = record['hrn'], record['type']
@@ -192,7 +204,6 @@ def register(api, record):
     record['authority'] = get_authority(record['hrn'])
     type = record['type']
     hrn = record['hrn']
-    api.auth.verify_object_permission(hrn)
     auth_info = api.auth.get_auth_info(record['authority'])
     pub_key = None
     # make sure record has a gid
@@ -288,7 +299,6 @@ def update(api, record_dict):
     type = new_record['type']
     hrn = new_record['hrn']
     urn = hrn_to_urn(hrn,type)
-    api.auth.verify_object_permission(hrn)
     table = SfaTable()
     # make sure the record exists
     records = table.findObjects({'type': type, 'hrn': hrn})

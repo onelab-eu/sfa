@@ -2,30 +2,35 @@
 
 from sfa.rspecs.pg_rspec_converter import PGRSpecConverter
 from sfa.rspecs.sfa_rspec_converter import SfaRSpecConverter
-from sfa.rspecs.sfa_rspec import sfa_rspec_version
-from sfa.rspecs.pg_rspec import pg_rspec_ad_version, pg_rspec_request_version
-from sfa.rspecs.rspec_parser import parse_rspec
-
+from sfa.rspecs.rspec import RSpec
+from sfa.rspecs.version_manager import VersionManager
 
 class RSpecConverter:
 
     @staticmethod
-    def to_sfa_rspec(in_rspec):
-        rspec = parse_rspec(in_rspec)
-        if rspec.version['type'] == sfa_rspec_version['type']: 
+    def to_sfa_rspec(in_rspec, content_type=None):
+        rspec = RSpec(in_rspec)
+        version_manager = VersionManager()
+        sfa_version = version_manager._get_version('sfa', '1')
+        pg_version = version_manager._get_version('protogeni', '2')
+        if rspec.version.type.lower() == sfa_version.type.lower(): 
           return in_rspec
-        elif rspec.version['type'] == pg_rspec_ad_version['type']:
-            return PGRSpecConverter.to_sfa_rspec(in_rspec)
+        elif rspec.version.type.lower() == pg_version.type.lower(): 
+            return PGRSpecConverter.to_sfa_rspec(in_rspec, content_type)
         else:
-             return in_rspec 
+            return in_rspec 
 
     @staticmethod 
-    def to_pg_rspec(in_rspec):
-        rspec = parse_rspec(in_rspec)
-        if rspec.version['type'] == pg_rspec_ad_version['type']:
+    def to_pg_rspec(in_rspec, content_type=None):
+        rspec = RSpec(in_rspec)
+        version_manager = VersionManager()
+        sfa_version = version_manager._get_version('sfa', '1')
+        pg_version = version_manager._get_version('protogeni', '2')
+
+        if rspec.version.type.lower() == pg_version.type.lower(): 
             return in_rspec
-        elif rspec.version['type'] == sfa_rspec_version['type']:
-            return SfaRSpecConverter.to_pg_rspec(in_rspec)
+        elif rspec.version.type.lower() == sfa_version.type.lower(): 
+            return SfaRSpecConverter.to_pg_rspec(in_rspec, content_type)
         else:
             return in_rspec 
 

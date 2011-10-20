@@ -28,9 +28,11 @@
 import xmlrpclib
 import uuid
 
-from sfa.util.sfalogging import sfa_logger
 from sfa.trust.certificate import Certificate
-from sfa.util.xrn import hrn_to_urn, urn_to_hrn
+
+from sfa.util.faults import *
+from sfa.util.sfalogging import logger
+from sfa.util.xrn import hrn_to_urn, urn_to_hrn, hrn_authfor_hrn
 
 ##
 # Create a new uuid. Returns the UUID as a string.
@@ -75,12 +77,13 @@ class GID(Certificate):
     # @param subject If subject!=None, create the X509 cert and set the subject name
     # @param string If string!=None, load the GID from a string
     # @param filename If filename!=None, load the GID from a file
+    # @param lifeDays life of GID in days - default is 1825==5 years
 
-    def __init__(self, create=False, subject=None, string=None, filename=None, uuid=None, hrn=None, urn=None):
+    def __init__(self, create=False, subject=None, string=None, filename=None, uuid=None, hrn=None, urn=None, lifeDays=1825):
         
-        Certificate.__init__(self, create, subject, string, filename)
+        Certificate.__init__(self, lifeDays, create, subject, string, filename)
         if subject:
-            sfa_logger().debug("Creating GID for subject: %s" % subject)
+            logger.debug("Creating GID for subject: %s" % subject)
         if uuid:
             self.uuid = int(uuid)
         if hrn:
@@ -180,7 +183,7 @@ class GID(Certificate):
         print self.dump_string(*args,**kwargs)
 
     def dump_string(self, indent=0, dump_parents=False):
-        result="GID\n"
+        result=" "*(indent-2) + "GID\n"
         result += " "*indent + "hrn:" + str(self.get_hrn()) +"\n"
         result += " "*indent + "urn:" + str(self.get_urn()) +"\n"
         result += " "*indent + "uuid:" + str(self.get_uuid()) + "\n"
@@ -196,7 +199,7 @@ class GID(Certificate):
     # Verify the chain of authenticity of the GID. First perform the checks
     # of the certificate class (verifying that each parent signs the child,
     # etc). In addition, GIDs also confirm that the parent's HRN is a prefix
-    # of the child's HRN.
+    # of the child's HRN, and the parent is of type 'authority'.
     #
     # Verifying these prefixes prevents a rogue authority from signing a GID
     # for a principal that is not a member of that authority. For example,
@@ -208,8 +211,17 @@ class GID(Certificate):
        
         if self.parent:
             # make sure the parent's hrn is a prefix of the child's hrn
-            if not self.get_hrn().startswith(self.parent.get_hrn()):
-                raise GidParentHrn("This cert HRN %s doesnt start with parent HRN %s" % (self.get_hrn(), self.parent.get_hrn()))
+            if not hrn_authfor_hrn(self.parent.get_hrn(), self.get_hrn()):
+                raise GidParentHrn("This cert HRN %s isn't in the namespace for parent HRN %s" % (self.get_hrn(), self.parent.get_hrn()))
+
+            # Parent must also be an authority (of some type) to sign a GID
+            # There are multiple types of authority - accept them all here
+            if not self.parent.get_type().find('authority') == 0:
+                raise GidInvalidParentHrn("This cert %s's parent %s is not an authority (is a %s)" % (self.get_hrn(), self.parent.get_hrn(), self.parent.get_type()))
+
+            # Then recurse up the chain - ensure the parent is a trusted
+            # root or is in the namespace of a trusted root
+            self.parent.verify_chain(trusted_certs)
         else:
             # make sure that the trusted root's hrn is a prefix of the child's
             trusted_gid = GID(string=trusted_root.save_to_string())
@@ -218,7 +230,11 @@ class GID(Certificate):
             #if trusted_type == 'authority':
             #    trusted_hrn = trusted_hrn[:trusted_hrn.rindex('.')]
             cur_hrn = self.get_hrn()
-            if not self.get_hrn().startswith(trusted_hrn):
-                raise GidParentHrn("Trusted roots HRN %s isnt start of this cert %s" % (trusted_hrn, cur_hrn))
+            if not hrn_authfor_hrn(trusted_hrn, cur_hrn):
+                raise GidParentHrn("Trusted root with HRN %s isn't a namespace authority for this cert %s" % (trusted_hrn, cur_hrn))
+
+            # There are multiple types of authority - accept them all here
+            if not trusted_type.find('authority') == 0:
+                raise GidInvalidParentHrn("This cert %s's trusted root signer %s is not an authority (is a %s)" % (self.get_hrn(), trusted_hrn, trusted_type))
 
         return

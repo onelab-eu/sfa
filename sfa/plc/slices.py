@@ -4,14 +4,15 @@ import traceback
 import sys
 
 from types import StringTypes
-from sfa.util.xrn import get_leaf, get_authority, hrn_to_urn, urn_to_hrn
-from sfa.util.plxrn import hrn_to_pl_slicename
+from sfa.util.xrn import Xrn, get_leaf, get_authority, hrn_to_urn, urn_to_hrn
+from sfa.util.plxrn import hrn_to_pl_slicename, hrn_to_pl_login_base
 from sfa.util.rspec import *
 from sfa.util.specdict import *
 from sfa.util.faults import *
 from sfa.util.record import SfaRecord
 from sfa.util.policy import Policy
 from sfa.util.prefixTree import prefixTree
+from collections import defaultdict
 
 MAXINT =  2L**31-1
 
@@ -24,6 +25,8 @@ class Slices:
         #filepath = path + os.sep + filename
         self.policy = Policy(self.api)    
         self.origin_hrn = origin_hrn
+        self.registry = api.registries[api.hrn]
+        self.credential = api.getCredential()
 
     def get_slivers(self, xrn, node=None):
         hrn, type = urn_to_hrn(xrn)
@@ -148,7 +151,7 @@ class Slices:
         for peer_record in peers:
             names = [name.lower() for name in peer_record.values() if isinstance(name, StringTypes)]
             if site_authority in names:
-                peer = peer_record['shortname']
+                peer = peer_record
 
         return peer
 
@@ -163,206 +166,378 @@ class Slices:
         if site_authority != self.api.hrn:
             sfa_peer = site_authority
 
-        return sfa_peer 
+        return sfa_peer
 
-    def verify_site(self, registry, credential, slice_hrn, peer, sfa_peer, reg_objects=None):
-        authority = get_authority(slice_hrn)
-        authority_urn = hrn_to_urn(authority, 'authority')
-        login_base = None
-        if reg_objects:
-            site = reg_objects['site']
-            login_base = site['login_base']
-        else:
-            site_records = registry.Resolve(authority_urn, [credential])
-            site = {}            
-            for site_record in site_records:            
-                if site_record['type'] == 'authority':
-                    site = site_record
-            if not site:
-                raise RecordNotFound(authority)
-            
-        remote_site_id = site.pop('site_id')    
+    def verify_slice_nodes(self, slice, requested_slivers, peer):
         
-        if login_base is None:
-            login_base = get_leaf(authority)
-        sites = self.api.plshell.GetSites(self.api.plauth, login_base)
+        nodes = self.api.plshell.GetNodes(self.api.plauth, slice['node_ids'], ['hostname'])
+        current_slivers = [node['hostname'] for node in nodes]
 
-        if not sites:
-            site_id = self.api.plshell.AddSite(self.api.plauth, site)
+        # remove nodes not in rspec
+        deleted_nodes = list(set(current_slivers).difference(requested_slivers))
+
+        # add nodes from rspec
+        added_nodes = list(set(requested_slivers).difference(current_slivers))        
+
+        try:
             if peer:
-                try:
-                    self.api.plshell.BindObjectToPeer(self.api.plauth, 'site', site_id, peer, remote_site_id)   
-                except Exception,e:
-                    self.api.plshell.DeleteSite(self.api.plauth, site_id)
-                    raise e
-            # mark this site as an sfa peer record
-            if sfa_peer and not reg_objects:
-                peer_dict = {'type': 'authority', 'hrn': authority, 'peer_authority': sfa_peer, 'pointer': site_id}
-                registry.register_peer_object(credential, peer_dict)
+                self.api.plshell.UnBindObjectFromPeer(self.api.plauth, 'slice', slice['slice_id'], peer['shortname'])
+            self.api.plshell.AddSliceToNodes(self.api.plauth, slice['name'], added_nodes)
+            self.api.plshell.DeleteSliceFromNodes(self.api.plauth, slice['name'], deleted_nodes)
 
-            # exempt federated sites from monitor policies
-            self.api.plshell.AddSiteTag(site_id, 'exempt_site_until', "20200101")
-             
-        else:
-            site_id = sites[0]['site_id']
-            remote_site_id = sites[0]['peer_site_id']
-            old_site = sites[0]
-            #the site is already on the remote agg. Let us update(e.g. max_slices field) it with the latest info.
-            self.sync_site(old_site, site, peer)
+        except: 
+            self.api.logger.log_exc('Failed to add/remove slice from nodes')
 
-
-        return (site_id, remote_site_id) 
-
-    def verify_slice(self, registry, credential, slice_hrn, site_id, remote_site_id, peer, sfa_peer, reg_objects=None):
-        slice = {}
-        slice_record = None
-        authority = get_authority(slice_hrn)
-
-        if reg_objects:
-            slice_record = reg_objects['slice_record']
-        else:
-            slice_records = registry.Resolve(slice_hrn, [credential])
-    
-            for record in slice_records:
-                if record['type'] in ['slice']:
-                    slice_record = record
-            if not slice_record:
-                raise RecordNotFound(hrn)
+    def handle_peer(self, site, slice, persons, peer):
+        if peer:
+            # bind site
+            try:
+                if site:
+                    self.api.plshell.BindObjectToPeer(self.api.plauth, 'site', \
+                       site['site_id'], peer['shortname'], slice['site_id'])
+            except Exception,e:
+                self.api.plshell.DeleteSite(self.api.plauth, site['site_id'])
+                raise e
             
+            # bind slice
+            try:
+                if slice:
+                    self.api.plshell.BindObjectToPeer(self.api.plauth, 'slice', \
+                       slice['slice_id'], peer['shortname'], slice['slice_id'])
+            except Exception,e:
+                self.api.plshell.DeleteSlice(self.api.plauth, slice['slice_id'])
+                raise e 
+
+            # bind persons
+            for person in persons:
+                try:
+                    self.api.plshell.BindObjectToPeer(self.api.plauth, 'person', \
+                        person['person_id'], peer['shortname'], person['peer_person_id'])
+
+                    for (key, remote_key_id) in zip(person['keys'], person['key_ids']):
+                        try:
+                            self.api.plshell.BindObjectToPeer(self.api.plauth, 'key',\
+                                key['key_id'], peer['shortname'], remote_key_id)
+                        except:
+                            self.api.plshell.DeleteKey(self.api.plauth, key['key_id'])
+                            self.api.logger("failed to bind key: %s to peer: %s " % (key['key_id'], peer['shortname']))
+                except Exception,e:
+                    self.api.plshell.DeletePerson(self.api.plauth, person['person_id'])
+                    raise e       
+
+        return slice
+
+    def verify_site(self, slice_xrn, slice_record={}, peer=None, sfa_peer=None):
+        (slice_hrn, type) = urn_to_hrn(slice_xrn)
+        site_hrn = get_authority(slice_hrn)
+        # login base can't be longer than 20 characters
+        slicename = hrn_to_pl_slicename(slice_hrn)
+        authority_name = slicename.split('_')[0]
+        login_base = authority_name[:20]
+        sites = self.api.plshell.GetSites(self.api.plauth, login_base)
+        if not sites:
+            # create new site record
+            site = {'name': 'geni.%s' % authority_name,
+                    'abbreviated_name': authority_name,
+                    'login_base': login_base,
+                    'max_slices': 100,
+                    'max_slivers': 1000,
+                    'enabled': True,
+                    'peer_site_id': None}
+            if peer:
+                site['peer_site_id'] = slice_record.get('site_id', None)
+            site['site_id'] = self.api.plshell.AddSite(self.api.plauth, site)
+            # exempt federated sites from monitor policies
+            self.api.plshell.AddSiteTag(self.api.plauth, site['site_id'], 'exempt_site_until', "20200101")
+            
+            # is this still necessary?
+            # add record to the local registry 
+            if sfa_peer and slice_record:
+                peer_dict = {'type': 'authority', 'hrn': site_hrn, \
+                             'peer_authority': sfa_peer, 'pointer': site['site_id']}
+                self.registry.register_peer_object(self.credential, peer_dict)
+        else:
+            site =  sites[0]
+            if peer:
+                # unbind from peer so we can modify if necessary. Will bind back later
+                self.api.plshell.UnBindObjectFromPeer(self.api.plauth, 'site', site['site_id'], peer['shortname']) 
         
+        return site        
+
+    def verify_slice(self, slice_hrn, slice_record, peer, sfa_peer):
         slicename = hrn_to_pl_slicename(slice_hrn)
         parts = slicename.split("_")
         login_base = parts[0]
         slices = self.api.plshell.GetSlices(self.api.plauth, [slicename]) 
         if not slices:
-            slice_fields = {}
-            slice_keys = ['name', 'url', 'description']
-            for key in slice_keys:
-                if key in slice_record and slice_record[key]:
-                    slice_fields[key] = slice_record[key]
+            slice = {'name': slicename,
+                     'url': slice_record.get('url', slice_hrn), 
+                     'description': slice_record.get('description', slice_hrn)}
             # add the slice                          
-            slice_id = self.api.plshell.AddSlice(self.api.plauth, slice_fields)
-            slice = slice_fields
-            slice['slice_id'] = slice_id
-
+            slice['slice_id'] = self.api.plshell.AddSlice(self.api.plauth, slice)
+            slice['node_ids'] = []
+            slice['person_ids'] = []
+            if peer:
+                slice['peer_slice_id'] = slice_record.get('slice_id', None) 
             # mark this slice as an sfa peer record
             if sfa_peer:
-                peer_dict = {'type': 'slice', 'hrn': slice_hrn, 'peer_authority': sfa_peer, 'pointer': slice_id}
-                registry.register_peer_object(credential, peer_dict)
-
-            #this belongs to a peer
-            if peer:
-                try:
-                    self.api.plshell.BindObjectToPeer(self.api.plauth, 'slice', slice_id, peer, slice_record['pointer'])
-                except Exception,e:
-                    self.api.plshell.DeleteSlice(self.api.plauth,slice_id)
-                    raise e
-            slice['node_ids'] = []
+                peer_dict = {'type': 'slice', 'hrn': slice_hrn, 
+                             'peer_authority': sfa_peer, 'pointer': slice['slice_id']}
+                self.registry.register_peer_object(self.credential, peer_dict)
         else:
             slice = slices[0]
-            slice_id = slice['slice_id']
-            site_id = slice['site_id']
-	    #the slice is alredy on the remote agg. Let us update(e.g. expires field) it with the latest info.
-	    self.sync_slice(slice, slice_record, peer)
-
-        slice['peer_slice_id'] = slice_record['pointer']
-        self.verify_persons(registry, credential, slice_record, site_id, remote_site_id, peer, sfa_peer, reg_objects)
-    
-        return slice        
-
-    def verify_persons(self, registry, credential, slice_record, site_id, remote_site_id, peer, sfa_peer, reg_objects=None):
-        # get the list of valid slice users from the registry and make 
-        # sure they are added to the slice 
-        slicename = hrn_to_pl_slicename(slice_record['hrn'])
-        if reg_objects:
-            researchers = reg_objects['users'].keys()
-        else:
-            researchers = slice_record.get('researcher', [])
-        for researcher in researchers:
-            if reg_objects:
-                person_dict = reg_objects['users'][researcher]
-            else:
-                person_records = registry.Resolve(researcher, [credential])
-                for record in person_records:
-                    if record['type'] in ['user'] and record['enabled']:
-                        person_record = record
-                if not person_record:
-                    return 1
-                person_dict = person_record
-
-            local_person=False
             if peer:
-                peer_id = self.api.plshell.GetPeers(self.api.plauth, {'shortname': peer}, ['peer_id'])[0]['peer_id']
-                persons = self.api.plshell.GetPersons(self.api.plauth, {'email': [person_dict['email']], 'peer_id': peer_id}, ['person_id', 'key_ids'])
-                if not persons:
-                    persons = self.api.plshell.GetPersons(self.api.plauth, [person_dict['email']], ['person_id', 'key_ids'])
-                    if persons:
-                        local_person=True
-                        
-            else:
-                persons = self.api.plshell.GetPersons(self.api.plauth, [person_dict['email']], ['person_id', 'key_ids'])   
-        
-            if not persons:
-                person_id=self.api.plshell.AddPerson(self.api.plauth, person_dict)
-                self.api.plshell.UpdatePerson(self.api.plauth, person_id, {'enabled' : True})
-                
-                # mark this person as an sfa peer record
-                if sfa_peer:
-                    peer_dict = {'type': 'user', 'hrn': researcher, 'peer_authority': sfa_peer, 'pointer': person_id}
-                    registry.register_peer_object(credential, peer_dict)
+                slice['peer_slice_id'] = slice_record.get('slice_id', None)
+                # unbind from peer so we can modify if necessary. Will bind back later
+                self.api.plshell.UnBindObjectFromPeer(self.api.plauth, 'slice',\
+                             slice['slice_id'], peer['shortname'])
+	        #Update existing record (e.g. expires field) it with the latest info.
+            if slice_record and slice['expires'] != slice_record['expires']:
+                self.api.plshell.UpdateSlice(self.api.plauth, slice['slice_id'],\
+                             {'expires' : slice_record['expires']})
+       
+        return slice
 
-                if peer:
-                    try:
-                        self.api.plshell.BindObjectToPeer(self.api.plauth, 'person', person_id, peer, person_dict['pointer'])
-                    except Exception,e:
-                        self.api.plshell.DeletePerson(self.api.plauth,person_id)
-                        raise e
-                key_ids = []
-            else:
-                person_id = persons[0]['person_id']
-                key_ids = persons[0]['key_ids']
+    #def get_existing_persons(self, users):
+    def verify_persons(self, slice_hrn, slice_record, users, peer, sfa_peer, append=True):
+        users_by_email = {}
+        users_by_site = defaultdict(list)
 
+        users_dict = {} 
+        for user in users:
+            if 'append' in user and user['append'] == False:
+                append = False
+            if 'email' in user:
+                users_by_email[user['email']] = user
+                users_dict[user['email']] = user
+            elif 'urn' in user:
+                hrn, type = urn_to_hrn(user['urn'])
+                username = get_leaf(hrn) 
+                login_base = get_leaf(get_authority(user['urn']))
+                user['username'] = username 
+                users_by_site[login_base].append(user)
 
-            # if this is a peer person, we must unbind them from the peer or PLCAPI will throw
-            # an error
-            try:
-                if peer and not local_person:
-                    self.api.plshell.UnBindObjectFromPeer(self.api.plauth, 'person', person_id, peer)
-                if peer:
-                    self.api.plshell.UnBindObjectFromPeer(self.api.plauth, 'site', site_id,  peer)
+        existing_user_ids = []
+        if users_by_email:
+            # get existing users by email 
+            existing_users = self.api.plshell.GetPersons(self.api.plauth, \
+                {'email': users_by_email.keys()}, ['person_id', 'key_ids', 'email'])
+            existing_user_ids.extend([user['email'] for user in existing_users])
 
-                self.api.plshell.AddPersonToSlice(self.api.plauth, person_dict['email'], slicename)
-                self.api.plshell.AddPersonToSite(self.api.plauth, person_dict['email'], site_id)
-            finally:
-                if peer:
-                    try: self.api.plshell.BindObjectToPeer(self.api.plauth, 'site', site_id, peer, remote_site_id)
-                    except: pass
-                if peer and not local_person:
-                    try: self.api.plshell.BindObjectToPeer(self.api.plauth, 'person', person_id, peer, person_dict['pointer'])
-                    except: pass
+        if users_by_site:
+            # get a list of user sites (based on requeste user urns
+            site_list = self.api.plshell.GetSites(self.api.plauth, users_by_site.keys(), \
+                ['site_id', 'login_base', 'person_ids'])
+            sites = {}
+            site_user_ids = []
             
-            self.verify_keys(registry, credential, person_dict, key_ids, person_id, peer, local_person)
+            # get all existing users at these sites
+            for site in site_list:
+                sites[site['site_id']] = site
+                site_user_ids.extend(site['person_ids'])
 
-    def verify_keys(self, registry, credential, person_dict, key_ids, person_id,  peer, local_person):
-        keylist = self.api.plshell.GetKeys(self.api.plauth, key_ids, ['key'])
-        keys = [key['key'] for key in keylist]
+            existing_site_persons_list = self.api.plshell.GetPersons(self.api.plauth, \
+              site_user_ids,  ['person_id', 'key_ids', 'email', 'site_ids'])
+
+            # all requested users are either existing users or new (added) users      
+            for login_base in users_by_site:
+                requested_site_users = users_by_site[login_base]
+                for requested_user in requested_site_users:
+                    user_found = False
+                    for existing_user in existing_site_persons_list:
+                        for site_id in existing_user['site_ids']:
+                            site = sites[site_id]
+                            if login_base == site['login_base'] and \
+                               existing_user['email'].startswith(requested_user['username']):
+                                existing_user_ids.append(existing_user['email'])
+                                users_dict[existing_user['email']] = requested_user
+                                user_found = True
+                                break
+                        if user_found:
+                            break
+      
+                    if user_found == False:
+                        fake_email = requested_user['username'] + '@geni.net'
+                        users_dict[fake_email] = requested_user
+                
+
+        # requested slice users        
+        requested_user_ids = users_dict.keys()
+        # existing slice users
+        existing_slice_users_filter = {'person_id': slice_record.get('person_ids', [])}
+        existing_slice_users = self.api.plshell.GetPersons(self.api.plauth, \
+             existing_slice_users_filter, ['person_id', 'key_ids', 'email'])
+        existing_slice_user_ids = [user['email'] for user in existing_slice_users]
         
-        #add keys that arent already there
-        key_ids = person_dict['key_ids']
-        for personkey in person_dict['keys']:
-            if personkey not in keys:
-                key = {'key_type': 'ssh', 'key': personkey}
-                try:
-                    if peer:
-                        self.api.plshell.UnBindObjectFromPeer(self.api.plauth, 'person', person_id, peer)
-                    key_id = self.api.plshell.AddPersonKey(self.api.plauth, person_dict['email'], key)
-                finally:
-                    if peer and not local_person:
-                        self.api.plshell.BindObjectToPeer(self.api.plauth, 'person', person_id, peer, person_dict['pointer'])
-                    if peer:
-                        # xxx - thierry how are we getting the peer_key_id in here ?
-                        try: self.api.plshell.BindObjectToPeer(self.api.plauth, 'key', key_id, peer, key_ids.pop(0))
-                        except: pass   
+        # users to be added, removed or updated
+        added_user_ids = set(requested_user_ids).difference(existing_user_ids)
+        added_slice_user_ids = set(requested_user_ids).difference(existing_slice_user_ids)
+        removed_user_ids = set(existing_slice_user_ids).difference(requested_user_ids)
+        updated_user_ids = set(existing_slice_user_ids).intersection(requested_user_ids)
+
+        # Remove stale users (only if we are not appending).
+        if append == False:
+            for removed_user_id in removed_user_ids:
+                self.api.plshell.DeletePersonFromSlice(self.api.plauth, removed_user_id, slice_record['name'])
+        # update_existing users
+        updated_users_list = [user for user in existing_slice_users if user['email'] in \
+          updated_user_ids]
+        self.verify_keys(existing_slice_users, updated_users_list, peer, append)
+
+        added_persons = []
+        # add new users
+        for added_user_id in added_user_ids:
+            added_user = users_dict[added_user_id]
+            hrn, type = urn_to_hrn(added_user['urn'])  
+            person = {
+                'first_name': added_user.get('first_name', hrn),
+                'last_name': added_user.get('last_name', hrn),
+                'email': added_user_id,
+                'peer_person_id': None,
+                'keys': [],
+                'key_ids': added_user.get('key_ids', []),
+            }
+            person['person_id'] = self.api.plshell.AddPerson(self.api.plauth, person)
+            if peer:
+                person['peer_person_id'] = added_user['person_id']
+            added_persons.append(person)
+           
+            # enable the account 
+            self.api.plshell.UpdatePerson(self.api.plauth, person['person_id'], {'enabled': True})
+            
+            # add person to site
+            self.api.plshell.AddPersonToSite(self.api.plauth, added_user_id, login_base)
+
+            for key_string in added_user.get('keys', []):
+                key = {'key':key_string, 'key_type':'ssh'}
+                key['key_id'] = self.api.plshell.AddPersonKey(self.api.plauth, person['person_id'], key)
+                person['keys'].append(key)
+
+            # add the registry record
+            if sfa_peer:
+                peer_dict = {'type': 'user', 'hrn': hrn, 'peer_authority': sfa_peer, \
+                    'pointer': person['person_id']}
+                self.registry.register_peer_object(self.credential, peer_dict)
+    
+        for added_slice_user_id in added_slice_user_ids.union(added_user_ids):
+            # add person to the slice 
+            self.api.plshell.AddPersonToSlice(self.api.plauth, added_slice_user_id, slice_record['name'])
+            # if this is a peer record then it should already be bound to a peer.
+            # no need to return worry about it getting bound later 
+
+        return added_persons
+            
+
+    def verify_keys(self, persons, users, peer, append=True):
+        # existing keys 
+        key_ids = []
+        for person in persons:
+            key_ids.extend(person['key_ids'])
+        keylist = self.api.plshell.GetKeys(self.api.plauth, key_ids, ['key_id', 'key'])
+        keydict = {}
+        for key in keylist:
+            keydict[key['key']] = key['key_id']     
+        existing_keys = keydict.keys()
+        persondict = {}
+        for person in persons:
+            persondict[person['email']] = person    
+    
+        # add new keys
+        requested_keys = []
+        updated_persons = []
+        for user in users:
+            user_keys = user.get('keys', [])
+            updated_persons.append(user)
+            for key_string in user_keys:
+                requested_keys.append(key_string)
+                if key_string not in existing_keys:
+                    key = {'key': key_string, 'key_type': 'ssh'}
+                    try:
+                        if peer:
+                            person = persondict[user['email']]
+                            self.api.plshell.UnBindObjectFromPeer(self.api.plauth, 'person', person['person_id'], peer['shortname'])
+                        key['key_id'] = self.api.plshell.AddPersonKey(self.api.plauth, user['email'], key)
+                        if peer:
+                            key_index = user_keys.index(key['key'])
+                            remote_key_id = user['key_ids'][key_index]
+                            self.api.plshell.BindObjectToPeer(self.api.plauth, 'key', key['key_id'], peer['shortname'], remote_key_id)
+                            
+                    finally:
+                        if peer:
+                            self.api.plshell.BindObjectToPeer(self.api.plauth, 'person', person['person_id'], peer['shortname'], user['person_id'])
+        
+        # remove old keys (only if we are not appending)
+        if append == False: 
+            removed_keys = set(existing_keys).difference(requested_keys)
+            for existing_key_id in keydict:
+                if keydict[existing_key_id] in removed_keys:
+                    try:
+                        if peer:
+                            self.api.plshell.UnBindObjectFromPeer(self.api.plauth, 'key', existing_key_id, peer['shortname'])
+                        self.api.plshell.DeleteKey(self.api.plauth, existing_key_id)
+                    except:
+                        pass   
+
+    def verify_slice_attributes(self, slice, requested_slice_attributes):
+        # get list of attributes users ar able to manage
+        slice_attributes = self.api.plshell.GetTagTypes(self.api.plauth, {'category': '*slice*', '|roles': ['user']})
+        valid_slice_attribute_names = [attribute['tagname'] for attribute in slice_attributes]
+
+        # get sliver attributes
+        added_slice_attributes = []
+        removed_slice_attributes = []
+        ignored_slice_attribute_names = []
+        existing_slice_attributes = self.api.plshell.GetSliceTags(self.api.plauth, {'slice_id': slice['slice_id']})
+
+        # get attributes that should be removed
+        for slice_tag in existing_slice_attributes:
+            if slice_tag['tagname'] in ignored_slice_attribute_names:
+                # If a slice already has a admin only role it was probably given to them by an
+                # admin, so we should ignore it.
+                ignored_slice_attribute_names.append(slice_tag['tagname'])
+            else:
+                # If an existing slice attribute was not found in the request it should
+                # be removed
+                attribute_found=False
+                for requested_attribute in requested_slice_attributes:
+                    if requested_attribute['name'] == slice_tag['tagname'] and \
+                       requested_attribute['value'] == slice_tag['value']:
+                        attribute_found=True
+                        break
+
+            if not attribute_found:
+                removed_slice_attributes.append(slice_tag)
+        
+        # get attributes that should be added:
+        for requested_attribute in requested_slice_attributes:
+            # if the requested attribute wasn't found  we should add it
+            if requested_attribute['name'] in valid_slice_attribute_names:
+                attribute_found = False
+                for existing_attribute in existing_slice_attributes:
+                    if requested_attribute['name'] == existing_attribute['tagname'] and \
+                       requested_attribute['value'] == existing_attribute['value']:
+                        attribute_found=True
+                        break
+                if not attribute_found:
+                    added_slice_attributes.append(requested_attribute)
+
+
+        # remove stale attributes
+        for attribute in removed_slice_attributes:
+            try:
+                self.api.plshell.DeleteSliceTag(self.api.plauth, attribute['slice_tag_id'])
+            except Exception, e:
+                self.api.logger.warn('Failed to remove sliver attribute. name: %s, value: %s, node_id: %s\nCause:%s'\
+                                % (name, value,  node_id, str(e)))
+
+        # add requested_attributes
+        for attribute in added_slice_attributes:
+            try:
+                name, value, node_id = attribute['name'], attribute['value'], attribute.get('node_id', None)
+                self.api.plshell.AddSliceTag(self.api.plauth, slice['name'], name, value, node_id)
+            except Exception, e:
+                self.api.logger.warn('Failed to add sliver attribute. name: %s, value: %s, node_id: %s\nCause:%s'\
+                                % (name, value,  node_id, str(e)))
 
     def create_slice_aggregate(self, xrn, rspec):
         hrn, type = urn_to_hrn(xrn)
@@ -443,27 +618,3 @@ class Slices:
 
         return 1
 
-    def sync_site(self, old_record, new_record, peer):
-        if old_record['max_slices'] != new_record['max_slices'] or old_record['max_slivers'] != new_record['max_slivers']:
-            try:
-                if peer:
-                    self.api.plshell.UnBindObjectFromPeer(self.api.plauth, 'site', old_record['site_id'], peer)
-                if old_record['max_slices'] != new_record['max_slices']:
-                    self.api.plshell.UpdateSite(self.api.plauth, old_record['site_id'], {'max_slices' : new_record['max_slices']})
-                if old_record['max_slivers'] != new_record['max_slivers']:
-                    self.api.plshell.UpdateSite(self.api.plauth, old_record['site_id'], {'max_slivers' : new_record['max_slivers']})
-            finally:
-                if peer:
-                    self.api.plshell.BindObjectToPeer(self.api.plauth, 'site', old_record['site_id'], peer, old_record['peer_site_id'])
-	return 1
-
-    def sync_slice(self, old_record, new_record, peer):
-        if old_record['expires'] != new_record['expires']:
-            try:
-                if peer:
-                    self.api.plshell.UnBindObjectFromPeer(self.api.plauth, 'slice', old_record['slice_id'], peer)
-                self.api.plshell.UpdateSlice(self.api.plauth, old_record['slice_id'], {'expires' : new_record['expires']})
-            finally:
-                if peer:
-                    self.api.plshell.BindObjectToPeer(self.api.plauth, 'slice', old_record['slice_id'], peer, old_record['peer_slice_id'])
-	return 1

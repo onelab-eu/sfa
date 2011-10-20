@@ -208,6 +208,22 @@ class SfaRecord(Row):
         return GID(string=self.gid)
 
     ##
+    # Returns the value of a field
+
+    def get_field(self, fieldname, default=None):
+        # sometimes records act like classes, and sometimes they act like dicts
+        try:
+            return getattr(self, fieldname)
+        except AttributeError:
+            try:
+                 return self[fieldname]
+            except KeyError:
+                 if default != None:
+                     return default
+                 else:
+                     raise
+
+    ##
     # Returns a list of field names in this record. 
 
     def get_field_names(self):

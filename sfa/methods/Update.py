@@ -1,6 +1,3 @@
-### $Id: update.py 16477 2010-01-05 16:31:37Z thierry $
-### $URL: https://svn.planet-lab.org/svn/sfa/trunk/sfa/methods/update.py $
-
 import time
 from sfa.util.faults import *
 from sfa.util.method import Method
@@ -31,8 +28,14 @@ class Update(Method):
     def call(self, record_dict, creds):
         # validate the cred
         valid_creds = self.api.auth.checkCredentials(creds, "update")
+        
+        # verify permissions
+        hrn = record_dict.get('hrn', '')  
+        self.api.auth.verify_object_permission(hrn)
+    
+        # log
         origin_hrn = Credential(string=valid_creds[0]).get_gid_caller().get_hrn()
-        self.api.logger.info("interface: %s\tcaller-hrn: %s\ttarget-hrn: %s\tmethod-name: %s"%(self.api.interface, origin_hrn, None, self.name))
+        self.api.logger.info("interface: %s\tcaller-hrn: %s\ttarget-hrn: %s\tmethod-name: %s"%(self.api.interface, origin_hrn, hrn, self.name))
        
         manager = self.api.get_interface_manager()
  

@@ -34,15 +34,15 @@ class Register(Method):
     returns = Parameter(int, "String representation of gid object")
     
     def call(self, record, creds):
-        
+        # validate cred    
         valid_creds = self.api.auth.checkCredentials(creds, 'register')
+        
+        # verify permissions
+        hrn = record.get('hrn', '')
+        self.api.auth.verify_object_permission(hrn)
 
         #log the call
         origin_hrn = Credential(string=valid_creds[0]).get_gid_caller().get_hrn()
-
-        hrn = None
-        if 'hrn' in record:
-            hrn = record['hrn']
         self.api.logger.info("interface: %s\tcaller-hrn: %s\ttarget-hrn: %s\tmethod-name: %s"%(self.api.interface, origin_hrn, hrn, self.name))
         
         manager = self.api.get_interface_manager()

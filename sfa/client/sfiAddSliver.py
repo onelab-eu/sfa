@@ -2,7 +2,8 @@
 
 import sys
 from sfa.client.sfi_commands import Commands
-from sfa.rspecs.rspec_parser import parse_rspec
+from sfa.rspecs.rspec import RSpec
+from sfa.rspecs.version_manager import VersionManager
 
 command = Commands(usage="%prog [options] node1 node2...",
                    description="Add slivers to the RSpec. " +
@@ -24,17 +25,19 @@ if command.opts.outfile:
     outfile=file(command.opts.outfile,"w")
 else:
     outfile=sys.stdout
-
-rspec = parse_rspec(infile)
-rspec.type = 'request'
+request_rspec = RSpec(infile)
 nodes = file(command.opts.nodefile).read().split()
+version_manager = VersionManager()
 try:
-    if rspec.version['type'].lower() == 'protogeni':
-        rspec.xml.set('type', 'request')
+    type = request_rspec.version.type
+    version_num = request_rspec.version.version
+    manifest_version = version_manager._get_version(type, version_num, 'manifest')    
+    manifest_rspec = RSpec(version=manifest_version)
     slivers = [{'hostname': node} for node in nodes]
-    rspec.add_slivers(slivers)
+    manifest_rspec.version.merge(request_rspec)
+    manifest_rspec.version.add_slivers(slivers)
 except:
     print >> sys.stderr, "FAILED: %s" % nodes
     sys.exit(1)
-print >>outfile, rspec.toxml(cleanup=True)
+print >>outfile, manifest_rspec.toxml()
 sys.exit(0)

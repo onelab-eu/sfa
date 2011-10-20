@@ -1,5 +1,3 @@
-
-
 import datetime
 import time
 import traceback
@@ -8,7 +6,7 @@ import re
 from types import StringTypes
 
 from sfa.util.faults import *
-from sfa.util.xrn import get_authority, hrn_to_urn, urn_to_hrn, Xrn
+from sfa.util.xrn import get_authority, hrn_to_urn, urn_to_hrn, Xrn, urn_to_sliver_id
 from sfa.util.plxrn import slicename_to_hrn, hrn_to_pl_slicename, hostname_to_urn
 from sfa.util.rspec import *
 from sfa.util.specdict import *
@@ -24,23 +22,29 @@ from sfa.plc.api import SfaAPI
 from sfa.plc.aggregate import Aggregate
 from sfa.plc.slices import *
 from sfa.util.version import version_core
-from sfa.rspecs.rspec_version import RSpecVersion
-from sfa.rspecs.sfa_rspec import sfa_rspec_version
-from sfa.rspecs.pg_rspec import pg_rspec_ad_version, pg_rspec_request_version
-from sfa.rspecs.rspec_parser import parse_rspec 
+from sfa.rspecs.version_manager import VersionManager
+from sfa.rspecs.rspec import RSpec
 from sfa.util.sfatime import utcparse
 from sfa.util.callids import Callids
 
 def GetVersion(api):
+
+    version_manager = VersionManager()
+    ad_rspec_versions = []
+    request_rspec_versions = []
+    for rspec_version in version_manager.versions:
+        if rspec_version.content_type in ['*', 'ad']:
+            ad_rspec_versions.append(rspec_version.to_dict())
+        if rspec_version.content_type in ['*', 'request']:
+            request_rspec_versions.append(rspec_version.to_dict()) 
+    default_rspec_version = version_manager.get_version("sfa 1").to_dict()
     xrn=Xrn(api.hrn)
-    request_rspec_versions = [dict(pg_rspec_request_version), dict(sfa_rspec_version)]
-    ad_rspec_versions = [dict(pg_rspec_ad_version), dict(sfa_rspec_version)]
     version_more = {'interface':'aggregate',
                     'testbed':'myplc',
                     'hrn':xrn.get_hrn(),
                     'request_rspec_versions': request_rspec_versions,
                     'ad_rspec_versions': ad_rspec_versions,
-                    'default_ad_rspec': dict(sfa_rspec_version)
+                    'default_ad_rspec': default_rspec_version
                     }
     return version_core(version_more)
 
@@ -79,6 +83,7 @@ def __get_registry_objects(slice_xrn, creds, users):
 
         slice = {}
         
+        # get_expiration always returns a normalized datetime - no need to utcparse
         extime = Credential(string=creds[0]).get_expiration()
         # If the expiration time is > 60 days from now, set the expiration time to 60 days from now
         if extime > datetime.datetime.utcnow() + datetime.timedelta(days=60):
@@ -113,17 +118,16 @@ def SliverStatus(api, slice_xrn, creds, call_id):
 
     (hrn, type) = urn_to_hrn(slice_xrn)
     # find out where this slice is currently running
-    api.logger.info(hrn)
     slicename = hrn_to_pl_slicename(hrn)
     
-    slices = api.plshell.GetSlices(api.plauth, [slicename], ['node_ids','person_ids','name','expires'])
+    slices = api.plshell.GetSlices(api.plauth, [slicename], ['slice_id', 'node_ids','person_ids','name','expires'])
     if len(slices) == 0:        
-        raise Exception("Slice %s not found (used %s as slicename internally)" % slice_xrn, slicename)
+        raise Exception("Slice %s not found (used %s as slicename internally)" % (slice_xrn, slicename))
     slice = slices[0]
     
     # report about the local nodes only
     nodes = api.plshell.GetNodes(api.plauth, {'node_id':slice['node_ids'],'peer_id':None},
-                                 ['hostname', 'site_id', 'boot_state', 'last_contact'])
+                                 ['node_id', 'hostname', 'site_id', 'boot_state', 'last_contact'])
     site_ids = [node['site_id'] for node in nodes]
     sites = api.plshell.GetSites(api.plauth, site_ids, ['site_id', 'login_base'])
     sites_dict = dict ( [ (site['site_id'],site['login_base'] ) for site in sites ] )
@@ -132,7 +136,8 @@ def SliverStatus(api, slice_xrn, creds, call_id):
     top_level_status = 'unknown'
     if nodes:
         top_level_status = 'ready'
-    result['geni_urn'] = Xrn(slice_xrn, 'slice').get_urn()
+    slice_urn = Xrn(slice_xrn, 'slice').get_urn()
+    result['geni_urn'] = slice_urn
     result['pl_login'] = slice['name']
     result['pl_expires'] = datetime.datetime.fromtimestamp(slice['expires']).ctime()
     
@@ -144,7 +149,8 @@ def SliverStatus(api, slice_xrn, creds, call_id):
         res['pl_last_contact'] = node['last_contact']
         if node['last_contact'] is not None:
             res['pl_last_contact'] = datetime.datetime.fromtimestamp(node['last_contact']).ctime()
-        res['geni_urn'] = hostname_to_urn(api.hrn, sites_dict[node['site_id']], node['hostname'])
+        sliver_id = urn_to_sliver_id(slice_urn, slice['slice_id'], node['node_id']) 
+        res['geni_urn'] = sliver_id
         if node['boot_state'] == 'boot':
             res['geni_status'] = 'ready'
         else:
@@ -157,9 +163,6 @@ def SliverStatus(api, slice_xrn, creds, call_id):
         
     result['geni_status'] = top_level_status
     result['geni_resources'] = resources
-    # XX remove me
-    #api.logger.info(result)
-    # XX remove me
     return result
 
 def CreateSliver(api, slice_xrn, creds, rspec_string, users, call_id):
@@ -169,47 +172,36 @@ def CreateSliver(api, slice_xrn, creds, rspec_string, users, call_id):
     """
     if Callids().already_handled(call_id): return ""
 
-    reg_objects = __get_registry_objects(slice_xrn, creds, users)
-
-    (hrn, type) = urn_to_hrn(slice_xrn)
-    peer = None
     aggregate = Aggregate(api)
     slices = Slices(api)
+    (hrn, type) = urn_to_hrn(slice_xrn)
     peer = slices.get_peer(hrn)
     sfa_peer = slices.get_sfa_peer(hrn)
-    registry = api.registries[api.hrn]
-    credential = api.getCredential()
-    (site_id, remote_site_id) = slices.verify_site(registry, credential, hrn, 
-                                                   peer, sfa_peer, reg_objects)
+    slice_record=None    
+    if users:
+        slice_record = users[0].get('slice_record', {})
 
-    slice = slices.verify_slice(registry, credential, hrn, site_id, 
-                                       remote_site_id, peer, sfa_peer, reg_objects)
-     
-    nodes = api.plshell.GetNodes(api.plauth, slice['node_ids'], ['hostname'])
-    current_slivers = [node['hostname'] for node in nodes] 
-    rspec = parse_rspec(rspec_string)
-    requested_slivers = [str(host) for host in rspec.get_nodes_with_slivers()]
-    # remove nodes not in rspec
-    deleted_nodes = list(set(current_slivers).difference(requested_slivers))
+    # parse rspec
+    rspec = RSpec(rspec_string)
+    requested_attributes = rspec.version.get_slice_attributes()
+    
+    # ensure site record exists
+    site = slices.verify_site(hrn, slice_record, peer, sfa_peer)
+    # ensure slice record exists
+    slice = slices.verify_slice(hrn, slice_record, peer, sfa_peer)
+    # ensure person records exists
+    persons = slices.verify_persons(hrn, slice, users, peer, sfa_peer)
+    # ensure slice attributes exists
+    slices.verify_slice_attributes(slice, requested_attributes)
+    
+    # add/remove slice from nodes
+    requested_slivers = [str(host) for host in rspec.version.get_nodes_with_slivers()]
+    slices.verify_slice_nodes(slice, requested_slivers, peer) 
 
-    # add nodes from rspec
-    added_nodes = list(set(requested_slivers).difference(current_slivers))
-
-    try:
-        if peer:
-            api.plshell.UnBindObjectFromPeer(api.plauth, 'slice', slice['slice_id'], peer)
-
-        api.plshell.AddSliceToNodes(api.plauth, slice['name'], added_nodes) 
-        api.plshell.DeleteSliceFromNodes(api.plauth, slice['name'], deleted_nodes)
-
-        # TODO: update slice tags
-        #network.updateSliceTags()
-
-    finally:
-        if peer:
-            api.plshell.BindObjectToPeer(api.plauth, 'slice', slice.id, peer, 
-                                         slice.peer_id)
-
+    # hanlde MyPLC peer association.
+    # only used by plc and ple.
+    slices.handle_peer(site, slice, persons, peer)
+    
     return aggregate.get_rspec(slice_xrn=slice_xrn, version=rspec.version)
 
 
@@ -304,19 +296,20 @@ def ListSlices(api, creds, call_id):
 
     return slice_urns
     
-def ListResources(api, creds, options,call_id):
+def ListResources(api, creds, options, call_id):
     if Callids().already_handled(call_id): return ""
     # get slice's hrn from options
-    xrn = options.get('geni_slice_urn', '')
+    xrn = options.get('geni_slice_urn', None)
     (hrn, type) = urn_to_hrn(xrn)
 
+    version_manager = VersionManager()
     # get the rspec's return format from options
-    rspec_version = RSpecVersion(options.get('rspec_version'))
-    version_string = "rspec_%s" % (rspec_version.get_version_name())
+    rspec_version = version_manager.get_version(options.get('rspec_version'))
+    version_string = "rspec_%s" % (rspec_version.to_string())
 
     #panos adding the info option to the caching key (can be improved)
     if options.get('info'):
-	version_string = version_string + "_"+options.get('info', 'default')
+        version_string = version_string + "_"+options.get('info', 'default')
 
     # look in cache first
     if caching and api.cache and not xrn:
@@ -325,11 +318,9 @@ def ListResources(api, creds, options,call_id):
             api.logger.info("aggregate.ListResources: returning cached value for hrn %s"%hrn)
             return rspec 
 
-    #aggregate = Aggregate(api)
     #panos: passing user-defined options
     #print "manager options = ",options
     aggregate = Aggregate(api, options)
-
     rspec =  aggregate.get_rspec(slice_xrn=xrn, version=rspec_version)
 
     # cache the result

@@ -7,11 +7,12 @@ import os
 import traceback
 import string
 import xmlrpclib
-
-from sfa.util.sfalogging import sfa_logger
+import sfa.util.xmlrpcprotocol as xmlrpcprotocol
+from sfa.util.sfalogging import logger
 from sfa.trust.auth import Auth
 from sfa.util.config import *
 from sfa.util.faults import *
+from sfa.util.cache import Cache
 from sfa.trust.credential import *
 from sfa.trust.certificate import *
 
@@ -113,12 +114,11 @@ class ManagerWrapper:
         
 class BaseAPI:
 
-    cache = None
     protocol = None
   
     def __init__(self, config = "/etc/sfa/sfa_config.py", encoding = "utf-8", 
                  methods='sfa.methods', peer_cert = None, interface = None, 
-                 key_file = None, cert_file = None, cache = cache):
+                 key_file = None, cert_file = None, cache = None):
 
         self.encoding = encoding
         
@@ -129,7 +129,6 @@ class BaseAPI:
         # Better just be documenting the API
         if config is None:
             return
-        
         # Load configuration
         self.config = Config(config)
         self.auth = Auth(peer_cert)
@@ -140,18 +139,20 @@ class BaseAPI:
         self.cert_file = cert_file
         self.cert = Certificate(filename=self.cert_file)
         self.cache = cache
+        if self.cache is None:
+            self.cache = Cache()
         self.credential = None
         self.source = None 
         self.time_format = "%Y-%m-%d %H:%M:%S"
-        self.logger=sfa_logger
-        
+        self.logger = logger
+ 
         # load registries
         from sfa.server.registry import Registries
-        self.registries = Registries(self) 
+        self.registries = Registries() 
 
         # load aggregates
         from sfa.server.aggregate import Aggregates
-        self.aggregates = Aggregates(self)
+        self.aggregates = Aggregates()
 
 
     def get_interface_manager(self, manager_base = 'sfa.managers'):
@@ -175,7 +176,7 @@ class BaseAPI:
         else:
             raise SfaAPIError("No manager for interface: %s" % self.interface)  
         manager = __import__(manager_module, fromlist=[manager_base])
-        # this isnt necessary but will hlep to produce better error messages
+        # this isnt necessary but will help to produce better error messages
         # if someone tries to access an operation this manager doesn't implement  
         manager = ManagerWrapper(manager, self.interface)
 
@@ -238,7 +239,7 @@ class BaseAPI:
         except SfaFault, fault:
             result = fault 
         except Exception, fault:
-            sfa_logger().log_exc("BaseAPI.handle has caught Exception")
+            logger.log_exc("BaseAPI.handle has caught Exception")
             result = SfaAPIError(fault)
 
 
@@ -266,3 +267,14 @@ class BaseAPI:
                 raise result 
             
         return response
+
+    def get_cached_server_version(self, server):
+        cache_key = server.url + "-version"
+        server_version = None
+        if self.cache:
+            server_version = self.cache.get(cache_key)
+        if not server_version:
+            server_version = server.GetVersion()
+            # cache version for 24 hours
+            self.cache.add(cache_key, server_version, ttl= 60*60*24)
+        return server_version

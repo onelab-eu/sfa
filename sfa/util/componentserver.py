@@ -19,7 +19,7 @@ import SimpleHTTPServer
 import SimpleXMLRPCServer
 from OpenSSL import SSL
 
-from sfa.util.sfalogging import sfa_logger
+from sfa.util.sfalogging import logger
 from sfa.trust.certificate import Keypair, Certificate
 from sfa.trust.credential import *
 from sfa.util.faults import *
@@ -74,7 +74,7 @@ class SecureXMLRpcRequestHandler(SimpleXMLRPCServer.SimpleXMLRPCRequestHandler):
             # internal error, report as HTTP server error
             self.send_response(500)
             self.end_headers()
-            sfa_logger().log_exc("componentserver.SecureXMLRpcRequestHandler.do_POST")
+            logger.log_exc("componentserver.SecureXMLRpcRequestHandler.do_POST")
         else:
             # got a valid XML RPC response
             self.send_response(200)

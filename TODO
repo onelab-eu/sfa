@@ -1,5 +1,7 @@
 RSpecs
 - CreateSlivers should update SliverTags/attributes 
+- ProtoGENI rspec integration testing
+- initscripts in the rspec
 
 Registry
 - Verify that sub authority certificates still work

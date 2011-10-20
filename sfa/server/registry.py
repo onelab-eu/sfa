@@ -8,10 +8,8 @@
 from sfa.util.server import SfaServer
 from sfa.util.faults import *
 from sfa.util.xrn import hrn_to_urn
-from sfa.server.interface import Interfaces
-import sfa.util.xmlrpcprotocol as xmlrpcprotocol
-import sfa.util.soapprotocol as soapprotocol
- 
+from sfa.server.interface import Interfaces, Interface
+from sfa.util.config import Config 
 
 ##
 # Registry is a SfaServer that serves registry and slice operations at PLC.
@@ -35,17 +33,12 @@ class Registries(Interfaces):
     
     default_dict = {'registries': {'registry': [Interfaces.default_fields]}}
 
-    def __init__(self, api, conf_file = "/etc/sfa/registries.xml"):
-        Interfaces.__init__(self, api, conf_file) 
-        address = self.api.config.SFA_REGISTRY_HOST
-        port = self.api.config.SFA_REGISTRY_PORT
-        url = 'http://%(address)s:%(port)s' % locals()
-        local_registry = {'hrn': self.api.hrn,
-                           'urn': hrn_to_urn(self.api.hrn, 'authority'),
-                           'addr': address,
-                           'port': port,
-                           'url': url}
-        self.interfaces[self.api.hrn] = local_registry
-       
-        # get connections
-        self.update(self.get_connections()) 
+    def __init__(self, conf_file = "/etc/sfa/registries.xml"):
+        Interfaces.__init__(self, conf_file) 
+        sfa_config = Config() 
+        if sfa_config.SFA_REGISTRY_ENABLED:
+            addr = sfa_config.SFA_REGISTRY_HOST
+            port = sfa_config.SFA_REGISTRY_PORT
+            hrn = sfa_config.SFA_INTERFACE_HRN
+            interface = Interface(hrn, addr, port)
+            self[hrn] = interface

@@ -7,7 +7,7 @@ import httplib
 from xml.dom import minidom
 from lxml import etree
 
-from sfa.util.sfalogging import sfa_logger
+from sfa.util.sfalogging import info_logger
 
 class RSpec:
 
@@ -232,11 +232,11 @@ class RSpec:
             except Exception, e:
                 # logging.debug("%s: web file not found" % xsdURI)
                 # logging.debug("Using local file %s" % self.xsd")
-                sfa_logger().log_exc("rspec.parseXSD: can't find %s on the web. Continuing." % xsdURI)
+                info_logger.log_exc("rspec.parseXSD: can't find %s on the web. Continuing." % xsdURI)
         if not schemaDom:
             if os.path.exists(xsdURI):
                 # logging.debug("using local copy.")
-                sfa_logger().debug("rspec.parseXSD: Using local %s" % xsdURI)
+                info_logger.debug("rspec.parseXSD: Using local %s" % xsdURI)
                 schemaDom = minidom.parse(xsdURI)
             else:
                 raise Exception("rspec.parseXSD: can't find xsd locally")
@@ -252,7 +252,7 @@ class RSpec:
             element = minidom.Element(tagname)
             for key in rd.keys():
                 if isinstance(rd[key], StringTypes) or isinstance(rd[key], int):
-                    element.setAttribute(key, str(rd[key]))
+                    element.setAttribute(key, unicode(rd[key]))
                 elif isinstance(rd[key], dict):
                     child = elementNode(key, rd[key])
                     element.appendChild(child)
