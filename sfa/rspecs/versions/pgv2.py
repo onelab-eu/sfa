@@ -129,7 +129,7 @@ class PGv2(BaseVersion):
             node_type_tag = etree.SubElement(node_tag, 'hardware_type', name='plab-pc')
             node_type_tag = etree.SubElement(node_tag, 'hardware_type', name='pc')
             available_tag = etree.SubElement(node_tag, 'available', now='true')
-            sliver_type_tag = etree.SubElement(node_tag, 'sliver_type', name='plab-vnode')
+            sliver_type_tag = etree.SubElement(node_tag, 'sliver_type', name='plab-vserver')
 
             pl_initscripts = node.get('pl_initscripts', {})
             for pl_initscript in pl_initscripts.values():
@@ -164,19 +164,18 @@ class PGv2(BaseVersion):
         for node in nodes:
             urn = node.get('component_id')
             hostname = xrn_to_hostname(urn)
-            if hostname not in slivers_dict:
+            if hostname not in slivers_dict and not append:
                 parent = node.getparent()
                 parent.remove(node)
             else:
                 sliver_info = slivers_dict[hostname]
-                sliver_type_elements = node.xpath('./sliver_type', namespaces=self.namespaces)
+                sliver_type_elements = node.xpath('./default:sliver_type', namespaces=self.namespaces)
                 available_sliver_types = [element.attrib['name'] for element in sliver_type_elements]
-                valid_sliver_types = ['emulab-openvz', 'raw-pc']
+                valid_sliver_types = ['emulab-openvz', 'raw-pc', 'plab-vserver', 'plab-vnode']
                 requested_sliver_type = None
                 for valid_sliver_type in valid_sliver_types:
-                    if valid_sliver_type in available_sliver_type:
+                    if valid_sliver_type in available_sliver_types:
                         requested_sliver_type = valid_sliver_type
-
                 if requested_sliver_type:
                     # remove existing sliver_type tags,it needs to be recreated
                     sliver_elem = node.xpath('./default:sliver_type | ./sliver_type', namespaces=self.namespaces)
@@ -200,10 +199,9 @@ class PGv2(BaseVersion):
                         elif tag['tagname'] == 'initscript':
                             e = etree.SubElement(sliver_elem, '{%s}initscript' % self.namespaces['planetlab'], attrib={'name': tag['value']})                
                 else:
-                    if not append:                   
-                        # node isn't usable. just remove it from the request     
-                        parent = node.getparent()
-                        parent.remove(node)
+                    # node isn't usable. just remove it from the request     
+                    parent = node.getparent()
+                    parent.remove(node)
 
     
 
