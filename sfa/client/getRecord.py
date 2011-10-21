@@ -15,9 +15,6 @@ from optparse import OptionParser
 from pprint import pprint
 from xml.parsers.expat import ExpatError
 
-from sfa.util.rspec import RecordSpec
-
-
 def create_parser():
     command = sys.argv[0]
     argv = sys.argv[1:]

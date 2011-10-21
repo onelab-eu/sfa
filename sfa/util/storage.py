@@ -1,7 +1,5 @@
 import os
 
-from sfa.util.rspec import RecordSpec
-
 class SimpleStorage(dict):
     """
     Handles storing and loading python dictionaries. The storage file created

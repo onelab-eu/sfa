@@ -13,7 +13,6 @@ from sfa.util.config import *
 from sfa.trust.certificate import *
 from sfa.trust.credential import *
 from sfa.util.sfaticket import *
-from sfa.util.rspec import *
 from sfa.client import sfi
 
 def random_string(size):

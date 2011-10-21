@@ -15,7 +15,6 @@ from sqlobject import *
 
 from sfa.util.faults import *
 from sfa.util.xrn import urn_to_hrn, Xrn
-from sfa.util.rspec import RSpec
 from sfa.server.registry import Registries
 from sfa.trust.credential import Credential
 from sfa.plc.api import SfaAPI

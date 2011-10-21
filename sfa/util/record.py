@@ -11,7 +11,6 @@ from types import StringTypes
 
 from sfa.trust.gid import *
 
-from sfa.util.rspec import *
 from sfa.util.parameter import *
 from sfa.util.xrn import get_authority
 from sfa.util.row import Row

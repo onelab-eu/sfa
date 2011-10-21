@@ -4,11 +4,6 @@
 # Mark Huang <mlhuang@cs.princeton.edu>
 # Copyright (C) 2006 The Trustees of Princeton University
 #
-# $Id$
-#
-
-### $Id$
-### $URL$
 
 from types import *
 from sfa.util.faults import *
