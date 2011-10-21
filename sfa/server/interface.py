@@ -64,7 +64,7 @@ class Interfaces(dict):
         # load config file
         self.interface_info = XmlStorage(conf_file, self.default_dict)
         self.interface_info.load()
-        records = self.interface_info.values()[0].values()[0]
+        records = self.interface_info.values()[0]
         if not isinstance(records, list):
             records = [records]
         

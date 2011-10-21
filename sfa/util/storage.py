@@ -1,5 +1,5 @@
 import os
-
+from sfa.util.xml import XML
 class SimpleStorage(dict):
     """
     Handles storing and loading python dictionaries. The storage file created
@@ -44,10 +44,9 @@ class XmlStorage(SimpleStorage):
         """
         Parse an xml file and store it as a dict
         """ 
-        data = RecordSpec()
         if os.path.exists(self.db_filename) and os.path.isfile(self.db_filename):
-            data.parseFile(self.db_filename)
-            dict.__init__(self, data.toDict())
+            xml = XML(self.db_filename)
+            dict.__init__(self, xml.todict())
         elif os.path.exists(self.db_filename) and not os.path.isfile(self.db_filename):
             raise IOError, '%s exists but is not a file. please remove it and try again' \
                            % self.db_filename
@@ -56,8 +55,8 @@ class XmlStorage(SimpleStorage):
             self.load()
 
     def write(self):
-        data = RecordSpec()
-        data.parseDict(self)
+        xml = XML()
+        xml.parseDict(self)
         db_file = open(self.db_filename, 'w')
         db_file.write(data.toprettyxml())
         db_file.close()
