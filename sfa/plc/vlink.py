@@ -57,30 +57,46 @@ def format_tc_rate(rate):
     else:
         return "%.0fbit" % rate
 
-def get_virt_ip(self, remote):
-        link = self.get_link_id(remote)
-        iface = self.get_iface_id(remote)
-        first = link >> 6
-        second = ((link & 0x3f)<<2) + iface
-        return "192.168.%d.%d" % (first, second)
+def get_link_id(if1, if2):
+    if if1['id'] < if2['id']:
+        link = (if1['id']<<7) + if2['id']
+    else:
+        link = (if2['id']<<7) + if1['id']
+    return link
 
-def get_virt_net(self, remote):
-    link = self.get_link_id(remote)
-    first = link >> 6
-    second = (link & 0x3f)<<2
+def get_iface_id(if1, if2):
+    if if1['id'] < if2['id']:
+        iface = 1
+    else:
+        iface = 2
+    return iface
+
+def get_virt_ip(if1, if2):
+    link_id = get_link_id(if1, if2)
+    iface_id = get_iface_id(if1, if2)
+    first = link_id >> 6
+    second = ((link_id & 0x3f)<<2) + iface_id
+    return "192.168.%d.%s" % (frist, second)
+
+def get_virt_net(link):
+    link_id = self.get_link_id(link)
+    first = link_id >> 6
+    second = (link_id & 0x3f)<<2
     return "192.168.%d.%d/30" % (first, second)
 
-def get_topo_rspec(self, link):
-    if link.end1 == self:
-        remote = link.end2
-    elif link.end2 == self:
-        remote = link.end1
-    else:
-        raise Error("Link does not connect to Node")
+def get_interface_id(interface):
+    if_name = PlXrn(interface=interface['component_id']).interface_name()
+    node, dev = if_name.split(":")
+    node_id = int(node.replace("pc", ""))
+    return node_id
 
-    my_ip = self.get_virt_ip(remote)
-    remote_ip = remote.get_virt_ip(self)
-    net = self.get_virt_net(remote)
-    bw = format_tc_rate(link.bps)
+    
+def get_topo_rspec(self, link):
+    link['interface1']['id'] = get_interface_id(link['interface1'])
+    link['interface2']['id'] = get_interface_id(link['interface2'])
+    my_ip = get_virt_ip(link['interface1'], link['interface2'])
+    remote_ip = get_virt_ip(link['interface2'], link['interface1'])
+    net = get_virt_net(link)
+    bw = format_tc_rate(long(link['capacity']))
     ipaddr = remote.get_primary_iface().ipv4
-    return (remote.id, ipaddr, bw, my_ip, remote_ip, net) 
+    return (link['interface2']['id'], ipaddr, bw, my_ip, remote_ip, net) 
