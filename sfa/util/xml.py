@@ -73,6 +73,26 @@ class XML:
                 namespace, schema  = schema_parts[0], schema_parts[1]
                 break
 
+    def parse_dict(self, d, root_tag_name='xml', element = None):
+        if element is None: 
+            self.parse_xml('<%s/>' % root_tag_name)
+            element = self.root
+
+        if 'text' in d:
+            text = d.pop('text')
+            element.text = text
+
+        # handle repeating fields
+        for (key, value) in d.items():
+            if isinstance(value, list):
+                value = d.pop(key)
+                for val in value:
+                    if isinstance(val, dict):
+                        child_element = etree.SubElement(element, key)
+                        self.parse_dict(val, key, child_element) 
+        
+        element.attrib.update(d)
+
     def validate(self, schema):
         """
         Validate against rng schema
