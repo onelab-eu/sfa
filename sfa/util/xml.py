@@ -181,6 +181,18 @@ class XML:
 
     def toxml(self):
         return etree.tostring(self.root, pretty_print=True)  
+    
+    def todict(self, elem=None):
+        if elem is None:
+            elem = self.root
+        d = {}
+        d.update(elem.attrib)
+        d['text'] = elem.text
+        for child in elem.iterchildren():
+            if child.tag not in d:
+                d[child.tag] = []
+            d[child.tag].append(self.todict(child))
+        return d            
         
     def save(self, filename):
         f = open(filename, 'w')
