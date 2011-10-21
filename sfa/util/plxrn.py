@@ -67,6 +67,10 @@ class PlXrn (Xrn):
         self._normalize()
         return self.authority[-1]
 
+    def interface_name(self):
+        self._normalize()
+        return self.leaf
+
     #def hrn_to_pl_login_base(hrn):
     def pl_login_base (self):
         self._normalize()
