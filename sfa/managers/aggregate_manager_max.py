@@ -2,7 +2,6 @@ from sfa.plc.slices import Slices
 from sfa.server.registry import Registries
 from sfa.util.xrn import urn_to_hrn, hrn_to_urn, get_authority, Xrn
 from sfa.util.plxrn import hrn_to_pl_slicename
-from sfa.util.rspec import RSpec
 from sfa.util.sfalogging import logger
 from sfa.util.faults import *
 from sfa.util.config import Config
