@@ -97,11 +97,11 @@ class PGv2(BaseVersion):
         return slice_attributes
 
     def get_links(self, network=None):
-        links = PGv2Link.get_links(self.xml, self.namespaces)
+        links = PGv2Link.get_links(self.xml.root, self.namespaces)
         return links
 
     def add_links(self, links):
-        PGv2Link.add_links(self.xml, links)
+        PGv2Link.add_links(self.xml.root, links)
 
     def attributes_list(self, elem):
         opts = []
@@ -225,28 +225,6 @@ class PGv2(BaseVersion):
 
     def add_interfaces(self, interfaces, no_dupes=False):
         pass
-
-    def add_links(self, links, no_dupes=False):
-        for link in links:
-            link_elem = etree.SubElement(self.xml.root, 'link' )
-            link_elem.set('component_name', link.component_name) 
-            link_elem.set('component_id', link.component_id)
-            cm_elem = etree.SubElement(link_elem, 'component_manager')
-            cm_elem.set('name', link.component_manager_name)
-            for endpoint in [link.endpoint1, link.enpoint2]:
-                interface_ref = etree.SubElement(link_elem, 'interface_ref', component_id=endpoint.id)
-                
-            property_attrs = {'capicity': link.capacity, 
-                              'latency': link.latency, 
-                              'packet_loss': link.packet_loss}    
-            property1 = etree.SubElement(link_elem, 'property', source_id=link.endpoint1.id, \
-              dest_id = link.endpoint2.id, capacity = link.capacity, latency=link.latency, \
-              packet_loss = link.packet_loss)
-            
-            property2 = etree.SubElement(link_elem, 'property', source_id=link.endpoint2.id, \
-              dest_id = link.endpoint1.id, capacity = link.capacity, latency=link.latency, \
-              packet_loss = link.packet_loss)
-            link_type = etree.SubElement(link_elem, 'link_type', name=link.type)
 
     def merge(self, in_rspec):
         """

@@ -11,13 +11,13 @@ class PGv2Link:
             for attrib in ['component_name', 'component_id', 'client_id']:
                 if attrib in link and link[attrib]:
                     link_elem.set(attrib, link[attrib])
-            if 'component_manager' in link and link['component_manger']:
+            if 'component_manager' in link and link['component_manager']:
                 cm_element = etree.SubElement(xml, 'component_manager', name=link['component_manager'])
             for if_ref in [link['interface1'], link['interface2']]:
                 if_ref_elem = etree.SubElement(xml, 'interface_ref')
                 for attrib in Interface.fields:
                     if attrib in if_ref and if_ref[attrib]:
-                        if_ref_elem[attrib] = if_ref[attrib]  
+                        if_ref_elem.attrib[attrib] = if_ref[attrib]  
             prop1 = etree.SubElement(xml, 'property', source_id = link['interface1']['component_id'],
                 dest_id = link['interface2']['component_id'], capacity=link['capacity'], 
                 latency=link['latency'], packet_loss=link['packet_loss'])
