@@ -50,11 +50,11 @@ class SenslabImportUsers:
 	def InitPersons(self):	
 		persons_per_site = {}
 		person_id = 7
-		persons_per_site[person_id] = {'person_id': person_id,'site_ids': [3],'email': 'a_rioot@senslab.fr', 'key_ids':[1], 'roles': ['pi'], 'role_ids':[20]}
+		persons_per_site[person_id] = {'person_id': person_id,'site_ids': [3],'email': 'a_rioot@senslab.fr', 'key_ids':[1], 'roles': ['pi'], 'role_ids':[20],'first_name':'A','last_name':'rioot'}
 		person_id = 8
-		persons_per_site[person_id] = {'person_id': person_id,'site_ids': [3],'email': 'lost@senslab.fr','key_ids':[1],'roles': ['pi'], 'role_ids':[20]}
+		persons_per_site[person_id] = {'person_id': person_id,'site_ids': [3],'email': 'lost@senslab.fr','key_ids':[1],'roles': ['pi'], 'role_ids':[20],'first_name':'L','last_name':'lost'}
 		person_id = 9
-		persons_per_site[person_id] = {'person_id': person_id,'site_ids': [3],'email': 'user@senslab.fr','key_ids':[1],'roles': ['user'], 'role_ids':[1]}
+		persons_per_site[person_id] = {'person_id': person_id,'site_ids': [3],'email': 'user@senslab.fr','key_ids':[1],'roles': ['user'], 'role_ids':[1],'first_name':'U','last_name':'senslab'}
 		for person_id in persons_per_site.keys():
 			person  = persons_per_site[person_id]
 			if person['person_id'] not in self.person_list:

@@ -160,16 +160,36 @@ class SfaAPI(BaseAPI):
         return cred.save_to_string(save_parents=True)
 
 
+    def get_server(self, interface, cred, timeout=30):
+        """
+        Returns a connection to the specified interface. Use the specified
+        credential to determine the caller and look for the caller's key/cert 
+        in the registry hierarchy cache. 
+        """       
+        from sfa.trust.hierarchy import Hierarchy
+        if not isinstance(cred, Credential):
+            cred_obj = Credential(string=cred)
+        else:
+            cred_obj = cred
+        caller_gid = cred_obj.get_gid_caller()
+        hierarchy = Hierarchy()
+        auth_info = hierarchy.get_auth_info(caller_gid.get_hrn())
+        key_file = auth_info.get_privkey_filename()
+        cert_file = auth_info.get_gid_filename()
+        server = interface.get_server(key_file, cert_file, timeout)
+        return server
+               
+
     def getDelegatedCredential(self, creds):
         """
         Attempt to find a credential delegated to us in
         the specified list of creds.
         """
-       if creds and not isinstance(creds, list): 
-            creds = [creds]
+	if creds and not isinstance(creds, list):
+            	creds = [creds]
         delegated_creds = filter_creds_by_caller(creds, [self.hrn, self.hrn + '.slicemanager'])
         if not delegated_creds:
-            return None
+            	return None
         return delegated_creds[0]
  
     def __getCredential(self):
