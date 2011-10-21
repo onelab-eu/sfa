@@ -4,7 +4,7 @@ from StringIO import StringIO
 from datetime import datetime, timedelta
 from sfa.util.xrn import *
 from sfa.util.plxrn import hostname_to_urn
-from sfa.util.faults import SfaNotImplemented, InvalidRSpec, InvalidRSpecElement
+from sfa.util.faults import SfaNotImplemented, InvalidXML
 
 class XpathFilter:
     @staticmethod
@@ -52,7 +52,7 @@ class XML:
             try:
                 tree = etree.parse(StringIO(xml), parser)
             except Exception, e:
-                raise InvalidRSpec(str(e))
+                raise InvalidXML(str(e))
         self.root = tree.getroot()
         # set namespaces map
         self.namespaces = dict(self.root.nsmap)
@@ -82,7 +82,7 @@ class XML:
         if not relaxng(self.root):
             error = relaxng.error_log.last_error
             message = "%s (line %s)" % (error.message, error.line)
-            raise InvalidRSpec(message)
+            raise InvalidXML(message)
         return True
 
     def xpath(self, xpath, namespaces=None):
