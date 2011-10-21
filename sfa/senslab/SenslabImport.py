@@ -66,6 +66,23 @@ class SenslabImport:
        print>>sys.stderr, "\r\n ========= \t\t SenslabImport  self.plc_auth %s \r\n" %(self.plc_auth ) 
        self.root_auth = self.config.SFA_REGISTRY_ROOT_AUTH
 
+    def create_sm_client_record(self):
+        """
+        Create a user record for the Slicemanager service.
+        """
+        hrn = self.config.SFA_INTERFACE_HRN + '.slicemanager'
+        urn = hrn_to_urn(hrn, 'user')
+        if not self.AuthHierarchy.auth_exists(urn):
+            self.logger.info("Import: creating Slice Manager user")
+            self.AuthHierarchy.create_auth(urn)
+
+        auth_info = self.AuthHierarchy.get_auth_info(hrn)
+        table = SfaTable()
+        sm_user_record = table.find({'type': 'user', 'hrn': hrn})
+        if not sm_user_record:
+            record = SfaRecord(hrn=hrn, gid=auth_info.get_gid_object(), type="user", pointer=-1)
+            record['authority'] = get_authority(record['hrn'])
+            table.insert(record)    
 
     def create_top_level_auth_records(self, hrn):
         """

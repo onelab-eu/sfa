@@ -165,9 +165,9 @@ class SfaAPI(BaseAPI):
         Attempt to find a credential delegated to us in
         the specified list of creds.
         """
-        if creds and not isinstance(creds, list): 
+       if creds and not isinstance(creds, list): 
             creds = [creds]
-        delegated_creds = filter_creds_by_caller(creds,self.hrn)
+        delegated_creds = filter_creds_by_caller(creds, [self.hrn, self.hrn + '.slicemanager'])
         if not delegated_creds:
             return None
         return delegated_creds[0]
