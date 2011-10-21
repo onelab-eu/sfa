@@ -321,7 +321,7 @@ class SfaRecord(Row):
         #dict = xmlrpclib.loads(str)[0][0]
         
         record = XML(str)
-        self.load_from_dict(record.root.attrib)
+        self.load_from_dict(record.todict())
 
     ##
     # Dump the record to stdout
