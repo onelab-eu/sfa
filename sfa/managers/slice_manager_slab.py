@@ -37,6 +37,24 @@ import sfa.plc.peers as peers
 from sfa.util.version import version_core
 from sfa.util.callids import Callids
 
+def _call_id_supported(api, server):
+    """
+    Returns true if server support the optional call_id arg, false otherwise.
+    """
+    server_version = api.get_cached_server_version(server)
+
+    if 'sfa' in server_version:
+        code_tag = server_version['code_tag']
+        code_tag_parts = code_tag.split("-")
+
+        version_parts = code_tag_parts[0].split(".")
+        major, minor = version_parts[0:2]
+        rev = code_tag_parts[1]
+        if int(major) > 1:
+            if int(minor) > 0 or int(rev) > 20:
+                return True
+    return False
+
 # we have specialized xmlrpclib.ServerProxy to remember the input url
 # OTOH it's not clear if we're only dealing with XMLRPCServerProxy instances
 def get_serverproxy_url (server):

@@ -5,8 +5,8 @@ import json
 from sfa.senslab.parsing import *
 from sfa.senslab.SenslabImportUsers import *
 
-#OARIP='10.127.255.254'
-OARIP='192.168.0.109'
+OARIP='10.127.255.254'
+#OARIP='192.168.0.109'
 
 
 OARrequests_list = ["GET_version", "GET_timezone", "GET_jobs", "GET_jobs_table", "GET_jobs_details",
