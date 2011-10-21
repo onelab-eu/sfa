@@ -14,6 +14,7 @@ import os
 from optparse import OptionParser
 from pprint import pprint
 from xml.parsers.expat import ExpatError
+from sfa.util.xml import XML    
 
 def create_parser():
     command = sys.argv[0]
@@ -31,17 +32,17 @@ def create_parser():
     return parser    
 
 
-def printRec(record, filters, options):
+def printRec(record_dict, filters, options):
     line = ""
     if len(filters):
         for filter in filters:
             if options.DEBUG:  print "Filtering on %s" %filter
             line += "%s: %s\n" % (filter, 
-                printVal(record.dict["record"].get(filter, None)))
+                printVal(record_dict.get(filter, None)))
         print line
     else:
         # print the wole thing
-        for (key, value) in record.dict["record"].iteritems():
+        for (key, value) in record_dict.iteritems():
             if (not options.withkey and key in ('gid', 'keys')) or\
                 (not options.plinfo and key == 'pl_info'):
                 continue
@@ -66,16 +67,14 @@ def main():
 
     stdin = sys.stdin.read()
     
-    record = RecordSpec(xml = stdin)
+    record = XML(stdin)
+    record_dict = record.todict()
     
-    if not record.dict.has_key("record"):
-        raise "RecordError", "Input record does not have 'record' tag."
-
     if options.DEBUG: 
-        record.pprint()
+        pprint(record.toxml())
         print "#####################################################"
 
-    printRec(record, args, options)
+    printRec(record_dict, args, options)
 
 if __name__ == '__main__':
     try: main()

@@ -14,6 +14,7 @@ sys.path.append('.')
 import os
 from optparse import OptionParser
 from pprint import pprint
+from sfa.util.xml import XML
 
 def create_parser():
     command = sys.argv[0]
@@ -89,15 +90,14 @@ def main():
     parser = create_parser(); 
     (options, args) = parser.parse_args()
 
-    record = RecordSpec(xml = sys.stdin.read())
-
+    record = XML(sys.stdin.read())
+    record_dict = record.todict()
     if args:
-        editDict(args, record.dict["record"], options)
+        editDict(args, record_dict, options)
     if options.DEBUG:
-        print "New Record:\n%s" % record.dict
-        record.pprint()
-
-    record.parseDict(record.dict)
+        print "New Record:\n%s" % record_dict
+        
+    record.parse_dict(record_dict)
     s = record.toxml()
     sys.stdout.write(s)
 
