@@ -1,13 +1,12 @@
 #!/usr/bin/python
 #
-# SFA PLC Wrapper
+# PlanetLab SFA implementation
 #
-# This wrapper implements the SFA Registry and Slice Interfaces on PLC.
+# This implements the SFA Registry and Slice Interfaces on PLC.
 # Depending on command line options, it starts some combination of a
 # Registry, an Aggregate Manager, and a Slice Manager.
 #
-# There are several items that need to be done before starting the wrapper
-# server.
+# There are several items that need to be done before starting the servers.
 #
 # NOTE:  Many configuration settings, including the PLC maintenance account
 # credentials, URI of the PLCAPI, and PLC DB URI and admin credentials are initialized

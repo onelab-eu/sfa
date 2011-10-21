@@ -46,13 +46,13 @@ Requires: python-dateutil
 #%endif
 
 %package cm
-Summary: the SFA wrapper around MyPLC NodeManager
+Summary: the SFA layer around MyPLC NodeManager
 Group: Applications/System
 Requires: sfa
 Requires: pyOpenSSL >= 0.6
 
 %package plc
-Summary: the SFA wrapper arounf MyPLC
+Summary: the SFA layer around MyPLC
 Group: Applications/System
 Requires: sfa
 Requires: python-psycopg2
