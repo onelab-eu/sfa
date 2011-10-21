@@ -1,6 +1,6 @@
 #!/usr/bin/python 
 from datetime import datetime, timedelta
-from sfa.rspecs.xml import XML, XpathFilter
+from sfa.util.xml import XML, XpathFilter
 from sfa.rspecs.version_manager import VersionManager
 from sfa.util.xrn import *
 from sfa.util.plxrn import hostname_to_urn
