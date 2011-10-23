@@ -6,7 +6,7 @@ from sfa.util.plxrn import *
 #from sfa.rspecs.rspec_version import RSpecVersion
 from sfa.rspecs.rspec import RSpec
 from sfa.rspecs.version_manager import VersionManager
-from sfa.util.bwlimit import get_tc_rate
+from sfa.plc.vlink import get_tc_rate
 
 class Aggregate:
 
