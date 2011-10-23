@@ -1,3 +1,5 @@
+
+from sfa.util.plxrn import PlXrn
 # Taken from bwlimit.py
 #
 # See tc_util.c and http://physics.nist.gov/cuu/Units/binary.html. Be
@@ -26,6 +28,7 @@ suffixes = {
     "tibps":    8*1024*1024*1024*1024,
     "tbps": 8000000000000
 }
+
 
 def get_tc_rate(s):
     """
@@ -57,46 +60,53 @@ def format_tc_rate(rate):
     else:
         return "%.0fbit" % rate
 
-def get_link_id(if1, if2):
-    if if1['id'] < if2['id']:
-        link = (if1['id']<<7) + if2['id']
-    else:
-        link = (if2['id']<<7) + if1['id']
-    return link
+class VLink:
+    @staticmethod
+    def get_link_id(if1, if2):
+        if if1['id'] < if2['id']:
+            link = (if1['id']<<7) + if2['id']
+        else:
+            link = (if2['id']<<7) + if1['id']
+        return link
 
-def get_iface_id(if1, if2):
-    if if1['id'] < if2['id']:
-        iface = 1
-    else:
-        iface = 2
-    return iface
+    @staticmethod
+    def get_iface_id(if1, if2):
+        if if1['id'] < if2['id']:
+            iface = 1
+        else:
+            iface = 2
+        return iface
 
-def get_virt_ip(if1, if2):
-    link_id = get_link_id(if1, if2)
-    iface_id = get_iface_id(if1, if2)
-    first = link_id >> 6
-    second = ((link_id & 0x3f)<<2) + iface_id
-    return "192.168.%d.%s" % (frist, second)
+    @staticmethod
+    def get_virt_ip(if1, if2):
+        link_id = get_link_id(if1, if2)
+        iface_id = get_iface_id(if1, if2)
+        first = link_id >> 6
+        second = ((link_id & 0x3f)<<2) + iface_id
+        return "192.168.%d.%s" % (frist, second)
 
-def get_virt_net(link):
-    link_id = self.get_link_id(link)
-    first = link_id >> 6
-    second = (link_id & 0x3f)<<2
-    return "192.168.%d.%d/30" % (first, second)
+    @staticmethod
+    def get_virt_net(link):
+        link_id = self.get_link_id(link)
+        first = link_id >> 6
+        second = (link_id & 0x3f)<<2
+        return "192.168.%d.%d/30" % (first, second)
 
-def get_interface_id(interface):
-    if_name = PlXrn(interface=interface['component_id']).interface_name()
-    node, dev = if_name.split(":")
-    node_id = int(node.replace("pc", ""))
-    return node_id
+    @staticmethod
+    def get_interface_id(interface):
+        if_name = PlXrn(interface=interface['component_id']).interface_name()
+        node, dev = if_name.split(":")
+        node_id = int(node.replace("pc", ""))
+        return node_id
 
-    
-def get_topo_rspec(self, link):
-    link['interface1']['id'] = get_interface_id(link['interface1'])
-    link['interface2']['id'] = get_interface_id(link['interface2'])
-    my_ip = get_virt_ip(link['interface1'], link['interface2'])
-    remote_ip = get_virt_ip(link['interface2'], link['interface1'])
-    net = get_virt_net(link)
-    bw = format_tc_rate(long(link['capacity']))
-    ipaddr = remote.get_primary_iface().ipv4
-    return (link['interface2']['id'], ipaddr, bw, my_ip, remote_ip, net) 
+        
+    @staticmethod
+    def get_topo_rspec(link):
+        link['interface1']['id'] = VLink.get_interface_id(link['interface1'])
+        link['interface2']['id'] = VLink.get_interface_id(link['interface2'])
+        my_ip = VLink.get_virt_ip(link['interface1'], link['interface2'])
+        remote_ip = VLink.get_virt_ip(link['interface2'], link['interface1'])
+        net = VLink.get_virt_net(link)
+        bw = format_tc_rate(long(link['capacity']))
+        ipaddr = remote.get_primary_iface().ipv4
+        return (link['interface2']['id'], ipaddr, bw, my_ip, remote_ip, net) 
