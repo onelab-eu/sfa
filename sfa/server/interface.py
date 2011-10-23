@@ -70,7 +70,7 @@ class Interfaces(dict):
         
         required_fields = self.default_fields.keys()
         for record in records:
-            if not set(required_fields).issubset(record.keys()):
+            if not record or not set(required_fields).issubset(record.keys()):
                 continue
             # port is appended onto the domain, before the path. Should look like:
             # http://domain:port/path
