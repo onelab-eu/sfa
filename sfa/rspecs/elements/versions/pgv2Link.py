@@ -1,8 +1,13 @@
 from lxml import etree
 from sfa.rspecs.elements.link import Link
 from sfa.rspecs.elements.interface import Interface
+from sfa.rspecs.rspec_elements import RSpecElement, RSpecElements
 
 class PGv2Link:
+
+    elements = {
+        'link': RSpecElement(RSpecElements.LINK, 'link', '//default:link | //link'),
+        'component_manager': RSpecElement(RSpecElement
     
     @staticmethod
     def add_links(xml, links):
@@ -26,7 +31,7 @@ class PGv2Link:
                 latency=link['latency'], packet_loss=link['packet_loss'])
             if 'type' in link and link['type']:
                 type_elem = etree.SubElement(xml, 'link_type', name=link['type'])             
-             
+   
     @staticmethod 
     def get_links(xml, namespaces=None):
         links = []
@@ -66,5 +71,4 @@ class PGv2Link:
                 link['interface2'] = ifs[1] 
             links.append(link)
         return links 
-            
-        
+
