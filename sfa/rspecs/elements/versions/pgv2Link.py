@@ -7,7 +7,8 @@ class PGv2Link:
 
     elements = {
         'link': RSpecElement(RSpecElements.LINK, 'link', '//default:link | //link'),
-        'component_manager': RSpecElement(RSpecElement
+#thierry:was incomplete..        'component_manager': RSpecElement(RSpecElement),
+        }
     
     @staticmethod
     def add_links(xml, links):
