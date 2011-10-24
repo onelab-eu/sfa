@@ -46,6 +46,7 @@ package_dirs = [
     'sfa/managers/vini',
     'sfa/rspecs',
     'sfa/rspecs/elements',
+    'sfa/rspecs/elements/versions',
     'sfa/rspecs/versions',
     'sfatables',
     'sfatables/commands',
