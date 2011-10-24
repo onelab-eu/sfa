@@ -179,12 +179,17 @@ class SfaAPI(BaseAPI):
         Attempt to find a credential delegated to us in
         the specified list of creds.
         """
+        from sfa.trust.hierarchy import Hierarchy
         if creds and not isinstance(creds, list): 
             creds = [creds]
-        delegated_creds = filter_creds_by_caller(creds, [self.hrn, self.hrn + '.slicemanager'])
-        if not delegated_creds:
-            return None
-        return delegated_creds[0]
+        hierarchy = Hierarchy()
+                
+        delegated_cred = None
+        for cred in creds:
+            if hierarchy.auth_exists(Credential(string=cred).get_gid_caller().get_hrn()):
+                delegated_cred = cred
+                break
+        return delegated_cred
  
     def __getCredential(self):
         """ 
