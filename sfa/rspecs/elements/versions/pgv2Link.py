@@ -6,9 +6,9 @@ from sfa.rspecs.rspec_elements import RSpecElement, RSpecElements
 class PGv2Link:
 
     elements = {
-        'link': RSpecElement(RSpecElements.LINK, 'link', '//default:link | //link'),
-#thierry:was incomplete..        'component_manager': RSpecElement(RSpecElement),
-        }
+        'link': RSpecElement(RSpecElements.LINK, '//default:link | //link'),
+        'component_manager': RSpecElement(RSpecElements.COMPONENT_MANAGER, './default:component_manager | ./component_manager')
+    }
     
     @staticmethod
     def add_links(xml, links):
