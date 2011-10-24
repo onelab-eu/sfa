@@ -15,5 +15,4 @@ class RSpecElement:
         if not element_type in RSpecElements:
             raise InvalidRSpecElement(element_type)
         self.type = element_type
-        self.name = name
         self.path = path
