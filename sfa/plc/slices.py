@@ -10,6 +10,7 @@ from sfa.util.specdict import *
 from sfa.util.faults import *
 from sfa.util.record import SfaRecord
 from sfa.util.policy import Policy
+from fsa.plc.vlink import VLink
 from sfa.util.prefixTree import prefixTree
 from collections import defaultdict
 
@@ -26,6 +27,8 @@ class Slices:
         self.origin_hrn = origin_hrn
         self.registry = api.registries[api.hrn]
         self.credential = api.getCredential()
+        self.nodes = []
+        self.persons = []
 
     def get_slivers(self, xrn, node=None):
         hrn, type = urn_to_hrn(xrn)
@@ -186,6 +189,13 @@ class Slices:
 
         except: 
             self.api.logger.log_exc('Failed to add/remove slice from nodes')
+
+    def verify_slice_links(self, slice, links, peer=None):
+        if not links or not nodes:
+            return 
+        for link in links:
+            topo_rspec = VLink.get_topo_rspec(link)            
+        
 
     def handle_peer(self, site, slice, persons, peer):
         if peer:
