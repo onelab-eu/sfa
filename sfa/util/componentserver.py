@@ -6,9 +6,6 @@
 # TODO: investigate ways to combine this with existing PLC server?
 ##
 
-### $Id$
-### $URL$
-
 import sys
 import traceback
 import threading

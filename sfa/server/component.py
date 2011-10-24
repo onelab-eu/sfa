@@ -1,10 +1,6 @@
 #
 # Component is a SfaServer that implements the Component interface
 #
-### $Id: 
-### $URL: 
-#
-
 import tempfile
 import os
 import time

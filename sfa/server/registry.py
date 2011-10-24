@@ -1,10 +1,6 @@
 #
 # Registry is a SfaServer that implements the Registry interface
 #
-### $Id$
-### $URL$
-#
-
 from sfa.util.server import SfaServer
 from sfa.util.faults import *
 from sfa.util.xrn import hrn_to_urn

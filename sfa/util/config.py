@@ -14,9 +14,6 @@
 # Note that SFA does not access any of the PLC databases directly via
 # a mysql connection; All PLC databases are accessed via PLCAPI.
 
-### $Id$
-### $URL$
-
 import os.path
 import traceback
 

@@ -1,5 +1,3 @@
-### $Id: register.py 16477 2010-01-05 16:31:37Z thierry $
-### $URL: https://svn.planet-lab.org/svn/sfa/trunk/sfa/methods/register.py $
 
 from sfa.util.xrn import urn_to_hrn
 from sfa.util.method import Method

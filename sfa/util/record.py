@@ -4,9 +4,6 @@
 # TODO: Use existing PLC database methods? or keep this separate?
 ##
 
-### $Id$
-### $URL$
-
 from types import StringTypes
 
 from sfa.trust.gid import *

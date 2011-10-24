@@ -1,5 +1,3 @@
-### $Id: register.py 16477 2010-01-05 16:31:37Z thierry $
-### $URL: https://svn.planet-lab.org/svn/sfa/trunk/sfa/methods/register.py $
 
 from sfa.trust.certificate import Keypair, convert_public_key
 from sfa.trust.gid import *
