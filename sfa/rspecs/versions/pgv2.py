@@ -18,11 +18,7 @@ class PGv2(BaseVersion):
         'planetlab': "http://www.planet-lab.org/resources/sfa/ext/planetlab/1",
     }
     namespaces = dict(extensions.items() + [('default', namespace)])
-    elements = [
-        RSpecElement(RSpecElements.NETWORK, 'network', '//default:node[@component_manager_id][1]'),
-        RSpecElement(RSpecElements.NODE, 'node', '//default:node | //node'),
-        RSpecElement(RSpecElements.SLIVER, 'sliver', '//default:node/default:sliver_type | //node/sliver_type'),
-    ]
+    elements = []
 
     def get_network(self):
         network = None

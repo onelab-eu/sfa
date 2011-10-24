@@ -13,11 +13,7 @@ class SFAv1(BaseVersion):
     namespace = None
     extensions = {}
     namespaces = None
-    elements = [
-        RSpecElement(RSpecElements.NETWORK, 'network', '//network'),
-        RSpecElement(RSpecElements.NODE, 'node', '//node'),
-        RSpecElement(RSpecElements.SLIVER, 'sliver', '//node/sliver'),
-    ] 
+    elements = [] 
     template = '<RSpec type="%s"></RSpec>' % type
 
     def get_network_elements(self):
