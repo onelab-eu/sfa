@@ -87,7 +87,7 @@ force:
 
 ##########
 tags:	
-	find . -type f | egrep -v '/\.git/|/\.svn/|TAGS|\.py[co]$$|\.doc$$|\.html$$|\.pdf$$|~$$|\.png$$|\.svg$$|\.out$$|\.bak$$|\.xml$$' | xargs etags
+	find . -type f | egrep -v '/\.git/|/\.svn/|TAGS|~$$|\.(py[co]|doc|html|pdf|png|svg|out|bak|xml|dg)$$' | xargs etags
 .PHONY: tags
 
 signatures:
