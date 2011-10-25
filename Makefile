@@ -138,6 +138,7 @@ else
 	+$(RSYNC) ./sfa/ $(SSHURL)/usr/lib\*/python2.\*/site-packages/sfa/
 	+$(RSYNC) ./tests/ $(SSHURL)/root/tests-sfa
 	+$(RSYNC)  $(BINS) $(SSHURL)/usr/bin
+	+$(RSYNC) ./sfa/init.d/sfa  $(SSHURL)/etc/init.d
 	$(SSHCOMMAND) exec service sfa restart
 endif
 
