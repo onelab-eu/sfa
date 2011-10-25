@@ -39,17 +39,17 @@ def parse_filter(list_to_filter, param_filter, type_of_list, return_fields=None)
 		print>>sys.stderr, " \r\n type_of_list Error  parse_filter %s " %(type_of_list)
 		return []
 	
-	print>>sys.stderr, " \r\n ____FIRST ENTRY parse_filter param_filter %s type %s  list %s " %(param_filter, type(param_filter), list_to_filter)
+	#print>>sys.stderr, " \r\n ____FIRST ENTRY parse_filter param_filter %s type %s  list %s " %(param_filter, type(param_filter), list_to_filter)
 	return_filtered_list= []
 	
 	for item in list_to_filter:
 		tmp_item = {}
 		
 		if type(param_filter) is list :
-			print>>sys.stderr, " \r\n p_filter LIST %s " %(param_filter)
+			#print>>sys.stderr, " \r\n p_filter LIST %s " %(param_filter)
 			
 			for p_filter in param_filter:
-				print>>sys.stderr, " \r\n p_filter %s \t item %s " %(p_filter,item)
+				#print>>sys.stderr, " \r\n p_filter %s \t item %s " %(p_filter,item)
 				if type(p_filter) is int:
 					if item[list_type[type_of_list]['int']] == p_filter :
 						if return_fields:
@@ -82,7 +82,7 @@ def parse_filter(list_to_filter, param_filter, type_of_list, return_fields=None)
 					del tmp_copy[key] 
 					
 			
-			print>>sys.stderr, " \r\n tmp_copy %s param_filter %s cmp = %s " %(tmp_copy, param_filter,cmp(tmp_copy, stripped_filterdict))
+			#print>>sys.stderr, " \r\n tmp_copy %s param_filter %s cmp = %s " %(tmp_copy, param_filter,cmp(tmp_copy, stripped_filterdict))
 			
 			if cmp(tmp_copy, stripped_filterdict) == 0:	
 				if return_fields:

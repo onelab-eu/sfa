@@ -16,14 +16,16 @@ from sfa.util.record import SfaRecord
 from sfa.util.policy import Policy
 from sfa.util.record import *
 from sfa.util.sfaticket import SfaTicket
-from sfa.plc.slices import Slices
+
+from sfa.senslab.slices import *
+
 from sfa.trust.credential import Credential
 import sfa.plc.peers as peers
 from sfa.plc.network import *
 from sfa.senslab.OARrestapi import *
 from sfa.senslab.api import SfaAPI
 #from sfa.plc.aggregate import Aggregate
-from sfa.plc.slices import *
+#from sfa.plc.slices import *
 from sfa.util.version import version_core
 from sfa.rspecs.version_manager import VersionManager
 from sfa.rspecs.rspec import RSpec
@@ -184,8 +186,11 @@ def CreateSliver(api, slice_xrn, creds, rspec_string, users, call_id):
     if Callids().already_handled(call_id): return ""
 
     #reg_objects = __get_registry_objects(slice_xrn, creds, users)
-    aggregate = Aggregate(api)
-    slices = Slices(api)
+    #aggregate = Aggregate(api)
+    aggregate = OARrspec(api)
+    print>>sys.stderr, " \r\n AGGREGATE CreateSliver DAFUQ IS THIS ?-----------------> aggregate " , aggregate
+    slices = Slices(api)    
+    print>>sys.stderr, " \r\n AGGREGATE CreateSliver DAFUQ IS THAT ?-----------------> Slices " , slices
     (hrn, type) = urn_to_hrn(slice_xrn)
     
     peer = slices.get_peer(hrn)

@@ -120,7 +120,7 @@ class OARGETParser:
 	
 	def ParseVersion(self) : 
 		print self.raw_json
-		print >>sys.stderr, self.raw_json
+		#print >>sys.stderr, self.raw_json
 		if 'oar_version' in self.raw_json :
 			self.version_json_dict.update(api_version=self.raw_json['api_version'] ,
 					apilib_version=self.raw_json['apilib_version'],
@@ -220,11 +220,11 @@ class OARGETParser:
 									('date_created', None), ('peer_id', None),]
 				self.site_dict[node['site_login_base']] = dict(self.site_dict[node['site_login_base']])
 				
-		print>>sys.stderr, "\r\n \r\n =============\t\t ParseSites site dict %s \r\n"%(self.site_dict)
+		#print>>sys.stderr, "\r\n \r\n =============\t\t ParseSites site dict %s \r\n"%(self.site_dict)
 		
 		
 	def GetNodesFromOARParse(self):
-		print>>sys.stderr, " \r\n =========GetNodesFromOARParse: node_dictlist %s "%(self.node_dictlist)
+		#print>>sys.stderr, " \r\n =========GetNodesFromOARParse: node_dictlist %s "%(self.node_dictlist)
 		return self.node_dictlist
 
 	def GetSitesFromOARParse(self):
@@ -278,11 +278,11 @@ class OARapi:
 		self.parser = OARGETParser(self.server)
 
 	def GetNodes(self,node_filter= None, return_fields=None):
-		print>>sys.stderr, " \r\n GetNodes node_filter %s return_fields %s" %(node_filter,return_fields) 
+		#print>>sys.stderr, " \r\n GetNodes node_filter %s return_fields %s" %(node_filter,return_fields) 
 		self.parser.SendRequest("GET_resources_full")
 		node_dict = self.parser.GetNodesFromOARParse()
 		return_node_list = []
-		print>>sys.stderr, " \r\n GetNodes   node_dict %s" %(node_dict) 
+		#print>>sys.stderr, " \r\n GetNodes   node_dict %s" %(node_dict) 
 		if not (node_filter or return_fields):
 			return_node_list = node_dict.values()
 			return return_node_list
@@ -299,19 +299,19 @@ class OARapi:
 		site = site_dict.values()[0]
 		Users = SenslabImportUsers()
 			
-		print>>sys.stderr, " \r\n  GetSites sites_dict %s site_filter %s  \r\n \r\n  \r\n \r\n------site %s" %(site_dict,site_filter,site ) 
+		#print>>sys.stderr, " \r\n  GetSites sites_dict %s site_filter %s  \r\n \r\n  \r\n \r\n------site %s" %(site_dict,site_filter,site ) 
 		admins_dict ={'person_ids': Users.GetPIs(site['site_id'])}
 		site.update(admins_dict)	
 		
 		slice_list = Users.GetSlices()
 		for sl in slice_list:
-			print>>sys.stderr, " \r\n  GetSites sl %s" %(sl)
+			#print>>sys.stderr, " \r\n  GetSites sl %s" %(sl)
 			if sl['site_id'] == site['site_id']:
 				site['slice_ids'].append(sl['slice_id'])
-		print>>sys.stderr, " \r\n  GetSites -site['site_id'] %s --slice_list %s" %(site['site_id'],slice_list ) 
+		#print>>sys.stderr, " \r\n  GetSites -site['site_id'] %s --slice_list %s" %(site['site_id'],slice_list ) 
 		
 		
-		print>>sys.stderr, " \r\n  GetSites -site['site_id'] %s --admins_dict %s---site %s" %(site['site_id'],admins_dict,site ) 		
+		#print>>sys.stderr, " \r\n  GetSites -site['site_id'] %s --admins_dict %s---site %s" %(site['site_id'],admins_dict,site ) 		
 		if not (site_filter or return_fields):
 			return_site_list = site_dict.values()
 			return return_site_list

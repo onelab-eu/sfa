@@ -129,16 +129,15 @@ def drop_slicemgr_stats(api,rspec):
  
  
 def CreateSliver(api, xrn, creds, rspec_str, users, call_id):
+	
 	version_manager = VersionManager()
-	def _CreateSliver(aggregate, xrn, credential, rspec, users, call_id):
-	# Need to call ParseVersion at an aggregate to determine the supported 
-	# rspec type/format beofre calling CreateSliver at an Aggregate. 
-	# The Aggregate's verion info is cached 
+	def _CreateSliver(aggregate, server, xrn, credential, rspec, users, call_id):
 		
 		tStart = time.time()
 		try:
 			# Need to call GetVersion at an aggregate to determine the supported
 			# rspec type/format beofre calling CreateSliver at an Aggregate.
+			print>>sys.stderr, " \r\n SLICE MANAGERSLAB _CreateSliver server " 
 			server_version = api.get_cached_server_version(server)
 			requested_users = users
 			if 'sfa' not in server_version and 'geni_api' in server_version:
@@ -178,23 +177,26 @@ def CreateSliver(api, xrn, creds, rspec_str, users, call_id):
 	credential = api.getDelegatedCredential(creds)
 	if not credential:
 		credential = api.getCredential()
-	
+
 	# get the callers hrn
 	hrn, type = urn_to_hrn(xrn)
 	valid_cred = api.auth.checkCredentials(creds, 'createsliver', hrn)[0]
 	caller_hrn = Credential(string=valid_cred).get_gid_caller().get_hrn()
 	threads = ThreadManager()
-	
+	print>>sys.stderr, " \r\n \r\n \t\t =======SLICE MANAGER _CreateSliver api aggregates  %s \t caller_hrn %s api.hrn %s" %(api.aggregates, caller_hrn, api.hrn)
 	for aggregate in api.aggregates:
 	# prevent infinite loop. Dont send request back to caller
 	# unless the caller is the aggregate's SM 
 		if caller_hrn == aggregate and aggregate != api.hrn:
 			continue
 		interface = api.aggregates[aggregate]
-		server = api.get_server(interface, credential)   
+		print>>sys.stderr, " \r\n \r\n \t\t =======SLICE MANAGER _CreateSliver aggregate %s interface %s" %(api.aggregates[aggregate],interface)   
+		server = api.get_server(interface, credential)
+		if server is None:
+			print>>sys.stderr, " \r\n \r\n \t\t =======SLICE MANAGER _CreateSliver NOSERVERS "  
 		# Just send entire RSpec to each aggregate
-		threads.run(_CreateSliver, aggregate, xrn, [credential], rspec.toxml(), users, call_id)
-		
+		#threads.run(_CreateSliver, aggregate, xrn, [credential], rspec.toxml(), users, call_id)
+		threads.run(_CreateSliver, aggregate, server, xrn, [credential], rspec.toxml(), users, call_id)
 	results = threads.get_results()
 	manifest_version = version_manager._get_version(rspec.version.type, rspec.version.version, 'manifest')
 	result_rspec = RSpec(version=manifest_version)
