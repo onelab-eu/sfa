@@ -7,7 +7,10 @@ class PGv2Link:
 
     elements = {
         'link': RSpecElement(RSpecElements.LINK, '//default:link | //link'),
-        'component_manager': RSpecElement(RSpecElements.COMPONENT_MANAGER, './default:component_manager | ./component_manager')
+        'component_manager': RSpecElement(RSpecElements.COMPONENT_MANAGER, './default:component_manager | ./component_manager'),
+        'link_type': RSpecElement(RSpecElements.LINK_TYPE, './default:link_type | ./link_type'),
+        'property': RSpecElement(RSpecElements.PROPERTY, './default:property | ./property'),
+        'interface_ref': RSpecElement(RSpecElements.INTERFACE_REF, './default:interface_ref | ./interface_ref') 
     }
     
     @staticmethod
@@ -18,25 +21,25 @@ class PGv2Link:
                 if attrib in link and link[attrib]:
                     link_elem.set(attrib, link[attrib])
             if 'component_manager' in link and link['component_manager']:
-                cm_element = etree.SubElement(xml, 'component_manager', name=link['component_manager'])
+                cm_element = etree.SubElement(link_elem, 'component_manager', name=link['component_manager'])
             for if_ref in [link['interface1'], link['interface2']]:
-                if_ref_elem = etree.SubElement(xml, 'interface_ref')
+                if_ref_elem = etree.SubElement(link_elem, 'interface_ref')
                 for attrib in Interface.fields:
                     if attrib in if_ref and if_ref[attrib]:
                         if_ref_elem.attrib[attrib] = if_ref[attrib]  
-            prop1 = etree.SubElement(xml, 'property', source_id = link['interface1']['component_id'],
+            prop1 = etree.SubElement(link_elem, 'property', source_id = link['interface1']['component_id'],
                 dest_id = link['interface2']['component_id'], capacity=link['capacity'], 
                 latency=link['latency'], packet_loss=link['packet_loss'])
-            prop2 = etree.SubElement(xml, 'property', source_id = link['interface2']['component_id'],
+            prop2 = etree.SubElement(link_elem, 'property', source_id = link['interface2']['component_id'],
                 dest_id = link['interface1']['component_id'], capacity=link['capacity'], 
                 latency=link['latency'], packet_loss=link['packet_loss'])
             if 'type' in link and link['type']:
-                type_elem = etree.SubElement(xml, 'link_type', name=link['type'])             
+                type_elem = etree.SubElement(link_elem, 'link_type', name=link['type'])             
    
     @staticmethod 
     def get_links(xml, namespaces=None):
         links = []
-        link_elems = xml.xpath('//default:link', namespaces=namespaces)
+        link_elems = xml.xpath(PGv2Link.elements['link'].path, namespaces=namespaces)
         for link_elem in link_elems:
             # set client_id, component_id, component_name
             link = Link(link_elem.attrib)
@@ -47,14 +50,14 @@ class PGv2Link:
                 if  'name' in cm.attrib:
                     link['component_manager'] = cm.attrib['name'] 
             # set link type
-            link_types = link_elem.xpath('./default:link_type', namespaces=namespaces)
+            link_types = link_elem.xpath(PGv2Link.elements['link_type'].path, namespaces=namespaces)
             if len(link_types) > 0:
                 link_type = link_types[0]
                 if 'name' in link_type.attrib:
                     link['type'] = link_type.attrib['name']
           
             # get capacity, latency and packet_loss from first property  
-            props = link_elem.xpath('./default:property', namespaces=namespaces)
+            props = link_elem.xpath(PGv2Link.elements['property'].path, namespaces=namespaces)
             if len(props) > 0:
                 prop = props[0]
                 for attrib in ['capacity', 'latency', 'packet_loss']:
@@ -62,7 +65,7 @@ class PGv2Link:
                         link[attrib] = prop.attrib[attrib]
                              
             # get interfaces 
-            if_elems = link_elem.xpath('./default:interface_ref', namespaces=namespaces)
+            if_elems = link_elem.xpath(PGv2Link.elements['interface_ref'].path, namespaces=namespaces)
             ifs = []
             for if_elem in if_elems:
                 if_ref = Interface(if_elem.attrib)                 
