@@ -15,8 +15,9 @@ class PGv2Link:
     
     @staticmethod
     def add_links(xml, links):
+        root = xml.root
         for link in links:
-            link_elem = etree.SubElement(xml, 'link')
+            link_elem = etree.SubElement(root, 'link')
             for attrib in ['component_name', 'component_id', 'client_id']:
                 if attrib in link and link[attrib]:
                     link_elem.set(attrib, link[attrib])
@@ -37,27 +38,28 @@ class PGv2Link:
                 type_elem = etree.SubElement(link_elem, 'link_type', name=link['type'])             
    
     @staticmethod 
-    def get_links(xml, namespaces=None):
+    def get_links(xml):
         links = []
-        link_elems = xml.xpath(PGv2Link.elements['link'].path, namespaces=namespaces)
+        link_elems = xml.xpath(PGv2Link.elements['link'].path, namespaces=xml.namespaces)
         for link_elem in link_elems:
             # set client_id, component_id, component_name
             link = Link(link_elem.attrib)
+            link['_element'] = link_elem
             # set component manager
-            cm = link_elem.xpath('./default:component_manager', namespaces=namespaces)
+            cm = link_elem.xpath('./default:component_manager', namespaces=xml.namespaces)
             if len(cm) >  0:
                 cm = cm[0]
                 if  'name' in cm.attrib:
                     link['component_manager'] = cm.attrib['name'] 
             # set link type
-            link_types = link_elem.xpath(PGv2Link.elements['link_type'].path, namespaces=namespaces)
+            link_types = link_elem.xpath(PGv2Link.elements['link_type'].path, namespaces=xml.namespaces)
             if len(link_types) > 0:
                 link_type = link_types[0]
                 if 'name' in link_type.attrib:
                     link['type'] = link_type.attrib['name']
           
             # get capacity, latency and packet_loss from first property  
-            props = link_elem.xpath(PGv2Link.elements['property'].path, namespaces=namespaces)
+            props = link_elem.xpath(PGv2Link.elements['property'].path, namespaces=xml.namespaces)
             if len(props) > 0:
                 prop = props[0]
                 for attrib in ['capacity', 'latency', 'packet_loss']:
@@ -65,7 +67,7 @@ class PGv2Link:
                         link[attrib] = prop.attrib[attrib]
                              
             # get interfaces 
-            if_elems = link_elem.xpath(PGv2Link.elements['interface_ref'].path, namespaces=namespaces)
+            if_elems = link_elem.xpath(PGv2Link.elements['interface_ref'].path, namespaces=xml.namespaces)
             ifs = []
             for if_elem in if_elems:
                 if_ref = Interface(if_elem.attrib)                 
@@ -76,3 +78,7 @@ class PGv2Link:
             links.append(link)
         return links 
 
+
+    def add_link_requests(xml, links_tuple):
+        available_links = PGv2Link.get_links(xml) 
+           
