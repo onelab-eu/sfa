@@ -21,7 +21,7 @@ from sfa.trust.certificate import Keypair, Certificate
 from sfa.trust.credential import *
 from sfa.util.faults import *
 from sfa.plc.api import ComponentAPI 
-from sfa.util.server import verify_callback, ThreadedServer 
+from sfa.server.sfaserver import verify_callback, ThreadedServer 
 
 
 ##
