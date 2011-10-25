@@ -7,24 +7,24 @@
 ##
 
 import sys
-import socket, os
+import socket
 import traceback
 import threading
 from Queue import Queue
 import SocketServer
 import BaseHTTPServer
-import SimpleHTTPServer
 import SimpleXMLRPCServer
 from OpenSSL import SSL
 
-from sfa.trust.certificate import Keypair, Certificate
-from sfa.trust.trustedroots import TrustedRoots
-from sfa.util.config import Config
-from sfa.trust.credential import *
-from sfa.util.faults import *
-from sfa.plc.api import SfaAPI
-from sfa.util.cache import Cache 
 from sfa.util.sfalogging import logger
+from sfa.util.config import Config
+from sfa.util.cache import Cache 
+from sfa.trust.certificate import Certificate
+from sfa.trust.trustedroots import TrustedRoots
+#seems useless
+#from sfa.trust.credential import *
+#can we get rid of that ?
+from sfa.plc.api import SfaAPI
 
 ##
 # Verification callback for pyOpenSSL. We do our own checking of keys because
@@ -260,54 +260,3 @@ class ThreadPoolMixIn(SocketServer.ThreadingMixIn):
 
 class ThreadedServer(ThreadPoolMixIn, SecureXMLRPCServer):
     pass
-##
-# Implements an HTTPS XML-RPC server. Generally it is expected that SFA
-# functions will take a credential string, which is passed to
-# decode_authentication. Decode_authentication() will verify the validity of
-# the credential, and verify that the user is using the key that matches the
-# GID supplied in the credential.
-
-class SfaServer(threading.Thread):
-
-    ##
-    # Create a new SfaServer object.
-    #
-    # @param ip the ip address to listen on
-    # @param port the port to listen on
-    # @param key_file private key filename of registry
-    # @param cert_file certificate filename containing public key 
-    #   (could be a GID file)
-
-    def __init__(self, ip, port, key_file, cert_file,interface):
-        threading.Thread.__init__(self)
-        self.key = Keypair(filename = key_file)
-        self.cert = Certificate(filename = cert_file)
-        #self.server = SecureXMLRPCServer((ip, port), SecureXMLRpcRequestHandler, key_file, cert_file)
-        self.server = ThreadedServer((ip, port), SecureXMLRpcRequestHandler, key_file, cert_file)
-        self.server.interface=interface
-        self.trusted_cert_list = None
-        self.register_functions()
-        logger.info("Starting SfaServer, interface=%s"%interface)
-
-    ##
-    # Register functions that will be served by the XMLRPC server. This
-    # function should be overridden by each descendant class.
-
-    def register_functions(self):
-        self.server.register_function(self.noop)
-
-    ##
-    # Sample no-op server function. The no-op function decodes the credential
-    # that was passed to it.
-
-    def noop(self, cred, anything):
-        self.decode_authentication(cred)
-        return anything
-
-    ##
-    # Execute the server, serving requests forever. 
-
-    def run(self):
-        self.server.serve_forever()
-
-

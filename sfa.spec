@@ -121,7 +121,7 @@ rm -rf $RPM_BUILD_ROOT
 
 %files
 # sfa and sfatables depend each other.
-%{_bindir}/sfa-server.py*
+%{_bindir}/sfa-start.py*
 /etc/sfatables/*
 %{python_sitelib}/*
 %{_bindir}/keyconvert.py*

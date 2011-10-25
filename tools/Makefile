@@ -6,7 +6,7 @@ all:deps
 deps: server.png client.png
 
 server.dg: $(DEPTOOLS)
-	py2depgraph.py ../sfa/server/sfa-server.py > $@
+	py2depgraph.py ../sfa/server/sfa-start.py > $@
 
 client.dg: $(DEPTOOLS)
 	py2depgraph.py ../sfa/client/sfi.py > $@

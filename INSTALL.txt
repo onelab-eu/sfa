@@ -63,9 +63,9 @@ This will initialize /etc/sfa/authorities/server.key from /etc/sfa/authorities/p
 This will start Registry, Slice Manager and Aggregate Manager. Your ps command output would look like:
 
 # ps -ef | grep python
-root     24944     1  0 May11 ?        00:00:00 /usr/bin/python /usr/bin/sfa-server.py -r -d
-root     24957     1  0 May11 ?        00:00:00 /usr/bin/python /usr/bin/sfa-server.py -a -d
-root     24970     1  0 May11 ?        00:00:00 /usr/bin/python /usr/bin/sfa-server.py -s -d
+root     24944     1  0 May11 ?        00:00:00 /usr/bin/python /usr/bin/sfa-start.py -r -d
+root     24957     1  0 May11 ?        00:00:00 /usr/bin/python /usr/bin/sfa-start.py -a -d
+root     24970     1  0 May11 ?        00:00:00 /usr/bin/python /usr/bin/sfa-start.py -s -d
 -------
 4) Configure SFA client:
 

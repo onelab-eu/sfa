@@ -6,7 +6,7 @@ import os
 import time
 import sys
 
-from sfa.util.componentserver import ComponentServer
+from sfa.server.componentserver import ComponentServer
  
 # GeniLight client support is optional
 try:
