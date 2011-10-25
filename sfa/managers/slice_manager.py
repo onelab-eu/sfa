@@ -1,4 +1,3 @@
-/
 import sys
 import time,datetime
 from StringIO import StringIO
