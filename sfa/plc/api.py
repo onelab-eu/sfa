@@ -576,12 +576,22 @@ class SfaAPI(BaseAPI):
         self.fill_record_sfa_info(records)
 
     def update_membership_list(self, oldRecord, record, listName, addFunc, delFunc):
-        # get a list of the HRNs tht are members of the old and new records
+        # get a list of the HRNs that are members of the old and new records
         if oldRecord:
             oldList = oldRecord.get(listName, [])
         else:
             oldList = []     
         newList = record.get(listName, [])
+        # ugly hack to see what's next
+        def normalize (value):
+            from types import StringTypes
+            from sfa.util.sfalogging import logger
+            if isinstance(value,StringTypes): return value
+            elif isinstance(value,dict): 
+                newvalue=value['text']
+                logger.info("Normalizing %s=>%s"%(value,newvalue))
+                return newvalue
+        newList=[normalize(v) for v in newList]
 
         # if the lists are the same, then we don't have to update anything
         if (oldList == newList):

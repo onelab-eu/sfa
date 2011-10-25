@@ -20,7 +20,7 @@ from sfa.rspecs.version_manager import VersionManager
 from sfa.rspecs.rspec import RSpec 
 from sfa.util.policy import Policy
 from sfa.util.prefixTree import prefixTree
-from sfa.util.sfaticket import *
+from sfa.trust.sfaticket import SfaTicket
 from sfa.trust.credential import Credential
 from sfa.util.threadmanager import ThreadManager
 import sfa.util.xmlrpcprotocol as xmlrpcprotocol     

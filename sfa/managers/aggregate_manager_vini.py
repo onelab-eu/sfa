@@ -11,7 +11,7 @@ from sfa.util.faults import *
 from sfa.util.record import SfaRecord
 from sfa.util.policy import Policy
 from sfa.util.record import *
-from sfa.util.sfaticket import SfaTicket
+from sfa.trust.sfaticket import SfaTicket
 from sfa.server.registry import Registries
 from sfa.plc.slices import Slices
 import sfa.plc.peers as peers

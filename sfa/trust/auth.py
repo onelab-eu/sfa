@@ -10,7 +10,7 @@ from sfa.util.faults import *
 from sfa.trust.hierarchy import Hierarchy
 from sfa.util.config import *
 from sfa.util.xrn import get_authority
-from sfa.util.sfaticket import *
+from sfa.trust.sfaticket import SfaTicket
 
 from sfa.util.sfalogging import logger
 
