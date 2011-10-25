@@ -14,6 +14,7 @@ class Link(dict):
         'latency': None,
         'packet_loss': None,
         'description': None,
+        '_element': None
     }
     
     def __init__(self, fields={}):
