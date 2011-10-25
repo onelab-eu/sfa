@@ -56,6 +56,8 @@ class XML:
         self.root = tree.getroot()
         # set namespaces map
         self.namespaces = dict(self.root.nsmap)
+        if 'default' not in self.namespaces and None in self.namespaces: 
+            self.namespaces['default'] = self.namespaces[None]
         # If the 'None' exist, then it's pointing to the default namespace. This makes 
         # it hard for us to write xpath queries for the default naemspace because lxml 
         # wont understand a None prefix. We will just associate the default namespeace 
@@ -200,7 +202,7 @@ class XML:
         return self.toxml()
 
     def toxml(self):
-        return etree.tostring(self.root, pretty_print=True)  
+        return etree.tostring(self.root, encoding='UTF-8', pretty_print=True)  
     
     def todict(self, elem=None):
         if elem is None:

@@ -93,11 +93,11 @@ class PGv2(BaseVersion):
         return slice_attributes
 
     def get_links(self, network=None):
-        links = PGv2Link.get_links(self.xml.root, self.namespaces)
+        links = PGv2Link.get_links(self.xml)
         return links
 
     def add_links(self, links):
-        PGv2Link.add_links(self.xml.root, links)
+        PGv2Link.add_links(self.xml, links)
 
     def attributes_list(self, elem):
         opts = []

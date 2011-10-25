@@ -113,7 +113,7 @@ class SFAv1(BaseVersion):
         return nodes
 
     def get_links(self, network=None):
-        links = PGv2Link.get_links(self.xml, self.namespaces)
+        links = PGv2Link.get_links(self.xml)
         return links
 
     def get_link(self, fromnode, tonode, network=None):
@@ -242,7 +242,7 @@ class SFAv1(BaseVersion):
         pass
 
     def add_links(self, links):
-        PGv2Link.add_links(self.xml.root, links)
+        PGv2Link.add_links(self.xml, links)
 
     def add_slivers(self, slivers, network=None, sliver_urn=None, no_dupes=False, append=False):
         # add slice name to network tag
