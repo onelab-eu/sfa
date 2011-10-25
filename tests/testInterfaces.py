@@ -12,7 +12,7 @@ from sfa.util.xrn import get_authority
 from sfa.util.config import *
 from sfa.trust.certificate import *
 from sfa.trust.credential import *
-from sfa.util.sfaticket import *
+from sfa.trust.sfaticket import SfaTicket
 from sfa.client import sfi
 
 def random_string(size):

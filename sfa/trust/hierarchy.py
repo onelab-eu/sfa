@@ -21,7 +21,7 @@ from sfa.trust.certificate import Keypair
 from sfa.trust.credential import Credential
 from sfa.trust.gid import GID, create_uuid
 from sfa.util.config import Config
-from sfa.util.sfaticket import SfaTicket
+from sfa.trust.sfaticket import SfaTicket
 
 ##
 # The AuthInfo class contains the information for an authority. This information
