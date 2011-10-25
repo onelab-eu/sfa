@@ -1,4 +1,4 @@
-#
+/
 import sys
 import time,datetime
 from StringIO import StringIO
@@ -11,7 +11,6 @@ from sfa.util.sfalogging import logger
 from sfa.util.rspecHelper import merge_rspecs
 from sfa.util.xrn import Xrn, urn_to_hrn, hrn_to_urn
 from sfa.util.plxrn import hrn_to_pl_slicename
-from sfa.util.specdict import *
 from sfa.util.faults import *
 from sfa.util.record import SfaRecord
 from sfa.rspecs.rspec_converter import RSpecConverter
