@@ -113,8 +113,10 @@ class SFAv1(BaseVersion):
         return nodes
 
     def get_links(self, network=None):
-        links = PGv2Link.get_links(self.xml)
-        return links
+        return PGv2Link.get_links(self.xml)
+
+    def get_link_requests(self):
+        return PGv2Link.get_links(self.xml) 
 
     def get_link(self, fromnode, tonode, network=None):
         fromsite = fromnode.getparent()
