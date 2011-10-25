@@ -27,7 +27,7 @@ start() {
             echo "Component Mgr"
             # make sure server key (nodes private key) exists first
             init_key
-            /usr/bin/sfa-server.py -c -d $OPTIONS
+            /usr/bin/sfa-start.py -c -d $OPTIONS
         fi
 
         RETVAL=$?
@@ -38,7 +38,7 @@ start() {
 
 stop() {
     echo -n $"Shutting down SFA: "
-    killproc sfa-server.py
+    killproc sfa-start.py
     RETVAL=$?
 
     echo

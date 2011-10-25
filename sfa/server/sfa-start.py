@@ -256,7 +256,7 @@ def update_cert_records(gids):
         
 def main():
     # Generate command line parser
-    parser = OptionParser(usage="sfa-server [options]")
+    parser = OptionParser(usage="sfa-start.py [options]")
     parser.add_option("-r", "--registry", dest="registry", action="store_true",
          help="run registry server", default=False)
     parser.add_option("-s", "--slicemgr", dest="sm", action="store_true",

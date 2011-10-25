@@ -125,7 +125,7 @@ sfiAddAttribute.py sfiAddSliver.py sfiDeleteAttribute.py sfiDeleteSliver.py sfiL
 sfiListSlivers.py sfadump.py
 
 BINS =	./config/sfa-config-tty ./config/gen-sfa-cm-config.py \
-	./sfa/plc/sfa-import-plc.py ./sfa/plc/sfa-nuke-plc.py ./sfa/server/sfa-server.py \
+	./sfa/plc/sfa-import-plc.py ./sfa/plc/sfa-nuke-plc.py ./sfa/server/sfa-start.py \
 	$(foreach client,$(CLIENTS),./sfa/client/$(client))
 
 sync:
