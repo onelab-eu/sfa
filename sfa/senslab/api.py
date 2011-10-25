@@ -71,7 +71,7 @@ def list_to_dict(recs, key):
     """
    # print>>sys.stderr, " \r\n \t\t 1list_to_dict : rec %s  \r\n \t\t list_to_dict key %s" %(recs,key)   
     keys = [rec[key] for rec in recs]
-    print>>sys.stderr, " \r\n \t\t list_to_dict : rec %s  \r\n \t\t list_to_dict keys %s" %(recs,keys)   
+    #print>>sys.stderr, " \r\n \t\t list_to_dict : rec %s  \r\n \t\t list_to_dict keys %s" %(recs,keys)   
     return dict(zip(keys, recs))
 
 class SfaAPI(BaseAPI):
@@ -110,28 +110,9 @@ class SfaAPI(BaseAPI):
         self.hrn = self.config.SFA_INTERFACE_HRN
         self.time_format = "%Y-%m-%d %H:%M:%S"
         #self.logger=sfa_logger()
-	print >>sys.stderr, "\r\n \t\t___________PLC/API.PY  __init__ STOP ",self.interface #dir(self)
+	print >>sys.stderr, "\r\n \t\t___________PSFA SENSLAN /API.PY  __init__ STOP ",self.interface #dir(self)
 	
 	
-    #def getPLCShell(self):
-        #self.plauth = {'Username': self.config.SFA_PLC_USER,
-                       #'AuthMethod': 'password',
-                       #'AuthString': self.config.SFA_PLC_PASSWORD}
-        #try:
-	    #print >>sys.stderr, "\r\n \t\t___________PLC/API.PY  getPLCShell "
-            #sys.path.append(os.path.dirname(os.path.realpath("/usr/bin/plcsh")))
-            #self.plshell_type = 'direct'
-            #import PLC.Shell
-            #shell = PLC.Shell.Shell(globals = globals())
-	    #print >>sys.stderr, "\r\n \t\t____tryshell %s \r\n  type %s \r\n %s"%(shell, type(shell), dir(shell))
-	    
-        #except:
-            #self.plshell_type = 'xmlrpc'  
-	    #print >>sys.stderr, "\r\n \t\t___________PLC/API.PY  getPLCShell  xmlrpc"
-            #url = self.config.SFA_PLC_URL
-            #shell = xmlrpclib.Server(url, verbose = 0, allow_none = True)
-        
-        #return shell
 
     def getCredential(self):
         """
@@ -141,7 +122,7 @@ class SfaAPI(BaseAPI):
         path = self.config.SFA_DATA_DIR
         filename = ".".join([self.interface, self.hrn, type, "cred"])
         cred_filename = path + os.sep + filename
-	print>>sys.stderr, "|\r\n \r\n API.pPY getCredential  cred_filename %s" %(cred_filename)
+	print>>sys.stderr, "|\r\n \r\n API.pPY getCredentialAUTHORITY  cred_filename %s" %(cred_filename)
         cred = None
         if os.path.isfile(cred_filename):
             cred = Credential(filename = cred_filename)
@@ -197,8 +178,12 @@ class SfaAPI(BaseAPI):
         Get our credential from a remote registry 
         """
         from sfa.server.registry import Registries
-        registries = Registries(self)
-        registry = registries[self.hrn]
+	registries = Registries()
+        registry = registries.get_server(self.hrn, self.key_file, self.cert_file)
+	#Sandrine 24 Oct 2 commented 2 following lines
+        #registries = Registries(self)
+        #registry = registries[self.hrn]
+	print>>sys.stderr, " SenslabAPI.PY __getCredential registries %s self.hrn %s \t registry %s " %(registries,self.hrn,registry)
         cert_string=self.cert.save_to_string(save_parents=True)
         # get self credential
         self_cred = registry.GetSelfCredential(cert_string, self.hrn, 'authority')
@@ -219,7 +204,10 @@ class SfaAPI(BaseAPI):
             auth_hrn = hrn
         auth_info = self.auth.get_auth_info(auth_hrn)
         table = self.SfaTable()
-        records = table.findObjects(hrn)
+	records = table.findObjects({'hrn': hrn, 'type': 'authority+sa'})
+	#Sandrine 24 Oct 2 commented  following line
+        #records = table.findObjects(hrn)
+	
         if not records:
             raise RecordNotFound
         record = records[0]
@@ -320,7 +308,7 @@ class SfaAPI(BaseAPI):
         @param record: record to fill in field (in/out param)     
         """
         # get ids by type
-	print>>sys.stderr, "\r\n \r\rn \t\t >>>>>>>>>>fill_record_pl_info  records %s : "%(records)
+	#print>>sys.stderr, "\r\n \r\rn \t\t >>>>>>>>>>fill_record_pl_info  records %s : "%(records)
         node_ids, site_ids, slice_ids = [], [], [] 
         person_ids, key_ids = [], []
         type_map = {'node': node_ids, 'authority': site_ids,
@@ -331,7 +319,7 @@ class SfaAPI(BaseAPI):
 		#print>>sys.stderr, "\r\n \t\t \t fill_record_pl_info : type %s. record['pointer'] %s "%(type,record['pointer'])   
                 if type == record['type']:
                     type_map[type].append(record['pointer'])
-	print>>sys.stderr, "\r\n \t\t \t fill_record_pl_info : records %s... \r\n \t\t \t fill_record_pl_info : type_map   %s"%(records,type_map)
+	#print>>sys.stderr, "\r\n \t\t \t fill_record_pl_info : records %s... \r\n \t\t \t fill_record_pl_info : type_map   %s"%(records,type_map)
         # get pl records
         nodes, sites, slices, persons, keys = {}, {}, {}, {}, {}
         if node_ids:
@@ -349,10 +337,10 @@ class SfaAPI(BaseAPI):
             #print>>sys.stderr, " \r\n \t\t \t fill_record_pl_info BEFORE GetPersons  person_ids: %s" %(person_ids)
             person_list = self.users.GetPersons( person_ids)
             persons = list_to_dict(person_list, 'person_id')
-	    print>>sys.stderr, "\r\n  fill_record_pl_info persons %s \r\n \t\t person_ids %s " %(persons, person_ids) 
+	    #print>>sys.stderr, "\r\n  fill_record_pl_info persons %s \r\n \t\t person_ids %s " %(persons, person_ids) 
             for person in persons:
                 key_ids.extend(persons[person]['key_ids'])
-		print>>sys.stderr, "\r\n key_ids %s " %(key_ids)
+		#print>>sys.stderr, "\r\n key_ids %s " %(key_ids)
 
         pl_records = {'node': nodes, 'authority': sites,
                       'slice': slices, 'user': persons}
@@ -377,13 +365,13 @@ class SfaAPI(BaseAPI):
             # fill in key info 
             if record['type'] == 'user':
 		 if 'key_ids' not in record:
-                    	print>>sys.stderr, " NO_KEY_IDS fill_record_pl_info key_ids record: %s" %(record)
+                    	#print>>sys.stderr, " NO_KEY_IDS fill_record_pl_info key_ids record: %s" %(record)
 			logger.info("user record has no 'key_ids' - need to import  ?")
                  else:
 			pubkeys = [keys[key_id]['key'] for key_id in record['key_ids'] if key_id in keys] 
 			record['keys'] = pubkeys
 			
-  	print>>sys.stderr, "\r\n \r\rn \t\t <<<<<<<<<<<<<<<<<< fill_record_pl_info  records %s : "%(records)
+  	#print>>sys.stderr, "\r\n \r\rn \t\t <<<<<<<<<<<<<<<<<< fill_record_pl_info  records %s : "%(records)
         # fill in record hrns
         records = self.fill_record_hrns(records)   
 
@@ -393,11 +381,11 @@ class SfaAPI(BaseAPI):
         """
         convert pl ids to hrns
         """
-	print>>sys.stderr, "\r\n \r\rn \t\t \t >>>>>>>>>>>>>>>>>>>>>> fill_record_hrns records %s : "%(records)  
+	#print>>sys.stderr, "\r\n \r\rn \t\t \t >>>>>>>>>>>>>>>>>>>>>> fill_record_hrns records %s : "%(records)  
         # get ids
         slice_ids, person_ids, site_ids, node_ids = [], [], [], []
         for record in records:
-            print>>sys.stderr, "\r\n \r\rn \t\t \t record %s : "%(record)
+            #print>>sys.stderr, "\r\n \r\rn \t\t \t record %s : "%(record)
             if 'site_id' in record:
                 site_ids.append(record['site_id'])
             if 'site_ids' in records:
@@ -417,7 +405,7 @@ class SfaAPI(BaseAPI):
 	    #print>>sys.stderr, " \r\n \r\n \t\t ____ site_list %s \r\n \t\t____ sites %s " % (site_list,sites)
         if person_ids:
             person_list = self.users.GetPersons( person_ids, ['person_id', 'email'])
-	    print>>sys.stderr, " \r\n \r\n   \t\t____ person_lists %s " %(person_list) 
+	    #print>>sys.stderr, " \r\n \r\n   \t\t____ person_lists %s " %(person_list) 
             persons = list_to_dict(person_list, 'person_id')
         if slice_ids:
             slice_list = self.users.GetSlices( slice_ids, ['slice_id', 'name'])
@@ -448,7 +436,7 @@ class SfaAPI(BaseAPI):
                           if person_id in  persons]
                 usernames = [email.split('@')[0] for email in emails]
                 person_hrns = [".".join([auth_hrn, login_base, username]) for username in usernames]
-		print>>sys.stderr, " \r\n \r\n \t\t ____ person_hrns : %s " %(person_hrns)
+		#print>>sys.stderr, " \r\n \r\n \t\t ____ person_hrns : %s " %(person_hrns)
                 record['persons'] = person_hrns 
             if 'slice_ids' in record:
                 slicenames = [slices[slice_id]['name'] for slice_id in record['slice_ids'] \
@@ -465,7 +453,7 @@ class SfaAPI(BaseAPI):
                                if site_id in sites]
                 site_hrns = [".".join([auth_hrn, lbase]) for lbase in login_bases]
                 record['sites'] = site_hrns
-	print>>sys.stderr, "\r\n \r\rn \t\t \t <<<<<<<<<<<<<<<<<<<<<<<<  fill_record_hrns records %s : "%(records)  
+	#print>>sys.stderr, "\r\n \r\rn \t\t \t <<<<<<<<<<<<<<<<<<<<<<<<  fill_record_hrns records %s : "%(records)  
         return records   
 
     def fill_record_sfa_info(self, records):
@@ -483,7 +471,7 @@ class SfaAPI(BaseAPI):
             if 'site_id' in record:
                 site_ids.append(record['site_id']) 
         	
-	print>>sys.stderr, "\r\n \r\n _fill_record_sfa_info ___person_ids %s \r\n \t\t site_ids %s " %(person_ids, site_ids)
+	#print>>sys.stderr, "\r\n \r\n _fill_record_sfa_info ___person_ids %s \r\n \t\t site_ids %s " %(person_ids, site_ids)
 	
         # get all pis from the sites we've encountered
         # and store them in a dictionary keyed on site_id 
@@ -491,7 +479,7 @@ class SfaAPI(BaseAPI):
         if site_ids:
             pi_filter = {'|roles': ['pi'], '|site_ids': site_ids} 
             pi_list = SenslabUsers.GetPersons( pi_filter, ['person_id', 'site_ids'])
-	    print>>sys.stderr, "\r\n \r\n _fill_record_sfa_info ___ GetPersons ['person_id', 'site_ids'] pi_ilist %s" %(pi_list)
+	    #print>>sys.stderr, "\r\n \r\n _fill_record_sfa_info ___ GetPersons ['person_id', 'site_ids'] pi_ilist %s" %(pi_list)
 
             for pi in pi_list:
                 # we will need the pi's hrns also
@@ -524,20 +512,24 @@ class SfaAPI(BaseAPI):
         pl_person_list, pl_persons = [], {}
         pl_person_list = SenslabUsers.GetPersons(person_ids, ['person_id', 'roles'])
         pl_persons = list_to_dict(pl_person_list, 'person_id')
-        print>>sys.stderr, "\r\n \r\n _fill_record_sfa_info ___  _list %s \r\n \t\t SenslabUsers.GetPersons ['person_id', 'roles'] pl_persons %s \r\n records %s" %(pl_person_list, pl_persons,records) 
+        #print>>sys.stderr, "\r\n \r\n _fill_record_sfa_info ___  _list %s \r\n \t\t SenslabUsers.GetPersons ['person_id', 'roles'] pl_persons %s \r\n records %s" %(pl_person_list, pl_persons,records) 
         # fill sfa info
 	
         for record in records:
             # skip records with no pl info (top level authorities)
-            if record['pointer'] == -1:
-                continue 
+	    #Sandrine 24 oct 11 2 lines
+            #if record['pointer'] == -1:
+                #continue 
             sfa_info = {}
             type = record['type']
             if (type == "slice"):
                 # all slice users are researchers
+		#record['geni_urn'] = hrn_to_urn(record['hrn'], 'slice')  ? besoin ou pas ?
                 record['PI'] = []
                 record['researcher'] = []
-                for person_id in record['person_ids']:
+		for person_id in record.get('person_ids', []):
+			 #Sandrine 24 oct 11 line
+                #for person_id in record['person_ids']:
                     hrns = [person['hrn'] for person in persons[person_id]]
                     record['researcher'].extend(hrns)                
 
@@ -577,7 +569,7 @@ class SfaAPI(BaseAPI):
                  sfa_info['geni_certificate'] = record['gid'] 
                 # xxx TODO: PostalAddress, Phone
 		
-            print>>sys.stderr, "\r\n \r\rn \t\t \t <<<<<<<<<<<<<<<<<<<<<<<<  fill_record_sfa_info sfa_info %s  \r\n record %s : "%(sfa_info,record)  
+            #print>>sys.stderr, "\r\n \r\rn \t\t \t <<<<<<<<<<<<<<<<<<<<<<<<  fill_record_sfa_info sfa_info %s  \r\n record %s : "%(sfa_info,record)  
             record.update(sfa_info)
 
     def fill_record_info(self, records):
@@ -585,14 +577,14 @@ class SfaAPI(BaseAPI):
         Given a SFA record, fill in the PLC specific and SFA specific
         fields in the record. 
         """
-	print >>sys.stderr, "\r\n \t\t fill_record_info %s"%(records)
+	#print >>sys.stderr, "\r\n \t\t fill_record_info %s"%(records)
         if not isinstance(records, list):
             records = [records]
-	print >>sys.stderr, "\r\n \t\t BEFORE fill_record_pl_info %s" %(records)	
+	#print >>sys.stderr, "\r\n \t\t BEFORE fill_record_pl_info %s" %(records)	
         self.fill_record_pl_info(records)
-	print >>sys.stderr, "\r\n \t\t after fill_record_pl_info %s" %(records)	
+	#print >>sys.stderr, "\r\n \t\t after fill_record_pl_info %s" %(records)	
         self.fill_record_sfa_info(records)
-	print >>sys.stderr, "\r\n \t\t after fill_record_sfa_info"
+	#print >>sys.stderr, "\r\n \t\t after fill_record_sfa_info"
 	
     def update_membership_list(self, oldRecord, record, listName, addFunc, delFunc):
         # get a list of the HRNs tht are members of the old and new records
@@ -697,6 +689,7 @@ class ComponentAPI(BaseAPI):
         path = self.config.SFA_DATA_DIR
         config_dir = self.config.config_path
         cred_filename = path + os.sep + 'node.cred'
+	print>>sys.stderr, "\r\n \r\n API.pPY COMPONENT getCredential  cred_filename %s" %(cred_filename)
         try:
             credential = Credential(filename = cred_filename)
             return credential.save_to_string(save_parents=True)

@@ -59,11 +59,11 @@ class SenslabImportUsers:
 			person  = persons_per_site[person_id]
 			if person['person_id'] not in self.person_list:
 				self.person_list.append(person)
-		print>>sys.stderr, "InitPersons PERSON DICLIST", self.person_list
+		#print>>sys.stderr, "InitPersons PERSON DICLIST", self.person_list
 
 	
 	def InitKeys(self):
-		print>>sys.stderr, " InitKeys HEYYYYYYY\r\n"
+		#print>>sys.stderr, " InitKeys HEYYYYYYY\r\n"
 	
 		self.keys_list = [{'peer_key_id': None, 'key_type': 'ssh', 'key' :"ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEArcdW0X2la754SoFE+URbDsYP07AZJjrspMlvUc6u+4o6JpGRkqiv7XdkgOMIn6w3DF3cYCcA1Mc6XSG7gSD7eQx614cjlLmXzHpxSeidSs/LgZaAQpq9aQ0KhEiFxg0gp8TPeB5Z37YOPUumvcJr1ArwL/8tAOx3ClwgRhccr2HOe10YtZbMEboCarTlzNHiGolo7RYIJjGuG2RBSeAg6SMZrtnn0OdKBwp3iUlOfkS98eirVtWUp+G5+SZggip3fS3k5Oj7OPr1qauva8Rizt02Shz30DN9ikFNqV2KuPg54nC27/DQsQ6gtycARRVY91VvchmOk0HxFiW/9kS2GQ== root@FlabFedora2",'person_id': 7, 'key_id':1, 'peer_id':None }, 
 		{'peer_key_id': None, 'key_type': 'ssh', 'key' :"ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEArcdW0X2la754SoFE+URbDsYP07AZJjrspMlvUc6u+4o6JpGRkqiv7XdkgOMIn6w3DF3cYCcA1Mc6XSG7gSD7eQx614cjlLmXzHpxSeidSs/LgZaAQpq9aQ0KhEiFxg0gp8TPeB5Z37YOPUumvcJr1ArwL/8tAOx3ClwgRhccr2HOe10YtZbMEboCarTlzNHiGolo7RYIJjGuG2RBSeAg6SMZrtnn0OdKBwp3iUlOfkS98eirVtWUp+G5+SZggip3fS3k5Oj7OPr1qauva8Rizt02Shz30DN9ikFNqV2KuPg54nC27/DQsQ6gtycARRVY91VvchmOk0HxFiW/9kS2GQ== root@FlabFedora2",'person_id': 8, 'key_id':1, 'peer_id':None }, 
@@ -73,7 +73,7 @@ class SenslabImportUsers:
 					
 	
 	def GetPersons(self, person_filter=None, return_fields=None):
-		print>>sys.stderr, " \r\n GetPersons person_filter %s return_fields %s  list: %s" %(person_filter,return_fields, self.person_list)
+		#print>>sys.stderr, " \r\n GetPersons person_filter %s return_fields %s  list: %s" %(person_filter,return_fields, self.person_list)
 		if not self.person_list :
 			print>>sys.stderr, " \r\n ========>GetPersons NO PERSON LIST DAMMIT<========== \r\n" 
 			
@@ -90,7 +90,7 @@ class SenslabImportUsers:
 		for person in self.person_list :
 			if site_id in person['site_ids'] and 'pi' in person['roles'] :
 				return_person_list.append(person['person_id'])
-		print>>sys.stderr, " \r\n  GetPIs 	return_person_list %s :" %(return_person_list)	
+		#print>>sys.stderr, " \r\n  GetPIs 	return_person_list %s :" %(return_person_list)	
 		return return_person_list
 		
 				

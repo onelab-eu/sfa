@@ -1,10 +1,4 @@
-###########################################################################
-#    Copyright (C) 2011 by root                                      
-#    <root@FlabFedora2>                                                             
-#
-# Copyright: See COPYING file that comes with this distribution
-#
-###########################################################################
+
 #!/usr/bin/python
 
 # import modules used here -- sys is a very standard one
@@ -27,16 +21,20 @@ class OARrspec:
     
     sites = {}
     nodes = {}
-  
+    api = None
+    interfaces = {}
+    links = {}
+    node_tags = {}
+    
     prepared=False
     #panos new user options variable
     user_options = {}
 
     def __init__(self ,api, user_options={}):
 	self.OARImporter = OARapi()	
-	print >>sys.stderr,'\r\n \r\n \t\t__INIT OARRSPEC__'
 	self.user_options = user_options
-
+	self.api = api 
+	print >>sys.stderr,"\r\n \r\n \t\t_____________INIT OARRSPEC__ api : %s" %(api)
 
     def prepare_sites(self, force=False):
 	print >>sys.stderr,'\r\n \r\n ++++++++++++++\t\t prepare_sites'
@@ -86,7 +84,7 @@ class OARrspec:
                 node['site'] = site
                 #node['interfaces'] = interfaces
                 #node['tags'] = tags
-		print >>sys.stderr, "\r\n OAR  prepare ", node 
+		#print >>sys.stderr, "\r\n OAR  prepare ", node 
 		
         self.prepared = True  
 	
