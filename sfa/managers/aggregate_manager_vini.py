@@ -6,7 +6,6 @@ import sys
 from types import StringTypes
 from sfa.util.xrn import urn_to_hrn, Xrn
 from sfa.util.plxrn import hrn_to_pl_slicename
-from sfa.util.specdict import *
 from sfa.util.faults import *
 from sfa.util.record import SfaRecord
 from sfa.util.policy import Policy

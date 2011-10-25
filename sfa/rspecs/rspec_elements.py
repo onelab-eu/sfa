@@ -4,10 +4,14 @@ from sfa.util.enumeration import Enum
 RSpecElements = Enum(NETWORK='NETWORK', 
                      COMPONENT_MANAGER='COMPONENT_MANAGER', 
                      SLIVER='SLIVER', 
+                     SLIVER_TYPE='SLIVER_TYPE', 
                      NODE='NODE', 
                      INTERFACE='INTERFACE', 
+                     INTERFACE_REF='INTERFACE_REF', 
                      LINK='LINK', 
-                     SERVICE='SERVICE'
+                     LINK_TYPE='LINK_TYPE', 
+                     SERVICE='SERVICE',
+                     PROPERTY='PROPERTY'
                 )
 
 class RSpecElement:
