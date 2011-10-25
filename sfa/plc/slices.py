@@ -10,7 +10,7 @@ from sfa.util.specdict import *
 from sfa.util.faults import *
 from sfa.util.record import SfaRecord
 from sfa.util.policy import Policy
-from fsa.plc.vlink import VLink
+from sfa.plc.vlink import VLink
 from sfa.util.prefixTree import prefixTree
 from collections import defaultdict
 
