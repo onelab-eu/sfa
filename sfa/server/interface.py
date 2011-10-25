@@ -1,13 +1,6 @@
-import traceback
-import os.path
-
 from sfa.util.faults import *
 from sfa.util.storage import XmlStorage
-from sfa.util.xrn import get_authority, hrn_to_urn
-from sfa.util.record import SfaRecord
 import sfa.util.xmlrpcprotocol as xmlrpcprotocol
-import sfa.util.soapprotocol as soapprotocol
-from sfa.trust.gid import GID
 
 # GeniLight client support is optional
 try:
@@ -15,10 +8,11 @@ try:
 except ImportError:
     GeniClientLight = None            
 
-
-
 class Interface:
-    
+    """
+    Interface to another SFA service, typically a peer, or the local aggregate
+    can retrieve a xmlrpclib.ServerProxy object for issuing calls there
+    """
     def __init__(self, hrn, addr, port, client_type='sfa'):
         self.hrn = hrn
         self.addr = addr
