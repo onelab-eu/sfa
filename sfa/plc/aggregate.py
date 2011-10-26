@@ -3,6 +3,7 @@ from sfa.util.xrn import hrn_to_urn, urn_to_hrn
 from sfa.util.plxrn import PlXrn, hostname_to_urn, hrn_to_pl_slicename
 from sfa.rspecs.rspec import RSpec
 from sfa.rspecs.elements.link import Link
+from sfa.managers.vini.topology import PhysicalLinks
 from sfa.rspecs.version_manager import VersionManager
 from sfa.plc.vlink import get_tc_rate
 
