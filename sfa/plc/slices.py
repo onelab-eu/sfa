@@ -183,7 +183,7 @@ class Slices:
         except: 
             self.api.logger.log_exc('Failed to add/remove slice from nodes')
 
-    def verify_slice_links(self, slice, links, peer=None):
+    def verify_slice_links(self, slice, links, aggregate):
         # nodes is undefined here
         if not links or not nodes:
             return 
