@@ -1,18 +1,19 @@
 import types
 import time 
 
-from sfa.util.faults import *
+from sfa.util.faults import RecordNotFound, AccountNotEnabled, PermissionError, MissingAuthority, \
+    UnknownSfaType, ExistingRecord
 from sfa.util.prefixTree import prefixTree
 from sfa.util.record import SfaRecord
 from sfa.util.table import SfaTable
-from sfa.util.record import SfaRecord
-from sfa.trust.gid import GID 
 from sfa.util.xrn import Xrn, get_leaf, get_authority, hrn_to_urn, urn_to_hrn
 from sfa.util.plxrn import hrn_to_pl_login_base
-from sfa.trust.credential import Credential
-from sfa.trust.certificate import Certificate, Keypair
-from sfa.trust.gid import create_uuid
 from sfa.util.version import version_core
+
+from sfa.trust.gid import GID 
+from sfa.trust.credential import Credential
+from sfa.trust.certificate import Certificate, Keypair, convert_public_key
+from sfa.trust.gid import create_uuid
 
 # The GENI GetVersion call
 def GetVersion(api):
