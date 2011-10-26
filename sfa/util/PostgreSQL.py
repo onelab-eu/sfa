@@ -21,7 +21,7 @@ import sys
 try: import pgdb
 except: print >> sys.stderr, "WARNING, could not import pgdb"
 
-from sfa.util.faults import *
+from sfa.util.faults import SfaDBError
 from sfa.util.sfalogging import logger
 
 if not psycopg2:

@@ -2,25 +2,26 @@
 # SFA XML-RPC and SOAP interfaces
 #
 
-import sys
 import os
-import traceback
-import string
+import tempfile
 import datetime
 import xmlrpclib
 
-from sfa.util.faults import *
-from sfa.util.api import *
-from sfa.util.config import *
+from sfa.util.faults import RecordNotFound, MissingSfaInfo
+from sfa.util.api import BaseAPI
+from sfa.util.config import Config
 from sfa.util.sfalogging import logger
 import sfa.util.xmlrpcprotocol as xmlrpcprotocol
-from sfa.trust.auth import Auth
-from sfa.trust.rights import Right, Rights, determine_rights
-from sfa.trust.credential import Credential,Keypair
-from sfa.trust.certificate import Certificate
-from sfa.util.xrn import get_authority, hrn_to_urn
-from sfa.util.plxrn import hostname_to_hrn, hrn_to_pl_slicename, hrn_to_pl_slicename, slicename_to_hrn
+from sfa.util.xrn import hrn_to_urn
+from sfa.util.plxrn import hostname_to_hrn, hrn_to_pl_slicename, \
+    hrn_to_pl_slicename, slicename_to_hrn, hrn_to_pl_login_base
 from sfa.util.nodemanager import NodeManager
+
+from sfa.trust.auth import Auth
+from sfa.trust.rights import determine_rights
+from sfa.trust.credential import Credential
+from sfa.trust.certificate import Certificate, Keypair
+from sfa.trust.gid import GID
 try:
     from collections import defaultdict
 except:
@@ -653,6 +654,7 @@ class ComponentAPI(BaseAPI):
 
     def sliver_exists(self):
         sliver_dict = self.nodemanager.GetXIDs()
+        ### xxx slicename is undefined
         if slicename in sliver_dict.keys():
             return True
         else:
@@ -706,6 +708,7 @@ class ComponentAPI(BaseAPI):
             cert_str = Certificate(filename=cert_filename).save_to_string(save_parents=True)
             registry = self.get_registry()
             cred = registry.GetSelfCredential(cert_str, hrn, 'node')
+            # xxx credfile is undefined
             Credential(string=cred).save_to_file(credfile, save_parents=True)            
 
             return cred
@@ -716,6 +719,7 @@ class ComponentAPI(BaseAPI):
         """
         files = ["server.key", "server.cert", "node.cred"]
         for f in files:
+            # xxx KEYDIR is undefined, could be meant to be "/var/lib/sfa/" from sfa_component_setup.py
             filepath = KEYDIR + os.sep + f
             if os.path.isfile(filepath):
                 os.unlink(f)

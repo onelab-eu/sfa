@@ -3,7 +3,8 @@
 #
 import sys
 
-from sfa.util.faults import *
+from sfa.util.faults import InsufficientRights, MissingCallerGID, MissingTrustedRoots, PermissionError, \
+    BadRequestHash, ConnectionKeyGIDMismatch, SfaPermissionDenied
 from sfa.util.sfalogging import logger
 from sfa.util.config import Config
 from sfa.util.xrn import get_authority
@@ -148,6 +149,7 @@ class Auth:
 
     def authenticateCert(self, certStr, requestHash):
         cert = Certificate(string=certStr)
+        # xxx should be validateCred ??
         self.validateCert(self, cert)   
 
     def gidNoop(self, gidStr, value, requestHash):
@@ -314,7 +316,7 @@ class Auth:
         if not isinstance(creds, list):
             creds = [creds]
         creds = []
-        if not isinistance(caller_hrn_list, list):
+        if not isinstance(caller_hrn_list, list):
             caller_hrn_list = [caller_hrn_list]
         for cred in creds:
             try:

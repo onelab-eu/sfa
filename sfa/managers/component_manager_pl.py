@@ -1,7 +1,6 @@
-import os
 import xmlrpclib
 
-from sfa.util.faults import *
+from sfa.util.faults import SliverDoesNotExist
 from sfa.util.plxrn import PlXrn
 from sfa.trust.sfaticket import SfaTicket
 from sfa.util.version import version_core

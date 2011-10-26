@@ -40,10 +40,11 @@ try:
 except:
     pass
 
-from sfa.util.faults import *
+from xml.parsers.expat import ExpatError
+
+from sfa.util.faults import CredentialNotVerifiable, ChildRightsNotSubsetOfParent
 from sfa.util.sfalogging import logger
 from sfa.util.sfatime import utcparse
-from sfa.trust.certificate import Keypair
 from sfa.trust.credential_legacy import CredentialLegacy
 from sfa.trust.rights import Right, Rights, determine_rights
 from sfa.trust.gid import GID

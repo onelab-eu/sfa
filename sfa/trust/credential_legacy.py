@@ -7,9 +7,8 @@
 
 import xmlrpclib
 
-from sfa.util.faults import *
+from sfa.util.faults import MissingDelegateBit, ChildRightsNotSubsetOfParent
 from sfa.trust.certificate import Certificate
-from sfa.trust.rights import Right,Rights
 from sfa.trust.gid import GID
 
 ##

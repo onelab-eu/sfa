@@ -6,22 +6,14 @@
 # TODO: investigate ways to combine this with existing PLC server?
 ##
 
-import sys
-import traceback
 import threading
-import socket, os
-import SocketServer
-import BaseHTTPServer
-import SimpleHTTPServer
+import socket
 import SimpleXMLRPCServer
-from OpenSSL import SSL
 
 from sfa.util.sfalogging import logger
 from sfa.trust.certificate import Keypair, Certificate
-from sfa.trust.credential import *
-from sfa.util.faults import *
 from sfa.plc.api import ComponentAPI 
-from sfa.server.sfaserver import verify_callback, ThreadedServer 
+from sfa.server.threadedserver import ThreadedServer 
 
 
 ##
@@ -46,9 +38,9 @@ class SecureXMLRpcRequestHandler(SimpleXMLRPCServer.SimpleXMLRPCRequestHandler):
             peer_cert = Certificate()
             peer_cert.load_from_pyopenssl_x509(self.connection.get_peer_certificate())
             self.api = ComponentAPI(peer_cert = peer_cert, 
-                           interface = self.server.interface, 
-                           key_file = self.server.key_file, 
-                           cert_file = self.server.cert_file)
+                                    interface = self.server.interface, 
+                                    key_file = self.server.key_file, 
+                                    cert_file = self.server.cert_file)
             # get arguments
             request = self.rfile.read(int(self.headers["content-length"]))
             # In previous versions of SimpleXMLRPCServer, _dispatch

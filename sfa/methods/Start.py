@@ -1,8 +1,6 @@
-from sfa.util.faults import *
 from sfa.util.xrn import urn_to_hrn
 from sfa.util.method import Method
 from sfa.util.parameter import Parameter, Mixed
-from sfa.trust.auth import Auth
 from sfa.trust.credential import Credential
 
 class Start(Method):

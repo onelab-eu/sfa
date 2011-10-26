@@ -2,20 +2,15 @@
 # SFA XML-RPC and SOAP interfaces
 #
 
-import sys
-import os
-import traceback
 import string
 import xmlrpclib
 
-from sfa.util.faults import *
-from sfa.util.config import *
-import sfa.util.xmlrpcprotocol as xmlrpcprotocol
+from sfa.util.faults import SfaNotImplemented, SfaAPIError, SfaInvalidAPIMethod, SfaFault
+from sfa.util.config import Config
 from sfa.util.sfalogging import logger
 from sfa.trust.auth import Auth
 from sfa.util.cache import Cache
-from sfa.trust.credential import *
-from sfa.trust.certificate import *
+from sfa.trust.certificate import Keypair, Certificate
 
 # this is wrong all right, but temporary 
 from sfa.managers.import_manager import import_manager

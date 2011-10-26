@@ -1,11 +1,11 @@
 #!/usr/bin/python 
 from datetime import datetime, timedelta
+
 from sfa.util.xml import XML, XpathFilter
-from sfa.rspecs.version_manager import VersionManager
-from sfa.util.xrn import *
-from sfa.util.plxrn import hostname_to_urn
+from sfa.util.faults import InvalidRSpecElement
+
 from sfa.rspecs.rspec_elements import RSpecElement, RSpecElements 
-from sfa.util.faults import SfaNotImplemented, InvalidRSpec, InvalidRSpecElement
+from sfa.rspecs.version_manager import VersionManager
 
 class RSpec:
  

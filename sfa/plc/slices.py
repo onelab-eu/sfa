@@ -1,17 +1,11 @@
-import datetime
-import time
-import traceback
-import sys
-
 from types import StringTypes
-from sfa.util.xrn import Xrn, get_leaf, get_authority, hrn_to_urn, urn_to_hrn
-from sfa.util.plxrn import hrn_to_pl_slicename, hrn_to_pl_login_base
-from sfa.util.faults import *
-from sfa.util.record import SfaRecord
-from sfa.util.policy import Policy
-from sfa.plc.vlink import VLink
-from sfa.util.prefixTree import prefixTree
 from collections import defaultdict
+
+from sfa.util.xrn import get_leaf, get_authority, urn_to_hrn
+from sfa.util.plxrn import hrn_to_pl_slicename
+from sfa.util.policy import Policy
+
+from sfa.plc.vlink import VLink
 
 MAXINT =  2L**31-1
 
@@ -190,6 +184,7 @@ class Slices:
             self.api.logger.log_exc('Failed to add/remove slice from nodes')
 
     def verify_slice_links(self, slice, links, peer=None):
+        # nodes is undefined here
         if not links or not nodes:
             return 
         for link in links:

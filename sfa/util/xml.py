@@ -1,10 +1,8 @@
 #!/usr/bin/python 
 from lxml import etree
 from StringIO import StringIO
-from datetime import datetime, timedelta
-from sfa.util.xrn import *
-from sfa.util.plxrn import hostname_to_urn
-from sfa.util.faults import SfaNotImplemented, InvalidXML
+
+from sfa.util.faults import InvalidXML
 
 class XpathFilter:
     @staticmethod
@@ -220,8 +218,9 @@ class XML:
         f = open(filename, 'w')
         f.write(self.toxml())
         f.close()
- 
-if __name__ == '__main__':
-    rspec = RSpec('/tmp/resources.rspec')
-    print rspec
+
+# no RSpec in scope 
+#if __name__ == '__main__':
+#    rspec = RSpec('/tmp/resources.rspec')
+#    print rspec
 

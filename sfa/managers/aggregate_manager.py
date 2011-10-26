@@ -5,7 +5,6 @@ import sys
 from sfa.util.faults import RecordNotFound, SliverDoesNotExist
 from sfa.util.xrn import get_authority, hrn_to_urn, urn_to_hrn, Xrn, urn_to_sliver_id
 from sfa.util.plxrn import slicename_to_hrn, hrn_to_pl_slicename
-#from sfa.util.record import *
 from sfa.util.version import version_core
 from sfa.util.sfatime import utcparse
 from sfa.util.callids import Callids
@@ -19,9 +18,6 @@ import sfa.plc.peers as peers
 from sfa.plc.api import SfaAPI
 from sfa.plc.aggregate import Aggregate
 from sfa.plc.slices import Slices
-#unused?
-#from sfa.plc.network import *
-#from sfa.plc.slices import *
 
 def GetVersion(api):
 

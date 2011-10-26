@@ -1,4 +1,4 @@
-from sfa.util.faults import *
+#from sfa.util.faults import *
 from sfa.util.storage import XmlStorage
 import sfa.util.xmlrpcprotocol as xmlrpcprotocol
 
@@ -28,6 +28,7 @@ class Interface:
     def get_server(self, key_file, cert_file, timeout=30):
         server = None 
         if  self.client_type ==  'geniclientlight' and GeniClientLight:
+            # xxx url and self.api are undefined
             server = GeniClientLight(url, self.api.key_file, self.api.cert_file)
         else:
             server = xmlrpcprotocol.get_server(self.get_url(), key_file, cert_file, timeout) 

@@ -23,7 +23,7 @@
 
 import re
 
-from sfa.util.faults import *
+from sfa.util.faults import SfaAPIError
 
 # for convenience and smoother translation - we should get rid of these functions eventually 
 def get_leaf(hrn): return Xrn(hrn).get_leaf()
@@ -98,7 +98,7 @@ class Xrn:
     @staticmethod
     def urn_full (urn):
         if urn.startswith(Xrn.URN_PREFIX): return urn
-        else: return Xrn.URN_PREFIX+URN
+        else: return Xrn.URN_PREFIX+urn
     @staticmethod
     def urn_meaningful (urn):
         if urn.startswith(Xrn.URN_PREFIX): return urn[len(Xrn.URN_PREFIX):]

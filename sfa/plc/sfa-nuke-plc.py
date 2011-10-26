@@ -11,8 +11,6 @@ import sys
 import os
 from optparse import OptionParser
 
-from sfa.trust.hierarchy import *
-from sfa.util.record import *
 from sfa.util.table import SfaTable
 from sfa.util.sfalogging import logger
 

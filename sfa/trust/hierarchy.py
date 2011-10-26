@@ -14,7 +14,7 @@
 
 import os
 
-from sfa.util.faults import *
+from sfa.util.faults import MissingAuthority
 from sfa.util.sfalogging import logger
 from sfa.util.xrn import get_leaf, get_authority, hrn_to_urn, urn_to_hrn
 from sfa.trust.certificate import Keypair
@@ -204,7 +204,7 @@ class Hierarchy:
     def get_auth_info(self, xrn):
         hrn, type = urn_to_hrn(xrn)
         if not self.auth_exists(hrn):
-            logger.warning("Hierarchy: mising authority - xrn=%s, hrn=%s"%(xrn,hrn))
+            logger.warning("Hierarchy: missing authority - xrn=%s, hrn=%s"%(xrn,hrn))
             raise MissingAuthority(hrn)
 
         (directory, gid_filename, privkey_filename, dbinfo_filename) = \

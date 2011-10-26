@@ -21,8 +21,6 @@ from sfa.util.config import Config
 from sfa.util.cache import Cache 
 from sfa.trust.certificate import Certificate
 from sfa.trust.trustedroots import TrustedRoots
-#seems useless
-#from sfa.trust.credential import *
 #can we get rid of that ?
 from sfa.plc.api import SfaAPI
 
