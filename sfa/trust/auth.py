@@ -150,7 +150,7 @@ class Auth:
     def authenticateCert(self, certStr, requestHash):
         cert = Certificate(string=certStr)
         # xxx should be validateCred ??
-        self.validateCert(self, cert)   
+        self.validateCred(cert)   
 
     def gidNoop(self, gidStr, value, requestHash):
         self.authenticateGid(gidStr, [gidStr, value], requestHash)
