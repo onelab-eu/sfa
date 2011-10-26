@@ -4,7 +4,7 @@ from collections import defaultdict
 from sfa.util.xrn import get_leaf, get_authority, urn_to_hrn
 from sfa.util.plxrn import hrn_to_pl_slicename
 from sfa.util.policy import Policy
-
+from sfa.rspecs.rspec import RSpec
 from sfa.plc.vlink import VLink
 
 MAXINT =  2L**31-1
@@ -185,7 +185,7 @@ class Slices:
 
     def verify_slice_links(self, slice, links, aggregate):
         # nodes is undefined here
-        if not links or not nodes:
+        if not links or not aggregate.nodes:
             return 
         for link in links:
             topo_rspec = VLink.get_topo_rspec(link)            
@@ -536,8 +536,7 @@ class Slices:
         # add requested_attributes
         for attribute in added_slice_attributes:
             try:
-                name, value, node_id = attribute['name'], attribute['value'], attribute.get('node_id', None)
-                self.api.plshell.AddSliceTag(self.api.plauth, slice['name'], name, value, node_id)
+                self.api.plshell.AddSliceTag(self.api.plauth, slice['name'], attribute['name'], attribute['value'], attribute.get('node_id', None))
             except Exception, e:
                 self.api.logger.warn('Failed to add sliver attribute. name: %s, value: %s, node_id: %s\nCause:%s'\
                                 % (name, value,  node_id, str(e)))
