@@ -81,7 +81,7 @@ def main():
     print interface_hrn, root_auth
     keys_filename = config.config_path + os.sep + 'person_keys.py' 
 
-    sfaImporter = SenslabImport()
+    SenslabImporter = SenslabImport()
     SenslabUsers = SenslabImportUsers()
     
     OARImporter = OARapi()
@@ -90,7 +90,7 @@ def main():
 	#print node, OARImporter.OARserver.GetNodes[node]
 
 
-    #if config.SFA_API_DEBUG: sfaImporter.logger.setLevelDebug()
+    #if config.SFA_API_DEBUG: SenslabImporter.logger.setLevelDebug()
     #shell = sfaImporter.shell
     #plc_auth = sfaImporter.plc_auth 
     #print plc_auth 
@@ -101,18 +101,21 @@ def main():
     	table.create()
 
     # create root authority 
-    sfaImporter.create_top_level_auth_records(root_auth)
+    SenslabImporter.create_top_level_auth_records(root_auth)
     if not root_auth == interface_hrn:
-       sfaImporter.create_top_level_auth_records(interface_hrn)
+       SenslabImporter.create_top_level_auth_records(interface_hrn)
+    
+    # create s user record for the slice manager
+    SenslabImporter.create_sm_client_record()
        
     # create interface records ADDED 12 JUILLET 2011 
-    sfaImporter.logger.info("Import: creating interface records")
-    sfaImporter.create_interface_records()
+    SenslabImporter.logger.info("Import: creating interface records")
+    SenslabImporter.create_interface_records()
 
     # add local root authority's cert  to trusted list ADDED 12 JUILLET 2011 
-    sfaImporter.logger.info("Import: adding " + interface_hrn + " to trusted list")
-    authority = sfaImporter.AuthHierarchy.get_auth_info(interface_hrn)
-    sfaImporter.TrustedRoots.add_gid(authority.get_gid_object())
+    SenslabImporter.logger.info("Import: adding " + interface_hrn + " to trusted list")
+    authority = SenslabImporter.AuthHierarchy.get_auth_info(interface_hrn)
+    SenslabImporter.TrustedRoots.add_gid(authority.get_gid_object())
     
     
     print "\r\n \r\n create dict of all existing sfa records"
@@ -156,7 +159,7 @@ def main():
         if site_hrn not in existing_hrns or \
             (site_hrn, 'authority') not in existing_records:
              print "SITE HRN UNKNOWN" , site, site_hrn
-             site_hrn = sfaImporter.import_site(interface_hrn, site)
+             site_hrn = SenslabImporter.import_site(interface_hrn, site)
 	     
  	print "\r\n \r\n ===========IMPORT NODE_RECORDS ==========\r\n site %s \r\n \t nodes_dict %s" %(site,nodes_dict)	         
         # import node records
@@ -174,13 +177,13 @@ def main():
     		if hrn not in existing_hrns or \
     		(hrn, 'node') not in existing_records:
 			print "\t\t NODE HRN NOT in existing records!" ,hrn
-    			sfaImporter.import_node(hrn, node)
+    			SenslabImporter.import_node(hrn, node)
 
    # import persons
 	for person in persons_list:
 		hrn = email_to_hrn(site_hrn, person['email'])
 		print >>sys.stderr, "\r\n\r\n^^^^^^^^^^^^^PERSON hrn %s person %s site hrn %s" %(hrn,person,site_hrn)    
-		sfaImporter.import_person( site_hrn, person,keys_list)
+		SenslabImporter.import_person( site_hrn, person,keys_list)
 		
 # import slices
         for slice_id in site['slice_ids']:
@@ -192,19 +195,27 @@ def main():
 				print >>sys.stderr, "\r\n\r\n^^^^^^^^^^^^^SLICE ID hrn %s  site_hrn %s" %(hrn,site_hrn)    				
 				if hrn not in existing_hrns or \
 				(hrn, 'slice') not in existing_records:
-					sfaImporter.import_slice(site_hrn, sl)	
+					SenslabImporter.import_slice(site_hrn, sl)	
 
 					
-					
- # remove stale records    
+    # remove stale records    
+    system_records = [interface_hrn, root_auth, interface_hrn + '.slicemanager']
     for (record_hrn, type) in existing_records.keys():
-        record = existing_records[(record_hrn, type)]
-	print" \r\n ****record hrn %s \t\t TYPE %s " %(record_hrn,type)
-        # if this is the interface name dont do anything
-        if record_hrn == interface_hrn or \
-           record_hrn == root_auth or \
-           record['peer_authority']:
+        if record_hrn in system_records:
             continue
+        
+        record = existing_records[(record_hrn, type)]
+        if record['peer_authority']:
+            continue					
+ ## remove stale records    
+    #for (record_hrn, type) in existing_records.keys():
+        #record = existing_records[(record_hrn, type)]
+	#print" \r\n ****record hrn %s \t\t TYPE %s " %(record_hrn,type)
+        ## if this is the interface name dont do anything
+        #if record_hrn == interface_hrn or \
+           #record_hrn == root_auth or \
+           #record['peer_authority']:
+            #continue
 
 
         found = False
@@ -240,10 +251,10 @@ def main():
         if not found:
             record_object = existing_records[(record_hrn, type)]
             print "\t\t NOT FOUND ! "
-            sfaImporter.delete_record(record_hrn, type) 
+            SenslabImporter.delete_record(record_hrn, type) 
                                    
     # save pub keys
-    sfaImporter.logger.info('Import: saving current pub keys')
+    SenslabImporter.logger.info('Import: saving current pub keys')
     save_keys(keys_filename, person_keys)                
 
  

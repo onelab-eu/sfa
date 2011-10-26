@@ -1,10 +1,4 @@
-###########################################################################
-#    Copyright (C) 2011 by root                                      
-#    <root@FlabFedora2>                                                             
-#
-# Copyright: See COPYING file that comes with this distribution
-#
-###########################################################################
+
 #!/usr/bin/python
 
 # import modules used here -- sys is a very standard one
@@ -15,10 +9,11 @@ import json
 
 from sfa.util.xrn import *
 from sfa.util.plxrn import *
-from sfa.rspecs.sfa_rspec import SfaRSpec
-from sfa.rspecs.pg_rspec  import PGRSpec
-from sfa.rspecs.rspec_version import RSpecVersion
-
+#from sfa.rspecs.sfa_rspec import SfaRSpec
+from sfa.rspecs.rspec import RSpec
+#from sfa.rspecs.pg_rspec  import PGRSpec
+#from sfa.rspecs.rspec_version import RSpecVersion
+from sfa.rspecs.version_manager import VersionManager
 from sfa.senslab.OARrestapi import *
 
 class OARrspec:
@@ -26,16 +21,20 @@ class OARrspec:
     
     sites = {}
     nodes = {}
-  
+    api = None
+    interfaces = {}
+    links = {}
+    node_tags = {}
+    
     prepared=False
     #panos new user options variable
     user_options = {}
 
     def __init__(self ,api, user_options={}):
 	self.OARImporter = OARapi()	
-	print >>sys.stderr,'\r\n \r\n \t\t__INIT OARRSPEC__'
 	self.user_options = user_options
-
+	self.api = api 
+	print >>sys.stderr,"\r\n \r\n \t\t_____________INIT OARRSPEC__ api : %s" %(api)
 
     def prepare_sites(self, force=False):
 	print >>sys.stderr,'\r\n \r\n ++++++++++++++\t\t prepare_sites'
@@ -69,7 +68,7 @@ class OARrspec:
         if not self.prepared or force:
             self.prepare_sites(force)
             self.prepare_nodes(force)
-            self.prepare_links(force)
+            #self.prepare_links(force)
             #self.prepare_interfaces(force)
             #self.prepare_node_tags(force)	    
             # add site/interface info to nodes
@@ -85,24 +84,28 @@ class OARrspec:
                 node['site'] = site
                 #node['interfaces'] = interfaces
                 #node['tags'] = tags
-
-	print >>sys.stderr, "\r\n OAR  prepare ", node 
+		#print >>sys.stderr, "\r\n OAR  prepare ", node 
+		
         self.prepared = True  
-
+	
+#from plc/aggregate.py 
     def get_rspec(self, slice_xrn=None, version = None):
 	print>>sys.stderr, " \r\n OARrspec \t\t get_spec **************\r\n" 
         self.prepare()
 	
         rspec = None
-        rspec_version = RSpecVersion(version)
-	print >>sys.stderr, '\r\n \t\t rspec_version type', rspec_version['type']
-        if rspec_version['type'].lower() == 'sfa':
-            rspec = SfaRSpec("",{},self.user_options)
+	version_manager = VersionManager()
+	version = version_manager.get_version(version)
+        #rspec_version = RSpecVersion(version)
+	#print >>sys.stderr, '\r\n \t\t rspec_version type',version_manager['type']
+	
+	if not slice_xrn:
+            rspec_version = version_manager._get_version(version.type, version.version, 'ad')
         else:
-            rspec = SfaRSpec("",{},self.user_options)
-
-
-        rspec.add_nodes(self.nodes.values())
+            rspec_version = version_manager._get_version(version.type, version.version, 'manifest')
+      
+        rspec = RSpec(version=rspec_version, user_options=self.user_options)
+        rspec.version.add_nodes(self.nodes.values())
 	print >>sys.stderr, 'after add_nodes'
       
 

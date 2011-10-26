@@ -8,7 +8,7 @@ import re
 from types import StringTypes
 
 from sfa.util.faults import *
-from sfa.util.xrn import get_authority, hrn_to_urn, urn_to_hrn, Xrn
+from sfa.util.xrn import get_authority, hrn_to_urn, urn_to_hrn, Xrn, urn_to_sliver_id
 from sfa.util.plxrn import slicename_to_hrn, hrn_to_pl_slicename, hostname_to_urn
 from sfa.util.rspec import *
 from sfa.util.specdict import *
@@ -16,41 +16,48 @@ from sfa.util.record import SfaRecord
 from sfa.util.policy import Policy
 from sfa.util.record import *
 from sfa.util.sfaticket import SfaTicket
-from sfa.plc.slices import Slices
+
+from sfa.senslab.slices import *
+
 from sfa.trust.credential import Credential
 import sfa.plc.peers as peers
 from sfa.plc.network import *
-
 from sfa.senslab.OARrestapi import *
 from sfa.senslab.api import SfaAPI
 #from sfa.plc.aggregate import Aggregate
-from sfa.plc.slices import *
+#from sfa.plc.slices import *
 from sfa.util.version import version_core
-from sfa.rspecs.rspec_version import RSpecVersion
-from sfa.rspecs.sfa_rspec import sfa_rspec_version
-from sfa.rspecs.pl_rspec_version import *
-#from sfa.rspecs.pg_rspec import pg_rspec_version
-from sfa.rspecs.pg_rspec import pg_rspec_ad_version, pg_rspec_request_version 
-from sfa.rspecs.rspec_parser import parse_rspec 
+from sfa.rspecs.version_manager import VersionManager
+from sfa.rspecs.rspec import RSpec
 from sfa.util.sfatime import utcparse
 from sfa.util.callids import Callids
 from sfa.senslab.OARrspec import *
 #from sfa.plc.aggregate import Aggregate
 
 def GetVersion(api):
-    print>>sys.stderr, "\r\n AGGREGATE GET_VERSION "
-    xrn=Xrn(api.hrn)
-    supported_rspecs = [dict(pg_rspec_request_version), dict(sfa_rspec_version)]
-    ad_rspec_versions = [dict(pg_rspec_ad_version), dict(sfa_rspec_version)]
-    version_more = {'interface':'aggregate',
-                    'testbed':'senslab',
-                    'hrn':xrn.get_hrn(),
-                    'request_rspec_versions': request_rspec_versions,
-                    'ad_rspec_versions': ad_rspec_versions,
-                    'default_ad_rspec': dict(sfa_rspec_version)
-                    }
-    print>>sys.stderr, "\r\n AGGREGATE GET_VERSION : %s  \r\n \r\n" %(version_core(version_more))	    
-    return version_core(version_more)
+	print>>sys.stderr, "\r\n AGGREGATE GET_VERSION "
+	#xrn=Xrn(api.hrn)
+	#supported_rspecs = [dict(pg_rspec_request_version), dict(sfa_rspec_version)]
+	#ad_rspec_versions = [dict(pg_rspec_ad_version), dict(sfa_rspec_version)]
+	version_manager = VersionManager()
+	ad_rspec_versions = []
+	request_rspec_versions = []
+	for rspec_version in version_manager.versions:
+		if rspec_version.content_type in ['*', 'ad']:
+			ad_rspec_versions.append(rspec_version.to_dict())
+		if rspec_version.content_type in ['*', 'request']:
+			request_rspec_versions.append(rspec_version.to_dict()) 
+	default_rspec_version = version_manager.get_version("sfa 1").to_dict()
+	xrn=Xrn(api.hrn)
+	version_more = {'interface':'aggregate',
+			'testbed':'senslab',
+			'hrn':xrn.get_hrn(),
+			'request_rspec_versions': request_rspec_versions,
+			'ad_rspec_versions': ad_rspec_versions,
+			'default_ad_rspec': default_rspec_version
+			}
+	print>>sys.stderr, "\r\n AGGREGATE GET_VERSION : %s  \r\n \r\n" %(version_core(version_more))	    
+	return version_core(version_more)
 
 def __get_registry_objects(slice_xrn, creds, users):
     """
@@ -178,47 +185,71 @@ def CreateSliver(api, slice_xrn, creds, rspec_string, users, call_id):
     print>>sys.stderr, " \r\n AGGREGATE CreateSliver-----------------> "
     if Callids().already_handled(call_id): return ""
 
-    reg_objects = __get_registry_objects(slice_xrn, creds, users)
-
+    #reg_objects = __get_registry_objects(slice_xrn, creds, users)
+    #aggregate = Aggregate(api)
+    aggregate = OARrspec(api)
+    print>>sys.stderr, " \r\n AGGREGATE CreateSliver DAFUQ IS THIS ?-----------------> aggregate " , aggregate
+    slices = Slices(api)    
+    print>>sys.stderr, " \r\n AGGREGATE CreateSliver DAFUQ IS THAT ?-----------------> Slices " , slices
     (hrn, type) = urn_to_hrn(slice_xrn)
-    peer = None
-    aggregate = Aggregate(api)
-    slices = Slices(api)
+    
     peer = slices.get_peer(hrn)
     sfa_peer = slices.get_sfa_peer(hrn)
-    registry = api.registries[api.hrn]
-    credential = api.getCredential()
-    (site_id, remote_site_id) = slices.verify_site(registry, credential, hrn, 
-                                                   peer, sfa_peer, reg_objects)
-
-    slice = slices.verify_slice(registry, credential, hrn, site_id, 
-                                       remote_site_id, peer, sfa_peer, reg_objects)
+    slice_record=None
+    if users:
+        slice_record = users[0].get('slice_record', {})
+	    
+    #registry = api.registries[api.hrn]
+    #credential = api.getCredential()
+    #(site_id, remote_site_id) = slices.verify_site(registry, credential, hrn, 
+                                                   #peer, sfa_peer, reg_objects)
+    # parse rspec
+    rspec = RSpec(rspec_string)
+    requested_attributes = rspec.version.get_slice_attributes()
+    
+    # ensure site record exists
+    site = slices.verify_site(hrn, slice_record, peer, sfa_peer)
+    # ensure slice record exists
+    slice = slices.verify_slice(hrn, slice_record, peer, sfa_peer)
+    # ensure person records exists
+    persons = slices.verify_persons(hrn, slice, users, peer, sfa_peer)
+    # ensure slice attributes exists
+    slices.verify_slice_attributes(slice, requested_attributes)
+    
+    # add/remove slice from nodes
+    requested_slivers = [str(host) for host in rspec.version.get_nodes_with_slivers()]
+    slices.verify_slice_nodes(slice, requested_slivers, peer)
      
-    nodes = api.oar.GetNodes(slice['node_ids'], ['hostname'])
-    current_slivers = [node['hostname'] for node in nodes] 
-    rspec = parse_rspec(rspec_string)
-    requested_slivers = [str(host) for host in rspec.get_nodes_with_slivers()]
-    # remove nodes not in rspec
-    deleted_nodes = list(set(current_slivers).difference(requested_slivers))
+     
+       
+    #nodes = api.oar.GetNodes(slice['node_ids'], ['hostname'])
+    #current_slivers = [node['hostname'] for node in nodes] 
+    #rspec = parse_rspec(rspec_string)
+    #requested_slivers = [str(host) for host in rspec.get_nodes_with_slivers()]
+    ## remove nodes not in rspec
+    #deleted_nodes = list(set(current_slivers).difference(requested_slivers))
 
-    # add nodes from rspec
-    added_nodes = list(set(requested_slivers).difference(current_slivers))
+    ## add nodes from rspec
+    #added_nodes = list(set(requested_slivers).difference(current_slivers))
 
-    try:
-        if peer:
-            api.plshell.UnBindObjectFromPeer(api.plauth, 'slice', slice['slice_id'], peer)
+    #try:
+        #if peer:
+            #api.plshell.UnBindObjectFromPeer(api.plauth, 'slice', slice['slice_id'], peer)
 
-        api.plshell.AddSliceToNodes(api.plauth, slice['name'], added_nodes) 
-        api.plshell.DeleteSliceFromNodes(api.plauth, slice['name'], deleted_nodes)
+        #api.plshell.AddSliceToNodes(api.plauth, slice['name'], added_nodes) 
+        #api.plshell.DeleteSliceFromNodes(api.plauth, slice['name'], deleted_nodes)
 
-        # TODO: update slice tags
-        #network.updateSliceTags()
+        ## TODO: update slice tags
+        ##network.updateSliceTags()
 
-    finally:
-        if peer:
-            api.plshell.BindObjectToPeer(api.plauth, 'slice', slice.id, peer, 
-                                         slice.peer_id)
-
+    #finally:
+        #if peer:
+            #api.plshell.BindObjectToPeer(api.plauth, 'slice', slice.id, peer, 
+                                         #slice.peer_id)
+    # hanlde MyPLC peer association.
+    # only used by plc and ple.
+    #slices.handle_peer(site, slice, persons, peer)
+    
     return aggregate.get_rspec(slice_xrn=slice_xrn, version=rspec.version)
 
 
@@ -323,29 +354,43 @@ def ListResources(api, creds, options,call_id):
     # get slice's hrn from options
     xrn = options.get('geni_slice_urn', '')
     (hrn, type) = urn_to_hrn(xrn)
- 
+    
+    version_manager = VersionManager()
     # get the rspec's return format from options
-    rspec_version = RSpecVersion(options.get('rspec_version'))
-    version_string = "rspec_%s" % (rspec_version.get_version_name())
+    rspec_version = version_manager.get_version(options.get('rspec_version'))
+    version_string = "rspec_%s" % (rspec_version.to_string())
 
     #panos adding the info option to the caching key (can be improved)
     if options.get('info'):
-	version_string = version_string + "_"+options.get('info')
+	version_string = version_string + "_"+options.get('info', 'default')
 	
     print >>sys.stderr, "[aggregate] version string = %s "%(version_string)
+    
+    # look in cache first
+    if caching and api.cache and not xrn:
+        rspec = api.cache.get(version_string)
+        if rspec:
+            api.logger.info("aggregate.ListResources: returning cached value for hrn %s"%hrn)
+            return rspec 
+
+    #panos: passing user-defined options
+    #print "manager options = ",options
+    OAR_rspec = OARrspec(api,options)
+    #aggregate = Aggregate(api, options)
+    rspec =  OAR_rspec.get_rspec(slice_xrn=xrn, version=rspec_version)
+
+    # cache the result
+    if caching and api.cache and not xrn:
+        api.cache.add(version_string, rspec)
 	
-    rspec = None
+    #if rspec_version['type'].lower() == 'protogeni':
+	#spec = PGRSpec()
+	##panos pass user options to SfaRSpec
+    #elif rspec_version['type'].lower() == 'sfa':
+        #rspec = SfaRSpec("",{},options)
+    #else:
+        #rspec = SfaRSpec("",{},options)
 
-    if rspec_version['type'].lower() == 'protogeni':
-	spec = PGRSpec()
-	#panos pass user options to SfaRSpec
-    elif rspec_version['type'].lower() == 'sfa':
-        rspec = SfaRSpec("",{},options)
-    else:
-        rspec = SfaRSpec("",{},options)
-
-
-    OAR_rspec = OARrspec()
 
     rspec =  OAR_rspec.get_rspec(slice_xrn=xrn, version=rspec_version)
     print >>sys.stderr, '\r\n OARImporter.GetNodes()', 	OARImporter.GetNodes()
