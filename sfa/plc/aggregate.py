@@ -3,6 +3,7 @@ from sfa.util.xrn import hrn_to_urn, urn_to_hrn
 from sfa.util.plxrn import PlXrn, hostname_to_urn, hrn_to_pl_slicename
 from sfa.rspecs.rspec import RSpec
 from sfa.rspecs.elements.link import Link
+from sfa.rspecs.elements.interface import Interface
 from sfa.managers.vini.topology import PhysicalLinks
 from sfa.rspecs.version_manager import VersionManager
 from sfa.plc.vlink import get_tc_rate
@@ -66,8 +67,8 @@ class Aggregate:
                 site1_hrn = self.api.hrn + '.' + site1['login_base']
                 site2_hrn = self.api.hrn + '.' + site2['login_base']
                 # get the first node
-                node1 = self.nodes[site1['node_id'][0]]
-                node2 = self.nodes[site2['node_id'][0]]
+                node1 = self.nodes[site1['node_ids'][0]]
+                node2 = self.nodes[site2['node_ids'][0]]
 
                 # set interfaces
                 # just get first interface of the first node
