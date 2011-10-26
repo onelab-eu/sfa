@@ -1,4 +1,6 @@
 from lxml import etree
+from sfa.util.plxrn import PlXrn
+from sfa.util.xrn import Xrn
 from sfa.rspecs.elements.link import Link
 from sfa.rspecs.elements.interface import Interface
 from sfa.rspecs.rspec_elements import RSpecElement, RSpecElements
@@ -43,8 +45,7 @@ class PGv2Link:
         link_elems = xml.xpath(PGv2Link.elements['link'].path, namespaces=xml.namespaces)
         for link_elem in link_elems:
             # set client_id, component_id, component_name
-            link = Link(link_elem.attrib)
-            link['_element'] = link_elem
+            link = Link(link_elem.attrib, link_elem)
             # set component manager
             cm = link_elem.xpath('./default:component_manager', namespaces=xml.namespaces)
             if len(cm) >  0:
@@ -70,7 +71,7 @@ class PGv2Link:
             if_elems = link_elem.xpath(PGv2Link.elements['interface_ref'].path, namespaces=xml.namespaces)
             ifs = []
             for if_elem in if_elems:
-                if_ref = Interface(if_elem.attrib)                 
+                if_ref = Interface(if_elem.attrib, if_elem)
                 ifs.append(if_ref)
             if len(ifs) > 1:
                 link['interface1'] = ifs[0]
@@ -78,7 +79,44 @@ class PGv2Link:
             links.append(link)
         return links 
 
+    @staticmethod
+    def add_link_requests(xml, link_tuples, append=False):
+        if not isinstance(link_tuples, set):
+            link_tuples = set(link_tuples)
 
-    def add_link_requests(xml, links_tuple):
-        available_links = PGv2Link.get_links(xml) 
-           
+        available_links = PGv2Link.get_links(xml)
+        recently_added = []
+        for link in available_links:
+            auth = Xrn(link['component_id']).get_authority_hrn()
+            if_name1 =  Xrn(link['interface1']['component_id']).get_leaf()
+            if_name2 =  Xrn(link['interface2']['component_id']).get_leaf()
+            
+            requested_link = None
+            l_tup_1 = (if_name1, if_name2)
+            l_tup_2 = (if_name2, if_name1) 
+            if link_tuples.issuperset([(if_name1, if_name2)]):
+                requested_link = (if_name1, if_name2)        
+            elif link_tuples.issuperset([(if_name2, if_name2)]):
+                requested_link = (if_name2, if_name1)
+            
+            if requested_link:
+                # add client id to link ane interface elements 
+                link.element.set('client_id', link['component_name'])
+                link['interface1'].element.set('client_id', Xrn(link['interface1']['component_id']).get_leaf()) 
+                link['interface2'].element.set('client_id', Xrn(link['interface2']['component_id']).get_leaf()) 
+                recently_added.append(link['component_name'])
+
+        if not append:
+            # remove all links that don't have a client id 
+            for link in PGv2Link.get_links(xml):
+                if not link['client_id'] or link['component_name'] not in recently_added:
+                    parent = link.element.getparent()
+                    parent.remove(link.element)                  
+             
+    @staticmethod
+    def get_link_requests(xml):
+        link_requests = []
+        for link in PGv2Link.get_links(xml):
+            if link['client_id']:
+                link_requests.append(link)
+        return link_requests           

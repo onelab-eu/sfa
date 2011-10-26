@@ -173,13 +173,17 @@ class Xrn:
             # or completely change how record types are generated/stored   
             if name != 'sa':
                 type = type + "+" + name
-
+            name =""
+        else:
+            name = parts.pop(len(parts)-1)
         # convert parts (list) into hrn (str) by doing the following
         # 1. remove blank parts
         # 2. escape dots inside parts
         # 3. replace ':' with '.' inside parts
-        # 3. join parts using '.' 
-        hrn = '.'.join([Xrn.escape(part).replace(':','.') for part in parts if part]) 
+        # 3. join parts using '.'
+        hrn = '.'.join([Xrn.escape(part).replace(':','.') for part in parts if part])
+        if name:
+            hrn += '.%s' % name 
 
         self.hrn=str(hrn)
         self.type=str(type)
