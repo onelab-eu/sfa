@@ -182,8 +182,9 @@ class Xrn:
         # 3. replace ':' with '.' inside parts
         # 3. join parts using '.'
         hrn = '.'.join([Xrn.escape(part).replace(':','.') for part in parts if part])
+        # dont replace ':' in the name section
         if name:
-            hrn += '.%s' % name 
+            hrn += '.%s' % Xrn.escape(name) 
 
         self.hrn=str(hrn)
         self.type=str(type)
