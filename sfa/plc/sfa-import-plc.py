@@ -169,12 +169,8 @@ def main():
                 continue 
             node = nodes_dict[node_id]
             site_auth = get_authority(site_hrn)
-            print 'site_auth',site_auth
             site_name = get_leaf(site_hrn)
             hrn =  hostname_to_hrn(site_auth, site_name, node['hostname'])
-            print 'site_name',site_name
-            print 'node hostname',node['hostname']
-            print 'hrn',hrn
             if hrn not in existing_hrns or \
                (hrn, 'node') not in existing_records:
                 sfaImporter.import_node(hrn, node)
