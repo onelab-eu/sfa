@@ -75,7 +75,8 @@ class XML:
 
     def parse_dict(self, d, root_tag_name='xml', element = None):
         if element is None: 
-            self.parse_xml('<%s/>' % root_tag_name)
+            if self.root is None:
+                self.parse_xml('<%s/>' % root_tag_name)
             element = self.root
 
         if 'text' in d:
@@ -89,8 +90,12 @@ class XML:
                 for val in value:
                     if isinstance(val, dict):
                         child_element = etree.SubElement(element, key)
-                        self.parse_dict(val, key, child_element) 
-        
+                        self.parse_dict(val, key, child_element)
+            elif isinstance(value, int):
+                d[key] = unicode(d[key])  
+            elif value is None:
+                d.pop(key)          
+             
         element.attrib.update(d)
 
     def validate(self, schema):
