@@ -188,6 +188,8 @@ def CreateSliver(api, slice_xrn, creds, rspec_string, users, call_id):
     requested_slivers = [str(host) for host in rspec.version.get_nodes_with_slivers()]
     slices.verify_slice_nodes(slice, requested_slivers, peer) 
 
+    slices.verify_slice_links(slice, rspec.version.get_link_requests(), aggregate)
+
     # hanlde MyPLC peer association.
     # only used by plc and ple.
     slices.handle_peer(site, slice, persons, peer)
