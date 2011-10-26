@@ -56,7 +56,6 @@ class SfaServer(threading.Thread):
     # that was passed to it.
 
     def noop(self, cred, anything):
-        self.decode_authentication(cred)
         return anything
 
     ##
