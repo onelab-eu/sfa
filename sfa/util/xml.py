@@ -91,6 +91,9 @@ class XML:
                     if isinstance(val, dict):
                         child_element = etree.SubElement(element, key)
                         self.parse_dict(val, key, child_element)
+                    elif isinstance(val, basestring):
+                        child_element = etree.SubElement(element, key).text = val
+                        
             elif isinstance(value, int):
                 d[key] = unicode(d[key])  
             elif value is None:
