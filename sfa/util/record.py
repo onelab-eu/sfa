@@ -302,7 +302,7 @@ class SfaRecord(Row):
         recorddict = self.as_dict()
         filteredDict = dict([(key, val) for (key, val) in recorddict.iteritems() if key in self.fields.keys()])
         record = XML('<record/>')
-        record.root.attrib.update(filteredDict)
+        record.parse_dict(filteredDict)
         str = record.toxml()
         return str
 
