@@ -42,7 +42,7 @@ from sfa.trust.certificate import Keypair, Certificate
 from sfa.trust.hierarchy import Hierarchy
 from sfa.trust.gid import GID
 from sfa.util.config import Config
-from sfa.plc.api import PlcSfaApi
+from sfa.plc.plcsfaapi import PlcSfaApi
 from sfa.server.registry import Registries
 from sfa.server.aggregate import Aggregates
 from sfa.util.xrn import get_authority, hrn_to_urn

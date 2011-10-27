@@ -12,7 +12,7 @@ import traceback
 import xmlrpclib
 from mod_python import apache
 
-from sfa.plc.api import PlcSfaApi
+from sfa.plc.plcsfaapi import PlcSfaApi
 from sfa.util.sfalogging import logger
 
 api = PlcSfaApi(interface='aggregate')

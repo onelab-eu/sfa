@@ -17,7 +17,7 @@ from sfa.util.faults import *
 from sfa.util.xrn import urn_to_hrn, Xrn
 from sfa.server.registry import Registries
 from sfa.trust.credential import Credential
-from sfa.plc.api import PlcSfaApi
+from sfa.plc.plcsfaapi import PlcSfaApi
 from sfa.plc.aggregate import Aggregate
 from sfa.plc.slices import *
 from sfa.util.plxrn import hrn_to_pl_slicename, slicename_to_hrn

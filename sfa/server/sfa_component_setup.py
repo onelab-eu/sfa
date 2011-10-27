@@ -8,6 +8,7 @@ from sfa.util.faults import ConnectionKeyGIDMismatch
 from sfa.util.config import Config
 import sfa.util.xmlrpcprotocol as xmlrpcprotocol
 from sfa.util.plxrn import hrn_to_pl_slicename, slicename_to_hrn
+
 from sfa.trust.certificate import Keypair, Certificate
 from sfa.trust.credential import Credential
 from sfa.trust.gid import GID
@@ -221,7 +222,7 @@ def get_gids(registry=None, verbose=False):
     if verbose:
         print "Getting current slices on this node"
     # get a list of slices on this node
-    from sfa.plc.api import PlcComponentApi
+    from sfa.plc.plcsfaapi import PlcComponentApi
     api = PlcComponentApi()
     xids_tuple = api.nodemanager.GetXIDs()
     slices = eval(xids_tuple[1])

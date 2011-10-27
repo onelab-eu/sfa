@@ -5,7 +5,7 @@ import os
 import traceback
 from sfa.util.table import SfaTable
 from sfa.util.prefixTree import prefixTree
-from sfa.plc.api import PlcSfaApi
+from sfa.plc.plcsfaapi import PlcSfaApi
 from sfa.util.config import Config
 from sfa.trust.certificate import Keypair
 from sfa.trust.hierarchy import Hierarchy
