@@ -83,13 +83,6 @@ except ImportError:
     SOAPpy = None
 
 
-def import_deep(name):
-    mod = __import__(name)
-    components = name.split('.')
-    for comp in components[1:]:
-        mod = getattr(mod, comp)
-    return mod
-
 class ManagerWrapper:
     """
     This class acts as a wrapper around an SFA interface manager module, but
