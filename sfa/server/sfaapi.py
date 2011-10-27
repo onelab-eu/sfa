@@ -1,9 +1,13 @@
+import os.path
+import datetime
+
 from sfa.util.faults import SfaAPIError
 from sfa.util.config import Config
 from sfa.util.cache import Cache
 
 from sfa.trust.auth import Auth
 from sfa.trust.certificate import Keypair, Certificate
+from sfa.trust.credential import Credential
 
 # this is wrong all right, but temporary 
 from sfa.managers.managerwrapper import ManagerWrapper, import_manager
@@ -18,6 +22,7 @@ class SfaApi (XmlrpcApi):
     augmented with the local cryptographic material and hrn
     It also has the notion of neighbour sfa services 
     as defined in /etc/sfa/{aggregates,registries}.xml
+    Finally it contains a cache instance
     It has no a priori knowledge of the underlying testbed
     """
 
@@ -33,6 +38,7 @@ class SfaApi (XmlrpcApi):
             return
         # Load configuration
         self.config = Config(config)
+        self.credential = None
         self.auth = Auth(peer_cert)
         self.interface = interface
         self.hrn = self.config.SFA_INTERFACE_HRN
@@ -43,7 +49,6 @@ class SfaApi (XmlrpcApi):
         self.cache = cache
         if self.cache is None:
             self.cache = Cache()
-        self.credential = None
 
         # load registries
         from sfa.server.registry import Registries
@@ -104,7 +109,7 @@ class SfaApi (XmlrpcApi):
         type = 'authority'
         path = self.config.SFA_DATA_DIR
         filename = ".".join([self.interface, self.hrn, type, "cred"])
-        cred_filename = path + os.sep + filename
+        cred_filename = os.path.join(path,filename)
         cred = None
         if os.path.isfile(cred_filename):
             cred = Credential(filename = cred_filename)
@@ -193,10 +198,11 @@ class SfaApi (XmlrpcApi):
 
         # see if this file exists
         # XX This is really the aggregate's credential. Using this is easier than getting
-        # the registry's credential from iteslf (ssl errors).   
-        ma_cred_filename = self.config.SFA_DATA_DIR + os.sep + self.interface + self.hrn + ".ma.cred"
+        # the registry's credential from iteslf (ssl errors).
+        filename = self.interface + self.hrn + ".ma.cred"
+        ma_cred_path = os.path.join(self.config.SFA_DATA_DIR,filename)
         try:
-            self.credential = Credential(filename = ma_cred_filename)
+            self.credential = Credential(filename = ma_cred_path)
         except IOError:
             self.credential = self.getCredentialFromRegistry()
 

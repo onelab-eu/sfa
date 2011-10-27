@@ -21,8 +21,8 @@ from sfa.util.config import Config
 from sfa.util.cache import Cache 
 from sfa.trust.certificate import Certificate
 from sfa.trust.trustedroots import TrustedRoots
-#can we get rid of that ?
-from sfa.plc.api import PlcSfaApi
+# don't hard code an api class anymore here
+from sfa.generic import Generic
 
 ##
 # Verification callback for pyOpenSSL. We do our own checking of keys because
@@ -95,11 +95,18 @@ class SecureXMLRpcRequestHandler(SimpleXMLRPCServer.SimpleXMLRPCRequestHandler):
         try:
             peer_cert = Certificate()
             peer_cert.load_from_pyopenssl_x509(self.connection.get_peer_certificate())
-            self.api = PlcSfaApi(peer_cert = peer_cert, 
-                              interface = self.server.interface, 
-                              key_file = self.server.key_file, 
-                              cert_file = self.server.cert_file,
-                              cache = self.cache)
+            generic=Generic.the_flavour()
+            self.api = generic.make_api (peer_cert = peer_cert, 
+                                         interface = self.server.interface, 
+                                         key_file = self.server.key_file, 
+                                         cert_file = self.server.cert_file,
+                                         cache = self.cache)
+            #logger.info("SecureXMLRpcRequestHandler.do_POST:")
+            #logger.info("interface=%s"%self.server.interface)
+            #logger.info("key_file=%s"%self.server.key_file)
+            #logger.info("api=%s"%self.api)
+            #logger.info("server=%s"%self.server)
+            #logger.info("handler=%s"%self)
             # get arguments
             request = self.rfile.read(int(self.headers["content-length"]))
             remote_addr = (remote_ip, remote_port) = self.connection.getpeername()
@@ -127,6 +134,7 @@ class SecureXMLRpcRequestHandler(SimpleXMLRPCServer.SimpleXMLRPCRequestHandler):
 ##
 # Taken from the web (XXX find reference). Implements an HTTPS xmlrpc server
 class SecureXMLRPCServer(BaseHTTPServer.HTTPServer,SimpleXMLRPCServer.SimpleXMLRPCDispatcher):
+
     def __init__(self, server_address, HandlerClass, key_file, cert_file, logRequests=True):
         """Secure XML-RPC server.
 

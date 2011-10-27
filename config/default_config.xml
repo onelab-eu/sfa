@@ -18,6 +18,15 @@ Thierry Parmentelat
       <description>Basic system variables.</description>
 
       <variablelist>
+	<variable id="generic_flavour" type="string">
+	  <name>Generic Flavour</name>
+	  <value>pl</value>
+	  <description>This string refers to a class located in sfa.generic that describes 
+	  which specific implementation needs to be used for api, manager and driver objects.
+	  PlanetLab users do not need to change this setting.
+	  </description>
+	</variable>
+
         <variable id="interface_hrn" type="string">
           <name>Human readable name</name>
           <value>plc</value>
@@ -49,9 +58,10 @@ Thierry Parmentelat
             it look like the user is the one performing the operation. Doing this requires a 
             valid key pair and credential for the user. This option defines the path where 
             key pairs and credentials are generated and stored.
-            This functionality is used by the SFA web gui 
+            This functionality is used by the SFA web GUI. 
             </description> 
         </variable>
+
       </variablelist>
     </category>
 
