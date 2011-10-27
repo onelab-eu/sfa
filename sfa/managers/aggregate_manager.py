@@ -15,7 +15,7 @@ from sfa.rspecs.version_manager import VersionManager
 from sfa.rspecs.rspec import RSpec
 
 import sfa.plc.peers as peers
-from sfa.plc.api import PlcSfaApi
+from sfa.plc.plcsfaapi import PlcSfaApi
 from sfa.plc.aggregate import Aggregate
 from sfa.plc.slices import Slices
 
