@@ -47,7 +47,7 @@ class LDAPapi :
 				ldapfilter="(|"
 				for hrn in hrns:
 					splited_hrn=hrn.split(".")
-					if splited_hrn[0] != "SFA_REGISTRY_ROOT_AUTH" :
+					if splited_hrn[0] != self.authname :
 						print >>sys.stderr,"i know nothing about",hrn
 					else :
 						login=splited_hrn[1]
