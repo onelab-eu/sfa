@@ -7,9 +7,9 @@ from sfa.util.cache import Cache
 from sfa.trust.auth import Auth
 from sfa.trust.certificate import Keypair, Certificate
 from sfa.trust.credential import Credential
+from sfa.trust.rights import determine_rights
 
 # this is wrong all right, but temporary, will use generic
-from sfa.managers.managerwrapper import ManagerWrapper, import_manager
 from sfa.server.xmlrpcapi import XmlrpcApi
 import os
 import datetime
@@ -23,7 +23,9 @@ class SfaApi (XmlrpcApi):
     It also has the notion of neighbour sfa services 
     as defined in /etc/sfa/{aggregates,registries}.xml
     Finally it contains a cache instance
-    It has no a priori knowledge of the underlying testbed
+    It gets augmented by the generic layer with 
+    (*) an instance of manager (actually a manager module for now)
+    (*) which in turn holds an instance of a testbed driver
     """
 
     def __init__ (self, encoding="utf-8", methods='sfa.methods', 
@@ -57,30 +59,13 @@ class SfaApi (XmlrpcApi):
         # load aggregates
         from sfa.server.aggregate import Aggregates
         self.aggregates = Aggregates()
+        
+        # filled later on by generic/Generic
+        self.manager=None
 
-
+    # tmp
     def get_interface_manager(self, manager_base = 'sfa.managers'):
-        """
-        Returns the appropriate manager module for this interface.
-        Modules are usually found in sfa/managers/
-        """
-        manager=None
-        if self.interface in ['registry']:
-            manager=import_manager ("registry",  self.config.SFA_REGISTRY_TYPE)
-        elif self.interface in ['aggregate']:
-            manager=import_manager ("aggregate", self.config.SFA_AGGREGATE_TYPE)
-        elif self.interface in ['slicemgr', 'sm']:
-            manager=import_manager ("slice",     self.config.SFA_SM_TYPE)
-        elif self.interface in ['component', 'cm']:
-            manager=import_manager ("component", self.config.SFA_CM_TYPE)
-        if not manager:
-            raise SfaAPIError("No manager for interface: %s" % self.interface)  
-            
-        # this isnt necessary but will help to produce better error messages
-        # if someone tries to access an operation this manager doesn't implement  
-        manager = ManagerWrapper(manager, self.interface)
-
-        return manager
+        return self.manager
 
     def get_server(self, interface, cred, timeout=30):
         """

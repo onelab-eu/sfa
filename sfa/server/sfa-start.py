@@ -48,8 +48,6 @@ from sfa.server.aggregate import Aggregates
 from sfa.util.xrn import get_authority, hrn_to_urn
 from sfa.util.sfalogging import logger
 
-from sfa.managers.managerwrapper import import_manager
-
 # after http://www.erlenstar.demon.co.uk/unix/faq_2.html
 def daemon():
     """Daemonize the current process."""
@@ -135,28 +133,6 @@ def init_self_signed_cert(hrn, key, server_cert_file):
     cert.set_pubkey(key)
     cert.sign()
     cert.save_to_file(server_cert_file)
-
-def init_server(options, config):
-    """
-    Locate the manager based on config.*TYPE
-    Execute the init_server method (well in fact function, sigh) if defined in that module
-    In order to migrate to a more generic approach:
-    * search for <>_manager_<type>.py
-    * if not found, try <>_manager.py (and issue a warning if <type>!='pl')
-    """
-    if options.registry:
-        manager=import_manager ("registry",       config.SFA_REGISTRY_TYPE)
-        if manager and hasattr(manager, 'init_server'): manager.init_server()
-    if options.am:      
-        manager=import_manager ("aggregate",      config.SFA_AGGREGATE_TYPE)
-        if manager and hasattr(manager, 'init_server'): manager.init_server()
-    if options.sm:
-        manager=import_manager ("slice",          config.SFA_SM_TYPE)
-        if manager and hasattr(manager, 'init_server'): manager.init_server()
-    if options.cm:
-        manager=import_manager ("component",      config.SFA_CM_TYPE)
-        if manager and hasattr(manager, 'init_server'): manager.init_server()
-
 
 def install_peer_certs(server_key_file, server_cert_file):
     """
@@ -280,8 +256,7 @@ def main():
     server_cert_file = os.path.join(hierarchy.basedir, "server.cert")
 
     init_server_key(server_key_file, server_cert_file, config, hierarchy)
-    init_server(options, config)
- 
+
     if (options.daemon):  daemon()
     
     if options.trusted_certs:
