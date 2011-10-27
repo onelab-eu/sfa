@@ -234,7 +234,7 @@ class PlcSfaApi(SfaApi):
         for record in records:
             if 'site_id' in record:
                 site_ids.append(record['site_id'])
-            if 'site_ids' in records:
+            if 'site_ids' in record:
                 site_ids.extend(record['site_ids'])
             if 'person_ids' in record:
                 person_ids.extend(record['person_ids'])
