@@ -1,5 +1,5 @@
 
-from sfa.util.plxrn import PlXrn
+from sfa.util.xrn import Xrn
 # Taken from bwlimit.py
 #
 # See tc_util.c and http://physics.nist.gov/cuu/Units/binary.html. Be
@@ -94,7 +94,7 @@ class VLink:
 
     @staticmethod
     def get_interface_id(interface):
-        if_name = PlXrn(interface=interface['component_id']).interface_name()
+        if_name = Xrn(interface=interface['component_id']).get_leaf()
         node, dev = if_name.split(":")
         node_id = int(node.replace("pc", ""))
         return node_id

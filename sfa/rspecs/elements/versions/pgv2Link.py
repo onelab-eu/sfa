@@ -117,6 +117,6 @@ class PGv2Link:
     def get_link_requests(xml):
         link_requests = []
         for link in PGv2Link.get_links(xml):
-            if link['client_id']:
+            if link['client_id'] != None:
                 link_requests.append(link)
         return link_requests           

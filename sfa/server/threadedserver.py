@@ -21,6 +21,7 @@ from sfa.util.config import Config
 from sfa.util.cache import Cache 
 from sfa.trust.certificate import Certificate
 from sfa.trust.trustedroots import TrustedRoots
+
 # don't hard code an api class anymore here
 from sfa.generic import Generic
 

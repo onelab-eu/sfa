@@ -55,14 +55,13 @@ class XML:
         # set namespaces map
         self.namespaces = dict(self.root.nsmap)
         if 'default' not in self.namespaces and None in self.namespaces: 
+            # If the 'None' exist, then it's pointing to the default namespace. This makes 
+            # it hard for us to write xpath queries for the default naemspace because lxml 
+            # wont understand a None prefix. We will just associate the default namespeace 
+            # with a key named 'default'.     
             self.namespaces['default'] = self.namespaces[None]
-        # If the 'None' exist, then it's pointing to the default namespace. This makes 
-        # it hard for us to write xpath queries for the default naemspace because lxml 
-        # wont understand a None prefix. We will just associate the default namespeace 
-        # with a key named 'default'.     
-        if None in self.namespaces:
-            default_namespace = self.namespaces.pop(None)
-            self.namespaces['default'] = default_namespace
+        else:
+            self.namespaces['default'] = 'default' 
 
         # set schema 
         for key in self.root.attrib.keys():
