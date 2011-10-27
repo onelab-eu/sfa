@@ -21,7 +21,7 @@ class PGv2Link:
         for link in links:
             link_elem = etree.SubElement(root, 'link')
             for attrib in ['component_name', 'component_id', 'client_id']:
-                if attrib in link and link[attrib]:
+                if attrib in link and link[attrib] is not None:
                     link_elem.set(attrib, link[attrib])
             if 'component_manager' in link and link['component_manager']:
                 cm_element = etree.SubElement(link_elem, 'component_manager', name=link['component_manager'])

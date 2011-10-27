@@ -1,5 +1,6 @@
 from lxml import etree
 from sfa.util.xrn import hrn_to_urn, urn_to_hrn
+from sfa.util.plxrn import PlXrn
 from sfa.rspecs.rspec_version import BaseVersion
 from sfa.rspecs.rspec_elements import RSpecElement, RSpecElements
 from sfa.rspecs.elements.versions.pgv2Link import PGv2Link
@@ -215,7 +216,7 @@ class SFAv1(BaseVersion):
                 for interface in node['interfaces']:
                     if 'bwlimit' in interface and interface['bwlimit']:
                         bwlimit = etree.SubElement(node_tag, 'bw_limit', units='kbps').text = str(interface['bwlimit']/1000)
-                    comp_id = hrn_to_urn(network, 'pc%s:eth%s' % (node['node_id'], i)) 
+                    comp_id = PlXrn(auth=network, interface='node%s:eth%s' % (node['node_id'], i)).get_urn() 
                     interface_tag = etree.SubElement(node_tag, 'interface', component_id=comp_id)
                     i+=1
             if 'bw_unallocated' in node:
