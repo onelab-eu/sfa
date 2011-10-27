@@ -230,7 +230,7 @@ def register(api, record):
         raise ExistingRecord(hrn)
        
     record = SfaRecord(dict = record)
-<<<<<<< HEAD
+
     print>>sys.stderr, " \r\n \r\n ----------- REGISTRY_MANAGER_SLAN.PY  register  SfaRecordrecord %s" %(record)
     #record['authority'] = get_authority(record['hrn'])
     record['authority'] = get_authority(hrn)

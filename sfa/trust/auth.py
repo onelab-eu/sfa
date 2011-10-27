@@ -220,13 +220,15 @@ class Auth:
         @param name human readable name to test  
         """
         object_hrn = self.object_gid.get_hrn()
-        if object_hrn == name:
+	strname = str(name).strip("['']")
+	
+        if object_hrn == strname:
             return
-        if name.startswith(object_hrn + "."):
+        if strname.startswith((object_hrn + ".")) is True:
             return
         #if name.startswith(get_authority(name)):
             #return
-    
+    	print>>sys.stderr, " \r\n \t AUTH.PY  verify_object_permission GROSECHECDELENFER "
         raise PermissionError(name)
 
     def determine_user_rights(self, caller_hrn, record):
