@@ -6,7 +6,7 @@ from types import StringTypes, ListType
 import httplib
 from xml.dom import minidom
 from lxml import etree
-
+import codecs 
 from sfa.util.sfalogging import info_logger
 
 class RSpec:
@@ -194,7 +194,11 @@ class RSpec:
         """
         read an xml string and store it as a dom object.
         """
+	print>>sys.stderr, "\r\n \t RSPEC.PY parseString xml \r\n %s " %(xml)
+	#xmlUnicode = unicode( xml, 'utf-8' )
+	xml = (xml.encode("utf-8"))
         dom = minidom.parseString(xml)
+	print>>sys.stderr, "\r\n \t RSPEC.PY OKKK parseString dom \r\n %s " %(dom)
         self.__removeWhitespaceNodes(dom)
         self.rootNode = dom.childNodes[0]
 
