@@ -584,15 +584,15 @@ class SfaAPI(BaseAPI):
             oldList = []     
         newList = record.get(listName, [])
         # ugly hack to see what's next
-        #def normalize (value):
-        #    from types import StringTypes
-        #    from sfa.util.sfalogging import logger
-        #    if isinstance(value,StringTypes): return value
-        #    elif isinstance(value,dict): 
-        #        newvalue=value['text']
-        #        logger.info("Normalizing %s=>%s"%(value,newvalue))
-        #        return newvalue
-        #newList=[normalize(v) for v in newList]
+        def normalize (value):
+            from types import StringTypes
+            from sfa.util.sfalogging import logger
+            if isinstance(value,StringTypes): return value
+            elif isinstance(value,dict): 
+                newvalue=value['text']
+                logger.info("Normalizing %s=>%s"%(value,newvalue))
+                return newvalue
+        newList=[normalize(v) for v in newList]
 
         # if the lists are the same, then we don't have to update anything
         if (oldList == newList):
