@@ -22,7 +22,7 @@ from sfa.util.cache import Cache
 from sfa.trust.certificate import Certificate
 from sfa.trust.trustedroots import TrustedRoots
 #can we get rid of that ?
-from sfa.plc.api import PlcSfaApi
+from sfa.plc.plcsfaapi import PlcSfaApi
 
 ##
 # Verification callback for pyOpenSSL. We do our own checking of keys because
