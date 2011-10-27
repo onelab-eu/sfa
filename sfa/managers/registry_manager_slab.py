@@ -209,26 +209,35 @@ def list(api, xrn, origin_hrn=None):
 
 def register(api, record):
 
-
-    hrn, type = record['hrn'], record['type']
-    urn = hrn_to_urn(hrn,type)
+    hrn = str(record['hrn']).strip("['']")
+    type_of_rec = str( record['type']).strip("['']")
+  
+ 
+    urn = hrn_to_urn(hrn,type_of_rec)
     # validate the type
-    print>>sys.stderr, " \r\n \r\n ----------- registry_manager_sl  register hrn %s"%(hrn)
-    if type not in ['authority', 'slice', 'node', 'user']:
-        raise UnknownSfaType(type) 
+ 
+    if type_of_rec not in ['authority', 'slice', 'node', 'user']:
+        raise UnknownSfaType(type_of_rec) 
     
     # check if record already exists
     table = SfaTable()
-    existing_records = table.find({'type': type, 'hrn': hrn})
+    existing_records = table.find({'type': type_of_rec, 'hrn': hrn})
     if existing_records:
         raise ExistingRecord(hrn)
        
     record = SfaRecord(dict = record)
-    record['authority'] = get_authority(record['hrn'])
-    type = record['type']
-    hrn = record['hrn']
-    api.auth.verify_object_permission(hrn)
+    print>>sys.stderr, " \r\n \r\n ----------- REGISTRY_MANAGER_SLAN.PY  register  SfaRecordrecord %s" %(record)
+    #record['authority'] = get_authority(record['hrn'])
+    record['authority'] = get_authority(hrn)
+    
+    #type_of_rec = record['type']
+    #hrn = record['hrn']
+    
+    #api.auth.verify_object_permission(hrn)
+    api.auth.verify_object_permission( record['hrn'])
     auth_info = api.auth.get_auth_info(record['authority'])
+  
+    
     pub_key = None
     # make sure record has a gid
     if 'gid' not in record:
@@ -245,8 +254,11 @@ def register(api, record):
         gid = gid_object.save_to_string(save_parents=True)
         record['gid'] = gid
         record.set_gid(gid)
+	print>>sys.stderr, " \r\n \r\n ----------- REGISTRY_MANAGER_SLAB.PY   record['gid']  %s" %(record['gid'])   
+	print>>sys.stderr, " \r\n \r\n ----------- REGISTRY_MANAGER_SLAB.PY  register type_of_rec %s"%(type_of_rec)
+	
+    if type_of_rec in ["authority"]:	
 
-    if type in ["authority"]:
         # update the tree
         if not api.auth.hierarchy.auth_exists(hrn):
             api.auth.hierarchy.create_auth(hrn_to_urn(hrn,'authority'))
@@ -254,7 +266,10 @@ def register(api, record):
         # get the GID from the newly created authority
         gid = auth_info.get_gid_object()
         record.set_gid(gid.save_to_string(save_parents=True))
-        pl_record = api.sfa_fields_to_pl_fields(type, hrn, record)
+	
+        #pl_record = api.sfa_fields_to_pl_fields(type, hrn, record)
+	print>>sys.stderr, " \r\n \r\n ----------- REGISTRY_MANAGER_SLAB.PY  register : type_of_rec in [authority ] sfa_fields_to_pl_fields FIELDS A CHANGER"    
+	
         sites = api.oar.GetSites( [pl_record['login_base']])
         if not sites:
             pointer = api.oar.AddSite( pl_record)
@@ -264,10 +279,10 @@ def register(api, record):
         record.set_pointer(pointer)
         record['pointer'] = pointer
 
-    elif (type == "slice"):
+    elif (type_of_rec == "slice"):
         acceptable_fields=['url', 'instantiation', 'name', 'description']
-        pl_record = api.sfa_fields_to_pl_fields(type, hrn, record)
-	print>>sys.stderr, " \r\n \r\n ----------- registry_manager_slab register  slice pl_record %s"%(pl_record)
+        pl_record = api.sfa_fields_to_pl_fields(type_of_rec, hrn, record)
+	print>>sys.stderr, " \r\n \r\n ----------- REGISTRY_MANAGER_SLAB.PY  register  slice pl_record %s"%(pl_record)
         for key in pl_record.keys():
             if key not in acceptable_fields:
                 pl_record.pop(key)
@@ -279,7 +294,7 @@ def register(api, record):
         record.set_pointer(pointer)
         record['pointer'] = pointer
 
-    elif  (type == "user"):
+    elif  (type_of_rec == "user"):
         persons = api.users.GetPersons( [record['email']]) 
 	if not persons:
            print>>sys.stderr, "  \r\n \r\n ----------- registry_manager_slab  register NO PERSON ADD TO LDAP?"
@@ -314,8 +329,8 @@ def register(api, record):
 
     ##record['pointer'] = pointer
     ##record.set_pointer(pointer)
-    record_id = table.insert(record)
-    record['record_id'] = record_id
+    #record_id = table.insert(record)
+    #record['record_id'] = record_id
 
     # update membership for researchers, pis, owners, operators
     api.update_membership(None, record)
