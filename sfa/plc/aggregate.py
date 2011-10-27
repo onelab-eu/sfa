@@ -83,7 +83,7 @@ class Aggregate:
                 link['interface1'] = if1
                 link['interface2'] = if2
                 link['component_name'] = "%s:%s" % (site1['login_base'], site2['login_base'])
-                link['component_id'] = PlXrn(auth=self.api.hrn, link=link['component_name'])
+                link['component_id'] = PlXrn(auth=self.api.hrn, interface=link['component_name']).get_urn()
                 link['component_manager_id'] =  hrn_to_urn(self.api.hrn, 'authority+am')
                 self.links[link['component_name']] = link
 
