@@ -583,7 +583,9 @@ class SfaAPI(BaseAPI):
         else:
             oldList = []     
         newList = record.get(listName, [])
-        # ugly hack to see what's next
+        # xxx ugly hack - somehow we receive here a list of {'text':value} 
+        # instead of an expected list of strings
+        # please remove once this is issue is cleanly fixed
         def normalize (value):
             from types import StringTypes
             from sfa.util.sfalogging import logger
