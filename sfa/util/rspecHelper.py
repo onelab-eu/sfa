@@ -8,7 +8,7 @@ from StringIO import StringIO
 from optparse import OptionParser
 
 from sfa.util.faults import *
-from sfa.util.sfalogging import sfa_logger
+from sfa.util.sfalogging import logger
 
 def merge_rspecs(rspecs):
     """
@@ -24,13 +24,13 @@ def merge_rspecs(rspecs):
         try:
             known_networks[network.get('name')]=True
         except:
-            sfa_logger().error("merge_rspecs: cannot register network with no name in rspec")
+            logger.error("merge_rspecs: cannot register network with no name in rspec")
             pass
     def is_registered_network (network):
         try:
             return network.get('name') in known_networks
         except:
-            sfa_logger().error("merge_rspecs: cannot retrieve network with no name in rspec")
+            logger.error("merge_rspecs: cannot retrieve network with no name in rspec")
             return False
 
     # the resulting tree
@@ -42,13 +42,13 @@ def merge_rspecs(rspecs):
             tree = etree.parse(StringIO(input_rspec))
         except etree.XMLSyntaxError:
             # consider failing silently here
-            sfa_logger().log_exc("merge_rspecs, parse error")
+            logger.log_exc("merge_rspecs, parse error")
             message = str(sys.exc_info()[1]) + ' with ' + input_rspec
             raise InvalidRSpec(message)
 
         root = tree.getroot()
         if not root.get("type") in ["SFA"]:
-            sfa_logger().error("merge_rspecs: unexpected type for rspec root, %s"%root.get('type'))
+            logger.error("merge_rspecs: unexpected type for rspec root, %s"%root.get('type'))
             continue
         if rspec == None:
             # we scan the first input, register all networks

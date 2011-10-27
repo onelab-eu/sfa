@@ -11,7 +11,7 @@ import textwrap
 import xmlrpclib
 
 
-from sfa.util.sfalogging import sfa_logger
+from sfa.util.sfalogging import logger
 from sfa.util.faults import * 
 from sfa.util.parameter import Parameter, Mixed, python_type, xmlrpc_type
 from sfa.trust.auth import Auth
@@ -80,12 +80,12 @@ class Method:
                 self.type_check(name, value, expected, args)
 
             if self.api.config.SFA_API_DEBUG:
-                sfa_logger().debug("method.__call__ [%s] : BEG %s"%(self.api.interface,methodname))
+                logger.debug("method.__call__ [%s] : BEG %s"%(self.api.interface,methodname))
             result = self.call(*args, **kwds)
 
             runtime = time.time() - start
             if self.api.config.SFA_API_DEBUG or hasattr(self, 'message'):
-                sfa_logger().debug("method.__call__ [%s] : END %s in %02f s (%s)"%\
+                logger.debug("method.__call__ [%s] : END %s in %02f s (%s)"%\
                                        (self.api.interface,methodname,runtime,getattr(self,'message',"[no-msg]")))
 
             return result
@@ -97,7 +97,7 @@ class Method:
             # Prepend caller and method name to expected faults
             fault.faultString = caller + ": " +  self.name + ": " + fault.faultString
             runtime = time.time() - start
-            sfa_logger().log_exc("Method %s raised an exception"%self.name) 
+            logger.log_exc("Method %s raised an exception"%self.name) 
             raise fault
 
 

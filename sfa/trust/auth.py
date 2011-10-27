@@ -5,14 +5,14 @@ import sys
 
 from sfa.trust.certificate import Keypair, Certificate
 from sfa.trust.credential import Credential
-from sfa.trust.trustedroot import TrustedRootList
+from sfa.trust.trustedroots import TrustedRoots
 from sfa.util.faults import *
 from sfa.trust.hierarchy import Hierarchy
 from sfa.util.config import *
 from sfa.util.xrn import get_authority
 from sfa.util.sfaticket import *
 
-from sfa.util.sfalogging import sfa_logger
+from sfa.util.sfalogging import logger
 
 class Auth:
     """
@@ -27,8 +27,8 @@ class Auth:
         self.load_trusted_certs()
 
     def load_trusted_certs(self):
-        self.trusted_cert_list = TrustedRootList(self.config.get_trustedroots_dir()).get_list()
-        self.trusted_cert_file_list = TrustedRootList(self.config.get_trustedroots_dir()).get_file_list()
+        self.trusted_cert_list = TrustedRoots(self.config.get_trustedroots_dir()).get_list()
+        self.trusted_cert_file_list = TrustedRoots(self.config.get_trustedroots_dir()).get_file_list()
 
         
         
@@ -36,14 +36,14 @@ class Auth:
         valid = []
         if not isinstance(creds, list):
             creds = [creds]
-        sfa_logger().debug("Auth.checkCredentials with %d creds"%len(creds))
+        logger.debug("Auth.checkCredentials with %d creds"%len(creds))
         for cred in creds:
             try:
                 self.check(cred, operation, hrn)
                 valid.append(cred)
             except:
                 cred_obj=Credential(string=cred)
-                sfa_logger().debug("failed to validate credential - dump=%s"%cred_obj.dump_string(dump_parents=True))
+                logger.debug("failed to validate credential - dump=%s"%cred_obj.dump_string(dump_parents=True))
                 error = sys.exc_info()[:2]
                 continue
             
@@ -303,7 +303,7 @@ class Auth:
     def get_authority(self, hrn):
         return get_authority(hrn)
 
-    def filter_creds_by_caller(self, creds, caller_hrn):
+    def filter_creds_by_caller(self, creds, caller_hrn_list):
         """
         Returns a list of creds who's gid caller matches the 
         specified caller hrn
@@ -311,10 +311,12 @@ class Auth:
         if not isinstance(creds, list):
             creds = [creds]
         creds = []
+        if not isinistance(caller_hrn_list, list):
+            caller_hrn_list = [caller_hrn_list]
         for cred in creds:
             try:
                 tmp_cred = Credential(string=cred)
-                if tmp_cred.get_gid_caller().get_hrn() == caller_hrn:
+                if tmp_cred.get_gid_caller().get_hrn() in [caller_hrn_list]:
                     creds.append(cred)
             except: pass
         return creds

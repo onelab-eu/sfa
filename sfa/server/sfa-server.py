@@ -1,13 +1,12 @@
 #!/usr/bin/python
 #
-# SFA PLC Wrapper
+# PlanetLab SFA implementation
 #
-# This wrapper implements the SFA Registry and Slice Interfaces on PLC.
+# This implements the SFA Registry and Slice Interfaces on PLC.
 # Depending on command line options, it starts some combination of a
 # Registry, an Aggregate Manager, and a Slice Manager.
 #
-# There are several items that need to be done before starting the wrapper
-# server.
+# There are several items that need to be done before starting the servers.
 #
 # NOTE:  Many configuration settings, including the PLC maintenance account
 # credentials, URI of the PLCAPI, and PLC DB URI and admin credentials are initialized
@@ -35,10 +34,10 @@ component_port=12346
 import os, os.path
 import traceback
 import sys
+import sfa.util.xmlrpcprotocol as xmlrpcprotocol
 from optparse import OptionParser
 
-from sfa.util.sfalogging import sfa_logger
-from sfa.trust.trustedroot import TrustedRootList
+from sfa.util.sfalogging import logger
 from sfa.trust.certificate import Keypair, Certificate
 from sfa.trust.hierarchy import Hierarchy
 from sfa.trust.gid import GID
@@ -46,6 +45,10 @@ from sfa.util.config import Config
 from sfa.plc.api import SfaAPI
 from sfa.server.registry import Registries
 from sfa.server.aggregate import Aggregates
+from sfa.util.xrn import get_authority, hrn_to_urn
+from sfa.util.sfalogging import logger
+
+from sfa.managers.import_manager import import_manager
 
 # after http://www.erlenstar.demon.co.uk/unix/faq_2.html
 def daemon():
@@ -83,8 +86,9 @@ def init_server_key(server_key_file, server_cert_file, config, hierarchy):
         if not os.path.exists(key_file):
             # if it doesnt exist then this is probably a fresh interface
             # with no records. Generate a random keypair for now
-            sfa_logger().debug("server's public key not found in %s" % key_file)
-            sfa_logger().debug("generating a random server key pair")
+            logger.debug("server's public key not found in %s" % key_file)
+
+            logger.debug("generating a random server key pair")
             key = Keypair(create=True)
             key.save_to_file(server_key_file)
             init_server_cert(hrn, key, server_cert_file, self_signed=True)    
@@ -113,18 +117,18 @@ def init_server_cert(hrn, key, server_cert_file, self_signed=False):
     else:
         try:
             # look for gid file
-            sfa_logger().debug("generating server cert from gid: %s"% hrn)
+            logger.debug("generating server cert from gid: %s"% hrn)
             hierarchy = Hierarchy()
             auth_info = hierarchy.get_auth_info(hrn)
             gid = GID(filename=auth_info.gid_filename)
             gid.save_to_file(filename=server_cert_file)
         except:
             # fall back to self signed cert
-            sfa_logger().debug("gid for %s not found" % hrn)
+            logger.debug("gid for %s not found" % hrn)
             init_self_signed_cert(hrn, key, server_cert_file)        
         
 def init_self_signed_cert(hrn, key, server_cert_file):
-    sfa_logger().debug("generating self signed cert")
+    logger.debug("generating self signed cert")
     # generate self signed certificate
     cert = Certificate(subject=hrn)
     cert.set_issuer(key=key, subject=hrn)
@@ -134,43 +138,122 @@ def init_self_signed_cert(hrn, key, server_cert_file):
 
 def init_server(options, config):
     """
-    Execute the init method defined in the manager file 
+    Locate the manager based on config.*TYPE
+    Execute the init_server method (well in fact function, sigh) if defined in that module
+    In order to migrate to a more generic approach:
+    * search for <>_manager_<type>.py
+    * if not found, try <>_manager.py (and issue a warning if <type>!='pl')
     """
-    def init_manager(manager_module, manager_base):
-        try: manager = __import__(manager_module, fromlist=[manager_base])
-        except: manager = None
-        if manager and hasattr(manager, 'init_server'):
-            manager.init_server()
-    
-    manager_base = 'sfa.managers'
     if options.registry:
-        mgr_type = config.SFA_REGISTRY_TYPE
-        manager_module = manager_base + ".registry_manager_%s" % mgr_type
-        init_manager(manager_module, manager_base)    
-    if options.am:
-        mgr_type = config.SFA_AGGREGATE_TYPE
-        manager_module = manager_base + ".aggregate_manager_%s" % mgr_type
-        init_manager(manager_module, manager_base)    
+        manager=import_manager ("registry",       config.SFA_REGISTRY_TYPE)
+        if manager and hasattr(manager, 'init_server'): manager.init_server()
+    if options.am:      
+        manager=import_manager ("aggregate",      config.SFA_AGGREGATE_TYPE)
+        if manager and hasattr(manager, 'init_server'): manager.init_server()
     if options.sm:
-        mgr_type = config.SFA_SM_TYPE
-        manager_module = manager_base + ".slice_manager_%s" % mgr_type
-        init_manager(manager_module, manager_base)    
+        manager=import_manager ("slice",          config.SFA_SM_TYPE)
+        if manager and hasattr(manager, 'init_server'): manager.init_server()
     if options.cm:
-        mgr_type = config.SFA_CM_TYPE
-        manager_module = manager_base + ".component_manager_%s" % mgr_type
-        init_manager(manager_module, manager_base)    
+        manager=import_manager ("component",      config.SFA_CM_TYPE)
+        if manager and hasattr(manager, 'init_server'): manager.init_server()
 
-def sync_interfaces(server_key_file, server_cert_file):
+
+def install_peer_certs(server_key_file, server_cert_file):
     """
     Attempt to install missing trusted gids and db records for 
     our federated interfaces
     """
+    # Attempt to get any missing peer gids
+    # There should be a gid file in /etc/sfa/trusted_roots for every
+    # peer registry found in in the registries.xml config file. If there
+    # are any missing gids, request a new one from the peer registry.
     api = SfaAPI(key_file = server_key_file, cert_file = server_cert_file)
-    registries = Registries(api)
-    aggregates = Aggregates(api)
-    registries.sync_interfaces()
-    aggregates.sync_interfaces()
+    registries = Registries()
+    aggregates = Aggregates()
+    interfaces = dict(registries.items() + aggregates.items())
+    gids_current = api.auth.trusted_cert_list
+    hrns_current = [gid.get_hrn() for gid in gids_current]
+    hrns_expected = set([hrn for hrn in interfaces])
+    new_hrns = set(hrns_expected).difference(hrns_current)
+    #gids = self.get_peer_gids(new_hrns) + gids_current
+    peer_gids = []
+    if not new_hrns:
+        return 
 
+    trusted_certs_dir = api.config.get_trustedroots_dir()
+    for new_hrn in new_hrns:
+        if not new_hrn: continue
+        # the gid for this interface should already be installed
+        if new_hrn == api.config.SFA_INTERFACE_HRN: continue
+        try:
+            # get gid from the registry
+            url = interfaces[new_hrn].get_url()
+            interface = interfaces[new_hrn].get_server(server_key_file, server_cert_file, timeout=30)
+            # skip non sfa aggregates
+            server_version = api.get_cached_server_version(interface)
+            if 'sfa' not in server_version:
+                logger.info("get_trusted_certs: skipping non sfa aggregate: %s" % new_hrn)
+                continue
+      
+            trusted_gids = interface.get_trusted_certs()
+            if trusted_gids:
+                # the gid we want should be the first one in the list,
+                # but lets make sure
+                for trusted_gid in trusted_gids:
+                    # default message
+                    message = "interface: %s\t" % (api.interface)
+                    message += "unable to install trusted gid for %s" % \
+                               (new_hrn)
+                    gid = GID(string=trusted_gids[0])
+                    peer_gids.append(gid)
+                    if gid.get_hrn() == new_hrn:
+                        gid_filename = os.path.join(trusted_certs_dir, '%s.gid' % new_hrn)
+                        gid.save_to_file(gid_filename, save_parents=True)
+                        message = "installed trusted cert for %s" % new_hrn
+                    # log the message
+                    api.logger.info(message)
+        except:
+            message = "interface: %s\tunable to install trusted gid for %s" % \
+                        (api.interface, new_hrn)
+            api.logger.log_exc(message)
+    # doesnt matter witch one
+    update_cert_records(peer_gids)
+
+def update_cert_records(gids):
+    """
+    Make sure there is a record in the registry for the specified gids. 
+    Removes old records from the db.
+    """
+    # import SfaTable here so this module can be loaded by ComponentAPI
+    from sfa.util.table import SfaTable
+    from sfa.util.record import SfaRecord
+    if not gids:
+        return
+    table = SfaTable()
+    # get records that actually exist in the db
+    gid_urns = [gid.get_urn() for gid in gids]
+    hrns_expected = [gid.get_hrn() for gid in gids]
+    records_found = table.find({'hrn': hrns_expected, 'pointer': -1}) 
+
+    # remove old records
+    for record in records_found:
+        if record['hrn'] not in hrns_expected and \
+            record['hrn'] != self.api.config.SFA_INTERFACE_HRN:
+            table.remove(record)
+
+    # TODO: store urn in the db so we do this in 1 query 
+    for gid in gids:
+        hrn, type = gid.get_hrn(), gid.get_type()
+        record = table.find({'hrn': hrn, 'type': type, 'pointer': -1})
+        if not record:
+            record = {
+                'hrn': hrn, 'type': type, 'pointer': -1,
+                'authority': get_authority(hrn),
+                'gid': gid.save_to_string(save_parents=True),
+            }
+            record = SfaRecord(dict=record)
+            table.insert(record)
+        
 def main():
     # Generate command line parser
     parser = OptionParser(usage="sfa-server [options]")
@@ -182,24 +265,28 @@ def main():
          help="run aggregate manager", default=False)
     parser.add_option("-c", "--component", dest="cm", action="store_true",
          help="run component server", default=False)
+    parser.add_option("-t", "--trusted-certs", dest="trusted_certs", action="store_true",
+         help="refresh trusted certs", default=False)
     parser.add_option("-v", "--verbose", action="count", dest="verbose", default=0,
          help="verbose mode - cumulative")
     parser.add_option("-d", "--daemon", dest="daemon", action="store_true",
          help="Run as daemon.", default=False)
     (options, args) = parser.parse_args()
-    sfa_logger().setLevelFromOptVerbose(options.verbose)
-
+    
     config = Config()
-    if config.SFA_API_DEBUG: sfa_logger().setLevelDebug()
+    if config.SFA_API_DEBUG: pass
     hierarchy = Hierarchy()
     server_key_file = os.path.join(hierarchy.basedir, "server.key")
     server_cert_file = os.path.join(hierarchy.basedir, "server.cert")
 
     init_server_key(server_key_file, server_cert_file, config, hierarchy)
     init_server(options, config)
-    sync_interfaces(server_key_file, server_cert_file)   
  
     if (options.daemon):  daemon()
+    
+    if options.trusted_certs:
+        install_peer_certs(server_key_file, server_cert_file)   
+    
     # start registry server
     if (options.registry):
         from sfa.server.registry import Registry
@@ -227,4 +314,4 @@ if __name__ == "__main__":
     try:
         main()
     except:
-        sfa_logger().log_exc_critical("SFA server is exiting")
+        logger.log_exc_critical("SFA server is exiting")

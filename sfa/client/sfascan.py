@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 import sys
 import socket
@@ -10,7 +10,7 @@ import pygraphviz
 from optparse import OptionParser
 
 from sfa.client.sfi import Sfi
-from sfa.util.sfalogging import sfa_logger,sfa_logger_goes_to_console
+from sfa.util.sfalogging import logger, DEBUG
 import sfa.util.xmlrpcprotocol as xmlrpcprotocol
 
 def url_hostname_port (url):
@@ -38,7 +38,6 @@ class Interface:
             self.ip=socket.gethostbyname(self.hostname)
             self.probed=False
         except:
-#            traceback.print_exc()
             self.hostname="unknown"
             self.ip='0.0.0.0'
             self.port="???"
@@ -62,17 +61,18 @@ class Interface:
             pass
         options=DummyOptions()
         options.verbose=False
+        options.timeout=10
         try:
             client=Sfi(options)
             client.read_config()
             key_file = client.get_key_file()
             cert_file = client.get_cert_file(key_file)
             url=self.url()
-            sfa_logger().info('issuing get version at %s'%url)
-            server=xmlrpcprotocol.get_server(url, key_file, cert_file, options)
+            logger.info('issuing get version at %s'%url)
+            logger.debug("GetVersion, using timeout=%d"%options.timeout)
+            server=xmlrpcprotocol.get_server(url, key_file, cert_file, timeout=options.timeout, verbose=options.verbose)
             self._version=server.GetVersion()
         except:
-#            traceback.print_exc()
             self._version={}
         self.probed=True
         return self._version
@@ -82,7 +82,6 @@ class Interface:
         result='<<TABLE BORDER="0" CELLBORDER="0"><TR><TD>' + \
             '</TD></TR><TR><TD>'.join(lines) + \
             '</TD></TR></TABLE>>'
-#        print 'multilines=',result
         return result
 
     # default is for when we can't determine the type of the service
@@ -158,17 +157,17 @@ class SfaScan:
                 # performing xmlrpc call
                 version=interface.get_version()
                 if self.verbose:
-                    sfa_logger().info("GetVersion at interface %s"%interface.url())
+                    logger.info("GetVersion at interface %s"%interface.url())
                     if not version:
-                        sfa_logger().info("<EMPTY GetVersion(); offline or cannot authenticate>")
+                        logger.info("<EMPTY GetVersion(); offline or cannot authenticate>")
                     else: 
                         for (k,v) in version.iteritems(): 
                             if not isinstance(v,dict):
-                                sfa_logger().info("\r\t%s:%s"%(k,v))
+                                logger.info("\r\t%s:%s"%(k,v))
                             else:
-                                sfa_logger().info(k)
+                                logger.info(k)
                                 for (k1,v1) in v.iteritems():
-                                    sfa_logger().info("\r\t\t%s:%s"%(k1,v1))
+                                    logger.info("\r\t\t%s:%s"%(k1,v1))
                 # 'geni_api' is expected if the call succeeded at all
                 # 'peers' is needed as well as AMs typically don't have peers
                 if 'geni_api' in version and 'peers' in version: 
@@ -195,13 +194,12 @@ class SfaScan:
                     for (k,v) in interface.get_layout().iteritems():
                         node.attr[k]=v
                 else:
-                    sfa_logger().error("MISSED interface with node %s"%node)
+                    logger.error("MISSED interface with node %s"%node)
     
 
 default_outfiles=['sfa.png','sfa.svg','sfa.dot']
 
 def main():
-    sfa_logger_goes_to_console()
     usage="%prog [options] url-entry-point(s)"
     parser=OptionParser(usage=usage)
     parser.add_option("-o","--output",action='append',dest='outfiles',default=[],
@@ -210,21 +208,27 @@ def main():
                       help="instead of top-to-bottom")
     parser.add_option("-v","--verbose",action='store_true',dest='verbose',default=False,
                       help="verbose")
+    parser.add_option("-d","--debug",action='store_true',dest='debug',default=False,
+                      help="debug")
     (options,args)=parser.parse_args()
     if not args:
         parser.print_help()
         sys.exit(1)
     if not options.outfiles:
         options.outfiles=default_outfiles
+    logger.enable_console()
+    if options.debug:
+        options.verbose=True
+        logger.setLevel(DEBUG)
     scanner=SfaScan(left_to_right=options.left_to_right, verbose=options.verbose)
     entries = [ Interface(entry) for entry in args ]
     g=scanner.graph(entries)
-    sfa_logger().info("creating layout")
+    logger.info("creating layout")
     g.layout(prog='dot')
     for outfile in options.outfiles:
-        sfa_logger().info("drawing in %s"%outfile)
+        logger.info("drawing in %s"%outfile)
         g.draw(outfile)
-    sfa_logger().info("done")
+    logger.info("done")
 
 if __name__ == '__main__':
     main()

@@ -1,7 +1,6 @@
 import traceback
 import os.path
 
-from sfa.util.sfalogging import sfa_logger
 from sfa.util.faults import *
 from sfa.util.storage import XmlStorage
 from sfa.util.xrn import get_authority, hrn_to_urn
@@ -17,6 +16,29 @@ except ImportError:
     GeniClientLight = None            
 
 
+
+class Interface:
+    
+    def __init__(self, hrn, addr, port, client_type='sfa'):
+        self.hrn = hrn
+        self.addr = addr
+        self.port = port
+        self.client_type = client_type
+  
+    def get_url(self):
+        address_parts = self.addr.split('/')
+        address_parts[0] = address_parts[0] + ":" + str(self.port)
+        url =  "http://%s" %  "/".join(address_parts)
+        return url
+
+    def get_server(self, key_file, cert_file, timeout=30):
+        server = None 
+        if  self.client_type ==  'geniclientlight' and GeniClientLight:
+            server = GeniClientLight(url, self.api.key_file, self.api.cert_file)
+        else:
+            server = xmlrpcprotocol.get_server(self.get_url(), key_file, cert_file, timeout) 
+ 
+        return server       
 ##
 # In is a dictionary of registry connections keyed on the registry
 # hrn
@@ -24,12 +46,7 @@ except ImportError:
 class Interfaces(dict):
     """
     Interfaces is a base class for managing information on the
-    peers we are federated with. It is responsible for the following:
-
-    1) Makes sure a record exist in the local registry for the each 
-       fedeated peer   
-    2) Attempts to fetch and install trusted gids   
-    3) Provides connections (xmlrpc or soap) to federated peers
+    peers we are federated with. Provides connections (xmlrpc or soap) to federated peers
     """
 
     # fields that must be specified in the config file
@@ -42,165 +59,24 @@ class Interfaces(dict):
     # defined by the class 
     default_dict = {}
 
-    types = ['authority']
-
-    def __init__(self, api, conf_file, type='authority'):
-        if type not in self.types:
-            raise SfaInfaildArgument('Invalid type %s: must be in %s' % (type, self.types))    
+    def __init__(self, conf_file):
         dict.__init__(self, {})
-        self.api = api
-        self.type = type  
         # load config file
         self.interface_info = XmlStorage(conf_file, self.default_dict)
         self.interface_info.load()
-        interfaces = self.interface_info.values()[0].values()[0]
-        if not isinstance(interfaces, list):
-            interfaces = [self.interfaces]
-        # set the url and urn 
-        for interface in interfaces:
+        records = self.interface_info.values()[0]
+        if not isinstance(records, list):
+            records = [records]
+        
+        required_fields = self.default_fields.keys()
+        for record in records:
+            if not record or not set(required_fields).issubset(record.keys()):
+                continue
             # port is appended onto the domain, before the path. Should look like:
             # http://domain:port/path
-            hrn, address, port = interface['hrn'], interface['addr'], interface['port']
-            address_parts = address.split('/')
-            address_parts[0] = address_parts[0] + ":" + str(port)
-            url =  "http://%s" %  "/".join(address_parts)
-            interface['url'] = url
-            interface['urn'] = hrn_to_urn(hrn, 'authority')
-    
-        self.interfaces = {}
-        required_fields = self.default_fields.keys()
-        for interface in interfaces:
-            valid = True
-            # skp any interface definition that has a null hrn, 
-            # address or port
-            for field in required_fields:
-                if field not in interface or not interface[field]:
-                    valid = False
-                    break
-            if valid:     
-                self.interfaces[interface['hrn']] = interface
+            hrn, address, port = record['hrn'], record['addr'], record['port']
+            interface = Interface(hrn, address, port) 
+            self[hrn] = interface
 
-
-    def sync_interfaces(self):
-        """
-        Install missing trusted gids and db records for our federated
-        interfaces
-        """     
-        # Attempt to get any missing peer gids
-        # There should be a gid file in /etc/sfa/trusted_roots for every
-        # peer registry found in in the registries.xml config file. If there
-        # are any missing gids, request a new one from the peer registry.
-        gids_current = self.api.auth.trusted_cert_list
-        hrns_current = [gid.get_hrn() for gid in gids_current] 
-        hrns_expected = self.interfaces.keys() 
-        new_hrns = set(hrns_expected).difference(hrns_current)
-        gids = self.get_peer_gids(new_hrns) + gids_current
-        # make sure there is a record for every gid
-        self.update_db_records(self.type, gids)
-        
-    def get_peer_gids(self, new_hrns):
-        """
-        Install trusted gids from the specified interfaces.  
-        """
-        peer_gids = []
-        if not new_hrns:
-            return peer_gids
-        trusted_certs_dir = self.api.config.get_trustedroots_dir()
-        for new_hrn in new_hrns:
-            if not new_hrn:
-                continue
-            # the gid for this interface should already be installed  
-            if new_hrn == self.api.config.SFA_INTERFACE_HRN:
-                continue
-            try:
-                # get gid from the registry
-                interface_info =  self.interfaces[new_hrn]
-                interface = self[new_hrn]
-                trusted_gids = interface.get_trusted_certs()
-                if trusted_gids:
-                    # the gid we want shoudl be the first one in the list, 
-                    # but lets make sure
-                    for trusted_gid in trusted_gids:
-                        # default message
-                        message = "interface: %s\t" % (self.api.interface)
-                        message += "unable to install trusted gid for %s" % \
-                                   (new_hrn) 
-                        gid = GID(string=trusted_gids[0])
-                        peer_gids.append(gid) 
-                        if gid.get_hrn() == new_hrn:
-                            gid_filename = os.path.join(trusted_certs_dir, '%s.gid' % new_hrn)
-                            gid.save_to_file(gid_filename, save_parents=True)
-                            message = "interface: %s\tinstalled trusted gid for %s" % \
-                                (self.api.interface, new_hrn)
-                        # log the message
-                        self.api.logger.info(message)
-            except:
-                message = "interface: %s\tunable to install trusted gid for %s" % \
-                            (self.api.interface, new_hrn) 
-                self.api.logger.log_exc(message)
-        
-        # reload the trusted certs list
-        self.api.auth.load_trusted_certs()
-        return peer_gids
-
-    def update_db_records(self, type, gids):
-        """
-        Make sure there is a record in the local db for allowed registries
-        defined in the config file (registries.xml). Removes old records from
-        the db.         
-        """
-        # import SfaTable here so this module can be loaded by ComponentAPI 
-        from sfa.util.table import SfaTable
-        if not gids: 
-            return
-        
-        # hrns that should have a record
-        hrns_expected = [gid.get_hrn() for gid in gids]
-
-        # get hrns that actually exist in the db
-        table = SfaTable()
-        records = table.find({'type': type, 'pointer': -1})
-        hrns_found = [record['hrn'] for record in records]
-      
-        # remove old records
-        for record in records:
-            if record['hrn'] not in hrns_expected and \
-                record['hrn'] != self.api.config.SFA_INTERFACE_HRN:
-                table.remove(record)
-
-        # add new records
-        for gid in gids:
-            hrn = gid.get_hrn()
-            if hrn not in hrns_found:
-                record = {
-                    'hrn': hrn,
-                    'type': type,
-                    'pointer': -1, 
-                    'authority': get_authority(hrn),
-                    'gid': gid.save_to_string(save_parents=True),
-                }
-                record = SfaRecord(dict=record)
-                table.insert(record)
-                        
-    def get_connections(self):
-        """
-        read connection details for the trusted peer registries from file return 
-        a dictionary of connections keyed on interface hrn. 
-        """
-        connections = {}
-        required_fields = self.default_fields.keys()
-        for interface in self.interfaces.values():
-            url = interface['url']
-#            sfa_logger().debug("Interfaces.get_connections - looping on neighbour %s"%url)
-            # check which client we should use
-            # sfa.util.xmlrpcprotocol is default
-            client_type = 'xmlrpcprotocol'
-            if interface.has_key('client') and \
-               interface['client'] in ['geniclientlight'] and \
-               GeniClientLight:
-                client_type = 'geniclientlight'
-                connections[hrn] = GeniClientLight(url, self.api.key_file, self.api.cert_file) 
-            else:
-                connections[interface['hrn']] = xmlrpcprotocol.get_server(url, self.api.key_file, self.api.cert_file)
-
-        return connections 
+    def get_server(self, hrn, key_file, cert_file, timeout=30):
+        return self[hrn].get_server(key_file, cert_file, timeout)

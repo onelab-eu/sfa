@@ -1,5 +1,3 @@
-### $Id: resolve.py 17157 2010-02-21 04:19:34Z tmack $
-### $URL: https://svn.planet-lab.org/svn/sfa/trunk/sfa/methods/resolve.py $
 import traceback
 import types
 from sfa.util.faults import *

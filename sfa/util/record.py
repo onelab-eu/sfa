@@ -4,17 +4,14 @@
 # TODO: Use existing PLC database methods? or keep this separate?
 ##
 
-### $Id$
-### $URL$
-
 from types import StringTypes
 
 from sfa.trust.gid import *
 
-from sfa.util.rspec import *
 from sfa.util.parameter import *
 from sfa.util.xrn import get_authority
 from sfa.util.row import Row
+from sfa.util.xml import XML 
 
 class SfaRecord(Row):
     """ 
@@ -208,6 +205,22 @@ class SfaRecord(Row):
         return GID(string=self.gid)
 
     ##
+    # Returns the value of a field
+
+    def get_field(self, fieldname, default=None):
+        # sometimes records act like classes, and sometimes they act like dicts
+        try:
+            return getattr(self, fieldname)
+        except AttributeError:
+            try:
+                 return self[fieldname]
+            except KeyError:
+                 if default != None:
+                     return default
+                 else:
+                     raise
+
+    ##
     # Returns a list of field names in this record. 
 
     def get_field_names(self):
@@ -288,10 +301,9 @@ class SfaRecord(Row):
         """
         recorddict = self.as_dict()
         filteredDict = dict([(key, val) for (key, val) in recorddict.iteritems() if key in self.fields.keys()])
-        record = RecordSpec()
-        record.parseDict(filteredDict)
+        record = XML('<record/>')
+        record.root.attrib.update(filteredDict)
         str = record.toxml()
-        #str = xmlrpclib.dumps((dict,), allow_none=True)
         return str
 
     ##
@@ -305,11 +317,8 @@ class SfaRecord(Row):
         """
         #dict = xmlrpclib.loads(str)[0][0]
         
-        record = RecordSpec()
-        record.parseString(str)
-        record_dict = record.toDict()
-        sfa_dict = record_dict['record']
-        self.load_from_dict(sfa_dict)
+        record = XML(str)
+        self.load_from_dict(record.todict())
 
     ##
     # Dump the record to stdout

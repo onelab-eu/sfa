@@ -1,5 +1,7 @@
 start = RSpec
 RSpec = element RSpec { 
+   attribute expires { xsd:NMTOKEN },
+   attribute generated { xsd:NMTOKEN },
    attribute type { xsd:NMTOKEN },
    ( network | request )
 }

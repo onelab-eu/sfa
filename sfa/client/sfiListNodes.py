@@ -2,7 +2,7 @@
 
 import sys
 from sfa.client.sfi_commands import Commands
-from sfa.rspecs.rspec_parser import parse_rspec 
+from sfa.rspecs.rspec import RSpec 
 
 command = Commands(usage="%prog [options]",
                    description="List all nodes in the RSpec. " + 
@@ -11,8 +11,8 @@ command = Commands(usage="%prog [options]",
 command.prep()
 
 if command.opts.infile:
-    rspec = parse_rspec(command.opts.infile)
-    nodes = rspec.get_nodes()
+    rspec = RSpec(command.opts.infile)
+    nodes = rspec.version.get_nodes()
     if command.opts.outfile:
         sys.stdout = open(command.opts.outfile, 'w')
     

@@ -1,5 +1,3 @@
-### $Id: get_ticket.py 17732 2010-04-19 21:10:45Z tmack $
-### $URL: https://svn.planet-lab.org/svn/sfa/trunk/sfa/methods/get_ticket.py $
 import time
 from sfa.util.faults import *
 from sfa.util.xrn import urn_to_hrn

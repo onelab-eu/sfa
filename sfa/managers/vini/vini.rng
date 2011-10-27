@@ -5,6 +5,12 @@
   </start>
   <define name="RSpec">
     <element name="RSpec">
+      <attribute name="expires">
+        <data type="NMTOKEN"/>
+      </attribute>
+      <attribute name="generated">
+        <data type="NMTOKEN"/>
+      </attribute>
       <attribute name="type">
         <data type="NMTOKEN"/>
       </attribute>

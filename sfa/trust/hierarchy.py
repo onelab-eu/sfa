@@ -15,7 +15,7 @@
 import os
 
 from sfa.util.faults import *
-from sfa.util.sfalogging import sfa_logger
+from sfa.util.sfalogging import logger
 from sfa.util.xrn import get_leaf, get_authority, hrn_to_urn, urn_to_hrn
 from sfa.trust.certificate import Keypair
 from sfa.trust.credential import Credential
@@ -33,7 +33,6 @@ class AuthInfo:
     gid_filename = None
     privkey_filename = None
     dbinfo_filename = None
-
     ##
     # Initialize and authority object.
     #
@@ -159,7 +158,7 @@ class Hierarchy:
 
     def create_auth(self, xrn, create_parents=False):
         hrn, type = urn_to_hrn(xrn)
-        sfa_logger().debug("Hierarchy: creating authority: %s"% hrn)
+        logger.debug("Hierarchy: creating authority: %s"% hrn)
 
         # create the parent authority if necessary
         parent_hrn = get_authority(hrn)
@@ -179,7 +178,7 @@ class Hierarchy:
                 pass
 
         if os.path.exists(privkey_filename):
-            sfa_logger().debug("using existing key %r for authority %r"%(privkey_filename,hrn))
+            logger.debug("using existing key %r for authority %r"%(privkey_filename,hrn))
             pkey = Keypair(filename = privkey_filename)
         else:
             pkey = Keypair(create = True)
@@ -205,7 +204,7 @@ class Hierarchy:
     def get_auth_info(self, xrn):
         hrn, type = urn_to_hrn(xrn)
         if not self.auth_exists(hrn):
-            sfa_logger().warning("Hierarchy: mising authority - xrn=%s, hrn=%s"%(xrn,hrn))
+            logger.warning("Hierarchy: mising authority - xrn=%s, hrn=%s"%(xrn,hrn))
             raise MissingAuthority(hrn)
 
         (directory, gid_filename, privkey_filename, dbinfo_filename) = \
@@ -230,15 +229,28 @@ class Hierarchy:
     # @param uuid the unique identifier to store in the GID
     # @param pkey the public key to store in the GID
 
-    def create_gid(self, xrn, uuid, pkey):
+    def create_gid(self, xrn, uuid, pkey, CA=False):
         hrn, type = urn_to_hrn(xrn)
+        parent_hrn = get_authority(hrn)
         # Using hrn_to_urn() here to make sure the urn is in the right format
         # If xrn was a hrn instead of a urn, then the gid's urn will be
         # of type None 
         urn = hrn_to_urn(hrn, type)
         gid = GID(subject=hrn, uuid=uuid, hrn=hrn, urn=urn)
 
-        parent_hrn = get_authority(hrn)
+        # is this a CA cert
+        if hrn == self.config.SFA_INTERFACE_HRN or not parent_hrn:
+            # root or sub authority  
+            gid.set_intermediate_ca(True)
+        elif type and 'authority' in type:
+            # authority type
+            gid.set_intermediate_ca(True)
+        elif CA:
+            gid.set_intermediate_ca(True)
+        else:
+            gid.set_intermediate_ca(False)
+
+        # set issuer
         if not parent_hrn or hrn == self.config.SFA_INTERFACE_HRN:
             # if there is no parent hrn, then it must be self-signed. this
             # is where we terminate the recursion
@@ -248,7 +260,6 @@ class Hierarchy:
             parent_auth_info = self.get_auth_info(parent_hrn)
             gid.set_issuer(parent_auth_info.get_pkey_object(), parent_auth_info.hrn)
             gid.set_parent(parent_auth_info.get_gid_object())
-            gid.set_intermediate_ca(True)
 
         gid.set_pubkey(pkey)
         gid.encode()

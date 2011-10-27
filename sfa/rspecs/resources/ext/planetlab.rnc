@@ -1,0 +1,13 @@
+#
+## Extension for the "initscript" type for RSpecV2 on PlanetLab
+## Version 1
+##
+
+default namespace = "http://www.planet-lab.org/resources/ext/initscript/1"
+
+Node = element initscript {
+   attribute name { text }
+}
+
+start = Node
+

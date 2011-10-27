@@ -270,6 +270,30 @@ class InvalidRSpec(SfaFault):
     def __str__(self):
         return repr(self.value)
 
+class InvalidRSpecElement(SfaFault):
+    def __init__(self, value, extra = None):
+        self.value = value
+        faultString = "Invalid RSpec Element: %(value)s" % locals()
+        SfaFault.__init__(self, 108, faultString, extra)
+    def __str__(self):
+        return repr(self.value)
+
+class InvalidXML(SfaFault):
+    def __init__(self, value, extra = None):
+        self.value = value
+        faultString = "Invalid XML Document: %(value)s" % locals()
+        SfaFault.__init__(self, 108, faultString, extra)
+    def __str__(self):
+        return repr(self.value)
+
+class InvalidXMLElement(SfaFault):
+    def __init__(self, value, extra = None):
+        self.value = value
+        faultString = "Invalid XML Element: %(value)s" % locals()
+        SfaFault.__init__(self, 108, faultString, extra)
+    def __str__(self):
+        return repr(self.value)
+
 class AccountNotEnabled(SfaFault):
     def __init__(self,  extra = None):
         faultString = "Account Disabled"

@@ -1,8 +1,4 @@
 #!/usr/bin/python
-
-# $Id: topology.py 14181 2009-07-01 19:46:07Z acb $
-# $URL: https://svn.planet-lab.org/svn/NodeManager-topo/trunk/topology.py $
-
 #
 # Links in the physical topology, gleaned from looking at the Internet2
 # topology map.  Link (a, b) connects sites with IDs a and b.

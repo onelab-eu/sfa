@@ -14,9 +14,6 @@
 # Note that SFA does not access any of the PLC databases directly via
 # a mysql connection; All PLC databases are accessed via PLCAPI.
 
-### $Id$
-### $URL$
-
 import os.path
 import traceback
 
@@ -68,6 +65,9 @@ class Config:
 
             if not hasattr(self, 'SFA_CM_TYPE'):
                 self.SFA_COMPONENT_TYPE='pl'
+
+            if not hasattr(self, 'SFA_MAX_SLICE_RENEW'):
+                self.SFA_MAX_SLICE_RENEW=60
 
             # create the data directory if it doesnt exist
             if not os.path.isdir(self.SFA_DATA_DIR):

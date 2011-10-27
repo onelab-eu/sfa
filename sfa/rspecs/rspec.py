@@ -1,164 +1,118 @@
 #!/usr/bin/python 
-from lxml import etree
-from StringIO import StringIO
 from datetime import datetime, timedelta
+from sfa.util.xml import XML, XpathFilter
+from sfa.rspecs.version_manager import VersionManager
 from sfa.util.xrn import *
 from sfa.util.plxrn import hostname_to_urn
-from sfa.util.faults import SfaNotImplemented, InvalidRSpec
+from sfa.rspecs.rspec_elements import RSpecElement, RSpecElements 
+from sfa.util.faults import SfaNotImplemented, InvalidRSpec, InvalidRSpecElement
 
 class RSpec:
-    header = '<?xml version="1.0"?>\n'
-    template = """<RSpec></RSpec>"""
-    xml = None
-    type = None
-    version = None
-    namespaces = None
-    user_options = {}
-  
-    def __init__(self, rspec="", namespaces={}, type=None, user_options={}):
-        self.type = type
+ 
+    def __init__(self, rspec="", version=None, user_options={}):
+        self.header = '<?xml version="1.0"?>\n'
+        self.template = """<RSpec></RSpec>"""
+        self.version = None
+        self.xml = XML()
+        self.version_manager = VersionManager()
         self.user_options = user_options
+        self.elements = {}
         if rspec:
-            self.parse_rspec(rspec, namespaces)
+            self.parse_xml(rspec)
         else:
-            self.create()
+            self.create(version)
 
-    def create(self):
+    def create(self, version=None):
         """
         Create root element
         """
+        self.version = self.version_manager.get_version(version)
+        self.namespaces = self.version.namespaces
+        self.parse_xml(self.version.template) 
         # eg. 2011-03-23T19:53:28Z 
         date_format = '%Y-%m-%dT%H:%M:%SZ'
         now = datetime.utcnow()
         generated_ts = now.strftime(date_format)
         expires_ts = (now + timedelta(hours=1)).strftime(date_format) 
-        self.parse_rspec(self.template, self.namespaces)
         self.xml.set('expires', expires_ts)
         self.xml.set('generated', generated_ts)
+
+
+    def parse_xml(self, xml):
+        self.xml.parse_xml(xml)
+        self.version = None
+        if self.xml.schema:
+            self.version = self.version_manager.get_version_by_schema(self.xml.schema)
+        else:
+            #raise InvalidRSpec('unknown rspec schema: %s' % schema)
+            # TODO: Should start raising an exception once SFA defines a schema.
+            # for now we just use the default  
+            self.version = self.version_manager.get_version()
+        self.version.xml = self.xml    
+        self.namespaces = self.xml.namespaces
     
-    def parse_rspec(self, rspec, namespaces={}):
-        """
-        parse rspec into etree
-        """
-        parser = etree.XMLParser(remove_blank_text=True)
-        try:
-            tree = etree.parse(rspec, parser)
-        except IOError:
-            # 'rspec' file doesnt exist. 'rspec' is proably an xml string
-            try:
-                tree = etree.parse(StringIO(rspec), parser)
-            except:
-                raise InvalidRSpec('Must specify a xml file or xml string. Received: ' + rspec )
-        self.xml = tree.getroot()  
-        if namespaces:
-           self.namespaces = namespaces
+    def load_rspec_elements(self, rspec_elements):
+        self.elements = {}
+        for rspec_element in rspec_elements:
+            if isinstance(rspec_element, RSpecElement):
+                self.elements[rspec_element.type] = rspec_element
 
-    def xpath(self, xpath):
-        return this.xml.xpath(xpath, namespaces=self.namespaces)
+    def register_rspec_element(self, element_type, element_name, element_path):
+        if element_type not in RSpecElements:
+            raise InvalidRSpecElement(element_type, extra="no such element type: %s. Must specify a valid RSpecElement" % element_type)
+        self.elements[element_type] = RSpecElement(element_type, element_name, element_path)
 
-    def add_attribute(self, elem, name, value):
-        """
-        Add attribute to specified etree element    
-        """
-        opt = etree.SubElement(elem, name)
-        opt.text = value
+    def get_rspec_element(self, element_type):
+        if element_type not in self.elements:
+            msg = "ElementType %s not registerd for this rspec" % element_type
+            raise InvalidRSpecElement(element_type, extra=msg)
+        return self.elements[element_type]
 
-    def add_element(self, name, attrs={}, parent=None, text=""):
-        """
-        Generic wrapper around etree.SubElement(). Adds an element to 
-        specified parent node. Adds element to root node is parent is 
-        not specified. 
-        """
-        if parent == None:
-            parent = self.xml
-        element = etree.SubElement(parent, name)
-        if text:
-            element.text = text
-        if isinstance(attrs, dict):
-            for attr in attrs:
-                element.set(attr, attrs[attr])  
-        return element
+    def get(self, element_type, filter={}, depth=0):
+        elements = self.get_elements(element_type, filter)
+        elements = [self.get_element_attributes(element, depth=depth) for element in elements]
+        return elements
 
-    def remove_attribute(self, elem, name, value):
+    def get_elements(self, element_type, filter={}):
         """
-        Removes an attribute from an element
+        search for a registered element
         """
-        if elem is not None:
-            opts = elem.iterfind(name)
-            if opts is not None:
-                for opt in opts:
-                    if opt.text == value:
-                        elem.remove(opt)
-
-    def remove_element(self, element_name, root_node = None):
-        """
-        Removes all occurences of an element from the tree. Start at 
-        specified root_node if specified, otherwise start at tree's root.   
-        """
-        if not root_node:
-            root_node = self.xml
-
-        if not element_name.startswith('//'):
-            element_name = '//' + element_name
-
-        elements = root_node.xpath('%s ' % element_name, namespaces=self.namespaces)
-        for element in elements:
-            parent = element.getparent()
-            parent.remove(element)
-         
+        if element_type not in self.elements:
+            msg = "Unable to search for element %s in rspec, expath expression not found." % \
+                   element_type
+            raise InvalidRSpecElement(element_type, extra=msg)
+        rspec_element = self.get_rspec_element(element_type)
+        xpath = rspec_element.path + XpathFilter.xpath(filter)
+        return self.xpath(xpath)
 
     def merge(self, in_rspec):
-        pass
+        self.version.merge(in_rspec)
 
-    def validate(self, schema):
-        """
-        Validate against rng schema
-        """
+    def filter(self, filter):
+        if 'component_manager_id' in filter:    
+            nodes = self.version.get_node_elements()
+            for node in nodes:
+                if 'component_manager_id' not in node.attrib or \
+                  node.attrib['component_manager_id'] != filter['component_manager_id']:
+                    parent = node.getparent()
+                    parent.remove(node) 
         
-        relaxng_doc = etree.parse(schema)
-        relaxng = etree.RelaxNG(relaxng_doc)
-        if not relaxng(self.xml):
-            error = relaxng.error_log.last_error
-            message = "%s (line %s)" % (error.message, error.line)
-            raise InvalidRSpec(message)
-        return True
-        
-    def cleanup(self):
-        """
-        Optional method which inheriting classes can choose to implent. 
-        """
-        pass 
 
-    def _process_slivers(self, slivers):
-        """
-        Creates a dict of sliver details for each sliver host
-        
-        @param slivers a single hostname, list of hostanmes or list of dicts keys on hostname,
-        Returns a list of dicts 
-        """
-        if not isinstance(slivers, list):
-            slivers = [slivers]
-        dicts = []
-        for sliver in slivers:
-            if isinstance(sliver, dict):
-                dicts.append(sliver)
-            elif isinstance(sliver, basestring):
-                dicts.append({'hostname': sliver}) 
-        return dicts
+    def toxml(self, header=True):
+        if header:
+            return self.header + self.xml.toxml()
+        else:
+            return self.xml.toxml()
+    
 
-    def __str__(self):
-        return self.toxml()
-
-    def toxml(self, cleanup=False):
-        if cleanup:
-            self.cleanup()
-        return self.header + etree.tostring(self.xml, pretty_print=True)  
-        
     def save(self, filename):
-        f = open(filename, 'w')
-        f.write(self.toxml())
-        f.close()
- 
+        return self.xml.save(filename)
+         
 if __name__ == '__main__':
-    rspec = RSpec()
+    rspec = RSpec('/tmp/resources.rspec')
     print rspec
+    rspec.register_rspec_element(RSpecElements.NETWORK, 'network', '//network')
+    rspec.register_rspec_element(RSpecElements.NODE, 'node', '//node')
+    print rspec.get(RSpecElements.NODE)[0]
+    print rspec.get(RSpecElements.NODE, depth=1)[0]
+

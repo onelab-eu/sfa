@@ -37,6 +37,11 @@ class CreateSliver(Method):
         valid_creds = self.api.auth.checkCredentials(creds, 'createsliver', hrn)
         origin_hrn = Credential(string=valid_creds[0]).get_gid_caller().get_hrn()
 
+        # make sure users info is specified
+        if not users:
+            msg = "'users' musst be specified and cannot be null. You may need to update your client." 
+            raise SfaInvalidArgument(name='users', extra=msg)  
+
         manager = self.api.get_interface_manager()
         
         # flter rspec through sfatables

@@ -1,6 +1,6 @@
 %define name sfa
 %define version 1.0
-%define taglevel 25
+%define taglevel 36
 
 %define release %{taglevel}%{?pldistro:.%{pldistro}}%{?date:.%{date}}
 %global python_sitearch	%( python -c "from distutils.sysconfig import get_python_lib; print get_python_lib(1)" )
@@ -46,13 +46,13 @@ Requires: python-dateutil
 #%endif
 
 %package cm
-Summary: the SFA wrapper around MyPLC NodeManager
+Summary: the SFA layer around MyPLC NodeManager
 Group: Applications/System
 Requires: sfa
 Requires: pyOpenSSL >= 0.6
 
 %package plc
-Summary: the SFA wrapper arounf MyPLC
+Summary: the SFA layer around MyPLC
 Group: Applications/System
 Requires: sfa
 Requires: python-psycopg2
@@ -193,10 +193,77 @@ if [ "$1" = 0 ] ; then
 fi
 
 %postun cm
-[ "$1" -ge "1" ] && service sfa-cm restart
-
+[ "$1" -ge "1" ] && service sfa-cm restart || :
 
 %changelog
+* Thu Sep 15 2011 Tony Mack <tmack@cs.princeton.edu> - sfa-1.0-36
+- Unicode-friendliness for user names with accents/special chars.
+- Fix bug that could cause create the client to fail when calling CreateSliver for a slice that has the same hrn as a user.
+- CreaetSliver no longer fails for users that have a capital letter in their URN.
+- Fix bug in CreateSliver that generated incorrect login bases and email addresses for ProtoGENI requests. 
+- Allow files with .gid, .pem or .crt extension to be loaded into the server's list of trusted certs.
+- Fix bugs and missing imports     
+ 
+
+* Tue Aug 30 2011 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-1.0-35
+- new method record.get_field for sface
+
+* Mon Aug 29 2011 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-1.0-34
+- new option -c to sfa-nuke-plc.py
+- CreateSliver fixed for admin-only slice tags
+
+* Wed Aug 24 2011 Tony Mack <tmack@cs.princeton.edu> - sfa-1.0-32
+- Fixed exploit that allowed an authorities to issue certs for objects that dont belong to them.
+- Fixed holes in certificate verification logic.
+- Aggregates no longer try to lookup slice and person records when processing CreateSliver requests. Clients are now required to specify this info in the 'users' argument. 
+- Added 'boot_state' as an attribute of the node element in SFA rspec.
+- Non authority certificates are marked as CA:FALSE.
+
+* Tue Aug 16 2011 Tony Mack <tmack@cs.princeton.edu> - sfa-1.0-32
+- fix typo in sfa-1.0-31 tag.
+- added CreateGid() Registry interface method.
+
+* Tue Aug 16 2011 Tony Mack <tmack@cs.princeton.edu> - sfa-1.0-31
+- fix typo in sfa-1.0-30 tag
+
+* Tue Aug 16 2011 Tony Mack <tmack@cs.princeton.edu> - sfa-1.0-30
+- Declare namespace and schema location in the credential.
+- Fix bug that prevetend connections from timing out.
+- Fix slice delegation.
+- Add statistics to slicemaanger listresources/createsliver rspec.
+- Added SFA_MAX_SLICE_RENEW which allows operators to configure the max ammout
+  of days a user can extend their slice expiration.
+- CA certs are only issued to objects of type authority
+   
+* Fri Aug 05 2011 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-1.0-29
+- tag 1.0-28 was broken due to typo in the changelog
+- new class sfa/util/httpsProtocol.py that supports timeouts
+
+* Thu Aug 4 2011 Tony Mack <tmack@cs.princeton.edu> - sfa-1.0-28
+- Resolved issue that caused sfa hold onto idle db connections.
+- Fix bug that caused the registry to use the wrong type of credential.
+- Support authority+sm type.
+- Fix rspec merging bugs.
+- Only load certs that have .gid extension from /etc/sfa/trusted_roots/
+- Created a 'planetlab' extension to the ProtoGENI v2 rspec for supporting 
+ planetlab hosted initscripts using the <planetlab:initscript> tag  
+- Can now handle extraneous whitespace in the rspec without failing.   
+ 
+* Fri Jul 8 2011 Tony Mack <tmack@cs.princeton.edu> - sfa-1.0-27
+- ProtoGENI v2 RSpec updates.
+- Convert expiration timestamps with timezone info in credentials to utc.
+- Fixed redundant logging issue. 
+- Improved SliceManager and SFI client logging.
+- Support aggregates that don't support the optional 'call_id' argument. 
+- Only call get_trusted_certs() at aggreage interfaces that support the call.
+- CreateSliver() now handles MyPLC slice attributes/tags.
+- Cache now supports persistence.
+- Hide whitelisted nodes.
+
+* Tue Jun 21 2011 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-1.0-26
+- fixed issues with sup authority signing
+- fixed bugs in remove_slivers and SliverStatus
+
 * Thu Jun 16 2011 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-1.0-25
 - fix typo that prevented aggregates from operating properly
 
@@ -334,111 +401,6 @@ fi
 - (Enhancement) Simplified caching. Accociated a global cache instance with
   the api handler on every new server request, making it easier to access the 
   cache and use in more general ways.     
-
-%changelog
-* Thu Jun 16 2011 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-1.0-25
-- fix typo that prevented aggregates from operating properly
-
-* Tue Jun 14 2011 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-1.0-24
-- load trusted certs into ssl context prior to handshake
-- client's logfile lives in ~/.sfi/sfi.log
-
-* Fri Jun 10 2011 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-1.0-23
-- includes a change on passphrases that was intended in 1.0-22
-
-* Wed Mar 16 2011 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-1.0-21
-- stable sfascan
-- fix in initscript, *ENABLED tags in config now taken into account
-
-* Fri Mar 11 2011 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-1.0-20
-- some commits had not been pushed in tag 19
-
-* Fri Mar 11 2011 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-1.0-19
-- GetVersion should now report full URLs with path
-- scansfa has nicer output and new syntax (entry URLs as args and not options)
-- dos2unix'ed flash policy pill
-
-* Wed Mar 09 2011 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-1.0-18
-- fix packaging again for f8
-
-* Wed Mar 09 2011 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-1.0-17
-- fix packaging (apparently broken in 1.0-16)
-- first working version of sfascan
-- tweaks in GetVersion for exposing hrn(AM) and full set of aggregates(SM)
-- deprecated the sfa_geni_aggregate config category
-
-* Tue Mar 08 2011 Andy Bavier <acb@cs.princeton.edu> - sfa-1.0-16
-- Fix build problem
-- First version of SFA scanner
-
-* Mon Mar 07 2011 Andy Bavier <acb@cs.princeton.edu> - sfa-1.0-15
-- Add support for Flash clients using flashpolicy
-- Fix problems with tag handling in RSpec
-
-* Wed Mar 02 2011 Andy Bavier <acb@cs.princeton.edu> - sfa-1.0-14
-- Modifications to the Eucalyptus Aggregate Manager
-- Fixes for VINI RSpec
-- Fix tag handling for PL RSpec
-- Fix XML Schema ordering for <urn> element
-
-* Tue Feb 01 2011 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-1.0-13
-- just set x509 version to 2
-
-* Wed Jan 26 2011 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-1.0-12
-- added urn to the node area in rspecs
-- conversion to urn now exports fqdn
-- sfa-import-plc.py now creates a unique registry record for each SFA interface
-
-* Thu Dec 16 2010 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-1.0-11
-- undo broken attempt for python-2.7
-
-* Wed Dec 15 2010 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-1.0-10
-- SMs avoid duplicates for when call graph has dags;
-- just based on network's name, when a duplicate occurs, one is just dropped
-- does not try to merge/aggregate 2 networks
-- also reviewed logging with the hope to fix the sfa startup msg:
-- TypeError: not all arguments converted during string formatting
-
-* Tue Dec 07 2010 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-1.0-9
-- verify credentials against xsd schema
-- Fix SM to SM communication
-- Fix bug in sfa.util.sfalogging, sfa-import.py now logs to sfa_import.log
-- new setting session_key_path
-
-* Tue Nov 09 2010 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-1.0-8
-- fix registry credential regeneration and handle expiration
-- support for setting slice tags (min_role=user)
-- client can display its own version: sfi.py version --local
-- GetVersion to provide urn in addition to hrn
-- more code uses plxrn vs previous helper functions
-- import replaces '+' in email addresses with '_'
-
-* Fri Oct 22 2010 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-1.0-7
-- fix GetVersion code_tag and add code_url
-
-* Fri Oct 22 2010 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-1.0-6
-- extend GetVersion towards minimum federation introspection, and expose local tag
-
-* Wed Oct 20 2010 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-1.0-5
-- fixed some legacy issues (list vs List)
-- deprecated sfa.util.namespace for xrn and plxrn
-- unit tests ship as the sfa-tests rpm
-
-* Mon Oct 11 2010 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-1.0-2
-- deprecated old methods (e.g. List/list, and GetCredential/get_credential)
-- NOTE:  get_(self_)credential both have type and hrn swapped when moving to Get(Self)Credential
-- hrn-urn translations tweaked
-- fixed 'service sfa status'
-- sfa-nuke-plc has a -f/--file-system option to clean up /var/lib/authorities (exp.)
-- started to repair sfadump - although not usable yet
-- trust objects now have dump_string method that dump() actually prints
-- unit tests under review
-- logging cleanup ongoing (always safe to use sfalogging.sfa_logger())
-- binaries now support -v or -vv to increase loglevel
-- trashed obsolete sfa.util.client
-
-* Mon Oct 04 2010 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-1.0-1
-- various bugfixes and cleanup, improved/harmonized logging
 
 * Thu May 11 2010 Tony Mack <tmack@cs.princeton.edu> - sfa-0.9-11
 - SfaServer now uses a pool of threads to handle requests concurrently

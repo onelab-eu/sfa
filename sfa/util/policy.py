@@ -1,6 +1,3 @@
-### $Id$
-### $URL$
-
 import os
 
 from sfa.util.storage import *

@@ -5,15 +5,23 @@
   </start>
   <define name="RSpec">
     <element name="RSpec">
+      <attribute name="expires">
+        <data type="NMTOKEN"/>
+      </attribute>
+      <attribute name="generated">
+        <data type="NMTOKEN"/>
+      </attribute>
       <attribute name="type">
         <data type="NMTOKEN"/>
       </attribute>
-      <ref name="cloud"/>
+      <oneOrMore>
+        <ref name="network"/>
+      </oneOrMore>
     </element>
   </define>
-  <define name="cloud">
-    <element name="cloud">
-      <attribute name="id">
+  <define name="network">
+    <element name="network">
+      <attribute name="name">
         <data type="NMTOKEN"/>
       </attribute>
       <optional>

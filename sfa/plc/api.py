@@ -12,7 +12,7 @@ import xmlrpclib
 from sfa.util.faults import *
 from sfa.util.api import *
 from sfa.util.config import *
-from sfa.util.sfalogging import sfa_logger
+from sfa.util.sfalogging import logger
 import sfa.util.xmlrpcprotocol as xmlrpcprotocol
 from sfa.trust.auth import Auth
 from sfa.trust.rights import Right, Rights, determine_rights
@@ -106,24 +106,48 @@ class SfaAPI(BaseAPI):
 
         self.hrn = self.config.SFA_INTERFACE_HRN
         self.time_format = "%Y-%m-%d %H:%M:%S"
-        self.logger=sfa_logger()
 
+    
     def getPLCShell(self):
         self.plauth = {'Username': self.config.SFA_PLC_USER,
                        'AuthMethod': 'password',
                        'AuthString': self.config.SFA_PLC_PASSWORD}
-        try:
-            sys.path.append(os.path.dirname(os.path.realpath("/usr/bin/plcsh")))
-            self.plshell_type = 'direct'
-            import PLC.Shell
-            shell = PLC.Shell.Shell(globals = globals())
-        except:
-            self.plshell_type = 'xmlrpc' 
-            url = self.config.SFA_PLC_URL
-            shell = xmlrpclib.Server(url, verbose = 0, allow_none = True)
+
+        # The native shell (PLC.Shell.Shell) is more efficient than xmlrpc,
+        # but it leaves idle db connections open. use xmlrpc until we can figure
+        # out why PLC.Shell.Shell doesn't close db connection properly     
+        #try:
+        #    sys.path.append(os.path.dirname(os.path.realpath("/usr/bin/plcsh")))
+        #    self.plshell_type = 'direct'
+        #    import PLC.Shell
+        #    shell = PLC.Shell.Shell(globals = globals())
+        #except:
         
+        self.plshell_type = 'xmlrpc' 
+        url = self.config.SFA_PLC_URL
+        shell = xmlrpclib.Server(url, verbose = 0, allow_none = True)
         return shell
 
+    def get_server(self, interface, cred, timeout=30):
+        """
+        Returns a connection to the specified interface. Use the specified
+        credential to determine the caller and look for the caller's key/cert 
+        in the registry hierarchy cache. 
+        """       
+        from sfa.trust.hierarchy import Hierarchy
+        if not isinstance(cred, Credential):
+            cred_obj = Credential(string=cred)
+        else:
+            cred_obj = cred
+        caller_gid = cred_obj.get_gid_caller()
+        hierarchy = Hierarchy()
+        auth_info = hierarchy.get_auth_info(caller_gid.get_hrn())
+        key_file = auth_info.get_privkey_filename()
+        cert_file = auth_info.get_gid_filename()
+        server = interface.get_server(key_file, cert_file, timeout)
+        return server
+               
+        
     def getCredential(self):
         """
         Return a valid credential for this interface. 
@@ -137,7 +161,7 @@ class SfaAPI(BaseAPI):
             cred = Credential(filename = cred_filename)
             # make sure cred isnt expired
             if not cred.get_expiration or \
-               datetime.datetime.today() < cred.get_expiration():    
+               datetime.datetime.utcnow() < cred.get_expiration():    
                 return cred.save_to_string(save_parents=True)
 
         # get a new credential
@@ -155,20 +179,25 @@ class SfaAPI(BaseAPI):
         Attempt to find a credential delegated to us in
         the specified list of creds.
         """
+        from sfa.trust.hierarchy import Hierarchy
         if creds and not isinstance(creds, list): 
             creds = [creds]
-        delegated_creds = filter_creds_by_caller(creds,self.hrn)
-        if not delegated_creds:
-            return None
-        return delegated_creds[0]
+        hierarchy = Hierarchy()
+                
+        delegated_cred = None
+        for cred in creds:
+            if hierarchy.auth_exists(Credential(string=cred).get_gid_caller().get_hrn()):
+                delegated_cred = cred
+                break
+        return delegated_cred
  
     def __getCredential(self):
         """ 
         Get our credential from a remote registry 
         """
         from sfa.server.registry import Registries
-        registries = Registries(self)
-        registry = registries[self.hrn]
+        registries = Registries()
+        registry = registries.get_server(self.hrn, self.key_file, self.cert_file)
         cert_string=self.cert.save_to_string(save_parents=True)
         # get self credential
         self_cred = registry.GetSelfCredential(cert_string, self.hrn, 'authority')
@@ -189,7 +218,7 @@ class SfaAPI(BaseAPI):
             auth_hrn = hrn
         auth_info = self.auth.get_auth_info(auth_hrn)
         table = self.SfaTable()
-        records = table.findObjects(hrn)
+        records = table.findObjects({'hrn': hrn, 'type': 'authority+sa'})
         if not records:
             raise RecordNotFound
         record = records[0]
@@ -222,6 +251,8 @@ class SfaAPI(BaseAPI):
             self.credential = Credential(filename = ma_cred_filename)
         except IOError:
             self.credential = self.getCredentialFromRegistry()
+
+
 
     ##
     # Convert SFA fields to PLC fields for use when registering up updating
@@ -340,7 +371,7 @@ class SfaAPI(BaseAPI):
             # fill in key info
             if record['type'] == 'user':
                 if 'key_ids' not in record:
-                    self.logger.info("user record has no 'key_ids' - need to import from myplc ?")
+                    logger.info("user record has no 'key_ids' - need to import from myplc ?")
                 else:
                     pubkeys = [keys[key_id]['key'] for key_id in record['key_ids'] if key_id in keys] 
                     record['keys'] = pubkeys
@@ -502,7 +533,8 @@ class SfaAPI(BaseAPI):
             elif (type.startswith("authority")):
                 record['url'] = None
                 if record['hrn'] in self.aggregates:
-                    record['url'] = self.aggregates[record['hrn']].url
+                    
+                    record['url'] = self.aggregates[record['hrn']].get_url()
 
                 if record['pointer'] != -1:
                     record['PI'] = []

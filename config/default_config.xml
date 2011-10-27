@@ -35,6 +35,12 @@ Thierry Parmentelat
           <value>false</value>
           <description>Flag to turn debug on.</description>
         </variable>
+    
+        <variable id="max_slice_renew" type="int">
+          <name>Max Slice Renew</name>
+          <value>60</value>
+          <description>Maximum amout of days a user can extend/renew their slices to</description>
+        </variable>
 
         <variable id="session_key_path" type="string">
             <name>User Session Keys Path </name>

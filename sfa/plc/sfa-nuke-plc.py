@@ -14,23 +14,39 @@ from optparse import OptionParser
 from sfa.trust.hierarchy import *
 from sfa.util.record import *
 from sfa.util.table import SfaTable
-from sfa.util.sfalogging import sfa_logger_goes_to_import,sfa_logger
+from sfa.util.sfalogging import logger
 
 def main():
    usage="%prog: trash the registry DB (the 'sfa' table in the 'planetlab5' database)"
    parser = OptionParser(usage=usage)
    parser.add_option('-f','--file-system',dest='clean_fs',action='store_true',default=False,
                      help='Clean up the /var/lib/sfa/authorities area as well')
+   parser.add_option('-c','--certs',dest='clean_certs',action='store_true',default=False,
+                     help='Remove all cached certs/gids found in /var/lib/sfa/authorities area as well')
    (options,args)=parser.parse_args()
    if args:
       parser.print_help()
       sys.exit(1)
-   sfa_logger_goes_to_import()
-   sfa_logger().info("Purging SFA records from database")
+   logger.info("Purging SFA records from database")
    table = SfaTable()
    table.sfa_records_purge()
+
+   if options.clean_certs:
+      # remove the server certificate and all gids found in /var/lib/sfa/authorities
+      logger.info("Purging cached certificates")
+      for (dir, _, files) in os.walk('/var/lib/sfa/authorities'):
+         for file in files:
+            if file.endswith('.gid') or file == 'server.cert':
+               path=dir+os.sep+file
+               os.unlink(path)
+               if not os.path.exists(path):
+                  logger.info("Unlinked file %s"%path)
+               else:
+                  logger.error("Could not unlink file %s"%path)
+
    if options.clean_fs:
       # just remove all files that do not match 'server.key' or 'server.cert'
+      logger.info("Purging registry filesystem cache")
       preserved_files = [ 'server.key', 'server.cert']
       for (dir,_,files) in os.walk('/var/lib/sfa/authorities'):
          for file in files:
@@ -38,8 +54,8 @@ def main():
             path=dir+os.sep+file
             os.unlink(path)
             if not os.path.exists(path):
-               sfa_logger().info("Unlinked file %s"%path)
+               logger.info("Unlinked file %s"%path)
             else:
-               sfa_logger().error("Could not unlink file %s"%path)
+               logger.error("Could not unlink file %s"%path)
 if __name__ == "__main__":
    main()

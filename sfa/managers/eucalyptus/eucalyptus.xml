@@ -1,55 +1,103 @@
-<RSpec type="eucalyptus">
-  <cloud id="OpenCirrus">
-    <ipv4>198.55.32.86</ipv4>
+<?xml version="1.0"?>
+<RSpec expires="2011-09-26T21:03:16Z" generated="2011-09-26T20:03:16Z" type="SFA">
+  <statistics call="ListResources">
+    <aggregate status="success" name="genicloud.hplabs" elapsed="0.697860002518"/>
+    <aggregate status="success" name="genicloud.ucsd" elapsed="0.901086091995"/>
+  </statistics>
+  <network name="HpLabs-Cloud">
+    <ipv4>198.55.32.75</ipv4>
     <bundles>
-      <bundle id="fc12" />
-      <bundle id="f12-plab" />
-      <bundle id="f12-planetlab" />
-      <bundle id="fc11" />
+      <bundle id="ubuntu904"/>
     </bundles>
-    <cluster id="euca-oc">
-      <ipv4>198.55.32.86</ipv4>
+    <cluster id="hplabs">
+      <ipv4>198.55.32.75</ipv4>
       <vm_types>
         <vm_type name="m1.small">
-          <free_slots>41</free_slots>
-          <max_instances>44</max_instances>
+          <free_slots>39</free_slots>
+          <max_instances>40</max_instances>
           <cores>1</cores>
-          <memory unit="MB">192</memory>
+          <memory unit="MB">128</memory>
           <disk_space unit="GB">2</disk_space>
         </vm_type>
         <vm_type name="c1.medium">
-          <free_slots>41</free_slots>
-          <max_instances>44</max_instances>
+          <free_slots>39</free_slots>
+          <max_instances>40</max_instances>
           <cores>1</cores>
           <memory unit="MB">256</memory>
           <disk_space unit="GB">5</disk_space>
-          <request>
+           <request>
             <instances>1</instances>
-            <bundle>f12-plab</bundle>
+            <bundle>ubuntu904</bundle>
           </request>
-        </vm_type>
+       </vm_type>
         <vm_type name="m1.large">
           <free_slots>19</free_slots>
-          <max_instances>22</max_instances>
+          <max_instances>20</max_instances>
           <cores>2</cores>
           <memory unit="MB">512</memory>
           <disk_space unit="GB">10</disk_space>
         </vm_type>
         <vm_type name="m1.xlarge">
           <free_slots>19</free_slots>
-          <max_instances>22</max_instances>
+          <max_instances>20</max_instances>
           <cores>2</cores>
           <memory unit="MB">1024</memory>
           <disk_space unit="GB">20</disk_space>
         </vm_type>
         <vm_type name="c1.xlarge">
-          <free_slots>8</free_slots>
-          <max_instances>11</max_instances>
+          <free_slots>9</free_slots>
+          <max_instances>10</max_instances>
           <cores>4</cores>
           <memory unit="MB">2048</memory>
           <disk_space unit="GB">20</disk_space>
         </vm_type>
       </vm_types>
     </cluster>
-  </cloud>
+  </network>
+  <network name="UCSD-Cloud">
+    <ipv4>169.228.66.144</ipv4>
+    <bundles>
+      <bundle id="ubuntu904"/>
+    </bundles>
+    <cluster id="ucsd">
+      <ipv4>169.228.66.144</ipv4>
+      <vm_types>
+        <vm_type name="m1.small">
+          <free_slots>15</free_slots>
+          <max_instances>16</max_instances>
+          <cores>1</cores>
+          <memory unit="MB">128</memory>
+          <disk_space unit="GB">2</disk_space>
+        </vm_type>
+        <vm_type name="c1.medium">
+          <free_slots>15</free_slots>
+          <max_instances>16</max_instances>
+          <cores>1</cores>
+          <memory unit="MB">256</memory>
+          <disk_space unit="GB">5</disk_space>
+        </vm_type>
+        <vm_type name="m1.large">
+          <free_slots>7</free_slots>
+          <max_instances>8</max_instances>
+          <cores>2</cores>
+          <memory unit="MB">512</memory>
+          <disk_space unit="GB">10</disk_space>
+        </vm_type>
+        <vm_type name="m1.xlarge">
+          <free_slots>7</free_slots>
+          <max_instances>8</max_instances>
+          <cores>2</cores>
+          <memory unit="MB">1024</memory>
+          <disk_space unit="GB">20</disk_space>
+        </vm_type>
+        <vm_type name="c1.xlarge">
+          <free_slots>3</free_slots>
+          <max_instances>4</max_instances>
+          <cores>4</cores>
+          <memory unit="MB">2048</memory>
+          <disk_space unit="GB">20</disk_space>
+        </vm_type>
+      </vm_types>
+    </cluster>
+  </network>
 </RSpec>
