@@ -3,7 +3,7 @@
 #
 # TODO: Use existing PLC database methods? or keep this separate?
 
-import ldap
+
 from sfa.trust.gid import *
 from sfa.util.record import *
 from sfa.util.config import *
@@ -12,14 +12,18 @@ from sfa.trust.hierarchy import *
 from sfa.trust.certificate import *
 from sfa.trust.auth import *
 from sfa.senslab.OARrestapi import *
+from sfa.senslab.LDAPapi import *
 
 class SfaTable(list):
-
+    authname=""
     def __init__(self, record_filter = None):
 	self.oar = OARapi()
-        self.ldapserv=ldap.open("192.168.0.251")
+	self.ldap = LDAPapi()
 	self.senslabauth=Hierarchy()
-	authinfo=self.senslabauth.get_auth_info("senslab")
+	config=Config()
+	self.authname=config.SFA_REGISTRY_ROOT_AUTH
+	authinfo=self.senslabauth.get_auth_info(self.authname)
+	
 	self.auth=Auth()
 	gid=authinfo.get_gid_object()
 
@@ -59,85 +63,14 @@ class SfaTable(list):
     def quote(self, value):
         return self.db.quote(value)
     
-    def ldapFind(self, record_filter = None, columns=None):
-
- 	results = []
-	
-	#first, ldap for users
-
-	if 'authority' in record_filter:
-		# ask for authority
-		if record_filter['authority']=='senslab':
-			# which is senslab
-			# request all records which are under our authority, ie all ldap entries
-			ldapfilter="cn=*"
-		else:
-			#which is NOT senslab
-			return []
-	else :
-		if not 'hrn' in record_filter:
-			print >>sys.stderr,"find : don't know how to handle filter ",record_filter
-			return []
-		else:
-			hrns=[]
-			h=record_filter['hrn']
-			if  isinstance(h,list):
-				hrns=h
-			else : 
-				hrns.append(h)
-	
-			ldapfilter="(|"
-			for hrn in hrns:
-				splited_hrn=hrn.split(".")
-				if splited_hrn[0] != "senslab" :
-					print >>sys.stderr,"i know nothing about",hrn
-				else :
-					login=splited_hrn[1]
-					ldapfilter+="(uid="
-					ldapfilter+=login
-					ldapfilter+=")"
-			ldapfilter+=")"
-	
-	
-	rindex=self.ldapserv.search("ou=people,dc=senslab,dc=info",ldap.SCOPE_SUBTREE,ldapfilter, ['mail','givenName', 'sn', 'uid','sshPublicKey'])
-	ldapresponse=self.ldapserv.result(rindex,1)
-	for ldapentry in ldapresponse[1]:
-		hrn="senslab."+ldapentry[1]['uid'][0]
-		uuid=create_uuid() 
-		
-		RSA_KEY_STRING=ldapentry[1]['sshPublicKey'][0]
-		
-		pkey=convert_public_key(RSA_KEY_STRING)
-		
-		gid=self.senslabauth.create_gid("urn:publicid:IDN+senslab+user+"+ldapentry[1]['uid'][0], uuid, pkey, CA=False)
-		
-		parent_hrn = get_authority(hrn)
-		parent_auth_info = self.senslabauth.get_auth_info(parent_hrn)
-
-		results.append(  {	
-			'type': 'user',
-#			'email': ldapentry[1]['mail'][0],
-#			'first_name': ldapentry[1]['givenName'][0],
-#			'last_name': ldapentry[1]['sn'][0],
-#			'phone': 'none',
-			'gid': gid.save_to_string(),
-			'serial': 'none',
-			'authority': 'senslab',
-			'peer_authority': '',
-			'pointer' : '',
-			'hrn': hrn,
-			'date_created' : 'none',
-			'last_updated': 'none'
-		 	} )
-	return results
-
+ 
     def oarFind(self, record_filter = None, columns=None):
 	results=[]
 	node_ids=[]
 
 	if 'authority' in record_filter:
 		# ask for authority
-		if record_filter['authority']=='senslab':
+		if record_filter['authority']== self.authname :
 			# which is senslab
 			print>> sys.stderr , "ET MERDE !!!!"
 			node_ids=""
@@ -158,7 +91,7 @@ class SfaTable(list):
 	
 			for hrn in hrns:
 				head,sep,tail=hrn.partition(".")
-				if head != "senslab" :
+				if head != self.authname :
 					print >>sys.stderr,"i know nothing about",hrn
 				else :
 					node_ids.append(tail)
@@ -166,7 +99,7 @@ class SfaTable(list):
 	node_list = self.oar.GetNodes( node_ids)
 
 	for node in node_list:
-		hrn="senslab."+node['hostname']
+		hrn=self.authname+"."+node['hostname']
 		results.append(  {	
 			'type': 'node',
 #			'email': ldapentry[1]['mail'][0],
@@ -175,7 +108,7 @@ class SfaTable(list):
 #			'phone': 'none',
 #			'gid': gid.save_to_string(),
 #			'serial': 'none',
-			'authority': 'senslab',
+			'authority': self.authname,
 			'peer_authority': '',
 			'pointer' : '',
 			'hrn': hrn,
@@ -200,20 +133,20 @@ class SfaTable(list):
 			print >>sys.stderr,"find : don't know how to handle slices yet"
 			return []
 		if record_filter['type'] == 'authority':
-			if  'hrn' in  record_filter and record_filter['hrn']=='senslab':
+			if  'hrn' in  record_filter and record_filter['hrn']==self.authname:
 				return []
 			else:
 				print >>sys.stderr,"find which authority ?"
 				return []
 		if record_filter['type'] == 'user':
-			return self.ldapFind(record_filter, columns)
+			return self.ldap.ldapFind(record_filter, columns)
 		if record_filter['type'] == 'node':
-			return self.ldapFind(record_filter, columns)
+			return self.ldap.ldapFind(record_filter, columns)
 		else:
 			print >>sys.stderr,"unknown type to find : ", record_filter['type']
 			return []
 	else:
-		allResults = self.ldapFind(record_filter, columns)
+		allResults = self.ldap.ldapFind(record_filter, columns)
 		allResults+= self.oarFind(record_filter, columns)
 	
 	return allResults

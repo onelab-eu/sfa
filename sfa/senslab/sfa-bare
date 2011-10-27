@@ -1,0 +1,69 @@
+#!/bin/bash
+#
+# sfa  starts sfa service
+#
+# chkconfig: 2345 61 39
+#
+# description:   starts sfa service
+#
+
+# Source config
+[ -f /etc/sfa/sfa_config ] && . /etc/sfa/sfa_config
+
+# source function library
+. /etc/init.d/functions
+
+start() {
+
+    if [ "$SFA_REGISTRY_ENABLED" -eq 1 ]; then
+        action $"SFA Registry" daemon /usr/bin/sfa-server.py -r -d $OPTIONS
+    fi
+
+    if [ "$SFA_AGGREGATE_ENABLED" -eq 1 ]; then
+        action $"SFA Aggregate" daemon /usr/bin/sfa-server.py -a -d $OPTIONS
+    fi
+        
+    if [ "$SFA_SM_ENABLED" -eq 1 ]; then
+        action "SFA SliceMgr" daemon /usr/bin/sfa-server.py -s -d $OPTIONS
+    fi
+
+    if [ "$SFA_FLASHPOLICY_ENABLED" -eq 1 ]; then
+        action "Flash Policy Server" daemon /usr/bin/sfa_flashpolicy.py --file="$SFA_FLASHPOLICY_CONFIG_FILE" --port=$SFA_FLASHPOLICY_PORT -d
+    fi
+
+    RETVAL=$?
+    [ $RETVAL -eq 0 ] && touch /var/lock/subsys/sfa-server.py
+
+}
+
+stop() {
+    action $"Shutting down SFA" killproc sfa-server.py
+    RETVAL=$?
+
+    [ $RETVAL -eq 0 ] && rm -f /var/lock/subsys/sfa-server.py
+}
+
+
+case "$1" in
+    start) start ;;
+    stop) stop ;;
+    reload) reload force ;;
+    restart) stop; start ;;
+    condrestart)
+	if [ -f /var/lock/subsys/sfa-server.py ]; then
+            stop
+            start
+	fi
+	;;
+    status)
+	status sfa-server.py
+	RETVAL=$?
+	;;
+    *)
+	echo $"Usage: $0 {start|stop|reload|restart|condrestart|status}"
+	exit 1
+	;;
+esac
+
+exit $RETVAL
+
