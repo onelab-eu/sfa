@@ -42,13 +42,13 @@ from sfa.trust.certificate import Keypair, Certificate
 from sfa.trust.hierarchy import Hierarchy
 from sfa.trust.gid import GID
 from sfa.util.config import Config
-from sfa.plc.api import SfaAPI
+from sfa.plc.api import PlcSfaApi
 from sfa.server.registry import Registries
 from sfa.server.aggregate import Aggregates
 from sfa.util.xrn import get_authority, hrn_to_urn
 from sfa.util.sfalogging import logger
 
-from sfa.managers.import_manager import import_manager
+from sfa.managers.managerwrapper import import_manager
 
 # after http://www.erlenstar.demon.co.uk/unix/faq_2.html
 def daemon():
@@ -167,7 +167,7 @@ def install_peer_certs(server_key_file, server_cert_file):
     # There should be a gid file in /etc/sfa/trusted_roots for every
     # peer registry found in in the registries.xml config file. If there
     # are any missing gids, request a new one from the peer registry.
-    api = SfaAPI(key_file = server_key_file, cert_file = server_cert_file)
+    api = PlcSfaApi(key_file = server_key_file, cert_file = server_cert_file)
     registries = Registries()
     aggregates = Aggregates()
     interfaces = dict(registries.items() + aggregates.items())
@@ -224,7 +224,7 @@ def update_cert_records(gids):
     Make sure there is a record in the registry for the specified gids. 
     Removes old records from the db.
     """
-    # import SfaTable here so this module can be loaded by ComponentAPI
+    # import SfaTable here so this module can be loaded by PlcComponentApi
     from sfa.util.table import SfaTable
     from sfa.util.record import SfaRecord
     if not gids:

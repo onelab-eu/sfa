@@ -221,8 +221,8 @@ def get_gids(registry=None, verbose=False):
     if verbose:
         print "Getting current slices on this node"
     # get a list of slices on this node
-    from sfa.plc.api import ComponentAPI
-    api = ComponentAPI()
+    from sfa.plc.api import PlcComponentApi
+    api = PlcComponentApi()
     xids_tuple = api.nodemanager.GetXIDs()
     slices = eval(xids_tuple[1])
     slicenames = slices.keys()

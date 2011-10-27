@@ -259,6 +259,6 @@ return the basic information needed in a dict.
 def fetch_context(slice_hrn, user_hrn, contexts):
     base_context = {'sfa':{'user':{'hrn':user_hrn}}}
     return base_context
-    api = SfaAPI()
+    api = PlcSfaApi()
     create_slice(api, "plc.maxpl.test000", None, rspec_xml, None)
 

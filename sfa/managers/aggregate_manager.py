@@ -15,7 +15,7 @@ from sfa.rspecs.version_manager import VersionManager
 from sfa.rspecs.rspec import RSpec
 
 import sfa.plc.peers as peers
-from sfa.plc.api import SfaAPI
+from sfa.plc.api import PlcSfaApi
 from sfa.plc.aggregate import Aggregate
 from sfa.plc.slices import Slices
 
@@ -396,7 +396,7 @@ def main():
     #rspec = ListResources(api, "plc.pl.sirius", None, 'pl_test_sirius')
     print rspec
     """
-    api = SfaAPI()
+    api = PlcSfaApi()
     f = open(sys.argv[1])
     xml = f.read()
     f.close()

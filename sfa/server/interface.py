@@ -70,6 +70,10 @@ class Interfaces(dict):
             # port is appended onto the domain, before the path. Should look like:
             # http://domain:port/path
             hrn, address, port = record['hrn'], record['addr'], record['port']
+            # sometime this is called at a very early stage with no config loaded
+            # avoid to remember this instance in such a case
+            if not address or not port:
+                continue
             interface = Interface(hrn, address, port) 
             self[hrn] = interface
 

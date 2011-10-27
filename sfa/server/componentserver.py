@@ -12,7 +12,7 @@ import SimpleXMLRPCServer
 
 from sfa.util.sfalogging import logger
 from sfa.trust.certificate import Keypair, Certificate
-from sfa.plc.api import ComponentAPI 
+from sfa.plc.api import PlcComponentApi 
 from sfa.server.threadedserver import ThreadedServer 
 
 
@@ -37,7 +37,7 @@ class SecureXMLRpcRequestHandler(SimpleXMLRPCServer.SimpleXMLRPCRequestHandler):
         try:
             peer_cert = Certificate()
             peer_cert.load_from_pyopenssl_x509(self.connection.get_peer_certificate())
-            self.api = ComponentAPI(peer_cert = peer_cert, 
+            self.api = PlcComponentApi(peer_cert = peer_cert, 
                                     interface = self.server.interface, 
                                     key_file = self.server.key_file, 
                                     cert_file = self.server.cert_file)

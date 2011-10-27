@@ -12,8 +12,6 @@ from sfa.server.threadedserver import ThreadedServer, SecureXMLRpcRequestHandler
 
 from sfa.util.sfalogging import logger
 from sfa.trust.certificate import Keypair, Certificate
-#should be passed to threadedserver
-#from sfa.plc.api import SfaAPI
 
 ##
 # Implements an HTTPS XML-RPC server. Generally it is expected that SFA

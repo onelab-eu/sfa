@@ -5,7 +5,7 @@ import os
 import traceback
 from sfa.util.table import SfaTable
 from sfa.util.prefixTree import prefixTree
-from sfa.plc.api import SfaAPI
+from sfa.plc.api import PlcSfaApi
 from sfa.util.config import Config
 from sfa.trust.certificate import Keypair
 from sfa.trust.hierarchy import Hierarchy
@@ -31,7 +31,7 @@ def main():
     authority = config.SFA_INTERFACE_HRN
     url = 'http://%s:%s/' %(config.SFA_REGISTRY_HOST, config.SFA_REGISTRY_PORT)
     registry = xmlrpcprotocol.get_server(url, key_file, cert_file)
-    sfa_api = SfaAPI(key_file = key_file, cert_file = cert_file, interface='registry')
+    sfa_api = PlcSfaApi(key_file = key_file, cert_file = cert_file, interface='registry')
     credential = sfa_api.getCredential()
 
     # get peer registries

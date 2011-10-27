@@ -5,16 +5,22 @@
 import string
 import xmlrpclib
 
-from sfa.util.faults import SfaNotImplemented, SfaAPIError, SfaInvalidAPIMethod, SfaFault
-from sfa.util.config import Config
+# SOAP support is optional
+try:
+    import SOAPpy
+    from SOAPpy.Parser import parseSOAPRPC
+    from SOAPpy.Types import faultType
+    from SOAPpy.NS import NS
+    from SOAPpy.SOAPBuilder import buildSOAP
+except ImportError:
+    SOAPpy = None
+
+####################
+#from sfa.util.faults import SfaNotImplemented, SfaAPIError, SfaInvalidAPIMethod, SfaFault
+from sfa.util.faults import SfaInvalidAPIMethod, SfaAPIError, SfaFault
 from sfa.util.sfalogging import logger
-from sfa.trust.auth import Auth
-from sfa.util.cache import Cache
-from sfa.trust.certificate import Keypair, Certificate
 
-# this is wrong all right, but temporary 
-from sfa.managers.import_manager import import_manager
-
+####################
 # See "2.2 Characters" in the XML specification:
 #
 # #x9 | #xA | #xD | [#x20-#xD7FF] | [#xE000-#xFFFD]
@@ -72,103 +78,24 @@ def xmlrpclib_dump(self, value, write):
 # You can't hide from me!
 xmlrpclib.Marshaller._Marshaller__dump = xmlrpclib_dump
 
-# SOAP support is optional
-try:
-    import SOAPpy
-    from SOAPpy.Parser import parseSOAPRPC
-    from SOAPpy.Types import faultType
-    from SOAPpy.NS import NS
-    from SOAPpy.SOAPBuilder import buildSOAP
-except ImportError:
-    SOAPpy = None
-
-
-class ManagerWrapper:
+class XmlrpcApi:
     """
-    This class acts as a wrapper around an SFA interface manager module, but
-    can be used with any python module. The purpose of this class is raise a 
-    SfaNotImplemented exception if someone attempts to use an attribute 
-    (could be a callable) thats not available in the library by checking the
-    library using hasattr. This helps to communicate better errors messages 
-    to the users and developers in the event that a specifiec operation 
-    is not implemented by a libarary and will generally be more helpful than
-    the standard AttributeError         
+    The XmlrpcApi class implements a basic xmlrpc (or soap) service 
     """
-    def __init__(self, manager, interface):
-        self.manager = manager
-        self.interface = interface
-        
-    def __getattr__(self, method):
-        if not hasattr(self.manager, method):
-            raise SfaNotImplemented(method, self.interface)
-        return getattr(self.manager, method)
-        
-class BaseAPI:
 
     protocol = None
   
-    def __init__(self, config = "/etc/sfa/sfa_config.py", encoding = "utf-8", 
-                 methods='sfa.methods', peer_cert = None, interface = None, 
-                 key_file = None, cert_file = None, cache = None):
+    def __init__ (self, encoding="utf-8", methods='sfa.methods'):
 
         self.encoding = encoding
+        self.source = None 
         
         # flat list of method names
         self.methods_module = methods_module = __import__(methods, fromlist=[methods])
         self.methods = methods_module.all
 
-        # Better just be documenting the API
-        if config is None:
-            return
-        # Load configuration
-        self.config = Config(config)
-        self.auth = Auth(peer_cert)
-        self.hrn = self.config.SFA_INTERFACE_HRN
-        self.interface = interface
-        self.key_file = key_file
-        self.key = Keypair(filename=self.key_file)
-        self.cert_file = cert_file
-        self.cert = Certificate(filename=self.cert_file)
-        self.cache = cache
-        if self.cache is None:
-            self.cache = Cache()
-        self.credential = None
-        self.source = None 
-        self.time_format = "%Y-%m-%d %H:%M:%S"
         self.logger = logger
  
-        # load registries
-        from sfa.server.registry import Registries
-        self.registries = Registries() 
-
-        # load aggregates
-        from sfa.server.aggregate import Aggregates
-        self.aggregates = Aggregates()
-
-
-    def get_interface_manager(self, manager_base = 'sfa.managers'):
-        """
-        Returns the appropriate manager module for this interface.
-        Modules are usually found in sfa/managers/
-        """
-        manager=None
-        if self.interface in ['registry']:
-            manager=import_manager ("registry",  self.config.SFA_REGISTRY_TYPE)
-        elif self.interface in ['aggregate']:
-            manager=import_manager ("aggregate", self.config.SFA_AGGREGATE_TYPE)
-        elif self.interface in ['slicemgr', 'sm']:
-            manager=import_manager ("slice",     self.config.SFA_SM_TYPE)
-        elif self.interface in ['component', 'cm']:
-            manager=import_manager ("component", self.config.SFA_CM_TYPE)
-        if not manager:
-            raise SfaAPIError("No manager for interface: %s" % self.interface)  
-            
-        # this isnt necessary but will help to produce better error messages
-        # if someone tries to access an operation this manager doesn't implement  
-        manager = ManagerWrapper(manager, self.interface)
-
-        return manager
-
     def callable(self, method):
         """
         Return a new instance of the specified method.
@@ -183,7 +110,7 @@ class BaseAPI:
             module = __import__(self.methods_module.__name__ + "." + method, globals(), locals(), [classname])
             callablemethod = getattr(module, classname)(self)
             return getattr(module, classname)(self)
-        except ImportError, AttributeError:
+        except (ImportError, AttributeError):
             raise SfaInvalidAPIMethod, method
 
     def call(self, source, method, *args):
@@ -226,7 +153,7 @@ class BaseAPI:
         except SfaFault, fault:
             result = fault 
         except Exception, fault:
-            logger.log_exc("BaseAPI.handle has caught Exception")
+            self.logger.log_exc("XmlrpcApi.handle has caught Exception")
             result = SfaAPIError(fault)
 
 
@@ -255,13 +182,3 @@ class BaseAPI:
             
         return response
 
-    def get_cached_server_version(self, server):
-        cache_key = server.url + "-version"
-        server_version = None
-        if self.cache:
-            server_version = self.cache.get(cache_key)
-        if not server_version:
-            server_version = server.GetVersion()
-            # cache version for 24 hours
-            self.cache.add(cache_key, server_version, ttl= 60*60*24)
-        return server_version

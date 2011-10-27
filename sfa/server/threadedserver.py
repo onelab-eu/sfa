@@ -22,7 +22,7 @@ from sfa.util.cache import Cache
 from sfa.trust.certificate import Certificate
 from sfa.trust.trustedroots import TrustedRoots
 #can we get rid of that ?
-from sfa.plc.api import SfaAPI
+from sfa.plc.api import PlcSfaApi
 
 ##
 # Verification callback for pyOpenSSL. We do our own checking of keys because
@@ -95,7 +95,7 @@ class SecureXMLRpcRequestHandler(SimpleXMLRPCServer.SimpleXMLRPCRequestHandler):
         try:
             peer_cert = Certificate()
             peer_cert.load_from_pyopenssl_x509(self.connection.get_peer_certificate())
-            self.api = SfaAPI(peer_cert = peer_cert, 
+            self.api = PlcSfaApi(peer_cert = peer_cert, 
                               interface = self.server.interface, 
                               key_file = self.server.key_file, 
                               cert_file = self.server.cert_file,
