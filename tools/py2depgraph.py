@@ -23,6 +23,8 @@
 import sys, pprint
 import modulefinder
 
+focus=[ 'sfa' , 'OpenSSL', 'M2Crypto', 'xmlrpclib', 'threading' ]
+
 class mymf(modulefinder.ModuleFinder):
     def __init__(self,*args,**kwargs):
         self._depgraph = {}
@@ -39,8 +41,11 @@ class mymf(modulefinder.ModuleFinder):
             self._last_caller = old_last_caller
             
     def import_module(self,partnam,fqname,parent):
-        if not fqname.startswith('sfa'): 
-            print >>sys.stderr, "Trimmed fqname",fqname
+        keep=False
+        for start in focus:
+            if fqname.startswith(start): keep=True
+        if not keep:
+            print >> sys.stderr, "Trimmed fqname",fqname
             return
         r = modulefinder.ModuleFinder.import_module(self,partnam,fqname,parent)
         if r is not None:

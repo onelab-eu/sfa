@@ -21,7 +21,7 @@
 # SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
-import sys, getopt, colorsys, imp, md5
+import sys, getopt, colorsys, imp, hashlib
 
 class pydepgraphdot:
 
@@ -179,7 +179,7 @@ class pydepgraphdot:
                 return s[:i]
         
     def color_from_name(self,name):
-        n = md5.md5(name).digest()
+        n = hashlib.md5(name).digest()
         hf = float(ord(n[0])+ord(n[1])*0xff)/0xffff
         sf = float(ord(n[2]))/0xff
         vf = float(ord(n[3]))/0xff
