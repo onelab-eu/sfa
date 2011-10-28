@@ -1,3 +1,4 @@
+from copy import deepcopy
 from lxml import etree
 from sfa.util.xrn import hrn_to_urn, urn_to_hrn
 from sfa.util.plxrn import PlXrn
