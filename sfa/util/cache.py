@@ -82,9 +82,18 @@ class Cache:
            
     def get(self, key):
         data = self.cache.get(key)
-        if not data or data.is_expired():
-            return None 
-        return data.get_data()
+        if not data:  
+            data = None
+        elif data.is_expired():
+            self.pop(key)
+            data = None 
+        else:
+            data = data.get_data()
+        return data
+
+    def pop(self, key):
+        if key in self.cache:
+            self.cache.pop(key) 
 
     def dump(self):
         result = {}
