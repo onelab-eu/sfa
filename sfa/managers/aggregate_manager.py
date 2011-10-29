@@ -324,30 +324,16 @@ def ListResources(api, creds, options, call_id):
 
 def get_ticket(api, xrn, creds, rspec, users):
 
-#unused
-#    reg_objects = __get_registry_objects(xrn, creds, users)
-
     (slice_hrn, _) = urn_to_hrn(xrn)
-#unused
-#    slices = Slices(api)
-#    peer = slices.get_peer(slice_hrn)
-#    sfa_peer = slices.get_sfa_peer(slice_hrn)
+    slices = Slices(api)
+    peer = slices.get_peer(slice_hrn)
+    sfa_peer = slices.get_sfa_peer(slice_hrn)
 
     # get the slice record
-    registry = api.registries[api.hrn]
     credential = api.getCredential()
+    interface = api.registries[api.hrn]
+    registry = api.get_server(interface, credential)
     records = registry.Resolve(xrn, credential)
-
-    # similar to CreateSliver, we must verify that the required records exist
-    # at this aggregate before we can issue a ticket
-#Error (E1121, get_ticket): Too many positional arguments for function call
-#unused anyway
-#    site_id, remote_site_id = slices.verify_site(registry, credential, slice_hrn,
-#                                                 peer, sfa_peer, reg_objects)
-#Error (E1121, get_ticket): Too many positional arguments for function call
-#unused anyway
-#    slice = slices.verify_slice(registry, credential, slice_hrn, site_id,
-#                                remote_site_id, peer, sfa_peer, reg_objects)
 
     # make sure we get a local slice record
     record = None
@@ -358,9 +344,25 @@ def get_ticket(api, xrn, creds, rspec, users):
             record = SliceRecord(dict=tmp_record)
     if not record:
         raise RecordNotFound(slice_hrn)
+    
+    # similar to CreateSliver, we must verify that the required records exist
+    # at this aggregate before we can issue a ticket
+    # parse rspec
+    rspec = RSpec(rspec_string)
+    requested_attributes = rspec.version.get_slice_attributes()
 
+    # ensure site record exists
+    site = slices.verify_site(hrn, slice_record, peer, sfa_peer)
+    # ensure slice record exists
+    slice = slices.verify_slice(hrn, slice_record, peer, sfa_peer)
+    # ensure person records exists
+    persons = slices.verify_persons(hrn, slice, users, peer, sfa_peer)
+    # ensure slice attributes exists
+    slices.verify_slice_attributes(slice, requested_attributes)
+    
     # get sliver info
-    slivers = Slices(api).get_slivers(slice_hrn)
+    slivers = slices.get_slivers(slice_hrn)
+
     if not slivers:
         raise SliverDoesNotExist(slice_hrn)
 
