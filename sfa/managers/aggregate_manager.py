@@ -190,7 +190,7 @@ def CreateSliver(api, slice_xrn, creds, rspec_string, users, call_id):
 
     aggregate.prepare_nodes({'hostname': requested_slivers})
     aggregate.prepare_interfaces({'node_id': aggregate.nodes.keys()})    
-    slices.verify_slice_links(rspec.version.get_link_requests(), aggregate)
+    slices.verify_slice_links(slice, rspec.version.get_link_requests(), aggregate)
 
     # hanlde MyPLC peer association.
     # only used by plc and ple.
