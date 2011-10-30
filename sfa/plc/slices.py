@@ -184,21 +184,21 @@ class Slices:
         except: 
             self.api.logger.log_exc('Failed to add/remove slice from nodes')
 
-    def verify_slice_links(self, links, aggregate):
+    def verify_slice_links(self, slice, links, aggregate):
         # nodes is undefined here
         if not links:
             return 
         
         for link in links:
             # get the ip address of the first node in the link
-            ifname1 = Xrn(link['interface1']).get_leaf()
+            ifname1 = Xrn(link['interface1']['component_id']).get_leaf()
             (node, device) = ifname1.split(':')
             node_id = int(node.replace('node', ''))
             node = aggregate.nodes[node_id]
             if1 = aggregate.interfaces[node['interface_ids'][0]]
             ipaddr = if1['ip']
             topo_rspec = VLink.get_topo_rspec(link, ipaddr)
-            self.api.plshell.AddSliceTag(self.api.plauth, slice['name'], 'topo_rspec', topo_rspec, node_id) 
+            self.api.plshell.AddSliceTag(self.api.plauth, slice['name'], 'topo_rspec', str([topo_rspec]), node_id) 
                         
         
 
