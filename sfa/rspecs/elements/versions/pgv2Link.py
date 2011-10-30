@@ -38,7 +38,6 @@ class PGv2Link:
                 latency=link['latency'], packet_loss=link['packet_loss'])
             if 'type' in link and link['type']:
                 type_elem = etree.SubElement(link_elem, 'link_type', name=link['type'])             
-   
     @staticmethod 
     def get_links(xml):
         links = []

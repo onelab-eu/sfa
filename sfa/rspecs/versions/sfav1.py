@@ -218,7 +218,8 @@ class SFAv1(BaseVersion):
                     if 'bwlimit' in interface and interface['bwlimit']:
                         bwlimit = etree.SubElement(node_tag, 'bw_limit', units='kbps').text = str(interface['bwlimit']/1000)
                     comp_id = PlXrn(auth=network, interface='node%s:eth%s' % (node['node_id'], i)).get_urn() 
-                    interface_tag = etree.SubElement(node_tag, 'interface', component_id=comp_id)
+                    ipaddr = interface['ip'] 
+                    interface_tag = etree.SubElement(node_tag, 'interface', component_id=comp_id, ipv4=ipaddr)
                     i+=1
             if 'bw_unallocated' in node:
                 bw_unallocated = etree.SubElement(node_tag, 'bw_unallocated', units='kbps').text = str(node['bw_unallocated']/1000) 

@@ -74,10 +74,12 @@ class Aggregate:
                 # set interfaces
                 # just get first interface of the first node
                 if1_xrn = PlXrn(auth=self.api.hrn, interface='node%s:eth0' % (node1['node_id']))
+                if1_ipv4 = self.interfaces[node1['interface_ids'][0]]['ip']
                 if2_xrn = PlXrn(auth=self.api.hrn, interface='node%s:eth0' % (node2['node_id']))
+                if2_ipv4 = self.interfaces[node2['interface_ids'][0]]['ip']
 
-                if1 = Interface({'component_id': if1_xrn.urn} )
-                if2 = Interface({'component_id': if2_xrn.urn} )
+                if1 = Interface({'component_id': if1_xrn.urn, 'ipv4': if1_ipv4} )
+                if2 = Interface({'component_id': if2_xrn.urn, 'ipv4': if2_ipv4} )
 
                 # set link
                 link = Link({'capacity': '1000000', 'latency': '0', 'packet_loss': '0', 'type': 'ipv4'})
@@ -135,6 +137,7 @@ class Aggregate:
             slices = self.api.plshell.GetSlices(self.api.plauth, slice_name)
             if slices:
                 slice = slices[0]
+            self.prepare(slice=slice)
         else:
             self.prepare()
             
