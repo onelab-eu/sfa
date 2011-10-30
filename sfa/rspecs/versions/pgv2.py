@@ -99,10 +99,10 @@ class PGv2(BaseVersion):
         return PGv2Link.get_link_requests(self.xml)  
 
     def add_links(self, links):
-        PGv2Link.add_links(self.xml, links)
+        PGv2Link.add_links(self.xml.root, links)
 
     def add_link_requests(self, link_tuples, append=False):
-        PGv2Link.add_link_requests(self.xml, link_tuples, append)
+        PGv2Link.add_link_requests(self.xml.root, link_tuples, append)
 
     def attributes_list(self, elem):
         opts = []
