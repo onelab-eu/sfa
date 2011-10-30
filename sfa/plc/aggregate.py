@@ -32,8 +32,19 @@ class Aggregate:
     
     def prepare_nodes(self, filter={}, force=False):
         if not self.nodes or force:
-            filter.update({'peer_id': None}) 
-            for node in self.api.plshell.GetNodes(self.api.plauth, filter):
+            filter.update({'peer_id': None})
+            nodes = self.api.plshell.GetNodes(self.api.plauth, filter)
+            site_ids = []
+            interface_ids = []
+            tag_ids = []
+            for node in nodes:
+                site_ids.append(node['site_id'])
+                interface_ids.extend(node['interface_ids'])
+                tag_ids.extend(node['node_tag_ids'])
+            self.prepare_sites({'site_id': site_ids})
+            self.prepare_interfaces({'interface_id': interface_ids})
+            self.prepare_node_tags({'node_tag_id': tag_ids}) 
+            for node in nodes:
                 # add site/interface info to nodes.
                 # assumes that sites, interfaces and tags have already been prepared.
                 site = self.sites[node['site_id']]
@@ -117,7 +128,7 @@ class Aggregate:
                 self.prepare_node_tags({'node_id': slice['node_ids']})
                 self.prepare_nodes({'node_id': slice['node_ids']})
                 self.prepare_links({'slice_id': slice['slice_id']})
-                self.prepare_pl_initscripts({'slice_id': slice['slice_id']})
+                self.prepare_pl_initscripts()
             self.prepared = True  
 
     def get_rspec(self, slice_xrn=None, version = None):
