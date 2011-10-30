@@ -101,12 +101,15 @@ class VLink:
 
         
     @staticmethod
-    def get_topo_rspec(link):
+    def get_topo_rspec(link, ipaddr):
         link['interface1']['id'] = VLink.get_interface_id(link['interface1'])
         link['interface2']['id'] = VLink.get_interface_id(link['interface2'])
         my_ip = VLink.get_virt_ip(link['interface1'], link['interface2'])
         remote_ip = VLink.get_virt_ip(link['interface2'], link['interface1'])
         net = VLink.get_virt_net(link)
         bw = format_tc_rate(long(link['capacity']))
-        ipaddr = remote.get_primary_iface().ipv4
-        return (link['interface2']['id'], ipaddr, bw, my_ip, remote_ip, net) 
+        return (link['interface2']['id'], ipaddr, bw, my_ip, remote_ip, net)
+
+    @staticmethod 
+    def topo_rspec_to_link(topo_rspec):
+        pass          
