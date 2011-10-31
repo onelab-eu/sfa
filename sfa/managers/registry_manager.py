@@ -119,7 +119,9 @@ def resolve(api, xrns, type=None, full=True):
         xrns = xrn_dict[registry_hrn]
         if registry_hrn != api.hrn:
             credential = api.getCredential()
-            peer_records = registries[registry_hrn].Resolve(xrns, credential)
+            interface = api.registries[registry_hrn]
+            server = api.get_server(interface, credential)
+            peer_records = server.Resolve(xrns, credential)
             records.extend([SfaRecord(dict=record).as_dict() for record in peer_records])
 
     # try resolving the remaining unfound records at the local registry
@@ -155,13 +157,14 @@ def list(api, xrn, origin_hrn=None):
     #if there was no match then this record belongs to an unknow registry
     if not registry_hrn:
         raise MissingAuthority(xrn)
-    
     # if the best match (longest matching hrn) is not the local registry,
     # forward the request
     records = []    
     if registry_hrn != api.hrn:
         credential = api.getCredential()
-        record_list = registries[registry_hrn].List(xrn, credential)
+        interface = api.registries[registry_hrn]
+        server = api.get_server(interface, credential)
+        record_list = server.List(xrn, credential)
         records = [SfaRecord(dict=record).as_dict() for record in record_list]
     
     # if we still have not found the record yet, try the local registry
