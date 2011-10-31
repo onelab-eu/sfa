@@ -521,7 +521,7 @@ class Sfi:
         if args:
             hrn = args[0]
         gid = self._get_gid(hrn)
-        self.logger.debug("Sfi.get_gid-> %s",gid.save_to_string(save_parents=True))
+        self.logger.debug("Sfi.get_gid-> %s" % gid.save_to_string(save_parents=True))
         return gid
 
     def _get_gid(self, hrn=None, type=None):
