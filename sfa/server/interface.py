@@ -1,6 +1,6 @@
 #from sfa.util.faults import *
-from sfa.util.storage import XmlStorage
 import sfa.util.xmlrpcprotocol as xmlrpcprotocol
+from sfa.util.xml import XML
 
 # GeniLight client support is optional
 try:
@@ -57,25 +57,20 @@ class Interfaces(dict):
     def __init__(self, conf_file):
         dict.__init__(self, {})
         # load config file
-        self.interface_info = XmlStorage(conf_file, self.default_dict)
-        self.interface_info.load()
-        records = self.interface_info.values()[0]
-        if not isinstance(records, list):
-            records = [records]
-        
-        required_fields = self.default_fields.keys()
-        for record in records:
-            if not record or not set(required_fields).issubset(record.keys()):
-                continue
-            # port is appended onto the domain, before the path. Should look like:
-            # http://domain:port/path
-            hrn, address, port = record['hrn'], record['addr'], record['port']
-            # sometime this is called at a very early stage with no config loaded
-            # avoid to remember this instance in such a case
-            if not address or not port:
-                continue
-            interface = Interface(hrn, address, port) 
-            self[hrn] = interface
+        required_fields = set(self.default_fields.keys())
+        self.interface_info = XML(conf_file).todict()
+        for value in self.interface_info.values():
+            if isinstance(value, list):
+                for record in value:
+                    if isinstance(record, dict) and \
+                      required_fields.issubset(record.keys()):
+                        hrn, address, port = record['hrn'], record['addr'], record['port']
+                        # sometime this is called at a very early stage with no config loaded
+                        # avoid to remember this instance in such a case
+                        if not address or not port:
+                            continue     
+                        interface = Interface(hrn, address, port)
+                        self[hrn] = interface   
 
     def get_server(self, hrn, key_file, cert_file, timeout=30):
         return self[hrn].get_server(key_file, cert_file, timeout)
