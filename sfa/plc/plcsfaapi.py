@@ -428,14 +428,14 @@ class PlcSfaApi(SfaApi):
         # xxx ugly hack - somehow we receive here a list of {'text':value} 
         # instead of an expected list of strings
         # please remove once this is issue is cleanly fixed
-        def normalize (value):
-            from types import StringTypes
-            if isinstance(value,StringTypes): return value
-            elif isinstance(value,dict): 
-                newvalue=value['text']
-                logger.info("Normalizing %s=>%s"%(value,newvalue))
-                return newvalue
-        newList=[normalize(v) for v in newList]
+        #def normalize (value):
+        #    from types import StringTypes
+        #    if isinstance(value,StringTypes): return value
+        #    elif isinstance(value,dict): 
+        #        newvalue=value['text']
+        #        logger.info("Normalizing %s=>%s"%(value,newvalue))
+        #        return newvalue
+        #newList=[normalize(v) for v in newList]
 
         # if the lists are the same, then we don't have to update anything
         if (oldList == newList):
