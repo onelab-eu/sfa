@@ -1,3 +1,4 @@
+from copy import deepcopy
 from lxml import etree
 from sfa.util.xrn import hrn_to_urn, urn_to_hrn
 from sfa.util.plxrn import PlXrn
@@ -217,7 +218,8 @@ class SFAv1(BaseVersion):
                     if 'bwlimit' in interface and interface['bwlimit']:
                         bwlimit = etree.SubElement(node_tag, 'bw_limit', units='kbps').text = str(interface['bwlimit']/1000)
                     comp_id = PlXrn(auth=network, interface='node%s:eth%s' % (node['node_id'], i)).get_urn() 
-                    interface_tag = etree.SubElement(node_tag, 'interface', component_id=comp_id)
+                    ipaddr = interface['ip'] 
+                    interface_tag = etree.SubElement(node_tag, 'interface', component_id=comp_id, ipv4=ipaddr)
                     i+=1
             if 'bw_unallocated' in node:
                 bw_unallocated = etree.SubElement(node_tag, 'bw_unallocated', units='kbps').text = str(node['bw_unallocated']/1000) 
@@ -245,7 +247,15 @@ class SFAv1(BaseVersion):
         pass
 
     def add_links(self, links):
-        PGv2Link.add_links(self.xml, links)
+        networks = self.get_network_elements()
+        if len(networks) > 0:
+            xml = networks[0]
+        else:
+            xml = self.xml    
+        PGv2Link.add_links(xml, links)
+
+    def add_link_requests(self, links):
+        PGv2Link.add_link_requests(self.xml, links)
 
     def add_slivers(self, slivers, network=None, sliver_urn=None, no_dupes=False, append=False):
         # add slice name to network tag

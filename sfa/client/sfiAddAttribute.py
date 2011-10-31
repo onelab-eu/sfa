@@ -1,7 +1,6 @@
 #! /usr/bin/env python
 
 import sys
-from sfa.util.rspecHelper import RSpec, Commands
 from sfa.client.sfi_commands import Commands
 from sfa.rspecs.rspec import RSpec
 

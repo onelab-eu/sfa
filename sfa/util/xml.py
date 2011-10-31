@@ -96,8 +96,15 @@ class XML:
             elif isinstance(value, int):
                 d[key] = unicode(d[key])  
             elif value is None:
-                d.pop(key)          
-             
+                d.pop(key)
+
+        # element.attrib.update will explode if DateTimes are in the
+        # dcitionary.
+        d=d.copy()
+        for k in d.keys():
+            if (type(d[k]) != str) and (type(d[k]) != unicode):
+                del d[k]
+
         element.attrib.update(d)
 
     def validate(self, schema):
@@ -209,6 +216,7 @@ class XML:
     def toxml(self):
         return etree.tostring(self.root, encoding='UTF-8', pretty_print=True)  
     
+    # XXX smbaker, for record.load_from_string
     def todict(self, elem=None):
         if elem is None:
             elem = self.root
@@ -219,7 +227,11 @@ class XML:
             if child.tag not in d:
                 d[child.tag] = []
             d[child.tag].append(self.todict(child))
-        return d            
+
+        if len(d)==1 and ("text" in d):
+            d = d["text"]
+
+        return d
         
     def save(self, filename):
         f = open(filename, 'w')

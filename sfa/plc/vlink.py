@@ -1,4 +1,4 @@
-
+import re
 from sfa.util.xrn import Xrn
 # Taken from bwlimit.py
 #
@@ -79,34 +79,37 @@ class VLink:
 
     @staticmethod
     def get_virt_ip(if1, if2):
-        link_id = get_link_id(if1, if2)
-        iface_id = get_iface_id(if1, if2)
+        link_id = VLink.get_link_id(if1, if2)
+        iface_id = VLink.get_iface_id(if1, if2)
         first = link_id >> 6
         second = ((link_id & 0x3f)<<2) + iface_id
-        return "192.168.%d.%s" % (frist, second)
+        return "192.168.%d.%s" % (first, second)
 
     @staticmethod
     def get_virt_net(link):
-        link_id = self.get_link_id(link)
+        link_id = VLink.get_link_id(link['interface1'], link['interface2'])
         first = link_id >> 6
         second = (link_id & 0x3f)<<2
         return "192.168.%d.%d/30" % (first, second)
 
     @staticmethod
     def get_interface_id(interface):
-        if_name = Xrn(interface=interface['component_id']).get_leaf()
+        if_name = Xrn(interface['component_id']).get_leaf()
         node, dev = if_name.split(":")
-        node_id = int(node.replace("pc", ""))
+        node_id = int(node.replace("node", ""))
         return node_id
 
         
     @staticmethod
-    def get_topo_rspec(link):
+    def get_topo_rspec(link, ipaddr):
         link['interface1']['id'] = VLink.get_interface_id(link['interface1'])
         link['interface2']['id'] = VLink.get_interface_id(link['interface2'])
         my_ip = VLink.get_virt_ip(link['interface1'], link['interface2'])
         remote_ip = VLink.get_virt_ip(link['interface2'], link['interface1'])
         net = VLink.get_virt_net(link)
         bw = format_tc_rate(long(link['capacity']))
-        ipaddr = remote.get_primary_iface().ipv4
-        return (link['interface2']['id'], ipaddr, bw, my_ip, remote_ip, net) 
+        return (link['interface2']['id'], ipaddr, bw, my_ip, remote_ip, net)
+
+    @staticmethod 
+    def topo_rspec_to_link(topo_rspec):
+        pass          

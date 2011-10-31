@@ -8,7 +8,6 @@ from sfa.trust.sfaticket import SfaTicket
 from sfa.trust.credential import Credential
 
 from sfa.util.sfalogging import logger
-from sfa.util.rspecHelper import merge_rspecs
 from sfa.util.xrn import Xrn, urn_to_hrn
 from sfa.util.threadmanager import ThreadManager
 from sfa.util.version import version_core
@@ -434,7 +433,7 @@ def get_ticket(api, xrn, creds, rspec, users):
     results = threads.get_results()
     
     # gather information from each ticket 
-    rspecs = []
+    rspec = None
     initscripts = []
     slivers = [] 
     object_gid = None  
@@ -443,15 +442,17 @@ def get_ticket(api, xrn, creds, rspec, users):
         attrs = agg_ticket.get_attributes()
         if not object_gid:
             object_gid = agg_ticket.get_gid_object()
-        rspecs.append(agg_ticket.get_rspec())
+        if not rspec:
+            rspec = RSpec(agg_ticket.get_rspec())
+        else:
+            rspec.version.merge(agg_ticket.get_rspec())
         initscripts.extend(attrs.get('initscripts', [])) 
         slivers.extend(attrs.get('slivers', [])) 
     
     # merge info
     attributes = {'initscripts': initscripts,
                  'slivers': slivers}
-    merged_rspec = merge_rspecs(rspecs) 
-
+    
     # create a new ticket
     ticket = SfaTicket(subject = slice_hrn)
     ticket.set_gid_caller(api.auth.client_gid)
@@ -460,7 +461,7 @@ def get_ticket(api, xrn, creds, rspec, users):
     ticket.set_pubkey(object_gid.get_pubkey())
     #new_ticket.set_parent(api.auth.hierarchy.get_auth_ticket(auth_hrn))
     ticket.set_attributes(attributes)
-    ticket.set_rspec(merged_rspec)
+    ticket.set_rspec(rspec.toxml())
     ticket.encode()
     ticket.sign()          
     return ticket.save_to_string(save_parents=True)

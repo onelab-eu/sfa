@@ -17,9 +17,8 @@ class PGv2Link:
     
     @staticmethod
     def add_links(xml, links):
-        root = xml.root
         for link in links:
-            link_elem = etree.SubElement(root, 'link')
+            link_elem = etree.SubElement(xml, 'link')
             for attrib in ['component_name', 'component_id', 'client_id']:
                 if attrib in link and link[attrib] is not None:
                     link_elem.set(attrib, link[attrib])
@@ -38,7 +37,6 @@ class PGv2Link:
                 latency=link['latency'], packet_loss=link['packet_loss'])
             if 'type' in link and link['type']:
                 type_elem = etree.SubElement(link_elem, 'link_type', name=link['type'])             
-   
     @staticmethod 
     def get_links(xml):
         links = []
@@ -87,18 +85,16 @@ class PGv2Link:
         available_links = PGv2Link.get_links(xml)
         recently_added = []
         for link in available_links:
-            auth = Xrn(link['component_id']).get_authority_hrn()
             if_name1 =  Xrn(link['interface1']['component_id']).get_leaf()
             if_name2 =  Xrn(link['interface2']['component_id']).get_leaf()
-            
+             
             requested_link = None
             l_tup_1 = (if_name1, if_name2)
-            l_tup_2 = (if_name2, if_name1) 
+            l_tup_2 = (if_name2, if_name1)
             if link_tuples.issuperset([(if_name1, if_name2)]):
                 requested_link = (if_name1, if_name2)        
             elif link_tuples.issuperset([(if_name2, if_name2)]):
                 requested_link = (if_name2, if_name1)
-            
             if requested_link:
                 # add client id to link ane interface elements 
                 link.element.set('client_id', link['component_name'])
