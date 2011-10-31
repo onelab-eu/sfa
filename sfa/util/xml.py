@@ -226,7 +226,7 @@ class XML:
         for child in elem.iterchildren():
             if child.tag not in d:
                 d[child.tag] = []
-            d[child.tag].append(self.todict2(child))
+            d[child.tag].append(self.todict(child))
 
         if len(d)==1 and ("text" in d):
             d = d["text"]
