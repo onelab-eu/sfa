@@ -96,8 +96,15 @@ class XML:
             elif isinstance(value, int):
                 d[key] = unicode(d[key])  
             elif value is None:
-                d.pop(key)          
-             
+                d.pop(key)
+
+        # element.attrib.update will explode if DateTimes are in the
+        # dcitionary.
+        d=d.copy()
+        for k in d.keys():
+            if (type(d[k]) != str) and (type(d[k]) != unicode):
+                del d[k]
+
         element.attrib.update(d)
 
     def validate(self, schema):
