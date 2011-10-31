@@ -279,6 +279,7 @@ class SfaRecord(Row):
         """
         Load the record from a dictionary 
         """
+
         self.set_name(dict['hrn'])
         gidstr = dict.get("gid", None)
         if gidstr:
@@ -316,9 +317,9 @@ class SfaRecord(Row):
         representation of the record.
         """
         #dict = xmlrpclib.loads(str)[0][0]
-        
+
         record = XML(str)
-        self.load_from_dict(record.todict())
+        self.load_from_dict(record.todict2())
 
     ##
     # Dump the record to stdout

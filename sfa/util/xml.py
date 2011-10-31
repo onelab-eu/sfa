@@ -226,7 +226,24 @@ class XML:
             if child.tag not in d:
                 d[child.tag] = []
             d[child.tag].append(self.todict(child))
-        return d            
+        return d
+
+    # XXX smbaker, for record.load_from_string
+    def todict2(self, elem=None):
+        if elem is None:
+            elem = self.root
+        d = {}
+        d.update(elem.attrib)
+        d['text'] = elem.text
+        for child in elem.iterchildren():
+            if child.tag not in d:
+                d[child.tag] = []
+            d[child.tag].append(self.todict2(child))
+
+        if len(d)==1 and ("text" in d):
+            d = d["text"]
+
+        return d
         
     def save(self, filename):
         f = open(filename, 'w')
