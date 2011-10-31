@@ -216,20 +216,8 @@ class XML:
     def toxml(self):
         return etree.tostring(self.root, encoding='UTF-8', pretty_print=True)  
     
-    def todict(self, elem=None):
-        if elem is None:
-            elem = self.root
-        d = {}
-        d.update(elem.attrib)
-        d['text'] = elem.text
-        for child in elem.iterchildren():
-            if child.tag not in d:
-                d[child.tag] = []
-            d[child.tag].append(self.todict(child))
-        return d
-
     # XXX smbaker, for record.load_from_string
-    def todict2(self, elem=None):
+    def todict(self, elem=None):
         if elem is None:
             elem = self.root
         d = {}
