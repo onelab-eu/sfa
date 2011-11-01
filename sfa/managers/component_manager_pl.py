@@ -29,26 +29,26 @@ def SliverStatus(api, slice_xrn, creds):
            
 def start_slice(api, xrn, creds):
     slicename = PlXrn(xrn, type='slice').pl_slicename()
-    api.nodemanager.Start(slicename)
+    api.driver.nodemanager.Start(slicename)
 
 def stop_slice(api, xrn, creds):
     slicename = PlXrn(xrn, type='slice').pl_slicename()
-    api.nodemanager.Stop(slicename)
+    api.driver.nodemanager.Stop(slicename)
 
 def DeleteSliver(api, xrn, creds, call_id):
     slicename = PlXrn(xrn, type='slice').pl_slicename()
-    api.nodemanager.Destroy(slicename)
+    api.driver.nodemanager.Destroy(slicename)
 
 def reset_slice(api, xrn):
     slicename = PlXrn(xrn, type='slice').pl_slicename()
     if not api.sliver_exists(slicename):
         raise SliverDoesNotExist(slicename)
-    api.nodemanager.ReCreate(slicename)
+    api.driver.nodemanager.ReCreate(slicename)
  
 # xxx outdated - this should accept a credential & call_id
 def ListSlices(api):
     # this returns a tuple, the data we want is at index 1 
-    xids = api.nodemanager.GetXIDs()
+    xids = api.driver.nodemanager.GetXIDs()
     # unfortunately the data we want is given to us as 
     # a string but we really want it as a dict
     # lets eval it
@@ -65,6 +65,6 @@ def redeem_ticket(api, ticket_string):
 
     # convert ticket to format nm is used to
     nm_ticket = xmlrpclib.dumps((ticket.attributes,), methodresponse=True)
-    api.nodemanager.AdminTicket(nm_ticket)
+    api.driver.nodemanager.AdminTicket(nm_ticket)
     
 

@@ -61,7 +61,7 @@ class Generic:
             logger.critical("Generic.make_api: no interface found")
         api = self.api_class()(*args, **kwargs)
         manager = self.make_manager(api.interface)
-        driver = self.make_driver (api.config)
+        driver = self.make_driver (api.config, api.interface)
         ### arrange stuff together
         # add a manager wrapper
         manager = ManagerWrapper(manager,api.interface)
@@ -80,7 +80,7 @@ class Generic:
         flavour = self.flavour
         message="Generic.make_manager for interface=%s and flavour=%s"%(interface,flavour)
         
-        classname = "%s_class"%interface
+        classname = "%s_manager_class"%interface
         try:
             module = getattr(self,classname)()
             logger.info("%s : %s"%(message,module))
@@ -88,11 +88,15 @@ class Generic:
         except:
             logger.log_exc_critical(message)
         
-    def make_driver (self, config):
+    # need interface to select the right driver
+    def make_driver (self, config, interface):
         flavour = self.flavour
-        message="Generic.make_driver for flavour=%s"%(flavour)
+        message="Generic.make_driver for flavour=%s and interface=%s"%(flavour,interface)
         
-        classname = "driver_class"
+        if interface == "component":
+            classname = "component_driver_class"
+        else:
+            classname = "driver_class"
         try:
             class_obj = getattr(self,classname)()
             logger.info("%s : %s"%(message,class_obj))

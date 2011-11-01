@@ -2,14 +2,14 @@ import os
 import tempfile
 
 import sfa.util.xmlrpcprotocol as xmlrpcprotocol
-from sfa.util.nodemanager import NodeManager
+from sfa.plc.nodemanager import NodeManager
 
 from sfa.trust.credential import Credential
 from sfa.trust.certificate import Certificate, Keypair
 from sfa.trust.gid import GID
 
 ####################
-class PlcComponentDriver:
+class PlComponentDriver:
     """
     This class is the type for the toplevel 'api' object 
     when running the component manager inside a planetlab node.
