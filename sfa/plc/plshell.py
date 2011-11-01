@@ -1,6 +1,6 @@
 import xmlrpclib
 
-class PlcShell:
+class PlShell:
     """
     A simple xmlrpc shell to a myplc instance
     This class can receive all PLCAPI calls to the underlying testbed
@@ -38,8 +38,8 @@ class PlcShell:
     def __getattr__(self, name):
         def func(*args, **kwds):
             actual_name=None
-            if name in PlcShell.direct_calls: actual_name=name
-            if name in PlcShell.alias_calls: actual_name=PlcShell.alias_calls[name]
+            if name in PlShell.direct_calls: actual_name=name
+            if name in PlShell.alias_calls: actual_name=PlShell.alias_calls[name]
             if not actual_name:
                 raise Exception, "Illegal method call %s for PL driver"%(name)
             return getattr(self.proxy_server, actual_name)(self.plauth, *args, **kwds)

@@ -1,7 +1,7 @@
 from sfa.generic import Generic
 
 import sfa.server.sfaapi
-import sfa.plc.plcdriver
+import sfa.plc.pldriver
 import sfa.managers.registry_manager
 import sfa.managers.slice_manager
 import sfa.managers.aggregate_manager
@@ -19,5 +19,5 @@ class pl (Generic):
         return sfa.managers.aggregate_manager
 
     def driver_class (self):
-        return sfa.plc.plcdriver.PlcDriver
+        return sfa.plc.pldriver.PlDriver
 

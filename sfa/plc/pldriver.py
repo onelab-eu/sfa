@@ -7,7 +7,7 @@ from sfa.util.defaultdict import defaultdict
 from sfa.util.xrn import hrn_to_urn
 from sfa.util.plxrn import slicename_to_hrn, hostname_to_hrn, hrn_to_pl_slicename, hrn_to_pl_login_base
 
-from sfa.plc.plcshell import PlcShell
+from sfa.plc.plshell import PlShell
 
 def list_to_dict(recs, key):
     """
@@ -17,10 +17,10 @@ def list_to_dict(recs, key):
     keys = [rec[key] for rec in recs]
     return dict(zip(keys, recs))
 
-class PlcDriver (PlcShell):
+class PlDriver (PlShell):
 
     def __init__ (self, config):
-        PlcShell.__init__ (self, config)
+        PlShell.__init__ (self, config)
  
         self.hrn = config.SFA_INTERFACE_HRN
         self.SfaTable = SfaTable
