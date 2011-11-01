@@ -222,7 +222,6 @@ def get_gids(registry=None, verbose=False):
     if verbose:
         print "Getting current slices on this node"
     # get a list of slices on this node
-    # make sure you run with SFA_GENERIC_FLAVOUR=plcm 
     from sfa.generic import Generic
     generic=Generic.the_flavour()
     api = generic.make_api(interface='component')
