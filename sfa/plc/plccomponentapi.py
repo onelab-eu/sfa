@@ -8,10 +8,8 @@ from sfa.trust.credential import Credential
 from sfa.trust.certificate import Certificate, Keypair
 from sfa.trust.gid import GID
 
-from sfa.server.sfaapi import SfaApi
-
 ####################
-class PlcComponentApi(SfaApi):
+class PlcComponentDriver:
     """
     This class is the type for the toplevel 'api' object 
     when running the component manager inside a planetlab node.
@@ -20,17 +18,8 @@ class PlcComponentApi(SfaApi):
     some tweaks as compared with a service running in the infrastructure.
     """
 
-    def __init__ (self, encoding="utf-8", methods='sfa.methods', 
-                  config = "/etc/sfa/sfa_config.py", 
-                  peer_cert = None, interface = None, 
-                  key_file = None, cert_file = None, cache = None):
-        SfaApi.__init__(self, encoding=encoding, methods=methods, 
-                        config=config, 
-                        peer_cert=peer_cert, interface=interface, 
-                        key_file=key_file, 
-                        cert_file=cert_file, cache=cache)
-
-        self.nodemanager = NodeManager(self.config)
+    def __init__ (self, config):
+        self.nodemanager = NodeManager(config)
 
     def sliver_exists(self):
         sliver_dict = self.nodemanager.GetXIDs()
@@ -43,6 +32,7 @@ class PlcComponentApi(SfaApi):
     def get_registry(self):
         addr, port = self.config.SFA_REGISTRY_HOST, self.config.SFA_REGISTRY_PORT
         url = "http://%(addr)s:%(port)s" % locals()
+        ### xxx this would require access to the api...
         server = xmlrpcprotocol.get_server(url, self.key_file, self.cert_file)
         return server
 

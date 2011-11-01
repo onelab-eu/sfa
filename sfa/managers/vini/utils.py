@@ -367,12 +367,11 @@ class Slicetag:
     def write(self, api):
         if self.changed:
             if int(self.id) > 0:
-                api.plshell.UpdateSliceTag(api.plauth, self.id, self.value)
+                api.driver.UpdateSliceTag(self.id, self.value)
             else:
-                api.plshell.AddSliceTag(api.plauth, self.slice_id, 
-                                        self.tagname, self.value, self.node_id)
+                api.driver.AddSliceTag(self.slice_id, self.tagname, self.value, self.node_id)
         elif self.deleted and int(self.id) > 0:
-            api.plshell.DeleteSliceTag(api.plauth, self.id)
+            api.driver.DeleteSliceTag(self.id)
 
 
 """
@@ -662,7 +661,7 @@ Create a dictionary of site objects keyed by site ID
 """
 def get_sites(api):
     tmp = []
-    for site in api.plshell.GetSites(api.plauth):
+    for site in api.driver.GetSites():
         t = site['site_id'], Site(site)
         tmp.append(t)
     return dict(tmp)
@@ -673,7 +672,7 @@ Create a dictionary of node objects keyed by node ID
 """
 def get_nodes(api):
     tmp = []
-    for node in api.plshell.GetNodes(api.plauth):
+    for node in api.driver.GetNodes():
         t = node['node_id'], Node(node)
         tmp.append(t)
     return dict(tmp)
@@ -682,7 +681,7 @@ def get_nodes(api):
 Create a dictionary of slice objects keyed by slice ID
 """
 def get_slice(api, slicename):
-    slice = api.plshell.GetSlices(api.plauth, [slicename])
+    slice = api.driver.GetSlices([slicename])
     if slice:
         return Slice(slice[0])
     else:
@@ -693,7 +692,7 @@ Create a dictionary of slicetag objects keyed by slice tag ID
 """
 def get_slice_tags(api):
     tmp = []
-    for tag in api.plshell.GetSliceTags(api.plauth):
+    for tag in api.driver.GetSliceTags():
         t = tag['slice_tag_id'], Slicetag(tag)
         tmp.append(t)
     return dict(tmp)

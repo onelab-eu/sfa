@@ -34,19 +34,21 @@ component_port=12346
 import os, os.path
 import traceback
 import sys
-import sfa.util.xmlrpcprotocol as xmlrpcprotocol
 from optparse import OptionParser
 
 from sfa.util.sfalogging import logger
+from sfa.util.xrn import get_authority, hrn_to_urn
+from sfa.util.config import Config
+import sfa.util.xmlrpcprotocol as xmlrpcprotocol
+
 from sfa.trust.certificate import Keypair, Certificate
 from sfa.trust.hierarchy import Hierarchy
 from sfa.trust.gid import GID
-from sfa.util.config import Config
-from sfa.plc.plcsfaapi import PlcSfaApi
+
+from sfa.server.sfaapi import SfaApi
+
 from sfa.server.registry import Registries
 from sfa.server.aggregate import Aggregates
-from sfa.util.xrn import get_authority, hrn_to_urn
-from sfa.util.sfalogging import logger
 
 # after http://www.erlenstar.demon.co.uk/unix/faq_2.html
 def daemon():
@@ -143,7 +145,7 @@ def install_peer_certs(server_key_file, server_cert_file):
     # There should be a gid file in /etc/sfa/trusted_roots for every
     # peer registry found in in the registries.xml config file. If there
     # are any missing gids, request a new one from the peer registry.
-    api = PlcSfaApi(key_file = server_key_file, cert_file = server_cert_file)
+    api = SfaApi(key_file = server_key_file, cert_file = server_cert_file)
     registries = Registries()
     aggregates = Aggregates()
     interfaces = dict(registries.items() + aggregates.items())

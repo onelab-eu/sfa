@@ -29,13 +29,13 @@ class Aggregate:
 
     def prepare_sites(self, filter={}, force=False):
         if not self.sites or force:  
-            for site in self.api.plshell.GetSites(self.api.plauth, filter):
+            for site in self.api.driver.GetSites(filter):
                 self.sites[site['site_id']] = site
     
     def prepare_nodes(self, filter={}, force=False):
         if not self.nodes or force:
             filter.update({'peer_id': None})
-            nodes = self.api.plshell.GetNodes(self.api.plauth, filter)
+            nodes = self.api.driver.GetNodes(filter)
             site_ids = []
             interface_ids = []
             tag_ids = []
@@ -63,10 +63,12 @@ class Aggregate:
 
     def prepare_interfaces(self, filter={}, force=False):
         if not self.interfaces or force:
-            for interface in self.api.plshell.GetInterfaces(self.api.plauth, filter):
+            for interface in self.api.driver.GetInterfaces(filter):
                 self.interfaces[interface['interface_id']] = interface
 
     def prepare_links(self, filter={}, force=False):
+        # we're aobut to deprecate sfa_aggregate_type, need to get this right 
+        # with the generic framework
         if not self.links or force:
             if not self.api.config.SFA_AGGREGATE_TYPE.lower() == 'vini':
                 return
@@ -106,13 +108,13 @@ class Aggregate:
 
     def prepare_node_tags(self, filter={}, force=False):
         if not self.node_tags or force:
-            for node_tag in self.api.plshell.GetNodeTags(self.api.plauth, filter):
+            for node_tag in self.api.driver.GetNodeTags(filter):
                 self.node_tags[node_tag['node_tag_id']] = node_tag
 
     def prepare_pl_initscripts(self, filter={}, force=False):
         if not self.pl_initscripts or force:
             filter.update({'enabled': True})
-            for initscript in self.api.plshell.GetInitScripts(self.api.plauth, filter):
+            for initscript in self.api.driver.GetInitScripts(filter):
                 self.pl_initscripts[initscript['initscript_id']] = initscript
 
     def prepare(self, slice = None, force=False):
@@ -147,7 +149,7 @@ class Aggregate:
         if slice_xrn:
             slice_hrn, _ = urn_to_hrn(slice_xrn)
             slice_name = hrn_to_pl_slicename(slice_hrn)
-            slices = self.api.plshell.GetSlices(self.api.plauth, slice_name)
+            slices = self.api.driver.GetSlices(slice_name)
             if slices:
                 slice = slices[0]
             self.prepare(slice=slice)
@@ -175,7 +177,7 @@ class Aggregate:
         # add slivers
         if slice_xrn and slice:
             slivers = []
-            tags = self.api.plshell.GetSliceTags(self.api.plauth, slice['slice_tag_ids'])
+            tags = self.api.driver.GetSliceTags(slice['slice_tag_ids'])
 
             # add default tags
             for tag in tags:

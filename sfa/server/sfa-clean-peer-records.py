@@ -3,15 +3,18 @@
 import sys
 import os
 import traceback
+import socket
+
+import sfa.util.xmlrpcprotocol as xmlrpcprotocol 
 from sfa.util.table import SfaTable
 from sfa.util.prefixTree import prefixTree
-from sfa.plc.plcsfaapi import PlcSfaApi
 from sfa.util.config import Config
+
+from sfa.generic import Generic
+
 from sfa.trust.certificate import Keypair
 from sfa.trust.hierarchy import Hierarchy
 from sfa.server.registry import Registries
-import sfa.util.xmlrpcprotocol as xmlrpcprotocol 
-import socket
 
 def main():
     config = Config()
@@ -31,7 +34,7 @@ def main():
     authority = config.SFA_INTERFACE_HRN
     url = 'http://%s:%s/' %(config.SFA_REGISTRY_HOST, config.SFA_REGISTRY_PORT)
     registry = xmlrpcprotocol.get_server(url, key_file, cert_file)
-    sfa_api = PlcSfaApi(key_file = key_file, cert_file = cert_file, interface='registry')
+    sfa_api = Generic.the_flavour()
     credential = sfa_api.getCredential()
 
     # get peer registries

@@ -29,7 +29,7 @@ def SliverStatus(api, slice_xrn, creds):
            
 def start_slice(api, xrn, creds):
     slicename = PlXrn(xrn, type='slice').pl_slicename()
-    api.nodemanger.Start(slicename)
+    api.nodemanager.Start(slicename)
 
 def stop_slice(api, xrn, creds):
     slicename = PlXrn(xrn, type='slice').pl_slicename()

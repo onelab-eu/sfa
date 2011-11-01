@@ -58,12 +58,18 @@ class Generic:
     def make_api (self, *args, **kwargs):
         # interface is a required arg
         if not 'interface' in kwargs:
-            logger.fatal("Generic.make_api: no interface found")
+            logger.critical("Generic.make_api: no interface found")
         api = self.api_class()(*args, **kwargs)
-        interface=kwargs['interface']
-        # or simpler, interface=api.interface
-        manager = self.make_manager(interface)
-        api.manager = ManagerWrapper(manager,interface)
+        manager = self.make_manager(api.interface)
+        driver = self.make_driver (api.config)
+        ### arrange stuff together
+        # add a manager wrapper
+        manager = ManagerWrapper(manager,api.interface)
+        api.manager=manager
+        # insert driver in manager
+        manager.driver=driver
+        # add it in api as well for convenience
+        api.driver=driver
         return api
 
     def make_manager (self, interface):
@@ -80,25 +86,18 @@ class Generic:
             logger.info("%s : %s"%(message,module))
             return module
         except:
-            logger.log_exc(message)
-            logger.fatal("Aborting")
+            logger.log_exc_critical(message)
         
-# former logic was
-#        basepath = 'sfa.managers'
-#        qualified = "%s.%s_manager_%s"%(basepath,interface,flavour)
-#        generic = "%s.%s_manager"%(basepath,interface)
-#
-#        try: 
-#            manager = __import__(qualified, fromlist=[basepath])
-#            logger.info ("%s: loaded %s"%(message,qualified))
-#        except:
-#            try:
-#                manager = __import__ (generic, fromlist=[basepath])
-#                if flavour != 'pl' : 
-#                    logger.warn ("%s: using generic with flavour!='pl'"%(message))
-#                logger.info("%s: loaded %s"%(message,generic))
-#            except:
-#                logger.log_exc("%s: unable to import either %s or %s"%(message,qualified,generic))
-#                logger.fatal("Aborted")
-#        return manager
+    def make_driver (self, config):
+        flavour = self.flavour
+        message="Generic.make_driver for flavour=%s"%(flavour)
+        
+        classname = "driver_class"
+        try:
+            class_obj = getattr(self,classname)()
+            logger.info("%s : %s"%(message,class_obj))
+            return class_obj(config)
+        except:
+            logger.log_exc_critical(message)
+        
         

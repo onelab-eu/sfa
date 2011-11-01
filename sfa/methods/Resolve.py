@@ -40,6 +40,5 @@ class Resolve(Method):
         self.api.logger.info("interface: %s\tcaller-hrn: %s\ttarget-hrn: %s\tmethod-name: %s"%(self.api.interface, origin_hrn, hrns, self.name))
  
         # send the call to the right manager
-        manager = self.api.get_interface_manager()
-        return manager.resolve(self.api, xrns, type)
+        return self.api.manager.resolve(self.api, xrns, type)
             
