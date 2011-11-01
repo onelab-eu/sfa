@@ -76,7 +76,7 @@ class Config:
                 except: pass
              
         except IOError, e:
-            raise IOError, "Could not find the configuration file: %s" % config_file
+            raise IOError, "Could not find or load the configuration file: %s" % config_file
 
     def get_trustedroots_dir(self):
         return self.config_path + os.sep + 'trusted_roots'

@@ -12,6 +12,13 @@ from sfa.server.sfaapi import SfaApi
 
 ####################
 class PlcComponentApi(SfaApi):
+    """
+    This class is the type for the toplevel 'api' object 
+    when running the component manager inside a planetlab node.
+    As such it runs an SFA-compliant interface and thus inherits SfaApi
+    However the fact that we run inside a planetlab nodes requires 
+    some tweaks as compared with a service running in the infrastructure.
+    """
 
     def __init__ (self, encoding="utf-8", methods='sfa.methods', 
                   config = "/etc/sfa/sfa_config.py", 

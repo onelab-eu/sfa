@@ -20,12 +20,18 @@ class SfaApi (XmlrpcApi):
     """
     An SfaApi instance is a basic xmlrcp service
     augmented with the local cryptographic material and hrn
-    It also has the notion of neighbour sfa services 
-    as defined in /etc/sfa/{aggregates,registries}.xml
+
+    It also has the notion of its own interface (a string describing
+    whether we run a registry, aggregate or slicemgr) and has 
+    the notion of neighbour sfa services as defined 
+    in /etc/sfa/{aggregates,registries}.xml
+
     Finally it contains a cache instance
+
     It gets augmented by the generic layer with 
     (*) an instance of manager (actually a manager module for now)
     (*) which in turn holds an instance of a testbed driver
+    For convenience api.manager.driver == api.driver
     """
 
     def __init__ (self, encoding="utf-8", methods='sfa.methods', 
