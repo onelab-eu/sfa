@@ -69,10 +69,6 @@ class SfaApi (XmlrpcApi):
         # filled later on by generic/Generic
         self.manager=None
 
-    # tmp
-    def get_interface_manager(self, manager_base = 'sfa.managers'):
-        return self.manager
-
     def server_proxy(self, interface, cred, timeout=30):
         """
         Returns a connection to the specified interface. Use the specified
