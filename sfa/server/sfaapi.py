@@ -73,7 +73,7 @@ class SfaApi (XmlrpcApi):
     def get_interface_manager(self, manager_base = 'sfa.managers'):
         return self.manager
 
-    def get_server(self, interface, cred, timeout=30):
+    def server_proxy(self, interface, cred, timeout=30):
         """
         Returns a connection to the specified interface. Use the specified
         credential to determine the caller and look for the caller's key/cert 
@@ -89,7 +89,7 @@ class SfaApi (XmlrpcApi):
         auth_info = hierarchy.get_auth_info(caller_gid.get_hrn())
         key_file = auth_info.get_privkey_filename()
         cert_file = auth_info.get_gid_filename()
-        server = interface.get_server(key_file, cert_file, timeout)
+        server = interface.server_proxy(key_file, cert_file, timeout)
         return server
                
         
@@ -142,7 +142,7 @@ class SfaApi (XmlrpcApi):
         """
         from sfa.server.registry import Registries
         registries = Registries()
-        registry = registries.get_server(self.hrn, self.key_file, self.cert_file)
+        registry = registries.server_proxy(self.hrn, self.key_file, self.cert_file)
         cert_string=self.cert.save_to_string(save_parents=True)
         # get self credential
         self_cred = registry.GetSelfCredential(cert_string, self.hrn, 'authority')

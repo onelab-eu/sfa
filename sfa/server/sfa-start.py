@@ -39,7 +39,7 @@ from optparse import OptionParser
 from sfa.util.sfalogging import logger
 from sfa.util.xrn import get_authority, hrn_to_urn
 from sfa.util.config import Config
-import sfa.util.xmlrpcprotocol as xmlrpcprotocol
+import sfa.client.xmlrpcprotocol as xmlrpcprotocol
 
 from sfa.trust.certificate import Keypair, Certificate
 from sfa.trust.hierarchy import Hierarchy
@@ -166,7 +166,7 @@ def install_peer_certs(server_key_file, server_cert_file):
         try:
             # get gid from the registry
             url = interfaces[new_hrn].get_url()
-            interface = interfaces[new_hrn].get_server(server_key_file, server_cert_file, timeout=30)
+            interface = interfaces[new_hrn].server_proxy(server_key_file, server_cert_file, timeout=30)
             # skip non sfa aggregates
             server_version = api.get_cached_server_version(interface)
             if 'sfa' not in server_version:

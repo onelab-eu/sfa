@@ -5,7 +5,7 @@ import os
 import traceback
 import socket
 
-import sfa.util.xmlrpcprotocol as xmlrpcprotocol 
+import sfa.client.xmlrpcprotocol as xmlrpcprotocol 
 from sfa.util.table import SfaTable
 from sfa.util.prefixTree import prefixTree
 from sfa.util.config import Config
@@ -33,7 +33,7 @@ def main():
     # and a valid credential
     authority = config.SFA_INTERFACE_HRN
     url = 'http://%s:%s/' %(config.SFA_REGISTRY_HOST, config.SFA_REGISTRY_PORT)
-    registry = xmlrpcprotocol.get_server(url, key_file, cert_file)
+    registry = xmlrpcprotocol.server_proxy(url, key_file, cert_file)
     sfa_api = Generic.the_flavour()
     credential = sfa_api.getCredential()
 

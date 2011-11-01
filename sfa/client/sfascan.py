@@ -11,7 +11,7 @@ from optparse import OptionParser
 
 from sfa.client.sfi import Sfi
 from sfa.util.sfalogging import logger, DEBUG
-import sfa.util.xmlrpcprotocol as xmlrpcprotocol
+import sfa.client.xmlrpcprotocol as xmlrpcprotocol
 
 def url_hostname_port (url):
     if url.find("://")<0:
@@ -70,7 +70,7 @@ class Interface:
             url=self.url()
             logger.info('issuing get version at %s'%url)
             logger.debug("GetVersion, using timeout=%d"%options.timeout)
-            server=xmlrpcprotocol.get_server(url, key_file, cert_file, timeout=options.timeout, verbose=options.verbose)
+            server=xmlrpcprotocol.server_proxy(url, key_file, cert_file, timeout=options.timeout, verbose=options.verbose)
             self._version=server.GetVersion()
         except:
             self._version={}

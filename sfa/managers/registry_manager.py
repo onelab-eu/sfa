@@ -120,7 +120,7 @@ def resolve(api, xrns, type=None, full=True):
         if registry_hrn != api.hrn:
             credential = api.getCredential()
             interface = api.registries[registry_hrn]
-            server = api.get_server(interface, credential)
+            server = api.server_proxy(interface, credential)
             peer_records = server.Resolve(xrns, credential)
             records.extend([SfaRecord(dict=record).as_dict() for record in peer_records])
 
@@ -163,7 +163,7 @@ def list(api, xrn, origin_hrn=None):
     if registry_hrn != api.hrn:
         credential = api.getCredential()
         interface = api.registries[registry_hrn]
-        server = api.get_server(interface, credential)
+        server = api.server_proxy(interface, credential)
         record_list = server.List(xrn, credential)
         records = [SfaRecord(dict=record).as_dict() for record in record_list]
     

@@ -23,7 +23,7 @@ class SFASoapBinding(Binding):
         return SFACallable(soap_callable)
 
 
-def get_server(url, key_file, cert_file):
+def server_proxy(url, key_file, cert_file):
     auth = {
         'transport' : HTTPSConnection,
         'transdict' : {'cert_file' : cert_file, 

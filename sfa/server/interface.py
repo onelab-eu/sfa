@@ -1,5 +1,5 @@
 #from sfa.util.faults import *
-import sfa.util.xmlrpcprotocol as xmlrpcprotocol
+import sfa.client.xmlrpcprotocol as xmlrpcprotocol
 from sfa.util.xml import XML
 
 # GeniLight client support is optional
@@ -25,13 +25,13 @@ class Interface:
         url =  "http://%s" %  "/".join(address_parts)
         return url
 
-    def get_server(self, key_file, cert_file, timeout=30):
+    def server_proxy(self, key_file, cert_file, timeout=30):
         server = None 
         if  self.client_type ==  'geniclientlight' and GeniClientLight:
             # xxx url and self.api are undefined
             server = GeniClientLight(url, self.api.key_file, self.api.cert_file)
         else:
-            server = xmlrpcprotocol.get_server(self.get_url(), key_file, cert_file, timeout) 
+            server = xmlrpcprotocol.server_proxy(self.get_url(), key_file, cert_file, timeout) 
  
         return server       
 ##
@@ -72,5 +72,5 @@ class Interfaces(dict):
                         interface = Interface(hrn, address, port)
                         self[hrn] = interface   
 
-    def get_server(self, hrn, key_file, cert_file, timeout=30):
-        return self[hrn].get_server(key_file, cert_file, timeout)
+    def server_proxy(self, hrn, key_file, cert_file, timeout=30):
+        return self[hrn].server_proxy(key_file, cert_file, timeout)

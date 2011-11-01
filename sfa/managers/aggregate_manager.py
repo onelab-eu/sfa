@@ -335,7 +335,7 @@ def get_ticket(api, xrn, creds, rspec, users):
     # get the slice record
     credential = api.getCredential()
     interface = api.registries[api.hrn]
-    registry = api.get_server(interface, credential)
+    registry = api.server_proxy(interface, credential)
     records = registry.Resolve(xrn, credential)
 
     # make sure we get a local slice record
