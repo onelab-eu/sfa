@@ -1,4 +1,5 @@
 #!/usr/bin/python 
+from types import StringTypes
 from lxml import etree
 from StringIO import StringIO
 
@@ -101,6 +102,8 @@ class XML:
         # element.attrib.update will explode if DateTimes are in the
         # dcitionary.
         d=d.copy()
+        for (k,v) in d.iteritems():
+            if not isinstance(v,StringTypes): del d[k]
         for k in d.keys():
             if (type(d[k]) != str) and (type(d[k]) != unicode):
                 del d[k]
