@@ -17,9 +17,8 @@ uninstall: python-uninstall tests-uninstall
 
 ##########
 rpmversion:=$(shell rpm -q --specfile sfa.spec --queryformat="%{version}\n" | head -1)
-# somehow this is empty
-rpmtaglevel:=$(shell rpm -q --specfile sfa.spec --queryformat="%{taglevel}\n" 2> /dev/null | head -1)
-rpmtaglevel:=$(if $(rpmtaglevel),$(rpmtaglevel),0)
+# somehow %{taglevel} is empty, turns out %{release} has what we want
+rpmtaglevel:=$(shell rpm -q --specfile sfa.spec --queryformat="%{release}\n" 2> /dev/null | head -1)
 VERSIONTAG=$(rpmversion)-$(rpmtaglevel)
 SCMURL=should-be-redefined-by-specfile
 
