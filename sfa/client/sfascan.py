@@ -52,7 +52,7 @@ class VersionCache:
         except:
             logger.debug("Cannot load version cache, restarting from scratch")
             self.url2version = {}
-        logger.debug("loaded version cache with %d entries"%(len(self.url2version)))
+        logger.debug("loaded version cache with %d entries %s"%(len(self.url2version),self.url2version.keys()))
 
     def save (self):
         try:
@@ -63,8 +63,8 @@ class VersionCache:
             logger.log_exc ("Cannot save version cache into %s"%self.filename)
     def clean (self):
         try:
-            os.unlink(self.filename)
-            logger.info("Cleaned up version cache %s"%self.filename)
+            retcod=os.unlink(self.filename)
+            logger.info("Cleaned up version cache %s, retcod=%d"%(self.filename,retcod))
         except:
             logger.info ("Could not unlink version cache %s"%self.filename)
 
@@ -131,8 +131,9 @@ class Interface:
         if self.probed:
             return self._version
         ### otherwise let's look in the cache file
+        logger.debug("searching in version cache %s"%self.url())
         cached_version = VersionCache().get(self.url())
-        if cached_version:
+        if cached_version is not None:
             logger.info("Retrieved version info from cache")
             return cached_version
         ### otherwise let's do the hard work
