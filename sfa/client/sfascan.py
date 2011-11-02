@@ -31,8 +31,9 @@ def url_hostname_port (url):
 ###
 class Interface:
 
-    def __init__ (self,url):
+    def __init__ (self,url,verbose=False):
         self._url=url
+        self.verbose=verbose
         try:
             (self._url,self.hostname,self.port)=url_hostname_port(url)
             self.ip=socket.gethostbyname(self.hostname)
@@ -60,7 +61,7 @@ class Interface:
         class DummyOptions:
             pass
         options=DummyOptions()
-        options.verbose=False
+        options.verbose=self.verbose
         options.timeout=10
         try:
             client=Sfi(options)
@@ -68,11 +69,16 @@ class Interface:
             key_file = client.get_key_file()
             cert_file = client.get_cert_file(key_file)
             url=self.url()
-            logger.info('issuing get version at %s'%url)
-            logger.debug("GetVersion, using timeout=%d"%options.timeout)
-            server=xmlrpcprotocol.server_proxy(url, key_file, cert_file, timeout=options.timeout, verbose=options.verbose)
+            logger.info('issuing GetVersion at %s'%url)
+            logger.debug("GetVersion, using key_file=%s"%key_file)
+            logger.debug("GetVersion, using cert_file=%s"%cert_file)
+            logger.debug("GetVersion, using timeout=%s"%options.timeout)
+            # setting timeout here seems to get the call to fail - even though the response time is fast
+            #server=xmlrpcprotocol.server_proxy(url, key_file, cert_file, verbose=self.verbose, timeout=options.timeout)
+            server=xmlrpcprotocol.server_proxy(url, key_file, cert_file, verbose=self.verbose)
             self._version=server.GetVersion()
         except:
+            logger.log_exc("failed to get version")
             self._version={}
         self.probed=True
         return self._version
@@ -206,10 +212,8 @@ def main():
                       help="output filenames (cumulative) - defaults are %r"%default_outfiles)
     parser.add_option("-l","--left-to-right",action="store_true",dest="left_to_right",default=False,
                       help="instead of top-to-bottom")
-    parser.add_option("-v","--verbose",action='store_true',dest='verbose',default=False,
-                      help="verbose")
-    parser.add_option("-d","--debug",action='store_true',dest='debug',default=False,
-                      help="debug")
+    parser.add_option("-v", "--verbose", action="count", dest="verbose", default=0,
+                      help="verbose - can be repeated for more verbosity")
     (options,args)=parser.parse_args()
     if not args:
         parser.print_help()
@@ -217,10 +221,11 @@ def main():
     if not options.outfiles:
         options.outfiles=default_outfiles
     logger.enable_console()
-    if options.debug:
-        options.verbose=True
-        logger.setLevel(DEBUG)
-    scanner=SfaScan(left_to_right=options.left_to_right, verbose=options.verbose)
+    # apply current verbosity to logger
+    logger.setLevelFromOptVerbose(options.verbose)
+    # figure if we need to be verbose for these local classes that only have a bool flag
+    bool_verbose=logger.getBoolVerboseFromOpt(options.verbose)
+    scanner=SfaScan(left_to_right=options.left_to_right, verbose=bool_verbose)
     entries = [ Interface(entry) for entry in args ]
     g=scanner.graph(entries)
     logger.info("creating layout")
