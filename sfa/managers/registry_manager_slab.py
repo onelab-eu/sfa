@@ -16,7 +16,7 @@ from sfa.trust.gid import create_uuid
 from sfa.util.version import version_core
 from sfa.senslab.api import *
 
-myapi=SfaAPI()
+myapi=SfaAPI(interface='registry')
 # The GENI GetVersion call
 def GetVersion(api):
     
@@ -197,7 +197,13 @@ def list(api, xrn, origin_hrn=None):
     records = []    
     if registry_hrn != myapi.hrn:
         credential = myapi.getCredential()
-        record_list = registries[registry_hrn].List(xrn, credential)
+	print>>sys.stderr, "Registries : ", registries
+        #record_list = registries[registry_hrn].List(xrn, credential)
+	
+	interface=registries[registries_hrn]
+	server=api.get_server(interface,credential)
+	records= server.List(xrn,credential)
+	
         records = [SfaRecord(dict=record).as_dict() for record in record_list]
     
     # if we still have not found the record yet, try the local registry
