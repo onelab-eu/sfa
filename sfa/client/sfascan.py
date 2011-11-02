@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 
-import sys
+import sys, os.path
+import pickle
+import time
 import socket
 import traceback
 from urlparse import urlparse
@@ -27,6 +29,66 @@ def url_hostname_port (url):
         return (url,parts[0],default_port)
     else:
         return (url,parts[0],parts[1])
+
+### a very simple cache mechanism so that successive runs (see make) 
+### will go *much* faster
+### assuming everything is sequential, as simple as it gets
+### { url -> (timestamp,version)}
+class VersionCache:
+    def __init__ (self, filename=None, expires=60*60):
+        # default is to store cache in the same dir as argv[0]
+        if filename is None:
+            filename=os.path.join(os.path.dirname(sys.argv[0]),"sfascan-version-cache.pickle")
+        self.filename=filename
+        self.expires=expires
+        self.url2version={}
+        self.load()
+
+    def load (self):
+        try:
+            infile=file(self.filename,'r')
+            self.url2version=pickle.load(infile)
+            infile.close()
+        except:
+            logger.info("Cannot load version cache, restarting from scratch")
+            self.url2version = {}
+        logger.debug("loaded version cache with %d entries"%(len(self.url2version)))
+
+    def save (self):
+        try:
+            outfile=file(self.filename,'w')
+            pickle.dump(self.url2version,outfile)
+            outfile.close()
+        except:
+            logger.log_exc ("Cannot save version cache into %s"%self.filename)
+    def clean (self):
+        try:
+            os.unlink(self.filename)
+            logger.info("Cleaned up version cache %s"%self.filename)
+        except:
+            logger.log_exc ("Could not unlink version cache %s"%self.filename)
+
+    def show (self):
+        entries=len(self.url2version)
+        print "version cache from file %s has %d entries"%(self.filename,entries)
+        for (url,tuple) in self.url2version.iteritems():
+            (timestamp,version) = tuple
+            how_old = time.time()-timestamp
+            if how_old<=self.expires:
+                print url,"(%d seconds ago)"%how_old,"-> keys=",version.keys()
+            else:
+                print url,"(%d seconds ago)"%how_old,"too old"
+    
+    def set (self,url,version):
+        self.url2version[url]=( time.time(), version)
+    def get (self,url):
+        try:
+            (timestamp,version)=self.url2version[url]
+            how_old = time.time()-timestamp
+            if how_old<=self.expires: return version
+            else: return None
+        except:
+            return None
 
 ###
 class Interface:
@@ -55,8 +117,15 @@ class Interface:
 
     # connect to server and trigger GetVersion
     def get_version(self):
+        ### if we already know the answer:
         if self.probed:
             return self._version
+        ### otherwise let's look in the cache file
+        cached_version = VersionCache().get(self.url())
+        if cached_version:
+            logger.info("Retrieved version info from cache")
+            return cached_version
+        ### otherwise let's do the hard work
         # dummy to meet Sfi's expectations for its 'options' field
         class DummyOptions:
             pass
@@ -70,9 +139,6 @@ class Interface:
             cert_file = client.get_cert_file(key_file)
             url=self.url()
             logger.info('issuing GetVersion at %s'%url)
-            logger.debug("GetVersion, using key_file=%s"%key_file)
-            logger.debug("GetVersion, using cert_file=%s"%cert_file)
-            logger.debug("GetVersion, using timeout=%s"%options.timeout)
             # setting timeout here seems to get the call to fail - even though the response time is fast
             #server=xmlrpcprotocol.server_proxy(url, key_file, cert_file, verbose=self.verbose, timeout=options.timeout)
             server=xmlrpcprotocol.server_proxy(url, key_file, cert_file, verbose=self.verbose)
@@ -81,6 +147,10 @@ class Interface:
             logger.log_exc("failed to get version")
             self._version={}
         self.probed=True
+        cache=VersionCache()
+        cache.set(self.url(),self._version)
+        cache.save()
+        logger.info("Saved version for url=%s in version cache"%self.url())
         return self._version
 
     @staticmethod
@@ -214,10 +284,24 @@ def main():
                       help="instead of top-to-bottom")
     parser.add_option("-v", "--verbose", action="count", dest="verbose", default=0,
                       help="verbose - can be repeated for more verbosity")
+    parser.add_option("-c", "--clear-cache",action='store_true',
+                      dest='clear_cache',default=False,
+                      help='clear/trash version cache and exit')
+    parser.add_option("-s","--show-cache",action='store_true',
+                      dest='show_cache',default=False,
+                      help='show/display version cache')
+    
     (options,args)=parser.parse_args()
+    if options.show_cache: 
+        VersionCache().show()
+        sys.exit(0)
+    if options.clear_cache:
+        VersionCache().clean()
+        sys.exit(0)
     if not args:
         parser.print_help()
         sys.exit(1)
+        
     if not options.outfiles:
         options.outfiles=default_outfiles
     logger.enable_console()
