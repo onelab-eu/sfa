@@ -50,7 +50,7 @@ class VersionCache:
             self.url2version=pickle.load(infile)
             infile.close()
         except:
-            logger.info("Cannot load version cache, restarting from scratch")
+            logger.debug("Cannot load version cache, restarting from scratch")
             self.url2version = {}
         logger.debug("loaded version cache with %d entries"%(len(self.url2version)))
 
@@ -66,22 +66,32 @@ class VersionCache:
             os.unlink(self.filename)
             logger.info("Cleaned up version cache %s"%self.filename)
         except:
-            logger.log_exc ("Could not unlink version cache %s"%self.filename)
+            logger.info ("Could not unlink version cache %s"%self.filename)
 
     def show (self):
         entries=len(self.url2version)
         print "version cache from file %s has %d entries"%(self.filename,entries)
-        for (url,tuple) in self.url2version.iteritems():
+        key_values=self.url2version.items()
+        def old_first (kv1,kv2): return int(kv1[1][0]-kv2[1][0])
+        key_values.sort(old_first)
+        for key_value in key_values:
+            (url,tuple) = key_value
             (timestamp,version) = tuple
             how_old = time.time()-timestamp
             if how_old<=self.expires:
-                print url,"(%d seconds ago)"%how_old,"-> keys=",version.keys()
+                print url,"-- %d seconds ago"%how_old
             else:
-                print url,"(%d seconds ago)"%how_old,"too old"
+                print "OUTDATED",url,"(%d seconds ago, expires=%d)"%(how_old,self.expires)
     
+    # turns out we might have trailing slashes or not
+    def normalize (self, url):
+        return url.strip("/")
+        
     def set (self,url,version):
+        url=self.normalize(url)
         self.url2version[url]=( time.time(), version)
     def get (self,url):
+        url=self.normalize(url)
         try:
             (timestamp,version)=self.url2version[url]
             how_old = time.time()-timestamp
@@ -152,7 +162,7 @@ class Interface:
         cache=VersionCache()
         cache.set(self.url(),self._version)
         cache.save()
-        logger.info("Saved version for url=%s in version cache"%self.url())
+        logger.debug("Saved version for url=%s in version cache"%self.url())
         # that's our result
         return self._version
 
@@ -234,19 +244,18 @@ class SfaScan:
         while to_scan:
             for interface in to_scan:
                 # performing xmlrpc call
+                logger.info("retrieving/fetching version at interface %s"%interface.url())
                 version=interface.get_version()
-                if self.verbose:
-                    logger.info("GetVersion at interface %s"%interface.url())
-                    if not version:
-                        logger.info("<EMPTY GetVersion(); offline or cannot authenticate>")
-                    else: 
-                        for (k,v) in version.iteritems(): 
-                            if not isinstance(v,dict):
-                                logger.info("\r\t%s:%s"%(k,v))
-                            else:
-                                logger.info(k)
-                                for (k1,v1) in v.iteritems():
-                                    logger.info("\r\t\t%s:%s"%(k1,v1))
+                if not version:
+                    logger.info("<EMPTY GetVersion(); offline or cannot authenticate>")
+                else: 
+                    for (k,v) in version.iteritems(): 
+                        if not isinstance(v,dict):
+                            logger.debug("\r\t%s:%s"%(k,v))
+                        else:
+                            logger.debug(k)
+                            for (k1,v1) in v.iteritems():
+                                logger.debug("\r\t\t%s:%s"%(k1,v1))
                 # 'geni_api' is expected if the call succeeded at all
                 # 'peers' is needed as well as AMs typically don't have peers
                 if 'geni_api' in version and 'peers' in version: 
@@ -287,18 +296,24 @@ def main():
                       help="instead of top-to-bottom")
     parser.add_option("-v", "--verbose", action="count", dest="verbose", default=0,
                       help="verbose - can be repeated for more verbosity")
-    parser.add_option("-c", "--clear-cache",action='store_true',
-                      dest='clear_cache',default=False,
-                      help='clear/trash version cache and exit')
+    parser.add_option("-c", "--clean-cache",action='store_true',
+                      dest='clean_cache',default=False,
+                      help='clean/trash version cache and exit')
     parser.add_option("-s","--show-cache",action='store_true',
                       dest='show_cache',default=False,
                       help='show/display version cache')
     
     (options,args)=parser.parse_args()
+    logger.enable_console()
+    # apply current verbosity to logger
+    logger.setLevelFromOptVerbose(options.verbose)
+    # figure if we need to be verbose for these local classes that only have a bool flag
+    bool_verbose=logger.getBoolVerboseFromOpt(options.verbose)
+
     if options.show_cache: 
         VersionCache().show()
         sys.exit(0)
-    if options.clear_cache:
+    if options.clean_cache:
         VersionCache().clean()
         sys.exit(0)
     if not args:
@@ -307,11 +322,6 @@ def main():
         
     if not options.outfiles:
         options.outfiles=default_outfiles
-    logger.enable_console()
-    # apply current verbosity to logger
-    logger.setLevelFromOptVerbose(options.verbose)
-    # figure if we need to be verbose for these local classes that only have a bool flag
-    bool_verbose=logger.getBoolVerboseFromOpt(options.verbose)
     scanner=SfaScan(left_to_right=options.left_to_right, verbose=bool_verbose)
     entries = [ Interface(entry) for entry in args ]
     g=scanner.graph(entries)
