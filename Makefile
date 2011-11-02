@@ -15,10 +15,14 @@ uninstall: python-uninstall tests-uninstall
 
 .PHONY: all install clean uninstall
 
-VERSIONTAG=0.0-0-should.be-redefined-by-specfile
+##########
+rpmversion:=$(shell rpm -q --specfile sfa.spec --queryformat="%{version}\n" | head -1)
+# somehow this is empty
+rpmtaglevel:=$(shell rpm -q --specfile sfa.spec --queryformat="%{taglevel}\n" 2> /dev/null | head -1)
+rpmtaglevel:=$(if $(rpmtaglevel),$(rpmtaglevel),0)
+VERSIONTAG=$(rpmversion)-$(rpmtaglevel)
 SCMURL=should-be-redefined-by-specfile
 
-##########
 python: version
 
 version: sfa/util/version.py
