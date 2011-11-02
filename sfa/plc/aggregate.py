@@ -6,7 +6,7 @@ from sfa.rspecs.rspec import RSpec
 from sfa.rspecs.elements.link import Link
 from sfa.rspecs.elements.interface import Interface
 
-from sfa.managers.vini.topology import PhysicalLinks
+from sfa.util.topology import Topology
 from sfa.rspecs.version_manager import VersionManager
 from sfa.plc.vlink import get_tc_rate
 
@@ -71,7 +71,8 @@ class Aggregate:
             if not self.api.config.SFA_AGGREGATE_TYPE.lower() == 'vini':
                 return
 
-            for (site_id1, site_id2) in PhysicalLinks:
+            topology = Topology() 
+            for (site_id1, site_id2) in topology:
                 link = Link()
                 if not site_id1 in self.sites or site_id2 not in self.sites:
                     continue
