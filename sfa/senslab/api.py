@@ -120,6 +120,7 @@ class SfaAPI(BaseAPI):
         """
         type = 'authority'
         path = self.config.SFA_DATA_DIR
+	print >>sys.stderr,"FILENAME :", self.interface, self.hrn, type, "cred"
         filename = ".".join([self.interface, self.hrn, type, "cred"])
         cred_filename = path + os.sep + filename
 	print>>sys.stderr, "|\r\n \r\n API.pPY getCredentialAUTHORITY  cred_filename %s" %(cred_filename)
@@ -181,8 +182,8 @@ class SfaAPI(BaseAPI):
 	registries = Registries()
         registry = registries.get_server(self.hrn, self.key_file, self.cert_file)
 	#Sandrine 24 Oct 2 commented 2 following lines
-        #registries = Registries(self)
-        #registry = registries[self.hrn]
+        registries = Registries(self)
+        registry = registries[self.hrn]
 	print>>sys.stderr, " SenslabAPI.PY __getCredential registries %s self.hrn %s \t registry %s " %(registries,self.hrn,registry)
         cert_string=self.cert.save_to_string(save_parents=True)
         # get self credential
@@ -206,7 +207,7 @@ class SfaAPI(BaseAPI):
         table = self.SfaTable()
 	records = table.findObjects({'hrn': hrn, 'type': 'authority+sa'})
 	#Sandrine 24 Oct 2 commented  following line
-        #records = table.findObjects(hrn)
+        records = table.findObjects(hrn)
 	
         if not records:
             raise RecordNotFound
