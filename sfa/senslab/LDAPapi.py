@@ -48,7 +48,7 @@ class LDAPapi :
 				for hrn in hrns:
 					splited_hrn=hrn.split(".")
 					if splited_hrn[0] != self.authname :
-						print >>sys.stderr,"i know nothing about",hrn
+						print >>sys.stderr,"i know nothing about",hrn, " my authname is ", self.authname, " not ", splited_hrn[0]
 					else :
 						login=splited_hrn[1]
 						ldapfilter+="(uid="
