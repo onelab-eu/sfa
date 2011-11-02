@@ -146,11 +146,14 @@ class Interface:
         except:
             logger.log_exc("failed to get version")
             self._version={}
+        # so that next run from this process will find out
         self.probed=True
+        # store in version cache so next processes will remember for an hour
         cache=VersionCache()
         cache.set(self.url(),self._version)
         cache.save()
         logger.info("Saved version for url=%s in version cache"%self.url())
+        # that's our result
         return self._version
 
     @staticmethod
