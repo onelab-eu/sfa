@@ -200,7 +200,7 @@ def list(api, xrn, origin_hrn=None):
 	print>>sys.stderr, "Registries : ", registries
         #record_list = registries[registry_hrn].List(xrn, credential)
 	
-	interface=registries[registries_hrn]
+	interface=registries[registry_hrn]
 	server=api.get_server(interface,credential)
 	records= server.List(xrn,credential)
 	
