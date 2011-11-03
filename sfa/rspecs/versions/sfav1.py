@@ -1,5 +1,7 @@
+from copy import deepcopy
 from lxml import etree
 from sfa.util.xrn import hrn_to_urn, urn_to_hrn
+from sfa.util.plxrn import PlXrn
 from sfa.rspecs.rspec_version import BaseVersion
 from sfa.rspecs.rspec_elements import RSpecElement, RSpecElements
 from sfa.rspecs.elements.versions.pgv2Link import PGv2Link
@@ -113,8 +115,10 @@ class SFAv1(BaseVersion):
         return nodes
 
     def get_links(self, network=None):
-        links = PGv2Link.get_links(self.xml, self.namespaces)
-        return links
+        return PGv2Link.get_links(self.xml)
+
+    def get_link_requests(self):
+        return PGv2Link.get_link_requests(self.xml) 
 
     def get_link(self, fromnode, tonode, network=None):
         fromsite = fromnode.getparent()
@@ -213,8 +217,9 @@ class SFAv1(BaseVersion):
                 for interface in node['interfaces']:
                     if 'bwlimit' in interface and interface['bwlimit']:
                         bwlimit = etree.SubElement(node_tag, 'bw_limit', units='kbps').text = str(interface['bwlimit']/1000)
-                    comp_id = hrn_to_urn(network, 'pc%s:eth%s' % (node['node_id'], i)) 
-                    interface_tag = etree.SubElement(node_tag, 'interface', component_id=comp_id)
+                    comp_id = PlXrn(auth=network, interface='node%s:eth%s' % (node['node_id'], i)).get_urn() 
+                    ipaddr = interface['ip'] 
+                    interface_tag = etree.SubElement(node_tag, 'interface', component_id=comp_id, ipv4=ipaddr)
                     i+=1
             if 'bw_unallocated' in node:
                 bw_unallocated = etree.SubElement(node_tag, 'bw_unallocated', units='kbps').text = str(node['bw_unallocated']/1000) 
@@ -242,7 +247,15 @@ class SFAv1(BaseVersion):
         pass
 
     def add_links(self, links):
-        PGv2Link.add_links(self.xml, links)
+        networks = self.get_network_elements()
+        if len(networks) > 0:
+            xml = networks[0]
+        else:
+            xml = self.xml    
+        PGv2Link.add_links(xml, links)
+
+    def add_link_requests(self, links):
+        PGv2Link.add_link_requests(self.xml, links)
 
     def add_slivers(self, slivers, network=None, sliver_urn=None, no_dupes=False, append=False):
         # add slice name to network tag

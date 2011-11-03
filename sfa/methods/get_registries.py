@@ -1,9 +1,6 @@
-from types import StringTypes
-from sfa.util.faults import *
 from sfa.util.xrn import urn_to_hrn
 from sfa.util.method import Method
 from sfa.util.parameter import Parameter, Mixed
-from sfa.trust.auth import Auth
 from sfa.server.registry import Registries
 
 class get_registries(Method):
@@ -28,7 +25,7 @@ class get_registries(Method):
     def call(self, cred, xrn = None):
         hrn, type = urn_to_hrn(xrn)
         self.api.auth.check(cred, 'list')
-        registries = Registries(self.api).interfaces.values()
+        registries = Registries(self.api).values()
         if hrn:
             registries = [reg for reg in registries if reg['hrn'] == hrn] 
         return registries

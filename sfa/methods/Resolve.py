@@ -1,6 +1,5 @@
-import traceback
 import types
-from sfa.util.faults import *
+
 from sfa.util.xrn import Xrn, urn_to_hrn
 from sfa.util.method import Method
 from sfa.util.parameter import Parameter, Mixed
@@ -43,6 +42,4 @@ class Resolve(Method):
         # send the call to the right manager
         manager = self.api.get_interface_manager()
         return manager.resolve(self.api, xrns, type)
-
-
             

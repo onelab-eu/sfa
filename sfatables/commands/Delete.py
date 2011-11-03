@@ -1,5 +1,5 @@
 import os, time
-from sfatables.globals import *
+from sfatables.globals import sfatables_config
 from sfatables.command import Command
 
 class Delete(Command):

@@ -8,14 +8,12 @@
 
 import sys
 import os
-import pdb
 import glob
-import libxml2
 
 from optparse import OptionParser
 from sfatables import commands
 from sfatables.xmlextension import Xmlextension
-from sfatables.globals import *
+from sfatables.globals import target_dir, match_dir
 
 def load_commands(module, list):
     command_dict={}

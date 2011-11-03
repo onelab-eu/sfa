@@ -1,12 +1,5 @@
-
-from sfa.trust.certificate import Keypair, convert_public_key
-from sfa.trust.gid import *
-from sfa.util.faults import *
 from sfa.util.method import Method
 from sfa.util.parameter import Parameter, Mixed
-from sfa.util.record import SfaRecord
-from sfa.trust.auth import Auth
-from sfa.trust.gid import create_uuid
 from sfa.trust.credential import Credential
 
 class Register(Method):

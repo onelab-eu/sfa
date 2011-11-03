@@ -5,11 +5,10 @@ except NameError:
     from sets import Set
     set = Set
 
-import time
 try: import pgdb
 except: pass
  
-from sfa.util.faults import *
+from sfa.util.faults import SfaInvalidArgument
 from sfa.util.parameter import Parameter, Mixed, python_type
 
 
@@ -128,7 +127,7 @@ class Filter(Parameter, dict):
 
 	    for char in modifiers.keys():
 		if field[0] == char:
-		    modifiers[char]=True;
+		    modifiers[char]=True
 		    field = field[1:]
 		    break
 

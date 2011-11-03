@@ -5,7 +5,6 @@
 #   - The parameters that the processor needs to evaluate the context
 
 import libxml2
-from sfatables.globals import *
 
 class Xmlextension:
     def __init__(self, file_path):

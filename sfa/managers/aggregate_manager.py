@@ -1,30 +1,23 @@
 import datetime
 import time
-import traceback
 import sys
-import re
-from types import StringTypes
 
-from sfa.util.faults import *
+from sfa.util.faults import RecordNotFound, SliverDoesNotExist
 from sfa.util.xrn import get_authority, hrn_to_urn, urn_to_hrn, Xrn, urn_to_sliver_id
-from sfa.util.plxrn import slicename_to_hrn, hrn_to_pl_slicename, hostname_to_urn
-from sfa.util.specdict import *
-from sfa.util.record import SfaRecord
-from sfa.util.policy import Policy
-from sfa.util.record import *
-from sfa.util.sfaticket import SfaTicket
-from sfa.plc.slices import Slices
-from sfa.trust.credential import Credential
-import sfa.plc.peers as peers
-from sfa.plc.network import *
-from sfa.plc.api import SfaAPI
-from sfa.plc.aggregate import Aggregate
-from sfa.plc.slices import *
+from sfa.util.plxrn import slicename_to_hrn, hrn_to_pl_slicename
 from sfa.util.version import version_core
-from sfa.rspecs.version_manager import VersionManager
-from sfa.rspecs.rspec import RSpec
 from sfa.util.sfatime import utcparse
 from sfa.util.callids import Callids
+
+from sfa.trust.sfaticket import SfaTicket
+from sfa.trust.credential import Credential
+from sfa.rspecs.version_manager import VersionManager
+from sfa.rspecs.rspec import RSpec
+
+import sfa.plc.peers as peers
+from sfa.plc.plcsfaapi import PlcSfaApi
+from sfa.plc.aggregate import Aggregate
+from sfa.plc.slices import Slices
 
 def GetVersion(api):
 
@@ -51,7 +44,7 @@ def __get_registry_objects(slice_xrn, creds, users):
     """
 
     """
-    hrn, type = urn_to_hrn(slice_xrn)
+    hrn, _ = urn_to_hrn(slice_xrn)
 
     hrn_auth = get_authority(hrn)
 
@@ -115,7 +108,7 @@ def __get_hostnames(nodes):
 def SliverStatus(api, slice_xrn, creds, call_id):
     if Callids().already_handled(call_id): return {}
 
-    (hrn, type) = urn_to_hrn(slice_xrn)
+    (hrn, _) = urn_to_hrn(slice_xrn)
     # find out where this slice is currently running
     slicename = hrn_to_pl_slicename(hrn)
     
@@ -128,8 +121,6 @@ def SliverStatus(api, slice_xrn, creds, call_id):
     nodes = api.plshell.GetNodes(api.plauth, {'node_id':slice['node_ids'],'peer_id':None},
                                  ['node_id', 'hostname', 'site_id', 'boot_state', 'last_contact'])
     site_ids = [node['site_id'] for node in nodes]
-    sites = api.plshell.GetSites(api.plauth, site_ids, ['site_id', 'login_base'])
-    sites_dict = dict ( [ (site['site_id'],site['login_base'] ) for site in sites ] )
 
     result = {}
     top_level_status = 'unknown'
@@ -154,7 +145,7 @@ def SliverStatus(api, slice_xrn, creds, call_id):
             res['geni_status'] = 'ready'
         else:
             res['geni_status'] = 'failed'
-            top_level_staus = 'failed' 
+            top_level_status = 'failed' 
             
         res['geni_error'] = ''
 
@@ -173,7 +164,7 @@ def CreateSliver(api, slice_xrn, creds, rspec_string, users, call_id):
 
     aggregate = Aggregate(api)
     slices = Slices(api)
-    (hrn, type) = urn_to_hrn(slice_xrn)
+    (hrn, _) = urn_to_hrn(slice_xrn)
     peer = slices.get_peer(hrn)
     sfa_peer = slices.get_sfa_peer(hrn)
     slice_record=None    
@@ -197,7 +188,11 @@ def CreateSliver(api, slice_xrn, creds, rspec_string, users, call_id):
     requested_slivers = [str(host) for host in rspec.version.get_nodes_with_slivers()]
     slices.verify_slice_nodes(slice, requested_slivers, peer) 
 
-    # hanlde MyPLC peer association.
+    aggregate.prepare_nodes({'hostname': requested_slivers})
+    aggregate.prepare_interfaces({'node_id': aggregate.nodes.keys()})    
+    slices.verify_slice_links(slice, rspec.version.get_link_requests(), aggregate)
+
+    # handle MyPLC peer association.
     # only used by plc and ple.
     slices.handle_peer(site, slice, persons, peer)
     
@@ -206,7 +201,7 @@ def CreateSliver(api, slice_xrn, creds, rspec_string, users, call_id):
 
 def RenewSliver(api, xrn, creds, expiration_time, call_id):
     if Callids().already_handled(call_id): return True
-    (hrn, type) = urn_to_hrn(xrn)
+    (hrn, _) = urn_to_hrn(xrn)
     slicename = hrn_to_pl_slicename(hrn)
     slices = api.plshell.GetSlices(api.plauth, {'name': slicename}, ['slice_id'])
     if not slices:
@@ -221,7 +216,7 @@ def RenewSliver(api, xrn, creds, expiration_time, call_id):
         return False
 
 def start_slice(api, xrn, creds):
-    hrn, type = urn_to_hrn(xrn)
+    (hrn, _) = urn_to_hrn(xrn)
     slicename = hrn_to_pl_slicename(hrn)
     slices = api.plshell.GetSlices(api.plauth, {'name': slicename}, ['slice_id'])
     if not slices:
@@ -235,7 +230,7 @@ def start_slice(api, xrn, creds):
     return 1
  
 def stop_slice(api, xrn, creds):
-    hrn, type = urn_to_hrn(xrn)
+    hrn, _ = urn_to_hrn(xrn)
     slicename = hrn_to_pl_slicename(hrn)
     slices = api.plshell.GetSlices(api.plauth, {'name': slicename}, ['slice_id'])
     if not slices:
@@ -245,7 +240,7 @@ def stop_slice(api, xrn, creds):
     if not slice_tags:
         api.plshell.AddSliceTag(api.plauth, slice_id, 'enabled', '0')
     elif slice_tags[0]['value'] != "0":
-        tag_id = attributes[0]['slice_tag_id']
+        tag_id = slice_tags[0]['slice_tag_id']
         api.plshell.UpdateSliceTag(api.plauth, tag_id, '0')
     return 1
 
@@ -255,7 +250,7 @@ def reset_slice(api, xrn):
 
 def DeleteSliver(api, xrn, creds, call_id):
     if Callids().already_handled(call_id): return ""
-    (hrn, type) = urn_to_hrn(xrn)
+    (hrn, _) = urn_to_hrn(xrn)
     slicename = hrn_to_pl_slicename(hrn)
     slices = api.plshell.GetSlices(api.plauth, {'name': slicename})
     if not slices:
@@ -299,7 +294,7 @@ def ListResources(api, creds, options, call_id):
     if Callids().already_handled(call_id): return ""
     # get slice's hrn from options
     xrn = options.get('geni_slice_urn', None)
-    (hrn, type) = urn_to_hrn(xrn)
+    (hrn, _) = urn_to_hrn(xrn)
 
     version_manager = VersionManager()
     # get the rspec's return format from options
@@ -331,36 +326,45 @@ def ListResources(api, creds, options, call_id):
 
 def get_ticket(api, xrn, creds, rspec, users):
 
-    reg_objects = __get_registry_objects(xrn, creds, users)
-
-    slice_hrn, type = urn_to_hrn(xrn)
+    (slice_hrn, _) = urn_to_hrn(xrn)
     slices = Slices(api)
     peer = slices.get_peer(slice_hrn)
     sfa_peer = slices.get_sfa_peer(slice_hrn)
 
     # get the slice record
-    registry = api.registries[api.hrn]
     credential = api.getCredential()
+    interface = api.registries[api.hrn]
+    registry = api.get_server(interface, credential)
     records = registry.Resolve(xrn, credential)
-
-    # similar to CreateSliver, we must verify that the required records exist
-    # at this aggregate before we can issue a ticket
-    site_id, remote_site_id = slices.verify_site(registry, credential, slice_hrn,
-                                                 peer, sfa_peer, reg_objects)
-    slice = slices.verify_slice(registry, credential, slice_hrn, site_id,
-                                remote_site_id, peer, sfa_peer, reg_objects)
 
     # make sure we get a local slice record
     record = None
     for tmp_record in records:
         if tmp_record['type'] == 'slice' and \
            not tmp_record['peer_authority']:
+#Error (E0602, get_ticket): Undefined variable 'SliceRecord'
             record = SliceRecord(dict=tmp_record)
     if not record:
         raise RecordNotFound(slice_hrn)
+    
+    # similar to CreateSliver, we must verify that the required records exist
+    # at this aggregate before we can issue a ticket
+    # parse rspec
+    rspec = RSpec(rspec_string)
+    requested_attributes = rspec.version.get_slice_attributes()
 
+    # ensure site record exists
+    site = slices.verify_site(hrn, slice_record, peer, sfa_peer)
+    # ensure slice record exists
+    slice = slices.verify_slice(hrn, slice_record, peer, sfa_peer)
+    # ensure person records exists
+    persons = slices.verify_persons(hrn, slice, users, peer, sfa_peer)
+    # ensure slice attributes exists
+    slices.verify_slice_attributes(slice, requested_attributes)
+    
     # get sliver info
-    slivers = Slices(api).get_slivers(slice_hrn)
+    slivers = slices.get_slivers(slice_hrn)
+
     if not slivers:
         raise SliverDoesNotExist(slice_hrn)
 
@@ -390,16 +394,18 @@ def get_ticket(api, xrn, creds, rspec, users):
 
 
 def main():
-    api = SfaAPI()
     """
     rspec = ListResources(api, "plc.princeton.sapan", None, 'pl_test_sapan')
     #rspec = ListResources(api, "plc.princeton.coblitz", None, 'pl_test_coblitz')
     #rspec = ListResources(api, "plc.pl.sirius", None, 'pl_test_sirius')
     print rspec
     """
+    api = PlcSfaApi()
     f = open(sys.argv[1])
     xml = f.read()
     f.close()
+#Error (E1120, main): No value passed for parameter 'users' in function call
+#Error (E1120, main): No value passed for parameter 'call_id' in function call
     CreateSliver(api, "plc.princeton.sapan", xml, 'CreateSliver_sapan')
 
 if __name__ == "__main__":

@@ -21,11 +21,12 @@
 import os
 import sys
 from optparse import OptionParser
-from sfa.trust.certificate import Keypair, Certificate
+
+from sfa.util.config import Config
+from sfa.util.table import SfaTable
+
 from sfa.trust.gid import GID, create_uuid
 from sfa.trust.hierarchy import Hierarchy
-from sfa.util.config import Config
-from collections import defaultdict
 
 def main():
     args = sys.argv
@@ -110,7 +111,6 @@ def sign(options):
     
 
 def export_gid(options):
-    from sfa.util.table import SfaTable
     # lookup the record for the specified hrn 
     hrn = options.export
     type = options.type
@@ -124,7 +124,7 @@ def export_gid(options):
         # check the authorities hierarchy 
         hierarchy = Hierarchy()
         try:
-            auth_info = hierarchy.get_auth_info()
+            auth_info = hierarchy.get_auth_info(hrn)
             gid = auth_info.gid_object 
         except:
             print "Record: %s not found" % hrn
@@ -148,8 +148,6 @@ def import_gid(options):
     Import the specified gid into the registry (db and authorities 
     hierarchy) overwriting any previous gid.
     """
-    from sfa.util.table import SfaTable
-    from sfa.util.record import SfaRecord
     # load the gid
     gidfile = os.path.abspath(options.importgid)
     if not gidfile or not os.path.isfile(gidfile):
@@ -167,7 +165,7 @@ def import_gid(options):
     table = SfaTable()
     records = table.find({'hrn': gid.get_hrn(), 'type': 'authority'})
     if not records:
-        print "%s not found in record database" % get.get_hrn()  
+        print "%s not found in record database" % gid.get_hrn()  
         sys.exit(1)
 
     # update the database record

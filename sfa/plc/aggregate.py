@@ -1,10 +1,12 @@
 #!/usr/bin/python
-from sfa.util.xrn import *
-from sfa.util.plxrn import *
-#from sfa.rspecs.sfa_rspec import SfaRSpec
-#from sfa.rspecs.pg_rspec  import PGRSpec
-#from sfa.rspecs.rspec_version import RSpecVersion
+from sfa.util.xrn import hrn_to_urn, urn_to_hrn
+from sfa.util.plxrn import PlXrn, hostname_to_urn, hrn_to_pl_slicename
+
 from sfa.rspecs.rspec import RSpec
+from sfa.rspecs.elements.link import Link
+from sfa.rspecs.elements.interface import Interface
+
+from sfa.util.topology import Topology
 from sfa.rspecs.version_manager import VersionManager
 from sfa.plc.vlink import get_tc_rate
 
@@ -25,14 +27,26 @@ class Aggregate:
         self.api = api
         self.user_options = user_options
 
-    def prepare_sites(self, force=False):
+    def prepare_sites(self, filter={}, force=False):
         if not self.sites or force:  
-            for site in self.api.plshell.GetSites(self.api.plauth):
+            for site in self.api.plshell.GetSites(self.api.plauth, filter):
                 self.sites[site['site_id']] = site
     
-    def prepare_nodes(self, force=False):
+    def prepare_nodes(self, filter={}, force=False):
         if not self.nodes or force:
-            for node in self.api.plshell.GetNodes(self.api.plauth, {'peer_id': None}):
+            filter.update({'peer_id': None})
+            nodes = self.api.plshell.GetNodes(self.api.plauth, filter)
+            site_ids = []
+            interface_ids = []
+            tag_ids = []
+            for node in nodes:
+                site_ids.append(node['site_id'])
+                interface_ids.extend(node['interface_ids'])
+                tag_ids.extend(node['node_tag_ids'])
+            self.prepare_sites({'site_id': site_ids})
+            self.prepare_interfaces({'interface_id': interface_ids})
+            self.prepare_node_tags({'node_tag_id': tag_ids}) 
+            for node in nodes:
                 # add site/interface info to nodes.
                 # assumes that sites, interfaces and tags have already been prepared.
                 site = self.sites[node['site_id']]
@@ -47,37 +61,80 @@ class Aggregate:
                 node['tags'] = tags
                 self.nodes[node['node_id']] = node
 
-    def prepare_interfaces(self, force=False):
+    def prepare_interfaces(self, filter={}, force=False):
         if not self.interfaces or force:
-            for interface in self.api.plshell.GetInterfaces(self.api.plauth):
+            for interface in self.api.plshell.GetInterfaces(self.api.plauth, filter):
                 self.interfaces[interface['interface_id']] = interface
 
-    def prepare_links(self, force=False):
+    def prepare_links(self, filter={}, force=False):
         if not self.links or force:
-            pass
+            if not self.api.config.SFA_AGGREGATE_TYPE.lower() == 'vini':
+                return
 
-    def prepare_node_tags(self, force=False):
+            topology = Topology() 
+            for (site_id1, site_id2) in topology:
+                link = Link()
+                if not site_id1 in self.sites or site_id2 not in self.sites:
+                    continue
+                site1 = self.sites[site_id1]
+                site2 = self.sites[site_id2]
+                # get hrns
+                site1_hrn = self.api.hrn + '.' + site1['login_base']
+                site2_hrn = self.api.hrn + '.' + site2['login_base']
+                # get the first node
+                node1 = self.nodes[site1['node_ids'][0]]
+                node2 = self.nodes[site2['node_ids'][0]]
+
+                # set interfaces
+                # just get first interface of the first node
+                if1_xrn = PlXrn(auth=self.api.hrn, interface='node%s:eth0' % (node1['node_id']))
+                if1_ipv4 = self.interfaces[node1['interface_ids'][0]]['ip']
+                if2_xrn = PlXrn(auth=self.api.hrn, interface='node%s:eth0' % (node2['node_id']))
+                if2_ipv4 = self.interfaces[node2['interface_ids'][0]]['ip']
+
+                if1 = Interface({'component_id': if1_xrn.urn, 'ipv4': if1_ipv4} )
+                if2 = Interface({'component_id': if2_xrn.urn, 'ipv4': if2_ipv4} )
+
+                # set link
+                link = Link({'capacity': '1000000', 'latency': '0', 'packet_loss': '0', 'type': 'ipv4'})
+                link['interface1'] = if1
+                link['interface2'] = if2
+                link['component_name'] = "%s:%s" % (site1['login_base'], site2['login_base'])
+                link['component_id'] = PlXrn(auth=self.api.hrn, interface=link['component_name']).get_urn()
+                link['component_manager_id'] =  hrn_to_urn(self.api.hrn, 'authority+am')
+                self.links[link['component_name']] = link
+
+
+    def prepare_node_tags(self, filter={}, force=False):
         if not self.node_tags or force:
-            for node_tag in self.api.plshell.GetNodeTags(self.api.plauth):
+            for node_tag in self.api.plshell.GetNodeTags(self.api.plauth, filter):
                 self.node_tags[node_tag['node_tag_id']] = node_tag
 
-    def prepare_pl_initscripts(self, force=False):
+    def prepare_pl_initscripts(self, filter={}, force=False):
         if not self.pl_initscripts or force:
-            for initscript in self.api.plshell.GetInitScripts(self.api.plauth, {'enabled': True}):
+            filter.update({'enabled': True})
+            for initscript in self.api.plshell.GetInitScripts(self.api.plauth, filter):
                 self.pl_initscripts[initscript['initscript_id']] = initscript
 
-    def prepare(self, force=False):
-        if not self.prepared or force:
-            self.prepare_sites(force)
-            self.prepare_interfaces(force)
-            self.prepare_node_tags(force)
-            self.prepare_nodes(force)
-            self.prepare_links(force)
-            self.prepare_pl_initscripts()
-        self.prepared = True  
+    def prepare(self, slice = None, force=False):
+        if not self.prepared or force or slice:
+            if not slice:
+                self.prepare_sites(force=force)
+                self.prepare_interfaces(force=force)
+                self.prepare_node_tags(force=force)
+                self.prepare_nodes(force=force)
+                self.prepare_links(force=force)
+                self.prepare_pl_initscripts(force=force)
+            else:
+                self.prepare_sites({'site_id': slice['site_id']})
+                self.prepare_interfaces({'node_id': slice['node_ids']})
+                self.prepare_node_tags({'node_id': slice['node_ids']})
+                self.prepare_nodes({'node_id': slice['node_ids']})
+                self.prepare_links({'slice_id': slice['slice_id']})
+                self.prepare_pl_initscripts()
+            self.prepared = True  
 
     def get_rspec(self, slice_xrn=None, version = None):
-        self.prepare()
         version_manager = VersionManager()
         version = version_manager.get_version(version)
         if not slice_xrn:
@@ -93,8 +150,11 @@ class Aggregate:
             slice_name = hrn_to_pl_slicename(slice_hrn)
             slices = self.api.plshell.GetSlices(self.api.plauth, slice_name)
             if slices:
-                slice = slices[0]            
-
+                slice = slices[0]
+            self.prepare(slice=slice)
+        else:
+            self.prepare()
+            
         # filter out nodes with a whitelist:
         valid_nodes = [] 
         for node in self.nodes.values():

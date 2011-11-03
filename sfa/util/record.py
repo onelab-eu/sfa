@@ -6,9 +6,9 @@
 
 from types import StringTypes
 
-from sfa.trust.gid import *
+from sfa.trust.gid import GID
 
-from sfa.util.parameter import *
+from sfa.util.parameter import Parameter
 from sfa.util.xrn import get_authority
 from sfa.util.row import Row
 from sfa.util.xml import XML 
@@ -279,6 +279,7 @@ class SfaRecord(Row):
         """
         Load the record from a dictionary 
         """
+
         self.set_name(dict['hrn'])
         gidstr = dict.get("gid", None)
         if gidstr:
@@ -302,7 +303,7 @@ class SfaRecord(Row):
         recorddict = self.as_dict()
         filteredDict = dict([(key, val) for (key, val) in recorddict.iteritems() if key in self.fields.keys()])
         record = XML('<record/>')
-        record.root.attrib.update(filteredDict)
+        record.parse_dict(filteredDict)
         str = record.toxml()
         return str
 
@@ -316,7 +317,7 @@ class SfaRecord(Row):
         representation of the record.
         """
         #dict = xmlrpclib.loads(str)[0][0]
-        
+
         record = XML(str)
         self.load_from_dict(record.todict())
 

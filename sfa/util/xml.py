@@ -1,10 +1,9 @@
 #!/usr/bin/python 
+from types import StringTypes
 from lxml import etree
 from StringIO import StringIO
-from datetime import datetime, timedelta
-from sfa.util.xrn import *
-from sfa.util.plxrn import hostname_to_urn
-from sfa.util.faults import SfaNotImplemented, InvalidXML
+
+from sfa.util.faults import InvalidXML
 
 class XpathFilter:
     @staticmethod
@@ -56,13 +55,14 @@ class XML:
         self.root = tree.getroot()
         # set namespaces map
         self.namespaces = dict(self.root.nsmap)
-        # If the 'None' exist, then it's pointing to the default namespace. This makes 
-        # it hard for us to write xpath queries for the default naemspace because lxml 
-        # wont understand a None prefix. We will just associate the default namespeace 
-        # with a key named 'default'.     
-        if None in self.namespaces:
-            default_namespace = self.namespaces.pop(None)
-            self.namespaces['default'] = default_namespace
+        if 'default' not in self.namespaces and None in self.namespaces: 
+            # If the 'None' exist, then it's pointing to the default namespace. This makes 
+            # it hard for us to write xpath queries for the default naemspace because lxml 
+            # wont understand a None prefix. We will just associate the default namespeace 
+            # with a key named 'default'.     
+            self.namespaces['default'] = self.namespaces[None]
+        else:
+            self.namespaces['default'] = 'default' 
 
         # set schema 
         for key in self.root.attrib.keys():
@@ -75,7 +75,8 @@ class XML:
 
     def parse_dict(self, d, root_tag_name='xml', element = None):
         if element is None: 
-            self.parse_xml('<%s/>' % root_tag_name)
+            if self.root is None:
+                self.parse_xml('<%s/>' % root_tag_name)
             element = self.root
 
         if 'text' in d:
@@ -89,8 +90,24 @@ class XML:
                 for val in value:
                     if isinstance(val, dict):
                         child_element = etree.SubElement(element, key)
-                        self.parse_dict(val, key, child_element) 
-        
+                        self.parse_dict(val, key, child_element)
+                    elif isinstance(val, basestring):
+                        child_element = etree.SubElement(element, key).text = val
+                        
+            elif isinstance(value, int):
+                d[key] = unicode(d[key])  
+            elif value is None:
+                d.pop(key)
+
+        # element.attrib.update will explode if DateTimes are in the
+        # dcitionary.
+        d=d.copy()
+        for (k,v) in d.iteritems():
+            if not isinstance(v,StringTypes): del d[k]
+        for k in d.keys():
+            if (type(d[k]) != str) and (type(d[k]) != unicode):
+                del d[k]
+
         element.attrib.update(d)
 
     def validate(self, schema):
@@ -200,8 +217,9 @@ class XML:
         return self.toxml()
 
     def toxml(self):
-        return etree.tostring(self.root, pretty_print=True)  
+        return etree.tostring(self.root, encoding='UTF-8', pretty_print=True)  
     
+    # XXX smbaker, for record.load_from_string
     def todict(self, elem=None):
         if elem is None:
             elem = self.root
@@ -212,14 +230,19 @@ class XML:
             if child.tag not in d:
                 d[child.tag] = []
             d[child.tag].append(self.todict(child))
-        return d            
+
+        if len(d)==1 and ("text" in d):
+            d = d["text"]
+
+        return d
         
     def save(self, filename):
         f = open(filename, 'w')
         f.write(self.toxml())
         f.close()
- 
-if __name__ == '__main__':
-    rspec = RSpec('/tmp/resources.rspec')
-    print rspec
+
+# no RSpec in scope 
+#if __name__ == '__main__':
+#    rspec = RSpec('/tmp/resources.rspec')
+#    print rspec
 

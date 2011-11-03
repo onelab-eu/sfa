@@ -1,6 +1,6 @@
 %define name sfa
-%define version 1.0
-%define taglevel 36
+%define version 1.1
+%define taglevel 1
 
 %define release %{taglevel}%{?pldistro:.%{pldistro}}%{?date:.%{date}}
 %global python_sitearch	%( python -c "from distutils.sysconfig import get_python_lib; print get_python_lib(1)" )
@@ -121,7 +121,7 @@ rm -rf $RPM_BUILD_ROOT
 
 %files
 # sfa and sfatables depend each other.
-%{_bindir}/sfa-server.py*
+%{_bindir}/sfa-start.py*
 /etc/sfatables/*
 %{python_sitelib}/*
 %{_bindir}/keyconvert.py*
@@ -144,6 +144,7 @@ rm -rf $RPM_BUILD_ROOT
 /etc/sfa/sig.xsd
 /etc/sfa/xml.xsd
 /etc/sfa/protogeni-rspec-common.xsd
+/etc/sfa/topology
 %{_bindir}/sfa-config-tty
 %{_bindir}/sfa-import-plc.py*
 %{_bindir}/sfa-clean-peer-records.py*
@@ -196,6 +197,11 @@ fi
 [ "$1" -ge "1" ] && service sfa-cm restart || :
 
 %changelog
+* Fri Oct 28 2011 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-1.1-1
+- first support for protogeni rspecs is working
+- vini no longer needs a specific manager
+- refactoring underway towards more flexible/generic architecture
+
 * Thu Sep 15 2011 Tony Mack <tmack@cs.princeton.edu> - sfa-1.0-36
 - Unicode-friendliness for user names with accents/special chars.
 - Fix bug that could cause create the client to fail when calling CreateSliver for a slice that has the same hrn as a user.

@@ -1,7 +1,7 @@
 from lxml import etree
 from copy import deepcopy
 from StringIO import StringIO
-from sfa.util.xrn import *
+from sfa.util.xrn import urn_to_sliver_id
 from sfa.util.plxrn import hostname_to_urn, xrn_to_hostname 
 from sfa.rspecs.rspec_version import BaseVersion
 from sfa.rspecs.rspec_elements import RSpecElement, RSpecElements
@@ -93,11 +93,16 @@ class PGv2(BaseVersion):
         return slice_attributes
 
     def get_links(self, network=None):
-        links = PGv2Link.get_links(self.xml.root, self.namespaces)
-        return links
+        return PGv2Link.get_links(self.xml)
+
+    def get_link_requests(self):
+        return PGv2Link.get_link_requests(self.xml)  
 
     def add_links(self, links):
         PGv2Link.add_links(self.xml.root, links)
+
+    def add_link_requests(self, link_tuples, append=False):
+        PGv2Link.add_link_requests(self.xml.root, link_tuples, append)
 
     def attributes_list(self, elem):
         opts = []

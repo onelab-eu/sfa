@@ -1,10 +1,11 @@
-from sfa.util.faults import *
+import datetime
+
+from sfa.util.faults import InsufficientRights
 from sfa.util.xrn import urn_to_hrn
 from sfa.util.method import Method
 from sfa.util.parameter import Parameter
 from sfa.trust.credential import Credential
 from sfa.util.sfatime import utcparse
-import datetime
 
 class RenewSliver(Method):
     """

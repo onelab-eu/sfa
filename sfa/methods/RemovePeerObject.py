@@ -1,11 +1,8 @@
-from sfa.util.faults import *
+from sfa.util.faults import UnknownSfaType, SfaInvalidArgument
 from sfa.util.method import Method
 from sfa.util.parameter import Parameter, Mixed
-from sfa.trust.auth import Auth
-from sfa.util.record import SfaRecord
 from sfa.util.table import SfaTable
 from sfa.trust.credential import Credential
-from types import StringTypes
 
 class RemovePeerObject(Method):
     """

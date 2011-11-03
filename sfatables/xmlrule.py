@@ -1,10 +1,11 @@
+import sys,os
+
 import libxml2
 # allow to run sfa2wsdl if this is missing (for mac)
-import sys
 try:import libxslt
 except: print >>sys.stderr, "WARNING, could not import libxslt"
 
-from sfatables.globals import *
+from sfatables.globals import sfatables_config
 
 class XMLRule:
     def apply_processor(self, type, doc, output_xpath_filter=None):
@@ -88,14 +89,13 @@ class XMLRule:
         #       then target(target_args, rspec)
         #       else rspec
         
-        import pdb
         if (self.match(rspec)):
             return (True,self.wrap_up(self.target(rspec)))
         else:
             return (False,self.wrap_up(rspec))
 
 
-    def apply_compiled(rspec):
+    def apply_compiled(self, rspec):
         # Not supported yet
         return None
 

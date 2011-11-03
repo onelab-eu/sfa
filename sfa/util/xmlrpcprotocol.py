@@ -1,9 +1,10 @@
 # XMLRPC-specific code for SFA Client
 
 import xmlrpclib
-#from sfa.util.httpsProtocol import HTTPS, HTTPSConnection
 from httplib import HTTPS, HTTPSConnection
+
 from sfa.util.sfalogging import logger
+
 ##
 # ServerException, ExceptionUnmarshaller
 #

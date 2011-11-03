@@ -14,22 +14,17 @@
 # RSA keys at this time, not DSA keys.
 ##
 
+import os
 import getopt
 import sys
-import tempfile
 
-from sfa.util.record import *
 from sfa.util.table import SfaTable
 from sfa.util.xrn import get_leaf, get_authority
 from sfa.util.plxrn import hostname_to_hrn, slicename_to_hrn, email_to_hrn, hrn_to_pl_slicename
 from sfa.util.config import Config
-from sfa.trust.certificate import convert_public_key, Keypair
-from sfa.trust.trustedroots import *
-from sfa.trust.hierarchy import *
 from sfa.util.xrn import Xrn
-from sfa.plc.api import *
-from sfa.trust.gid import create_uuid
-from sfa.plc.sfaImport import sfaImport, _cleanup_string
+
+from sfa.plc.sfaImport import sfaImport
 
 def process_options():
 
@@ -125,7 +120,8 @@ def main():
         sites_dict[site['login_base']] = site 
     
     # Get all plc users
-    persons = shell.GetPersons(plc_auth, {'peer_id': None, 'enabled': True}, ['person_id', 'email', 'key_ids', 'site_ids'])
+    persons = shell.GetPersons(plc_auth, {'peer_id': None, 'enabled': True}, 
+                               ['person_id', 'email', 'key_ids', 'site_ids'])
     persons_dict = {}
     for person in persons:
         persons_dict[person['person_id']] = person

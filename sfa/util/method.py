@@ -3,18 +3,14 @@
 #
 #
 
-import os, time
-from types import *
-from types import StringTypes
-import traceback
+import time
+from types import IntType, LongType, StringTypes
 import textwrap
-import xmlrpclib
 
 
 from sfa.util.sfalogging import logger
-from sfa.util.faults import * 
+from sfa.util.faults import SfaFault, SfaInvalidAPIMethod, SfaInvalidArgumentCount, SfaInvalidArgument
 from sfa.util.parameter import Parameter, Mixed, python_type, xmlrpc_type
-from sfa.trust.auth import Auth
 
 class Method:
     """
