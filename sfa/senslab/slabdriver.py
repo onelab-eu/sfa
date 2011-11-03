@@ -1,68 +1,39 @@
-#
-# SFA XML-RPC and SOAP interfaces
-#
-
-import sys
-import os
-import traceback
-import string
-import datetime
-import xmlrpclib
-
-from sfa.util.faults import *
-from sfa.util.api import *
-from sfa.util.config import *
+from sfa.util.faults import MissingSfaInfo
 from sfa.util.sfalogging import logger
-import sfa.util.xmlrpcprotocol as xmlrpcprotocol
-from sfa.trust.auth import Auth
-from sfa.trust.rights import Right, Rights, determine_rights
-from sfa.trust.credential import Credential,Keypair
-from sfa.trust.certificate import Certificate
-from sfa.util.xrn import get_authority, hrn_to_urn
-from sfa.util.plxrn import hostname_to_hrn, hrn_to_pl_slicename, hrn_to_pl_slicename, slicename_to_hrn
-from sfa.util.nodemanager import NodeManager
+from sfa.util.table import SfaTable
+from sfa.util.defaultdict import defaultdict
 
+from sfa.util.xrn import hrn_to_urn
+from sfa.util.plxrn import slicename_to_hrn, hostname_to_hrn, hrn_to_pl_slicename, hrn_to_pl_login_base
+
+## thierry: everything that is API-related (i.e. handling incoming requests) 
+# is taken care of 
+# SlabDriver should be really only about talking to the senslab testbed
+
+## thierry: this class sohuld be *much* simpler now, just use what you really need
+#import sys
+#import os
+#import traceback
+#import string
+#import datetime
+#import xmlrpclib
+#
+#from sfa.util.faults import *
+#from sfa.util.api import *
+#from sfa.util.config import *
+#from sfa.util.sfalogging import logger
+#import sfa.util.xmlrpcprotocol as xmlrpcprotocol
+#from sfa.trust.auth import Auth
+#from sfa.trust.rights import Right, Rights, determine_rights
+#from sfa.trust.credential import Credential,Keypair
+#from sfa.trust.certificate import Certificate
+#from sfa.util.xrn import get_authority, hrn_to_urn
+#from sfa.util.plxrn import hostname_to_hrn, hrn_to_pl_slicename, hrn_to_pl_slicename, slicename_to_hrn
+#from sfa.util.nodemanager import NodeManager
+
+## thierry : please avoid wildcard imports :)
 from sfa.senslab.OARrestapi import *
 from sfa.senslab.SenslabImportUsers import *
-
-try:
-    from collections import defaultdict
-except:
-    class defaultdict(dict):
-        def __init__(self, default_factory=None, *a, **kw):
-            if (default_factory is not None and
-                not hasattr(default_factory, '__call__')):
-                raise TypeError('first argument must be callable')
-            dict.__init__(self, *a, **kw)
-            self.default_factory = default_factory
-        def __getitem__(self, key):
-            try:
-                return dict.__getitem__(self, key)
-            except KeyError:
-                return self.__missing__(key)
-        def __missing__(self, key):
-            if self.default_factory is None:
-                raise KeyError(key)
-            self[key] = value = self.default_factory()
-            return value
-        def __reduce__(self):
-            if self.default_factory is None:
-                args = tuple()
-            else:
-                args = self.default_factory,
-            return type(self), args, None, None, self.items()
-        def copy(self):
-            return self.__copy__()
-        def __copy__(self):
-            return type(self)(self.default_factory, self)
-        def __deepcopy__(self, memo):
-            import copy
-            return type(self)(self.default_factory,
-                              copy.deepcopy(self.items()))
-        def __repr__(self):
-            return 'defaultdict(%s, %s)' % (self.default_factory,
-                                            dict.__repr__(self))
-## end of http://code.activestate.com/recipes/523034/ }}}
 
 def list_to_dict(recs, key):
     """
@@ -74,174 +45,26 @@ def list_to_dict(recs, key):
     #print>>sys.stderr, " \r\n \t\t list_to_dict : rec %s  \r\n \t\t list_to_dict keys %s" %(recs,keys)   
     return dict(zip(keys, recs))
 
-class SfaAPI(BaseAPI):
+class SlabDriver:
 
-    # flat list of method names
-    import sfa.methods
-    methods = sfa.methods.all
-    
-    def __init__(self, config = "/etc/sfa/sfa_config.py", encoding = "utf-8", 
-                 methods='sfa.methods', peer_cert = None, interface = None, 
-                key_file = None, cert_file = None, cache = None):
-        BaseAPI.__init__(self, config=config, encoding=encoding, methods=methods, \
-                         peer_cert=peer_cert, interface=interface, key_file=key_file, \
-                         cert_file=cert_file, cache=cache)
+    def __init__(self, config):
+        self.config=config
+        self.hrn = config.SFA_INTERFACE_HRN
  
-        self.encoding = encoding
-        from sfa.util.table import SfaTable
-        self.SfaTable = SfaTable
-        # Better just be documenting the API
-        if config is None:
-            return
-	print >>sys.stderr, "\r\n_____________ SFA SENSLAB API \r\n" 
-        # Load configuration
-        self.config = Config(config)
-        self.auth = Auth(peer_cert)
-        self.interface = interface
-        self.key_file = key_file
-        self.key = Keypair(filename=self.key_file)
-        self.cert_file = cert_file
-        self.cert = Certificate(filename=self.cert_file)
-        self.credential = None
-        # Initialize the PLC shell only if SFA wraps a myPLC
-        rspec_type = self.config.get_aggregate_type()
+	print >>sys.stderr, "\r\n_____________ SFA SENSLAB DRIVER \r\n" 
+        # thierry : note
+        # this class chould be able to somehow call this API
+        # in the pl case see the PlShell class that does exactly that
+        # I mean, the rest of the code is going to make calls like
+        # api.driver.GetNodes
+        # which will result in this class (SlabDriver) receiving the GetNodes call
+        # you might wish for example to have SlabDriver inherit the OARapi class instead
 	self.oar = OARapi()
 	self.users = SenslabImportUsers()
-        self.hrn = self.config.SFA_INTERFACE_HRN
         self.time_format = "%Y-%m-%d %H:%M:%S"
         #self.logger=sfa_logger()
 	print >>sys.stderr, "\r\n \t\t___________PSFA SENSLAN /API.PY  __init__ STOP ",self.interface #dir(self)
 	
-	
-
-    def getCredential(self):
-        """
-        Return a valid credential for this interface. 
-        """
-        type = 'authority'
-        path = self.config.SFA_DATA_DIR
-	print >>sys.stderr,"FILENAME :", self.interface, self.hrn, type, "cred"
-        filename = ".".join([self.interface, self.hrn, type, "cred"])
-        cred_filename = path + os.sep + filename
-	print>>sys.stderr, "|\r\n \r\n API.pPY getCredentialAUTHORITY  cred_filename %s" %(cred_filename)
-        cred = None
-        if os.path.isfile(cred_filename):
-            cred = Credential(filename = cred_filename)
-            # make sure cred isnt expired
-            if not cred.get_expiration or \
-               datetime.datetime.today() < cred.get_expiration():    
-                return cred.save_to_string(save_parents=True)
-
-        # get a new credential
-        if self.interface in ['registry']:
-            cred =  self.__getCredentialRaw()
-        else:
-            cred =  self.__getCredential()
-        cred.save_to_file(cred_filename, save_parents=True)
-
-        return cred.save_to_string(save_parents=True)
-
-
-    def get_server(self, interface, cred, timeout=30):
-        """
-        Returns a connection to the specified interface. Use the specified
-        credential to determine the caller and look for the caller's key/cert 
-        in the registry hierarchy cache. 
-        """       
-        from sfa.trust.hierarchy import Hierarchy
-        if not isinstance(cred, Credential):
-            cred_obj = Credential(string=cred)
-        else:
-            cred_obj = cred
-        caller_gid = cred_obj.get_gid_caller()
-        hierarchy = Hierarchy()
-        auth_info = hierarchy.get_auth_info(caller_gid.get_hrn())
-        key_file = auth_info.get_privkey_filename()
-        cert_file = auth_info.get_gid_filename()
-        server = interface.get_server(key_file, cert_file, timeout)
-        return server
-               
-
-    def getDelegatedCredential(self, creds):
-        """
-        Attempt to find a credential delegated to us in
-        the specified list of creds.
-        """
-	if creds and not isinstance(creds, list):
-            	creds = [creds]
-        delegated_creds = filter_creds_by_caller(creds, [self.hrn, self.hrn + '.slicemanager'])
-        if not delegated_creds:
-            	return None
-        return delegated_creds[0]
- 
-    def __getCredential(self):
-        """ 
-        Get our credential from a remote registry 
-        """
-        from sfa.server.registry import Registries
-	registries = Registries()
-        registry = registries.get_server(self.hrn, self.key_file, self.cert_file)
-	#Sandrine 24 Oct 2 commented 2 following lines
-        registries = Registries(self)
-        registry = registries[self.hrn]
-	print>>sys.stderr, " SenslabAPI.PY __getCredential registries %s self.hrn %s \t registry %s " %(registries,self.hrn,registry)
-        cert_string=self.cert.save_to_string(save_parents=True)
-        # get self credential
-        self_cred = registry.GetSelfCredential(cert_string, self.hrn, 'authority')
-        # get credential
-        cred = registry.GetCredential(self_cred, self.hrn, 'authority')
-        return Credential(string=cred)
-
-    def __getCredentialRaw(self):
-        """
-        Get our current credential directly from the local registry.
-        """
-
-        hrn = self.hrn
-        auth_hrn = self.auth.get_authority(hrn)
-    
-        # is this a root or sub authority
-        if not auth_hrn or hrn == self.config.SFA_INTERFACE_HRN:
-            auth_hrn = hrn
-        auth_info = self.auth.get_auth_info(auth_hrn)
-        table = self.SfaTable()
-	records = table.findObjects({'hrn': hrn, 'type': 'authority+sa'})
-	#Sandrine 24 Oct 2 commented  following line
-        records = table.findObjects(hrn)
-	
-        if not records:
-            raise RecordNotFound
-        record = records[0]
-        type = record['type']
-        object_gid = record.get_gid_object()
-        new_cred = Credential(subject = object_gid.get_subject())
-        new_cred.set_gid_caller(object_gid)
-        new_cred.set_gid_object(object_gid)
-        new_cred.set_issuer_keys(auth_info.get_privkey_filename(), auth_info.get_gid_filename())
-        
-        r1 = determine_rights(type, hrn)
-        new_cred.set_privileges(r1)
-        new_cred.encode()
-        new_cred.sign()
-
-        return new_cred
-   
-
-    def loadCredential (self):
-        """
-        Attempt to load credential from file if it exists. If it doesnt get
-        credential from registry.
-        """
-
-        # see if this file exists
-        # XX This is really the aggregate's credential. Using this is easier than getting
-        # the registry's credential from iteslf (ssl errors).   
-        ma_cred_filename = self.config.SFA_DATA_DIR + os.sep + self.interface + self.hrn + ".ma.cred"
-        try:
-            self.credential = Credential(filename = ma_cred_filename)
-        except IOError:
-            self.credential = self.getCredentialFromRegistry()
-
     ##
     # Convert SFA fields to PLC fields for use when registering up updating
     # registry record in the PLC database
@@ -499,7 +322,7 @@ class SfaAPI(BaseAPI):
         # we obtain
         
         # get the sfa records
-        table = self.SfaTable()
+        table = SfaTable()
         person_list, persons = [], {}
         person_list = table.find({'type': 'user', 'pointer': person_ids})
         # create a hrns keyed on the sfa record's pointer.
@@ -602,7 +425,7 @@ class SfaAPI(BaseAPI):
         # build a list of the new person ids, by looking up each person to get
         # their pointer
         newIdList = []
-        table = self.SfaTable()
+        table = SfaTable()
         records = table.find({'type': 'user', 'hrn': newList})
         for rec in records:
             newIdList.append(rec['pointer'])
@@ -636,97 +459,6 @@ class SfaAPI(BaseAPI):
             # xxx TODO
             pass
 
-
-
-class ComponentAPI(BaseAPI):
-
-    def __init__(self, config = "/etc/sfa/sfa_config.py", encoding = "utf-8", methods='sfa.methods',
-                 peer_cert = None, interface = None, key_file = None, cert_file = None):
-
-        BaseAPI.__init__(self, config=config, encoding=encoding, methods=methods, peer_cert=peer_cert,
-                         interface=interface, key_file=key_file, cert_file=cert_file)
-        self.encoding = encoding
-
-        # Better just be documenting the API
-        if config is None:
-            return
-
-        self.nodemanager = NodeManager(self.config)
-
-    def sliver_exists(self):
-        sliver_dict = self.nodemanager.GetXIDs()
-        if slicename in sliver_dict.keys():
-            return True
-        else:
-            return False
-
-    def get_registry(self):
-        addr, port = self.config.SFA_REGISTRY_HOST, self.config.SFA_REGISTRY_PORT
-        url = "http://%(addr)s:%(port)s" % locals()
-        server = xmlrpcprotocol.get_server(url, self.key_file, self.cert_file)
-        return server
-
-    def get_node_key(self):
-        # this call requires no authentication,
-        # so we can generate a random keypair here
-        subject="component"
-        (kfd, keyfile) = tempfile.mkstemp()
-        (cfd, certfile) = tempfile.mkstemp()
-        key = Keypair(create=True)
-        key.save_to_file(keyfile)
-        cert = Certificate(subject=subject)
-        cert.set_issuer(key=key, subject=subject)
-        cert.set_pubkey(key)
-        cert.sign()
-        cert.save_to_file(certfile)
-        registry = self.get_registry()
-        # the registry will scp the key onto the node
-        registry.get_key()        
-
-    def getCredential(self):
-        """
-        Get our credential from a remote registry
-        """
-        path = self.config.SFA_DATA_DIR
-        config_dir = self.config.config_path
-        cred_filename = path + os.sep + 'node.cred'
-	print>>sys.stderr, "\r\n \r\n API.pPY COMPONENT getCredential  cred_filename %s" %(cred_filename)
-        try:
-            credential = Credential(filename = cred_filename)
-            return credential.save_to_string(save_parents=True)
-        except IOError:
-            node_pkey_file = config_dir + os.sep + "node.key"
-            node_gid_file = config_dir + os.sep + "node.gid"
-            cert_filename = path + os.sep + 'server.cert'
-            if not os.path.exists(node_pkey_file) or \
-               not os.path.exists(node_gid_file):
-                self.get_node_key()
-
-            # get node's hrn
-            gid = GID(filename=node_gid_file)
-            hrn = gid.get_hrn()
-            # get credential from registry
-            cert_str = Certificate(filename=cert_filename).save_to_string(save_parents=True)
-            registry = self.get_registry()
-            cred = registry.GetSelfCredential(cert_str, hrn, 'node')
-            Credential(string=cred).save_to_file(credfile, save_parents=True)            
-
-            return cred
-
-    def clean_key_cred(self):
-        """
-        remove the existing keypair and cred  and generate new ones
-        """
-        files = ["server.key", "server.cert", "node.cred"]
-        for f in files:
-            filepath = KEYDIR + os.sep + f
-            if os.path.isfile(filepath):
-                os.unlink(f)
-
-        # install the new key pair
-        # GetCredential will take care of generating the new keypair
-        # and credential
-        self.get_node_key()
-        self.getCredential()
-
-    
+### thierry
+# I don't think you plan on running a component manager at this point
+# let me clean up the mess of ComponentAPI that is deprecated anyways
