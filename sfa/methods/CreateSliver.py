@@ -4,6 +4,7 @@ from sfa.util.method import Method
 from sfa.util.parameter import Parameter, Mixed
 from sfa.util.sfatablesRuntime import run_sfatables
 from sfa.trust.credential import Credential
+from sfa.rspecs.rspec import RSpec
 
 class CreateSliver(Method):
     """
@@ -49,5 +50,9 @@ class CreateSliver(Method):
             chain_name = 'FORWARD-INCOMING'
         self.api.logger.debug("CreateSliver: sfatables on chain %s"%chain_name)
         rspec = run_sfatables(chain_name, hrn, origin_hrn, rspec)
-
-        return self.api.manager.CreateSliver(self.api, slice_xrn, creds, rspec, users, call_id)
+        slivers = RSpec(rspec).version.get_nodes_with_slivers()
+        if slivers:
+            result = self.api.manager.CreateSliver(self.api, slice_xrn, creds, rspec, users, call_id)
+        else:
+            result = rspec     
+        return result
