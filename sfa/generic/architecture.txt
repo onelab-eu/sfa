@@ -1,0 +1,40 @@
+We identify 3 layers in the server-side aspects:
+
+. api: this object reacts to an incoming SFA request
+
+. manager: this implements a given interface, either registry,
+aggregate, or slicemgr
+
+. driver: this object is in charge of actually talking to the
+underlying testbed
+
+-----
+
+the generic layer is in charge of instantiating these and to link them
+as follows:
+* the classes actually used for creating the 3 elements are
+configurable in a flavour (e.g. sfa.generic.pl.py)
+* which is then configured from sfa-config-tty as SFA_GENERIC_FLAVOUR
+
+* a call to make_api will then create the 3 elements with the
+  following layout:
+
+api.manager 
+manager.driver
+api.driver (for convenience)
+
+------
+example
+
+from sfa.generic import Generic
+generic=Generic.the_flavour()
+-> returns an instance of a Generic object with a flavour from the
+   config; by default it would thus be an instance of sfa.generic.pl
+
+api = generic.make_api (...) returns an instance of the given class
+with the arguments passed as arguments to the constructor
+
+------
+more in sfa/generic/__init__.py
+
+

@@ -12,8 +12,8 @@ from distutils.core import setup
 bins = [ 
     'config/sfa-config-tty',
     'config/gen-sfa-cm-config.py',
-    'sfa/plc/sfa-import-plc.py', 
-    'sfa/plc/sfa-nuke-plc.py', 
+    'sfa/importer/sfa-import-plc.py', 
+    'sfa/importer/sfa-nuke-plc.py', 
     'sfa/server/sfa-ca.py', 
     'sfa/server/sfa-start.py', 
     'sfa/server/sfa-clean-peer-records.py', 
@@ -44,6 +44,7 @@ package_dirs = [
     'sfa/generic',
     'sfa/managers',
     'sfa/managers/vini',
+    'sfa/importer',
     'sfa/plc',
     'sfa/rspecs',
     'sfa/rspecs/elements',

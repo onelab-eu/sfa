@@ -43,8 +43,6 @@ class GetTicket(Method):
         #log the call
         self.api.logger.info("interface: %s\tcaller-hrn: %s\ttarget-hrn: %s\tmethod-name: %s"%(self.api.interface, origin_hrn, hrn, self.name))
 
-        manager = self.api.get_interface_manager()
-
         # filter rspec through sfatables
         if self.api.interface in ['aggregate']:
             chain_name = 'OUTGOING'
@@ -53,7 +51,5 @@ class GetTicket(Method):
         rspec = run_sfatables(chain_name, hrn, origin_hrn, rspec)
         
         # remove nodes that are not available at this interface from the rspec
-        ticket = manager.get_ticket(self.api, xrn, creds, rspec, users)
-        
-        return ticket
+        return self.api.manager.get_ticket(self.api, xrn, creds, rspec, users)
         

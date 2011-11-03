@@ -14,8 +14,9 @@ from sfa.trust.credential import Credential
 from sfa.rspecs.version_manager import VersionManager
 from sfa.rspecs.rspec import RSpec
 
+from sfa.server.sfaapi import SfaApi
+
 import sfa.plc.peers as peers
-from sfa.plc.plcsfaapi import PlcSfaApi
 from sfa.plc.aggregate import Aggregate
 from sfa.plc.slices import Slices
 
@@ -112,13 +113,13 @@ def SliverStatus(api, slice_xrn, creds, call_id):
     # find out where this slice is currently running
     slicename = hrn_to_pl_slicename(hrn)
     
-    slices = api.plshell.GetSlices(api.plauth, [slicename], ['slice_id', 'node_ids','person_ids','name','expires'])
+    slices = api.driver.GetSlices([slicename], ['slice_id', 'node_ids','person_ids','name','expires'])
     if len(slices) == 0:        
         raise Exception("Slice %s not found (used %s as slicename internally)" % (slice_xrn, slicename))
     slice = slices[0]
     
     # report about the local nodes only
-    nodes = api.plshell.GetNodes(api.plauth, {'node_id':slice['node_ids'],'peer_id':None},
+    nodes = api.driver.GetNodes({'node_id':slice['node_ids'],'peer_id':None},
                                  ['node_id', 'hostname', 'site_id', 'boot_state', 'last_contact'])
     site_ids = [node['site_id'] for node in nodes]
 
@@ -203,14 +204,14 @@ def RenewSliver(api, xrn, creds, expiration_time, call_id):
     if Callids().already_handled(call_id): return True
     (hrn, _) = urn_to_hrn(xrn)
     slicename = hrn_to_pl_slicename(hrn)
-    slices = api.plshell.GetSlices(api.plauth, {'name': slicename}, ['slice_id'])
+    slices = api.driver.GetSlices({'name': slicename}, ['slice_id'])
     if not slices:
         raise RecordNotFound(hrn)
     slice = slices[0]
     requested_time = utcparse(expiration_time)
     record = {'expires': int(time.mktime(requested_time.timetuple()))}
     try:
-        api.plshell.UpdateSlice(api.plauth, slice['slice_id'], record)
+        api.driver.UpdateSlice(slice['slice_id'], record)
         return True
     except:
         return False
@@ -218,30 +219,30 @@ def RenewSliver(api, xrn, creds, expiration_time, call_id):
 def start_slice(api, xrn, creds):
     (hrn, _) = urn_to_hrn(xrn)
     slicename = hrn_to_pl_slicename(hrn)
-    slices = api.plshell.GetSlices(api.plauth, {'name': slicename}, ['slice_id'])
+    slices = api.driver.GetSlices({'name': slicename}, ['slice_id'])
     if not slices:
         raise RecordNotFound(hrn)
     slice_id = slices[0]['slice_id']
-    slice_tags = api.plshell.GetSliceTags(api.plauth, {'slice_id': slice_id, 'tagname': 'enabled'}, ['slice_tag_id'])
+    slice_tags = api.driver.GetSliceTags({'slice_id': slice_id, 'tagname': 'enabled'}, ['slice_tag_id'])
     # just remove the tag if it exists
     if slice_tags:
-        api.plshell.DeleteSliceTag(api.plauth, slice_tags[0]['slice_tag_id'])
+        api.driver.DeleteSliceTag(slice_tags[0]['slice_tag_id'])
 
     return 1
  
 def stop_slice(api, xrn, creds):
     hrn, _ = urn_to_hrn(xrn)
     slicename = hrn_to_pl_slicename(hrn)
-    slices = api.plshell.GetSlices(api.plauth, {'name': slicename}, ['slice_id'])
+    slices = api.driver.GetSlices({'name': slicename}, ['slice_id'])
     if not slices:
         raise RecordNotFound(hrn)
     slice_id = slices[0]['slice_id']
-    slice_tags = api.plshell.GetSliceTags(api.plauth, {'slice_id': slice_id, 'tagname': 'enabled'})
+    slice_tags = api.driver.GetSliceTags({'slice_id': slice_id, 'tagname': 'enabled'})
     if not slice_tags:
-        api.plshell.AddSliceTag(api.plauth, slice_id, 'enabled', '0')
+        api.driver.AddSliceTag(slice_id, 'enabled', '0')
     elif slice_tags[0]['value'] != "0":
         tag_id = slice_tags[0]['slice_tag_id']
-        api.plshell.UpdateSliceTag(api.plauth, tag_id, '0')
+        api.driver.UpdateSliceTag(tag_id, '0')
     return 1
 
 def reset_slice(api, xrn):
@@ -252,7 +253,7 @@ def DeleteSliver(api, xrn, creds, call_id):
     if Callids().already_handled(call_id): return ""
     (hrn, _) = urn_to_hrn(xrn)
     slicename = hrn_to_pl_slicename(hrn)
-    slices = api.plshell.GetSlices(api.plauth, {'name': slicename})
+    slices = api.driver.GetSlices({'name': slicename})
     if not slices:
         return 1
     slice = slices[0]
@@ -261,11 +262,11 @@ def DeleteSliver(api, xrn, creds, call_id):
     peer = peers.get_peer(api, hrn)
     try:
         if peer:
-            api.plshell.UnBindObjectFromPeer(api.plauth, 'slice', slice['slice_id'], peer)
-        api.plshell.DeleteSliceFromNodes(api.plauth, slicename, slice['node_ids'])
+            api.driver.UnBindObjectFromPeer('slice', slice['slice_id'], peer)
+        api.driver.DeleteSliceFromNodes(slicename, slice['node_ids'])
     finally:
         if peer:
-            api.plshell.BindObjectToPeer(api.plauth, 'slice', slice['slice_id'], peer, slice['peer_slice_id'])
+            api.driver.BindObjectToPeer('slice', slice['slice_id'], peer, slice['peer_slice_id'])
     return 1
 
 # xxx Thierry : caching at the aggregate level sounds wrong...
@@ -280,7 +281,7 @@ def ListSlices(api, creds, call_id):
             return slices
 
     # get data from db 
-    slices = api.plshell.GetSlices(api.plauth, {'peer_id': None}, ['name'])
+    slices = api.driver.GetSlices({'peer_id': None}, ['name'])
     slice_hrns = [slicename_to_hrn(api.hrn, slice['name']) for slice in slices]
     slice_urns = [hrn_to_urn(slice_hrn, 'slice') for slice_hrn in slice_hrns]
 
@@ -334,7 +335,7 @@ def get_ticket(api, xrn, creds, rspec, users):
     # get the slice record
     credential = api.getCredential()
     interface = api.registries[api.hrn]
-    registry = api.get_server(interface, credential)
+    registry = api.server_proxy(interface, credential)
     records = registry.Resolve(xrn, credential)
 
     # make sure we get a local slice record
@@ -393,20 +394,20 @@ def get_ticket(api, xrn, creds, rspec, users):
 
 
 
-def main():
-    """
-    rspec = ListResources(api, "plc.princeton.sapan", None, 'pl_test_sapan')
-    #rspec = ListResources(api, "plc.princeton.coblitz", None, 'pl_test_coblitz')
-    #rspec = ListResources(api, "plc.pl.sirius", None, 'pl_test_sirius')
-    print rspec
-    """
-    api = PlcSfaApi()
-    f = open(sys.argv[1])
-    xml = f.read()
-    f.close()
-#Error (E1120, main): No value passed for parameter 'users' in function call
-#Error (E1120, main): No value passed for parameter 'call_id' in function call
-    CreateSliver(api, "plc.princeton.sapan", xml, 'CreateSliver_sapan')
-
-if __name__ == "__main__":
-    main()
+#def main():
+#    """
+#    rspec = ListResources(api, "plc.princeton.sapan", None, 'pl_test_sapan')
+#    #rspec = ListResources(api, "plc.princeton.coblitz", None, 'pl_test_coblitz')
+#    #rspec = ListResources(api, "plc.pl.sirius", None, 'pl_test_sirius')
+#    print rspec
+#    """
+#    api = PlcSfaApi()
+#    f = open(sys.argv[1])
+#    xml = f.read()
+#    f.close()
+##Error (E1120, main): No value passed for parameter 'users' in function call
+##Error (E1120, main): No value passed for parameter 'call_id' in function call
+#    CreateSliver(api, "plc.princeton.sapan", xml, 'CreateSliver_sapan')
+#
+#if __name__ == "__main__":
+#    main()

@@ -30,7 +30,6 @@ class Stop(Method):
         origin_hrn = Credential(string=valid_creds[0]).get_gid_caller().get_hrn()
         self.api.logger.info("interface: %s\tcaller-hrn: %s\ttarget-hrn: %s\tmethod-name: %s"%(self.api.interface, origin_hrn, hrn, self.name))
 
-        manager = self.api.get_interface_manager() 
-        manager.stop_slice(self.api, xrn, creds)
+        self.api.manager.stop_slice(self.api, xrn, creds)
  
         return 1 

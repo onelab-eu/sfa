@@ -10,7 +10,7 @@ class Element:
 
     def add_element(self, name, attrs={}, parent=None, text=""):
         """
-        Generic wrapper around etree.SubElement(). Adds an element to
+        Wrapper around etree.SubElement(). Adds an element to
         specified parent node. Adds element to root node is parent is
         not specified.
         """
