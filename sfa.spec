@@ -144,6 +144,7 @@ rm -rf $RPM_BUILD_ROOT
 /etc/sfa/sig.xsd
 /etc/sfa/xml.xsd
 /etc/sfa/protogeni-rspec-common.xsd
+/etc/sfa/topology
 %{_bindir}/sfa-config-tty
 %{_bindir}/sfa-import-plc.py*
 %{_bindir}/sfa-clean-peer-records.py*
