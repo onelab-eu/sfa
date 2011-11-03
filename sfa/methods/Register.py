@@ -1,14 +1,5 @@
-### $Id: register.py 16477 2010-01-05 16:31:37Z thierry $
-### $URL: https://svn.planet-lab.org/svn/sfa/trunk/sfa/methods/register.py $
-
-from sfa.trust.certificate import Keypair, convert_public_key
-from sfa.trust.gid import *
-from sfa.util.faults import *
 from sfa.util.method import Method
 from sfa.util.parameter import Parameter, Mixed
-from sfa.util.record import SfaRecord
-from sfa.trust.auth import Auth
-from sfa.trust.gid import create_uuid
 from sfa.trust.credential import Credential
 
 class Register(Method):

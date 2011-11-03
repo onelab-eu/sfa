@@ -4,14 +4,9 @@
 # Mark Huang <mlhuang@cs.princeton.edu>
 # Copyright (C) 2006 The Trustees of Princeton University
 #
-# $Id$
-#
 
-### $Id$
-### $URL$
-
-from types import *
-from sfa.util.faults import *
+from types import NoneType, IntType, LongType, FloatType, StringTypes, DictType, TupleType, ListType
+from sfa.util.faults import SfaAPIError
 
 class Parameter:
     """

@@ -1,7 +1,10 @@
+from copy import deepcopy
 from lxml import etree
 from sfa.util.xrn import hrn_to_urn, urn_to_hrn
+from sfa.util.plxrn import PlXrn
 from sfa.rspecs.rspec_version import BaseVersion
 from sfa.rspecs.rspec_elements import RSpecElement, RSpecElements
+from sfa.rspecs.elements.versions.pgv2Link import PGv2Link
 
 class SFAv1(BaseVersion):
     enabled = True
@@ -12,11 +15,7 @@ class SFAv1(BaseVersion):
     namespace = None
     extensions = {}
     namespaces = None
-    elements = [
-        RSpecElement(RSpecElements.NETWORK, 'network', '//network'),
-        RSpecElement(RSpecElements.NODE, 'node', '//node'),
-        RSpecElement(RSpecElements.SLIVER, 'sliver', '//node/sliver'),
-    ] 
+    elements = [] 
     template = '<RSpec type="%s"></RSpec>' % type
 
     def get_network_elements(self):
@@ -116,18 +115,10 @@ class SFAv1(BaseVersion):
         return nodes
 
     def get_links(self, network=None):
-        if network:
-            links = self.xml.xpath('//network[@name="%s"]/link' % network)
-        else:
-            links = self.xml.xpath('//link')
-        linklist = []
-        for link in links:
-            (end1, end2) = link.get("endpoints").split()
-            name = link.find("description")
-            linklist.append((name.text,
-                             self.get_site_nodes(end1, network),
-                             self.get_site_nodes(end2, network)))
-        return linklist
+        return PGv2Link.get_links(self.xml)
+
+    def get_link_requests(self):
+        return PGv2Link.get_link_requests(self.xml) 
 
     def get_link(self, fromnode, tonode, network=None):
         fromsite = fromnode.getparent()
@@ -222,9 +213,14 @@ class SFAv1(BaseVersion):
                 node_tag.set('component_name', node['hostname']) 
                 hostname_tag = etree.SubElement(node_tag, 'hostname').text = node['hostname']
             if 'interfaces' in node:
+                i = 0
                 for interface in node['interfaces']:
                     if 'bwlimit' in interface and interface['bwlimit']:
                         bwlimit = etree.SubElement(node_tag, 'bw_limit', units='kbps').text = str(interface['bwlimit']/1000)
+                    comp_id = PlXrn(auth=network, interface='node%s:eth%s' % (node['node_id'], i)).get_urn() 
+                    ipaddr = interface['ip'] 
+                    interface_tag = etree.SubElement(node_tag, 'interface', component_id=comp_id, ipv4=ipaddr)
+                    i+=1
             if 'bw_unallocated' in node:
                 bw_unallocated = etree.SubElement(node_tag, 'bw_unallocated', units='kbps').text = str(node['bw_unallocated']/1000) 
             if 'tags' in node:
@@ -251,18 +247,17 @@ class SFAv1(BaseVersion):
         pass
 
     def add_links(self, links):
-        for link in links:
-            network_tag = self.xml.root
-            if link.component_manager_id != None:
-                network_hrn, type = urn_to_hrn(link.component_manager_id)
-                network_tag = self.add_network(network) 
+        networks = self.get_network_elements()
+        if len(networks) > 0:
+            xml = networks[0]
+        else:
+            xml = self.xml    
+        PGv2Link.add_links(xml, links)
 
-            link_elem = etree.SubElement(network_tag, 'link')
-            link_elem.set('endpoints', '%s %s' % (link.endpoint1.name, link.endpoint2.name))
-            description = etree.SubElement(link_elem, 'description').text = link.description
-            bw_unallocated = etree.SubElement(link_elem, 'bw_unallocated', units='kbps').text = link.capacity  
+    def add_link_requests(self, links):
+        PGv2Link.add_link_requests(self.xml, links)
 
-    def add_slivers(self, slivers, network=None, sliver_urn=None, no_dupes=False):
+    def add_slivers(self, slivers, network=None, sliver_urn=None, no_dupes=False, append=False):
         # add slice name to network tag
         network_tags = self.xml.xpath('//network')
         if network_tags:
@@ -283,10 +278,11 @@ class SFAv1(BaseVersion):
                     etree.SubElement(sliver_elem, tag['tagname']).text = value=tag['value']
             
         # remove all nodes without slivers
-        for node in nodes_without_slivers:
-            node_elem = self.get_node_element(node, network)
-            parent = node_elem.getparent()
-            parent.remove(node_elem)
+        if not append:
+            for node in nodes_without_slivers:
+                node_elem = self.get_node_element(node)
+                parent = node_elem.getparent()
+                parent.remove(node_elem)
 
     def remove_slivers(self, slivers, network=None, no_dupes=False):
         for sliver in slivers:

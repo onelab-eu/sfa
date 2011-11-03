@@ -1,18 +1,12 @@
-import datetime
-import time
-import traceback
-import sys
-
 from types import StringTypes
-from sfa.util.xrn import Xrn, get_leaf, get_authority, hrn_to_urn, urn_to_hrn
-from sfa.util.plxrn import hrn_to_pl_slicename, hrn_to_pl_login_base
-from sfa.util.rspec import *
-from sfa.util.specdict import *
-from sfa.util.faults import *
-from sfa.util.record import SfaRecord
-from sfa.util.policy import Policy
-from sfa.util.prefixTree import prefixTree
 from collections import defaultdict
+
+from sfa.util.xrn import get_leaf, get_authority, urn_to_hrn
+from sfa.util.plxrn import hrn_to_pl_slicename
+from sfa.util.policy import Policy
+from sfa.rspecs.rspec import RSpec
+from sfa.plc.vlink import VLink
+from sfa.util.xrn import Xrn
 
 MAXINT =  2L**31-1
 
@@ -27,6 +21,8 @@ class Slices:
         self.origin_hrn = origin_hrn
         self.registry = api.registries[api.hrn]
         self.credential = api.getCredential()
+        self.nodes = []
+        self.persons = []
 
     def get_slivers(self, xrn, node=None):
         hrn, type = urn_to_hrn(xrn)
@@ -187,6 +183,24 @@ class Slices:
 
         except: 
             self.api.logger.log_exc('Failed to add/remove slice from nodes')
+
+    def verify_slice_links(self, slice, links, aggregate):
+        # nodes is undefined here
+        if not links:
+            return 
+        
+        for link in links:
+            # get the ip address of the first node in the link
+            ifname1 = Xrn(link['interface1']['component_id']).get_leaf()
+            (node, device) = ifname1.split(':')
+            node_id = int(node.replace('node', ''))
+            node = aggregate.nodes[node_id]
+            if1 = aggregate.interfaces[node['interface_ids'][0]]
+            ipaddr = if1['ip']
+            topo_rspec = VLink.get_topo_rspec(link, ipaddr)
+            self.api.plshell.AddSliceTag(self.api.plauth, slice['name'], 'topo_rspec', str([topo_rspec]), node_id) 
+                        
+        
 
     def handle_peer(self, site, slice, persons, peer):
         if peer:
@@ -533,8 +547,7 @@ class Slices:
         # add requested_attributes
         for attribute in added_slice_attributes:
             try:
-                name, value, node_id = attribute['name'], attribute['value'], attribute.get('node_id', None)
-                self.api.plshell.AddSliceTag(self.api.plauth, slice['name'], name, value, node_id)
+                self.api.plshell.AddSliceTag(self.api.plauth, slice['name'], attribute['name'], attribute['value'], attribute.get('node_id', None))
             except Exception, e:
                 self.api.logger.warn('Failed to add sliver attribute. name: %s, value: %s, node_id: %s\nCause:%s'\
                                 % (name, value,  node_id, str(e)))

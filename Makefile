@@ -87,7 +87,7 @@ force:
 
 ##########
 tags:	
-	find . -type f | egrep -v '/\.git/|/\.svn/|TAGS|\.py[co]$$|\.doc$$|\.html$$|\.pdf$$|~$$|\.png$$|\.svg$$|\.out$$|\.bak$$|\.xml$$' | xargs etags
+	find . -type f | egrep -v '/\.git/|/\.svn/|TAGS|~$$|\.(py[co]|doc|html|pdf|png|svg|out|bak|xml|dg)$$' | xargs etags
 .PHONY: tags
 
 signatures:
@@ -125,7 +125,7 @@ sfiAddAttribute.py sfiAddSliver.py sfiDeleteAttribute.py sfiDeleteSliver.py sfiL
 sfiListSlivers.py sfadump.py
 
 BINS =	./config/sfa-config-tty ./config/gen-sfa-cm-config.py \
-	./sfa/plc/sfa-import-plc.py ./sfa/plc/sfa-nuke-plc.py ./sfa/server/sfa-server.py \
+	./sfa/plc/sfa-import-plc.py ./sfa/plc/sfa-nuke-plc.py ./sfa/server/sfa-start.py \
 	$(foreach client,$(CLIENTS),./sfa/client/$(client))
 
 sync:
@@ -137,7 +137,9 @@ ifeq (,$(SSHURL))
 else
 	+$(RSYNC) ./sfa/ $(SSHURL)/usr/lib\*/python2.\*/site-packages/sfa/
 	+$(RSYNC) ./tests/ $(SSHURL)/root/tests-sfa
-	+$(RSYNC)  $(BINS) $(SSHURL)/usr/bin
+	+$(RSYNC)  $(BINS) $(SSHURL)/usr/bin/
+	+$(RSYNC) ./sfa/init.d/sfa  $(SSHURL)/etc/init.d/
+	+$(RSYNC) ./config/default_config.xml $(SSHURL)/etc/sfa/
 	$(SSHCOMMAND) exec service sfa restart
 endif
 

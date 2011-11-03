@@ -8,20 +8,16 @@
 # RSA keys at this time, not DSA keys.
 ##
 
-import getopt
-import sys
-import tempfile
-
 from sfa.util.sfalogging import _SfaLogger
 
-from sfa.util.record import *
+from sfa.util.record import SfaRecord
 from sfa.util.table import SfaTable
 from sfa.util.xrn import get_authority, hrn_to_urn
 from sfa.util.plxrn import email_to_hrn
 from sfa.util.config import Config
 from sfa.trust.certificate import convert_public_key, Keypair
 from sfa.trust.trustedroots import TrustedRoots
-from sfa.trust.hierarchy import *
+from sfa.trust.hierarchy import Hierarchy
 from sfa.trust.gid import create_uuid
 
 
@@ -234,8 +230,6 @@ class sfaImport:
 
     
     def import_site(self, hrn, site):
-        shell = self.shell
-        plc_auth = self.plc_auth
         urn = hrn_to_urn(hrn, 'authority')
         self.logger.info("Import: site %s"%hrn)
 

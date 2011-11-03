@@ -2,15 +2,13 @@
 
 import sys
 import os
-import pdb
-from optparse import OptionParser
 
 import libxml2
+import libxslt
 
-from sfatables import commands
-from sfatables.globals import *
-from sfatables.commands.List import *
-from sfatables.xmlrule import *
+from sfatables.globals import sfatables_config
+from sfatables.commands.List import List
+from sfatables.xmlrule import XMLRule
 
 class SFATablesRules:
     def __init__(self, chain_name):

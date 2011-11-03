@@ -15,10 +15,9 @@ from sqlobject import *
 
 from sfa.util.faults import *
 from sfa.util.xrn import urn_to_hrn, Xrn
-from sfa.util.rspec import RSpec
 from sfa.server.registry import Registries
 from sfa.trust.credential import Credential
-from sfa.plc.api import SfaAPI
+from sfa.plc.plcsfaapi import PlcSfaApi
 from sfa.plc.aggregate import Aggregate
 from sfa.plc.slices import *
 from sfa.util.plxrn import hrn_to_pl_slicename, slicename_to_hrn
@@ -42,7 +41,7 @@ cloud = {}
 #
 EUCALYPTUS_RSPEC_SCHEMA='/etc/sfa/eucalyptus.rng'
 
-api = SfaAPI()
+api = PlcSfaApi()
 
 ##
 # Meta data of an instance.
@@ -736,7 +735,7 @@ def main():
 
     server_key_file = '/var/lib/sfa/authorities/server.key'
     server_cert_file = '/var/lib/sfa/authorities/server.cert'
-    api = SfaAPI(key_file = server_key_file, cert_file = server_cert_file, interface='aggregate')
+    api = PlcSfaApi(key_file = server_key_file, cert_file = server_cert_file, interface='aggregate')
     print getKeysForSlice(api, 'gc.gc.test1')
 
 if __name__ == "__main__":

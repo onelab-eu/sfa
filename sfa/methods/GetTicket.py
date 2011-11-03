@@ -1,14 +1,9 @@
-### $Id: get_ticket.py 17732 2010-04-19 21:10:45Z tmack $
-### $URL: https://svn.planet-lab.org/svn/sfa/trunk/sfa/methods/get_ticket.py $
-import time
-from sfa.util.faults import *
 from sfa.util.xrn import urn_to_hrn
 from sfa.util.method import Method
 from sfa.util.parameter import Parameter, Mixed
-from sfa.trust.auth import Auth
-from sfa.util.config import Config
-from sfa.trust.credential import Credential
 from sfa.util.sfatablesRuntime import run_sfatables
+
+from sfa.trust.credential import Credential
 
 class GetTicket(Method):
     """

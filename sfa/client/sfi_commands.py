@@ -12,6 +12,7 @@ class Commands:
         self.parser.add_option("-o", "", dest="outfile", metavar="FILE",
                                help="write output to FILE (default is stdout)")
         self.nodefile = False
+        self.linkfile = False
         self.attributes = {}
 
     def add_nodefile_option(self):
@@ -19,6 +20,12 @@ class Commands:
         self.parser.add_option("-n", "", dest="nodefile", 
                                metavar="FILE",
                                help="read node list from FILE"),
+
+    def add_linkfile_option(self):
+        self.linkfile = True
+        self.parser.add_option("-l", "", dest="linkfile",
+                               metavar="FILE",
+                               help="read link list from FILE") 
 
     def add_show_attributes_option(self):
         self.parser.add_option("-s", "--show-attributes", action="store_true", 

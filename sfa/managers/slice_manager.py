@@ -1,34 +1,22 @@
-#
 import sys
-import time,datetime
+import time
 from StringIO import StringIO
-from types import StringTypes
-from copy import deepcopy
 from copy import copy
 from lxml import etree
 
-from sfa.util.sfalogging import logger
-from sfa.util.rspecHelper import merge_rspecs
-from sfa.util.xrn import Xrn, urn_to_hrn, hrn_to_urn
-from sfa.util.plxrn import hrn_to_pl_slicename
-from sfa.util.rspec import *
-from sfa.util.specdict import *
-from sfa.util.faults import *
-from sfa.util.record import SfaRecord
-from sfa.rspecs.rspec_converter import RSpecConverter
-from sfa.client.client_helper import sfa_to_pg_users_arg
-from sfa.rspecs.version_manager import VersionManager
-from sfa.rspecs.rspec import RSpec 
-from sfa.util.policy import Policy
-from sfa.util.prefixTree import prefixTree
-from sfa.util.sfaticket import *
+from sfa.trust.sfaticket import SfaTicket
 from sfa.trust.credential import Credential
+
+from sfa.util.sfalogging import logger
+from sfa.util.xrn import Xrn, urn_to_hrn
 from sfa.util.threadmanager import ThreadManager
-import sfa.util.xmlrpcprotocol as xmlrpcprotocol     
-import sfa.plc.peers as peers
 from sfa.util.version import version_core
 from sfa.util.callids import Callids
 
+from sfa.rspecs.rspec_converter import RSpecConverter
+from sfa.rspecs.version_manager import VersionManager
+from sfa.rspecs.rspec import RSpec 
+from sfa.client.client_helper import sfa_to_pg_users_arg
 
 def _call_id_supported(api, server):
     """
@@ -92,7 +80,7 @@ def drop_slicemgr_stats(rspec):
         for node in stats_elements:
             node.getparent().remove(node)
     except Exception, e:
-        api.logger.warn("drop_slicemgr_stats failed: %s " % (str(e)))
+        logger.warn("drop_slicemgr_stats failed: %s " % (str(e)))
 
 def add_slicemgr_stat(rspec, callname, aggname, elapsed, status):
     try:
@@ -104,7 +92,7 @@ def add_slicemgr_stat(rspec, callname, aggname, elapsed, status):
 
         etree.SubElement(stats_tag, "aggregate", name=str(aggname), elapsed=str(elapsed), status=str(status))
     except Exception, e:
-        api.logger.warn("add_slicemgr_stat failed on  %s: %s" %(aggname, str(e)))
+        logger.warn("add_slicemgr_stat failed on  %s: %s" %(aggname, str(e)))
 
 def ListResources(api, creds, options, call_id):
     version_manager = VersionManager()
@@ -219,9 +207,9 @@ def CreateSliver(api, xrn, creds, rspec_str, users, call_id):
     # The schema used here needs to aggregate the PL and VINI schemas
     # schema = "/var/www/html/schemas/pl.rng"
     rspec = RSpec(rspec_str)
-    schema = None
-    if schema:
-        rspec.validate(schema)
+#    schema = None
+#    if schema:
+#        rspec.validate(schema)
 
     # if there is a <statistics> section, the aggregates don't care about it,
     # so delete it.
@@ -445,7 +433,7 @@ def get_ticket(api, xrn, creds, rspec, users):
     results = threads.get_results()
     
     # gather information from each ticket 
-    rspecs = []
+    rspec = None
     initscripts = []
     slivers = [] 
     object_gid = None  
@@ -454,15 +442,17 @@ def get_ticket(api, xrn, creds, rspec, users):
         attrs = agg_ticket.get_attributes()
         if not object_gid:
             object_gid = agg_ticket.get_gid_object()
-        rspecs.append(agg_ticket.get_rspec())
+        if not rspec:
+            rspec = RSpec(agg_ticket.get_rspec())
+        else:
+            rspec.version.merge(agg_ticket.get_rspec())
         initscripts.extend(attrs.get('initscripts', [])) 
         slivers.extend(attrs.get('slivers', [])) 
     
     # merge info
     attributes = {'initscripts': initscripts,
                  'slivers': slivers}
-    merged_rspec = merge_rspecs(rspecs) 
-
+    
     # create a new ticket
     ticket = SfaTicket(subject = slice_hrn)
     ticket.set_gid_caller(api.auth.client_gid)
@@ -471,7 +461,7 @@ def get_ticket(api, xrn, creds, rspec, users):
     ticket.set_pubkey(object_gid.get_pubkey())
     #new_ticket.set_parent(api.auth.hierarchy.get_auth_ticket(auth_hrn))
     ticket.set_attributes(attributes)
-    ticket.set_rspec(merged_rspec)
+    ticket.set_rspec(rspec.toxml())
     ticket.encode()
     ticket.sign()          
     return ticket.save_to_string(save_parents=True)
@@ -540,11 +530,12 @@ def status(api, xrn, creds):
     """
     return 1
 
-def main():
-    r = RSpec()
-    r.parseFile(sys.argv[1])
-    rspec = r.toDict()
-    CreateSliver(None,'plc.princeton.tmacktestslice',rspec,'create-slice-tmacktestslice')
+# this is plain broken
+#def main():
+#    r = RSpec()
+#    r.parseFile(sys.argv[1])
+#    rspec = r.toDict()
+#    CreateSliver(None,'plc.princeton.tmacktestslice',rspec,'create-slice-tmacktestslice')
 
 if __name__ == "__main__":
     main()

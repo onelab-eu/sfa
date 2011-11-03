@@ -18,7 +18,7 @@ from sfa.util.sfalogging import sfi_logger
 from sfa.trust.certificate import Keypair, Certificate
 from sfa.trust.gid import GID
 from sfa.trust.credential import Credential
-from sfa.util.sfaticket import SfaTicket
+from sfa.trust.sfaticket import SfaTicket
 from sfa.util.record import SfaRecord, UserRecord, SliceRecord, NodeRecord, AuthorityRecord
 from sfa.rspecs.rspec import RSpec
 from sfa.rspecs.rspec_converter import RSpecConverter
@@ -232,9 +232,9 @@ class Sfi:
             parser.add_option("-d", "--delegate", dest="delegate", default=None, 
                              action="store_true",
                              help="Include a credential delegated to the user's root"+\
-                                  "authority in set of credentials for this call")  
-        
-        # registy filter option    
+                                  "authority in set of credentials for this call")
+
+        # registy filter option
         if command in ("list", "show", "remove"):
             parser.add_option("-t", "--type", dest="type", type="choice",
                             help="type filter ([all]|user|slice|authority|node|aggregate)",
@@ -521,7 +521,7 @@ class Sfi:
         if args:
             hrn = args[0]
         gid = self._get_gid(hrn)
-        self.logger.debug("Sfi.get_gid-> %s",gid.save_to_string(save_parents=True))
+        self.logger.debug("Sfi.get_gid-> %s" % gid.save_to_string(save_parents=True))
         return gid
 
     def _get_gid(self, hrn=None, type=None):
@@ -985,10 +985,15 @@ class Sfi:
         slice_urn = hrn_to_urn(slice_hrn, 'slice')
         user_cred = self.get_user_cred()
         slice_cred = self.get_slice_cred(slice_hrn).save_to_string(save_parents=True)
-        # delegate the cred to the callers root authority
-        delegated_cred = self.delegate_cred(slice_cred, get_authority(self.authority)+'.slicemanager')
-        #delegated_cred = self.delegate_cred(slice_cred, get_authority(slice_hrn))
-        #creds.append(delegated_cred)
+
+        if hasattr(opts, 'aggregate') and opts.aggregate:
+            delegated_cred = None
+        else:
+            # delegate the cred to the callers root authority
+            delegated_cred = self.delegate_cred(slice_cred, get_authority(self.authority)+'.slicemanager')
+            #delegated_cred = self.delegate_cred(slice_cred, get_authority(slice_hrn))
+            #creds.append(delegated_cred)
+
         rspec_file = self.get_rspec_file(args[1])
         rspec = open(rspec_file).read()
 
@@ -1013,11 +1018,13 @@ class Sfi:
                 creds = [slice_cred]
             else:
                 users = sfa_users_arg(user_records, slice_record)
-                creds = [slice_cred, delegated_cred]
+                creds = [slice_cred]
+                if delegated_cred:
+                    creds.append(delegated_cred)
         call_args = [slice_urn, creds, rspec, users]
         if self.server_supports_call_id_arg(server):
             call_args.append(unique_call_id())
-           
+
         result = server.CreateSliver(*call_args)
         if opts.file is None:
             print result

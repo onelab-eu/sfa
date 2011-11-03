@@ -3,11 +3,13 @@
 #
 # TODO: Use existing PLC database methods? or keep this separate?
 
-from sfa.util.PostgreSQL import *
-from sfa.trust.gid import *
-from sfa.util.record import *
-from sfa.util.config import *
-from sfa.util.filter import *
+from types import StringTypes
+
+from sfa.util.config import Config
+from sfa.util.parameter import Parameter
+from sfa.util.filter import Filter
+from sfa.util.PostgreSQL import PostgreSQL
+from sfa.util.record import SfaRecord, AuthorityRecord, NodeRecord, SliceRecord, UserRecord
 
 class SfaTable(list):
 

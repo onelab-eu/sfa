@@ -1,13 +1,12 @@
 #!/usr/bin/python
 #
-# SFA PLC Wrapper
+# PlanetLab SFA implementation
 #
-# This wrapper implements the SFA Registry and Slice Interfaces on PLC.
+# This implements the SFA Registry and Slice Interfaces on PLC.
 # Depending on command line options, it starts some combination of a
 # Registry, an Aggregate Manager, and a Slice Manager.
 #
-# There are several items that need to be done before starting the wrapper
-# server.
+# There are several items that need to be done before starting the servers.
 #
 # NOTE:  Many configuration settings, including the PLC maintenance account
 # credentials, URI of the PLCAPI, and PLC DB URI and admin credentials are initialized
@@ -43,7 +42,7 @@ from sfa.trust.certificate import Keypair, Certificate
 from sfa.trust.hierarchy import Hierarchy
 from sfa.trust.gid import GID
 from sfa.util.config import Config
-from sfa.plc.api import SfaAPI
+from sfa.plc.plcsfaapi import PlcSfaApi
 from sfa.server.registry import Registries
 from sfa.server.aggregate import Aggregates
 from sfa.util.xrn import get_authority, hrn_to_urn
@@ -135,34 +134,6 @@ def init_self_signed_cert(hrn, key, server_cert_file):
     cert.sign()
     cert.save_to_file(server_cert_file)
 
-def init_server(options, config):
-    """
-    Execute the init method defined in the manager file 
-    """
-    def init_manager(manager_module, manager_base):
-        try: manager = __import__(manager_module, fromlist=[manager_base])
-        except: manager = None
-        if manager and hasattr(manager, 'init_server'):
-            manager.init_server()
-    
-    manager_base = 'sfa.managers'
-    if options.registry:
-        mgr_type = config.SFA_REGISTRY_TYPE
-        manager_module = manager_base + ".registry_manager_%s" % mgr_type
-        init_manager(manager_module, manager_base)    
-    if options.am:
-        mgr_type = config.SFA_AGGREGATE_TYPE
-        manager_module = manager_base + ".aggregate_manager_%s" % mgr_type
-        init_manager(manager_module, manager_base)    
-    if options.sm:
-        mgr_type = config.SFA_SM_TYPE
-        manager_module = manager_base + ".slice_manager_%s" % mgr_type
-        init_manager(manager_module, manager_base)    
-    if options.cm:
-        mgr_type = config.SFA_CM_TYPE
-        manager_module = manager_base + ".component_manager_%s" % mgr_type
-        init_manager(manager_module, manager_base)    
-
 def install_peer_certs(server_key_file, server_cert_file):
     """
     Attempt to install missing trusted gids and db records for 
@@ -172,7 +143,7 @@ def install_peer_certs(server_key_file, server_cert_file):
     # There should be a gid file in /etc/sfa/trusted_roots for every
     # peer registry found in in the registries.xml config file. If there
     # are any missing gids, request a new one from the peer registry.
-    api = SfaAPI(key_file = server_key_file, cert_file = server_cert_file)
+    api = PlcSfaApi(key_file = server_key_file, cert_file = server_cert_file)
     registries = Registries()
     aggregates = Aggregates()
     interfaces = dict(registries.items() + aggregates.items())
@@ -229,7 +200,7 @@ def update_cert_records(gids):
     Make sure there is a record in the registry for the specified gids. 
     Removes old records from the db.
     """
-    # import SfaTable here so this module can be loaded by ComponentAPI
+    # import SfaTable here so this module can be loaded by PlcComponentApi
     from sfa.util.table import SfaTable
     from sfa.util.record import SfaRecord
     if not gids:
@@ -261,7 +232,7 @@ def update_cert_records(gids):
         
 def main():
     # Generate command line parser
-    parser = OptionParser(usage="sfa-server [options]")
+    parser = OptionParser(usage="sfa-start.py [options]")
     parser.add_option("-r", "--registry", dest="registry", action="store_true",
          help="run registry server", default=False)
     parser.add_option("-s", "--slicemgr", dest="sm", action="store_true",
@@ -285,8 +256,7 @@ def main():
     server_cert_file = os.path.join(hierarchy.basedir, "server.cert")
 
     init_server_key(server_key_file, server_cert_file, config, hierarchy)
-    init_server(options, config)
- 
+
     if (options.daemon):  daemon()
     
     if options.trusted_certs:

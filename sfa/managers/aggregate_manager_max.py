@@ -2,7 +2,6 @@ from sfa.plc.slices import Slices
 from sfa.server.registry import Registries
 from sfa.util.xrn import urn_to_hrn, hrn_to_urn, get_authority, Xrn
 from sfa.util.plxrn import hrn_to_pl_slicename
-from sfa.util.rspec import RSpec
 from sfa.util.sfalogging import logger
 from sfa.util.faults import *
 from sfa.util.config import Config
@@ -260,6 +259,6 @@ return the basic information needed in a dict.
 def fetch_context(slice_hrn, user_hrn, contexts):
     base_context = {'sfa':{'user':{'hrn':user_hrn}}}
     return base_context
-    api = SfaAPI()
+    api = PlcSfaApi()
     create_slice(api, "plc.maxpl.test000", None, rspec_xml, None)
 

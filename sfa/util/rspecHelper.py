@@ -7,7 +7,7 @@ from lxml import etree
 from StringIO import StringIO
 from optparse import OptionParser
 
-from sfa.util.faults import *
+from sfa.util.faults import InvalidRSpec
 from sfa.util.sfalogging import logger
 
 def merge_rspecs(rspecs):

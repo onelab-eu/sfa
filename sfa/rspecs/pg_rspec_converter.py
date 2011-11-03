@@ -1,7 +1,7 @@
 #!/usr/bin/python 
 from lxml import etree
 from StringIO import StringIO
-from sfa.util.xrn import *
+from sfa.util.xrn import Xrn, urn_to_hrn
 from sfa.rspecs.rspec import RSpec
 from sfa.rspecs.version_manager import VersionManager
 

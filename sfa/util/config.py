@@ -14,9 +14,6 @@
 # Note that SFA does not access any of the PLC databases directly via
 # a mysql connection; All PLC databases are accessed via PLCAPI.
 
-### $Id$
-### $URL$
-
 import os.path
 import traceback
 
@@ -79,7 +76,7 @@ class Config:
                 except: pass
              
         except IOError, e:
-            raise IOError, "Could not find the configuration file: %s" % config_file
+            raise IOError, "Could not find or load the configuration file: %s" % config_file
 
     def get_trustedroots_dir(self):
         return self.config_path + os.sep + 'trusted_roots'

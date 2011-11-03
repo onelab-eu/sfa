@@ -1,4 +1,4 @@
-from sfa.util.faults import *
+#from sfa.util.faults import *
 from sfa.util.method import Method
 from sfa.util.parameter import Parameter, Mixed
 from sfa.trust.auth import Auth

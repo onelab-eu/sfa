@@ -1,7 +1,5 @@
-import time
-from sfa.util.faults import *
 from sfa.util.method import Method
-from sfa.util.parameter import Parameter, Mixed
+from sfa.util.parameter import Parameter
 from sfa.trust.credential import Credential
 
 class Update(Method):

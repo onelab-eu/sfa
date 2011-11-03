@@ -1,7 +1,7 @@
 import os, time
 import libxml2
 
-from sfatables.globals import *
+from sfatables.globals import sfatables_config
 from sfatables.pretty import Pretty
 from sfatables.command import Command
 
