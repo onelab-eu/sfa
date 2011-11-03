@@ -4,6 +4,8 @@ import sys
 import os, errno
 import logging
 import datetime
+from multiprocessing import Process
+from time import sleep
 
 import boto
 from boto.ec2.regioninfo import RegionInfo
@@ -15,19 +17,19 @@ from sqlobject import *
 
 from sfa.util.faults import *
 from sfa.util.xrn import urn_to_hrn, Xrn
-from sfa.server.registry import Registries
-from sfa.trust.credential import Credential
-from sfa.plc.plcsfaapi import PlcSfaApi
-from sfa.plc.aggregate import Aggregate
-from sfa.plc.slices import *
 from sfa.util.plxrn import hrn_to_pl_slicename, slicename_to_hrn
 from sfa.util.callids import Callids
 from sfa.util.sfalogging import logger
-from sfa.rspecs.sfa_rspec import sfa_rspec_version
 from sfa.util.version import version_core
 
-from multiprocessing import Process
-from time import sleep
+from sfa.trust.credential import Credential
+
+from sfa.server.sfaapi import SfaApi
+
+from sfa.plc.aggregate import Aggregate
+from sfa.plc.slices import *
+from sfa.rspecs.sfa_rspec import sfa_rspec_version
+
 
 ##
 # The data structure used to represent a cloud.
@@ -40,8 +42,6 @@ cloud = {}
 # The location of the RelaxNG schema.
 #
 EUCALYPTUS_RSPEC_SCHEMA='/etc/sfa/eucalyptus.rng'
-
-api = PlcSfaApi()
 
 ##
 # Meta data of an instance.
@@ -722,22 +722,22 @@ def GetVersion(api):
                     }
     return version_core(version_more)
 
-def main():
-    init_server()
-
-    #theRSpec = None
-    #with open(sys.argv[1]) as xml:
-    #    theRSpec = xml.read()
-    #CreateSliver(None, 'planetcloud.pc.test', theRSpec, 'call-id-cloudtest')
-
-    #rspec = ListResources('euca', 'planetcloud.pc.test', 'planetcloud.pc.marcoy', 'test_euca')
-    #print rspec
-
-    server_key_file = '/var/lib/sfa/authorities/server.key'
-    server_cert_file = '/var/lib/sfa/authorities/server.cert'
-    api = PlcSfaApi(key_file = server_key_file, cert_file = server_cert_file, interface='aggregate')
-    print getKeysForSlice(api, 'gc.gc.test1')
-
-if __name__ == "__main__":
-    main()
+#def main():
+#    init_server()
+#
+#    #theRSpec = None
+#    #with open(sys.argv[1]) as xml:
+#    #    theRSpec = xml.read()
+#    #CreateSliver(None, 'planetcloud.pc.test', theRSpec, 'call-id-cloudtest')
+#
+#    #rspec = ListResources('euca', 'planetcloud.pc.test', 'planetcloud.pc.marcoy', 'test_euca')
+#    #print rspec
+#
+#    server_key_file = '/var/lib/sfa/authorities/server.key'
+#    server_cert_file = '/var/lib/sfa/authorities/server.cert'
+#    api = PlcSfaApi(key_file = server_key_file, cert_file = server_cert_file, interface='aggregate')
+#    print getKeysForSlice(api, 'gc.gc.test1')
+#
+#if __name__ == "__main__":
+#    main()
 

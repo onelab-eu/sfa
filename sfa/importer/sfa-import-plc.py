@@ -24,7 +24,7 @@ from sfa.util.plxrn import hostname_to_hrn, slicename_to_hrn, email_to_hrn, hrn_
 from sfa.util.config import Config
 from sfa.util.xrn import Xrn
 
-from sfa.plc.sfaImport import sfaImport
+from sfa.importer.sfaImport import sfaImport
 
 def process_options():
 

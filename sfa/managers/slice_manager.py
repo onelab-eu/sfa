@@ -9,9 +9,10 @@ from sfa.trust.credential import Credential
 
 from sfa.util.sfalogging import logger
 from sfa.util.xrn import Xrn, urn_to_hrn
-from sfa.util.threadmanager import ThreadManager
 from sfa.util.version import version_core
 from sfa.util.callids import Callids
+
+from sfa.server.threadmanager import ThreadManager
 
 from sfa.rspecs.rspec_converter import RSpecConverter
 from sfa.rspecs.version_manager import VersionManager
@@ -149,7 +150,7 @@ def ListResources(api, creds, options, call_id):
 
         # get the rspec from the aggregate
         interface = api.aggregates[aggregate]
-        server = api.get_server(interface, cred)
+        server = api.server_proxy(interface, cred)
         threads.run(_ListResources, aggregate, server, [cred], options, call_id)
 
 
@@ -231,7 +232,7 @@ def CreateSliver(api, xrn, creds, rspec_str, users, call_id):
         if caller_hrn == aggregate and aggregate != api.hrn:
             continue
         interface = api.aggregates[aggregate]
-        server = api.get_server(interface, cred)
+        server = api.server_proxy(interface, cred)
         # Just send entire RSpec to each aggregate
         threads.run(_CreateSliver, aggregate, server, xrn, [cred], rspec.toxml(), users, call_id)
             
@@ -273,7 +274,7 @@ def RenewSliver(api, xrn, creds, expiration_time, call_id):
         if caller_hrn == aggregate and aggregate != api.hrn:
             continue
         interface = api.aggregates[aggregate]
-        server = api.get_server(interface, cred)
+        server = api.server_proxy(interface, cred)
         threads.run(_RenewSliver, server, xrn, [cred], expiration_time, call_id)
     # 'and' the results
     return reduce (lambda x,y: x and y, threads.get_results() , True)
@@ -303,7 +304,7 @@ def DeleteSliver(api, xrn, creds, call_id):
         if caller_hrn == aggregate and aggregate != api.hrn:
             continue
         interface = api.aggregates[aggregate]
-        server = api.get_server(interface, cred)
+        server = api.server_proxy(interface, cred)
         threads.run(_DeleteSliver, server, xrn, [cred], call_id)
     threads.get_results()
     return 1
@@ -326,7 +327,7 @@ def SliverStatus(api, slice_xrn, creds, call_id):
     threads = ThreadManager()
     for aggregate in api.aggregates:
         interface = api.aggregates[aggregate]
-        server = api.get_server(interface, cred)
+        server = api.server_proxy(interface, cred)
         threads.run (_SliverStatus, server, slice_xrn, [cred], call_id)
     results = threads.get_results()
 
@@ -385,7 +386,7 @@ def ListSlices(api, creds, call_id):
         if caller_hrn == aggregate and aggregate != api.hrn:
             continue
         interface = api.aggregates[aggregate]
-        server = api.get_server(interface, cred)
+        server = api.server_proxy(interface, cred)
         threads.run(_ListSlices, server, [cred], call_id)
 
     # combime results
@@ -427,7 +428,7 @@ def get_ticket(api, xrn, creds, rspec, users):
             continue
         
         interface = api.aggregates[aggregate]
-        server = api.get_server(interface, cred)
+        server = api.server_proxy(interface, cred)
         threads.run(server.GetTicket, xrn, [cred], aggregate_rspec, users)
 
     results = threads.get_results()
@@ -484,7 +485,7 @@ def start_slice(api, xrn, creds):
         if caller_hrn == aggregate and aggregate != api.hrn:
             continue
         interface = api.aggregates[aggregate]
-        server = api.get_server(interface, cred)    
+        server = api.server_proxy(interface, cred)    
         threads.run(server.Start, xrn, cred)
     threads.get_results()    
     return 1
@@ -507,7 +508,7 @@ def stop_slice(api, xrn, creds):
         if caller_hrn == aggregate and aggregate != api.hrn:
             continue
         interface = api.aggregates[aggregate]
-        server = api.get_server(interface, cred)
+        server = api.server_proxy(interface, cred)
         threads.run(server.Stop, xrn, cred)
     threads.get_results()    
     return 1

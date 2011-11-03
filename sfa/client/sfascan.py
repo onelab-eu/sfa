@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 
-import sys
+import sys, os.path
+import pickle
+import time
 import socket
 import traceback
 from urlparse import urlparse
@@ -11,7 +13,7 @@ from optparse import OptionParser
 
 from sfa.client.sfi import Sfi
 from sfa.util.sfalogging import logger, DEBUG
-import sfa.util.xmlrpcprotocol as xmlrpcprotocol
+import sfa.client.xmlrpcprotocol as xmlrpcprotocol
 
 def url_hostname_port (url):
     if url.find("://")<0:
@@ -28,11 +30,82 @@ def url_hostname_port (url):
     else:
         return (url,parts[0],parts[1])
 
+### a very simple cache mechanism so that successive runs (see make) 
+### will go *much* faster
+### assuming everything is sequential, as simple as it gets
+### { url -> (timestamp,version)}
+class VersionCache:
+    def __init__ (self, filename=None, expires=60*60):
+        # default is to store cache in the same dir as argv[0]
+        if filename is None:
+            filename=os.path.join(os.path.dirname(sys.argv[0]),"sfascan-version-cache.pickle")
+        self.filename=filename
+        self.expires=expires
+        self.url2version={}
+        self.load()
+
+    def load (self):
+        try:
+            infile=file(self.filename,'r')
+            self.url2version=pickle.load(infile)
+            infile.close()
+        except:
+            logger.debug("Cannot load version cache, restarting from scratch")
+            self.url2version = {}
+        logger.debug("loaded version cache with %d entries %s"%(len(self.url2version),self.url2version.keys()))
+
+    def save (self):
+        try:
+            outfile=file(self.filename,'w')
+            pickle.dump(self.url2version,outfile)
+            outfile.close()
+        except:
+            logger.log_exc ("Cannot save version cache into %s"%self.filename)
+    def clean (self):
+        try:
+            retcod=os.unlink(self.filename)
+            logger.info("Cleaned up version cache %s, retcod=%d"%(self.filename,retcod))
+        except:
+            logger.info ("Could not unlink version cache %s"%self.filename)
+
+    def show (self):
+        entries=len(self.url2version)
+        print "version cache from file %s has %d entries"%(self.filename,entries)
+        key_values=self.url2version.items()
+        def old_first (kv1,kv2): return int(kv1[1][0]-kv2[1][0])
+        key_values.sort(old_first)
+        for key_value in key_values:
+            (url,tuple) = key_value
+            (timestamp,version) = tuple
+            how_old = time.time()-timestamp
+            if how_old<=self.expires:
+                print url,"-- %d seconds ago"%how_old
+            else:
+                print "OUTDATED",url,"(%d seconds ago, expires=%d)"%(how_old,self.expires)
+    
+    # turns out we might have trailing slashes or not
+    def normalize (self, url):
+        return url.strip("/")
+        
+    def set (self,url,version):
+        url=self.normalize(url)
+        self.url2version[url]=( time.time(), version)
+    def get (self,url):
+        url=self.normalize(url)
+        try:
+            (timestamp,version)=self.url2version[url]
+            how_old = time.time()-timestamp
+            if how_old<=self.expires: return version
+            else: return None
+        except:
+            return None
+
 ###
 class Interface:
 
-    def __init__ (self,url):
+    def __init__ (self,url,verbose=False):
         self._url=url
+        self.verbose=verbose
         try:
             (self._url,self.hostname,self.port)=url_hostname_port(url)
             self.ip=socket.gethostbyname(self.hostname)
@@ -54,13 +127,21 @@ class Interface:
 
     # connect to server and trigger GetVersion
     def get_version(self):
+        ### if we already know the answer:
         if self.probed:
             return self._version
+        ### otherwise let's look in the cache file
+        logger.debug("searching in version cache %s"%self.url())
+        cached_version = VersionCache().get(self.url())
+        if cached_version is not None:
+            logger.info("Retrieved version info from cache")
+            return cached_version
+        ### otherwise let's do the hard work
         # dummy to meet Sfi's expectations for its 'options' field
         class DummyOptions:
             pass
         options=DummyOptions()
-        options.verbose=False
+        options.verbose=self.verbose
         options.timeout=10
         try:
             client=Sfi(options)
@@ -68,13 +149,22 @@ class Interface:
             key_file = client.get_key_file()
             cert_file = client.get_cert_file(key_file)
             url=self.url()
-            logger.info('issuing get version at %s'%url)
-            logger.debug("GetVersion, using timeout=%d"%options.timeout)
-            server=xmlrpcprotocol.get_server(url, key_file, cert_file, timeout=options.timeout, verbose=options.verbose)
+            logger.info('issuing GetVersion at %s'%url)
+            # setting timeout here seems to get the call to fail - even though the response time is fast
+            #server=xmlrpcprotocol.server_proxy(url, key_file, cert_file, verbose=self.verbose, timeout=options.timeout)
+            server=xmlrpcprotocol.server_proxy(url, key_file, cert_file, verbose=self.verbose)
             self._version=server.GetVersion()
         except:
+            logger.log_exc("failed to get version")
             self._version={}
+        # so that next run from this process will find out
         self.probed=True
+        # store in version cache so next processes will remember for an hour
+        cache=VersionCache()
+        cache.set(self.url(),self._version)
+        cache.save()
+        logger.debug("Saved version for url=%s in version cache"%self.url())
+        # that's our result
         return self._version
 
     @staticmethod
@@ -155,19 +245,18 @@ class SfaScan:
         while to_scan:
             for interface in to_scan:
                 # performing xmlrpc call
+                logger.info("retrieving/fetching version at interface %s"%interface.url())
                 version=interface.get_version()
-                if self.verbose:
-                    logger.info("GetVersion at interface %s"%interface.url())
-                    if not version:
-                        logger.info("<EMPTY GetVersion(); offline or cannot authenticate>")
-                    else: 
-                        for (k,v) in version.iteritems(): 
-                            if not isinstance(v,dict):
-                                logger.info("\r\t%s:%s"%(k,v))
-                            else:
-                                logger.info(k)
-                                for (k1,v1) in v.iteritems():
-                                    logger.info("\r\t\t%s:%s"%(k1,v1))
+                if not version:
+                    logger.info("<EMPTY GetVersion(); offline or cannot authenticate>")
+                else: 
+                    for (k,v) in version.iteritems(): 
+                        if not isinstance(v,dict):
+                            logger.debug("\r\t%s:%s"%(k,v))
+                        else:
+                            logger.debug(k)
+                            for (k1,v1) in v.iteritems():
+                                logger.debug("\r\t\t%s:%s"%(k1,v1))
                 # 'geni_api' is expected if the call succeeded at all
                 # 'peers' is needed as well as AMs typically don't have peers
                 if 'geni_api' in version and 'peers' in version: 
@@ -206,21 +295,35 @@ def main():
                       help="output filenames (cumulative) - defaults are %r"%default_outfiles)
     parser.add_option("-l","--left-to-right",action="store_true",dest="left_to_right",default=False,
                       help="instead of top-to-bottom")
-    parser.add_option("-v","--verbose",action='store_true',dest='verbose',default=False,
-                      help="verbose")
-    parser.add_option("-d","--debug",action='store_true',dest='debug',default=False,
-                      help="debug")
+    parser.add_option("-v", "--verbose", action="count", dest="verbose", default=0,
+                      help="verbose - can be repeated for more verbosity")
+    parser.add_option("-c", "--clean-cache",action='store_true',
+                      dest='clean_cache',default=False,
+                      help='clean/trash version cache and exit')
+    parser.add_option("-s","--show-cache",action='store_true',
+                      dest='show_cache',default=False,
+                      help='show/display version cache')
+    
     (options,args)=parser.parse_args()
+    logger.enable_console()
+    # apply current verbosity to logger
+    logger.setLevelFromOptVerbose(options.verbose)
+    # figure if we need to be verbose for these local classes that only have a bool flag
+    bool_verbose=logger.getBoolVerboseFromOpt(options.verbose)
+
+    if options.show_cache: 
+        VersionCache().show()
+        sys.exit(0)
+    if options.clean_cache:
+        VersionCache().clean()
+        sys.exit(0)
     if not args:
         parser.print_help()
         sys.exit(1)
+        
     if not options.outfiles:
         options.outfiles=default_outfiles
-    logger.enable_console()
-    if options.debug:
-        options.verbose=True
-        logger.setLevel(DEBUG)
-    scanner=SfaScan(left_to_right=options.left_to_right, verbose=options.verbose)
+    scanner=SfaScan(left_to_right=options.left_to_right, verbose=bool_verbose)
     entries = [ Interface(entry) for entry in args ]
     g=scanner.graph(entries)
     logger.info("creating layout")

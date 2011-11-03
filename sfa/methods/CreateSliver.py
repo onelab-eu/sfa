@@ -43,8 +43,6 @@ class CreateSliver(Method):
             msg = "'users' musst be specified and cannot be null. You may need to update your client." 
             raise SfaInvalidArgument(name='users', extra=msg)  
 
-        manager = self.api.get_interface_manager()
-        
         # flter rspec through sfatables
         if self.api.interface in ['aggregate']:
             chain_name = 'INCOMING'
@@ -54,7 +52,7 @@ class CreateSliver(Method):
         rspec = run_sfatables(chain_name, hrn, origin_hrn, rspec)
         slivers = RSpec(rspec).version.get_nodes_with_slivers()
         if slivers:
-            result = manager.CreateSliver(self.api, slice_xrn, creds, rspec, users, call_id)
+            result = self.api.manager.CreateSliver(self.api, slice_xrn, creds, rspec, users, call_id)
         else:
             result = rspec     
         return result
