@@ -24,22 +24,22 @@ def list_to_dict(recs, key):
     #print>>sys.stderr, " \r\n \t\t list_to_dict : rec %s  \r\n \t\t list_to_dict keys %s" %(recs,keys)   
     return dict(zip(keys, recs))
 
-class SlabDriver:
+# thierry : note
+# this inheritance scheme is so that the driver object can receive
+# GetNodes or GetSites sorts of calls directly
+# and thus minimize the differences in the managers with the pl version
+class SlabDriver (OARapi, SenslabImportUsers):
 
     def __init__(self, config):
         self.config=config
         self.hrn = config.SFA_INTERFACE_HRN
  
 	print >>sys.stderr, "\r\n_____________ SFA SENSLAB DRIVER \r\n" 
-        # thierry : note
-        # this class chould be able to somehow call this API
-        # in the pl case see the PlShell class that does exactly that
-        # I mean, the rest of the code is going to make calls like
-        # api.driver.GetNodes
-        # which will result in this class (SlabDriver) receiving the GetNodes call
-        # you might wish for example to have SlabDriver inherit the OARapi class instead
-	self.oar = OARapi()
-	self.users = SenslabImportUsers()
+        # thierry - just to not break the rest of this code
+	#self.oar = OARapi()
+	#self.users = SenslabImportUsers()
+	self.oar = self
+	self.users = self
         self.time_format = "%Y-%m-%d %H:%M:%S"
         #self.logger=sfa_logger()
 	print >>sys.stderr, "\r\n \t\t___________PSFA SENSLAN /API.PY  __init__ STOP ",self.interface #dir(self)
