@@ -10,27 +10,6 @@ from sfa.util.plxrn import slicename_to_hrn, hostname_to_hrn, hrn_to_pl_slicenam
 # is taken care of 
 # SlabDriver should be really only about talking to the senslab testbed
 
-## thierry: this class sohuld be *much* simpler now, just use what you really need
-#import sys
-#import os
-#import traceback
-#import string
-#import datetime
-#import xmlrpclib
-#
-#from sfa.util.faults import *
-#from sfa.util.api import *
-#from sfa.util.config import *
-#from sfa.util.sfalogging import logger
-#import sfa.util.xmlrpcprotocol as xmlrpcprotocol
-#from sfa.trust.auth import Auth
-#from sfa.trust.rights import Right, Rights, determine_rights
-#from sfa.trust.credential import Credential,Keypair
-#from sfa.trust.certificate import Certificate
-#from sfa.util.xrn import get_authority, hrn_to_urn
-#from sfa.util.plxrn import hostname_to_hrn, hrn_to_pl_slicename, hrn_to_pl_slicename, slicename_to_hrn
-#from sfa.util.nodemanager import NodeManager
-
 ## thierry : please avoid wildcard imports :)
 from sfa.senslab.OARrestapi import *
 from sfa.senslab.SenslabImportUsers import *
