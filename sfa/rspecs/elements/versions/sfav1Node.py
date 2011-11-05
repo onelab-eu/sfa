@@ -68,8 +68,8 @@ class SFAv1Node:
             if 'tags' in node:
                 for tag in node['tags']:
                    # expose this hard wired list of tags, plus the ones that are marked 'sfa' in their category
-                   if tag['tagname'] in ['fcdistro', 'arch'] or 'sfa' in tag['category'].split('/'):
-                        tag_element = etree.SubElement(node_elem, tag['tagname']).text=tag['value']
+                   if tag['name'] in ['fcdistro', 'arch']:
+                        tag_element = etree.SubElement(node_elem, tag['name']).text=tag['value']
 
             if 'slivers' in node:
                 for sliver in node['slivers']:
