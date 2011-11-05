@@ -3,16 +3,18 @@ from sfa.util.plxrn import PlXrn
 from sfa.util.xrn import Xrn
 from sfa.rspecs.elements.link import Link
 from sfa.rspecs.elements.interface import Interface
+from sfa.rspecs.elements.link_type import LinkType
+from sfa.rspecs.elements.component_manager import ComponentManager
+from sfa.rspecs.elements.property import Property    
 from sfa.rspecs.rspec_elements import RSpecElement, RSpecElements
 
 class PGv2Link:
-
     elements = {
         'link': RSpecElement(RSpecElements.LINK, '//default:link | //link'),
         'component_manager': RSpecElement(RSpecElements.COMPONENT_MANAGER, './default:component_manager | ./component_manager'),
         'link_type': RSpecElement(RSpecElements.LINK_TYPE, './default:link_type | ./link_type'),
         'property': RSpecElement(RSpecElements.PROPERTY, './default:property | ./property'),
-        'interface_ref': RSpecElement(RSpecElements.INTERFACE_REF, './default:interface_ref | ./interface_ref') 
+        'interface_ref': RSpecElement(RSpecElements.INTERFACE_REF, './default:interface_ref | ./interface_ref'), 
     }
     
     @staticmethod
