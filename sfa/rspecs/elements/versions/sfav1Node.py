@@ -29,11 +29,14 @@ class SFAv1Node:
         network_elems = SFAv1Network.get_networks(xml)
         if len(network_elems) > 0:
             network_elem = network_elems[0]
-        else:
-            network_elem = xml.root
-                    
+        elif len(nodes) > 0 and nodes[0].get('component_manager_id'):
+            network_elem = SFAv1Network.add_network(xml.root, {'name': nodes[0]['component_manager_id']})
+            
+
+        node_elems = []       
         for node in nodes:
             node_elem = etree.SubElement(network_elem, 'node')
+            node_elems.append(node_elem)
             network = None 
             if 'component_manager_id' in node and node['component_manager_id']:
                 node_elem.set('component_manager_id', node['component_manager_id'])

@@ -7,7 +7,7 @@ from sfa.rspecs.rspec_elements import RSpecElement, RSpecElements
 
 class SFAv1Network:
     elements = {
-        'network': RSpecElement(RSpecElements.NETWORK, '//default:network | //network'),
+        'network': RSpecElement(RSpecElements.NETWORK, '//network'),
     }
 
     @staticmethod
