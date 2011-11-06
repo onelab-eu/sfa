@@ -1,7 +1,6 @@
-from sfa.rspecs.elements.interface import Interface
+from sfa.rspecs.elements.element import Element    
 
-class Link(dict):
-    element = None 
+class Link(Element):
     fields = {
         'client_id': None, 
         'component_id': None,
@@ -15,9 +14,3 @@ class Link(dict):
         'packet_loss': None,
         'description': None,
     }
-    
-    def __init__(self, fields={}, element=None):
-        self.element = element
-        dict.__init__(self, Link.fields)
-        self.update(fields)
-

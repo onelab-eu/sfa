@@ -87,7 +87,7 @@ class XMLRPCServerProxy(xmlrpclib.ServerProxy):
         logger.debug ("xml-rpc %s method:%s"%(self.url,attr))
         return xmlrpclib.ServerProxy.__getattr__(self, attr)
 
-def get_server(url, key_file, cert_file, timeout=None, verbose=False):
+def server_proxy(url, key_file, cert_file, timeout=None, verbose=False):
     transport = XMLRPCTransport(key_file, cert_file, timeout)
     return XMLRPCServerProxy(url, transport, allow_none=True, verbose=verbose)
 

@@ -23,8 +23,6 @@ class RedeemTicket(Method):
         valid_creds = self.api.auth.checkCredentials(cred, 'redeemticket')
         self.api.auth.check_ticket(ticket)
 
-        
         # send the call to the right manager
-        manager = self.api.get_interface_manager()
-        manager.redeem_ticket(self.api, ticket) 
+        self.api.manager.redeem_ticket(self.api, ticket) 
         return 1 

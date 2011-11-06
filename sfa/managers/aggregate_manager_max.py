@@ -1,20 +1,26 @@
-from sfa.plc.slices import Slices
-from sfa.server.registry import Registries
-from sfa.util.xrn import urn_to_hrn, hrn_to_urn, get_authority, Xrn
-from sfa.util.plxrn import hrn_to_pl_slicename
-from sfa.util.sfalogging import logger
+import os
+import time
+import re
+
 from sfa.util.faults import *
+from sfa.util.sfalogging import logger
 from sfa.util.config import Config
 from sfa.util.sfatime import utcparse
 from sfa.util.callids import Callids
 from sfa.util.version import version_core
+from sfa.util.xrn import urn_to_hrn, hrn_to_urn, get_authority, Xrn
+from sfa.util.plxrn import hrn_to_pl_slicename
+
+from sfa.server.sfaapi import SfaApi
+from sfa.server.registry import Registries
 from sfa.rspecs.rspec_version import RSpecVersion
 from sfa.rspecs.sfa_rspec import sfa_rspec_version
 from sfa.rspecs.rspec_parser import parse_rspec
-from sfa.managers.aggregate_manager_pl import __get_registry_objects, ListSlices
-import os
-import time
-import re
+
+from sfa.managers.aggregate_manager import __get_registry_objects, ListSlices
+
+from sfa.plc.slices import Slices
+
 
 RSPEC_TMP_FILE_PREFIX = "/tmp/max_rspec"
 
@@ -251,14 +257,14 @@ def ListResources(api, creds, options,call_id):
     slice_urn = options.get('geni_slice_urn')
     return get_rspec(api, creds, slice_urn)
 
-"""
-Returns the request context required by sfatables. At some point, this mechanism should be changed
-to refer to "contexts", which is the information that sfatables is requesting. But for now, we just
-return the basic information needed in a dict.
-"""
 def fetch_context(slice_hrn, user_hrn, contexts):
+    """
+    Returns the request context required by sfatables. At some point, this mechanism should be changed
+    to refer to "contexts", which is the information that sfatables is requesting. But for now, we just
+    return the basic information needed in a dict.
+    """
     base_context = {'sfa':{'user':{'hrn':user_hrn}}}
     return base_context
-    api = PlcSfaApi()
+    api = SfaApi()
     create_slice(api, "plc.maxpl.test000", None, rspec_xml, None)
 
