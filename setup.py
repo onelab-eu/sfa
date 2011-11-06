@@ -43,7 +43,6 @@ package_dirs = [
     'sfa/methods',
     'sfa/generic',
     'sfa/managers',
-    'sfa/managers/vini',
     'sfa/importer',
     'sfa/plc',
     'sfa/senslab',

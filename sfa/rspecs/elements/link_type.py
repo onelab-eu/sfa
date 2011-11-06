@@ -1,9 +1,6 @@
 from sfa.rspecs.elements.element import Element
- 
-class Network(Element):
-    
+
+class LinkType(Element):
     fields = {
         'name': None,
-    }
-                
-      
+    } 
