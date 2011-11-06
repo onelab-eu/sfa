@@ -17,7 +17,6 @@ except ImportError:
 ##
 # Component is a SfaServer that serves component operations.
 
-# set SFA_GENERIC_FLAVOUR=plcm to get a PlcComponentApi instance in the request handler 
 class Component(SfaServer):
     ##
     # Create a new registry object.
@@ -28,5 +27,4 @@ class Component(SfaServer):
     # @param cert_file certificate filename containing public key (could be a GID file)
 
     def __init__(self, ip, port, key_file, cert_file):
-        SfaServer.__init__(self, ip, port, key_file, cert_file)
-        self.server.interface = 'component'
+        SfaServer.__init__(self, ip, port, key_file, cert_file, interface='component')

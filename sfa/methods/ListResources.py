@@ -36,9 +36,7 @@ class ListResources(Method):
         origin_hrn = options.get('origin_hrn', None)
         if not origin_hrn:
             origin_hrn = Credential(string=valid_creds[0]).get_gid_caller().get_hrn()
-        # get manager for this interface    
-        manager = self.api.get_interface_manager()
-        rspec = manager.ListResources(self.api, creds, options, call_id)
+        rspec = self.api.manager.ListResources(self.api, creds, options, call_id)
 
         # filter rspec through sfatables 
         if self.api.interface in ['aggregate']:

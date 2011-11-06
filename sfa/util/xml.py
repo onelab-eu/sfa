@@ -102,10 +102,9 @@ class XML:
         # element.attrib.update will explode if DateTimes are in the
         # dcitionary.
         d=d.copy()
-        for (k,v) in d.iteritems():
-            if not isinstance(v,StringTypes): del d[k]
+        # looks like iteritems won't stand side-effects
         for k in d.keys():
-            if (type(d[k]) != str) and (type(d[k]) != unicode):
+            if not isinstance(d[k],StringTypes):
                 del d[k]
 
         element.attrib.update(d)
@@ -139,7 +138,7 @@ class XML:
 
     def add_element(self, name, attrs={}, parent=None, text=""):
         """
-        Generic wrapper around etree.SubElement(). Adds an element to 
+        Wrapper around etree.SubElement(). Adds an element to 
         specified parent node. Adds element to root node is parent is 
         not specified. 
         """

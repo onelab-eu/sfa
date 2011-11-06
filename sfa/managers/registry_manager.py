@@ -46,7 +46,7 @@ def get_credential(api, xrn, type, is_self=False):
 
     # verify_cancreate_credential requires that the member lists
     # (researchers, pis, etc) be filled in
-    api.fill_record_info(record)
+    api.driver.fill_record_info(record, api.aggregates)
     if record['type']=='user':
        if not record['enabled']:
           raise AccountNotEnabled(": PlanetLab account %s is not enabled. Please contact your site PI" %(record['email']))
@@ -120,7 +120,7 @@ def resolve(api, xrns, type=None, full=True):
         if registry_hrn != api.hrn:
             credential = api.getCredential()
             interface = api.registries[registry_hrn]
-            server = api.get_server(interface, credential)
+            server = api.server_proxy(interface, credential)
             peer_records = server.Resolve(xrns, credential)
             records.extend([SfaRecord(dict=record).as_dict() for record in peer_records])
 
@@ -131,7 +131,7 @@ def resolve(api, xrns, type=None, full=True):
     table = SfaTable()
     local_records = table.findObjects({'hrn': remaining_hrns})
     if full:
-        api.fill_record_info(local_records)
+        api.driver.fill_record_info(local_records, api.aggregates)
     
     # convert local record objects to dicts
     records.extend([dict(record) for record in local_records])
@@ -163,7 +163,7 @@ def list(api, xrn, origin_hrn=None):
     if registry_hrn != api.hrn:
         credential = api.getCredential()
         interface = api.registries[registry_hrn]
-        server = api.get_server(interface, credential)
+        server = api.server_proxy(interface, credential)
         record_list = server.List(xrn, credential)
         records = [SfaRecord(dict=record).as_dict() for record in record_list]
     
@@ -234,10 +234,10 @@ def register(api, record):
         # get the GID from the newly created authority
         gid = auth_info.get_gid_object()
         record.set_gid(gid.save_to_string(save_parents=True))
-        pl_record = api.sfa_fields_to_pl_fields(type, hrn, record)
-        sites = api.plshell.GetSites(api.plauth, [pl_record['login_base']])
+        pl_record = api.driver.sfa_fields_to_pl_fields(type, hrn, record)
+        sites = api.driver.GetSites([pl_record['login_base']])
         if not sites:
-            pointer = api.plshell.AddSite(api.plauth, pl_record)
+            pointer = api.driver.AddSite(pl_record)
         else:
             pointer = sites[0]['site_id']
 
@@ -246,45 +246,45 @@ def register(api, record):
 
     elif (type == "slice"):
         acceptable_fields=['url', 'instantiation', 'name', 'description']
-        pl_record = api.sfa_fields_to_pl_fields(type, hrn, record)
+        pl_record = api.driver.sfa_fields_to_pl_fields(type, hrn, record)
         for key in pl_record.keys():
             if key not in acceptable_fields:
                 pl_record.pop(key)
-        slices = api.plshell.GetSlices(api.plauth, [pl_record['name']])
+        slices = api.driver.GetSlices([pl_record['name']])
         if not slices:
-             pointer = api.plshell.AddSlice(api.plauth, pl_record)
+             pointer = api.driver.AddSlice(pl_record)
         else:
              pointer = slices[0]['slice_id']
         record.set_pointer(pointer)
         record['pointer'] = pointer
 
     elif  (type == "user"):
-        persons = api.plshell.GetPersons(api.plauth, [record['email']])
+        persons = api.driver.GetPersons([record['email']])
         if not persons:
-            pointer = api.plshell.AddPerson(api.plauth, dict(record))
+            pointer = api.driver.AddPerson(dict(record))
         else:
             pointer = persons[0]['person_id']
 
         if 'enabled' in record and record['enabled']:
-            api.plshell.UpdatePerson(api.plauth, pointer, {'enabled': record['enabled']})
+            api.driver.UpdatePerson(pointer, {'enabled': record['enabled']})
         # add this persons to the site only if he is being added for the first
         # time by sfa and doesont already exist in plc
         if not persons or not persons[0]['site_ids']:
             login_base = get_leaf(record['authority'])
-            api.plshell.AddPersonToSite(api.plauth, pointer, login_base)
+            api.driver.AddPersonToSite(pointer, login_base)
 
         # What roles should this user have?
-        api.plshell.AddRoleToPerson(api.plauth, 'user', pointer)
+        api.driver.AddRoleToPerson('user', pointer)
         # Add the user's key
         if pub_key:
-            api.plshell.AddPersonKey(api.plauth, pointer, {'key_type' : 'ssh', 'key' : pub_key})
+            api.driver.AddPersonKey(pointer, {'key_type' : 'ssh', 'key' : pub_key})
 
     elif (type == "node"):
-        pl_record = api.sfa_fields_to_pl_fields(type, hrn, record)
+        pl_record = api.driver.sfa_fields_to_pl_fields(type, hrn, record)
         login_base = hrn_to_pl_login_base(record['authority'])
-        nodes = api.plshell.GetNodes(api.plauth, [pl_record['hostname']])
+        nodes = api.driver.GetNodes([pl_record['hostname']])
         if not nodes:
-            pointer = api.plshell.AddNode(api.plauth, login_base, pl_record)
+            pointer = api.driver.AddNode(login_base, pl_record)
         else:
             pointer = nodes[0]['node_id']
 
@@ -294,7 +294,7 @@ def register(api, record):
     record['record_id'] = record_id
 
     # update membership for researchers, pis, owners, operators
-    api.update_membership(None, record)
+    api.driver.update_membership(None, record)
 
     return record.get_gid_object().save_to_string(save_parents=True)
 
@@ -313,7 +313,7 @@ def update(api, record_dict):
 
     # Update_membership needs the membership lists in the existing record
     # filled in, so it can see if members were added or removed
-    api.fill_record_info(record)
+    api.driver.fill_record_info(record, api.aggregates)
 
     # Use the pointer from the existing record, not the one that the user
     # gave us. This prevents the user from inserting a forged pointer
@@ -321,13 +321,13 @@ def update(api, record_dict):
     # update the PLC information that was specified with the record
 
     if (type == "authority"):
-        api.plshell.UpdateSite(api.plauth, pointer, new_record)
+        api.driver.UpdateSite(pointer, new_record)
 
     elif type == "slice":
-        pl_record=api.sfa_fields_to_pl_fields(type, hrn, new_record)
+        pl_record=api.driver.sfa_fields_to_pl_fields(type, hrn, new_record)
         if 'name' in pl_record:
             pl_record.pop('name')
-            api.plshell.UpdateSlice(api.plauth, pointer, pl_record)
+            api.driver.UpdateSlice(pointer, pl_record)
 
     elif type == "user":
         # SMBAKER: UpdatePerson only allows a limited set of fields to be
@@ -340,14 +340,14 @@ def update(api, record_dict):
                        'password', 'phone', 'url', 'bio', 'accepted_aup',
                        'enabled']:
                 update_fields[key] = all_fields[key]
-        api.plshell.UpdatePerson(api.plauth, pointer, update_fields)
+        api.driver.UpdatePerson(pointer, update_fields)
 
         if 'key' in new_record and new_record['key']:
             # must check this key against the previous one if it exists
-            persons = api.plshell.GetPersons(api.plauth, [pointer], ['key_ids'])
+            persons = api.driver.GetPersons([pointer], ['key_ids'])
             person = persons[0]
             keys = person['key_ids']
-            keys = api.plshell.GetKeys(api.plauth, person['key_ids'])
+            keys = api.driver.GetKeys(person['key_ids'])
             key_exists = False
             if isinstance(new_record['key'], types.ListType):
                 new_key = new_record['key'][0]
@@ -357,11 +357,11 @@ def update(api, record_dict):
             # Delete all stale keys
             for key in keys:
                 if new_record['key'] != key['key']:
-                    api.plshell.DeleteKey(api.plauth, key['key_id'])
+                    api.driver.DeleteKey(key['key_id'])
                 else:
                     key_exists = True
             if not key_exists:
-                api.plshell.AddPersonKey(api.plauth, pointer, {'key_type': 'ssh', 'key': new_key})
+                api.driver.AddPersonKey(pointer, {'key_type': 'ssh', 'key': new_key})
 
             # update the openssl key and gid
             pkey = convert_public_key(new_key)
@@ -373,13 +373,13 @@ def update(api, record_dict):
             table.update(record)
 
     elif type == "node":
-        api.plshell.UpdateNode(api.plauth, pointer, new_record)
+        api.driver.UpdateNode(pointer, new_record)
 
     else:
         raise UnknownSfaType(type)
 
     # update membership for researchers, pis, owners, operators
-    api.update_membership(record, new_record)
+    api.driver.update_membership(record, new_record)
     
     return 1 
 
@@ -411,20 +411,20 @@ def remove(api, xrn, origin_hrn=None):
                 except:
                     pass
     if type == "user":
-        persons = api.plshell.GetPersons(api.plauth, record['pointer'])
+        persons = api.driver.GetPersons(record['pointer'])
         # only delete this person if he has site ids. if he doesnt, it probably means
         # he was just removed from a site, not actually deleted
         if persons and persons[0]['site_ids']:
-            api.plshell.DeletePerson(api.plauth, record['pointer'])
+            api.driver.DeletePerson(record['pointer'])
     elif type == "slice":
-        if api.plshell.GetSlices(api.plauth, record['pointer']):
-            api.plshell.DeleteSlice(api.plauth, record['pointer'])
+        if api.driver.GetSlices(record['pointer']):
+            api.driver.DeleteSlice(record['pointer'])
     elif type == "node":
-        if api.plshell.GetNodes(api.plauth, record['pointer']):
-            api.plshell.DeleteNode(api.plauth, record['pointer'])
+        if api.driver.GetNodes(record['pointer']):
+            api.driver.DeleteNode(record['pointer'])
     elif type == "authority":
-        if api.plshell.GetSites(api.plauth, record['pointer']):
-            api.plshell.DeleteSite(api.plauth, record['pointer'])
+        if api.driver.GetSites(record['pointer']):
+            api.driver.DeleteSite(record['pointer'])
     else:
         raise UnknownSfaType(type)
 
