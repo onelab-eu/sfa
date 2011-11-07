@@ -41,7 +41,7 @@ def GetVersion(api):
                     }
     return version_core(version_more)
 
-def __get_registry_objects(slice_xrn, creds, users):
+def _get_registry_objects(slice_xrn, creds, users):
     """
 
     """
@@ -99,12 +99,6 @@ def __get_registry_objects(slice_xrn, creds, users):
             reg_objects['users'][user['email']] = user
 
         return reg_objects
-
-def __get_hostnames(nodes):
-    hostnames = []
-    for node in nodes:
-        hostnames.append(node.hostname)
-    return hostnames
 
 def SliverStatus(api, slice_xrn, creds, call_id):
     if Callids().already_handled(call_id): return {}
@@ -391,23 +385,3 @@ def get_ticket(api, xrn, creds, rspec, users):
     new_ticket.sign()
 
     return new_ticket.save_to_string(save_parents=True)
-
-
-
-#def main():
-#    """
-#    rspec = ListResources(api, "plc.princeton.sapan", None, 'pl_test_sapan')
-#    #rspec = ListResources(api, "plc.princeton.coblitz", None, 'pl_test_coblitz')
-#    #rspec = ListResources(api, "plc.pl.sirius", None, 'pl_test_sirius')
-#    print rspec
-#    """
-#    api = PlcSfaApi()
-#    f = open(sys.argv[1])
-#    xml = f.read()
-#    f.close()
-##Error (E1120, main): No value passed for parameter 'users' in function call
-##Error (E1120, main): No value passed for parameter 'call_id' in function call
-#    CreateSliver(api, "plc.princeton.sapan", xml, 'CreateSliver_sapan')
-#
-#if __name__ == "__main__":
-#    main()

@@ -17,7 +17,7 @@ from sfa.rspecs.rspec_version import RSpecVersion
 from sfa.rspecs.sfa_rspec import sfa_rspec_version
 from sfa.rspecs.rspec_parser import parse_rspec
 
-from sfa.managers.aggregate_manager import __get_registry_objects, ListSlices
+from sfa.managers.aggregate_manager import _get_registry_objects, ListSlices
 
 from sfa.plc.slices import Slices
 
@@ -86,7 +86,7 @@ def get_xml_by_tag(text, tag):
     return xml
 
 def prepare_slice(api, slice_xrn, creds, users):
-    reg_objects = __get_registry_objects(slice_xrn, creds, users)
+    reg_objects = _get_registry_objects(slice_xrn, creds, users)
     (hrn, type) = urn_to_hrn(slice_xrn)
     slices = Slices(api)
     peer = slices.get_peer(hrn)
