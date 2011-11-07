@@ -195,8 +195,8 @@ class Aggregate:
                 rspec_node['slivers'] = [slivers[node['node_id']]]
                 
                 # slivers always provide the ssh service
-                login = Login({'authentication': 'ssh-keys', hostname=node['hostname'], port='22'})
-                service = Services({'login': login)
+                login = Login({'authentication': 'ssh-keys', 'hostname': node['hostname'], port:'22'})
+                service = Services({'login': login})
                 rspec_node['services'].append(service)
             rspec_nodes.append(rspec_node)
         return rspec_nodes
