@@ -1,13 +1,22 @@
 from sfa.rspecs.elements.element import Element
-from sfa.util.faults import SfaNotImplemented 
-from sfa.util.sfalogging import logger
  
 class Node(Element):
-
-    def get_nodes(*args):
-        logger.info("sfa.rspecs.nodes: get_nodes not implemented") 
     
-    def add_nodes(*args):
-        logger.info("sfa.rspecs.nodes: add_nodes not implemented") 
+    fields = {
+        'component_id': None,
+        'component_name': None,
+        'component_manager_id': None,
+        'authority_id': None,    
+        'exclusive': None,
+        'location': None,
+        'bw_unallocated': None,
+        'bw_limit': None,
+        'boot_state': None,    
+        'slivers': [],
+        'hardware_type': [],
+        'disk_image': [],
+        'interfaces': [],
+        'tags': [],
+    }
                 
       
