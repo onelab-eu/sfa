@@ -55,7 +55,6 @@ class SFAv1Node:
                 for field in Location.fields:
                     if field in node['location'] and node['location'][field]:
                         location_elem.set(field, node['location'][field])
-
             if 'interfaces' in node and node['interfaces']:
                 i = 0
                 for interface in node['interfaces']:
@@ -92,7 +91,9 @@ class SFAv1Node:
             node = Node(node_elem.attrib, node_elem)
             if 'site_id' in node_elem.attrib:
                 node['authority_id'] = node_elem.attrib['site_id']
-            
+            if 'authority_id' in node_elem.attrib:
+                node['authority_id'] = node_elem.attrib['authority_id']
+ 
             # set the location
             location_elems = node_elem.xpath(SFAv1Node.elements['location'].path, xml.namespaces)
             if len(location_elems) > 0:
