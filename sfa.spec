@@ -1,6 +1,6 @@
 %define name sfa
 %define version 1.1
-%define taglevel 1
+%define taglevel 2
 
 %define release %{taglevel}%{?pldistro:.%{pldistro}}%{?date:.%{date}}
 %global python_sitearch	%( python -c "from distutils.sysconfig import get_python_lib; print get_python_lib(1)" )
@@ -197,6 +197,14 @@ fi
 [ "$1" -ge "1" ] && service sfa-cm restart || :
 
 %changelog
+* Mon Nov 07 2011 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-1.1-2
+- checkpoint tag: use SFA_GENERIC_FLAVOUR instead of SFA_*_TYPE
+- improvements in the pgv2 rspecs
+- driver separated from api
+- code starts moving around where it belongs
+- sfascan caches getversion across invokations
+- vini topology extracted as a config file
+
 * Fri Oct 28 2011 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-1.1-1
 - first support for protogeni rspecs is working
 - vini no longer needs a specific manager
