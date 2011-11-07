@@ -216,6 +216,11 @@ class Aggregate:
         rspec.version.add_nodes(self.get_nodes(slice, slivers))
         rspec.version.add_links(self.get_links(slice))
         
+        # add sliver defaults
+        default_sliver_attribs = slivers.get(None, [])
+        for sliver_attrib in default_sliver_attribs:
+            rspec.version.add_default_sliver_attribute(sliver_attrib['name'], sliver_attrib['value'])  
+        
         return rspec.toxml()
 
 
