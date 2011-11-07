@@ -16,7 +16,7 @@ class pl (Generic):
     def registry_manager_class (self) : 
         return sfa.managers.registry_manager
     def slicemgr_manager_class (self) : 
-        return sfa.managers.slice_manager
+        return sfa.managers.slice_manager.SliceManager
     def aggregate_manager_class (self) :
         return sfa.managers.aggregate_manager
 
