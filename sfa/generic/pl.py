@@ -18,7 +18,7 @@ class pl (Generic):
     def slicemgr_manager_class (self) : 
         return sfa.managers.slice_manager.SliceManager
     def aggregate_manager_class (self) :
-        return sfa.managers.aggregate_manager
+        return sfa.managers.aggregate_manager.AggregateManager
 
     # driver class for server-side services, talk to the whole testbed
     def driver_class (self):
