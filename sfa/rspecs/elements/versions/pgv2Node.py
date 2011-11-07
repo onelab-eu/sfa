@@ -12,6 +12,7 @@ from sfa.rspecs.elements.interface import Interface
 from sfa.rspecs.elements.bwlimit import BWlimit
 from sfa.rspecs.elements.pl_tag import PLTag
 from sfa.rspecs.rspec_elements import RSpecElement, RSpecElements
+from sfa.rspecs.elements.versions.pgv2Service import PGv2Service     
 
 class PGv2Node:
     elements = {
@@ -37,6 +38,8 @@ class PGv2Node:
                 node_elem.set('component_nama', component_name)
             if node.get('client_id'):
                 node_elem.set('client_id', node['client_id'])
+            if node.get('sliver_id'):
+                node_elem.set('sliver_id', node['sliver_id'])
             if node.get('exclusive'):
                 node_elem.set('exclusive', node['exclusive'])
             hardware_types = node.get('hardware_type', [])
@@ -44,17 +47,22 @@ class PGv2Node:
                 hw_type_elem = etree.SubElement(node_elem, 'hardware_type')
                 if hardware_type.get('name'):
                     hw_type_elem.set('name', hardware_type['name'])
-            if node.get('available') and node['available'].get('now'):
-                available_elem = etree.SubElement(node_elem, 'available', \
-                  now=node['available']['now'])
+            if node.get('boot_state', '').lower() == 'boot':
+                available_elem = etree.SubElement(node_elem, 'available', now='True')
+            else:
+                available_elem = etree.SubElement(node_elem, 'available', now='False')
+            
+            if node.get('services'):
+                PGv2Services.add_services(node_elem, node.get('services'))
+    
             slivers = node.get('slivers', [])
+            pl_initscripts = node.get('pl_initscripts', {})
             for sliver in slivers:
                 sliver_elem = etree.SubElement(node_elem, 'sliver_type')
                 if sliver.get('name'):
                     sliver_elem.set('name', sliver['name'])
                 if sliver.get('client_id'):
                     sliver_elem.set('client_id', sliver['client_id'])      
-                pl_initscripts = node.get('pl_initscripts', {})
                 for pl_initscript in pl_initscripts.values():
                     etree.SubElement(sliver_elem, '{%s}initscript' % xml.namespaces['planetlab'], \
                       name=pl_initscript['name'])
@@ -86,6 +94,13 @@ class PGv2Node:
             if len(location_elems) > 0:
                 node['location'] = Location(location_elems[0].attrib, location_elems[0])
             
+            # set services
+            services_elems = node_elem.xpath(PGv2Service.elements['services'].path, xml.namespaces)
+            node['services'] = []
+            for services_elem in services_elems:
+                # services element has no useful info, but the child elements do  
+                for child in services_elem.iterchildren():
+                    
             # set interfaces
             interface_elems = node_elem.xpath(PGv2Node.elements['interface'].path, xml.namespaces)
             node['interfaces'] = []
@@ -95,7 +110,10 @@ class PGv2Node:
             # set available
             available = node_elem.xpath(PGv2Node.elements['available'].path, xml.namespaces)
             if len(available) > 0:
-                node['available'] = available[0].attrib 
+                if available[0].attrib.get('now', '').lower() == 'true': 
+                    node['boot_state'] = 'boot'
+                else: 
+                    node['boot_state'] = 'disabled' 
 
             # set the slivers
             sliver_elems = node_elem.xpath(PGv2Node.elements['sliver'].path, xml.namespaces)
