@@ -1,4 +1,5 @@
 #!/usr/bin/python 
+from types import StringTypes
 from lxml import etree
 from StringIO import StringIO
 
@@ -59,10 +60,10 @@ class XML:
             # it hard for us to write xpath queries for the default naemspace because lxml 
             # wont understand a None prefix. We will just associate the default namespeace 
             # with a key named 'default'.     
-            self.namespaces['default'] = self.namespaces[None]
+            self.namespaces['default'] = self.namespaces.pop(None)
+            
         else:
             self.namespaces['default'] = 'default' 
-
         # set schema 
         for key in self.root.attrib.keys():
             if key.endswith('schemaLocation'):
@@ -101,8 +102,9 @@ class XML:
         # element.attrib.update will explode if DateTimes are in the
         # dcitionary.
         d=d.copy()
+        # looks like iteritems won't stand side-effects
         for k in d.keys():
-            if (type(d[k]) != str) and (type(d[k]) != unicode):
+            if not isinstance(d[k],StringTypes):
                 del d[k]
 
         element.attrib.update(d)
@@ -136,7 +138,7 @@ class XML:
 
     def add_element(self, name, attrs={}, parent=None, text=""):
         """
-        Generic wrapper around etree.SubElement(). Adds an element to 
+        Wrapper around etree.SubElement(). Adds an element to 
         specified parent node. Adds element to root node is parent is 
         not specified. 
         """
@@ -216,6 +218,7 @@ class XML:
     def toxml(self):
         return etree.tostring(self.root, encoding='UTF-8', pretty_print=True)  
     
+    # XXX smbaker, for record.load_from_string
     def todict(self, elem=None):
         if elem is None:
             elem = self.root
@@ -226,19 +229,6 @@ class XML:
             if child.tag not in d:
                 d[child.tag] = []
             d[child.tag].append(self.todict(child))
-        return d
-
-    # XXX smbaker, for record.load_from_string
-    def todict2(self, elem=None):
-        if elem is None:
-            elem = self.root
-        d = {}
-        d.update(elem.attrib)
-        d['text'] = elem.text
-        for child in elem.iterchildren():
-            if child.tag not in d:
-                d[child.tag] = []
-            d[child.tag].append(self.todict2(child))
 
         if len(d)==1 and ("text" in d):
             d = d["text"]

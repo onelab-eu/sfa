@@ -437,7 +437,7 @@ class ViniNetwork(Network):
     """
     def get_sites(self, api):
         tmp = []
-        for site in api.plshell.GetSites(api.plauth, {'peer_id': None}):
+        for site in api.driver.GetSites({'peer_id': None}):
             t = site['site_id'], ViniSite(self, site)
             tmp.append(t)
         return dict(tmp)
@@ -448,7 +448,7 @@ class ViniNetwork(Network):
     """
     def get_nodes(self, api):
         tmp = []
-        for node in api.plshell.GetNodes(api.plauth, {'peer_id': None}):
+        for node in api.driver.GetNodes({'peer_id': None}):
             t = node['node_id'], ViniNode(self, node)
             tmp.append(t)
         return dict(tmp)
@@ -458,7 +458,7 @@ class ViniNetwork(Network):
     """
     def get_slice(self, api, hrn):
         slicename = hrn_to_pl_slicename(hrn)
-        slice = api.plshell.GetSlices(api.plauth, [slicename])
+        slice = api.driver.GetSlices([slicename])
         if slice:
             self.slice = ViniSlice(self, slicename, slice[0])
             return self.slice

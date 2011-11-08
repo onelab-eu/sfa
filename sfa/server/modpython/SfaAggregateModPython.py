@@ -12,10 +12,10 @@ import traceback
 import xmlrpclib
 from mod_python import apache
 
-from sfa.plc.plcsfaapi import PlcSfaApi
 from sfa.util.sfalogging import logger
+from sfa.plc.server import SfaApi
 
-api = PlcSfaApi(interface='aggregate')
+api = SfaApi(interface='aggregate')
 
 def handler(req):
     try:

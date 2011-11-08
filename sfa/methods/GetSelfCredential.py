@@ -52,10 +52,9 @@ class GetSelfCredential(Method):
         origin_hrn = Certificate(string=cert).get_subject()
         self.api.logger.info("interface: %s\tcaller-hrn: %s\ttarget-hrn: %s\tmethod-name: %s"%(self.api.interface, origin_hrn, hrn, self.name))
         
-        manager = self.api.get_interface_manager()
  
         # authenticate the gid
-        records = manager.resolve(self.api, xrn, type)
+        records = self.api.manager.resolve(self.api, xrn, type)
         if not records:
             raise RecordNotFound(hrn)
         record = SfaRecord(dict=records[0])
@@ -72,4 +71,4 @@ class GetSelfCredential(Method):
                     self.api.logger.debug("ConnectionKeyGIDMismatch, %s filename: %s"%(name,obj.filename))
             raise ConnectionKeyGIDMismatch(gid.get_subject())
         
-        return manager.get_credential(self.api, xrn, type, is_self=True)
+        return self.api.manager.get_credential(self.api, xrn, type, is_self=True)

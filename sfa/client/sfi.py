@@ -23,7 +23,7 @@ from sfa.util.record import SfaRecord, UserRecord, SliceRecord, NodeRecord, Auth
 from sfa.rspecs.rspec import RSpec
 from sfa.rspecs.rspec_converter import RSpecConverter
 from sfa.util.xrn import get_leaf, get_authority, hrn_to_urn
-import sfa.util.xmlrpcprotocol as xmlrpcprotocol
+import sfa.client.xmlrpcprotocol as xmlrpcprotocol
 from sfa.util.config import Config
 from sfa.util.version import version_core
 from sfa.util.cache import Cache
@@ -398,9 +398,9 @@ class Sfi:
        self.cert_file = cert_file
        self.cert = GID(filename=cert_file)
        self.logger.info("Contacting Registry at: %s"%self.reg_url)
-       self.registry = xmlrpcprotocol.get_server(self.reg_url, key_file, cert_file, timeout=self.options.timeout, verbose=self.options.debug)  
+       self.registry = xmlrpcprotocol.server_proxy(self.reg_url, key_file, cert_file, timeout=self.options.timeout, verbose=self.options.debug)  
        self.logger.info("Contacting Slice Manager at: %s"%self.sm_url)
-       self.slicemgr = xmlrpcprotocol.get_server(self.sm_url, key_file, cert_file, timeout=self.options.timeout, verbose=self.options.debug)
+       self.slicemgr = xmlrpcprotocol.server_proxy(self.sm_url, key_file, cert_file, timeout=self.options.timeout, verbose=self.options.debug)
        return
 
     def get_cached_server_version(self, server):
@@ -493,7 +493,7 @@ class Sfi:
             self.logger.info("Getting Registry issued cert")
             self.read_config()
             # *hack.  need to set registyr before _get_gid() is called 
-            self.registry = xmlrpcprotocol.get_server(self.reg_url, key_file, cert_file, timeout=self.options.timeout, verbose=self.options.debug)
+            self.registry = xmlrpcprotocol.server_proxy(self.reg_url, key_file, cert_file, timeout=self.options.timeout, verbose=self.options.debug)
             gid = self._get_gid(type='user')
             self.registry = None 
             self.logger.info("Writing certificate to %s"%cert_file)
@@ -521,7 +521,7 @@ class Sfi:
         if args:
             hrn = args[0]
         gid = self._get_gid(hrn)
-        self.logger.debug("Sfi.get_gid-> %s",gid.save_to_string(save_parents=True))
+        self.logger.debug("Sfi.get_gid-> %s" % gid.save_to_string(save_parents=True))
         return gid
 
     def _get_gid(self, hrn=None, type=None):
@@ -646,7 +646,7 @@ class Sfi:
        return key_string
 
     # xxx opts undefined
-    def get_component_server_from_hrn(self, hrn):
+    def get_component_proxy_from_hrn(self, hrn):
         # direct connection to the nodes component manager interface
         user_cred = self.get_user_cred().save_to_string(save_parents=True)
         records = self.registry.Resolve(hrn, user_cred)
@@ -655,9 +655,9 @@ class Sfi:
             self.logger.warning("No such component:%r"% opts.component)
         record = records[0]
   
-        return self.get_server(record['hostname'], CM_PORT, self.key_file, self.cert_file)
+        return self.server_proxy(record['hostname'], CM_PORT, self.key_file, self.cert_file)
  
-    def get_server(self, host, port, keyfile, certfile):
+    def server_proxy(self, host, port, keyfile, certfile):
         """
         Return an instance of an xmlrpc server connection    
         """
@@ -666,10 +666,10 @@ class Sfi:
         host_parts = host.split('/')
         host_parts[0] = host_parts[0] + ":" + str(port)
         url =  "http://%s" %  "/".join(host_parts)    
-        return xmlrpcprotocol.get_server(url, keyfile, certfile, timeout=self.options.timeout, verbose=self.options.debug)
+        return xmlrpcprotocol.server_proxy(url, keyfile, certfile, timeout=self.options.timeout, verbose=self.options.debug)
 
     # xxx opts could be retrieved in self.options
-    def get_server_from_opts(self, opts):
+    def server_proxy_from_opts(self, opts):
         """
         Return instance of an xmlrpc connection to a slice manager, aggregate
         or component server depending on the specified opts
@@ -677,10 +677,10 @@ class Sfi:
         server = self.slicemgr
         # direct connection to an aggregate
         if hasattr(opts, 'aggregate') and opts.aggregate:
-            server = self.get_server(opts.aggregate, opts.port, self.key_file, self.cert_file)
+            server = self.server_proxy(opts.aggregate, opts.port, self.key_file, self.cert_file)
         # direct connection to the nodes component manager interface
         if hasattr(opts, 'component') and opts.component:
-            server = self.get_component_server_from_hrn(opts.component)    
+            server = self.get_component_proxy_from_hrn(opts.component)    
  
         return server
     #==========================================================================
@@ -911,7 +911,7 @@ class Sfi:
             if opts.version_registry:
                 server=self.registry
             else:
-                server = self.get_server_from_opts(opts)
+                server = self.server_proxy_from_opts(opts)
             version=server.GetVersion()
         for (k,v) in version.iteritems():
             print "%-20s: %s"%(k,v)
@@ -928,7 +928,7 @@ class Sfi:
         if opts.delegate:
             delegated_cred = self.delegate_cred(user_cred, get_authority(self.authority))
             creds.append(delegated_cred)  
-        server = self.get_server_from_opts(opts)
+        server = self.server_proxy_from_opts(opts)
         #results = server.ListSlices(creds, unique_call_id())
         results = server.ListSlices(creds)
         display_list(results)
@@ -939,7 +939,7 @@ class Sfi:
         user_cred = self.get_user_cred().save_to_string(save_parents=True)
         server = self.slicemgr
         call_options = {}
-        server = self.get_server_from_opts(opts)
+        server = self.server_proxy_from_opts(opts)
         
         if args:
             cred = self.get_slice_cred(args[0]).save_to_string(save_parents=True)
@@ -979,7 +979,7 @@ class Sfi:
 
     # created named slice with given rspec
     def create(self, opts, args):
-        server = self.get_server_from_opts(opts)
+        server = self.server_proxy_from_opts(opts)
         server_version = self.get_cached_server_version(server)
         slice_hrn = args[0]
         slice_urn = hrn_to_urn(slice_hrn, 'slice')
@@ -1044,7 +1044,7 @@ class Sfi:
             creds.append(delegated_cred)
         rspec_file = self.get_rspec_file(rspec_path) 
         rspec = open(rspec_file).read()
-        server = self.get_server_from_opts(opts)
+        server = self.server_proxy_from_opts(opts)
         ticket_string = server.GetTicket(slice_urn, creds, rspec, [])
         file = os.path.join(self.options.sfi_dir, get_leaf(slice_hrn) + ".ticket")
         self.logger.info("writing ticket to %s"%file)
@@ -1075,7 +1075,7 @@ class Sfi:
         for hostname in hostnames:
             try:
                 self.logger.info("Calling redeem_ticket at %(hostname)s " % locals())
-                server = self.get_server(hostname, CM_PORT, self.key_file, \
+                server = self.server_proxy(hostname, CM_PORT, self.key_file, \
                                          self.cert_file, self.options.debug)
                 server.RedeemTicket(ticket.save_to_string(save_parents=True), slice_cred)
                 self.logger.info("Success")
@@ -1094,7 +1094,7 @@ class Sfi:
         if opts.delegate:
             delegated_cred = self.delegate_cred(slice_cred, get_authority(self.authority))
             creds.append(delegated_cred)
-        server = self.get_server_from_opts(opts)
+        server = self.server_proxy_from_opts(opts)
 
         call_args = [slice_urn, creds]
         if self.server_supports_call_id_arg(server):
@@ -1110,7 +1110,7 @@ class Sfi:
         if opts.delegate:
             delegated_cred = self.delegate_cred(slice_cred, get_authority(self.authority))
             creds.append(delegated_cred)
-        server = self.get_server_from_opts(opts)
+        server = self.server_proxy_from_opts(opts)
         return server.Start(slice_urn, creds)
     
     # stop named slice
@@ -1122,14 +1122,14 @@ class Sfi:
         if opts.delegate:
             delegated_cred = self.delegate_cred(slice_cred, get_authority(self.authority))
             creds.append(delegated_cred)
-        server = self.get_server_from_opts(opts)
+        server = self.server_proxy_from_opts(opts)
         return server.Stop(slice_urn, creds)
     
     # reset named slice
     def reset(self, opts, args):
         slice_hrn = args[0]
         slice_urn = hrn_to_urn(slice_hrn, 'slice') 
-        server = self.get_server_from_opts(opts)
+        server = self.server_proxy_from_opts(opts)
         slice_cred = self.get_slice_cred(args[0]).save_to_string(save_parents=True)
         creds = [slice_cred]
         if opts.delegate:
@@ -1140,7 +1140,7 @@ class Sfi:
     def renew(self, opts, args):
         slice_hrn = args[0]
         slice_urn = hrn_to_urn(slice_hrn, 'slice') 
-        server = self.get_server_from_opts(opts)
+        server = self.server_proxy_from_opts(opts)
         slice_cred = self.get_slice_cred(args[0]).save_to_string(save_parents=True)
         creds = [slice_cred]
         if opts.delegate:
@@ -1162,7 +1162,7 @@ class Sfi:
         if opts.delegate:
             delegated_cred = self.delegate_cred(slice_cred, get_authority(self.authority))
             creds.append(delegated_cred)
-        server = self.get_server_from_opts(opts)
+        server = self.server_proxy_from_opts(opts)
         call_args = [slice_urn, creds]
         if self.server_supports_call_id_arg(server):
             call_args.append(unique_call_id())
@@ -1180,7 +1180,7 @@ class Sfi:
         if opts.delegate:
             delegated_cred = self.delegate_cred(slice_cred, get_authority(self.authority))
             creds.append(delegated_cred)
-        server = self.get_server_from_opts(opts)
+        server = self.server_proxy_from_opts(opts)
         return server.Shutdown(slice_urn, creds)         
     
     def print_help (self):
