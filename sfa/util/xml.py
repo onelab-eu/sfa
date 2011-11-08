@@ -60,10 +60,10 @@ class XML:
             # it hard for us to write xpath queries for the default naemspace because lxml 
             # wont understand a None prefix. We will just associate the default namespeace 
             # with a key named 'default'.     
-            self.namespaces['default'] = self.namespaces[None]
+            self.namespaces['default'] = self.namespaces.pop(None)
+            
         else:
             self.namespaces['default'] = 'default' 
-
         # set schema 
         for key in self.root.attrib.keys():
             if key.endswith('schemaLocation'):

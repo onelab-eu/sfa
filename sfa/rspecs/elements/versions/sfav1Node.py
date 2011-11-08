@@ -13,6 +13,7 @@ from sfa.rspecs.elements.bwlimit import BWlimit
 from sfa.rspecs.elements.pl_tag import PLTag
 from sfa.rspecs.rspec_elements import RSpecElement, RSpecElements
 from sfa.rspecs.elements.versions.sfav1Network import SFAv1Network
+from sfa.rspecs.elements.versions.pgv2Services import PGv2Services
 
 class SFAv1Node:
 
@@ -55,7 +56,6 @@ class SFAv1Node:
                 for field in Location.fields:
                     if field in node['location'] and node['location'][field]:
                         location_elem.set(field, node['location'][field])
-
             if 'interfaces' in node and node['interfaces']:
                 i = 0
                 for interface in node['interfaces']:
@@ -68,17 +68,23 @@ class SFAv1Node:
             if 'bw_unallocated' in node and node['bw_unallocated']:
                 bw_unallocated = etree.SubElement(node_elem, 'bw_unallocated', units='kbps').text = str(int(node['bw_unallocated'])/1000)
 
+            if node.get('services'):
+                PGv2Services.add_services(node_elem, node.get('services'))
+
             if 'tags' in node:
                 for tag in node['tags']:
                    # expose this hard wired list of tags, plus the ones that are marked 'sfa' in their category
                    if tag['name'] in ['fcdistro', 'arch']:
                         tag_element = etree.SubElement(node_elem, tag['name']).text=tag['value']
 
-            if 'slivers' in node:
+            if node.get('slivers'):
                 for sliver in node['slivers']:
                     sliver_elem = etree.SubElement(node_elem, 'sliver')
-                    if 'name' in sliver and sliver['name']: 
-                        sliver_elem.set('name', sliver['name']) 
+                    if sliver.get('sliver_id'): 
+                        sliver_id_leaf = Xrn(sliver.get('sliver_id')).get_leaf()
+                        sliver_id_parts = sliver_id_leaf.split(':')
+                        name = sliver_id_parts[0] 
+                        sliver_elem.set('name', name) 
 
     @staticmethod 
     def add_slivers(xml, slivers):
@@ -92,7 +98,9 @@ class SFAv1Node:
             node = Node(node_elem.attrib, node_elem)
             if 'site_id' in node_elem.attrib:
                 node['authority_id'] = node_elem.attrib['site_id']
-            
+            if 'authority_id' in node_elem.attrib:
+                node['authority_id'] = node_elem.attrib['authority_id']
+ 
             # set the location
             location_elems = node_elem.xpath(SFAv1Node.elements['location'].path, xml.namespaces)
             if len(location_elems) > 0:
