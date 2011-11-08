@@ -1,5 +1,6 @@
 import sys
 import time
+import traceback
 from StringIO import StringIO
 from copy import copy
 from lxml import etree
@@ -89,15 +90,27 @@ class SliceManager:
         except Exception, e:
             logger.warn("drop_slicemgr_stats failed: %s " % (str(e)))
     
-    def add_slicemgr_stat(self, rspec, callname, aggname, elapsed, status):
+    def add_slicemgr_stat(self, rspec, callname, aggname, elapsed, status, exc_info=None):
         try:
             stats_tags = rspec.xml.xpath('//statistics[@call="%s"]' % callname)
             if stats_tags:
                 stats_tag = stats_tags[0]
             else:
                 stats_tag = etree.SubElement(rspec.xml.root, "statistics", call=callname)
-    
-            etree.SubElement(stats_tag, "aggregate", name=str(aggname), elapsed=str(elapsed), status=str(status))
+
+            stat_tag = etree.SubElement(stats_tag, "aggregate", name=str(aggname), elapsed=str(elapsed), status=str(status))
+
+            if exc_info:
+                exc_tag = etree.SubElement(stat_tag, "exc_info", name=str(exc_info[1]))
+
+                # formats the traceback as one big text blob
+                #exc_tag.text = "\n".join(traceback.format_exception(exc_info[0], exc_info[1], exc_info[2]))
+
+                # formats the traceback as a set of xml elements
+                tb = traceback.extract_tb(exc_info[2])
+                for item in tb:
+                    exc_frame = etree.SubElement(exc_tag, "tb_frame", filename=str(item[0]), line=str(item[1]), func=str(item[2]), code=str(item[3]))
+
         except Exception, e:
             logger.warn("add_slicemgr_stat failed on  %s: %s" %(aggname, str(e)))
     
@@ -119,7 +132,7 @@ class SliceManager:
                 return {"aggregate": aggregate, "rspec": rspec, "elapsed": time.time()-tStart, "status": "success"}
             except Exception, e:
                 api.logger.log_exc("ListResources failed at %s" %(server.url))
-                return {"aggregate": aggregate, "elapsed": time.time()-tStart, "status": "exception"}
+                return {"aggregate": aggregate, "elapsed": time.time()-tStart, "status": "exception", "exc_info": sys.exc_info()}
     
         if Callids().already_handled(call_id): return ""
     
@@ -168,7 +181,7 @@ class SliceManager:
             result_version = version_manager._get_version(rspec_version.type, rspec_version.version, 'ad')
         rspec = RSpec(version=result_version)
         for result in results:
-            self.add_slicemgr_stat(rspec, "ListResources", result["aggregate"], result["elapsed"], result["status"])
+            self.add_slicemgr_stat(rspec, "ListResources", result["aggregate"], result["elapsed"], result["status"], result.get("exc_info",None))
             if result["status"]=="success":
                 try:
                     rspec.version.merge(result["rspec"])
@@ -205,9 +218,9 @@ class SliceManager:
                     args.append(call_id)
                 rspec = server.CreateSliver(*args)
                 return {"aggregate": aggregate, "rspec": rspec, "elapsed": time.time()-tStart, "status": "success"}
-            except: 
+            except:
                 logger.log_exc('Something wrong in _CreateSliver with URL %s'%server.url)
-                return {"aggregate": aggregate, "elapsed": time.time()-tStart, "status": "exception"}
+                return {"aggregate": aggregate, "elapsed": time.time()-tStart, "status": "exception", "exc_info": sys.exc_info()}
     
         if Callids().already_handled(call_id): return ""
         # Validate the RSpec against PlanetLab's schema --disabled for now
@@ -246,7 +259,7 @@ class SliceManager:
         manifest_version = version_manager._get_version(rspec.version.type, rspec.version.version, 'manifest')
         result_rspec = RSpec(version=manifest_version)
         for result in results:
-            self.add_slicemgr_stat(result_rspec, "CreateSliver", result["aggregate"], result["elapsed"], result["status"])
+            self.add_slicemgr_stat(result_rspec, "CreateSliver", result["aggregate"], result["elapsed"], result["status"], result.get("exc_info",None))
             if result["status"]=="success":
                 try:
                     result_rspec.version.merge(result["rspec"])
