@@ -22,13 +22,12 @@ from sfa.util.callids import Callids
 #comes with its own logging
 #from sfa.util.sfalogging import logger
 from sfa.util.version import version_core
-
 from sfa.trust.credential import Credential
-
 from sfa.server.sfaapi import SfaApi
-
 from sfa.plc.aggregate import Aggregate
 from sfa.plc.slices import Slice, Slices
+from sfa.rspecs.version_manager import VersionManager
+from sfa.rspecs.rspec import RSpec
 # not sure what this used to be nor where it is now defined
 #from sfa.rspecs.sfa_rspec import sfa_rspec_version
 
@@ -679,15 +678,22 @@ class AggregateManagerEucalyptus:
         f.close()
     
     def GetVersion(api):
+
+        version_manager = VersionManager()
+        ad_rspec_versions = []
+        request_rspec_versions = []
+        for rspec_version in version_manager.versions:
+            if rspec_version.content_type in ['*', 'ad']:
+                ad_rspec_versions.append(rspec_version.to_dict())
+            if rspec_version.content_type in ['*', 'request']:
+                request_rspec_versions.append(rspec_version.to_dict())
+        default_rspec_version = version_manager.get_version("sfa 1").to_dict()
         xrn=Xrn(api.hrn)
-        request_rspec_versions = [dict(sfa_rspec_version)]
-        ad_rspec_versions = [dict(sfa_rspec_version)]
         version_more = {'interface':'aggregate',
                         'testbed':'myplc',
                         'hrn':xrn.get_hrn(),
                         'request_rspec_versions': request_rspec_versions,
                         'ad_rspec_versions': ad_rspec_versions,
-                        'default_ad_rspec': dict(sfa_rspec_version)
+                        'default_ad_rspec': default_rspec_version
                         }
         return version_core(version_more)
-
