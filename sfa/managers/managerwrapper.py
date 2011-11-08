@@ -1,4 +1,6 @@
-from sfa.util.faults import SfaNotImplemented
+from types import ModuleType, ClassType
+
+from sfa.util.faults import SfaNotImplemented, SfaAPIError
 from sfa.util.sfalogging import logger
 
 ####################
@@ -14,7 +16,15 @@ class ManagerWrapper:
     the standard AttributeError         
     """
     def __init__(self, manager, interface):
-        self.manager = manager
+        if isinstance (manager, ModuleType):
+            # old-fashioned module implementation
+            self.manager = manager
+        elif isinstance (manager, ClassType):
+            # create an instance; we don't pass the api in argument as it is passed 
+            # to the actual method calls anyway
+            self.manager = manager()
+        else:
+            raise SfaAPIError,"Argument to ManagerWrapper must be a module or class"
         self.interface = interface
         
     def __getattr__(self, method):
