@@ -184,10 +184,36 @@ class Slices:
         except: 
             self.api.logger.log_exc('Failed to add/remove slice from nodes')
 
+    def free_egre_key(self):
+        used = set()
+        for tag in self.api.driver.GetSliceTags({'tagname': 'egre_key'}):
+                used.add(int(tag['value']))
+
+        for i in range(1, 256):
+            if i not in used:
+                key = i
+                break
+        else:
+            raise KeyError("No more EGRE keys available")
+
+        return str(key)
+
     def verify_slice_links(self, slice, links, aggregate):
         # nodes is undefined here
         if not links:
-            return 
+            return
+
+        slice_tags = []
+        
+        # set egre key
+        slice_tags.append({'name': 'egre_key', 'value': self.free_egre_key()})
+    
+        # set netns
+        slice_tags.append({'name': 'netns', 'value': '1'})
+
+        # set cap_net_admin 
+        # need to update the attribute string?
+        slice_tags.append({'name': 'capabilities', 'value': 'CAP_NET_ADMIN'}) 
         
         for link in links:
             # get the ip address of the first node in the link
@@ -198,7 +224,13 @@ class Slices:
             if1 = aggregate.interfaces[node['interface_ids'][0]]
             ipaddr = if1['ip']
             topo_rspec = VLink.get_topo_rspec(link, ipaddr)
-            self.api.driver.AddSliceTag(slice['name'], 'topo_rspec', str([topo_rspec]), node_id) 
+            # set topo_rspec tag
+            slice_tags.append({'name': 'topo_rspec', 'value': str([topo_rspec]), 'node_id': node_id})
+            # set vini_topo tag
+            slice_tags.append({'name': 'vini_topo', 'value': 'manual', 'node_id': node_id})
+            #self.api.driver.AddSliceTag(slice['name'], 'topo_rspec', str([topo_rspec]), node_id) 
+
+        self.verify_slice_attributes(slice, slice_tags, append=True, admin=True)
                         
         
 
@@ -487,9 +519,12 @@ class Slices:
                     except:
                         pass   
 
-    def verify_slice_attributes(self, slice, requested_slice_attributes):
+    def verify_slice_attributes(self, slice, requested_slice_attributes, append=False, admin=False):
         # get list of attributes users ar able to manage
-        slice_attributes = self.api.driver.GetTagTypes({'category': '*slice*', '|roles': ['user']})
+        filter = {'category': '*slice*'}
+        if not admin:
+            filter['|roles'] = ['user']
+        slice_attributes = self.api.driver.GetTagTypes(filter)
         valid_slice_attribute_names = [attribute['tagname'] for attribute in slice_attributes]
 
         # get sliver attributes
@@ -514,7 +549,7 @@ class Slices:
                         attribute_found=True
                         break
 
-            if not attribute_found:
+            if not attribute_found and not append:
                 removed_slice_attributes.append(slice_tag)
         
         # get attributes that should be added:
