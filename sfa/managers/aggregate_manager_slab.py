@@ -10,20 +10,20 @@ from types import StringTypes
 from sfa.util.faults import *
 from sfa.util.xrn import get_authority, hrn_to_urn, urn_to_hrn, Xrn, urn_to_sliver_id
 from sfa.util.plxrn import slicename_to_hrn, hrn_to_pl_slicename, hostname_to_urn
-from sfa.util.rspec import *
-from sfa.util.specdict import *
+#from sfa.util.rspec import *
+#from sfa.util.specdict import *
 from sfa.util.record import SfaRecord
 from sfa.util.policy import Policy
 from sfa.util.record import *
-from sfa.util.sfaticket import SfaTicket
+#from sfa.util.sfaticket import SfaTicket
 
-from sfa.senslab.slices import *
+#from sfa.senslab.slices import *
 
 from sfa.trust.credential import Credential
 import sfa.plc.peers as peers
 from sfa.plc.network import *
 from sfa.senslab.OARrestapi import *
-from sfa.senslab.api import SfaAPI
+#from sfa.senslab.api import SfaAPI
 #from sfa.plc.aggregate import Aggregate
 #from sfa.plc.slices import *
 from sfa.util.version import version_core

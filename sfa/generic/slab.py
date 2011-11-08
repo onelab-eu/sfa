@@ -6,7 +6,7 @@ import sfa.managers.registry_manager_slab
 import sfa.managers.slice_manager_slab
 import sfa.managers.aggregate_manager_slab
 
-class pl (Generic):
+class slab (Generic):
     
     # use the standard api class
     def api_class (self):
@@ -22,7 +22,7 @@ class pl (Generic):
 
     # driver class for server-side services, talk to the whole testbed
     def driver_class (self):
-        return sfa.plc.slabdriver.SlabDriver
+        return sfa.senslab.slabdriver.SlabDriver
 
     # slab does not have a component manager yet
     # manager class

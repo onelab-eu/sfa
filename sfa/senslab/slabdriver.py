@@ -42,7 +42,7 @@ class SlabDriver (OARapi, SenslabImportUsers):
 	self.users = self
         self.time_format = "%Y-%m-%d %H:%M:%S"
         #self.logger=sfa_logger()
-	print >>sys.stderr, "\r\n \t\t___________PSFA SENSLAN /API.PY  __init__ STOP ",self.interface #dir(self)
+        #print >>sys.stderr, "\r\n \t\t___________PSFA SENSLAN /API.PY  __init__ STOP ",self.interface #dir(self)
 	
     ##
     # Convert SFA fields to PLC fields for use when registering up updating
