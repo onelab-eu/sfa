@@ -1,6 +1,6 @@
 #!/usr/bin/python
-from sfa.util.xrn import hrn_to_urn, urn_to_hrn
-from sfa.util.plxrn import PlXrn, hostname_to_urn, hrn_to_pl_slicename, urn_to_sliver_id
+from sfa.util.xrn import hrn_to_urn, urn_to_hrn, urn_to_sliver_id
+from sfa.util.plxrn import PlXrn, hostname_to_urn, hrn_to_pl_slicename
 
 from sfa.rspecs.rspec import RSpec
 from sfa.rspecs.elements.hardware_type import HardwareType
