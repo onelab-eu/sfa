@@ -2,10 +2,12 @@ from sfa.util.enumeration import Enum
 
 # recognized top level rspec elements
 RSpecElements = Enum(
+    AVAILABLE='AVAILABLE',
     BWLIMIT='BWLIMIT',
     EXECUTE='EXECUTE',
     NETWORK='NETWORK', 
     COMPONENT_MANAGER='COMPONENT_MANAGER',
+    HARDWARE_TYPE='HARDWARE_TYPE', 
     INSTALL='INSTALL', 
     INTERFACE='INTERFACE', 
     INTERFACE_REF='INTERFACE_REF',

@@ -10,8 +10,8 @@ class PGv2Services:
     elements = {
         'services': RSpecElement(RSpecElements.SERVICES, '//default:services | //services'),
         'install': RSpecElement(RspecElements.INSTALL, './default:install | ./install'),
-        'execute': RSpecElement(RspecElements.INSTALL, './default:execute | ./execute'),
-        'login': RSpecElement(RspecElements.INSTALL, './default:login | ./login'),
+        'execute': RSpecElement(RspecElements.EXECUTE, './default:execute | ./execute'),
+        'login': RSpecElement(RspecElements.LOGIN, './default:login | ./login'),
     }  
     
     @staticmethod
