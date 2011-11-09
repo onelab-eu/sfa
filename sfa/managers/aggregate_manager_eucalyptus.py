@@ -15,7 +15,7 @@ from xmlbuilder import XMLBuilder
 from lxml import etree as ET
 from sqlobject import *
 
-from sfa.util.faults import InvalidRSpec, 
+from sfa.util.faults import InvalidRSpec 
 from sfa.util.xrn import urn_to_hrn, Xrn
 from sfa.util.plxrn import hrn_to_pl_slicename, slicename_to_hrn
 from sfa.util.callids import Callids
