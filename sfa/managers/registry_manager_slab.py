@@ -17,8 +17,10 @@ from sfa.trust.gid import create_uuid
 
 # The GENI GetVersion call
 def GetVersion(api):
-    peers =dict ([ (peername,v._ServerProxy__host) for (peername,v) in api.registries.iteritems() 
-                   if peername != api.hrn])
+    # Bugfix TP 09/11/2011
+    #peers =dict ([ (peername,v._ServerProxy__host) for (peername,v) in api.registries.iteritems()
+    peers =dict ([ (peername,v.get_url()) for (peername,v) in api.registries.iteritems()
+        if peername != api.hrn])
     xrn=Xrn(api.hrn)
     return version_core({'interface':'registry',
                          'hrn':xrn.get_hrn(),
