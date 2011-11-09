@@ -100,6 +100,7 @@ class PGv2Node:
             for services_elem in services_elems:
                 # services element has no useful info, but the child elements do  
                 for child in services_elem.iterchildren():
+                    pass
                     
             # set interfaces
             interface_elems = node_elem.xpath(PGv2Node.elements['interface'].path, xml.namespaces)
