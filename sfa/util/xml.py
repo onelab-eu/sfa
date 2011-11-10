@@ -40,8 +40,10 @@ class XpathFilter:
 class XmlNode:
     def __init__(self, node, namespaces):
         self.node = node
+        self.text = node.text
         self.namespaces = namespaces
         self.attrib = node.attrib
+        
 
     def xpath(self, xpath, namespaces=None):
         if not namespaces:
@@ -65,6 +67,9 @@ class XmlNode:
         for element in elements:
             parent = element.getparent()
             parent.remove(element)
+
+    def remove(element):
+        self.node.remove(element)
 
     def set(self, key, value):
         self.node.set(key, value)
