@@ -4,8 +4,14 @@ from sfa.rspecs.elements.sliver import Sliver
 class PGv2SliverType:
 
     @staticmethod
-    def add_sliver(xml, sliver):
-        sliver_elem = Element.add(xml, 'sliver_type', sliver, ['name'])
+    def add_slivers(xml, sliver):
+        if not isinstance(slivers, list):
+            slivers = [slivers]
+        for sliver in slivers: 
+            sliver_elem = Element.add(xml, 'sliver_type', sliver, ['type', 'client_id'])
+            for tag in sliver.get('tags', []):
+                if tag['name'] == 'initscript':
+                    sliver_elem.add_element('{%s}initscript' % xml.namespaces['planetlab'], name=tag['value'])
                     
     @staticmethod
     def get_slivers(xml, filter={}):
