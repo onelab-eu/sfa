@@ -1,81 +1,64 @@
-from lxml import etree
 from sfa.util.plxrn import PlXrn
 from sfa.util.xrn import Xrn
+from sfa.rspecs.elements.element import Element
 from sfa.rspecs.elements.link import Link
 from sfa.rspecs.elements.interface import Interface
-from sfa.rspecs.elements.link_type import LinkType
-from sfa.rspecs.elements.component_manager import ComponentManager
 from sfa.rspecs.elements.property import Property    
-from sfa.rspecs.rspec_elements import RSpecElement, RSpecElements
 
 class PGv2Link:
-    elements = {
-        'link': RSpecElement(RSpecElements.LINK, '//default:link | //link'),
-        'component_manager': RSpecElement(RSpecElements.COMPONENT_MANAGER, './default:component_manager | ./component_manager'),
-        'link_type': RSpecElement(RSpecElements.LINK_TYPE, './default:link_type | ./link_type'),
-        'property': RSpecElement(RSpecElements.PROPERTY, './default:property | ./property'),
-        'interface_ref': RSpecElement(RSpecElements.INTERFACE_REF, './default:interface_ref | ./interface_ref'), 
-    }
-    
     @staticmethod
     def add_links(xml, links):
         for link in links:
-            link_elem = etree.SubElement(xml, 'link')
-            for attrib in ['component_name', 'component_id', 'client_id']:
-                if attrib in link and link[attrib] is not None:
-                    link_elem.set(attrib, link[attrib])
+            link_elems = Element.add(xml, 'link', link, ['component_name', 'component_id', 'client_id'])
+            link_elem = link_elems[0]
+            # set component manager element            
             if 'component_manager' in link and link['component_manager']:
-                cm_element = etree.SubElement(link_elem, 'component_manager', name=link['component_manager'])
+                cm_element = link_elem.add_element('component_manager', name=link['component_manager'])
+            # set interface_ref elements
             for if_ref in [link['interface1'], link['interface2']]:
-                if_ref_elem = etree.SubElement(link_elem, 'interface_ref')
-                for attrib in Interface.fields:
-                    if attrib in if_ref and if_ref[attrib]:
-                        if_ref_elem.attrib[attrib] = if_ref[attrib]  
-            prop1 = etree.SubElement(link_elem, 'property', source_id = link['interface1']['component_id'],
+                Element.add(link_elem, 'interface_ref', if_ref, Interface.fields)
+            # set property elements
+            prop1 = link_elem.add_element('property', source_id = link['interface1']['component_id'],
                 dest_id = link['interface2']['component_id'], capacity=link['capacity'], 
                 latency=link['latency'], packet_loss=link['packet_loss'])
-            prop2 = etree.SubElement(link_elem, 'property', source_id = link['interface2']['component_id'],
+            prop2 = link_elem.add_element('property', source_id = link['interface2']['component_id'],
                 dest_id = link['interface1']['component_id'], capacity=link['capacity'], 
                 latency=link['latency'], packet_loss=link['packet_loss'])
-            if 'type' in link and link['type']:
-                type_elem = etree.SubElement(link_elem, 'link_type', name=link['type'])             
+            if link.get('type'):
+                type_elem = link_elem.add_element('link_type', name=link['type'])            
+ 
     @staticmethod 
     def get_links(xml):
         links = []
-        link_elems = xml.xpath(PGv2Link.elements['link'].path, namespaces=xml.namespaces)
+        link_elems = xml.xpath('//default:link | //link')
         for link_elem in link_elems:
             # set client_id, component_id, component_name
             link = Link(link_elem.attrib, link_elem)
+
             # set component manager
-            cm = link_elem.xpath('./default:component_manager', namespaces=xml.namespaces)
-            if len(cm) >  0:
-                cm = cm[0]
-                if  'name' in cm.attrib:
-                    link['component_manager'] = cm.attrib['name'] 
+            component_managers = link_elem.xpath('./default:component_manager | ./component_manager')
+            if len(component_managers) > 0 and 'name' in component_managers[0].attrib:
+                link['component_manager'] = component_managers[0].attrib['name']
+
             # set link type
-            link_types = link_elem.xpath(PGv2Link.elements['link_type'].path, namespaces=xml.namespaces)
-            if len(link_types) > 0:
-                link_type = link_types[0]
-                if 'name' in link_type.attrib:
-                    link['type'] = link_type.attrib['name']
+            link_types = link_elem.xpath('./default:link_type | ./link_type')
+            if len(link_types) > 0 and 'name' in link_types[0].attrib:
+                link['type'] = link_types[0].attrib['name']
           
             # get capacity, latency and packet_loss from first property  
-            props = link_elem.xpath(PGv2Link.elements['property'].path, namespaces=xml.namespaces)
-            if len(props) > 0:
-                prop = props[0]
+            property_fields = ['capacity', 'latency', 'packet_loss']
+            property_elems = link_elem.xpath('./default:property | ./property')
+            if len(propery_elems) > 0:
+                prop = property_elems[0]
                 for attrib in ['capacity', 'latency', 'packet_loss']:
-                    if attrib in prop.attrib:
-                        link[attrib] = prop.attrib[attrib]
+                    if attrib in prop:
+                        link[attrib] = prop[attrib]
                              
-            # get interfaces 
-            if_elems = link_elem.xpath(PGv2Link.elements['interface_ref'].path, namespaces=xml.namespaces)
-            ifs = []
-            for if_elem in if_elems:
-                if_ref = Interface(if_elem.attrib, if_elem)
-                ifs.append(if_ref)
-            if len(ifs) > 1:
-                link['interface1'] = ifs[0]
-                link['interface2'] = ifs[1] 
+            # get interfaces
+            interfaces = Element.get(Interface, link_elem, './default:interface_ref | ./interface_ref')
+            if len(interfaces) > 1:
+                link['interface1'] = interfaces[0]
+                link['interface2'] = interfaces[1] 
             links.append(link)
         return links 
 
