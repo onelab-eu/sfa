@@ -10,7 +10,7 @@ from sfa.rspecs.elements.hardware_type import HardwareType
 from sfa.rspecs.elements.disk_image import DiskImage
 from sfa.rspecs.elements.interface import Interface
 from sfa.rspecs.elements.bwlimit import BWlimit
-from sfa.rspecs.elements.pl_tag import PLTag
+from sfa.rspecs.elements.pltag import PLTag
 from sfa.rspecs.rspec_elements import RSpecElement, RSpecElements
 from sfa.rspecs.elements.versions.sfav1Network import SFAv1Network
 from sfa.rspecs.elements.versions.pgv2Services import PGv2Services

@@ -10,7 +10,7 @@ from sfa.rspecs.elements.hardware_type import HardwareType
 from sfa.rspecs.elements.disk_image import DiskImage
 from sfa.rspecs.elements.interface import Interface
 from sfa.rspecs.elements.bwlimit import BWlimit
-from sfa.rspecs.elements.pl_tag import PLTag
+from sfa.rspecs.elements.pltag import PLTag
 from sfa.rspecs.rspec_elements import RSpecElement, RSpecElements
 from sfa.rspecs.elements.versions.pgv2Service import PGv2Service     
 
@@ -100,6 +100,7 @@ class PGv2Node:
             for services_elem in services_elems:
                 # services element has no useful info, but the child elements do  
                 for child in services_elem.iterchildren():
+                    pass
                     
             # set interfaces
             interface_elems = node_elem.xpath(PGv2Node.elements['interface'].path, xml.namespaces)
