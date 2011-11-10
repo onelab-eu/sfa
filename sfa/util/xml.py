@@ -91,7 +91,7 @@ class XML:
             self.parse_xml(xml)
         if isinstance(xml, XmlNode):
             self.root = xml
-            self.namespces = xml.namespaces
+            self.namespaces = xml.namespaces
         elif isinstance(xml, etree._ElementTree) or isinstance(xml, etree._Element):
             self.parse_xml(etree.tostring(xml))
 
