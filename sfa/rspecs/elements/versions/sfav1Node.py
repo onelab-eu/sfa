@@ -53,12 +53,6 @@ class SFAv1Node:
 
             location_elems = Element.add(node_elem, 'location', node.get('location', []), Location.fields)
             interface_elems = Element.add(node_elem, 'interface', node.get('interfaces', []), Interface.fields)
-            # need to generate the device id in the component_id
-            i=0
-            for interface_elem in interface_elems:
-                comp_id = PlXrn(auth=network, interface='node%s:eth%s' % (interface['node_id'], i)).get_urn()
-                interface_elem.set('component_id', comp_id)      
-                i++ 
             
             #if 'bw_unallocated' in node and node['bw_unallocated']:
             #    bw_unallocated = etree.SubElement(node_elem, 'bw_unallocated', units='kbps').text = str(int(node['bw_unallocated'])/1000)
@@ -77,6 +71,8 @@ class SFAv1Node:
                 sliver = {}
             elif 'component_id' in sliver and sliver['component_id']:
                 filter['component_id'] = '*%s*' % sliver['component_id']
+            if not fliter:
+                continue 
             nodes = SFAv1Node.get_nodes(xml, filter)
             if not nodes:
                 continue
