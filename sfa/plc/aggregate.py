@@ -1,11 +1,13 @@
 #!/usr/bin/python
-from sfa.util.xrn import hrn_to_urn, urn_to_hrn
-from sfa.util.plxrn import PlXrn, hostname_to_urn, hrn_to_pl_slicename, urn_to_sliver_id
+from sfa.util.xrn import hrn_to_urn, urn_to_hrn, urn_to_sliver_id
+from sfa.util.plxrn import PlXrn, hostname_to_urn, hrn_to_pl_slicename
 
 from sfa.rspecs.rspec import RSpec
 from sfa.rspecs.elements.hardware_type import HardwareType
+from sfa.rspecs.elements.node import Node
 from sfa.rspecs.elements.link import Link
 from sfa.rspecs.elements.login import Login
+from sfa.rspecs.elements.location import Location
 from sfa.rspecs.elements.interface import Interface
 from sfa.rspecs.elements.services import Services
 from sfa.rspecs.elements.pltag import PLTag
@@ -43,7 +45,7 @@ class Aggregate:
     def get_links(self, filter={}):
         
         if not self.api.config.SFA_AGGREGATE_TYPE.lower() == 'vini':
-            return
+            return []
 
         topology = Topology() 
         links = {}
@@ -131,10 +133,12 @@ class Aggregate:
         
         return (slice, slivers)
 
-    def get_nodes(self, slice=None):
+    def get_nodes (self, slice=None,slivers=[]):
         filter = {}
+        tags_filter = {}
         if slice and 'node_ids' in slice and slice['node_ids']:
             filter['node_id'] = slice['node_ids']
+            tags_filter=filter.copy()
         
         filter.update({'peer_id': None})
         nodes = self.api.driver.GetNodes(filter)
@@ -152,9 +156,14 @@ class Aggregate:
         # get interfaces
         interfaces = self.get_interfaces({'interface_id':interface_ids}) 
         # get slivers
-        slivers = self.get_slivers(slice)
+        # 
+        # thierry: no get_slivers, we have slivers as a result of
+        # get_slice_and_slivers passed as an argument
+        # 
+#        slivers = self.get_slivers(slice)
+
         # get tags
-        node_tags = self.get_node_tags({'node_id': node_ids})
+        node_tags = self.get_node_tags(tags_filter)
         # get initscripts
         pl_initscripts = self.get_pl_initscripts()
 
@@ -165,6 +174,9 @@ class Aggregate:
                 if not slice or slice['slice_id'] not in node['slice_ids_whitelist']:
                     continue
             rspec_node = Node()
+            # xxx how to retrieve site['login_base']
+            site_id=node['site_id']
+            site=sites_dict[site_id]
             rspec_node['component_id'] = hostname_to_urn(self.api.hrn, site['login_base'], node['hostname'])
             rspec_node['component_name'] = node['hostname']
             rspec_node['component_manager_id'] = self.api.hrn
@@ -183,7 +195,7 @@ class Aggregate:
             rspec_node['interfaces'] = []
             for if_id in node['interface_ids']:
                 interface = Interface(interfaces[if_id]) 
-                interface['ipv4'] = interface['ip']
+                interface['ipv4'] = interface['ipv4']
                 rspec_node['interfaces'].append(interface)
             tags = [PLTag(node_tags[tag_id]) for tag_id in node['node_tag_ids']]
             rspec_node['tags'] = tags
@@ -213,7 +225,7 @@ class Aggregate:
 
         slice, slivers = self.get_slice_and_slivers(slice_xrn)
         rspec = RSpec(version=rspec_version, user_options=self.user_options)
-        rspec.version.add_nodes(self.get_nodes(slice, slivers))
+        rspec.version.add_nodes(self.get_nodes(slice), slivers)
         rspec.version.add_links(self.get_links(slice))
         
         # add sliver defaults

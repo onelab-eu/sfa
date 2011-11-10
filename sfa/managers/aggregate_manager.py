@@ -187,11 +187,10 @@ class AggregateManager:
         slices.verify_slice_attributes(slice, requested_attributes)
         
         # add/remove slice from nodes
-        requested_slivers = [str(host) for host in rspec.version.get_nodes_with_slivers()]
+        requested_slivers = [node['component_name'] for node in rspec.version.get_nodes_with_slivers()]
         slices.verify_slice_nodes(slice, requested_slivers, peer) 
-    
-        aggregate.prepare_nodes({'hostname': requested_slivers})
-        aggregate.prepare_interfaces({'node_id': aggregate.nodes.keys()})    
+   
+        # add/remove links links 
         slices.verify_slice_links(slice, rspec.version.get_link_requests(), aggregate)
     
         # handle MyPLC peer association.

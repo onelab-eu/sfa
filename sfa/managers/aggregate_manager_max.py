@@ -214,20 +214,6 @@ class AggregateManagerMax (AggregateManager):
     
     ### GENI AM API Methods
     
-    def GetVersion(self, api):
-        xrn=Xrn(api.hrn)
-        request_rspec_versions = [dict(sfa_rspec_version)]
-        ad_rspec_versions = [dict(sfa_rspec_version)]
-        #TODO: MAX-AM specific
-        version_more = {'interface':'aggregate',
-                        'testbed':'myplc',
-                        'hrn':xrn.get_hrn(),
-                        'request_rspec_versions': request_rspec_versions,
-                        'ad_rspec_versions': ad_rspec_versions,
-                        'default_ad_rspec': dict(sfa_rspec_version)
-                        }
-        return version_core(version_more)
-    
     def SliverStatus(self, api, slice_xrn, creds, call_id):
         if Callids().already_handled(call_id): return {}
         return self.slice_status(api, slice_xrn, creds)

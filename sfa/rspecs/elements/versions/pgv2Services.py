@@ -9,9 +9,9 @@ from sfa.rspecs.rspec_elements import RSpecElement, RSpecElements
 class PGv2Services:
     elements = {
         'services': RSpecElement(RSpecElements.SERVICES, '//default:services | //services'),
-        'install': RSpecElement(RspecElements.INSTALL, './default:install | ./install'),
-        'execute': RSpecElement(RspecElements.EXECUTE, './default:execute | ./execute'),
-        'login': RSpecElement(RspecElements.LOGIN, './default:login | ./login'),
+        'install': RSpecElement(RSpecElements.INSTALL, './default:install | ./install'),
+        'execute': RSpecElement(RSpecElements.EXECUTE, './default:execute | ./execute'),
+        'login': RSpecElement(RSpecElements.LOGIN, './default:login | ./login'),
     }  
     
     @staticmethod
