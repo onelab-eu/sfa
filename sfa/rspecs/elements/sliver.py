@@ -6,5 +6,6 @@ class Sliver(Element):
         'component_id': None,
         'client_id': None,
         'name': None,
+        'type': None,
         'tags': [],
     }
