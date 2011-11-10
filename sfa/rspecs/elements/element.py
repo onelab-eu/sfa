@@ -48,7 +48,7 @@ class Element(dict):
         elems = []
         for obj in objs:
             elem = xml.add_element(name)
-            for field in fields
+            for field in fields:
                 if field in obj and obj[field]:
                     elem.set(field, obj[field])
             elems.append(elem)
