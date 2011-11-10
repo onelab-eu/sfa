@@ -117,7 +117,8 @@ class Aggregate:
         # sort slivers by node id    
         for node_id in slice['node_ids']:
             sliver = Sliver({'sliver_id': urn_to_sliver_id(slice_urn, slice['slice_id'], node_id),
-                             'name': 'plab-vserver', 
+                             'name': slice['name'],
+                             'type': 'plab-vserver', 
                              'tags': []})
             slivers[node_id]= sliver
 
@@ -156,13 +157,6 @@ class Aggregate:
         sites_dict  = self.get_sites({'site_id': site_ids}) 
         # get interfaces
         interfaces = self.get_interfaces({'interface_id':interface_ids}) 
-        # get slivers
-        # 
-        # thierry: no get_slivers, we have slivers as a result of
-        # get_slice_and_slivers passed as an argument
-        # 
-#        slivers = self.get_slivers(slice)
-
         # get tags
         node_tags = self.get_node_tags(tags_filter)
         # get initscripts
@@ -187,17 +181,21 @@ class Aggregate:
             rspec_node['hardware_types'].append(HardwareType({'name': 'plab-vserver'}))
             # only doing this because protogeni rspec needs
             # to advertise available initscripts 
-            rspec_node['pl_initscripts'] = pl_initscripts
+            rspec_node['pl_initscripts'] = pl_initscripts.values()
              # add site/interface info to nodes.
             # assumes that sites, interfaces and tags have already been prepared.
             site = sites_dict[node['site_id']]
             location = Location({'longitude': site['longitude'], 'latitude': site['latitude']})
             rspec_node['location'] = location
             rspec_node['interfaces'] = []
+            if_count=0
             for if_id in node['interface_ids']:
                 interface = Interface(interfaces[if_id]) 
                 interface['ipv4'] = interface['ipv4']
+                interface['component_id'] = PlXrn(auth=self.api.hrn, interface='node%s:eth%s' % (node['node_id'], if_count))
                 rspec_node['interfaces'].append(interface)
+                if_count+=1
+
             tags = [PLTag(node_tags[tag_id]) for tag_id in node['node_tag_ids']]
             rspec_node['tags'] = tags
             if node['node_id'] in slivers:
@@ -205,7 +203,7 @@ class Aggregate:
                 sliver = slivers[node['node_id']]
                 rspec_node['sliver_id'] = sliver['sliver_id']
                 rspec_node['client_id'] = node['hostname']
-                rspec_node['slivers'] = [slivers[node['node_id']]]
+                rspec_node['slivers'] = [sliver]
                 
                 # slivers always provide the ssh service
                 login = Login({'authentication': 'ssh-keys', 'hostname': node['hostname'], port:'22'})
