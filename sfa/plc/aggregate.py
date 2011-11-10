@@ -14,6 +14,7 @@ from sfa.rspecs.elements.pltag import PLTag
 from sfa.util.topology import Topology
 from sfa.rspecs.version_manager import VersionManager
 from sfa.plc.vlink import get_tc_rate
+from sfa.util.sfatime import epochparse
 
 class Aggregate:
 
@@ -225,6 +226,8 @@ class Aggregate:
 
         slice, slivers = self.get_slice_and_slivers(slice_xrn)
         rspec = RSpec(version=rspec_version, user_options=self.user_options)
+        if slice and 'expiration_date' in slice:
+            rspec.set('expires',  epochparse(slice['expiration_date'])) 
         rspec.version.add_nodes(self.get_nodes(slice), slivers)
         rspec.version.add_links(self.get_links(slice))
         

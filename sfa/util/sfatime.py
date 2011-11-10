@@ -1,6 +1,7 @@
 from types import StringTypes
 import dateutil.parser
 import datetime
+import time
 
 from sfa.util.sfalogging import logger
 
@@ -24,3 +25,5 @@ For safety this can also handle inputs that are either timestamps, or datetimes
     else:
         logger.error("Unexpected type in utcparse [%s]"%type(input))
 
+def epochparse(input):
+    return time.strftime("%Y-%d-%m-T%H:%M:%SZ", time.localtime(input)) 
