@@ -1,7 +1,7 @@
 
-from lxml import etree
 from sfa.util.plxrn import PlXrn
 from sfa.util.xrn import Xrn
+from sfa.rspecs.elements.element import Element
 from sfa.rspecs.elements.node import Node
 from sfa.rspecs.elements.sliver import Sliver
 from sfa.rspecs.elements.network import Network
@@ -11,130 +11,111 @@ from sfa.rspecs.elements.disk_image import DiskImage
 from sfa.rspecs.elements.interface import Interface
 from sfa.rspecs.elements.bwlimit import BWlimit
 from sfa.rspecs.elements.pltag import PLTag
-from sfa.rspecs.rspec_elements import RSpecElement, RSpecElements
-from sfa.rspecs.elements.versions.pgv2Service import PGv2Service     
+from sfa.rspecs.elements.versions.pgv2Services import PGv2Services     
+from sfa.rspecs.elements.versions.pgv2SliverType import PGv2SliverType     
 
 class PGv2Node:
-    elements = {
-        'node': RSpecElement(RSpecElements.NODE, '//default:node | //node'),
-        'sliver': RSpecElement(RSpecElements.SLIVER, './default:sliver_type | ./sliver_type'),
-        'interface': RSpecElement(RSpecElements.INTERFACE, './default:interface | ./interface'),
-        'location': RSpecElement(RSpecElements.LOCATION, './default:location | ./location'),
-        'hardware_type': RSpecElement(RSpecElements.HARDWARE_TYPE, './default:hardware_type | ./hardware_type'),
-        'available': RSpecElement(RSpecElements.AVAILABLE, './default:available | ./available'),
-    } 
-    
     @staticmethod
     def add_nodes(xml, nodes):
         node_elems = []
         for node in nodes:
-            node_elem = etree.SubElement(xml, 'node')
+            node_fields = ['component_manager_id', 'component_id', 'client_id', 'sliver_id', 'exclusive']
+            elems = Element.add(xml, 'node', node, node_fields)
+            node_elem = elems[0]
             node_elems.append(node_elem)
-            if node.get('component_manager_id'):
-                node_elem.set('component_manager_id', node['component_manager_id'])
+            # set component name
             if node.get('component_id'):
-                node_elem.set('component_id', node['component_id'])
                 component_name = Xrn(node['component_id']).get_leaf()
-                node_elem.set('component_nama', component_name)
-            if node.get('client_id'):
-                node_elem.set('client_id', node['client_id'])
-            if node.get('sliver_id'):
-                node_elem.set('sliver_id', node['sliver_id'])
-            if node.get('exclusive'):
-                node_elem.set('exclusive', node['exclusive'])
-            hardware_types = node.get('hardware_type', [])
-            for hardware_type in hardware_types:
-                hw_type_elem = etree.SubElement(node_elem, 'hardware_type')
-                if hardware_type.get('name'):
-                    hw_type_elem.set('name', hardware_type['name'])
+                node_elem.set('component_name', component_name)
+            # set hardware types 
+            Element.add(node_elem, 'hardware_type', node.get('hardware_types', []), HardwareType.fields.keys()) 
+            # set location       
+            location_elems = Element.add(node_elem, 'location', node.get('location', []), Location.fields)
+            # set interfaces
+            interface_elems = Element.add(node_elem, 'interface', node.get('interfaces', []), Interface.fields)
+            # set available element
             if node.get('boot_state', '').lower() == 'boot':
-                available_elem = etree.SubElement(node_elem, 'available', now='True')
+                available_elem = node_elem.add_element('available', now='True')
             else:
-                available_elem = etree.SubElement(node_elem, 'available', now='False')
-            
-            if node.get('services'):
-                PGv2Services.add_services(node_elem, node.get('services'))
-    
+                available_elem = node_elem.add_element('available', now='False')
+            # add services
+            PGv2Services.add_services(node_elem, node.get('services', [])) 
+            # add slivers
             slivers = node.get('slivers', [])
-            pl_initscripts = node.get('pl_initscripts', {})
-            for sliver in slivers:
-                sliver_elem = etree.SubElement(node_elem, 'sliver_type')
-                if sliver.get('name'):
-                    sliver_elem.set('name', sliver['name'])
-                if sliver.get('client_id'):
-                    sliver_elem.set('client_id', sliver['client_id'])      
-                for pl_initscript in pl_initscripts.values():
-                    etree.SubElement(sliver_elem, '{%s}initscript' % xml.namespaces['planetlab'], \
-                      name=pl_initscript['name'])
-            location = node.get('location')
-            #only add locaiton if long and lat are not null
-            if location.get('longitute') and location.get('latitude'):
-                location_elem = etree.SubElement(node_elem, country=location['country'],
-                  latitude=location['latitude'], longitude=location['longiutde'])
+            if not slivers:
+                # we must still advertise the available sliver types
+                slivers = Sliver({'type': 'plab-vserver'})
+                # we must also advertise the available initscripts
+                slivers['tags'] = []
+                for initscript in node.get('pl_initscripts', []):
+                    slivers['tags'].append({'name': 'initscript', 'value': initscript['name']})
+            PGv2SliverType.add_slivers(node_elem, slivers)
+        
         return node_elems
 
     @staticmethod
-    def get_nodes(xml):
+    def get_nodes(xml, filter={}):
+        xpath = '//node%s | //default:node%s' % (XpathFilter.xpath(filter), XpathFilter.xpath(filter))
+        node_elems = xml.xpath(xpath)
+        return PGv2Node.get_node_objs(node_elems)
+
+    @staticmethod
+    def get_nodes_with_sliver(xml):
+        xpath = '//node/sliver_type | //default:node/default:sliver_type' 
+        node_elems = xml.xpath(xpath)        
+        return PGv2Node.get_node_objs(node_elems)
+
+    @staticmethod
+    def get_nodes_objs(node_elems):
         nodes = []
-        node_elems = xml.xpath(PGv2Node.elements['node'].path)
         for node_elem in node_elems:
             node = Node(node_elem.attrib, node_elem)
             nodes.append(node) 
             if 'component_id' in node_elem.attrib:
                 node['authority_id'] = Xrn(node_elem.attrib['component_id']).get_authority_urn()
 
-            # set hardware type
-            node['hardware_types'] = []
-            hardware_type_elems = node_elem.xpath(PGv2Node.elements['hardware_type'].path, xml.namespaces)
-            for hardware_type_elem in hardware_type_elems:
-                node['hardware_types'].append(HardwareType(hardware_type_elem.attrib, hardware_type_elem))
-            
-            # set location
-            location_elems = node_elem.xpath(PGv2Node.elements['location'].path, xml.namespaces)
+            node['hardware_types'] = Element.get(node_elem, './default:hardwate_type | ./hardware_type', HardwareType)
+            lolocation_elems = Element.get(node_elem, './default:location | ./location', Location)
             if len(location_elems) > 0:
-                node['location'] = Location(location_elems[0].attrib, location_elems[0])
-            
-            # set services
-            services_elems = node_elem.xpath(PGv2Service.elements['services'].path, xml.namespaces)
-            node['services'] = []
-            for services_elem in services_elems:
-                # services element has no useful info, but the child elements do  
-                for child in services_elem.iterchildren():
-                    pass
-                    
-            # set interfaces
-            interface_elems = node_elem.xpath(PGv2Node.elements['interface'].path, xml.namespaces)
-            node['interfaces'] = []
-            for interface_elem in interface_elems:
-                node['interfaces'].append(Interface(interface_elem.attrib, interface_elem))
-
-            # set available
-            available = node_elem.xpath(PGv2Node.elements['available'].path, xml.namespaces)
-            if len(available) > 0:
+                node['location'] = location_elems[0]
+            node['interfaces'] = Element.get(node_elem, './default:interface | ./interface', Interface)
+            node['services'] = PGv2Services.get_services(node_elem)
+            node['slivers'] = PGv2SliverType.get_slivers(node_elem)    
+            available = Element.get(node_element, './default:available | ./available', fields=['now'])
+            if len(available) > 0 and 'name' in available[0].attrib:
                 if available[0].attrib.get('now', '').lower() == 'true': 
                     node['boot_state'] = 'boot'
                 else: 
                     node['boot_state'] = 'disabled' 
-
-            # set the slivers
-            sliver_elems = node_elem.xpath(PGv2Node.elements['sliver'].path, xml.namespaces)
-            node['slivers'] = []
-            for sliver_elem in sliver_elems:
-                node['slivers'].append(Sliver(sliver_elem.attrib, sliver_elem))            
-
         return nodes
 
 
     @staticmethod
     def add_slivers(xml, slivers):
-        pass
-   
-    @staticmethod
-    def get_nodes_with_slivers(xml):
-        nodes = PGv2Node.get_nodes(xml)
-        nodes_with_slivers = [node for node in nodes if node['slivers']]
-        return nodes_with_slivers 
+        component_ids = []
+        for sliver in slivers:
+            filter = {}
+            if isinstance(sliver, str):
+                filter['component_id'] = '*%s*' % sliver
+                sliver = {}
+            elif 'component_id' in sliver and sliver['component_id']:
+                filter['component_id'] = '*%s*' % sliver['component_id']
+            if not filter: 
+                continue
+            nodes = PGv2Node.get_nodes(xml, filter)
+            if not nodes:
+                continue
+            node = nodes[0]
+            PGv2SliverType.add_slivers(node, sliver)
 
+    @staticmethod
+    def remove_slivers(xml, hostnames):
+        for hostname in hostnames:
+            nodes = PGv2Node.get_nodes(xml, {'component_id': '*%s*' % hostname})
+            for node in nodes:
+                slivers = PGv2SliverType.get_slivers(node.element)
+                for sliver in slivers:
+                    node.element.remove(sliver.element) 
 if __name__ == '__main__':
     from sfa.rspecs.rspec import RSpec
     import pdb
