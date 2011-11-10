@@ -46,7 +46,8 @@ class XmlNode:
     def xpath(self, xpath, namespaces=None):
         if not namespaces:
             namespaces = self.namespaces 
-        return self.node.xpath(xpath, namespaces=namespaces)
+        elems = self.node.xpath(xpath, namespaces=namespaces)
+        return [XmlNode(elem, namespaces) for elem in elems]
     
     def add_element(name, *args, **kwds):
         element = etree.SubElement(name, args, kwds)
@@ -73,7 +74,10 @@ class XmlNode:
     
     def unset(self, key):
         del self.node.attrib[key]
-   
+  
+    def iterchildren(self):
+        return self.node.iterchildren()
+     
     def toxml(self):
         return etree.tostring(self.node, encoding='UTF-8', pretty_print=True)                    
 
