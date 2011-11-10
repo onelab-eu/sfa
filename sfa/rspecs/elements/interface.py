@@ -7,6 +7,6 @@ class Interface(Element):
               'ipv4': None,
               'bwlimit': None,
               'node_id': None,
-              'interface_id': None
-    
+              'interface_id': None,
+              'mac_address': None,  
     }    
