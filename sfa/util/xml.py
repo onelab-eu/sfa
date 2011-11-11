@@ -261,7 +261,7 @@ class XML:
         return self.toxml()
 
     def toxml(self):
-        return etree.tostring(self.root, encoding='UTF-8', pretty_print=True)  
+        return etree.tostring(self.root.node, encoding='UTF-8', pretty_print=True)  
     
     # XXX smbaker, for record.load_from_string
     def todict(self, elem=None):
