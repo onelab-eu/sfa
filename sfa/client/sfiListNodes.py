@@ -2,7 +2,8 @@
 
 import sys
 from sfa.client.sfi_commands import Commands
-from sfa.rspecs.rspec import RSpec 
+from sfa.rspecs.rspec import RSpec
+from sfa.util.plxrn import xrn_to_hostname 
 
 command = Commands(usage="%prog [options]",
                    description="List all nodes in the RSpec. " + 
@@ -17,7 +18,13 @@ if command.opts.infile:
         sys.stdout = open(command.opts.outfile, 'w')
     
     for node in nodes:
-        print node
+        hostname = None
+        if node.get('component_name'):
+            hostname = node['component_name']
+        elif node.get('component_id'):
+            hostname = xrn_to_hostname(node['component_id'])
+        if hostname:
+            print hostname 
 
 
 
