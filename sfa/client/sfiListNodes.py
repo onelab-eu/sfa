@@ -19,9 +19,7 @@ if command.opts.infile:
     
     for node in nodes:
         hostname = None
-        if node.get('component_name'):
-            hostname = node['component_name']
-        elif node.get('component_id'):
+        if node.get('component_id'):
             hostname = xrn_to_hostname(node['component_id'])
         if hostname:
             print hostname 
