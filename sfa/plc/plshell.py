@@ -30,9 +30,9 @@ class PlShell:
                        'AuthString': config.SFA_PLC_PASSWORD}
         
         self.url = config.SFA_PLC_URL
-        self.plauth = {'Username': 'root@test.onelab.eu',
-                       'AuthMethod': 'password',
-                       'AuthString': 'test++'}
+        #self.plauth = {'Username': 'root@test.onelab.eu',
+        #               'AuthMethod': 'password',
+        #               'AuthString': 'test++'}
         self.proxy_server = xmlrpclib.Server(self.url, verbose = 0, allow_none = True)
 
     def __getattr__(self, name):
