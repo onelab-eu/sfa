@@ -1,6 +1,6 @@
 
 from sfa.util.xml import XpathFilter
-from sfa.util.plxrn import PlXrn
+from sfa.util.plxrn import PlXrn, xrn_to_hostname
 from sfa.util.xrn import Xrn
 from sfa.rspecs.elements.element import Element
 from sfa.rspecs.elements.node import Node
@@ -42,10 +42,10 @@ class SFAv1Node:
 
             # set component_name attribute and  hostname element
             if 'component_id' in node and node['component_id']:
-                xrn = Xrn(node['component_id'])
-                node_elem.set('component_name', xrn.get_leaf())
+                component_name = xrn_to_hostname(node['component_id'])
+                node_elem.set('component_name', component_name)
                 hostname_tag = node_elem.add_element('hostname')
-                hostname_tag.set_text(xrn.get_leaf())
+                hostname_tag.set_text(component_name)
 
             # set site id
             if 'authority_id' in node and node['authority_id']:
