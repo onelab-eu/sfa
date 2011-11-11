@@ -12,12 +12,14 @@ class Element(dict):
                 self[key] = fields[keys] 
 
     @staticmethod
-    def get(xml, xpath, element_class=Element, fields=None):
+    def get(xml, xpath, element_class=None, fields=None):
         """
         Search the specifed xml node for elements that match the 
         specified xpath query. 
         Returns a list of objectes instanced by the specfied element_class.
         """
+        if not element_class:
+            element_class = Element
         if not fields:
            fields = element_class.fields.keys()
         elems = xml.xpath(xpath, namespaces)
