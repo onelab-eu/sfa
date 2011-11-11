@@ -10,7 +10,7 @@ class SFAv1Sliver:
         if not isinstance(slivers, list):
             slivers = [slivers]
         for sliver in slivers:
-            sliver_elem = Element.add(xml, 'sliver', sliver, ['name'])
+            sliver_elem = Element.add_elements(xml, 'sliver', sliver, ['name'])[0]
             if sliver.get('sliver_id'):
                 sliver_id_leaf = Xrn(sliver.get('sliver_id')).get_leaf()
                 sliver_id_parts = sliver_id_leaf.split(':')
