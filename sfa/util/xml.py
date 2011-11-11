@@ -56,7 +56,10 @@ class XmlNode:
         return XmlNode(element, self.namespaces)
 
     def append(self, elem):
-        self.node.append(elem)
+        if isinstance(elem, XmlNode):
+            self.node.append(elem.node)
+        else:
+            self.node.append(elem)
 
     def remove_elements(name):
         """

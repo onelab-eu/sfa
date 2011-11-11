@@ -191,7 +191,7 @@ class SFAv1(BaseVersion):
         for network in networks:
             current_network = network.get('name')
             if current_network and current_network not in current_networks:
-                self.xml.root.append(network)
+                self.xml.root.append(network.element)
                 current_networks.append(current_network)
 
 if __name__ == '__main__':
