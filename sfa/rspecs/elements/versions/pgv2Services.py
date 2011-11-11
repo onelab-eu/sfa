@@ -7,7 +7,7 @@ class PGv2Services:
     @staticmethod
     def add_services(xml, services):
         for service in services:
-            service_elem = xml.add_element('service')
+            service_elem = xml.add_element('services')
             Element.add_elements(service_elem, 'install', service.get('install', []), Install.fields) 
             Element.add_elements(service_elem, 'execute', service.get('execute', []), Execute.fields) 
             Element.add_elements(service_elem, 'login', service.get('login', []), Login.fields) 

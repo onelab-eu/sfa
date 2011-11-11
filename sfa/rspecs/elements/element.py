@@ -4,7 +4,7 @@ class Element(dict):
 
     def __init__(self, fields={}, element=None, keys=None):
         self.element = element
-        dict.__init__(self, self.fields)
+        dict.__init__(self, dict.fromkeys(self.fields))
         if not keys:
             keys = fields.keys()
         for key in keys:
