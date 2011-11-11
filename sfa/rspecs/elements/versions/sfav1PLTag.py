@@ -14,6 +14,6 @@ class SFAv1PLTag:
         for elem in xml.iterchildren():
             if elem.tag not in ignore:
                 pl_tag = PLTag({'tagname': elem.tag, 'value': elem.text})
-                pl_tags.appen(pl_tag)    
+                pl_tags.append(pl_tag)    
         return pl_tags
 
