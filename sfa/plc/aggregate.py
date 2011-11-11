@@ -208,7 +208,7 @@ class Aggregate:
                 rspec_node['slivers'] = [sliver]
                 
                 # slivers always provide the ssh service
-                login = Login({'authentication': 'ssh-keys', 'hostname': node['hostname'], port:'22'})
+                login = Login({'authentication': 'ssh-keys', 'hostname': node['hostname'], 'port':'22'})
                 service = Services({'login': login})
                 rspec_node['services'].append(service)
             rspec_nodes.append(rspec_node)
@@ -228,7 +228,7 @@ class Aggregate:
         rspec = RSpec(version=rspec_version, user_options=self.user_options)
         if slice and 'expiration_date' in slice:
             rspec.set('expires',  epochparse(slice['expiration_date'])) 
-        rspec.version.add_nodes(self.get_nodes(slice), slivers)
+        rspec.version.add_nodes(self.get_nodes(slice, slivers))
         rspec.version.add_links(self.get_links(slice))
         
         # add sliver defaults
