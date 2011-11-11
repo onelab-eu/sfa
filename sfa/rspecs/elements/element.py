@@ -47,6 +47,8 @@ class Element(dict):
             objs = [objs]
         elems = []
         for obj in objs:
+            if not obj:
+                continue
             if not fields:
                 fields = obj.keys()
             elem = xml.add_element(name)
