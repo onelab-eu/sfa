@@ -185,8 +185,9 @@ class Aggregate:
              # add site/interface info to nodes.
             # assumes that sites, interfaces and tags have already been prepared.
             site = sites_dict[node['site_id']]
-            location = Location({'longitude': site['longitude'], 'latitude': site['latitude']})
-            rspec_node['location'] = location
+            if site['longitude'] and site['latitude']:  
+                location = Location({'longitude': site['longitude'], 'latitude': site['latitude']})
+                rspec_node['location'] = location
             rspec_node['interfaces'] = []
             if_count=0
             for if_id in node['interface_ids']:
