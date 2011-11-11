@@ -6,6 +6,7 @@ from sfa.rspecs.rspec import RSpec
 from sfa.rspecs.elements.hardware_type import HardwareType
 from sfa.rspecs.elements.node import Node
 from sfa.rspecs.elements.link import Link
+from sfa.rspecs.elements.sliver import Sliver
 from sfa.rspecs.elements.login import Login
 from sfa.rspecs.elements.location import Location
 from sfa.rspecs.elements.interface import Interface
@@ -106,7 +107,7 @@ class Aggregate:
         slice = None
         if not slice_xrn:
             return (slice, slivers)
-        slice_urn = hrn_to_urn(slice_xrn)
+        slice_urn = hrn_to_urn(slice_xrn, 'slice')
         slice_hrn, _ = urn_to_hrn(slice_xrn)
         slice_name = hrn_to_pl_slicename(slice_hrn)
         slices = self.api.driver.GetSlices(slice_name)
