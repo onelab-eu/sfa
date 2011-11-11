@@ -12,8 +12,6 @@ from sfa.rspecs.elements.disk_image import DiskImage
 from sfa.rspecs.elements.interface import Interface
 from sfa.rspecs.elements.bwlimit import BWlimit
 from sfa.rspecs.elements.pltag import PLTag
-from sfa.rspecs.rspec_elements import RSpecElement, RSpecElements
-from sfa.rspecs.elements.versions.sfav1Network import SFAv1Network
 from sfa.rspecs.elements.versions.sfav1Sliver import SFAv1Sliver
 from sfa.rspecs.elements.versions.sfav1PLTag import SFAv1PLTag
 from sfa.rspecs.elements.versions.pgv2Services import PGv2Services
@@ -22,16 +20,18 @@ class SFAv1Node:
 
     @staticmethod
     def add_nodes(xml, nodes):
-        network_elems = SFAv1Network.get_networks(xml)
+        network_elems = Element.get_elements(xml, '//network', fields=['name'])
         if len(network_elems) > 0:
             network_elem = network_elems[0]
         elif len(nodes) > 0 and nodes[0].get('component_manager_id'):
-            network_elem = SFAv1Network.add_network(xml.root, {'name': nodes[0]['component_manager_id']})
+            network_urn = nodes[0]['component_manager_id']    
+            network_elems = Element.add_elements(xml, 'network', {'name': Xrn(network_urn).get_hrn()})
+            network_elem = network_elems[0]
 
         node_elems = []       
         for node in nodes:
             node_fields = ['component_manager_id', 'component_id', 'boot_state']
-            elems = Element.add(network_elem, 'node', node, node_fields)
+            elems = Element.add_elements(network_elem, 'node', node, node_fields)
             node_elem = elems[0]  
             node_elems.append(node_elem)
 
@@ -51,14 +51,14 @@ class SFAv1Node:
             if 'authority_id' in node and node['authority_id']:
                 node_elem.set('site_id', node['authority_id'])
 
-            location_elems = Element.add(node_elem, 'location', node.get('location', []), Location.fields)
-            interface_elems = Element.add(node_elem, 'interface', node.get('interfaces', []), Interface.fields)
+            location_elems = Element.add_elements(node_elem, 'location', node.get('location', []), Location.fields)
+            interface_elems = Element.add_elements(node_elem, 'interface', node.get('interfaces', []), Interface.fields)
             
             #if 'bw_unallocated' in node and node['bw_unallocated']:
             #    bw_unallocated = etree.SubElement(node_elem, 'bw_unallocated', units='kbps').text = str(int(node['bw_unallocated'])/1000)
 
             PGv2Services.add_services(node_elem, node.get('services', []))
-            SFAv1PLTags.add_tags(node_elem, node.get('tags', [])) 
+            SFAv1PLTag.add_pl_tags(node_elem, node.get('tags', [])) 
             SFAv1Sliver.add_slivers(node_elem, node.get('slivers', []))
 
     @staticmethod 
@@ -108,13 +108,13 @@ class SFAv1Node:
             node = Node(node_elem.attrib, node_elem)
             if 'site_id' in node_elem.attrib:
                 node['authority_id'] = node_elem.attrib['site_id']
-            location_objs = Element.get(node_elem, './default:location | ./location', Location)
+            location_objs = Element.get_elements(node_elem, './default:location | ./location', Location)
             if len(location_objs) > 0:
                 node['location'] = location_objs[0]
-            bwlimit_objs = Element.get(node_elem, './default:bw_limit | ./bw_limit', BWlimit)
+            bwlimit_objs = Element.get_elements(node_elem, './default:bw_limit | ./bw_limit', BWlimit)
             if len(bwlimit_objs) > 0:
                 node['bwlimit'] = bwlimit_objs[0]
-            node['interfaces'] = Element.get(node_elem, './default:interface | ./interface', Interface)
+            node['interfaces'] = Element.get_elements(node_elem, './default:interface | ./interface', Interface)
             node['services'] = PGv2Services.get_services(node_elem) 
             node['slivers'] = SFAv1Sliver.get_slivers(node_elem)
             node['tags'] =  SFAv1PLTag.get_pl_tags(node_elem, ignore=Node.fields.keys())
