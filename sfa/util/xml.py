@@ -55,6 +55,9 @@ class XmlNode:
         element = etree.SubElement(self.node, name, **kwds)
         return XmlNode(element, self.namespaces)
 
+    def append(self, elem):
+        self.node.append(elem)
+
     def remove_elements(name):
         """
         Removes all occurences of an element from the tree. Start at
