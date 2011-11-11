@@ -51,8 +51,8 @@ class XmlNode:
         elems = self.node.xpath(xpath, namespaces=namespaces)
         return [XmlNode(elem, namespaces) for elem in elems]
     
-    def add_element(self, name, **kwds):
-        element = etree.SubElement(self.node, name, **kwds)
+    def add_element(self, tagname, **kwds):
+        element = etree.SubElement(self.node, tagname, **kwds)
         return XmlNode(element, self.namespaces)
 
     def append(self, elem):
