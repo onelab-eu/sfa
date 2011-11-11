@@ -6,6 +6,9 @@ from sfa.rspecs.elements.login import Login
 class PGv2Services:
     @staticmethod
     def add_services(xml, services):
+        if not services:
+            return 
+
         for service in services:
             service_elem = xml.add_element('services')
             Element.add_elements(service_elem, 'install', service.get('install', []), Install.fields) 

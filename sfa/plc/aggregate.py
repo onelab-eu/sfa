@@ -179,7 +179,7 @@ class Aggregate:
             rspec_node['authority_id'] = hrn_to_urn(PlXrn.site_hrn(self.api.hrn, site['login_base']), 'authority+sa')
             rspec_node['boot_state'] = node['boot_state']
             rspec_node['exclusive'] = 'False'
-            rspec_node['hardware_types'].append(HardwareType({'name': 'plab-vserver'}))
+            rspec_node['hardware_types']= [HardwareType({'name': 'plab-vserver'})]
             # only doing this because protogeni rspec needs
             # to advertise available initscripts 
             rspec_node['pl_initscripts'] = pl_initscripts.values()
@@ -210,7 +210,7 @@ class Aggregate:
                 # slivers always provide the ssh service
                 login = Login({'authentication': 'ssh-keys', 'hostname': node['hostname'], 'port':'22'})
                 service = Services({'login': login})
-                rspec_node['services'].append(service)
+                rspec_node['services'] = [service]
             rspec_nodes.append(rspec_node)
         return rspec_nodes
              
@@ -226,8 +226,8 @@ class Aggregate:
 
         slice, slivers = self.get_slice_and_slivers(slice_xrn)
         rspec = RSpec(version=rspec_version, user_options=self.user_options)
-        if slice and 'expiration_date' in slice:
-            rspec.set('expires',  epochparse(slice['expiration_date'])) 
+        if slice and 'expires' in slice:
+            rspec.xml.set('expires',  epochparse(slice['expires'])) 
         rspec.version.add_nodes(self.get_nodes(slice, slivers))
         rspec.version.add_links(self.get_links(slice))
         

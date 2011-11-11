@@ -7,6 +7,8 @@ class SFAv1Sliver:
 
     @staticmethod
     def add_slivers(xml, slivers):
+        if not slivers:
+            return
         if not isinstance(slivers, list):
             slivers = [slivers]
         for sliver in slivers:
