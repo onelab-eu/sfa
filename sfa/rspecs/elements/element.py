@@ -9,10 +9,10 @@ class Element(dict):
             keys = fields.keys()
         for key in keys:
             if key in fields:
-                self[key] = fields[keys] 
+                self[key] = fields[key] 
 
     @staticmethod
-    def get(xml, xpath, element_class=None, fields=None):
+    def get_elements(xml, xpath, element_class=None, fields=None):
         """
         Search the specifed xml node for elements that match the 
         specified xpath query. 
@@ -22,7 +22,7 @@ class Element(dict):
             element_class = Element
         if not fields:
            fields = element_class.fields.keys()
-        elems = xml.xpath(xpath, namespaces)
+        elems = xml.xpath(xpath)
         objs = []
         for elem in elems:
             if not fields:
@@ -38,17 +38,17 @@ class Element(dict):
 
 
     @staticmethod
-    def add(xml, name, objs, fields=None):
+    def add_elements(xml, name, objs, fields=None):
         """
         Adds a child node to the specified xml node based on
         the specified name , element class and object.    
         """
         if not isinstance(objs, list):
             objs = [objs]
-        if not fields:
-            fields = obj.keys()
         elems = []
         for obj in objs:
+            if not fields:
+                fields = obj.keys()
             elem = xml.add_element(name)
             for field in fields:
                 if field in obj and obj[field]:
