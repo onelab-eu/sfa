@@ -3,7 +3,7 @@ from lxml import etree
 from sfa.util.xrn import hrn_to_urn, urn_to_hrn
 from sfa.util.plxrn import PlXrn
 from sfa.rspecs.rspec_version import BaseVersion
-from sfa.rspecs.rspec_elements import RSpecElement, RSpecElements
+from sfa.rspecs.elements.element import Element
 from sfa.rspecs.elements.versions.pgv2Link import PGv2Link
 from sfa.rspecs.elements.versions.sfav1Node import SFAv1Node
 
@@ -19,11 +19,9 @@ class SFAv1(BaseVersion):
     elements = [] 
     template = '<RSpec type="%s"></RSpec>' % type
 
-    def get_network_elements(self):
-        return self.xml.xpath('//network')
 
     def get_networks(self):
-        return self.xml.xpath('//network[@name]/@name')
+        return Element.get_elements(self.xml, '//network', Element)
 
     def get_nodes(self, network=None):
         return SFAv1Node.get_nodes(self.xml)
@@ -101,7 +99,7 @@ class SFAv1(BaseVersion):
         network_tag.append(deepcopy(source_node_tag))
 
     def add_links(self, links):
-        networks = self.get_network_elements()
+        networks = self.get_networks()
         if len(networks) > 0:
             xml = networks[0]
         else:
@@ -189,7 +187,7 @@ class SFAv1(BaseVersion):
 
         # just copy over all networks
         current_networks = self.get_networks()
-        networks = rspec.version.get_network_elements()
+        networks = rspec.version.get_networks()
         for network in networks:
             current_network = network.get('name')
             if current_network and current_network not in current_networks:
