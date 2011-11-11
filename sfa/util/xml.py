@@ -51,8 +51,8 @@ class XmlNode:
         elems = self.node.xpath(xpath, namespaces=namespaces)
         return [XmlNode(elem, namespaces) for elem in elems]
     
-    def add_element(name, *args, **kwds):
-        element = etree.SubElement(name, args, kwds)
+    def add_element(self, name, **kwds):
+        element = etree.SubElement(self.node, name, **kwds)
         return XmlNode(element, self.namespaces)
 
     def remove_elements(name):
@@ -204,21 +204,15 @@ class XML:
         node.remove_attribute(name) 
         
 
-    def add_element(self, name, attrs={}, parent=None, text=""):
+    def add_element(self, name, **kwds):
         """
         Wrapper around etree.SubElement(). Adds an element to 
         specified parent node. Adds element to root node is parent is 
         not specified. 
         """
-        if parent == None:
-            parent = self.root
-        element = etree.SubElement(parent, name)
-        if text:
-            element.text = text
-        if isinstance(attrs, dict):
-            for attr in attrs:
-                element.set(attr, attrs[attr])  
-        return XmlNode(element, self.namespaces)
+        parent = self.root
+        xmlnode = parent.add_element(name, *kwds)
+        return xmlnode
 
     def remove_elements(self, name, node = None):
         """
