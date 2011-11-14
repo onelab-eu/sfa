@@ -40,7 +40,11 @@ class Aggregate:
             iface['interface_id'] = interface['interface_id']
             iface['node_id'] = interface['node_id']
             iface['ipv4'] = interface['ip']
-            iface['bwlimit'] = str(int(interface['bwlimit'])/1000)
+            try:
+                iface['bwlimit'] = str(int(interface['bwlimit'])/1000)
+            except:
+                # xxx not sure how to code that no limit was set
+                iface['bwlimit'] = ''
             interfaces[iface['interface_id']] = iface
         return interfaces
 
