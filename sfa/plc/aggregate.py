@@ -61,28 +61,27 @@ class Aggregate:
             # get hrns
             site1_hrn = self.api.hrn + '.' + site1['login_base']
             site2_hrn = self.api.hrn + '.' + site2['login_base']
-            # get the first node
-            node1 = self.nodes[site1['node_ids'][0]]
-            node2 = self.nodes[site2['node_ids'][0]]
 
-            # set interfaces
-            # just get first interface of the first node
-            if1_xrn = PlXrn(auth=self.api.hrn, interface='node%s:eth0' % (node1['node_id']))
-            if1_ipv4 = self.interfaces[node1['interface_ids'][0]]['ip']
-            if2_xrn = PlXrn(auth=self.api.hrn, interface='node%s:eth0' % (node2['node_id']))
-            if2_ipv4 = self.interfaces[node2['interface_ids'][0]]['ip']
+            for s1_node in self.nodes[site1['node_ids']]:
+                for s2_node in self.nodes[site2['node_ids']]:
+                    # set interfaces
+                    # just get first interface of the first node
+                    if1_xrn = PlXrn(auth=self.api.hrn, interface='node%s:eth0' % (s1_node['node_id']))
+                    if1_ipv4 = self.interfaces[node1['interface_ids'][0]]['ip']
+                    if2_xrn = PlXrn(auth=self.api.hrn, interface='node%s:eth0' % (s2_node['node_id']))
+                    if2_ipv4 = self.interfaces[node2['interface_ids'][0]]['ip']
 
-            if1 = Interface({'component_id': if1_xrn.urn, 'ipv4': if1_ipv4} )
-            if2 = Interface({'component_id': if2_xrn.urn, 'ipv4': if2_ipv4} )
+                    if1 = Interface({'component_id': if1_xrn.urn, 'ipv4': if1_ipv4} )
+                    if2 = Interface({'component_id': if2_xrn.urn, 'ipv4': if2_ipv4} )
 
-            # set link
-            link = Link({'capacity': '1000000', 'latency': '0', 'packet_loss': '0', 'type': 'ipv4'})
-            link['interface1'] = if1
-            link['interface2'] = if2
-            link['component_name'] = "%s:%s" % (site1['login_base'], site2['login_base'])
-            link['component_id'] = PlXrn(auth=self.api.hrn, interface=link['component_name']).get_urn()
-            link['component_manager_id'] =  hrn_to_urn(self.api.hrn, 'authority+am')
-            links[link['component_name']] = link
+                    # set link
+                    link = Link({'capacity': '1000000', 'latency': '0', 'packet_loss': '0', 'type': 'ipv4'})
+                    link['interface1'] = if1
+                    link['interface2'] = if2
+                    link['component_name'] = "%s:%s" % (site1['login_base'], site2['login_base'])
+                    link['component_id'] = PlXrn(auth=self.api.hrn, interface=link['component_name']).get_urn()
+                    link['component_manager_id'] =  hrn_to_urn(self.api.hrn, 'authority+am')
+                    links[link['component_name']] = link
 
         return links
 
@@ -180,7 +179,8 @@ class Aggregate:
             rspec_node['authority_id'] = hrn_to_urn(PlXrn.site_hrn(self.api.hrn, site['login_base']), 'authority+sa')
             rspec_node['boot_state'] = node['boot_state']
             rspec_node['exclusive'] = 'False'
-            rspec_node['hardware_types']= [HardwareType({'name': 'plab-vserver'})]
+            rspec_node['hardware_types']= [HardwareType({'name': 'plab-pc'}),
+                                           HardwareType({'name': 'pc'})]
             # only doing this because protogeni rspec needs
             # to advertise available initscripts 
             rspec_node['pl_initscripts'] = pl_initscripts.values()
