@@ -20,8 +20,8 @@ class Element(dict):
         """
         if not element_class:
             element_class = Element
-        if not fields:
-           fields = element_class.fields.keys()
+        if not fields and hasattr(element_class, fields):
+           fields = element_class.fields
         elems = xml.xpath(xpath)
         objs = []
         for elem in elems:
