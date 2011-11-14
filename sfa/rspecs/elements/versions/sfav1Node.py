@@ -5,7 +5,6 @@ from sfa.util.xrn import Xrn
 from sfa.rspecs.elements.element import Element
 from sfa.rspecs.elements.node import Node
 from sfa.rspecs.elements.sliver import Sliver
-from sfa.rspecs.elements.network import Network 
 from sfa.rspecs.elements.location import Location
 from sfa.rspecs.elements.hardware_type import HardwareType
 from sfa.rspecs.elements.disk_image import DiskImage
