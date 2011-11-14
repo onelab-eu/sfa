@@ -1,14 +1,9 @@
-### $Id: get_ticket.py 17732 2010-04-19 21:10:45Z tmack $
-### $URL: https://svn.planet-lab.org/svn/sfa/trunk/sfa/methods/get_ticket.py $
-import time
-from sfa.util.faults import *
 from sfa.util.xrn import urn_to_hrn
 from sfa.util.method import Method
 from sfa.util.parameter import Parameter, Mixed
-from sfa.trust.auth import Auth
-from sfa.util.config import Config
-from sfa.trust.credential import Credential
 from sfa.util.sfatablesRuntime import run_sfatables
+
+from sfa.trust.credential import Credential
 
 class GetTicket(Method):
     """
@@ -48,8 +43,6 @@ class GetTicket(Method):
         #log the call
         self.api.logger.info("interface: %s\tcaller-hrn: %s\ttarget-hrn: %s\tmethod-name: %s"%(self.api.interface, origin_hrn, hrn, self.name))
 
-        manager = self.api.get_interface_manager()
-
         # filter rspec through sfatables
         if self.api.interface in ['aggregate']:
             chain_name = 'OUTGOING'
@@ -58,7 +51,5 @@ class GetTicket(Method):
         rspec = run_sfatables(chain_name, hrn, origin_hrn, rspec)
         
         # remove nodes that are not available at this interface from the rspec
-        ticket = manager.get_ticket(self.api, xrn, creds, rspec, users)
-        
-        return ticket
+        return self.api.manager.get_ticket(self.api, xrn, creds, rspec, users)
         

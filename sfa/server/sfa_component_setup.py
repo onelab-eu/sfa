@@ -4,10 +4,11 @@ import os
 import tempfile
 from optparse import OptionParser
 
-from sfa.util.faults import *
+from sfa.util.faults import ConnectionKeyGIDMismatch
 from sfa.util.config import Config
-import sfa.util.xmlrpcprotocol as xmlrpcprotocol
+import sfa.client.xmlrpcprotocol as xmlrpcprotocol
 from sfa.util.plxrn import hrn_to_pl_slicename, slicename_to_hrn
+
 from sfa.trust.certificate import Keypair, Certificate
 from sfa.trust.credential import Credential
 from sfa.trust.gid import GID
@@ -27,7 +28,7 @@ def handle_gid_mismatch_exception(f):
 
     return wrapper
 
-def get_server(url=None, port=None, keyfile=None, certfile=None,verbose=False):
+def server_proxy(url=None, port=None, keyfile=None, certfile=None,verbose=False):
     """
     returns an xmlrpc connection to the service a the specified 
     address
@@ -47,7 +48,7 @@ def get_server(url=None, port=None, keyfile=None, certfile=None,verbose=False):
     if verbose:
         print "Contacting registry at: %(url)s" % locals()
 
-    server = xmlrpcprotocol.get_server(url, keyfile, certfile)
+    server = xmlrpcprotocol.server_proxy(url, keyfile, certfile)
     return server    
     
 
@@ -96,7 +97,7 @@ def get_node_key(registry=None, verbose=False):
     cert.sign()
     cert.save_to_file(certfile)
     
-    registry = get_server(url = registry, keyfile=keyfile, certfile=certfile)    
+    registry = server_proxy(url = registry, keyfile=keyfile, certfile=certfile)    
     registry.get_key()
 
 def create_server_keypair(keyfile=None, certfile=None, hrn="component", verbose=False):
@@ -144,7 +145,7 @@ def get_credential(registry=None, force=False, verbose=False):
         create_server_keypair(keyfile, certfile, hrn, verbose)
 
         # get credential from registry 
-        registry = get_server(url=registry, keyfile=keyfile, certfile=certfile)
+        registry = server_proxy(url=registry, keyfile=keyfile, certfile=certfile)
         cert = Certificate(filename=certfile)
         cert_str = cert.save_to_string(save_parents=True)
         cred = registry.GetSelfCredential(cert_str, 'node', hrn)
@@ -171,7 +172,7 @@ def get_trusted_certs(registry=None, verbose=False):
     cred = get_credential(registry=registry, verbose=verbose)
     # make sure server key cert pair exists
     create_server_keypair(keyfile=keyfile, certfile=certfile, hrn=hrn, verbose=verbose)
-    registry = get_server(url=registry, keyfile=keyfile, certfile=certfile)
+    registry = server_proxy(url=registry, keyfile=keyfile, certfile=certfile)
     # get the trusted certs and save them in the right place
     if verbose:
         print "Getting trusted certs from registry"
@@ -216,14 +217,15 @@ def get_gids(registry=None, verbose=False):
     cred = get_credential(registry=registry, verbose=verbose)
     # make sure server key cert pair exists
     create_server_keypair(keyfile=keyfile, certfile=certfile, hrn=hrn, verbose=verbose)
-    registry = get_server(url=registry, keyfile=keyfile, certfile=certfile)
+    registry = server_proxy(url=registry, keyfile=keyfile, certfile=certfile)
             
     if verbose:
         print "Getting current slices on this node"
     # get a list of slices on this node
-    from sfa.plc.api import ComponentAPI
-    api = ComponentAPI()
-    xids_tuple = api.nodemanager.GetXIDs()
+    from sfa.generic import Generic
+    generic=Generic.the_flavour()
+    api = generic.make_api(interface='component')
+    xids_tuple = api.driver.nodemanager.GetXIDs()
     slices = eval(xids_tuple[1])
     slicenames = slices.keys()
 

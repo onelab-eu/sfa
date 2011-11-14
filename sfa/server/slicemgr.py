@@ -1,11 +1,8 @@
-### $Id$
-### $URL$
-
 import os
 import sys
 import datetime
 import time
-from sfa.util.server import *
+from sfa.server.sfaserver import SfaServer
 
 class SliceMgr(SfaServer):
 

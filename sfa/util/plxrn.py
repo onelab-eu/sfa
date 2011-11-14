@@ -26,7 +26,7 @@ class PlXrn (Xrn):
     def site_hrn (auth, login_base):
         return '.'.join([auth,login_base])
 
-    def __init__ (self, auth=None, hostname=None, slicename=None, email=None, **kwargs):
+    def __init__ (self, auth=None, hostname=None, slicename=None, email=None, interface=None, **kwargs):
         #def hostname_to_hrn(auth_hrn, login_base, hostname):
         if hostname is not None:
             self.type='node'
@@ -48,6 +48,10 @@ class PlXrn (Xrn):
             # keep only the part before '@' and replace special chars into _
             self.hrn='.'.join([auth,email.split('@')[0].replace(".", "_").replace("+", "_")])
             self.hrn_to_urn()
+        elif interface is not None:
+            self.type = 'interface'
+            self.hrn = auth + '.' + interface
+            self.hrn_to_urn()
         else:
             Xrn.__init__ (self,**kwargs)
 
@@ -62,6 +66,10 @@ class PlXrn (Xrn):
     def pl_authname (self):
         self._normalize()
         return self.authority[-1]
+
+    def interface_name(self):
+        self._normalize()
+        return self.leaf
 
     #def hrn_to_pl_login_base(hrn):
     def pl_login_base (self):

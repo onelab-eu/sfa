@@ -1,0 +1,5 @@
+initial version from
+ http://www.tarind.com/py2depgraph.py
+ http://www.tarind.com/depgraph2dot.py
+
+customized for trimming all non-project dependencies

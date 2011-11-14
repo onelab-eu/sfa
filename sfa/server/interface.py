@@ -1,13 +1,6 @@
-import traceback
-import os.path
-
-from sfa.util.faults import *
-from sfa.util.storage import XmlStorage
-from sfa.util.xrn import get_authority, hrn_to_urn
-from sfa.util.record import SfaRecord
-import sfa.util.xmlrpcprotocol as xmlrpcprotocol
-import sfa.util.soapprotocol as soapprotocol
-from sfa.trust.gid import GID
+#from sfa.util.faults import *
+import sfa.client.xmlrpcprotocol as xmlrpcprotocol
+from sfa.util.xml import XML
 
 # GeniLight client support is optional
 try:
@@ -15,10 +8,11 @@ try:
 except ImportError:
     GeniClientLight = None            
 
-
-
 class Interface:
-    
+    """
+    Interface to another SFA service, typically a peer, or the local aggregate
+    can retrieve a xmlrpclib.ServerProxy object for issuing calls there
+    """
     def __init__(self, hrn, addr, port, client_type='sfa'):
         self.hrn = hrn
         self.addr = addr
@@ -31,12 +25,13 @@ class Interface:
         url =  "http://%s" %  "/".join(address_parts)
         return url
 
-    def get_server(self, key_file, cert_file, timeout=30):
+    def server_proxy(self, key_file, cert_file, timeout=30):
         server = None 
         if  self.client_type ==  'geniclientlight' and GeniClientLight:
+            # xxx url and self.api are undefined
             server = GeniClientLight(url, self.api.key_file, self.api.cert_file)
         else:
-            server = xmlrpcprotocol.get_server(self.get_url(), key_file, cert_file, timeout) 
+            server = xmlrpcprotocol.server_proxy(self.get_url(), key_file, cert_file, timeout) 
  
         return server       
 ##
@@ -62,21 +57,20 @@ class Interfaces(dict):
     def __init__(self, conf_file):
         dict.__init__(self, {})
         # load config file
-        self.interface_info = XmlStorage(conf_file, self.default_dict)
-        self.interface_info.load()
-        records = self.interface_info.values()[0].values()[0]
-        if not isinstance(records, list):
-            records = [records]
-        
-        required_fields = self.default_fields.keys()
-        for record in records:
-            if not set(required_fields).issubset(record.keys()):
-                continue
-            # port is appended onto the domain, before the path. Should look like:
-            # http://domain:port/path
-            hrn, address, port = record['hrn'], record['addr'], record['port']
-            interface = Interface(hrn, address, port) 
-            self[hrn] = interface
+        required_fields = set(self.default_fields.keys())
+        self.interface_info = XML(conf_file).todict()
+        for value in self.interface_info.values():
+            if isinstance(value, list):
+                for record in value:
+                    if isinstance(record, dict) and \
+                      required_fields.issubset(record.keys()):
+                        hrn, address, port = record['hrn'], record['addr'], record['port']
+                        # sometime this is called at a very early stage with no config loaded
+                        # avoid to remember this instance in such a case
+                        if not address or not port:
+                            continue     
+                        interface = Interface(hrn, address, port)
+                        self[hrn] = interface   
 
-    def get_server(self, hrn, key_file, cert_file, timeout=30):
-        return self[hrn].get_server(key_file, cert_file, timeout)
+    def server_proxy(self, hrn, key_file, cert_file, timeout=30):
+        return self[hrn].server_proxy(key_file, cert_file, timeout)

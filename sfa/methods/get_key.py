@@ -1,11 +1,10 @@
 import os
 import tempfile
 import commands
-from sfa.util.faults import *
+from sfa.util.faults import NonExistingRecord, RecordNotFound
 from sfa.util.xrn import hrn_to_urn
 from sfa.util.method import Method
-from sfa.util.parameter import Parameter, Mixed
-from sfa.trust.auth import Auth
+from sfa.util.parameter import Parameter
 from sfa.util.table import SfaTable
 from sfa.trust.certificate import Keypair
 from sfa.trust.gid import create_uuid
@@ -26,10 +25,10 @@ class get_key(Method):
         # verify that the callers's ip address exist in the db and is an inteface
         # for a node in the db
         (ip, port) = self.api.remote_addr
-        interfaces = self.api.plshell.GetInterfaces(self.api.plauth, {'ip': ip}, ['node_id'])
+        interfaces = self.api.driver.GetInterfaces({'ip': ip}, ['node_id'])
         if not interfaces:
             raise NonExistingRecord("no such ip %(ip)s" % locals())
-        nodes = self.api.plshell.GetNodes(self.api.plauth, [interfaces[0]['node_id']], ['node_id', 'hostname'])
+        nodes = self.api.driver.GetNodes([interfaces[0]['node_id']], ['node_id', 'hostname'])
         if not nodes:
             raise NonExistingRecord("no such node using ip %(ip)s" % locals())
         node = nodes[0]

@@ -1,5 +1,6 @@
 # recompute the SFA graphs from different locations
 
+## use -vv for the full story
 SFASCAN = ./sfascan.py -v
 
 # AMs, at least MyPLC AMs, are boring
@@ -40,8 +41,8 @@ BUNDLES-LR += http://www.planet-lab.jp:12347/@auto-plj-sa
 BUNDLES-LR += http://www.emanicslab.org:12345/@auto-elc-reg 
 BUNDLES-LR += http://www.emanicslab.org:12347/@auto-elc-sa
 
-#EXTENSIONS := png svg
-EXTENSIONS := png
+EXTENSIONS := png svg
+#EXTENSIONS := png
 
 ####################
 ALL += $(foreach bundle,$(BUNDLES),$(word 2,$(subst @, ,$(bundle))))
@@ -89,8 +90,9 @@ $(foreach bundle,$(BUNDLES),$(eval $(call bundle_version_target,$(bundle))))
 
 ####################
 clean:
-	rm -f auto-*.{out,version}
+	rm -f .auto*
 	$(foreach extension,$(EXTENSIONS),rm -rf auto-*.$(extension);)
+	$(SFASCAN) -c
 
 DATE=$(shell date '+%Y-%m-%d')
 PUBEXTENSIONS=png

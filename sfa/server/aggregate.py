@@ -1,9 +1,9 @@
-from sfa.util.faults import *
-from sfa.util.server import SfaServer
+from sfa.server.sfaserver import SfaServer
 from sfa.util.xrn import hrn_to_urn
 from sfa.server.interface import Interfaces, Interface
 from sfa.util.config import Config     
 
+# this truly is a server-side object
 class Aggregate(SfaServer):
 
     ##
@@ -16,9 +16,10 @@ class Aggregate(SfaServer):
     def __init__(self, ip, port, key_file, cert_file):
         SfaServer.__init__(self, ip, port, key_file, cert_file,'aggregate')
 
-##
+#
 # Aggregates is a dictionary of aggregate connections keyed on the aggregate hrn
-
+# as such it's more of a client-side thing for aggregate servers to reach their peers
+#
 class Aggregates(Interfaces):
 
     default_dict = {'aggregates': {'aggregate': [Interfaces.default_fields]}}

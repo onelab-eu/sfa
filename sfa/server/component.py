@@ -1,16 +1,12 @@
 #
 # Component is a SfaServer that implements the Component interface
 #
-### $Id: 
-### $URL: 
-#
-
 import tempfile
 import os
 import time
 import sys
 
-from sfa.util.componentserver import ComponentServer
+from sfa.server.sfaserver import SfaServer
  
 # GeniLight client support is optional
 try:
@@ -21,7 +17,7 @@ except ImportError:
 ##
 # Component is a SfaServer that serves component operations.
 
-class Component(ComponentServer):
+class Component(SfaServer):
     ##
     # Create a new registry object.
     #
@@ -31,5 +27,4 @@ class Component(ComponentServer):
     # @param cert_file certificate filename containing public key (could be a GID file)
 
     def __init__(self, ip, port, key_file, cert_file):
-        ComponentServer.__init__(self, ip, port, key_file, cert_file)
-        self.server.interface = 'component'
+        SfaServer.__init__(self, ip, port, key_file, cert_file, interface='component')

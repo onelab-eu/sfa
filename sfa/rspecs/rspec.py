@@ -1,11 +1,11 @@
 #!/usr/bin/python 
 from datetime import datetime, timedelta
-from sfa.rspecs.xml import XML, XpathFilter
-from sfa.rspecs.version_manager import VersionManager
-from sfa.util.xrn import *
-from sfa.util.plxrn import hostname_to_urn
+
+from sfa.util.xml import XML, XpathFilter
+from sfa.util.faults import InvalidRSpecElement
+
 from sfa.rspecs.rspec_elements import RSpecElement, RSpecElements 
-from sfa.util.faults import SfaNotImplemented, InvalidRSpec, InvalidRSpecElement
+from sfa.rspecs.version_manager import VersionManager
 
 class RSpec:
  
@@ -70,7 +70,7 @@ class RSpec:
 
     def get(self, element_type, filter={}, depth=0):
         elements = self.get_elements(element_type, filter)
-        elements = [self.get_element_attributes(element, depth=depth) for element in elements]
+        elements = [self.xml.get_element_attributes(elem, depth=depth) for elem in elements]
         return elements
 
     def get_elements(self, element_type, filter={}):
@@ -83,7 +83,7 @@ class RSpec:
             raise InvalidRSpecElement(element_type, extra=msg)
         rspec_element = self.get_rspec_element(element_type)
         xpath = rspec_element.path + XpathFilter.xpath(filter)
-        return self.xpath(xpath)
+        return self.xml.xpath(xpath)
 
     def merge(self, in_rspec):
         self.version.merge(in_rspec)

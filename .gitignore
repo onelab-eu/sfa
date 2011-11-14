@@ -15,3 +15,4 @@ sfa/client/*.version
 *.pkey
 *.cert
 *.cred
+.DS_Store

@@ -1,7 +1,7 @@
 import os, time
 import libxml2
 from sfatables.command import Command
-from sfatables.globals import *
+from sfatables.globals import sfatables_config, target_dir, match_dir
 
 class Insert(Command):
     def __init__(self):

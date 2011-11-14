@@ -6,8 +6,6 @@ from optparse import OptionParser
 from pprint import pprint
 from types import StringTypes
 
-from sfa.util.rspec import RSpec
-
 def create_parser():
     command = sys.argv[0]
     argv = sys.argv[1:]

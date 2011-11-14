@@ -1,9 +1,6 @@
-from types import StringTypes
-from sfa.util.faults import *
 from sfa.util.xrn import urn_to_hrn
 from sfa.util.method import Method
 from sfa.util.parameter import Parameter, Mixed
-from sfa.trust.auth import Auth
 from sfa.server.aggregate import Aggregates
 
 class get_aggregates(Method):

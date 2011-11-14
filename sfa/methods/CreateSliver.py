@@ -1,9 +1,10 @@
-from sfa.util.faults import *
+from sfa.util.faults import SfaInvalidArgument
 from sfa.util.xrn import urn_to_hrn
 from sfa.util.method import Method
 from sfa.util.parameter import Parameter, Mixed
 from sfa.util.sfatablesRuntime import run_sfatables
 from sfa.trust.credential import Credential
+from sfa.rspecs.rspec import RSpec
 
 class CreateSliver(Method):
     """
@@ -42,8 +43,6 @@ class CreateSliver(Method):
             msg = "'users' musst be specified and cannot be null. You may need to update your client." 
             raise SfaInvalidArgument(name='users', extra=msg)  
 
-        manager = self.api.get_interface_manager()
-        
         # flter rspec through sfatables
         if self.api.interface in ['aggregate']:
             chain_name = 'INCOMING'
@@ -51,5 +50,9 @@ class CreateSliver(Method):
             chain_name = 'FORWARD-INCOMING'
         self.api.logger.debug("CreateSliver: sfatables on chain %s"%chain_name)
         rspec = run_sfatables(chain_name, hrn, origin_hrn, rspec)
-
-        return manager.CreateSliver(self.api, slice_xrn, creds, rspec, users, call_id)
+        slivers = RSpec(rspec).version.get_nodes_with_slivers()
+        if slivers:
+            result = self.api.manager.CreateSliver(self.api, slice_xrn, creds, rspec, users, call_id)
+        else:
+            result = rspec     
+        return result

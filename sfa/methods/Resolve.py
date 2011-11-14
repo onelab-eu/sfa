@@ -1,8 +1,5 @@
-### $Id: resolve.py 17157 2010-02-21 04:19:34Z tmack $
-### $URL: https://svn.planet-lab.org/svn/sfa/trunk/sfa/methods/resolve.py $
-import traceback
 import types
-from sfa.util.faults import *
+
 from sfa.util.xrn import Xrn, urn_to_hrn
 from sfa.util.method import Method
 from sfa.util.parameter import Parameter, Mixed
@@ -43,8 +40,5 @@ class Resolve(Method):
         self.api.logger.info("interface: %s\tcaller-hrn: %s\ttarget-hrn: %s\tmethod-name: %s"%(self.api.interface, origin_hrn, hrns, self.name))
  
         # send the call to the right manager
-        manager = self.api.get_interface_manager()
-        return manager.resolve(self.api, xrns, type)
-
-
+        return self.api.manager.resolve(self.api, xrns, type)
             

@@ -6,7 +6,7 @@ from StringIO import StringIO
 from lxml import etree
 from xmlbuilder import XMLBuilder
 
-from sfa.util.faults import *
+from sfa.util.faults import InvalidRSpec
 from sfa.util.xrn import get_authority
 from sfa.util.plxrn import hrn_to_pl_slicename, hostname_to_urn
 
@@ -282,12 +282,11 @@ class Slicetag:
     
     def write(self, api):
         if self.was_added():
-            api.plshell.AddSliceTag(api.plauth, self.slice_id, 
-                                    self.tagname, self.value, self.node_id)
+            api.driver.AddSliceTag(self.slice_id, self.tagname, self.value, self.node_id)
         elif self.was_changed():
-            api.plshell.UpdateSliceTag(api.plauth, self.id, self.value)
+            api.driver.UpdateSliceTag(self.id, self.value)
         elif self.was_deleted():
-            api.plshell.DeleteSliceTag(api.plauth, self.id)
+            api.driver.DeleteSliceTag(self.id)
 
 
 class TagType:
@@ -560,7 +559,7 @@ class Network:
         Create a dictionary of site objects keyed by site ID
         """
         tmp = []
-        for site in api.plshell.GetSites(api.plauth, {'peer_id': None}):
+        for site in api.driver.GetSites({'peer_id': None}):
             t = site['site_id'], Site(self, site)
             tmp.append(t)
         return dict(tmp)
@@ -571,7 +570,7 @@ class Network:
         Create a dictionary of node objects keyed by node ID
         """
         tmp = []
-        for node in api.plshell.GetNodes(api.plauth, {'peer_id': None}):
+        for node in api.driver.GetNodes({'peer_id': None}):
             try:
                 t = node['node_id'], Node(self, node)
                 tmp.append(t)
@@ -585,7 +584,7 @@ class Network:
         Create a dictionary of node objects keyed by node ID
         """
         tmp = []
-        for iface in api.plshell.GetInterfaces(api.plauth):
+        for iface in api.driver.GetInterfaces():
             t = iface['interface_id'], Iface(self, iface)
             tmp.append(t)
         return dict(tmp)
@@ -595,7 +594,7 @@ class Network:
         Create a dictionary of slicetag objects keyed by slice tag ID
         """
         tmp = []
-        for tag in api.plshell.GetSliceTags(api.plauth, {'~tagname':Slicetag.ignore_tags}, Slicetag.filter_fields): 
+        for tag in api.driver.GetSliceTags({'~tagname':Slicetag.ignore_tags}, Slicetag.filter_fields): 
             t = tag['slice_tag_id'], Slicetag(tag)
             tmp.append(t)
         return dict(tmp)
@@ -605,7 +604,7 @@ class Network:
         Create a list of tagtype obects keyed by tag name
         """
         tmp = []
-        for tag in api.plshell.GetTagTypes(api.plauth, {'~tagname':TagType.ignore_tags}):
+        for tag in api.driver.GetTagTypes({'~tagname':TagType.ignore_tags}):
             t = tag['tagname'], TagType(tag)
             tmp.append(t)
         return dict(tmp)
@@ -615,7 +614,7 @@ class Network:
         Return a Slice object for a single slice
         """
         slicename = hrn_to_pl_slicename(hrn)
-        slice = api.plshell.GetSlices(api.plauth, [slicename])
+        slice = api.driver.GetSlices([slicename])
         if len(slice):
             self.slice = Slice(self, slicename, slice[0])
             return self.slice

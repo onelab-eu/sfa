@@ -2,26 +2,27 @@ import types
 import time 
 import sys
 
-from sfa.util.faults import *
+from sfa.util.faults import RecordNotFound, AccountNotEnabled, PermissionError, MissingAuthority, \
+    UnknownSfaType, ExistingRecord
 from sfa.util.prefixTree import prefixTree
 from sfa.util.record import SfaRecord
 from sfa.senslab.table_slab import SfaTable
-from sfa.util.record import SfaRecord
-from sfa.trust.gid import GID 
 from sfa.util.xrn import Xrn, get_leaf, get_authority, hrn_to_urn, urn_to_hrn
-from sfa.util.plxrn import hrn_to_pl_login_base
-from sfa.trust.credential import Credential
-from sfa.trust.certificate import Certificate, Keypair
-from sfa.trust.gid import create_uuid
 from sfa.util.version import version_core
-from sfa.senslab.api import *
+
+from sfa.trust.gid import GID 
+from sfa.trust.credential import Credential
+from sfa.trust.certificate import Certificate, Keypair, convert_public_key
+from sfa.trust.gid import create_uuid
 
 #myapi=SfaAPI()
 # The GENI GetVersion call
 def GetVersion(api):
     
-    peers =dict ([ (peername,v._ServerProxy__host) for (peername,v) in api.registries.iteritems() 
-                   if peername != api.hrn])
+    # Bugfix TP 09/11/2011
+    #peers =dict ([ (peername,v._ServerProxy__host) for (peername,v) in api.registries.iteritems()
+    peers =dict ([ (peername,v.get_url()) for (peername,v) in api.registries.iteritems()
+        if peername != api.hrn])
     xrn=Xrn(api.hrn)
     return version_core({'interface':'registry',
                          'hrn':xrn.get_hrn(),
@@ -34,7 +35,7 @@ def get_credential(api, xrn, type, is_self=False):
         hrn = urn_to_hrn(xrn)[0]
     else:
         hrn, type = urn_to_hrn(xrn)
-
+        
     # Is this a root or sub authority
     auth_hrn = api.auth.get_authority(hrn)
     print>> sys.stderr , " \r\n        REGISTRY get_credential auth_hrn:" , auth_hrn,"hrn : ", hrn, " Type : ", type, "is self : " , is_self,"<<"
@@ -52,7 +53,7 @@ def get_credential(api, xrn, type, is_self=False):
 
     # verify_cancreate_credential requires that the member lists
     # (researchers, pis, etc) be filled in
-    api.fill_record_info(record)
+    api.driver.fill_record_info(record, api.aggregates)
     record['enabled'] = True
     print>> sys.stderr , " \r\n    ++    REGISTRY get_credential hrn %s record['enabled'] %s is_self %s" %(hrn, record['enabled'], is_self)    
     if record['type']=='user':
@@ -105,7 +106,7 @@ def get_credential(api, xrn, type, is_self=False):
 def resolve(api, xrns, type=None, full=True):
 
     # load all known registry names into a prefix tree and attempt to find
-    # the longest matching prefix 
+    # the longest matching prefix
     print >>sys.stderr , '\t\t REGISTRY MANAGER : resolve=========xrns ', xrns
     if not isinstance(xrns, types.ListType):
         if not type:
@@ -130,10 +131,9 @@ def resolve(api, xrns, type=None, full=True):
         xrn_dict[registry_hrn].append(xrn)
 	print >>sys.stderr, '\t\tREGISTRY MANAGER  *****xrn_dict[registry_hrn] ',xrn_dict[registry_hrn]
     records = [] 
-
     for registry_hrn in xrn_dict:
         # skip the hrn without a registry hrn
-        # XX should we let the user know the authority is unknown?   
+        # XX should we let the user know the authority is unknown?       
 	print >>sys.stderr, '\t\t registry_hrn in xrn_dict ', registry_hrn    
         if not registry_hrn:
             continue
@@ -143,14 +143,15 @@ def resolve(api, xrns, type=None, full=True):
         xrns = xrn_dict[registry_hrn]
         if registry_hrn != api.hrn:
             credential = api.getCredential()
-            peer_records = registries[registry_hrn].Resolve(xrns, credential)
+            interface = api.registries[registry_hrn]
+            server = api.server_proxy(interface, credential)
+            peer_records = server.Resolve(xrns, credential)
             print >>sys.stderr , '\t\t peer_records ', peer_records
             records.extend([SfaRecord(dict=record).as_dict() for record in peer_records])
 
     print >>sys.stderr,'\t\t hrns ' , hrns
     # try resolving the remaining unfound records at the local registry
     remaining_hrns = set(hrns).difference([record['hrn'] for record in records])
-
     # convert set to list
     remaining_hrns = [hrn for hrn in remaining_hrns] 
     print >>sys.stderr, '\t\t remaining_hrns', remaining_hrns
@@ -163,9 +164,9 @@ def resolve(api, xrns, type=None, full=True):
                    
     if full:
 	print >>sys.stderr, '\r\n \r\n REGISTRY:_FULL', api     
-        api.fill_record_info(local_records)
-	
   
+        api.driver.fill_record_info(local_records)
+    
     # convert local record objects to dicts
     records.extend([dict(record) for record in local_records])
     print >>sys.stderr, "\r\n \t\t records extends %s" %(records)      
@@ -191,13 +192,15 @@ def list(api, xrn, origin_hrn=None):
     #if there was no match then this record belongs to an unknow registry
     if not registry_hrn:
         raise MissingAuthority(xrn)
-    
     # if the best match (longest matching hrn) is not the local registry,
     # forward the request
     records = []    
     if registry_hrn != api.hrn:
         credential = api.getCredential()
-        record_list = registries[registry_hrn].List(xrn, credential)
+	print>>sys.stderr, "Registries : ", registries
+        interface = api.registries[registry_hrn]
+        server = api.server_proxy(interface, credential)
+        record_list = server.List(xrn, credential)
         records = [SfaRecord(dict=record).as_dict() for record in record_list]
     
     # if we still have not found the record yet, try the local registry
@@ -213,20 +216,18 @@ def list(api, xrn, origin_hrn=None):
 
 def register(api, record):
 
-    #hrn = str(record['hrn']).strip("['']")
-    #type_of_rec = str( record['type']).strip("['']")
-    hrn = record['hrn']
-    type_of_rec =record['type']
  
-    urn = hrn_to_urn(hrn,type_of_rec)
+    #hrn, type = record['hrn'], record['type']
+    hrn = str(record['hrn']).strip("['']")
+    type = str( record['type']).strip("['']")
+    urn = hrn_to_urn(hrn,type)
     # validate the type
- 
-    if type_of_rec not in ['authority', 'slice', 'node', 'user']:
-        raise UnknownSfaType(type_of_rec) 
+    if type not in ['authority', 'slice', 'node', 'user']:
+        raise UnknownSfaType(type) 
     
     # check if record already exists
     table = SfaTable()
-    existing_records = table.find({'type': type_of_rec, 'hrn': hrn})
+    existing_records = table.find({'type': type, 'hrn': hrn})
     if existing_records:
         raise ExistingRecord(hrn)
        
@@ -236,11 +237,11 @@ def register(api, record):
     #record['authority'] = get_authority(record['hrn'])
     record['authority'] = get_authority(hrn)
     
-    type_of_rec = record['type']
-    hrn = record['hrn']
+    #type_of_rec = record['type']
+    #hrn = record['hrn']
     
-    api.auth.verify_object_permission(hrn)
-    #myapi.auth.verify_object_permission( record['hrn'])
+    #api.auth.verify_object_permission(hrn)
+    api.auth.verify_object_permission( record['hrn'])
     auth_info = api.auth.get_auth_info(record['authority'])
   
     
@@ -262,10 +263,9 @@ def register(api, record):
         record['gid'] = gid
         record.set_gid(gid)
 	print>>sys.stderr, " \r\n \r\n ----------- REGISTRY_MANAGER_SLAB.PY   record['gid']  %s" %(record['gid'])   
-	print>>sys.stderr, " \r\n \r\n ----------- REGISTRY_MANAGER_SLAB.PY  register type_of_rec %s"%(type_of_rec)
-	
-    if type_of_rec in ["authority"]:	
+	print>>sys.stderr, " \r\n \r\n ----------- REGISTRY_MANAGER_SLAB.PY  register type %s"%(type)
 
+    if type in ["authority"]:
         # update the tree
         if not api.auth.hierarchy.auth_exists(hrn):
             api.auth.hierarchy.create_auth(hrn_to_urn(hrn,'authority'))
@@ -274,63 +274,68 @@ def register(api, record):
         gid = auth_info.get_gid_object()
         record.set_gid(gid.save_to_string(save_parents=True))
 	
-        #pl_record = api.sfa_fields_to_pl_fields(type, hrn, record)
-	print>>sys.stderr, " \r\n \r\n ----------- REGISTRY_MANAGER_SLAB.PY  register : type_of_rec in [authority ] sfa_fields_to_pl_fields FIELDS A CHANGER"    
+        #pl_record = api.driver.sfa_fields_to_pl_fields(type, hrn, record)
+	print>>sys.stderr, " \r\n \r\n ----------- REGISTRY_MANAGER_SLAB.PY  register : type in [authority ] sfa_fields_to_pl_fields FIELDS A CHANGER"    
 	
-        sites = api.oar.GetSites( [pl_record['login_base']])
+        # thierry: ideally we'd like to be able to write api.driver.GetSites
+        # in which case the code would become mostly the same as for pl
+        sites = api.driver.GetSites([pl_record['login_base']])
         if not sites:
-            pointer = api.oar.AddSite( pl_record)
+            # thierry
+            # Error (E0601, register): Using variable 'pl_record' before assignment
+            pointer = api.driver.AddSite( pl_record)
         else:
             pointer = sites[0]['site_id']
 
         record.set_pointer(pointer)
         record['pointer'] = pointer
 
-    elif (type_of_rec == "slice"):
+    elif (type == "slice"):
         acceptable_fields=['url', 'instantiation', 'name', 'description']
-        pl_record = api.sfa_fields_to_pl_fields(type_of_rec, hrn, record)
+        pl_record = api.driver.sfa_fields_to_pl_fields(type, hrn, record)
 	print>>sys.stderr, " \r\n \r\n ----------- REGISTRY_MANAGER_SLAB.PY  register  slice pl_record %s"%(pl_record)
         for key in pl_record.keys():
             if key not in acceptable_fields:
                 pl_record.pop(key)
-        slices = api.users.GetSlices( [pl_record['name']])
+        slices = api.driver.GetSlices([pl_record['name']])
         if not slices:
-             pointer = api.users.AddSlice(pl_record)
+             pointer = api.driver.AddSlice(pl_record)
         else:
              pointer = slices[0]['slice_id']
         record.set_pointer(pointer)
         record['pointer'] = pointer
 
-    elif  (type_of_rec == "user"):
-        persons = api.users.GetPersons( [record['email']]) 
+    elif  (type == "user"):
+        persons = api.driver.GetPersons([record['email']])
 	if not persons:
            print>>sys.stderr, "  \r\n \r\n ----------- registry_manager_slab  register NO PERSON ADD TO LDAP?"
       
         #if not persons:
-            #pointer = api.users.AddPerson( dict(record))
+            #pointer = api.driver.AddPerson( dict(record))
         #else:
             #pointer = persons[0]['person_id']
 
         if 'enabled' in record and record['enabled']:
-            api.users.UpdatePerson( pointer, {'enabled': record['enabled']})
+            api.driver.UpdatePerson(pointer, {'enabled': record['enabled']})
         # add this persons to the site only if he is being added for the first
         # time by sfa and doesont already exist in plc
         if not persons or not persons[0]['site_ids']:
             login_base = get_leaf(record['authority'])
-            api.users.AddPersonToSite( pointer, login_base)
+
+            api.driver.AddPersonToSite(pointer, login_base)
 
         # What roles should this user have?
-        api.users.AddRoleToPerson( 'user', pointer)
+        api.driver.AddRoleToPerson('user', pointer)
         # Add the user's key
         if pub_key:
-            api.users.AddPersonKey( pointer, {'key_type' : 'ssh', 'key' : pub_key})
+            api.driver.AddPersonKey(pointer, {'key_type' : 'ssh', 'key' : pub_key})
 
     #elif (type == "node"):
-        #pl_record = api.sfa_fields_to_pl_fields(type, hrn, record)
+        #pl_record = api.driver.sfa_fields_to_pl_fields(type, hrn, record)
         #login_base = hrn_to_pl_login_base(record['authority'])
-        #nodes = api.oar.GetNodes( [pl_record['hostname']])
+        #nodes = api.driver.GetNodes([pl_record['hostname']])
         #if not nodes:
-            #pointer = api.oar.AddNode(login_base, pl_record)
+            #pointer = api.driver.AddNode(login_base, pl_record)
         #else:
             #pointer = nodes[0]['node_id']
 
@@ -340,7 +345,7 @@ def register(api, record):
     #record['record_id'] = record_id
 
     # update membership for researchers, pis, owners, operators
-    api.update_membership(None, record)
+    api.driver.update_membership(None, record)
 
     return record.get_gid_object().save_to_string(save_parents=True)
 
@@ -360,7 +365,7 @@ def update(api, record_dict):
 
     # Update_membership needs the membership lists in the existing record
     # filled in, so it can see if members were added or removed
-    api.fill_record_info(record)
+    api.driver.fill_record_info(record)
 
     # Use the pointer from the existing record, not the one that the user
     # gave us. This prevents the user from inserting a forged pointer
@@ -368,13 +373,13 @@ def update(api, record_dict):
     # update the PLC information that was specified with the record
 
     if (type == "authority"):
-        api.oar.UpdateSite( pointer, new_record)
+        api.driver.UpdateSite(pointer, new_record)
 
     elif type == "slice":
-        pl_record=api.sfa_fields_to_pl_fields(type, hrn, new_record)
+        pl_record=api.driver.sfa_fields_to_pl_fields(type, hrn, new_record)
         if 'name' in pl_record:
             pl_record.pop('name')
-            api.users.UpdateSlice( pointer, pl_record)
+            api.driver.UpdateSlice(pointer, pl_record)
 
     elif type == "user":
         # SMBAKER: UpdatePerson only allows a limited set of fields to be
@@ -387,14 +392,14 @@ def update(api, record_dict):
                        'password', 'phone', 'url', 'bio', 'accepted_aup',
                        'enabled']:
                 update_fields[key] = all_fields[key]
-        api.users.UpdatePerson( pointer, update_fields)
+        api.driver.UpdatePerson(pointer, update_fields)
 
         if 'key' in new_record and new_record['key']:
             # must check this key against the previous one if it exists
-            persons = api.users.GetPersons( [pointer], ['key_ids'])
+            persons = api.driver.GetPersons([pointer], ['key_ids'])
             person = persons[0]
             keys = person['key_ids']
-            keys = api.users.GetKeys( person['key_ids'])
+            keys = api.driver.GetKeys(person['key_ids'])
             key_exists = False
             if isinstance(new_record['key'], types.ListType):
                 new_key = new_record['key'][0]
@@ -404,11 +409,11 @@ def update(api, record_dict):
             # Delete all stale keys
             for key in keys:
                 if new_record['key'] != key['key']:
-                    api.users.DeleteKey( key['key_id'])
+                    api.driver.DeleteKey(key['key_id'])
                 else:
                     key_exists = True
             if not key_exists:
-                api.users.AddPersonKey( pointer, {'key_type': 'ssh', 'key': new_key})
+                api.driver.AddPersonKey(pointer, {'key_type': 'ssh', 'key': new_key})
 
             # update the openssl key and gid
             pkey = convert_public_key(new_key)
@@ -420,13 +425,13 @@ def update(api, record_dict):
             table.update(record)
 
     elif type == "node":
-        api.oar.UpdateNode( pointer, new_record)
+        api.driver.UpdateNode(pointer, new_record)
 
     else:
         raise UnknownSfaType(type)
 
     # update membership for researchers, pis, owners, operators
-    api.update_membership(record, new_record)
+    api.driver.update_membership(record, new_record)
     
     return 1 
 
@@ -458,20 +463,20 @@ def remove(api, xrn, origin_hrn=None):
                 except:
                     pass
     if type == "user":
-        persons = api.users.GetPersons(record['pointer'])
+        persons = api.driver.GetPersons(record['pointer'])
         # only delete this person if he has site ids. if he doesnt, it probably means
         # he was just removed from a site, not actually deleted
         if persons and persons[0]['site_ids']:
-            api.users.DeletePerson(record['pointer'])
+            api.driver.DeletePerson(record['pointer'])
     elif type == "slice":
-        if api.users.GetSlices( record['pointer']):
-            api.users.DeleteSlice( record['pointer'])
+        if api.driver.GetSlices(record['pointer']):
+            api.driver.DeleteSlice(record['pointer'])
     elif type == "node":
-        if api.oar.GetNodes( record['pointer']):
-            api.oar.DeleteNode( record['pointer'])
+        if api.driver.GetNodes(record['pointer']):
+            api.driver.DeleteNode(record['pointer'])
     elif type == "authority":
-        if api.oar.GetSites( record['pointer']):
-            api.oar.DeleteSite( record['pointer'])
+        if api.driver.GetSites(record['pointer']):
+            api.driver.DeleteSite(record['pointer'])
     else:
         raise UnknownSfaType(type)
 

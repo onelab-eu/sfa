@@ -25,19 +25,20 @@ if command.opts.outfile:
     outfile=file(command.opts.outfile,"w")
 else:
     outfile=sys.stdout
-request_rspec = RSpec(infile)
+ad_rspec = RSpec(infile)
 nodes = file(command.opts.nodefile).read().split()
 version_manager = VersionManager()
 try:
-    type = request_rspec.version.type
-    version_num = request_rspec.version.version
-    manifest_version = version_manager._get_version(type, version_num, 'manifest')    
-    manifest_rspec = RSpec(version=manifest_version)
+    type = ad_rspec.version.type
+    version_num = ad_rspec.version.version
+    request_version = version_manager._get_version(type, version_num, 'request')    
+    request_rspec = RSpec(version=request_version)
     slivers = [{'hostname': node} for node in nodes]
-    manifest_rspec.version.merge(request_rspec)
-    manifest_rspec.version.add_slivers(slivers)
+    request_rspec.version.merge(ad_rspec)
+    request_rspec.version.add_slivers(slivers)
 except:
     print >> sys.stderr, "FAILED: %s" % nodes
+    raise
     sys.exit(1)
-print >>outfile, manifest_rspec.toxml()
+print >>outfile, request_rspec.toxml()
 sys.exit(0)

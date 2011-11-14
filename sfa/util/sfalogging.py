@@ -68,8 +68,11 @@ class _SfaLogger:
             self.logger.setLevel(logging.WARNING)
         elif verbose==1:
             self.logger.setLevel(logging.INFO)
-        elif verbose==2:
+        elif verbose>=2:
             self.logger.setLevel(logging.DEBUG)
+    # in case some other code needs a boolean
+    def getBoolVerboseFromOpt(self,verbose):
+        return verbose>=1
 
     ####################
     def info(self, msg):

@@ -1,10 +1,11 @@
-from sfa.util.faults import *
+import datetime
+
+from sfa.util.faults import InsufficientRights
 from sfa.util.xrn import urn_to_hrn
 from sfa.util.method import Method
 from sfa.util.parameter import Parameter
 from sfa.trust.credential import Credential
 from sfa.util.sfatime import utcparse
-import datetime
 
 class RenewSliver(Method):
     """
@@ -39,6 +40,5 @@ class RenewSliver(Method):
             raise InsufficientRights('Renewsliver: Credential expires before requested expiration time')
         if requested_time > datetime.datetime.utcnow() + datetime.timedelta(days=max_renew_days):
             raise Exception('Cannot renew > %s days from now' % max_renew_days)
-        manager = self.api.get_interface_manager()
-        return manager.RenewSliver(self.api, slice_xrn, valid_creds, expiration_time, call_id)    
+        return self.api.manager.RenewSliver(self.api, slice_xrn, valid_creds, expiration_time, call_id)    
     

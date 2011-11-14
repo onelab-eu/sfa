@@ -1,4 +1,3 @@
-from sfa.util.faults import *
 from sfa.util.xrn import Xrn
 from sfa.util.method import Method
 from sfa.util.parameter import Parameter, Mixed
@@ -40,6 +39,4 @@ class Remove(Method):
         self.api.logger.info("interface: %s\tmethod-name: %s\tcaller-hrn: %s\ttarget-urn: %s"%(
                 self.api.interface, self.name, origin_hrn, xrn.get_urn()))
 
-        manager = self.api.get_interface_manager()
-
-        return manager.remove(self.api, xrn) 
+        return self.api.manager.remove(self.api, xrn) 

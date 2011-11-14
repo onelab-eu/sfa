@@ -92,7 +92,7 @@ class SfaTable(list):
 			for hrn in hrns:
 				head,sep,tail=hrn.partition(".")
 				if head != self.authname :
-					print >>sys.stderr,"i know nothing about",hrn
+					print >>sys.stderr,"i know nothing about",hrn, " my authname is ", self.authname, " not ", splited_hrn[0]
 				else :
 					node_ids.append(tail)
 

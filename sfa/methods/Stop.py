@@ -1,11 +1,6 @@
-### $Id: stop_slice.py 17732 2010-04-19 21:10:45Z tmack $
-### $URL: https://svn.planet-lab.org/svn/sfa/trunk/sfa/methods/stop_slice.py $
-
-from sfa.util.faults import *
 from sfa.util.xrn import urn_to_hrn
 from sfa.util.method import Method
 from sfa.util.parameter import Parameter, Mixed
-from sfa.trust.auth import Auth
 from sfa.trust.credential import Credential
  
 class Stop(Method):
@@ -35,7 +30,6 @@ class Stop(Method):
         origin_hrn = Credential(string=valid_creds[0]).get_gid_caller().get_hrn()
         self.api.logger.info("interface: %s\tcaller-hrn: %s\ttarget-hrn: %s\tmethod-name: %s"%(self.api.interface, origin_hrn, hrn, self.name))
 
-        manager = self.api.get_interface_manager() 
-        manager.stop_slice(self.api, xrn, creds)
+        self.api.manager.stop_slice(self.api, xrn, creds)
  
         return 1 

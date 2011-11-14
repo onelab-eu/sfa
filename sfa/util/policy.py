@@ -1,9 +1,6 @@
-### $Id$
-### $URL$
-
 import os
 
-from sfa.util.storage import *
+from sfa.util.storage import SimpleStorage
 
 class Policy(SimpleStorage):
 

@@ -12,7 +12,6 @@ from sfa.trust.certificate import Certificate
 from sfa.trust.credential import Credential
 from sfa.trust.gid import GID
 from sfa.util.record import SfaRecord
-from sfa.util.rspec import RSpec
 from sfa.util.sfalogging import logger
 
 def determine_sfa_filekind(fn):

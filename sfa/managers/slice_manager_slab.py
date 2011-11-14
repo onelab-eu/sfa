@@ -9,11 +9,11 @@ from lxml import etree
 
 from sfa.util.sfalogging import logger
 #from sfa.util.sfalogging import sfa_logger
-from sfa.util.rspecHelper import merge_rspecs
+#from sfa.util.rspecHelper import merge_rspecs
 from sfa.util.xrn import Xrn, urn_to_hrn, hrn_to_urn
 from sfa.util.plxrn import hrn_to_pl_slicename
-from sfa.util.rspec import *
-from sfa.util.specdict import *
+#from sfa.util.rspec import *
+#from sfa.util.specdict import *
 from sfa.util.faults import *
 from sfa.util.record import SfaRecord
 #from sfa.rspecs.pg_rspec import PGRSpec
@@ -26,16 +26,20 @@ from sfa.rspecs.rspec_converter import RSpecConverter
 from sfa.client.client_helper import sfa_to_pg_users_arg
 from sfa.rspecs.version_manager import VersionManager
 
-from sfa.rspecs.rspec import RSpec 
+#from sfa.rspecs.rspec import RSpec 
 from sfa.util.policy import Policy
 from sfa.util.prefixTree import prefixTree
-from sfa.util.sfaticket import *
+#from sfa.util.sfaticket import *
 from sfa.trust.credential import Credential
-from sfa.util.threadmanager import ThreadManager
-import sfa.util.xmlrpcprotocol as xmlrpcprotocol     
-import sfa.plc.peers as peers
+#from sfa.util.threadmanager import ThreadManager
+#import sfa.util.xmlrpcprotocol as xmlrpcprotocol     
+#import sfa.plc.peers as peers
 from sfa.util.version import version_core
 from sfa.util.callids import Callids
+#from sfa.senslab.api import *
+
+
+#api=SfaAPI(interface='slicemgr')
 
 def _call_id_supported(api, server):
     """

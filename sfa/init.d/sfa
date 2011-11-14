@@ -62,18 +62,18 @@ start() {
     reload
 
     # install peer certs
-    action $"SFA installing peer certs" daemon /usr/bin/sfa-server.py -t -d $OPTIONS 
+    action $"SFA installing peer certs" daemon /usr/bin/sfa-start.py -t -d $OPTIONS 
 
     if [ "$SFA_REGISTRY_ENABLED" -eq 1 ]; then
-        action $"SFA Registry" daemon /usr/bin/sfa-server.py -r -d $OPTIONS
+        action $"SFA Registry" daemon /usr/bin/sfa-start.py -r -d $OPTIONS
     fi
 
     if [ "$SFA_AGGREGATE_ENABLED" -eq 1 ]; then
-        action $"SFA Aggregate" daemon /usr/bin/sfa-server.py -a -d $OPTIONS
+        action $"SFA Aggregate" daemon /usr/bin/sfa-start.py -a -d $OPTIONS
     fi
         
     if [ "$SFA_SM_ENABLED" -eq 1 ]; then
-        action "SFA SliceMgr" daemon /usr/bin/sfa-server.py -s -d $OPTIONS
+        action "SFA SliceMgr" daemon /usr/bin/sfa-start.py -s -d $OPTIONS
     fi
 
     if [ "$SFA_FLASHPOLICY_ENABLED" -eq 1 ]; then
@@ -81,15 +81,15 @@ start() {
     fi
 
     RETVAL=$?
-    [ $RETVAL -eq 0 ] && touch /var/lock/subsys/sfa-server.py
+    [ $RETVAL -eq 0 ] && touch /var/lock/subsys/sfa-start.py
 
 }
 
 stop() {
-    action $"Shutting down SFA" killproc sfa-server.py
+    action $"Shutting down SFA" killproc sfa-start.py
     RETVAL=$?
 
-    [ $RETVAL -eq 0 ] && rm -f /var/lock/subsys/sfa-server.py
+    [ $RETVAL -eq 0 ] && rm -f /var/lock/subsys/sfa-start.py
 }
 
 
@@ -99,13 +99,13 @@ case "$1" in
     reload) reload force ;;
     restart) stop; start ;;
     condrestart)
-	if [ -f /var/lock/subsys/sfa-server.py ]; then
+	if [ -f /var/lock/subsys/sfa-start.py ]; then
             stop
             start
 	fi
 	;;
     status)
-	status sfa-server.py
+	status sfa-start.py
 	RETVAL=$?
 	;;
     *)

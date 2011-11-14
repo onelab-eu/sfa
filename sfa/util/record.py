@@ -4,17 +4,14 @@
 # TODO: Use existing PLC database methods? or keep this separate?
 ##
 
-### $Id$
-### $URL$
-
 from types import StringTypes
 
-from sfa.trust.gid import *
+from sfa.trust.gid import GID
 
-from sfa.util.rspec import *
-from sfa.util.parameter import *
+from sfa.util.parameter import Parameter
 from sfa.util.xrn import get_authority
 from sfa.util.row import Row
+from sfa.util.xml import XML 
 
 class SfaRecord(Row):
     """ 
@@ -282,6 +279,7 @@ class SfaRecord(Row):
         """
         Load the record from a dictionary 
         """
+
         self.set_name(dict['hrn'])
         gidstr = dict.get("gid", None)
         if gidstr:
@@ -304,10 +302,9 @@ class SfaRecord(Row):
         """
         recorddict = self.as_dict()
         filteredDict = dict([(key, val) for (key, val) in recorddict.iteritems() if key in self.fields.keys()])
-        record = RecordSpec()
-        record.parseDict(filteredDict)
+        record = XML('<record/>')
+        record.parse_dict(filteredDict)
         str = record.toxml()
-        #str = xmlrpclib.dumps((dict,), allow_none=True)
         return str
 
     ##
@@ -320,12 +317,9 @@ class SfaRecord(Row):
         representation of the record.
         """
         #dict = xmlrpclib.loads(str)[0][0]
-        
-        record = RecordSpec()
-        record.parseString(str)
-        record_dict = record.toDict()
-        sfa_dict = record_dict['record']
-        self.load_from_dict(sfa_dict)
+
+        record = XML(str)
+        self.load_from_dict(record.todict())
 
     ##
     # Dump the record to stdout

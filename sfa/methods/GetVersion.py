@@ -1,4 +1,3 @@
-from sfa.util.faults import *
 from sfa.util.method import Method
 from sfa.util.parameter import Parameter
 
@@ -14,5 +13,4 @@ class GetVersion(Method):
 
     def call(self):
         self.api.logger.info("interface: %s\tmethod-name: %s" % (self.api.interface, self.name))
-        manager = self.api.get_interface_manager()
-        return manager.GetVersion(self.api)
+        return self.api.manager.GetVersion(self.api)

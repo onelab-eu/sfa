@@ -1,4 +1,3 @@
-from sfa.util.faults import *
 from sfa.util.xrn import urn_to_hrn
 from sfa.util.method import Method
 from sfa.util.parameter import Parameter, Mixed
@@ -25,8 +24,7 @@ class SliverStatus(Method):
 
         self.api.logger.info("interface: %s\ttarget-hrn: %s\tmethod-name: %s"%(self.api.interface, hrn, self.name))
     
-        manager = self.api.get_interface_manager()
-        status = manager.SliverStatus(self.api, hrn, valid_creds, call_id)
+        status = self.api.manager.SliverStatus(self.api, hrn, valid_creds, call_id)
 
         return status
     

@@ -1,11 +1,12 @@
 from lxml import etree
 from copy import deepcopy
 from StringIO import StringIO
-from sfa.util.xrn import *
+from sfa.util.xrn import urn_to_sliver_id
 from sfa.util.plxrn import hostname_to_urn, xrn_to_hostname 
 from sfa.rspecs.rspec_version import BaseVersion
 from sfa.rspecs.rspec_elements import RSpecElement, RSpecElements
-
+from sfa.rspecs.elements.versions.pgv2Link import PGv2Link
+ 
 class PGv2(BaseVersion):
     type = 'ProtoGENI'
     content_type = 'ad'
@@ -17,11 +18,7 @@ class PGv2(BaseVersion):
         'planetlab': "http://www.planet-lab.org/resources/sfa/ext/planetlab/1",
     }
     namespaces = dict(extensions.items() + [('default', namespace)])
-    elements = [
-        RSpecElement(RSpecElements.NETWORK, 'network', '//default:node[@component_manager_id][1]'),
-        RSpecElement(RSpecElements.NODE, 'node', '//default:node | //node'),
-        RSpecElement(RSpecElements.SLIVER, 'sliver', '//default:node/default:sliver_type | //node/sliver_type'),
-    ]
+    elements = []
 
     def get_network(self):
         network = None
@@ -95,6 +92,18 @@ class PGv2(BaseVersion):
 
         return slice_attributes
 
+    def get_links(self, network=None):
+        return PGv2Link.get_links(self.xml)
+
+    def get_link_requests(self):
+        return PGv2Link.get_link_requests(self.xml)  
+
+    def add_links(self, links):
+        PGv2Link.add_links(self.xml.root, links)
+
+    def add_link_requests(self, link_tuples, append=False):
+        PGv2Link.add_link_requests(self.xml.root, link_tuples, append)
+
     def attributes_list(self, elem):
         opts = []
         if elem is not None:
@@ -129,7 +138,7 @@ class PGv2(BaseVersion):
             node_type_tag = etree.SubElement(node_tag, 'hardware_type', name='plab-pc')
             node_type_tag = etree.SubElement(node_tag, 'hardware_type', name='pc')
             available_tag = etree.SubElement(node_tag, 'available', now='true')
-            sliver_type_tag = etree.SubElement(node_tag, 'sliver_type', name='plab-vnode')
+            sliver_type_tag = etree.SubElement(node_tag, 'sliver_type', name='plab-vserver')
 
             pl_initscripts = node.get('pl_initscripts', {})
             for pl_initscript in pl_initscripts.values():
@@ -149,7 +158,7 @@ class PGv2(BaseVersion):
         # this is untested
         self.xml.root.append(deepcopy(source_node_tag))
 
-    def add_slivers(self, slivers, sliver_urn=None, no_dupes=False):
+    def add_slivers(self, slivers, sliver_urn=None, no_dupes=False, append=False):
 
         # all nodes hould already be present in the rspec. Remove all
         # nodes that done have slivers
@@ -164,19 +173,18 @@ class PGv2(BaseVersion):
         for node in nodes:
             urn = node.get('component_id')
             hostname = xrn_to_hostname(urn)
-            if hostname not in slivers_dict:
+            if hostname not in slivers_dict and not append:
                 parent = node.getparent()
                 parent.remove(node)
             else:
                 sliver_info = slivers_dict[hostname]
-                sliver_type_elements = node.xpath('./sliver_type', namespaces=self.namespaces)
+                sliver_type_elements = node.xpath('./default:sliver_type', namespaces=self.namespaces)
                 available_sliver_types = [element.attrib['name'] for element in sliver_type_elements]
-                valid_sliver_types = ['emulab-openvz', 'raw-pc']
+                valid_sliver_types = ['emulab-openvz', 'raw-pc', 'plab-vserver', 'plab-vnode']
                 requested_sliver_type = None
                 for valid_sliver_type in valid_sliver_types:
-                    if valid_sliver_type in available_sliver_type:
+                    if valid_sliver_type in available_sliver_types:
                         requested_sliver_type = valid_sliver_type
-
                 if requested_sliver_type:
                     # remove existing sliver_type tags,it needs to be recreated
                     sliver_elem = node.xpath('./default:sliver_type | ./sliver_type', namespaces=self.namespaces)
@@ -204,6 +212,7 @@ class PGv2(BaseVersion):
                     parent = node.getparent()
                     parent.remove(node)
 
+    
 
     def remove_slivers(self, slivers, network=None, no_dupes=False):
         for sliver in slivers:
@@ -217,28 +226,6 @@ class PGv2(BaseVersion):
 
     def add_interfaces(self, interfaces, no_dupes=False):
         pass
-
-    def add_links(self, links, no_dupes=False):
-        for link in links:
-            link_elem = etree.SubElement(self.xml.root, 'link' )
-            link_elem.set('component_name', link.component_name) 
-            link_elem.set('component_id', link.component_id)
-            cm_elem = etree.SubElement(link_elem, 'component_manager')
-            cm_elem.set('name', link.component_manager_name)
-            for endpoint in [link.endpoint1, link.enpoint2]:
-                interface_ref = etree.SubElement(link_elem, 'interface_ref', component_id=endpoint.id)
-                
-            property_attrs = {'capicity': link.capacity, 
-                              'latency': link.latency, 
-                              'packet_loss': link.packet_loss}    
-            property1 = etree.SubElement(link_elem, 'property', source_id=link.endpoint1.id, \
-              dest_id = link.endpoint2.id, capacity = link.capacity, latency=link.latency, \
-              packet_loss = link.packet_loss)
-            
-            property2 = etree.SubElement(link_elem, 'property', source_id=link.endpoint2.id, \
-              dest_id = link.endpoint1.id, capacity = link.capacity, latency=link.latency, \
-              packet_loss = link.packet_loss)
-            link_type = etree.SubElement(link_elem, 'link_type', name=link.type)
 
     def merge(self, in_rspec):
         """

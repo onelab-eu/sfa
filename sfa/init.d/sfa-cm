@@ -6,9 +6,6 @@
 #
 # description:   Wraps PLCAPI into the SFA compliant API
 #
-# $Id: sfa 14304 2009-07-06 20:19:51Z thierry $
-# $URL: https://svn.planet-lab.org/svn/sfa/trunk/sfa/init.d/sfa $
-#
 
 # Source config
 . /etc/sfa/sfa_config
@@ -30,7 +27,7 @@ start() {
             echo "Component Mgr"
             # make sure server key (nodes private key) exists first
             init_key
-            /usr/bin/sfa-server.py -c -d $OPTIONS
+            /usr/bin/sfa-start.py -c -d $OPTIONS
         fi
 
         RETVAL=$?
@@ -41,7 +38,7 @@ start() {
 
 stop() {
     echo -n $"Shutting down SFA: "
-    killproc sfa-server.py
+    killproc sfa-start.py
     RETVAL=$?
 
     echo

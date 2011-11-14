@@ -1,7 +1,5 @@
-from sfa.util.faults import *
 from sfa.util.method import Method
 from sfa.util.parameter import Parameter, Mixed
-from sfa.trust.auth import Auth
 from sfa.trust.credential import Credential
  
 class ListSlices(Method):
@@ -29,6 +27,5 @@ class ListSlices(Method):
         origin_hrn = Credential(string=valid_creds[0]).get_gid_caller().get_hrn()
         self.api.logger.info("interface: %s\tcaller-hrn: %s\tmethod-name: %s"%(self.api.interface, origin_hrn, self.name))
 
-        manager = self.api.get_interface_manager() 
-        return manager.ListSlices(self.api, creds, call_id)
+        return self.api.manager.ListSlices(self.api, creds, call_id)
  
