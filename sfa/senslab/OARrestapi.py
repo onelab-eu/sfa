@@ -93,8 +93,8 @@ class OARGETParser:
 	
 	def AddNodeNetworkAddr(self,tuplelist,value):
 		#tuplelist.append(('hostname',str(value)))
-		tuplelist.append(('hostname',str(value)+'.demolab.fr'))
-		tuplelist.append(('site_id',3))	
+		tuplelist.append(('hostname',str(value)))
+			
 		
 	def AddNodeSite(self,tuplelist,value):
 		tuplelist.append(('site_login_base',str(value)))	
