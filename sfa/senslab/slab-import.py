@@ -122,13 +122,14 @@ def main():
         existing_hrns.append(result['hrn'])   
         
          #Get Senslab nodes 
-    nodes_dict  = OARImporter.GetNodes()
+    Driver = SlabDriver(OARapi(),SenslabUsers())
+    nodes_dict  = Driver.GetNodes()
     print "\r\n NODES8DICT ",nodes_dict
     
-    persons_list = SenslabUsers.GetPersons()
+    persons_list = Driver.GetPersons()
     print "\r\n PERSONS_LIST ",persons_list
 
-    keys_list = SenslabUsers.GetKeys()
+    keys_list = Driver.GetKeys()
     print "\r\n KEYSS_LIST ",keys_list
     
     #slices_list = SenslabUsers.GetSlices()
