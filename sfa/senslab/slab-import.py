@@ -100,7 +100,7 @@ def main():
     	table.create()
 
     # create root authority 
-    SenslabImporter.create_top_level_auth_records(root_auth)
+    create_top_level_auth_records(root_auth)
     
     # create s user record for the slice manager
     #Do we need this?
@@ -171,7 +171,7 @@ def main():
    # import persons
     for person in persons_list:
         print >>sys.stderr, "\r\n\r\n^^^^^^^^^^^^^PERSON hrn %s person %s site hrn %s" %(hrn,person)    
-        SenslabImporter.import_person( site_hrn, person,keys_list)
+        import_person( site_hrn, person,keys_list)
         if hrn not in existing_hrns or \
             (hrn, 'user') not in existing_records or update_record:
             import_person(site_hrn, person)	
