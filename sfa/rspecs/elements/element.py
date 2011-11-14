@@ -54,6 +54,6 @@ class Element(dict):
             elem = xml.add_element(name)
             for field in fields:
                 if field in obj and obj[field]:
-                    elem.set(field, obj[field])
+                    elem.set(field, unicode(obj[field]))
             elems.append(elem)
         return elems
