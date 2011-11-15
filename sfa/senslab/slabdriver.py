@@ -28,9 +28,9 @@ def list_to_dict(recs, key):
 # this inheritance scheme is so that the driver object can receive
 # GetNodes or GetSites sorts of calls directly
 # and thus minimize the differences in the managers with the pl version
-class SlabDriver (OARapi, LDAPapi):
+class SlabDriver ():
 
-    def __init__(self,config):
+    def __init__(self, config):
        
         self.config=config
         self.hrn = config.SFA_INTERFACE_HRN
@@ -42,22 +42,22 @@ class SlabDriver (OARapi, LDAPapi):
         # thierry - just to not break the rest of this code
 	#self.oar = OARapi()
 	#self.users = SenslabImportUsers()
-	self.oar = self
-	self.ldap = self
+	self.oar = OARapi()
+	self.ldap = LDAPapi()
         self.time_format = "%Y-%m-%d %H:%M:%S"
         #self.logger=sfa_logger()
       
 	
     def GetPersons(self, person_filter=None, return_fields=None):
 
-        person_list = self.ldapFind({'authority': self.root_auth })
+        person_list = self.ldap.ldapFind({'authority': self.root_auth })
         return_person_list = parse_filter(person_list,person_filter ,'persons', return_fields)
         return return_person_list
     
     def GetNodes(self,node_filter= None, return_fields=None):
 		
-        self.parser.SendRequest("GET_resources_full")
-        node_dict = self.parser.GetNodesFromOARParse()
+        self.oar.parser.SendRequest("GET_resources_full")
+        node_dict = self.oar.parser.GetNodesFromOARParse()
         return_node_list = []
         print>>sys.stderr, " \r\n GetNodes   node_dict %s" %(node_dict) 
         if not (node_filter or return_fields):
