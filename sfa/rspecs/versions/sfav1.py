@@ -19,36 +19,42 @@ class SFAv1(BaseVersion):
     namespace = None
     extensions = {}
     namespaces = None
-    elements = [] 
     template = '<RSpec type="%s"></RSpec>' % type
 
-
+    # Network 
     def get_networks(self):
         return Element.get_elements(self.xml, '//network', Element)
 
-    def get_nodes(self, network=None):
-        return SFAv1Node.get_nodes(self.xml)
+    def add_network(self, network):
+        network_tags = self.xml.xpath('//network[@name="%s"]' % network)
+        if not network_tags:
+            network_tag = etree.SubElement(self.xml.root, 'network', name=network)
+        else:
+            network_tag = network_tags[0]
+        return network_tag
 
-    def get_node_element(self,hostname,network):
-        if network is not None:
-            xpath="//network[@name='%s']/node[@component_id[contains(., '%s')]]" % (network,hostname)
-        else: xpath="//node[@component_id[contains(., '%s')]]" % (hostname)
-        nodes=self.xml.xpath(xpath)
-        print 'found %d nodes'%len(nodes)
-        if nodes:       return nodes[0]
-        else:           return None
 
-    def get_nodes_with_slivers(self, network = None):
-        return SFAv1Node.get_nodes_with_slivers_thierry(self.xml)
+    # Nodes
+    
+    def get_nodes(self, filter=None):
+        return SFAv1Node.get_nodes(self.xml, filter)
 
-    # xxx thierry - this seems more like it
-    # warning, the same code is duplicated in xml.py and pgv2.py..
-    def attributes_list_thierry (self, elem):
-        opts=[]
-        for (k,v) in elem.items():
-            opts.append ( (k,v.strip(),) )
-        return opts
+    def get_nodes_with_slivers(self):
+        return SFAv1Node.get_nodes_with_slivers(self.xml)
 
+    def add_nodes(self, nodes, network = None, no_dupes=False):
+        SFAv1Node.add_nodes(self.xml, nodes)
+
+    def merge_node(self, source_node_tag, network, no_dupes=False):
+        if no_dupes and self.get_node_element(node['hostname']):
+            # node already exists
+            return
+
+        network_tag = self.add_network(network)
+        network_tag.append(deepcopy(source_node_tag))
+
+    # Slivers
+    
     def attributes_list(self, elem):
         # convert a list of attribute tags into list of tuples
         # (tagname, text_value)
@@ -89,75 +95,32 @@ class SFAv1(BaseVersion):
                 slice_attributes.append(attribute)
         return slice_attributes
 
-    def get_links(self, network=None):
-        return PGv2Link.get_links(self.xml)
-
-    def get_link_requests(self):
-        return PGv2Link.get_link_requests(self.xml) 
-
-    ##################
-    # Builder
-    ##################
-
-    def add_network(self, network):
-        network_tags = self.xml.xpath('//network[@name="%s"]' % network)
-        if not network_tags:
-            network_tag = etree.SubElement(self.xml.root, 'network', name=network)
-        else:
-            network_tag = network_tags[0]
-        return network_tag
-
-    def add_nodes(self, nodes, network = None, no_dupes=False):
-        SFAv1Node.add_nodes(self.xml, nodes)
-
-    def merge_node(self, source_node_tag, network, no_dupes=False):
-        if no_dupes and self.get_node_element(node['hostname']):
-            # node already exists
-            return
-
-        network_tag = self.add_network(network)
-        network_tag.append(deepcopy(source_node_tag))
-
-    def add_links(self, links):
-        networks = self.get_networks()
-        if len(networks) > 0:
-            xml = networks[0]
-        else:
-            xml = self.xml    
-        PGv2Link.add_links(xml, links)
-
-    def add_link_requests(self, links):
-        PGv2Link.add_link_requests(self.xml, links)
-
-    def add_slivers(self, slivers, network=None, sliver_urn=None, no_dupes=False, append=False):
+    def add_slivers(self, hostnames, attributes=[], sliver_urn=None, append=False):
         # add slice name to network tag
         network_tags = self.xml.xpath('//network')
         if network_tags:
             network_tag = network_tags[0]
             network_tag.set('slice', urn_to_hrn(sliver_urn)[0])
         
-        all_nodes = self.get_nodes()
-        all_nodenames = [ n['component_name'] for n in all_nodes ]
-        nodes_with_slivers = [sliver['hostname'] for sliver in slivers]
-        nodes_without_slivers = set(all_nodenames).difference(set(nodes_with_slivers))
-        
         # add slivers
-        for sliver in slivers:
-            node_elem = self.get_node_element(sliver['hostname'], network)
-            if not node_elem: continue
-#thierry    sliver_elem = etree.SubElement(node_elem, 'sliver')
-            sliver_elem = node_elem.add_element('sliver')
-            if 'tags' in sliver:
-                for tag in sliver['tags']:
-#thierry            etree.SubElement(sliver_elem, tag['tagname']).text = value=tag['value']
-                    sliver_elem.add_element (tag['tagname'],{'text':tag['value']})
-            
+        sliver = {'name':sliver_urn,
+                  'pl_tags': attributes}
+        for hostname in hostnames:
+            if sliver_urn:
+                sliver['name'] = sliver_urn
+            node_elems = self.get_nodes({'component_id': '*%s*' % hostname})
+            if not node_elems: 
+                continue
+            node_elem = node_elems[0]
+            SFAv1Sliver.add_slivers(node_elem, sliver)   
+
         # remove all nodes without slivers
         if not append:
-            for node in nodes_without_slivers:
-                node_elem = self.get_node_element(node)
-                parent = node_elem.getparent()
-                parent.remove(node_elem)
+            for node_elem in self.get_nodes():
+                if not node['slivers']:
+                    parent = node.getparent()
+                    parent.remove(node_elem)
+
 
     def remove_slivers(self, slivers, network=None, no_dupes=False):
         SFAv1Node.remove_slivers(self.xml, slivers)
@@ -193,6 +156,27 @@ class SFAv1(BaseVersion):
         sliver = node.find("sliver")
         self.xml.remove_attribute(sliver, name, value)
 
+    # Links
+
+    def get_links(self, network=None):
+        return PGv2Link.get_links(self.xml)
+
+    def get_link_requests(self):
+        return PGv2Link.get_link_requests(self.xml) 
+
+    def add_links(self, links):
+        networks = self.get_networks()
+        if len(networks) > 0:
+            xml = networks[0]
+        else:
+            xml = self.xml
+        PGv2Link.add_links(xml, links)
+
+    def add_link_requests(self, links):
+        PGv2Link.add_link_requests(self.xml, links)
+
+    # utility
+
     def merge(self, in_rspec):
         """
         Merge contents for specified rspec with current rspec
@@ -214,7 +198,7 @@ class SFAv1(BaseVersion):
         for network in networks:
             current_network = network.get('name')
             if current_network and current_network not in current_networks:
-                self.xml.root.append(network.element)
+                self.xml.append(network.element)
                 current_networks.append(current_network)
 
 if __name__ == '__main__':
