@@ -1,3 +1,4 @@
+import sys
 from sfa.util.faults import MissingSfaInfo
 from sfa.util.sfalogging import logger
 from sfa.util.table import SfaTable
