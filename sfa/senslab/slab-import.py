@@ -126,7 +126,7 @@ def main():
         
     #Get Senslab nodes 
    
-    Driver = SlabDriver(OARapi(),LDAPapi())
+    Driver = SlabDriver()
     nodes_dict  = Driver.GetNodes()
     print "\r\n NODES8DICT ",nodes_dict
     
