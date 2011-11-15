@@ -12,7 +12,7 @@ from sfa.util.plxrn import slicename_to_hrn, hostname_to_hrn, hrn_to_pl_slicenam
 
 ## thierry : please avoid wildcard imports :)
 from sfa.senslab.OARrestapi import *
-from sfa.senslab.SenslabImportUsers import *
+from sfa.senslab.LDAapi import *
 
 def list_to_dict(recs, key):
     """
@@ -28,22 +28,45 @@ def list_to_dict(recs, key):
 # this inheritance scheme is so that the driver object can receive
 # GetNodes or GetSites sorts of calls directly
 # and thus minimize the differences in the managers with the pl version
-class SlabDriver (OARapi, SenslabImportUsers):
+class SlabDriver (OARapi, LDAPapi):
 
-    def __init__(self, config):
+    def __init__(self,config):
+       
         self.config=config
         self.hrn = config.SFA_INTERFACE_HRN
- 
+    
+        self.root_auth = config.SFA_REGISTRY_ROOT_AUTH
+
+        
 	print >>sys.stderr, "\r\n_____________ SFA SENSLAB DRIVER \r\n" 
         # thierry - just to not break the rest of this code
 	#self.oar = OARapi()
 	#self.users = SenslabImportUsers()
 	self.oar = self
-	self.users = self
+	self.ldap = self
         self.time_format = "%Y-%m-%d %H:%M:%S"
         #self.logger=sfa_logger()
       
 	
+    def GetPersons(self, person_filter=None, return_fields=None):
+
+        person_list = self.ldapFind({'authority': self.root_auth })
+        return_person_list = parse_filter(person_list,person_filter ,'persons', return_fields)
+        return return_person_list
+    
+    def GetNodes(self,node_filter= None, return_fields=None):
+		
+        self.parser.SendRequest("GET_resources_full")
+        node_dict = self.parser.GetNodesFromOARParse()
+        return_node_list = []
+        print>>sys.stderr, " \r\n GetNodes   node_dict %s" %(node_dict) 
+        if not (node_filter or return_fields):
+                return_node_list = node_dict.values()
+                return return_node_list
+    
+        return_node_list= parse_filter(node_dict.values(),node_filter ,'node', return_fields)
+        return return_node_list
+    
     ##
     # Convert SFA fields to PLC fields for use when registering up updating
     # registry record in the PLC database

@@ -277,18 +277,18 @@ class OARapi:
 		self.server = OARrestapi()
 		self.parser = OARGETParser(self.server)
 
-	def GetNodes(self,node_filter= None, return_fields=None):
-		#print>>sys.stderr, " \r\n GetNodes node_filter %s return_fields %s" %(node_filter,return_fields) 
-		self.parser.SendRequest("GET_resources_full")
-		node_dict = self.parser.GetNodesFromOARParse()
-		return_node_list = []
-		#print>>sys.stderr, " \r\n GetNodes   node_dict %s" %(node_dict) 
-		if not (node_filter or return_fields):
-			return_node_list = node_dict.values()
-			return return_node_list
+	#def GetNodes(self,node_filter= None, return_fields=None):
+		##print>>sys.stderr, " \r\n GetNodes node_filter %s return_fields %s" %(node_filter,return_fields) 
+		#self.parser.SendRequest("GET_resources_full")
+		#node_dict = self.parser.GetNodesFromOARParse()
+		#return_node_list = []
+		##print>>sys.stderr, " \r\n GetNodes   node_dict %s" %(node_dict) 
+		#if not (node_filter or return_fields):
+			#return_node_list = node_dict.values()
+			#return return_node_list
 
-		return_node_list= parse_filter(node_dict.values(),node_filter ,'node', return_fields)
-		return return_node_list
+		#return_node_list= parse_filter(node_dict.values(),node_filter ,'node', return_fields)
+		#return return_node_list
 
 		
 	def GetSites(self, site_filter= None, return_fields=None):

@@ -15,7 +15,9 @@ from sfa.trust.hierarchy import Hierarchy
 
 AuthHierarchy = Hierarchy()
 table = SfaTable()
-
+if not table.exists():
+    table.create()
+    
 def create_top_level_auth_records(hrn):
     """
     Create top level records (includes root and sub authorities (local/remote)
@@ -66,15 +68,15 @@ def import_node(hrn, node):
         node_record['record_id'] = existing_record['record_id']
         table.update(node_record)
 
- 
+# person is already a sfa record 
 def import_person(person):       
     existing_records = table.find({'hrn': person['hrn'], 'type': 'user'})
     if not existing_records:
-        table.insert(person_record)
+        table.insert(person)
     else:
         existing_record = existing_records[0]
         person['record_id'] = existing_record['record_id']
-        table.update(person_record)      
+        table.update(person)      
         
         
         
@@ -95,9 +97,9 @@ def main():
     print interface_hrn, root_auth
     
      # initialize registry db table
-    table = SfaTable()
-    if not table.exists():
-    	table.create()
+    #table = SfaTable()
+    #if not table.exists():
+    	#table.create()
 
     # create root authority 
     create_top_level_auth_records(root_auth)
@@ -121,16 +123,16 @@ def main():
         existing_records[(result['hrn'], result['type'])] = result
         existing_hrns.append(result['hrn'])   
         
-         #Get Senslab nodes 
-    Driver = SlabDriver(OARapi(),SenslabUsers())
+    #Get Senslab nodes 
+   
+    Driver = SlabDriver(OARapi(),LDAPapi())
     nodes_dict  = Driver.GetNodes()
     print "\r\n NODES8DICT ",nodes_dict
     
-    persons_list = Driver.GetPersons()
-    print "\r\n PERSONS_LIST ",persons_list
+    ldap_person_list = Driver.GetPersons()
+    print "\r\n PERSONS_LIST ",ldap_person_list
 
-    keys_list = Driver.GetKeys()
-    print "\r\n KEYSS_LIST ",keys_list
+   
     
     #slices_list = SenslabUsers.GetSlices()
     #print "\r\n SLICES_LIST ",slices_list
@@ -158,24 +160,19 @@ def main():
 			#print '\r\n \t **NODE_ID %s node %s '%( node_id, node)		
  			#continue 
     for node in nodes_dict:
-        #if node_id is node['node_id']:	
-                #node = nodes_dict[node_id]
         print '\r\n \t NODE_ID %s node %s '%( node_id, node)
         hrn =  hostname_to_hrn(interface_hrn, root_auth, node['hostname'])
-        break	
-
-    if hrn not in existing_hrns or \
-    (hrn, 'node') not in existing_records:
-        print "\t\t NODE HRN NOT in existing records!" ,hrn
-        import_node(hrn, node)
+        if hrn not in existing_hrns or \
+        (hrn, 'node') not in existing_records:
+            print "\t\t NODE HRN NOT in existing records!" ,hrn
+            import_node(hrn, node)
 
    # import persons
-    for person in persons_list:
+    for person in ldap_person_list:
         print >>sys.stderr, "\r\n\r\n^^^^^^^^^^^^^PERSON hrn %s person %s site hrn %s" %(hrn,person)    
-        import_person( site_hrn, person,keys_list)
-        if hrn not in existing_hrns or \
-            (hrn, 'user') not in existing_records or update_record:
-            import_person(site_hrn, person)	
+        if person['hrn'] not in existing_hrns or \
+            (person['hrn'], 'user') not in existing_records :
+            import_person( person)	
 # import slices
         #for slice_id in site['slice_ids']:
 		#print >>sys.stderr, "\r\n\r\n \t ^^^^^^^\\\\\\\\\\\\\\\^^^^^^ slice_id  %s  " %(slice_id)    		
