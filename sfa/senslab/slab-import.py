@@ -68,7 +68,7 @@ def import_node(hrn, node):
     node_record['authority'] = get_authority(node_record['hrn'])
     existing_records = table.find({'hrn': hrn, 'type': 'node', 'pointer': node['node_id']})
     if not existing_records:
-        print sys.stderr, " \r\n \t slab-import : node record %s inserted" %(node_record['hrn'])
+        print>>sys.stderr, " \r\n \t slab-import : node record %s inserted" %(node_record['hrn'])
         table.insert(node_record)
     else:
         existing_record = existing_records[0]
@@ -79,7 +79,7 @@ def import_node(hrn, node):
 def import_person(person):       
     existing_records = table.find({'hrn': person['hrn'], 'type': 'user'})
     if not existing_records:
-        print sys.stderr, " \r\n \t slab-import : person record %s inserted" %(person['hrn'])
+        print>>sys.stderr, " \r\n \t slab-import : person record %s inserted" %(person['hrn'])
         table.insert(person)
     else:
         existing_record = existing_records[0]
@@ -92,7 +92,7 @@ def delete_record( hrn, type):
     # delete the record
     record_list = table.find({'type': type, 'hrn': hrn})
     for record in record_list:
-        print sys.stderr, " \r\n \t slab-import : record %s deleted" %(record['hrn'])
+        print>>sys.stderr, " \r\n \t slab-import : record %s deleted" %(record['hrn'])
         table.remove(record)
                 
 def hostname_to_hrn(root_auth,hostname):
