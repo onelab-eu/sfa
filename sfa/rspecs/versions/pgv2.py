@@ -3,7 +3,7 @@ from copy import deepcopy
 from StringIO import StringIO
 from sfa.util.xrn import urn_to_sliver_id
 from sfa.util.plxrn import hostname_to_urn, xrn_to_hostname 
-from sfa.rspecs.rspec_version import BaseVersion
+from sfa.rspecs.baseversion import BaseVersion
 from sfa.rspecs.rspec_elements import RSpecElement, RSpecElements
 from sfa.rspecs.elements.versions.pgv2Link import PGv2Link
  

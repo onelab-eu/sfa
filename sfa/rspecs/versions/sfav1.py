@@ -2,7 +2,7 @@ from copy import deepcopy
 from lxml import etree
 from sfa.util.xrn import hrn_to_urn, urn_to_hrn
 from sfa.util.plxrn import PlXrn
-from sfa.rspecs.rspec_version import BaseVersion
+from sfa.rspecs.baseversion import BaseVersion
 from sfa.rspecs.elements.element import Element
 from sfa.rspecs.elements.versions.pgv2Link import PGv2Link
 from sfa.rspecs.elements.versions.sfav1Node import SFAv1Node
