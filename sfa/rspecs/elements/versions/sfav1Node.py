@@ -50,8 +50,10 @@ class SFAv1Node:
             if 'authority_id' in node and node['authority_id']:
                 node_elem.set('site_id', node['authority_id'])
 
-            location_elems = Element.add_elements(node_elem, 'location', node.get('location', []), Location.fields)
-            interface_elems = Element.add_elements(node_elem, 'interface', node.get('interfaces', []), Interface.fields)
+            location_elems = Element.add_elements(node_elem, 'location',
+                                                  node.get('location', []), Location.fields)
+            interface_elems = Element.add_elements(node_elem, 'interface', 
+                                                   node.get('interfaces', []), Interface.fields)
             
             #if 'bw_unallocated' in node and node['bw_unallocated']:
             #    bw_unallocated = etree.SubElement(node_elem, 'bw_unallocated', units='kbps').text = str(int(node['bw_unallocated'])/1000)

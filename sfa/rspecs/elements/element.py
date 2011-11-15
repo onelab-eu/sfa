@@ -34,6 +34,7 @@ class Element(dict):
                     if field in elem.attrib:
                         obj[field] = elem.attrib[field]    
             objs.append(obj)
+# xxx seems unused
         generic_elems = [element_class(elem.attrib, elem) for elem in elems]
         return objs
 
