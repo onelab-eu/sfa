@@ -160,7 +160,6 @@ def main():
 			#print '\r\n \t **NODE_ID %s node %s '%( node_id, node)		
  			#continue 
     for node in nodes_dict:
-        print '\r\n \t NODE_ID %s node %s '%( node_id, node)
         hrn =  hostname_to_hrn(interface_hrn, root_auth, node['hostname'])
         if hrn not in existing_hrns or \
         (hrn, 'node') not in existing_records:
@@ -169,7 +168,6 @@ def main():
 
    # import persons
     for person in ldap_person_list:
-        print >>sys.stderr, "\r\n\r\n^^^^^^^^^^^^^PERSON hrn %s person %s site hrn %s" %(hrn,person)    
         if person['hrn'] not in existing_hrns or \
             (person['hrn'], 'user') not in existing_records :
             import_person( person)	
