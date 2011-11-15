@@ -61,6 +61,9 @@ class XmlNode:
         else:
             self.node.append(elem)
 
+    def getparent(self):
+        return XmlNode(self.node.getparent(), self.namespaces)
+
     def remove_elements(name):
         """
         Removes all occurences of an element from the tree. Start at
