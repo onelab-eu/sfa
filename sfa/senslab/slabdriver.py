@@ -1,4 +1,5 @@
 import sys
+
 from sfa.util.faults import MissingSfaInfo
 from sfa.util.sfalogging import logger
 from sfa.util.table import SfaTable
@@ -15,6 +16,7 @@ from sfa.util.plxrn import slicename_to_hrn, hostname_to_hrn, hrn_to_pl_slicenam
 from sfa.senslab.OARrestapi import OARapi
 from sfa.senslab.LDAPapi import LDAPapi
 from sfa.senslab.SenslabImportUsers import SenslabImportUsers
+from sfa.senslab.parsing import parse_filter
 
 def list_to_dict(recs, key):
     """
@@ -54,7 +56,9 @@ class SlabDriver ():
     def GetPersons(self, person_filter=None, return_fields=None):
 
         person_list = self.ldap.ldapFind({'authority': self.root_auth })
+        print>>sys.stderr, " \r\n \t\t SLABDRIVER.PY : GetPersons ldapfind rslt \r\n \t %s "%(person_list)
         return_person_list = parse_filter(person_list,person_filter ,'persons', return_fields)
+        print>>sys.stderr, " \r\n \t\t SLABDRIVER.PY : GetPersons parse_filter \r\n \t %s "%(return_person_list)      
         return return_person_list
     
     def GetNodes(self,node_filter= None, return_fields=None):
@@ -152,7 +156,7 @@ class SlabDriver ():
         # get pl records
         nodes, sites, slices, persons, keys = {}, {}, {}, {}, {}
         if node_ids:
-            node_list = self.oar.GetNodes( node_ids)
+            node_list = self.GetNodes( node_ids)
 	    #print>>sys.stderr, " \r\n \t\t\t BEFORE LIST_TO_DICT_NODES node_ids : %s" %(node_ids)
             nodes = list_to_dict(node_list, 'node_id')
         if site_ids:
@@ -164,7 +168,7 @@ class SlabDriver ():
             slices = list_to_dict(slice_list, 'slice_id')
         if person_ids:
             #print>>sys.stderr, " \r\n \t\t \t fill_record_pl_info BEFORE GetPersons  person_ids: %s" %(person_ids)
-            person_list = self.ldap.GetPersons( person_ids)
+            person_list = self.GetPersons( person_ids)
             persons = list_to_dict(person_list, 'person_id')
 	    #print>>sys.stderr, "\r\n  fill_record_pl_info persons %s \r\n \t\t person_ids %s " %(persons, person_ids) 
             for person in persons:
@@ -233,14 +237,14 @@ class SlabDriver ():
             sites = list_to_dict(site_list, 'site_id')
 	    #print>>sys.stderr, " \r\n \r\n \t\t ____ site_list %s \r\n \t\t____ sites %s " % (site_list,sites)
         if person_ids:
-            person_list = self.ldap.GetPersons( person_ids, ['person_id', 'email'])
+            person_list = self.GetPersons( person_ids, ['person_id', 'email'])
 	    #print>>sys.stderr, " \r\n \r\n   \t\t____ person_lists %s " %(person_list) 
             persons = list_to_dict(person_list, 'person_id')
         if slice_ids:
             slice_list = self.users.GetSlices( slice_ids, ['slice_id', 'name'])
             slices = list_to_dict(slice_list, 'slice_id')       
         if node_ids:
-            node_list = self.oar.GetNodes( node_ids, ['node_id', 'hostname'])
+            node_list = self.GetNodes( node_ids, ['node_id', 'hostname'])
             nodes = list_to_dict(node_list, 'node_id')
        
         # convert ids to hrns
@@ -307,7 +311,7 @@ class SlabDriver ():
         site_pis = {}
         if site_ids:
             pi_filter = {'|roles': ['pi'], '|site_ids': site_ids} 
-            pi_list = self.ldap.GetPersons( pi_filter, ['person_id', 'site_ids'])
+            pi_list = self.GetPersons( pi_filter, ['person_id', 'site_ids'])
 	    #print>>sys.stderr, "\r\n \r\n _fill_record_sfa_info ___ GetPersons ['person_id', 'site_ids'] pi_ilist %s" %(pi_list)
 
             for pi in pi_list:
@@ -339,7 +343,7 @@ class SlabDriver ():
 
         # get the pl records
         pl_person_list, pl_persons = [], {}
-        pl_person_list = self.ldap.GetPersons(person_ids, ['person_id', 'roles'])
+        pl_person_list = self.GetPersons(person_ids, ['person_id', 'roles'])
         pl_persons = list_to_dict(pl_person_list, 'person_id')
         #print>>sys.stderr, "\r\n \r\n _fill_record_sfa_info ___  _list %s \r\n \t\t SenslabUsers.GetPersons ['person_id', 'roles'] pl_persons %s \r\n records %s" %(pl_person_list, pl_persons,records) 
         # fill sfa info
