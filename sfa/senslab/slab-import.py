@@ -10,9 +10,13 @@ from sfa.senslab.OARrestapi import OARapi
 from sfa.senslab.LDAPapi import LDAPapi
 from sfa.senslab.slabdriver import SlabDriver
 from sfa.util.config import Config
-from sfa.util.xrn import hrn_to_urn, get_authority
+from sfa.util.xrn import hrn_to_urn, get_authority,Xrn
 from sfa.util.table import SfaTable
+from sfa.util.record import SfaRecord
 from sfa.trust.hierarchy import Hierarchy
+from sfa.trust.certificate import Keypair
+from sfa.trust.gid import create_uuid
+
 
 AuthHierarchy = Hierarchy()
 table = SfaTable()
@@ -87,7 +91,13 @@ def delete_record( hrn, type):
     for record in record_list:
         table.remove(record)
                 
-                
+def hostname_to_hrn(root_auth,hostname):
+    # keep only the first part of the DNS name
+    #hrn='.'.join( [auth,hostname.split(".")[0] ] )
+    # escape the '.' in the hostname
+    hrn='.'.join( [root_auth,Xrn.escape(hostname)] )
+    return hrn_to_urn(hrn,'node')
+    
 def main():
 
     config = Config()
@@ -128,7 +138,7 @@ def main():
    
     Driver = SlabDriver(config)
     nodes_dict  = Driver.GetNodes()
-    print "\r\n NODES8DICT ",nodes_dict
+    #print "\r\n NODES8DICT ",nodes_dict
     
     ldap_person_list = Driver.GetPersons()
     print "\r\n PERSONS_LIST ",ldap_person_list
@@ -160,10 +170,10 @@ def main():
 			#print '\r\n \t **NODE_ID %s node %s '%( node_id, node)		
  			#continue 
     for node in nodes_dict:
-        hrn =  hostname_to_hrn(interface_hrn, root_auth, node['hostname'])
+        hrn =  hostname_to_hrn( root_auth, node['hostname'])
         if hrn not in existing_hrns or \
         (hrn, 'node') not in existing_records:
-            print "\t\t NODE HRN NOT in existing records!" ,hrn
+            print "\t\t NODE HRN NOT in existing record, importing it" ,hrn
             import_node(hrn, node)
 
    # import persons
