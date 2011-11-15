@@ -1,5 +1,4 @@
-
-from sfa.util.plxrn import PlXrn
+from sfa.util.plxrn import PlXrn, xrn_to_hostname
 from sfa.util.xrn import Xrn
 from sfa.rspecs.elements.element import Element
 from sfa.rspecs.elements.node import Node
@@ -20,19 +19,19 @@ class PGv2Node:
         node_elems = []
         for node in nodes:
             node_fields = ['component_manager_id', 'component_id', 'client_id', 'sliver_id', 'exclusive']
-            elems = Element.add(xml, 'node', node, node_fields)
+            elems = Element.add_elements(xml, 'node', node, node_fields)
             node_elem = elems[0]
             node_elems.append(node_elem)
             # set component name
             if node.get('component_id'):
-                component_name = Xrn(node['component_id']).get_leaf()
+                component_name = xrn_to_hostname(node['component_id'])
                 node_elem.set('component_name', component_name)
             # set hardware types 
-            Element.add(node_elem, 'hardware_type', node.get('hardware_types', []), HardwareType.fields.keys()) 
+            Element.add_elements(node_elem, 'hardware_type', node.get('hardware_types', []), HardwareType.fields) 
             # set location       
-            location_elems = Element.add(node_elem, 'location', node.get('location', []), Location.fields)
+            location_elems = Element.add_elements(node_elem, 'location', node.get('location', []), Location.fields)
             # set interfaces
-            interface_elems = Element.add(node_elem, 'interface', node.get('interfaces', []), Interface.fields)
+            interface_elems = Element.add_elements(node_elem, 'interface', node.get('interfaces', []), Interface.fields)
             # set available element
             if node.get('boot_state', '').lower() == 'boot':
                 available_elem = node_elem.add_element('available', now='True')
@@ -74,14 +73,14 @@ class PGv2Node:
             if 'component_id' in node_elem.attrib:
                 node['authority_id'] = Xrn(node_elem.attrib['component_id']).get_authority_urn()
 
-            node['hardware_types'] = Element.get(node_elem, './default:hardwate_type | ./hardware_type', HardwareType)
-            lolocation_elems = Element.get(node_elem, './default:location | ./location', Location)
+            node['hardware_types'] = Element.get_elements(node_elem, './default:hardwate_type | ./hardware_type', HardwareType)
+            lolocation_elems = Element.get_elements(node_elem, './default:location | ./location', Location)
             if len(location_elems) > 0:
                 node['location'] = location_elems[0]
-            node['interfaces'] = Element.get(node_elem, './default:interface | ./interface', Interface)
+            node['interfaces'] = Element.get_elements(node_elem, './default:interface | ./interface', Interface)
             node['services'] = PGv2Services.get_services(node_elem)
             node['slivers'] = PGv2SliverType.get_slivers(node_elem)    
-            available = Element.get(node_element, './default:available | ./available', fields=['now'])
+            available = Element.get_elements(node_element, './default:available | ./available', fields=['now'])
             if len(available) > 0 and 'name' in available[0].attrib:
                 if available[0].attrib.get('now', '').lower() == 'true': 
                     node['boot_state'] = 'boot'
