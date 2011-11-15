@@ -224,7 +224,6 @@ def main():
         elif type == 'node':
             login_base = get_leaf(get_authority(record_hrn))
             nodename = Xrn.unescape(get_leaf(record_hrn))
-            print "type: node :  nodename %s" %(nodename)
             for node in nodes_dict:
                 if node['hostname'] == nodename :
                     found = True
