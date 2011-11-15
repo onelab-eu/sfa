@@ -101,7 +101,7 @@ class SliceManager:
             stat_tag = stats_tag.add_element("aggregate", name=str(aggname), elapsed=str(elapsed), status=str(status))
 
             if exc_info:
-                exc_tag = stat_tag.add_elememt("exc_info", name=str(exc_info[1]))
+                exc_tag = stat_tag.add_element("exc_info", name=str(exc_info[1]))
 
                 # formats the traceback as one big text blob
                 #exc_tag.text = "\n".join(traceback.format_exception(exc_info[0], exc_info[1], exc_info[2]))
