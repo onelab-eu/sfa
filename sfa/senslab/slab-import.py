@@ -153,8 +153,7 @@ def main():
             #(site_hrn, 'authority') not in existing_records:
              #print "SITE HRN UNKNOWN" , site, site_hrn
              #site_hrn = SenslabImporter.import_site(interface_hrn, site)
-	     
-    print "\r\n \r\n ===========IMPORT NODE_RECORDS ==========\r\n site %s \r\n \t nodes_dict %s" %(site,nodes_dict)	         
+   
         # import node records
     	#for node_id in site['node_ids']:
 		#for[node['node_id'] for node in nodes_dict]:
