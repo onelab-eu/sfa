@@ -141,8 +141,7 @@ def main():
     #print "\r\n NODES8DICT ",nodes_dict
     
     ldap_person_list = Driver.GetPersons()
-    print "\r\n PERSONS_LIST ",ldap_person_list
-
+    
    
     
     #slices_list = SenslabUsers.GetSlices()
@@ -196,7 +195,9 @@ def main():
 					
     # remove stale records    
     system_records = [interface_hrn, root_auth, interface_hrn + '.slicemanager']
+
     for (record_hrn, type) in existing_records.keys():
+        #print " \r\n EXISTING RECORDS " , (record_hrn, type)
         if record_hrn in system_records:
             continue
         
@@ -218,10 +219,10 @@ def main():
             break
                 
         elif type == 'user':
-            for person in persons:
+            for person in ldap_person_list:
                 if person['hrn'] == record_hrn:
                     found = True
-                break
+                    break
             
         elif type == 'node':
             login_base = get_leaf(get_authority(record_hrn))
@@ -237,7 +238,7 @@ def main():
         
         if not found:
             record_object = existing_records[(record_hrn, type)]
-            print "\t\t NOT FOUND ! "
+            print "\t\t  NOT FOUND ! ", record_hrn
             delete_record(record_hrn, type) 
     
 if __name__ == "__main__":

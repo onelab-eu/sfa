@@ -82,7 +82,7 @@ class LDAPapi :
 				'serial': 'none',
 				'authority': self.authname,
 				'peer_authority': '',
-				'pointer' : '',
+				'pointer' : -1,
 				'hrn': hrn,
 				'date_created' : 'none',
 				'last_updated': 'none'
