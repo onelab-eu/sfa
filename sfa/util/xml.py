@@ -217,7 +217,6 @@ class XML:
             node = self.root
         node.remove_attribute(name) 
         
-
     def add_element(self, name, **kwds):
         """
         Wrapper around etree.SubElement(). Adds an element to 
@@ -267,6 +266,12 @@ class XML:
         else:
             attrs['child_nodes'] = list(elem)
         return attrs
+
+    def append(self, elem):
+        return self.root.append(elem)
+
+    def iterchildren(self):
+        return self.root.iterchildren()    
 
     def merge(self, in_xml):
         pass
