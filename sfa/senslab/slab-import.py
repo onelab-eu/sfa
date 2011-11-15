@@ -49,6 +49,7 @@ def create_top_level_auth_records(hrn):
     if not auth_record:
         auth_record = SfaRecord(hrn=hrn, gid=auth_info.get_gid_object(), type="authority", pointer=-1)
         auth_record['authority'] = get_authority(auth_record['hrn'])
+        print sys.stderr, " \r\n \t slab-import : auth record %s inserted" %(auth_record['hrn'])
         table.insert(auth_record)
         print>>sys.stderr, "\r\n ========= \t\t SenslabImport NO AUTH RECORD \r\n" ,auth_record['authority']
         
@@ -67,6 +68,7 @@ def import_node(hrn, node):
     node_record['authority'] = get_authority(node_record['hrn'])
     existing_records = table.find({'hrn': hrn, 'type': 'node', 'pointer': node['node_id']})
     if not existing_records:
+        print sys.stderr, " \r\n \t slab-import : node record %s inserted" %(node_record['hrn'])
         table.insert(node_record)
     else:
         existing_record = existing_records[0]
@@ -77,6 +79,7 @@ def import_node(hrn, node):
 def import_person(person):       
     existing_records = table.find({'hrn': person['hrn'], 'type': 'user'})
     if not existing_records:
+        print sys.stderr, " \r\n \t slab-import : person record %s inserted" %(person['hrn'])
         table.insert(person)
     else:
         existing_record = existing_records[0]
@@ -89,6 +92,7 @@ def delete_record( hrn, type):
     # delete the record
     record_list = table.find({'type': type, 'hrn': hrn})
     for record in record_list:
+        print sys.stderr, " \r\n \t slab-import : record %s deleted" %(record['hrn'])
         table.remove(record)
                 
 def hostname_to_hrn(root_auth,hostname):
@@ -142,8 +146,7 @@ def main():
     
     ldap_person_list = Driver.GetPersons()
     
-   
-    
+
     #slices_list = SenslabUsers.GetSlices()
     #print "\r\n SLICES_LIST ",slices_list
     
@@ -164,10 +167,6 @@ def main():
              #site_hrn = SenslabImporter.import_site(interface_hrn, site)
    
         # import node records
-    	#for node_id in site['node_ids']:
-		#for[node['node_id'] for node in nodes_dict]:
-			#print '\r\n \t **NODE_ID %s node %s '%( node_id, node)		
- 			#continue 
     for node in nodes_dict:
         hrn =  hostname_to_hrn( root_auth, node['hostname'])
         if hrn not in existing_hrns or \
@@ -197,7 +196,6 @@ def main():
     system_records = [interface_hrn, root_auth, interface_hrn + '.slicemanager']
 
     for (record_hrn, type) in existing_records.keys():
-        #print " \r\n EXISTING RECORDS " , (record_hrn, type)
         if record_hrn in system_records:
             continue
         
