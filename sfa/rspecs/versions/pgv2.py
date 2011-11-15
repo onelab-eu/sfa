@@ -175,7 +175,7 @@ class PGv2(BaseVersion):
             in_rspec = in_rspec.toxml()
         
         rspec = RSpec(in_rspec)
-        for child in rspec.root.iterchildren():
+        for child in rspec.xml.iterchildren():
             self.xml.root.append(child)
 
     def cleanup(self):
