@@ -1,9 +1,12 @@
 #! /usr/bin/env python
 
 import sys
+
+from sfa.util.sfalogging import logger
 from sfa.client.sfi_commands import Commands
 from sfa.rspecs.rspec import RSpec
 
+logger.enable_console()
 command = Commands(usage="%prog [options] node1 node2...",
                    description="Delete slivers from the RSpec. " +
                    "This command reads in an RSpec and outputs a modified " +
@@ -24,7 +27,7 @@ if command.opts.infile:
         rspec.version.remove_slivers(slivers)
         print rspec.toxml()
     except:
-        print >> sys.stderr, "FAILED: %s" % nodes 
+        logger.log_exc("sfiDeleteSliver FAILED with nodes %s" % nodes)
 
     
 
