@@ -77,6 +77,11 @@ class XmlNode:
     def remove(element):
         self.node.remove(element)
 
+    def get(self, key, *args):
+        return self.node.get(key, *args)
+
+    def items(self): return self.node.items()
+
     def set(self, key, value):
         self.node.set(key, value)
     

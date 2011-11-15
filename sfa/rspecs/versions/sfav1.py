@@ -1,7 +1,10 @@
 from copy import deepcopy
 from lxml import etree
+
+from sfa.util.sfalogging import logger
 from sfa.util.xrn import hrn_to_urn, urn_to_hrn
 from sfa.util.plxrn import PlXrn
+
 from sfa.rspecs.baseversion import BaseVersion
 from sfa.rspecs.elements.element import Element
 from sfa.rspecs.elements.versions.pgv2Link import PGv2Link
@@ -26,12 +29,29 @@ class SFAv1(BaseVersion):
     def get_nodes(self, network=None):
         return SFAv1Node.get_nodes(self.xml)
 
+    def get_node_element(self,hostname,network):
+        if network is not None:
+            xpath="//network[@name='%s']/node[@component_id[contains(., '%s')]]" % (network,hostname)
+        else: xpath="//node[@component_id[contains(., '%s')]]" % (hostname)
+        nodes=self.xml.xpath(xpath)
+        print 'found %d nodes'%len(nodes)
+        if nodes:       return nodes[0]
+        else:           return None
+
     def get_nodes_with_slivers(self, network = None):
-        return SFAv1Node.get_nodes_with_slivers(self.xml)
+        return SFAv1Node.get_nodes_with_slivers_thierry(self.xml)
+
+    # xxx thierry - this seems more like it
+    # warning, the same code is duplicated in xml.py and pgv2.py..
+    def attributes_list_thierry (self, elem):
+        opts=[]
+        for (k,v) in elem.items():
+            opts.append ( (k,v.strip(),) )
+        return opts
 
     def attributes_list(self, elem):
         # convert a list of attribute tags into list of tuples
-        # (tagnme, text_value)
+        # (tagname, text_value)
         opts = []
         if elem is not None:
             for e in elem:
@@ -43,27 +63,27 @@ class SFAv1(BaseVersion):
             defaults = self.xml.xpath("//network[@name='%s']/sliver_defaults" % network)
         else:
             defaults = self.xml.xpath("//sliver_defaults")
-        if isinstance(defaults, list) and defaults:
-            defaults = defaults[0]
-        return self.attributes_list(defaults)
+        if not defaults: return []
+        return self.attributes_list_thierry(defaults)
 
     def get_sliver_attributes(self, hostname, network=None):
-        attributes = []
         node = self.get_node_element(hostname, network)
         #sliver = node.find("sliver")
         slivers = node.xpath('./sliver')
-        if isinstance(slivers, list) and slivers:
-            attributes = self.attributes_list(slivers[0])
-        return attributes
+        if not slivers: return []
+        return self.attributes_list_thierry(slivers[0])
 
     def get_slice_attributes(self, network=None):
         slice_attributes = []
         nodes_with_slivers = self.get_nodes_with_slivers(network)
         for default_attribute in self.get_default_sliver_attributes(network):
-            attribute = {'name': str(default_attribute[0]), 'value': str(default_attribute[1]), 'node_id': None}
+            attribute = {'name': str(default_attribute[0]), 
+                         'value': str(default_attribute[1]), 
+                         'node_id': None}
             slice_attributes.append(attribute)
         for node in nodes_with_slivers:
-            sliver_attributes = self.get_sliver_attributes(node, network)
+            nodename=node.get('component_name')
+            sliver_attributes = self.get_sliver_attributes(nodename, network)
             for sliver_attribute in sliver_attributes:
                 attribute = {'name': str(sliver_attribute[0]), 'value': str(sliver_attribute[1]), 'node_id': node}
                 slice_attributes.append(attribute)
@@ -117,17 +137,20 @@ class SFAv1(BaseVersion):
             network_tag.set('slice', urn_to_hrn(sliver_urn)[0])
         
         all_nodes = self.get_nodes()
+        all_nodenames = [ n['component_name'] for n in all_nodes ]
         nodes_with_slivers = [sliver['hostname'] for sliver in slivers]
-        nodes_without_slivers = set(all_nodes).difference(nodes_with_slivers)
+        nodes_without_slivers = set(all_nodenames).difference(set(nodes_with_slivers))
         
         # add slivers
         for sliver in slivers:
             node_elem = self.get_node_element(sliver['hostname'], network)
             if not node_elem: continue
-            sliver_elem = etree.SubElement(node_elem, 'sliver')
+#thierry    sliver_elem = etree.SubElement(node_elem, 'sliver')
+            sliver_elem = node_elem.add_element('sliver')
             if 'tags' in sliver:
                 for tag in sliver['tags']:
-                    etree.SubElement(sliver_elem, tag['tagname']).text = value=tag['value']
+#thierry            etree.SubElement(sliver_elem, tag['tagname']).text = value=tag['value']
+                    sliver_elem.add_element (tag['tagname'],{'text':tag['value']})
             
         # remove all nodes without slivers
         if not append:
