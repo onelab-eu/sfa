@@ -16,12 +16,13 @@ class Element(dict):
         """
         Search the specifed xml node for elements that match the 
         specified xpath query. 
-        Returns a list of objectes instanced by the specfied element_class.
+        Returns a list of objects instanced by the specified element_class.
         """
         if not element_class:
             element_class = Element
-        if not fields and hasattr(element_class, fields):
-           fields = element_class.fields
+# xxx this obviously is wrong...
+#        if not fields and hasattr(element_class, fields):
+#           fields = element_class.fields
         elems = xml.xpath(xpath)
         objs = []
         for elem in elems:
