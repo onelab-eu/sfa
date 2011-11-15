@@ -12,7 +12,7 @@ from sfa.util.plxrn import slicename_to_hrn, hostname_to_hrn, hrn_to_pl_slicenam
 
 ## thierry : please avoid wildcard imports :)
 from sfa.senslab.OARrestapi import *
-from sfa.senslab.LDAapi import *
+from sfa.senslab.LDAPapi import *
 
 def list_to_dict(recs, key):
     """
