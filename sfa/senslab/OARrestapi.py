@@ -92,7 +92,6 @@ class OARGETParser:
 		return node_id
 	
 	def AddNodeNetworkAddr(self,tuplelist,value):
-		#tuplelist.append(('hostname',str(value)))
 		tuplelist.append(('hostname',str(value)))
 			
 		
@@ -165,7 +164,7 @@ class OARGETParser:
 		if self.version_json_dict['apilib_version'] != "0.2.10" :
 			self.raw_json = self.raw_json['items']
 		self.ParseNodes()
-		#self.ParseSites()
+
 		
 		
 	#Parse nodes properties from OAR
@@ -277,19 +276,7 @@ class OARapi:
 		self.server = OARrestapi()
 		self.parser = OARGETParser(self.server)
 
-	#def GetNodes(self,node_filter= None, return_fields=None):
-		##print>>sys.stderr, " \r\n GetNodes node_filter %s return_fields %s" %(node_filter,return_fields) 
-		#self.parser.SendRequest("GET_resources_full")
-		#node_dict = self.parser.GetNodesFromOARParse()
-		#return_node_list = []
-		##print>>sys.stderr, " \r\n GetNodes   node_dict %s" %(node_dict) 
-		#if not (node_filter or return_fields):
-			#return_node_list = node_dict.values()
-			#return return_node_list
-
-		#return_node_list= parse_filter(node_dict.values(),node_filter ,'node', return_fields)
-		#return return_node_list
-
+	#GetNodes moved to slabdriver.py
 		
 	def GetSites(self, site_filter= None, return_fields=None):
 		print>>sys.stderr, " \r\n GetSites+++++++++++++++++" 
@@ -308,10 +295,7 @@ class OARapi:
 			#print>>sys.stderr, " \r\n  GetSites sl %s" %(sl)
 			if sl['site_id'] == site['site_id']:
 				site['slice_ids'].append(sl['slice_id'])
-		#print>>sys.stderr, " \r\n  GetSites -site['site_id'] %s --slice_list %s" %(site['site_id'],slice_list ) 
 		
-		
-		#print>>sys.stderr, " \r\n  GetSites -site['site_id'] %s --admins_dict %s---site %s" %(site['site_id'],admins_dict,site ) 		
 		if not (site_filter or return_fields):
 			return_site_list = site_dict.values()
 			return return_site_list

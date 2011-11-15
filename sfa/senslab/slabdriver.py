@@ -11,8 +11,9 @@ from sfa.util.plxrn import slicename_to_hrn, hostname_to_hrn, hrn_to_pl_slicenam
 # SlabDriver should be really only about talking to the senslab testbed
 
 ## thierry : please avoid wildcard imports :)
-from sfa.senslab.OARrestapi import *
-from sfa.senslab.LDAPapi import *
+from sfa.senslab.OARrestapi import OARapi
+from sfa.senslab.LDAPapi import LDAPapi
+from sfa.senslab.SenslabImportUsers import SenslabImportUsers
 
 def list_to_dict(recs, key):
     """
@@ -44,6 +45,7 @@ class SlabDriver ():
 	#self.users = SenslabImportUsers()
 	self.oar = OARapi()
 	self.ldap = LDAPapi()
+        self.users = SenslabImportUsers()
         self.time_format = "%Y-%m-%d %H:%M:%S"
         #self.logger=sfa_logger()
       
@@ -59,7 +61,7 @@ class SlabDriver ():
         self.oar.parser.SendRequest("GET_resources_full")
         node_dict = self.oar.parser.GetNodesFromOARParse()
         return_node_list = []
-        print>>sys.stderr, " \r\n GetNodes   node_dict %s" %(node_dict) 
+
         if not (node_filter or return_fields):
                 return_node_list = node_dict.values()
                 return return_node_list
@@ -161,7 +163,7 @@ class SlabDriver ():
             slices = list_to_dict(slice_list, 'slice_id')
         if person_ids:
             #print>>sys.stderr, " \r\n \t\t \t fill_record_pl_info BEFORE GetPersons  person_ids: %s" %(person_ids)
-            person_list = self.users.GetPersons( person_ids)
+            person_list = self.ldap.GetPersons( person_ids)
             persons = list_to_dict(person_list, 'person_id')
 	    #print>>sys.stderr, "\r\n  fill_record_pl_info persons %s \r\n \t\t person_ids %s " %(persons, person_ids) 
             for person in persons:
@@ -230,7 +232,7 @@ class SlabDriver ():
             sites = list_to_dict(site_list, 'site_id')
 	    #print>>sys.stderr, " \r\n \r\n \t\t ____ site_list %s \r\n \t\t____ sites %s " % (site_list,sites)
         if person_ids:
-            person_list = self.users.GetPersons( person_ids, ['person_id', 'email'])
+            person_list = self.ldap.GetPersons( person_ids, ['person_id', 'email'])
 	    #print>>sys.stderr, " \r\n \r\n   \t\t____ person_lists %s " %(person_list) 
             persons = list_to_dict(person_list, 'person_id')
         if slice_ids:
@@ -304,7 +306,7 @@ class SlabDriver ():
         site_pis = {}
         if site_ids:
             pi_filter = {'|roles': ['pi'], '|site_ids': site_ids} 
-            pi_list = SenslabUsers.GetPersons( pi_filter, ['person_id', 'site_ids'])
+            pi_list = self.ldap.GetPersons( pi_filter, ['person_id', 'site_ids'])
 	    #print>>sys.stderr, "\r\n \r\n _fill_record_sfa_info ___ GetPersons ['person_id', 'site_ids'] pi_ilist %s" %(pi_list)
 
             for pi in pi_list:
@@ -336,7 +338,7 @@ class SlabDriver ():
 
         # get the pl records
         pl_person_list, pl_persons = [], {}
-        pl_person_list = SenslabUsers.GetPersons(person_ids, ['person_id', 'roles'])
+        pl_person_list = self.ldap.GetPersons(person_ids, ['person_id', 'roles'])
         pl_persons = list_to_dict(pl_person_list, 'person_id')
         #print>>sys.stderr, "\r\n \r\n _fill_record_sfa_info ___  _list %s \r\n \t\t SenslabUsers.GetPersons ['person_id', 'roles'] pl_persons %s \r\n records %s" %(pl_person_list, pl_persons,records) 
         # fill sfa info
