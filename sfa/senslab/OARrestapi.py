@@ -154,7 +154,7 @@ class OARGETParser:
 		#resources are listed inside the 'items' list from the json
 		self.raw_json = self.raw_json['items']
 		self.ParseNodes()
-		self.ParseSites()
+		#self.ParseSites()
 		
 		
 		
@@ -165,7 +165,7 @@ class OARGETParser:
 		if self.version_json_dict['apilib_version'] != "0.2.10" :
 			self.raw_json = self.raw_json['items']
 		self.ParseNodes()
-		self.ParseSites()
+		#self.ParseSites()
 		
 		
 	#Parse nodes properties from OAR
