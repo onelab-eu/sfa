@@ -5,14 +5,24 @@ class PGv2SliverType:
 
     @staticmethod
     def add_slivers(xml, sliver):
+        if not slivers:
+            return 
         if not isinstance(slivers, list):
             slivers = [slivers]
         for sliver in slivers: 
             sliver_elem = Element.add(xml, 'sliver_type', sliver, ['type', 'client_id'])
-            for tag in sliver.get('tags', []):
-                if tag['name'] == 'initscript':
-                    sliver_elem.add_element('{%s}initscript' % xml.namespaces['planetlab'], name=tag['value'])
-                    
+            PGv2Sliver.add_sliver_attributes(sliver_elem, sliver.get('pl_tags', []))
+    
+    @staticmethod
+    def add_sliver_attributes(xml, attributes):
+        for attribute in attributes:
+            if attribute['name'] == 'initscript':
+                xml.add_element('{%s}initscript' % xml.namespaces['planetlab'], name=attribute['value'])
+            elif tag['tagname'] == 'flack_info':
+                attrib_elem = xml.add_element('{%s}info' % self.namespaces['flack'])
+                attrib_dict = eval(tag['value'])
+                for (key, value) in attrib_dict.items():
+                    attrib_elem.set(key, value)                
     @staticmethod
     def get_slivers(xml, filter={}):
         xpath = './default:sliver_type | ./sliver_type'
@@ -23,4 +33,8 @@ class PGv2SliverType:
             if 'component_id' in xml.attrib:     
                 sliver['component_id'] = xml.attrib['component_id']
             slivers.append(sliver)
-        return slivers            
+        return slivers
+
+    @staticmethod
+    def get_sliver_attributes(xml, filter={}):
+        return []             
