@@ -34,12 +34,15 @@ def parse_filter(list_to_filter, param_filter, type_of_list, return_fields=None)
 	 'site':{'str':'login_base','int':'site_id'},\
 	  'node':{'str':'hostname','int':'node_id'},\
 	  'slice':{'str':'name','int':'slice_id'}}
-	 
+        	
+	print>>sys.stderr, " \r\n ___ parse_filter param_filter %s type %s  return fields %s " %(param_filter,type_of_list, return_fields)  
+	if  param_filter is None and return_fields is None:
+            return list_to_filter
+        
 	if type_of_list not in list_type:
 		print>>sys.stderr, " \r\n type_of_list Error  parse_filter %s " %(type_of_list)
 		return []
-	
-	#print>>sys.stderr, " \r\n ____FIRST ENTRY parse_filter param_filter %s type %s  list %s " %(param_filter, type(param_filter), list_to_filter)
+
 	return_filtered_list= []
 	
 	for item in list_to_filter:

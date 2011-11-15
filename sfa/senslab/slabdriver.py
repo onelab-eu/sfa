@@ -56,9 +56,7 @@ class SlabDriver ():
     def GetPersons(self, person_filter=None, return_fields=None):
 
         person_list = self.ldap.ldapFind({'authority': self.root_auth })
-        print>>sys.stderr, " \r\n \t\t SLABDRIVER.PY : GetPersons ldapfind rslt \r\n \t %s "%(person_list)
         return_person_list = parse_filter(person_list,person_filter ,'persons', return_fields)
-        print>>sys.stderr, " \r\n \t\t SLABDRIVER.PY : GetPersons parse_filter \r\n \t %s "%(return_person_list)      
         return return_person_list
     
     def GetNodes(self,node_filter= None, return_fields=None):
