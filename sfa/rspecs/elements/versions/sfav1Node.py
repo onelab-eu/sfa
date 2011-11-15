@@ -116,7 +116,8 @@ class SFAv1Node:
             node['interfaces'] = Element.get_elements(node_elem, './default:interface | ./interface', Interface)
             node['services'] = PGv2Services.get_services(node_elem) 
             node['slivers'] = SFAv1Sliver.get_slivers(node_elem)
-            node['tags'] =  SFAv1PLTag.get_pl_tags(node_elem, ignore=Node.fields.keys())
+#thierry    node['tags'] =  SFAv1PLTag.get_pl_tags(node_elem, ignore=Node.fields.keys())
+            node['tags'] =  SFAv1PLTag.get_pl_tags(node_elem, ignore=Node.fields)
             nodes.append(node)
         return nodes            
             
