@@ -171,7 +171,6 @@ def main():
         hrn =  hostname_to_hrn( root_auth, node['hostname'])
         if hrn not in existing_hrns or \
         (hrn, 'node') not in existing_records:
-            print "\t\t NODE HRN NOT in existing record, importing it" ,hrn
             import_node(hrn, node)
 
    # import persons
