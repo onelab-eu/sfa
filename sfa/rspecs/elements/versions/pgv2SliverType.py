@@ -4,14 +4,14 @@ from sfa.rspecs.elements.sliver import Sliver
 class PGv2SliverType:
 
     @staticmethod
-    def add_slivers(xml, sliver):
+    def add_slivers(xml, slivers):
         if not slivers:
             return 
         if not isinstance(slivers, list):
             slivers = [slivers]
         for sliver in slivers: 
-            sliver_elem = Element.add(xml, 'sliver_type', sliver, ['type', 'client_id'])
-            PGv2Sliver.add_sliver_attributes(sliver_elem, sliver.get('pl_tags', []))
+            sliver_elem = Element.add_elements(xml, 'sliver_type', sliver, ['type', 'client_id'])
+            PGv2SliverType.add_sliver_attributes(sliver_elem, sliver.get('pl_tags', []))
     
     @staticmethod
     def add_sliver_attributes(xml, attributes):
