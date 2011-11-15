@@ -10,7 +10,7 @@ from sfa.senslab.OARrestapi import OARapi
 from sfa.senslab.LDAPapi import LDAPapi
 from sfa.senslab.slabdriver import SlabDriver
 from sfa.util.config import Config
-from sfa.util.xrn import hrn_to_urn, get_authority,Xrn
+from sfa.util.xrn import hrn_to_urn, get_authority,Xrn,get_leaf
 from sfa.util.table import SfaTable
 from sfa.util.record import SfaRecord
 from sfa.trust.hierarchy import Hierarchy
