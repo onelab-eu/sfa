@@ -16,7 +16,7 @@ from sfa.util.xrn import hrn_to_urn, get_authority,Xrn,get_leaf
 from sfa.util.table import SfaTable
 from sfa.util.record import SfaRecord
 from sfa.trust.hierarchy import Hierarchy
-from sfa.trust.certificate import Keypair
+from sfa.trust.certificate import Keypair,convert_public_key
 from sfa.trust.gid import create_uuid
 
 
@@ -80,7 +80,7 @@ def import_node(hrn, node):
         table.update(node_record)
 
 # person is already a sfa record 
-def import_person(person):       
+def import_person(authname,person):       
     existing_records = table.find({'hrn': person['hrn'], 'type': 'user'})
     extime = datetime.datetime.utcnow()
     person['date_created'] = int(time.mktime(extime.timetuple()))
@@ -89,7 +89,7 @@ def import_person(person):
         uuid=create_uuid() 
         RSA_KEY_STRING=person['pkey']
         pkey=convert_public_key(RSA_KEY_STRING)
-	person['gid']=self.senslabauth.create_gid("urn:publicid:IDN+"+self.authname+"+user+"+ldapentry[1]['uid'][0], uuid, pkey, CA=False)
+	person['gid']=AuthHierarchy.create_gid("urn:publicid:IDN+"+authname+"+user+"+person['uid'], uuid, pkey, CA=False).save_to_string()
         table.insert(person)
     else:
         existing_record = existing_records[0]
@@ -209,7 +209,7 @@ def main():
     for person in ldap_person_list:
         if person['hrn'] not in existing_hrns or \
             (person['hrn'], 'user') not in existing_records :
-            import_person(person)
+            import_person(root_auth,person)
             import_slice(person)
 
 # import slices
