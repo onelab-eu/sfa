@@ -6,6 +6,8 @@
 #
 ###########################################################################
 import sys
+import datetime
+import time
 from sfa.senslab.OARrestapi import OARapi
 from sfa.senslab.LDAPapi import LDAPapi
 from sfa.senslab.slabdriver import SlabDriver
@@ -66,6 +68,8 @@ def import_node(hrn, node):
     node_gid = AuthHierarchy.create_gid(urn, create_uuid(), pkey)
     node_record = SfaRecord(hrn=hrn, gid=node_gid, type="node", pointer=node['node_id'])
     node_record['authority'] = get_authority(node_record['hrn'])
+    extime = datetime.datetime.utcnow()
+    node_record['date_created'] = int(time.mktime(extime.timetuple()))
     existing_records = table.find({'hrn': hrn, 'type': 'node', 'pointer': node['node_id']})
     if not existing_records:
         print>>sys.stderr, " \r\n \t slab-import : node record %s inserted" %(node_record['hrn'])
@@ -78,6 +82,8 @@ def import_node(hrn, node):
 # person is already a sfa record 
 def import_person(person):       
     existing_records = table.find({'hrn': person['hrn'], 'type': 'user'})
+    extime = datetime.datetime.utcnow()
+    person['date_created'] = int(time.mktime(extime.timetuple()))
     if not existing_records:
         print>>sys.stderr, " \r\n \t slab-import : person record %s inserted" %(person['hrn'])
         table.insert(person)
@@ -94,6 +100,10 @@ def import_slice(person):
     gid = AuthHierarchy.create_gid(urn, create_uuid(), pkey)
     slice_record= SfaRecord(hrn=hrn, gid=gid, type="slice", pointer=-1)
     slice_record['authority'] = get_authority(slice_record['hrn'])
+   
+    extime = datetime.datetime.utcnow()
+    slice_record['date_created'] = int(time.mktime(extime.timetuple()))
+				
     print>>sys.stderr, " \r\n \t slab-import : slice record %s " %(slice_record['hrn']) 
     existing_records = table.find({'hrn': slice_record['hrn'], 'type': 'slice'})
     if not existing_records:
