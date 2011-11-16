@@ -85,27 +85,19 @@ def import_person(person):
         existing_record = existing_records[0]
         person['record_id'] = existing_record['record_id']
         table.update(person)
-              
-def init_slice_record(person):
-    slices_list = []
-    dflt_slice = { 'authority': None, 'gid': None,  'record_id':None ,'peer_authority': None, 'type':'slice','pointer':-1, 'date_created':None, 'last_updated': None}
-  
-    def_slice = {}
-    def_slice['hrn'] = person['hrn']+'_slice'
-    def_slice.update(dflt_slice)
-    return  def_slice
         
-def import_slice(slice_record):
-
+def import_slice(person):
+    slice_record = { 'peer_authority': None,'type':'slice','pointer':-1, 'date_created': None, 'last_updated': None }
+    slice_record['hrn'] = person['hrn']+'_slice'
     pkey = Keypair(create=True)
-    urn = hrn_to_urn(slice['hrn'], 'slice')
+    urn = hrn_to_urn(slice_record['hrn'], 'slice')
     slice_record['gid'] = AuthHierarchy.create_gid(urn, create_uuid(), pkey)
     
-    slice_record['authority'] = get_authority(slice['hrn'])
+    slice_record['authority'] = get_authority(slice_record['hrn'])
     
-    existing_records = table.find({'hrn': hrn, 'type': 'slice'})
+    existing_records = table.find({'hrn': slice_record['hrn'], 'type': 'slice'})
     if not existing_records:
-         print>>sys.stderr, " \r\n \t slab-import : slice record %s inserted" %(slice_record['hrn'])
+        print>>sys.stderr, " \r\n \t slab-import : slice record %s inserted" %(slice_record['hrn'])
         table.insert(slice_record)
     else:
         print>>sys.stderr, " \r\n \t slab-import : slice record %s updated" %(slice_record['hrn'])
@@ -202,11 +194,8 @@ def main():
     for person in ldap_person_list:
         if person['hrn'] not in existing_hrns or \
             (person['hrn'], 'user') not in existing_records :
-            import_person( person)
-            init_slice_record(person)
-     	
-    
-    
+            import_slice(person)
+
 # import slices
         #for slice_id in site['slice_ids']:
 		#print >>sys.stderr, "\r\n\r\n \t ^^^^^^^\\\\\\\\\\\\\\\^^^^^^ slice_id  %s  " %(slice_id)    		
