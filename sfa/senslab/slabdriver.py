@@ -408,13 +408,13 @@ class SlabDriver ():
         Given a SFA record, fill in the PLC specific and SFA specific
         fields in the record. 
         """
-	#print >>sys.stderr, "\r\n \t\t fill_record_info %s"%(records)
+	
         if not isinstance(records, list):
             records = [records]
-	#print >>sys.stderr, "\r\n \t\t BEFORE fill_record_pl_info %s" %(records)	
-        self.fill_record_pl_info(records)
-	#print >>sys.stderr, "\r\n \t\t after fill_record_pl_info %s" %(records)	
-        self.fill_record_sfa_info(records)
+	print >>sys.stderr, "\r\n \t\t BEFORE fill_record_pl_info %s" %(records)	
+        #self.fill_record_pl_info(records)
+	##print >>sys.stderr, "\r\n \t\t after fill_record_pl_info %s" %(records)	
+        #self.fill_record_sfa_info(records)
 	#print >>sys.stderr, "\r\n \t\t after fill_record_sfa_info"
 	
     def update_membership_list(self, oldRecord, record, listName, addFunc, delFunc):
