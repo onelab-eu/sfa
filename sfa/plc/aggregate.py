@@ -195,7 +195,7 @@ class Aggregate:
             for if_id in node['interface_ids']:
                 interface = Interface(interfaces[if_id]) 
                 interface['ipv4'] = interface['ipv4']
-                interface['component_id'] = PlXrn(auth=self.api.hrn, interface='node%s:eth%s' % (node['node_id'], if_count))
+                interface['component_id'] = PlXrn(auth=self.api.hrn, interface='node%s:eth%s' % (node['node_id'], if_count)).get_urn()
                 rspec_node['interfaces'].append(interface)
                 if_count+=1
 

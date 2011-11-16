@@ -2,7 +2,6 @@ from sfa.util.sfalogging import logger
 from sfa.util.xml import XpathFilter
 from sfa.util.plxrn import PlXrn, xrn_to_hostname
 from sfa.util.xrn import Xrn
-
 from sfa.rspecs.elements.element import Element
 from sfa.rspecs.elements.node import Node
 from sfa.rspecs.elements.sliver import Sliver
@@ -54,7 +53,7 @@ class SFAv1Node:
             location_elems = Element.add_elements(node_elem, 'location',
                                                   node.get('location', []), Location.fields)
             interface_elems = Element.add_elements(node_elem, 'interface', 
-                                                   node.get('interfaces', []), Interface.fields)
+                                                   node.get('interfaces', []), ['component_id', 'client_id', 'ipv4'])
             
             #if 'bw_unallocated' in node and node['bw_unallocated']:
             #    bw_unallocated = etree.SubElement(node_elem, 'bw_unallocated', units='kbps').text = str(int(node['bw_unallocated'])/1000)

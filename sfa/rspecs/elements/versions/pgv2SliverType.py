@@ -29,7 +29,7 @@ class PGv2SliverType:
         sliver_elems = xml.xpath(xpath)
         slivers = []
         for sliver_elem in sliver_elems:
-            sliver = Sliver(sliver_elem.attrib,sliver_elm)
+            sliver = Sliver(sliver_elem.attrib,sliver_elem)
             if 'component_id' in xml.attrib:     
                 sliver['component_id'] = xml.attrib['component_id']
             slivers.append(sliver)

@@ -64,7 +64,7 @@ class XmlNode:
     def getparent(self):
         return XmlNode(self.node.getparent(), self.namespaces)
 
-    def remove_elements(name):
+    def remove_elements(self, name):
         """
         Removes all occurences of an element from the tree. Start at
         specified root_node if specified, otherwise start at tree's root.
@@ -77,8 +77,11 @@ class XmlNode:
             parent = element.getparent()
             parent.remove(element)
 
-    def remove(element):
-        self.node.remove(element)
+    def remove(self, element):
+        if isinstance(element, XmlNode):
+            self.node.remove(element.node)
+        else:
+            self.node.remove(element)
 
     def get(self, key, *args):
         return self.node.get(key, *args)

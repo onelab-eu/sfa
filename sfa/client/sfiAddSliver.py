@@ -36,9 +36,8 @@ try:
     version_num = ad_rspec.version.version
     request_version = version_manager._get_version(type, version_num, 'request')    
     request_rspec = RSpec(version=request_version)
-    slivers = [{'hostname': node} for node in nodes]
     request_rspec.version.merge(ad_rspec)
-    request_rspec.version.add_slivers(slivers)
+    request_rspec.version.add_slivers(nodes)
 except:
     logger.log_exc("sfiAddSliver failed with nodes %s" % nodes)
     sys.exit(1)

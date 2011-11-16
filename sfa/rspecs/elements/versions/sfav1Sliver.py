@@ -39,4 +39,4 @@ class SFAv1Sliver:
 
     @staticmethod
     def get_sliver_attributes(xml, filter={}):
-        return SFAv1PLTag.get_pl_tags(xml, ignore=Sliver.fields.keys())     
+        return SFAv1PLTag.get_pl_tags(xml, ignore=Sliver.fields)     

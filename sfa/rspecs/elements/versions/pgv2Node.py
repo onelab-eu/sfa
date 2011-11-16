@@ -1,9 +1,9 @@
 from sfa.util.plxrn import PlXrn, xrn_to_hostname
 from sfa.util.xrn import Xrn
+from sfa.util.xml import XpathFilter
 from sfa.rspecs.elements.element import Element
 from sfa.rspecs.elements.node import Node
 from sfa.rspecs.elements.sliver import Sliver
-from sfa.rspecs.elements.network import Network
 from sfa.rspecs.elements.location import Location
 from sfa.rspecs.elements.hardware_type import HardwareType
 from sfa.rspecs.elements.disk_image import DiskImage
@@ -31,7 +31,7 @@ class PGv2Node:
             # set location       
             location_elems = Element.add_elements(node_elem, 'location', node.get('location', []), Location.fields)
             # set interfaces
-            interface_elems = Element.add_elements(node_elem, 'interface', node.get('interfaces', []), Interface.fields)
+            interface_elems = Element.add_elements(node_elem, 'interface', node.get('interfaces', []), ['component_id', 'client_id', 'ipv4'])
             # set available element
             if node.get('boot_state', '').lower() == 'boot':
                 available_elem = node_elem.add_element('available', now='True')
@@ -59,13 +59,13 @@ class PGv2Node:
         return PGv2Node.get_node_objs(node_elems)
 
     @staticmethod
-    def get_nodes_with_sliver(xml, filter={}):
+    def get_nodes_with_slivers(xml, filter={}):
         xpath = '//node/sliver_type | //default:node/default:sliver_type' 
         node_elems = xml.xpath(xpath)        
         return PGv2Node.get_node_objs(node_elems)
 
     @staticmethod
-    def get_nodes_objs(node_elems):
+    def get_node_objs(node_elems):
         nodes = []
         for node_elem in node_elems:
             node = Node(node_elem.attrib, node_elem)
@@ -74,15 +74,15 @@ class PGv2Node:
                 node['authority_id'] = Xrn(node_elem.attrib['component_id']).get_authority_urn()
 
             node['hardware_types'] = Element.get_elements(node_elem, './default:hardwate_type | ./hardware_type', HardwareType)
-            lolocation_elems = Element.get_elements(node_elem, './default:location | ./location', Location)
+            location_elems = Element.get_elements(node_elem, './default:location | ./location', Location)
             if len(location_elems) > 0:
                 node['location'] = location_elems[0]
             node['interfaces'] = Element.get_elements(node_elem, './default:interface | ./interface', Interface)
             node['services'] = PGv2Services.get_services(node_elem)
             node['slivers'] = PGv2SliverType.get_slivers(node_elem)    
-            available = Element.get_elements(node_element, './default:available | ./available', fields=['now'])
-            if len(available) > 0 and 'name' in available[0].attrib:
-                if available[0].attrib.get('now', '').lower() == 'true': 
+            available_elem = Element.get_elements(node_elem, './default:available | ./available', fields=['now'])
+            if len(available_elem) > 0 and 'name' in available_elem[0]:
+                if available_elem[0].get('now', '').lower() == 'true': 
                     node['boot_state'] = 'boot'
                 else: 
                     node['boot_state'] = 'disabled' 

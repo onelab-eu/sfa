@@ -2,7 +2,7 @@ from copy import deepcopy
 from StringIO import StringIO
 from sfa.util.xrn import urn_to_sliver_id
 from sfa.util.plxrn import hostname_to_urn, xrn_to_hostname 
-from sfa.rspecs.rspec_version import BaseVersion
+from sfa.rspecs.baseversion import BaseVersion
 from sfa.rspecs.elements.versions.pgv2Link import PGv2Link
 from sfa.rspecs.elements.versions.pgv2Node import PGv2Node
 from sfa.rspecs.elements.versions.pgv2SliverType import PGv2SliverType
@@ -47,26 +47,22 @@ class PGv2(BaseVersion):
         # this is untested
         self.xml.root.append(deepcopy(source_node_tag))
 
-    def get_nodes_with_slivers(self, network=None):
-        if network:
-            nodes = self.xml.xpath('//default:node[@component_manager_id="%s"][sliver_type]/@component_id' % network, namespaces=self.namespaces)
-        else:
-            nodes = self.xml.xpath('//default:node[default:sliver_type]/@component_id', namespaces=self.namespaces)
-        nodes = [xrn_to_hostname(node) for node in nodes]
-        return nodes
-
     # Slivers
     
     def get_sliver_attributes(self, hostname, network=None):
-        node = self.get_node_element(hostname, network)
-        sliver = node.xpath('./default:sliver_type', namespaces=self.namespaces)
-        if sliver is not None and isinstance(sliver, list):
-            sliver = sliver[0]
-        return self.attributes_list(sliver)
+        nodes = self.get_nodes({'component_id': '*%s*' %hostname})
+        attribs = []
+        if nodes is not None and isinstance(nodes, list) and len(nodes) > 0:
+            node = nodes[0]
+            sliver = node.xpath('./default:sliver_type', namespaces=self.namespaces)
+            if sliver is not None and isinstance(sliver, list) and len(sliver) > 0:
+                sliver = sliver[0]
+                #attribs = self.attributes_list(sliver)
+        return attribs
 
     def get_slice_attributes(self, network=None):
         slice_attributes = []
-        nodes_with_slivers = self.get_nodes_with_slivers(network)
+        nodes_with_slivers = self.get_nodes_with_slivers()
         # TODO: default sliver attributes in the PG rspec?
         default_ns_prefix = self.namespaces['default']
         for node in nodes_with_slivers:
@@ -125,26 +121,28 @@ class PGv2(BaseVersion):
 
             # remove existing sliver_type tags
             for sliver_type in node_elem.get('slivers', []):
-                node_elem.remove(sliver_type)
+                node_elem.element.remove(sliver_type.element)
 
             # set the client id
-            node.set('client_id', hostname)
+            node_elem.element.set('client_id', hostname)
             if sliver_urn:
+                pass
+                # TODO
                 # set the sliver id
-                slice_id = sliver_info.get('slice_id', -1)
-                node_id = sliver_info.get('node_id', -1)
-                sliver_id = urn_to_sliver_id(sliver_urn, slice_id, node_id)
-                node_elem.set('sliver_id', sliver_id)
+                #slice_id = sliver_info.get('slice_id', -1)
+                #node_id = sliver_info.get('node_id', -1)
+                #sliver_id = urn_to_sliver_id(sliver_urn, slice_id, node_id)
+                #node_elem.set('sliver_id', sliver_id)
 
             # add the sliver type elemnt    
-            PGv1Sliver.add_slivers(node_elem, sliver)         
+            PGv2SliverType.add_slivers(node_elem.element, sliver)         
 
         # remove all nodes without slivers
         if not append:
             for node_elem in self.get_nodes():
-                if not node['client_id']:
-                    parent = node.getparent()
-                    parent.remove(node_elem)
+                if not node_elem['client_id']:
+                    parent = node_elem.element.getparent()
+                    parent.remove(node_elem.element)
 
     def remove_slivers(self, slivers, network=None, no_dupes=False):
         PGv2Node.remove_slivers(self.xml, slivers) 

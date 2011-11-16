@@ -4,11 +4,11 @@ from lxml import etree
 from sfa.util.sfalogging import logger
 from sfa.util.xrn import hrn_to_urn, urn_to_hrn
 from sfa.util.plxrn import PlXrn
-
 from sfa.rspecs.baseversion import BaseVersion
 from sfa.rspecs.elements.element import Element
 from sfa.rspecs.elements.versions.pgv2Link import PGv2Link
 from sfa.rspecs.elements.versions.sfav1Node import SFAv1Node
+from sfa.rspecs.elements.versions.sfav1Sliver import SFAv1Sliver
 
 class SFAv1(BaseVersion):
     enabled = True
@@ -73,15 +73,19 @@ class SFAv1(BaseVersion):
         return self.attributes_list_thierry(defaults)
 
     def get_sliver_attributes(self, hostname, network=None):
-        node = self.get_node_element(hostname, network)
-        #sliver = node.find("sliver")
-        slivers = node.xpath('./sliver')
-        if not slivers: return []
-        return self.attributes_list_thierry(slivers[0])
+        nodes = self.get_nodes({'component_id': '*%s*' %hostname})
+        attribs = []
+        if nodes is not None and isinstance(nodes, list) and len(nodes) > 0:
+            node = nodes[0]
+            sliver = node.xpath('./default:sliver', namespaces=self.namespaces)
+            if sliver is not None and isinstance(sliver, list) and len(sliver) > 0:
+                sliver = sliver[0]
+                #attribs = self.attributes_list(sliver)
+        return attribs        
 
     def get_slice_attributes(self, network=None):
         slice_attributes = []
-        nodes_with_slivers = self.get_nodes_with_slivers(network)
+        nodes_with_slivers = self.get_nodes_with_slivers()
         for default_attribute in self.get_default_sliver_attributes(network):
             attribute = {'name': str(default_attribute[0]), 
                          'value': str(default_attribute[1]), 
@@ -112,14 +116,14 @@ class SFAv1(BaseVersion):
             if not node_elems: 
                 continue
             node_elem = node_elems[0]
-            SFAv1Sliver.add_slivers(node_elem, sliver)   
+            SFAv1Sliver.add_slivers(node_elem.element, sliver)   
 
         # remove all nodes without slivers
         if not append:
             for node_elem in self.get_nodes():
-                if not node['slivers']:
-                    parent = node.getparent()
-                    parent.remove(node_elem)
+                if not node_elem['slivers']:
+                    parent = node_elem.element.getparent()
+                    parent.remove(node_elem.element)
 
 
     def remove_slivers(self, slivers, network=None, no_dupes=False):
