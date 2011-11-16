@@ -72,7 +72,7 @@ class SFAv1Node:
                 sliver = {}
             elif 'component_id' in sliver and sliver['component_id']:
                 filter['component_id'] = '*%s*' % sliver['component_id']
-            if not fliter:
+            if not filter:
                 continue 
             nodes = SFAv1Node.get_nodes(xml, filter)
             if not nodes:
