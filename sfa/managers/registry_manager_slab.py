@@ -6,7 +6,7 @@ from sfa.util.faults import RecordNotFound, AccountNotEnabled, PermissionError, 
     UnknownSfaType, ExistingRecord
 from sfa.util.prefixTree import prefixTree
 from sfa.util.record import SfaRecord
-from sfa.senslab.table_slab import SfaTable
+from sfa.util.table import SfaTable
 from sfa.util.xrn import Xrn, get_leaf, get_authority, hrn_to_urn, urn_to_hrn
 from sfa.util.version import version_core
 
