@@ -61,30 +61,28 @@ class LDAPapi :
 		ldapresponse=self.ldapserv.result(rindex,1)
 		for ldapentry in ldapresponse[1]:
 			hrn=self.authname+"."+ldapentry[1]['uid'][0]
-			uuid=create_uuid() 
+#			uuid=create_uuid() 
 		
-			RSA_KEY_STRING=ldapentry[1]['sshPublicKey'][0]
+#			RSA_KEY_STRING=ldapentry[1]['sshPublicKey'][0]
 		
-			pkey=convert_public_key(RSA_KEY_STRING)
+#			pkey=convert_public_key(RSA_KEY_STRING)
 		
-			gid=self.senslabauth.create_gid("urn:publicid:IDN+"+self.authname+"+user+"+ldapentry[1]['uid'][0], uuid, pkey, CA=False)
+#			gid=self.senslabauth.create_gid("urn:publicid:IDN+"+self.authname+"+user+"+ldapentry[1]['uid'][0], uuid, pkey, CA=False)
 		
 			parent_hrn = get_authority(hrn)
 			parent_auth_info = self.senslabauth.get_auth_info(parent_hrn)
 
 			results.append(  {	
 				'type': 'user',
+                                'pkey': ldapentry[1]['sshPublicKey'][0].
 #				'email': ldapentry[1]['mail'][0],
 #				'first_name': ldapentry[1]['givenName'][0],
 #				'last_name': ldapentry[1]['sn'][0],
 #				'phone': 'none',
-				'gid': gid.save_to_string(),
 				'serial': 'none',
 				'authority': self.authname,
 				'peer_authority': '',
 				'pointer' : -1,
 				'hrn': hrn,
-				'date_created' : 'none',
-				'last_updated': 'none'
 			 	} )
 		return results

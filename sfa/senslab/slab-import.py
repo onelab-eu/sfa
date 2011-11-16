@@ -80,10 +80,15 @@ def import_person(person):
     existing_records = table.find({'hrn': person['hrn'], 'type': 'user'})
     if not existing_records:
         print>>sys.stderr, " \r\n \t slab-import : person record %s inserted" %(person['hrn'])
+        uuid=create_uuid() 
+        RSA_KEY_STRING=person['pkey']
+        pkey=convert_public_key(RSA_KEY_STRING)
+	person['gid']=self.senslabauth.create_gid("urn:publicid:IDN+"+self.authname+"+user+"+ldapentry[1]['uid'][0], uuid, pkey, CA=False)
         table.insert(person)
     else:
         existing_record = existing_records[0]
         person['record_id'] = existing_record['record_id']
+        # handle key change ??? 
         table.update(person)
         
 def import_slice(person):
