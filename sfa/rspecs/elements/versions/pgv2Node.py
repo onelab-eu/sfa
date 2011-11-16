@@ -60,7 +60,7 @@ class PGv2Node:
 
     @staticmethod
     def get_nodes_with_slivers(xml, filter={}):
-        xpath = '//node/sliver_type | //default:node/default:sliver_type' 
+        xpath = '//node[count(sliver_type)>0] | //default:node[count(default:sliver_type) > 0]' 
         node_elems = xml.xpath(xpath)        
         return PGv2Node.get_node_objs(node_elems)
 

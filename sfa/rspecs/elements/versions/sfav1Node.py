@@ -112,7 +112,7 @@ class SFAv1Node:
 
     @staticmethod
     def get_nodes_with_slivers(xml):
-        xpath = '//node/sliver | //default:node/default:sliver' 
+        xpath = '//node[count(sliver)>0] | //default:node[count(default:sliver)>0]' 
         node_elems = xml.xpath(xpath)
         return SFAv1Node.get_node_objs(node_elems)
 
