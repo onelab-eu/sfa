@@ -87,12 +87,12 @@ def import_person(person):
         table.update(person)
         
 def import_slice(person):
-    slice = { 'peer_authority': None,'type':'slice','pointer':-1, 'date_created': None, 'last_updated': None }
-    slice['hrn'] = person['hrn']+'_slice'
+
+    hrn = person['hrn']+'_slice'
     pkey = Keypair(create=True)
-    urn = hrn_to_urn(slice['hrn'], 'slice')
-    slice['gid'] = AuthHierarchy.create_gid(urn, create_uuid(), pkey)
-    slice_record= SfaRecord(hrn=slice['hrn'], gid=slice['gid'], type="slice", pointer=slice['pointer'])
+    urn = hrn_to_urn(hrn, 'slice')
+    gid = AuthHierarchy.create_gid(urn, create_uuid(), pkey)
+    slice_record= SfaRecord(hrn=hrn, gid=gid, type="slice", pointer=-1)
     slice_record['authority'] = get_authority(slice_record['hrn'])
     print>>sys.stderr, " \r\n \t slab-import : slice record %s " %(slice_record['hrn']) 
     existing_records = table.find({'hrn': slice_record['hrn'], 'type': 'slice'})
@@ -194,6 +194,7 @@ def main():
     for person in ldap_person_list:
         if person['hrn'] not in existing_hrns or \
             (person['hrn'], 'user') not in existing_records :
+            import_person(person)
             import_slice(person)
 
 # import slices
