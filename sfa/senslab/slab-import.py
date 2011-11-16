@@ -87,14 +87,14 @@ def import_person(person):
         table.update(person)
         
 def import_slice(person):
-    slice_record = { 'peer_authority': None,'type':'slice','pointer':-1, 'date_created': None, 'last_updated': None }
-    slice_record['hrn'] = person['hrn']+'_slice'
+    slice = { 'peer_authority': None,'type':'slice','pointer':-1, 'date_created': None, 'last_updated': None }
+    slice['hrn'] = person['hrn']+'_slice'
     pkey = Keypair(create=True)
-    urn = hrn_to_urn(slice_record['hrn'], 'slice')
-    slice_record['gid'] = AuthHierarchy.create_gid(urn, create_uuid(), pkey)
-    
+    urn = hrn_to_urn(slice['hrn'], 'slice')
+    slice['gid'] = AuthHierarchy.create_gid(urn, create_uuid(), pkey)
+    slice_record= SfaRecord(hrn=slice['hrn'], gid=slice['gid'], type="slice", pointer=slice['pointer'])
     slice_record['authority'] = get_authority(slice_record['hrn'])
-    
+    print>>sys.stderr, " \r\n \t slab-import : slice record %s " %(slice_record['hrn']) 
     existing_records = table.find({'hrn': slice_record['hrn'], 'type': 'slice'})
     if not existing_records:
         print>>sys.stderr, " \r\n \t slab-import : slice record %s inserted" %(slice_record['hrn'])
