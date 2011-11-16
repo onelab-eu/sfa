@@ -83,7 +83,7 @@ class Generic:
         classname = "%s_manager_class"%interface
         try:
             module = getattr(self,classname)()
-            logger.info("%s : %s"%(message,module))
+            logger.debug("%s : %s"%(message,module))
             return module
         except:
             logger.log_exc_critical(message)
@@ -99,7 +99,7 @@ class Generic:
             classname = "driver_class"
         try:
             class_obj = getattr(self,classname)()
-            logger.info("%s : %s"%(message,class_obj))
+            logger.debug("%s : %s"%(message,class_obj))
             return class_obj(config)
         except:
             logger.log_exc_critical(message)

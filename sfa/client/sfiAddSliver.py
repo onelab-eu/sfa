@@ -1,10 +1,13 @@
 #! /usr/bin/env python
 
 import sys
+
+from sfa.util.sfalogging import logger
 from sfa.client.sfi_commands import Commands
 from sfa.rspecs.rspec import RSpec
 from sfa.rspecs.version_manager import VersionManager
 
+logger.enable_console()
 command = Commands(usage="%prog [options] node1 node2...",
                    description="Add slivers to the RSpec. " +
                    "This command reads in an RSpec and outputs a modified " +
@@ -33,12 +36,10 @@ try:
     version_num = ad_rspec.version.version
     request_version = version_manager._get_version(type, version_num, 'request')    
     request_rspec = RSpec(version=request_version)
-    slivers = [{'hostname': node} for node in nodes]
     request_rspec.version.merge(ad_rspec)
-    request_rspec.version.add_slivers(slivers)
+    request_rspec.version.add_slivers(nodes)
 except:
-    print >> sys.stderr, "FAILED: %s" % nodes
-    raise
+    logger.log_exc("sfiAddSliver failed with nodes %s" % nodes)
     sys.exit(1)
 print >>outfile, request_rspec.toxml()
 sys.exit(0)

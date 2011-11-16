@@ -1,9 +1,12 @@
 #! /usr/bin/env python
 
 import sys
+
+from sfa.util.sfalogging import logger
 from sfa.client.sfi_commands import Commands
 from sfa.rspecs.rspec import RSpec
 
+logger.enable_console()
 command = Commands(usage="%prog [options] [node1 node2...]",
                    description="Delete sliver attributes from the RSpec. " +
                    "This command reads in an RSpec and outputs a modified " +
@@ -33,12 +36,12 @@ if command.opts.infile:
                 try:
                     rspec.version.remove_default_sliver_attribute(name, value)
                 except:
-                    print >> sys.stderr, "FAILED: on all nodes: %s=%s" % (name, value)
+                    logger.log_exc("sfiDeleteAttribute FAILED on all nodes: %s=%s" % (name, value))
             else:
                 for node in nodes:
                     try:
                         rspec.version.remove_sliver_attribute(node, name, value)
                     except:
-                        print >> sys.stderr, "FAILED: on node %s: %s=%s" % (node, name, value)
+                        logger.log_exc("sfiDeleteAttribute FAILED on node %s: %s=%s" % (node, name, value))
 
     print rspec.toxml()

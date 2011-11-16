@@ -2,6 +2,7 @@ import datetime
 import time
 import sys
 
+from sfa.util.sfalogging import logger
 from sfa.util.faults import RecordNotFound, SliverDoesNotExist
 from sfa.util.xrn import get_authority, hrn_to_urn, urn_to_hrn, Xrn, urn_to_sliver_id
 from sfa.util.plxrn import slicename_to_hrn, hrn_to_pl_slicename
@@ -187,7 +188,7 @@ class AggregateManager:
         slices.verify_slice_attributes(slice, requested_attributes)
         
         # add/remove slice from nodes
-        requested_slivers = [node['component_name'] for node in rspec.version.get_nodes_with_slivers()]
+        requested_slivers = [node.get('component_name') for node in rspec.version.get_nodes_with_slivers()]
         slices.verify_slice_nodes(slice, requested_slivers, peer) 
    
         # add/remove links links 

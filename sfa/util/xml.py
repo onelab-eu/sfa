@@ -40,19 +40,31 @@ class XpathFilter:
 class XmlNode:
     def __init__(self, node, namespaces):
         self.node = node
+        self.text = node.text
         self.namespaces = namespaces
         self.attrib = node.attrib
+        
 
     def xpath(self, xpath, namespaces=None):
         if not namespaces:
             namespaces = self.namespaces 
-        return self.node.xpath(xpath, namespaces=namespaces)
+        elems = self.node.xpath(xpath, namespaces=namespaces)
+        return [XmlNode(elem, namespaces) for elem in elems]
     
-    def add_element(name, *args, **kwds):
-        element = etree.SubElement(name, args, kwds)
+    def add_element(self, tagname, **kwds):
+        element = etree.SubElement(self.node, tagname, **kwds)
         return XmlNode(element, self.namespaces)
 
-    def remove_elements(name):
+    def append(self, elem):
+        if isinstance(elem, XmlNode):
+            self.node.append(elem.node)
+        else:
+            self.node.append(elem)
+
+    def getparent(self):
+        return XmlNode(self.node.getparent(), self.namespaces)
+
+    def remove_elements(self, name):
         """
         Removes all occurences of an element from the tree. Start at
         specified root_node if specified, otherwise start at tree's root.
@@ -65,6 +77,17 @@ class XmlNode:
             parent = element.getparent()
             parent.remove(element)
 
+    def remove(self, element):
+        if isinstance(element, XmlNode):
+            self.node.remove(element.node)
+        else:
+            self.node.remove(element)
+
+    def get(self, key, *args):
+        return self.node.get(key, *args)
+
+    def items(self): return self.node.items()
+
     def set(self, key, value):
         self.node.set(key, value)
     
@@ -73,7 +96,10 @@ class XmlNode:
     
     def unset(self, key):
         del self.node.attrib[key]
-   
+  
+    def iterchildren(self):
+        return self.node.iterchildren()
+     
     def toxml(self):
         return etree.tostring(self.node, encoding='UTF-8', pretty_print=True)                    
 
@@ -91,7 +117,7 @@ class XML:
             self.parse_xml(xml)
         if isinstance(xml, XmlNode):
             self.root = xml
-            self.namespces = xml.namespaces
+            self.namespaces = xml.namespaces
         elif isinstance(xml, etree._ElementTree) or isinstance(xml, etree._Element):
             self.parse_xml(etree.tostring(xml))
 
@@ -194,22 +220,15 @@ class XML:
             node = self.root
         node.remove_attribute(name) 
         
-
-    def add_element(self, name, attrs={}, parent=None, text=""):
+    def add_element(self, name, **kwds):
         """
         Wrapper around etree.SubElement(). Adds an element to 
         specified parent node. Adds element to root node is parent is 
         not specified. 
         """
-        if parent == None:
-            parent = self.root
-        element = etree.SubElement(parent, name)
-        if text:
-            element.text = text
-        if isinstance(attrs, dict):
-            for attr in attrs:
-                element.set(attr, attrs[attr])  
-        return XmlNode(element, self.namespaces)
+        parent = self.root
+        xmlnode = parent.add_element(name, *kwds)
+        return xmlnode
 
     def remove_elements(self, name, node = None):
         """
@@ -251,6 +270,12 @@ class XML:
             attrs['child_nodes'] = list(elem)
         return attrs
 
+    def append(self, elem):
+        return self.root.append(elem)
+
+    def iterchildren(self):
+        return self.root.iterchildren()    
+
     def merge(self, in_xml):
         pass
 
@@ -258,7 +283,7 @@ class XML:
         return self.toxml()
 
     def toxml(self):
-        return etree.tostring(self.root, encoding='UTF-8', pretty_print=True)  
+        return etree.tostring(self.root.node, encoding='UTF-8', pretty_print=True)  
     
     # XXX smbaker, for record.load_from_string
     def todict(self, elem=None):
