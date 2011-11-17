@@ -435,9 +435,3 @@ class RegistryManager:
         table.remove(record)
     
         return 1
-    
-    def remove_peer_object(self, api, record, origin_hrn=None):
-        pass
-    
-    def register_peer_object(self, api, record, origin_hrn=None):
-        pass
