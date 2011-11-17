@@ -5,6 +5,7 @@ from StringIO import StringIO
 from sfa.util.faults import InvalidXML
 from sfa.rspecs.elements.element import Element
 
+# helper functions to help build xpaths
 class XpathFilter:
     @staticmethod
 
@@ -38,15 +39,26 @@ class XpathFilter:
                 xpath = '[' + xpath + ']'
         return xpath
 
+# a wrapper class around lxml.etree._Element
+# the reason why we need this one is because of the limitations
+# we've found in xpath to address documents with multiple namespaces defined
+# in a nutshell, we deal with xml documents that have
+# a default namespace defined (xmlns="http://default.com/") and specific prefixes defined
+# (xmlns:foo="http://foo.com")
+# according to the documentation instead of writing
+# element.xpath ( "//node/foo:subnode" ) 
+# we'd then need to write xpaths like
+# element.xpath ( "//{http://default.com/}node/{http://foo.com}subnode" ) 
+# which is a real pain..
+# So just so we can keep some reasonable programming style we need to manage the
+# namespace map that goes with the _Element (its internal .nsmap being unmutable)
+
 class XmlElement:
     def __init__(self, element, namespaces):
         self.element = element
-        self.tag = element.tag 
-        self.text = element.text
-        self.attrib = element.attrib
         self.namespaces = namespaces
         
-
+    # redefine as few methods as possible
     def xpath(self, xpath, namespaces=None):
         if not namespaces:
             namespaces = self.namespaces 
@@ -69,7 +81,7 @@ class XmlElement:
     def get_instance(self, instance_class=None, fields=[]):
         """
         Returns an instance (dict) of this xml element. The instance
-        holds a reference this xml element.   
+        holds a reference to this xml element.   
         """
         if not instance_class:
             instance_class = Element
@@ -245,10 +257,8 @@ class XML:
             namespaces = self.namespaces
         return self.root.xpath(xpath, namespaces=namespaces)
 
-    def set(self, key, value, element=None):
-        if not element:
-            element = self.root 
-        return element.set(key, value)
+    def set(self, key, value):
+        return self.root.set(key, value)
 
     def remove_attribute(self, name, element=None):
         if not element:
