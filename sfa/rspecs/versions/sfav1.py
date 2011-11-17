@@ -23,12 +23,16 @@ class SFAv1(BaseVersion):
 
     # Network 
     def get_networks(self):
-        return Element.get_elements(self.xml, '//network', Element)
+        network_elems = self.xml.xpath('//network')
+        networks = [network_elem.get_instance(fields=['name', 'slice']) for \
+                    network_elem in network_elems]
+        return networks    
+
 
     def add_network(self, network):
         network_tags = self.xml.xpath('//network[@name="%s"]' % network)
         if not network_tags:
-            network_tag = etree.SubElement(self.xml.root, 'network', name=network)
+            network_tag = self.xml.add_element('network', name=network)
         else:
             network_tag = network_tags[0]
         return network_tag

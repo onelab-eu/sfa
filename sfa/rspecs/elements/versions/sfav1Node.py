@@ -19,19 +19,19 @@ class SFAv1Node:
 
     @staticmethod
     def add_nodes(xml, nodes):
-        network_elems = Element.get_elements(xml, '//network', fields=['name'])
+        network_elems = xml.xpath('//network')
         if len(network_elems) > 0:
             network_elem = network_elems[0]
         elif len(nodes) > 0 and nodes[0].get('component_manager_id'):
-            network_urn = nodes[0]['component_manager_id']    
-            network_elems = Element.add_elements(xml, 'network', {'name': Xrn(network_urn).get_hrn()})
-            network_elem = network_elems[0]
+            network_urn = nodes[0]['component_manager_id']
+            network_elem = xml.add_element('network', name = Xrn(network_urn).get_hrn()[0])     
+        else:
+            network_elem = xml
 
         node_elems = []       
         for node in nodes:
             node_fields = ['component_manager_id', 'component_id', 'boot_state']
-            elems = Element.add_elements(network_elem, 'node', node, node_fields)
-            node_elem = elems[0]  
+            node_elem = network_elem.add_instance('node', node, node_fields)
             node_elems.append(node_elem)
 
             # determine network hrn
@@ -43,17 +43,20 @@ class SFAv1Node:
             if 'component_id' in node and node['component_id']:
                 component_name = xrn_to_hostname(node['component_id'])
                 node_elem.set('component_name', component_name)
-                hostname_tag = node_elem.add_element('hostname')
-                hostname_tag.set_text(component_name)
+                hostname_elem = node_elem.add_element('hostname')
+                hostname_elem.set_text(component_name)
 
             # set site id
             if 'authority_id' in node and node['authority_id']:
                 node_elem.set('site_id', node['authority_id'])
 
-            location_elems = Element.add_elements(node_elem, 'location',
-                                                  node.get('location', []), Location.fields)
-            interface_elems = Element.add_elements(node_elem, 'interface', 
-                                                   node.get('interfaces', []), ['component_id', 'client_id', 'ipv4'])
+            # add locaiton
+            location = node.get('location')
+            if location:
+                node_elem.add_instance('location', location, Location.fields)
+
+            for interface in node.get('interfaces', []):
+                node_elem.add_instance('interface', interface, ['component_id', 'client_id', 'ipv4']) 
             
             #if 'bw_unallocated' in node and node['bw_unallocated']:
             #    bw_unallocated = etree.SubElement(node_elem, 'bw_unallocated', units='kbps').text = str(int(node['bw_unallocated'])/1000)
@@ -95,21 +98,6 @@ class SFAv1Node:
         node_elems = xml.xpath(xpath)
         return SFAv1Node.get_node_objs(node_elems)
 
-    # xxx Thierry : an ugly hack to get the tests to pass again
-    # probably this needs to be trashed
-    # the original code returned the <sliver /> tag, 
-    # but we prefer the <node> father node instead as it already holds data
-    # initially this was to preserve the nodename...
-    # xxx I don't get the ' | //default:node/default:sliver' ...
-    @staticmethod
-    def get_nodes_with_slivers_thierry(xml):
-        # dropping the ''
-        xpath = '//node[count (sliver)>0]'
-        node_elems = xml.xpath(xpath)
-        #  we need to check/recompute the node data 
-        
-        return node_elems
-
     @staticmethod
     def get_nodes_with_slivers(xml):
         xpath = '//node[count(sliver)>0] | //default:node[count(default:sliver)>0]' 
@@ -124,16 +112,25 @@ class SFAv1Node:
             node = Node(node_elem.attrib, node_elem)
             if 'site_id' in node_elem.attrib:
                 node['authority_id'] = node_elem.attrib['site_id']
-            location_objs = Element.get_elements(node_elem, './default:location | ./location', Location)
-            if len(location_objs) > 0:
-                node['location'] = location_objs[0]
-            bwlimit_objs = Element.get_elements(node_elem, './default:bw_limit | ./bw_limit', BWlimit)
-            if len(bwlimit_objs) > 0:
-                node['bwlimit'] = bwlimit_objs[0]
-            node['interfaces'] = Element.get_elements(node_elem, './default:interface | ./interface', Interface)
+            # get location
+            location_elems = node_elem.xpath('./default:location | ./location')
+            locations = [loc_elem.get_instance(Location) for loc_elem in location_elems]  
+            if len(locations) > 0:
+                node['location'] = locations[0]
+            # get bwlimit
+            bwlimit_elems = node_elem.xpath('./default:bw_limit | ./bw_limit')
+            bwlimits = [bwlimit_elem.get_instance(BWlimit) for bwlimit_elem in bwlimit_elems]
+            if len(bwlimits) > 0:
+                node['bwlimit'] = bwlimits[0]
+            # get interfaces
+            iface_elems = node_elem.xpath('./default:interface | ./interface')
+            ifaces = [iface_elem.get_instance(Interface) for iface_elem in iface_elems]
+            node['interfaces'] = ifaces
+            # get services
             node['services'] = PGv2Services.get_services(node_elem) 
+            # get slivers
             node['slivers'] = SFAv1Sliver.get_slivers(node_elem)
-#thierry    node['tags'] =  SFAv1PLTag.get_pl_tags(node_elem, ignore=Node.fields.keys())
+            # get tags
             node['tags'] =  SFAv1PLTag.get_pl_tags(node_elem, ignore=Node.fields)
             nodes.append(node)
         return nodes            

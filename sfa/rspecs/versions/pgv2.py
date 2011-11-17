@@ -1,6 +1,6 @@
 from copy import deepcopy
 from StringIO import StringIO
-from sfa.util.xrn import urn_to_sliver_id
+from sfa.util.xrn import Xrn, urn_to_sliver_id
 from sfa.util.plxrn import hostname_to_urn, xrn_to_hostname 
 from sfa.rspecs.baseversion import BaseVersion
 from sfa.rspecs.elements.versions.pgv2Link import PGv2Link
@@ -20,18 +20,16 @@ class PGv2(BaseVersion):
     namespaces = dict(extensions.items() + [('default', namespace)])
 
     # Networks    
-    def get_network(self):
-        network = None
-        nodes = self.xml.xpath('//default:node[@component_manager_id][1]', namespaces=self.namespaces)
-        if nodes:
-            network  = nodes[0].get('component_manager_id')
-        return network
-
     def get_networks(self):
-        networks = self.xml.xpath('//default:node[@component_manager_id]/@component_manager_id', namespaces=self.namespaces)
-        return set(networks)
+        networks = set()
+        nodes = self.xml.xpath('//default:node[@component_manager_id]', namespaces=self.namespaces)
+        for node in nodes: 
+            if 'component_manager_id' in node:
+                network_urn  = node.get('component_manager_id')
+                network_hrn = Xrn(network_urn).get_hrn()[0]
+                networks.add({'name': network_hrn})
+        return list(networks)
 
-    
     # Nodes
 
     def get_nodes(self, filter=None):
