@@ -121,28 +121,25 @@ class XmlElement:
         else:
             self.element.remove(element)
 
-    def get(self, key, *args):
-        return self.element.get(key, *args)
-
-    def items(self): return self.element.items()
-
-    def set(self, key, value):
-        self.element.set(key, value)
-    
     def set_text(self, text):
         self.element.text = text
     
+    # Element does not have unset ?!?
     def unset(self, key):
         del self.element.attrib[key]
   
-    def iterchildren(self):
-        return self.element.iterchildren()
-     
     def toxml(self):
         return etree.tostring(self.element, encoding='UTF-8', pretty_print=True)                    
 
     def __str__(self):
         return self.toxml()
+
+    ### other method calls or attribute access like .text or .tag or .get 
+    # are redirected on self.element
+    def __getattr__ (self, name):
+        if not hasattr(self.element, name):
+            raise AttributeError, name
+        return getattr(self.element, name)
 
 class XML:
  
