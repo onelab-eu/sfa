@@ -71,4 +71,4 @@ class GetSelfCredential(Method):
                     self.api.logger.debug("ConnectionKeyGIDMismatch, %s filename: %s"%(name,obj.filename))
             raise ConnectionKeyGIDMismatch(gid.get_subject())
         
-        return self.api.manager.get_credential(self.api, xrn, type, is_self=True)
+        return self.api.manager.GetCredential(self.api, xrn, type, is_self=True)

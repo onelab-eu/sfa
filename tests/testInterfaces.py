@@ -51,9 +51,9 @@ class Client:
         # XX defaulting to user, but this should be configurable so we can
         # test from components persepctive
         self.type = 'user'
-        self.credential = self.get_credential(self.hrn)
+        self.credential = self.GetCredential(self.hrn)
         
-    def get_credential(self, hrn = None, type = 'user'):
+    def GetCredential(self, hrn = None, type = 'user'):
         if not hrn: hrn = self.hrn 
         if hrn == self.hrn:
             cert = self.cert.save_to_string(save_parents=True)
@@ -62,8 +62,8 @@ class Client:
             return credential
         else:
             if not self.credential:
-                self.credential = self.get_credential(self.hrn, 'user')
-            return self.registry.get_credential(self.credential, type, hrn)     
+                self.credential = self.GetCredential(self.hrn, 'user')
+            return self.registry.GetCredential(self.credential, type, hrn)     
 
 class BasicTestCase(unittest.TestCase):
     def __init__(self, testname, client, test_slice=None):
@@ -90,13 +90,13 @@ class RegistryTest(BasicTestCase):
         BasicTestCase.setUp(self)
 
     def testGetSelfCredential(self):
-        cred = self.client.get_credential()
+        cred = self.client.GetCredential()
         # this will raise an openssl error if the credential string isnt valid
         Credential(string=cred)
 
     def testRegister(self):
         authority = get_authority(self.hrn)
-        auth_cred = self.client.get_credential(authority, 'authority')
+        auth_cred = self.client.GetCredential(authority, 'authority')
         auth_record = {'hrn': '.'.join([authority, random_string(10).lower()]),
                        'type': 'authority'}
         node_record = {'hrn': '.'.join([authority, random_string(10)]),
@@ -113,12 +113,12 @@ class RegistryTest(BasicTestCase):
         all_records = [auth_record, node_record, slice_record, user_record]
         for record in all_records:
             try:
-                self.registry.register(auth_cred, record)
-                self.registry.resolve(self.credential, record['hrn'])
+                self.registry.Register(auth_cred, record)
+                self.registry.Resolve(self.credential, record['hrn'])
             except:
                 raise
             finally:
-                try: self.registry.remove(auth_cred, record['type'], record['hrn'])
+                try: self.registry.Remove(auth_cred, record['type'], record['hrn'])
                 except: pass
 
     
@@ -127,26 +127,26 @@ class RegistryTest(BasicTestCase):
    
     def testUpdate(self):
         authority = get_authority(self.hrn)
-        auth_cred = self.client.get_credential(authority, 'authority')
-        records = self.registry.resolve(self.credential, self.hrn)
+        auth_cred = self.client.GetCredential(authority, 'authority')
+        records = self.registry.Resolve(self.credential, self.hrn)
         if not records: assert False
         record = records[0]
         self.registry.update(auth_cred, record) 
 
     def testResolve(self):
         authority = get_authority(self.hrn)
-        self.registry.resolve(self.credential, self.hrn)
+        self.registry.Resolve(self.credential, self.hrn)
    
     def testRemove(self):
         authority = get_authority(self.hrn)
-        auth_cred = self.client.get_credential(authority, 'authority')
+        auth_cred = self.client.GetCredential(authority, 'authority')
         record = {'hrn': ".".join([authority, random_string(10)]),
                        'type': 'slice'}
-        self.registry.register(auth_cred, record)
-        self.registry.remove(auth_cred, record['type'], record['hrn'])
+        self.registry.Register(auth_cred, record)
+        self.registry.Remove(auth_cred, record['type'], record['hrn'])
         # should generate an exception
         try:
-            self.registry.resolve(self.credential,  record['hrn'])
+            self.registry.Resolve(self.credential,  record['hrn'])
             assert False
         except:       
             assert True
@@ -156,7 +156,7 @@ class RegistryTest(BasicTestCase):
 
     def testList(self):
         authority = get_authority(self.client.hrn)
-        self.registry.list(self.credential, authority)
+        self.registry.List(self.credential, authority)
              
     def testGetRegistries(self):
         self.registry.get_registries(self.credential)
@@ -196,17 +196,17 @@ class AggregateTest(BasicTestCase):
     def testCreateSlice(self):
         # get availabel resources   
         rspec = self.aggregate.get_resources(self.credential)
-        slice_credential = self.client.get_credential(self.slice['hrn'], 'slice')
+        slice_credential = self.client.GetCredential(self.slice['hrn'], 'slice')
         self.aggregate.CreateSliver(slice_credential, self.slice['hrn'], rspec)
 
     def testDeleteSlice(self):
-        slice_credential = self.client.get_credential(self.slice['hrn'], 'slice')
+        slice_credential = self.client.GetCredential(self.slice['hrn'], 'slice')
         self.aggregate.DeleteSliver(slice_credential, self.slice['hrn'],"call-id-delete-slice")
 
     def testGetTicket(self):
-        slice_credential = self.client.get_credential(self.slice['hrn'], 'slice')
+        slice_credential = self.client.GetCredential(self.slice['hrn'], 'slice')
         rspec = self.aggregate.get_resources(self.credential)
-        ticket = self.aggregate.get_ticket(slice_credential, self.slice['hrn'], rspec)
+        ticket = self.aggregate.GetTicket(slice_credential, self.slice['hrn'], rspec)
         # will raise an exception if the ticket inst valid
         SfaTicket(string=ticket)        
 
@@ -223,7 +223,7 @@ class SlicemgrTest(AggregateTest):
 class ComponentTest(BasicTestCase):
     def setUp(self):
         BasicTestCase.setUp(self)
-        self.slice_cred = self.client.get_credential(self.slice['hrn'], 'slice')
+        self.slice_cred = self.client.GetCredential(self.slice['hrn'], 'slice')
 
     def testStartSlice(self):
         self.cm.start_slice(self.slice_cred, self.slice['hrn'])
@@ -242,7 +242,7 @@ class ComponentTest(BasicTestCase):
 
     def testRedeemTicket(self):
         rspec = self.aggregate.get_resources(self.credential)
-        ticket = self.aggregate.get_ticket(slice_cred, self.slice['hrn'], rspec)
+        ticket = self.aggregate.GetTicket(slice_cred, self.slice['hrn'], rspec)
         self.cm.redeem_ticket(slice_cred, ticket)
 
 
@@ -252,17 +252,17 @@ def test_names(testcase):
 def CreateSliver(client):
     # register a slice that will be used for some test
     authority = get_authority(client.hrn)
-    auth_cred = client.get_credential(authority, 'authority')
+    auth_cred = client.GetCredential(authority, 'authority')
     slice_record = {'hrn': ".".join([authority, random_string(10)]),
                     'type': 'slice', 'researcher': [client.hrn]}
-    client.registry.register(auth_cred, slice_record)
+    client.registry.Register(auth_cred, slice_record)
     return  slice_record
  
 def DeleteSliver(client, slice):
     authority = get_authority(client.hrn)
-    auth_cred = client.get_credential(authority, 'authority')
+    auth_cred = client.GetCredential(authority, 'authority')
     if slice:
-        client.registry.remove(auth_cred, 'slice', slice['hrn'])
+        client.registry.Remove(auth_cred, 'slice', slice['hrn'])
     
 if __name__ == '__main__':
 

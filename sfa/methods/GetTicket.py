@@ -51,5 +51,5 @@ class GetTicket(Method):
         rspec = run_sfatables(chain_name, hrn, origin_hrn, rspec)
         
         # remove nodes that are not available at this interface from the rspec
-        return self.api.manager.get_ticket(self.api, xrn, creds, rspec, users)
+        return self.api.manager.GetTicket(self.api, xrn, creds, rspec, users)
         

@@ -29,7 +29,7 @@ class RegistryManager:
                              'urn':xrn.get_urn(),
                              'peers':peers})
     
-    def get_credential(self, api, xrn, type, is_self=False):
+    def GetCredential(self, api, xrn, type, is_self=False):
         # convert xrn to hrn     
         if type:
             hrn = urn_to_hrn(xrn)[0]
@@ -89,7 +89,7 @@ class RegistryManager:
         return new_cred.save_to_string(save_parents=True)
     
     
-    def resolve(self, api, xrns, type=None, full=True):
+    def Resolve(self, api, xrns, type=None, full=True):
     
         # load all known registry names into a prefix tree and attempt to find
         # the longest matching prefix
@@ -147,7 +147,7 @@ class RegistryManager:
     
         return records
     
-    def list(self, api, xrn, origin_hrn=None):
+    def List(self, api, xrn, origin_hrn=None):
         hrn, type = urn_to_hrn(xrn)
         # load all know registry names into a prefix tree and attempt to find
         # the longest matching prefix
@@ -182,7 +182,7 @@ class RegistryManager:
         return records
     
     
-    def create_gid(self, api, xrn, cert):
+    def CreateGid(self, api, xrn, cert):
         # get the authority
         authority = Xrn(xrn=xrn).get_authority_hrn()
         auth_info = api.auth.get_auth_info(authority)
@@ -194,7 +194,7 @@ class RegistryManager:
         gid = api.auth.hierarchy.create_gid(xrn, create_uuid(), pkey) 
         return gid.save_to_string(save_parents=True)
         
-    def register(self, api, record):
+    def Register(self, api, record):
     
         hrn, type = record['hrn'], record['type']
         urn = hrn_to_urn(hrn,type)
@@ -302,7 +302,7 @@ class RegistryManager:
     
         return record.get_gid_object().save_to_string(save_parents=True)
     
-    def update(self, api, record_dict):
+    def Update(self, api, record_dict):
         new_record = SfaRecord(dict = record_dict)
         type = new_record['type']
         hrn = new_record['hrn']
@@ -388,7 +388,7 @@ class RegistryManager:
         return 1 
     
     # expecting an Xrn instance
-    def remove(self, api, xrn, origin_hrn=None):
+    def Remove(self, api, xrn, origin_hrn=None):
     
         table = SfaTable()
         filter = {'hrn': xrn.get_hrn()}

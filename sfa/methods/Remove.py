@@ -39,4 +39,4 @@ class Remove(Method):
         self.api.logger.info("interface: %s\tmethod-name: %s\tcaller-hrn: %s\ttarget-urn: %s"%(
                 self.api.interface, self.name, origin_hrn, xrn.get_urn()))
 
-        return self.api.manager.remove(self.api, xrn) 
+        return self.api.manager.Remove(self.api, xrn) 

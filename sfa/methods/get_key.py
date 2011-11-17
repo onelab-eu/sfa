@@ -22,7 +22,7 @@ class get_key(Method):
     returns = Parameter(int, "1 if successful, faults otherwise")
     
     def call(self):
-        # verify that the callers's ip address exist in the db and is an inteface
+        # verify that the callers's ip address exist in the db and is an interface
         # for a node in the db
         (ip, port) = self.api.remote_addr
         interfaces = self.api.driver.GetInterfaces({'ip': ip}, ['node_id'])

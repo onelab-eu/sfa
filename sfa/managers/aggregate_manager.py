@@ -323,7 +323,7 @@ class AggregateManager:
         return rspec
     
     
-    def get_ticket(self, api, xrn, creds, rspec, users):
+    def GetTicket(self, api, xrn, creds, rspec, users):
     
         (slice_hrn, _) = urn_to_hrn(xrn)
         slices = Slices(api)
@@ -341,7 +341,7 @@ class AggregateManager:
         for tmp_record in records:
             if tmp_record['type'] == 'slice' and \
                not tmp_record['peer_authority']:
-    #Error (E0602, get_ticket): Undefined variable 'SliceRecord'
+    #Error (E0602, GetTicket): Undefined variable 'SliceRecord'
                 record = SliceRecord(dict=tmp_record)
         if not record:
             raise RecordNotFound(slice_hrn)
