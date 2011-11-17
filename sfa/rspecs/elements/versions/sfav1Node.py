@@ -24,7 +24,7 @@ class SFAv1Node:
             network_elem = network_elems[0]
         elif len(nodes) > 0 and nodes[0].get('component_manager_id'):
             network_urn = nodes[0]['component_manager_id']
-            network_elem = xml.add_element('network', name = Xrn(network_urn).get_hrn()[0])     
+            network_elem = xml.add_element('network', name = Xrn(network_urn).get_hrn())     
         else:
             network_elem = xml
 
@@ -62,7 +62,9 @@ class SFAv1Node:
             #    bw_unallocated = etree.SubElement(node_elem, 'bw_unallocated', units='kbps').text = str(int(node['bw_unallocated'])/1000)
 
             PGv2Services.add_services(node_elem, node.get('services', []))
-            SFAv1PLTag.add_pl_tags(node_elem, node.get('tags', [])) 
+            for tag in node.get('tags', []):
+                tag_elem = node_elem.add_element(tag['tagname'])
+                tag_elem.set_text(tag['value'])
             SFAv1Sliver.add_slivers(node_elem, node.get('slivers', []))
 
     @staticmethod 

@@ -41,9 +41,10 @@ class XpathFilter:
 class XmlElement:
     def __init__(self, element, namespaces):
         self.element = element
+        self.tag = element.tag 
         self.text = element.text
-        self.namespaces = namespaces
         self.attrib = element.attrib
+        self.namespaces = namespaces
         
 
     def xpath(self, xpath, namespaces=None):
@@ -109,6 +110,10 @@ class XmlElement:
         for element in elements:
             parent = element.getparent()
             parent.remove(element)
+
+    def delete(self):
+        parent = self.getparent()
+        parent.remove(self)
 
     def remove(self, element):
         if isinstance(element, XmlElement):
