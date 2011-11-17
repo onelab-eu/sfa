@@ -54,7 +54,7 @@ class GetSelfCredential(Method):
         
  
         # authenticate the gid
-        records = self.api.manager.resolve(self.api, xrn, type)
+        records = self.api.manager.Resolve(self.api, xrn, type)
         if not records:
             raise RecordNotFound(hrn)
         record = SfaRecord(dict=records[0])
