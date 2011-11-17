@@ -23,12 +23,16 @@ class SFAv1(BaseVersion):
 
     # Network 
     def get_networks(self):
-        return Element.get_elements(self.xml, '//network', Element)
+        network_elems = self.xml.xpath('//network')
+        networks = [network_elem.get_instance(fields=['name', 'slice']) for \
+                    network_elem in network_elems]
+        return networks    
+
 
     def add_network(self, network):
         network_tags = self.xml.xpath('//network[@name="%s"]' % network)
         if not network_tags:
-            network_tag = etree.SubElement(self.xml.root, 'network', name=network)
+            network_tag = self.xml.add_element('network', name=network)
         else:
             network_tag = network_tags[0]
         return network_tag
@@ -54,37 +58,40 @@ class SFAv1(BaseVersion):
         network_tag.append(deepcopy(source_node_tag))
 
     # Slivers
-    
-    def attributes_list(self, elem):
-        # convert a list of attribute tags into list of tuples
-        # (tagname, text_value)
-        opts = []
-        if elem is not None:
-            for e in elem:
-                opts.append((e.tag, str(e.text).strip()))
-        return opts
+   
+    def add_slivers(self, hostnames, attributes=[], sliver_urn=None, append=False):
+        # add slice name to network tag
+        network_tags = self.xml.xpath('//network')
+        if network_tags:
+            network_tag = network_tags[0]
+            network_tag.set('slice', urn_to_hrn(sliver_urn)[0])
 
-    def get_default_sliver_attributes(self, network=None):
-        if network:
-            defaults = self.xml.xpath("//network[@name='%s']/sliver_defaults" % network)
-        else:
-            defaults = self.xml.xpath("//sliver_defaults")
-        if not defaults: return []
-        return self.attributes_list_thierry(defaults)
+        # add slivers
+        sliver = {'name':sliver_urn,
+                  'pl_tags': attributes}
+        for hostname in hostnames:
+            if sliver_urn:
+                sliver['name'] = sliver_urn
+            node_elems = self.get_nodes({'component_id': '*%s*' % hostname})
+            if not node_elems:
+                continue
+            node_elem = node_elems[0]
+            SFAv1Sliver.add_slivers(node_elem.element, sliver)
 
-    def get_sliver_attributes(self, hostname, network=None):
-        nodes = self.get_nodes({'component_id': '*%s*' %hostname})
-        attribs = []
-        if nodes is not None and isinstance(nodes, list) and len(nodes) > 0:
-            node = nodes[0]
-            sliver = node.xpath('./default:sliver', namespaces=self.namespaces)
-            if sliver is not None and isinstance(sliver, list) and len(sliver) > 0:
-                sliver = sliver[0]
-                #attribs = self.attributes_list(sliver)
-        return attribs        
+        # remove all nodes without slivers
+        if not append:
+            for node_elem in self.get_nodes():
+                if not node_elem['slivers']:
+                    parent = node_elem.element.getparent()
+                    parent.remove(node_elem.element)
 
+
+    def remove_slivers(self, slivers, network=None, no_dupes=False):
+        SFAv1Node.remove_slivers(self.xml, slivers)
+ 
     def get_slice_attributes(self, network=None):
         slice_attributes = []
+        """
         nodes_with_slivers = self.get_nodes_with_slivers()
         for default_attribute in self.get_default_sliver_attributes(network):
             attribute = {'name': str(default_attribute[0]), 
@@ -97,37 +104,35 @@ class SFAv1(BaseVersion):
             for sliver_attribute in sliver_attributes:
                 attribute = {'name': str(sliver_attribute[0]), 'value': str(sliver_attribute[1]), 'node_id': node}
                 slice_attributes.append(attribute)
+        """
         return slice_attributes
 
-    def add_slivers(self, hostnames, attributes=[], sliver_urn=None, append=False):
-        # add slice name to network tag
-        network_tags = self.xml.xpath('//network')
-        if network_tags:
-            network_tag = network_tags[0]
-            network_tag.set('slice', urn_to_hrn(sliver_urn)[0])
-        
-        # add slivers
-        sliver = {'name':sliver_urn,
-                  'pl_tags': attributes}
-        for hostname in hostnames:
-            if sliver_urn:
-                sliver['name'] = sliver_urn
-            node_elems = self.get_nodes({'component_id': '*%s*' % hostname})
-            if not node_elems: 
-                continue
-            node_elem = node_elems[0]
-            SFAv1Sliver.add_slivers(node_elem.element, sliver)   
 
-        # remove all nodes without slivers
-        if not append:
-            for node_elem in self.get_nodes():
-                if not node_elem['slivers']:
-                    parent = node_elem.element.getparent()
-                    parent.remove(node_elem.element)
+    def add_sliver_attribute(self, hostname, name, value, network=None):
+        nodes = self.get_nodes({'component_id': '*%s*' % hostname})
+        if not nodes:
+            node = nodes[0]
+            slivers = SFAv1Sliver.get_slivers(node)
+            if slivers:
+                sliver = slivers[0]
+                SFAv1Sliver.add_attribute(sliver, name, value)
 
+    def get_sliver_attributes(self, hostname, network=None):
+        nodes = self.get_nodes({'component_id': '*%s*' %hostname})
+        attribs = []
+        if nodes is not None and isinstance(nodes, list) and len(nodes) > 0:
+            node = nodes[0]
+            slivers = node.xpath('./default:sliver', namespaces=self.namespaces)
+            if slivers is not None and isinstance(slivers, list) and len(slivers) > 0:
+                sliver = slivers[0]
+                attribs = SFAv1Sliver.get_sliver_attributes(sliver)
+        return attribs
 
-    def remove_slivers(self, slivers, network=None, no_dupes=False):
-        SFAv1Node.remove_slivers(self.xml, slivers)
+    def remove_sliver_attribute(self, hostname, name, value, network=None):
+        attribs = self.get_sliver_attributes(hostname)
+        for attrib in attribs:
+            if attrib['tagname'] == name and attrib['value'] == value:
+                attrib.element.delete()
 
     def add_default_sliver_attribute(self, name, value, network=None):
         if network:
@@ -143,22 +148,20 @@ class SFAv1(BaseVersion):
             defaults = defaults[0]
         self.xml.add_attribute(defaults, name, value)
 
-    def add_sliver_attribute(self, hostname, name, value, network=None):
-        node = self.get_node_element(hostname, network)
-        sliver = node.find("sliver")
-        self.xml.add_attribute(sliver, name, value)
-
+    def get_default_sliver_attributes(self, network=None):
+        if network:
+            defaults = self.xml.xpath("//network[@name='%s']/sliver_defaults" % network)
+        else:
+            defaults = self.xml.xpath("//sliver_defaults")
+        if not defaults: return []
+        return self.attributes_list_thierry(defaults)
+    
     def remove_default_sliver_attribute(self, name, value, network=None):
         if network:
             defaults = self.xml.xpath("//network[@name='%s']/sliver_defaults" % network)
         else:
             defaults = self.xml.xpath("//sliver_defaults" % network)
         self.xml.remove_attribute(defaults, name, value)
-
-    def remove_sliver_attribute(self, hostname, name, value, network=None):
-        node = self.get_node_element(hostname, network)
-        sliver = node.find("sliver")
-        self.xml.remove_attribute(sliver, name, value)
 
     # Links
 

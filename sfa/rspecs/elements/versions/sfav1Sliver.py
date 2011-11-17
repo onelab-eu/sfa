@@ -1,4 +1,5 @@
 from sfa.util.xrn import Xrn
+from sfa.util.xml import XmlElement
 from sfa.rspecs.elements.element import Element
 from sfa.rspecs.elements.sliver import Sliver
 from sfa.rspecs.elements.versions.sfav1PLTag import SFAv1PLTag
@@ -12,8 +13,9 @@ class SFAv1Sliver:
         if not isinstance(slivers, list):
             slivers = [slivers]
         for sliver in slivers:
-            sliver_elem = Element.add_elements(xml, 'sliver', sliver, ['name'])[0]
-            SFAv1Sliver.add_sliver_attributes(sliver_elem, sliver.get('tags', []))
+            sliver_elem = xml.add_instance('sliver', sliver, ['name'])
+            for tag in sliver.get('tags', []):
+                SFAv1Sliver.add_sliver_attribute(sliver_elem, tag['tagname'], tag['value'])
             if sliver.get('sliver_id'):
                 sliver_id_leaf = Xrn(sliver.get('sliver_id')).get_leaf()
                 sliver_id_parts = sliver_id_leaf.split(':')
@@ -21,9 +23,22 @@ class SFAv1Sliver:
                 sliver_elem.set('name', name)
 
     @staticmethod
-    def add_sliver_attributes(xml, attributes):
-        SFAv1PLTag.add_pl_tags(xml, attributes)
-                    
+    def add_sliver_attribute(xml, name, value):
+        elem = xml.add_element(name)
+        elem.set_text(value)
+    
+    @staticmethod
+    def get_sliver_attributes(xml):
+        attribs = []
+        for elem in xml.iterchildren():
+            if elem.tag not in Sliver.fields:
+                xml_element = XmlElement(elem, xml.namespaces)
+                instance = Element(xml_element)
+                instance['tagname'] = elem.tag
+                instance['value'] = elem.text
+                attribs.append(instance)
+        return attribs 
+                
     @staticmethod
     def get_slivers(xml, filter={}):
         xpath = './default:sliver | ./sliver'
@@ -37,6 +52,3 @@ class SFAv1Sliver:
             slivers.append(sliver)
         return slivers           
 
-    @staticmethod
-    def get_sliver_attributes(xml, filter={}):
-        return SFAv1PLTag.get_pl_tags(xml, ignore=Sliver.fields)     

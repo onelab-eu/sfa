@@ -3,10 +3,10 @@ from sfa.rspecs.elements.pltag import PLTag
 
 class SFAv1PLTag:
     @staticmethod
-    def add_pl_tags(xml, pl_tags):
+    def add_pl_tag(xml, name, value):
         for pl_tag in pl_tags:
-            pl_tag_elem = xml.add_element(pl_tag['tagname'])
-            pl_tag_elem.set_text(pl_tag['value'])
+            pl_tag_elem = xml.add_element(name)
+            pl_tag_elem.set_text(value)
               
     @staticmethod
     def get_pl_tags(xml, ignore=[]):

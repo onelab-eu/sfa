@@ -9,14 +9,14 @@ class PGv2Link:
     @staticmethod
     def add_links(xml, links):
         for link in links:
-            link_elems = Element.add(xml, 'link', link, ['component_name', 'component_id', 'client_id'])
-            link_elem = link_elems[0]
+            
+            link_elem = xml.add_instance('link', link, ['component_name', 'component_id', 'client_id'])
             # set component manager element            
             if 'component_manager' in link and link['component_manager']:
                 cm_element = link_elem.add_element('component_manager', name=link['component_manager'])
             # set interface_ref elements
             for if_ref in [link['interface1'], link['interface2']]:
-                Element.add(link_elem, 'interface_ref', if_ref, Interface.fields)
+                link_elem.add_instance('interface_ref', if_ref, Interface.fields)
             # set property elements
             prop1 = link_elem.add_element('property', source_id = link['interface1']['component_id'],
                 dest_id = link['interface2']['component_id'], capacity=link['capacity'], 
@@ -55,7 +55,8 @@ class PGv2Link:
                         link[attrib] = prop[attrib]
                              
             # get interfaces
-            interfaces = Element.get(Interface, link_elem, './default:interface_ref | ./interface_ref')
+            iface_elems = link_elem.xpath('./default:interface_ref | ./interface_ref')
+            interfaces = [iface_elem.get_instance(Interface) for iface_elem in iface_elems]
             if len(interfaces) > 1:
                 link['interface1'] = interfaces[0]
                 link['interface2'] = interfaces[1] 

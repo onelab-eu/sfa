@@ -10,7 +10,7 @@ class PGv2SliverType:
         if not isinstance(slivers, list):
             slivers = [slivers]
         for sliver in slivers: 
-            sliver_elem = Element.add_elements(xml, 'sliver_type', sliver, ['type', 'client_id'])
+            sliver_elem = xml.add_instance('sliver_type', sliver, ['type', 'client_id'])
             PGv2SliverType.add_sliver_attributes(sliver_elem, sliver.get('pl_tags', []))
     
     @staticmethod
