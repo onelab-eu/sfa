@@ -34,7 +34,7 @@ class SFAv1Sliver:
             if elem.tag not in Sliver.fields:
                 xml_element = XmlElement(elem, xml.namespaces)
                 instance = Element(xml_element)
-                instance['tagname'] = elem.tag
+                instance['name'] = elem.tag
                 instance['value'] = elem.text
                 attribs.append(instance)
         return attribs 
