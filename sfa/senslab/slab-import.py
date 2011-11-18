@@ -125,10 +125,7 @@ def import_person(authname,person):
     existing_records = table.find({'hrn': person['hrn'], 'type': 'user'})
     extime = datetime.datetime.utcnow()
     person['date_created'] = int(time.mktime(extime.timetuple()))
-    if 'savakian' in person['hrn']:
-        person['pkey']="ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEAwSUkJ+cr3xM47h8lFkIXJoJhg4wHakTaLJmgTXkzvUmQsQeFB2MjUZ6WAelMXj/EFz2+XkK+bcWNXwfbrLptJQ+XwGpPZlu9YV/kzO63ghVrAyEg0+p7Pn1TO9f1ZYg4R6JfP/3qwH1AsE+X3PNpIewsuEIKwd2wUCJDf5RXJTpl39GizcBFemrRqgs0bdqAN/vUT9YvtWn8fCYR5EfJHVXOK8P1KmnbuGZpk7ryz21pDMlgw13+8aYB+LPkxdv5zG54A5c6o9N3zOCblvRFWaNBqathS8y04cOYWPmyu+Q0Xccwi7vM3Ktm8RoJw+raQNwsmneJOm6KXKnjoOQeiQ== savakian@sfa2.grenoble.senslab.info"
 
-        print>>sys.stderr," \r\n \t slab-import : CMOI \r\n \t\t %s\r\n\r\n" %(person)
   
     if not existing_records:
         print>>sys.stderr, " \r\n \t slab-import : person record %s inserted" %(person['hrn'])
