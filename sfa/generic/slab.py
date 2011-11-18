@@ -16,7 +16,7 @@ class slab (Generic):
     def registry_manager_class (self) : 
         return sfa.managers.registry_manager_slab
     def slicemgr_manager_class (self) : 
-        return sfa.managers.slice_manager_slab
+        return sfa.managers.slice_manager_slab.SliceManager
     def aggregate_manager_class (self) :
         return sfa.managers.aggregate_manager_slab
 

@@ -15,6 +15,8 @@ from sfa.rspecs.rspec import RSpec
 #from sfa.rspecs.rspec_version import RSpecVersion
 from sfa.rspecs.version_manager import VersionManager
 from sfa.senslab.OARrestapi import *
+from sfa.senslab.slabdriver import SlabDriver
+from sfa.util.config import Config
 
 class OARrspec:
 
@@ -32,6 +34,7 @@ class OARrspec:
 
     def __init__(self ,api, user_options={}):
 	self.OARImporter = OARapi()	
+        self.driver = SlabDriver(Config())
 	self.user_options = user_options
 	self.api = api 
 	print >>sys.stderr,"\r\n \r\n \t\t_____________INIT OARRSPEC__ api : %s" %(api)
@@ -46,7 +49,8 @@ class OARrspec:
     
     def prepare_nodes(self, force=False):
         if not self.nodes or force:
-            for node in self.OARImporter.GetNodes():
+            for node in self.driver.GetNodes():
+            #for node in self.OARImporter.GetNodes():
                 self.nodes[node['node_id']] = node
 		print >>sys.stderr,'prepare_nodes:node', node
 
@@ -66,7 +70,7 @@ class OARrspec:
 
     def prepare(self, force=False):
         if not self.prepared or force:
-            self.prepare_sites(force)
+            #self.prepare_sites(force)
             self.prepare_nodes(force)
             #self.prepare_links(force)
             #self.prepare_interfaces(force)
@@ -74,20 +78,20 @@ class OARrspec:
             # add site/interface info to nodes
             for node_id in self.nodes:
                 node = self.nodes[node_id]
-                site = self.sites[node['site_id']]
+                #site = self.sites[node['site_id']]
                 #interfaces = [self.interfaces[interface_id] for interface_id in node['interface_ids']]
                 #tags = [self.node_tags[tag_id] for tag_id in node['node_tag_ids']]
-		node['network'] = "senslab"	
+		node['network'] = self.driver.root_auth	
                 node['network_urn'] = hrn_to_urn(node['network'], 'authority+am')
-                node['urn'] = hostname_to_urn(node['network'], site['login_base'], node['hostname'])
-                node['site_urn'] = hrn_to_urn(PlXrn.site_hrn(node['network'], site['login_base']), 'authority+sa') 
-                node['site'] = site
+                node['urn'] = hostname_to_urn(node['network'], node['site_login_base'], node['hostname'])
+                node['site_urn'] = hrn_to_urn(PlXrn.site_hrn(node['network'], node['site_login_base']), 'authority+sa') 
+                #node['site'] = site
                 #node['interfaces'] = interfaces
                 #node['tags'] = tags
 		#print >>sys.stderr, "\r\n OAR  prepare ", node 
 		
         self.prepared = True  
-	
+	print >>sys.stderr, " \r\n \t\t prepare prepare_nodes \r\n %s " %(self.nodes)
 #from plc/aggregate.py 
     def get_rspec(self, slice_xrn=None, version = None):
 	print>>sys.stderr, " \r\n OARrspec \t\t get_spec **************\r\n" 
