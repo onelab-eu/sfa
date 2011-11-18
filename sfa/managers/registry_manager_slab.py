@@ -29,7 +29,7 @@ def GetVersion(api):
                          'urn':xrn.get_urn(),
                          'peers':peers})
 
-def get_credential(api, xrn, type, is_self=False):
+def GetCredential(api, xrn, type, is_self=False):
     # convert xrn to hrn     
     if type:
         hrn = urn_to_hrn(xrn)[0]
@@ -104,7 +104,7 @@ def get_credential(api, xrn, type, is_self=False):
     return new_cred.save_to_string(save_parents=True)
 
 
-def resolve(api, xrns, type=None, full=True):
+def Resolve(api, xrns, type=None, full=True):
 
     # load all known registry names into a prefix tree and attempt to find
     # the longest matching prefix
@@ -179,7 +179,7 @@ def resolve(api, xrns, type=None, full=True):
 
     return records
 
-def list(api, xrn, origin_hrn=None):
+def List(api, xrn, origin_hrn=None):
     hrn, type = urn_to_hrn(xrn)
     # load all know registry names into a prefix tree and attempt to find
     # the longest matching prefix
@@ -215,7 +215,7 @@ def list(api, xrn, origin_hrn=None):
     return records
 
 
-def register(api, record):
+def Register(api, record):
 
  
     #hrn, type = record['hrn'], record['type']
@@ -350,7 +350,7 @@ def register(api, record):
 
     return record.get_gid_object().save_to_string(save_parents=True)
 
-def update(api, record_dict):
+def Update(api, record_dict):
     new_record = SfaRecord(dict = record_dict)
     type = new_record['type']
     hrn = new_record['hrn']
@@ -437,7 +437,7 @@ def update(api, record_dict):
     return 1 
 
 # expecting an Xrn instance
-def remove(api, xrn, origin_hrn=None):
+def Remove(api, xrn, origin_hrn=None):
 
     table = SfaTable()
     filter = {'hrn': xrn.get_hrn()}
@@ -485,8 +485,3 @@ def remove(api, xrn, origin_hrn=None):
 
     return 1
 
-def remove_peer_object(api, record, origin_hrn=None):
-    pass
-
-def register_peer_object(api, record, origin_hrn=None):
-    pass
