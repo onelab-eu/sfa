@@ -3,7 +3,7 @@ from sfa.generic import Generic
 import sfa.server.sfaapi
 import sfa.senslab.slabdriver
 import sfa.managers.registry_manager_slab
-import sfa.managers.slice_manager_slab
+import sfa.managers.slice_manager
 import sfa.managers.aggregate_manager_slab
 
 class slab (Generic):
@@ -16,7 +16,7 @@ class slab (Generic):
     def registry_manager_class (self) : 
         return sfa.managers.registry_manager_slab
     def slicemgr_manager_class (self) : 
-        return sfa.managers.slice_manager_slab.SliceManager
+        return sfa.managers.slice_manager.SliceManager
     def aggregate_manager_class (self) :
         return sfa.managers.aggregate_manager_slab
 
