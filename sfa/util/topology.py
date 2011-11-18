@@ -13,8 +13,7 @@ class Topology(set):
     Parse the topology configuration file. 
     """
 
-    #def __init__(self, config_file = "/etc/sfa/topology"):
-    def __init__(self, config_file = "/tmp/topology"):
+    def __init__(self, config_file = "/etc/sfa/topology"):
         set.__init__(self) 
         self.config_file = None
         self.config_path = None

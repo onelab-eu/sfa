@@ -151,7 +151,8 @@ class XmlrpcApi:
         try:
             result = self.call(source, method, *args)
         except SfaFault, fault:
-            result = fault 
+            result = fault
+            self.logger.log_exc("XmlrpcApi.handle has caught Exception") 
         except Exception, fault:
             self.logger.log_exc("XmlrpcApi.handle has caught Exception")
             result = SfaAPIError(fault)
