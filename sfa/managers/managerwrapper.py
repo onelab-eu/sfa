@@ -29,6 +29,6 @@ class ManagerWrapper:
         
     def __getattr__(self, method):
         if not hasattr(self.manager, method):
-            raise SfaNotImplemented(method, self.interface)
+            raise SfaNotImplemented(self.interface, method)
         return getattr(self.manager, method)
         

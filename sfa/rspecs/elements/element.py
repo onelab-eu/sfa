@@ -11,9 +11,11 @@ class Element(dict):
             if key in fields:
                 self[key] = fields[key] 
 
-    def __getattr__(self, attr):
-        if hasattr(self, attr):
-            return getattr(self, attr)
-        elif self.element is not None and hasattr(self.element, attr):
-            return getattr(self.element, attr)
-        raise AttributeError, "Element class has no attribute %s" % attr
+
+    def __getattr__(self, name):
+        if hasattr(self, name):
+            return getattr(self, name)
+        elif hasattr(self.element, name):
+            return getattr(self.element, name)
+        else:
+            raise AttributeError, "class Element has not attribute %s" % name

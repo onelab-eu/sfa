@@ -14,13 +14,13 @@ class PGv2Services:
                               'execute': Execute.fields,
                               'login': Login.fields}
             for (name, fields) in child_elements.items():
-                objects = service.get(name)
-                if not objects: 
+                child = service.get(name)
+                if not child: 
                     continue
-                if isinstance(objects, basestring):
-                    service_elem.add_instance(name, objects, fields)
-                elif isinstance(objects, list):
-                    for obj in objects:
+                if isinstance(child, dict):
+                    service_elem.add_instance(name, child, fields)
+                elif isinstance(child, list):
+                    for obj in child:
                         service_elem.add_instance(name, obj, fields)
               
     @staticmethod

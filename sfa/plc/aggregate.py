@@ -37,39 +37,37 @@ class Aggregate:
         interfaces = {}
         for interface in self.api.driver.GetInterfaces(filter):
             iface = Interface()
-            iface['interface_id'] = interface['interface_id']
-            iface['node_id'] = interface['node_id']
-            iface['ipv4'] = interface['ip']
             if interface['bwlimit']:
-                iface['bwlimit'] = str(int(interface['bwlimit'])/1000)
-            interfaces[iface['interface_id']] = iface
+                interface['bwlimit'] = str(int(interface['bwlimit'])/1000)
+            interfaces[interface['interface_id']] = interface
         return interfaces
 
-    def get_links(self, filter={}):
+    def get_links(self, sites, nodes, interfaces):
         
-        if not self.api.config.SFA_AGGREGATE_TYPE.lower() == 'vini':
-            return []
-
         topology = Topology() 
-        links = {}
+        links = []
         for (site_id1, site_id2) in topology:
+            site_id1 = int(site_id1)
+            site_id2 = int(site_id2)
             link = Link()
-            if not site_id1 in self.sites or site_id2 not in self.sites:
+            if not site_id1 in sites or site_id2 not in sites:
                 continue
-            site1 = self.sites[site_id1]
-            site2 = self.sites[site_id2]
+            site1 = sites[site_id1]
+            site2 = sites[site_id2]
             # get hrns
             site1_hrn = self.api.hrn + '.' + site1['login_base']
             site2_hrn = self.api.hrn + '.' + site2['login_base']
 
-            for s1_node in self.nodes[site1['node_ids']]:
-                for s2_node in self.nodes[site2['node_ids']]:
+            for s1_node_id in site1['node_ids']:
+                for s2_node_id in site2['node_ids']:
+                    node1 = nodes[s1_node_id]
+                    node2 = nodes[s2_node_id]
                     # set interfaces
                     # just get first interface of the first node
-                    if1_xrn = PlXrn(auth=self.api.hrn, interface='node%s:eth0' % (s1_node['node_id']))
-                    if1_ipv4 = self.interfaces[node1['interface_ids'][0]]['ip']
-                    if2_xrn = PlXrn(auth=self.api.hrn, interface='node%s:eth0' % (s2_node['node_id']))
-                    if2_ipv4 = self.interfaces[node2['interface_ids'][0]]['ip']
+                    if1_xrn = PlXrn(auth=self.api.hrn, interface='node%s:eth0' % (node1['node_id']))
+                    if1_ipv4 = interfaces[node1['interface_ids'][0]]['ip']
+                    if2_xrn = PlXrn(auth=self.api.hrn, interface='node%s:eth0' % (node2['node_id']))
+                    if2_ipv4 = interfaces[node2['interface_ids'][0]]['ip']
 
                     if1 = Interface({'component_id': if1_xrn.urn, 'ipv4': if1_ipv4} )
                     if2 = Interface({'component_id': if2_xrn.urn, 'ipv4': if2_ipv4} )
@@ -81,7 +79,7 @@ class Aggregate:
                     link['component_name'] = "%s:%s" % (site1['login_base'], site2['login_base'])
                     link['component_id'] = PlXrn(auth=self.api.hrn, interface=link['component_name']).get_urn()
                     link['component_manager_id'] =  hrn_to_urn(self.api.hrn, 'authority+am')
-                    links[link['component_name']] = link
+                    links.append(link)
 
         return links
 
@@ -136,7 +134,7 @@ class Aggregate:
         
         return (slice, slivers)
 
-    def get_nodes (self, slice=None,slivers=[]):
+    def get_nodes_and_links(self, slice=None,slivers=[]):
         filter = {}
         tags_filter = {}
         if slice and 'node_ids' in slice and slice['node_ids']:
@@ -149,10 +147,12 @@ class Aggregate:
         site_ids = []
         interface_ids = []
         tag_ids = []
+        nodes_dict = {}
         for node in nodes:
             site_ids.append(node['site_id'])
             interface_ids.extend(node['interface_ids'])
             tag_ids.extend(node['node_tag_ids'])
+            nodes_dict[node['node_id']] = node
  
         # get sites
         sites_dict  = self.get_sites({'site_id': site_ids}) 
@@ -162,6 +162,8 @@ class Aggregate:
         node_tags = self.get_node_tags(tags_filter)
         # get initscripts
         pl_initscripts = self.get_pl_initscripts()
+        
+        links = self.get_links(sites_dict, nodes_dict, interfaces)
 
         rspec_nodes = []
         for node in nodes:
@@ -194,7 +196,7 @@ class Aggregate:
             if_count=0
             for if_id in node['interface_ids']:
                 interface = Interface(interfaces[if_id]) 
-                interface['ipv4'] = interface['ipv4']
+                interface['ipv4'] = interface['ip']
                 interface['component_id'] = PlXrn(auth=self.api.hrn, interface='node%s:eth%s' % (node['node_id'], if_count)).get_urn()
                 rspec_node['interfaces'].append(interface)
                 if_count+=1
@@ -213,7 +215,7 @@ class Aggregate:
                 service = Services({'login': login})
                 rspec_node['services'] = [service]
             rspec_nodes.append(rspec_node)
-        return rspec_nodes
+        return (rspec_nodes, links)
              
         
     def get_rspec(self, slice_xrn=None, version = None):
@@ -228,9 +230,11 @@ class Aggregate:
         slice, slivers = self.get_slice_and_slivers(slice_xrn)
         rspec = RSpec(version=rspec_version, user_options=self.user_options)
         if slice and 'expires' in slice:
-            rspec.xml.set('expires',  epochparse(slice['expires'])) 
-        rspec.version.add_nodes(self.get_nodes(slice, slivers))
-        rspec.version.add_links(self.get_links(slice))
+            rspec.xml.set('expires',  epochparse(slice['expires']))
+
+        nodes, links = self.get_nodes_and_links(slice, slivers)
+        rspec.version.add_nodes(nodes)
+        rspec.version.add_links(links)
         
         # add sliver defaults
         default_sliver_attribs = slivers.get(None, [])

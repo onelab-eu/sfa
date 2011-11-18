@@ -419,7 +419,7 @@ class SliceManager:
         return slices
     
     
-    def get_ticket(self, api, xrn, creds, rspec, users):
+    def GetTicket(self, api, xrn, creds, rspec, users):
         slice_hrn, type = urn_to_hrn(xrn)
         # get the netspecs contained within the clients rspec
         aggregate_rspecs = {}

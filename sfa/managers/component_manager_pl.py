@@ -17,7 +17,7 @@ def init_server():
     except:
         # our keypair may be old, try refreshing
         sfa_component_setup.get_node_key()
-        sfa_component_setup.get_credential(force=True)
+        sfa_component_setup.GetCredential(force=True)
         sfa_component_setup.get_trusted_certs()
 
 def SliverStatus(api, slice_xrn, creds):
