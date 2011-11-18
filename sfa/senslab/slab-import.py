@@ -186,41 +186,37 @@ def main():
     interface_hrn = config.SFA_INTERFACE_HRN
     print interface_hrn, root_auth
     
-     # initialize registry db table
-    #table = SfaTable()
-    #if not table.exists():
-    	#table.create()
-
-    # create root authority 
-    create_top_level_auth_records(root_auth)
-    if not root_auth == interface_hrn:
-       create_top_level_auth_records(interface_hrn)
-    
-    # create s user record for the slice manager Do we need this?
-    #create_sm_client_record()
-       
-    # create interface records ADDED 18 nov 11 Do we need this?
-
-    create_interface_records()
-
-    # add local root authority's cert  to trusted list ADDED 18 nov 11 Do we need this?
-    
-    authority = AuthHierarchy.get_auth_info(interface_hrn)
-    TrustedR.add_gid(authority.get_gid_object())
-
-
-
-     # create dict of all existing sfa records
-     
+    #Get all records in the sfa table   
+    # create dict of all existing sfa records
     existing_records = {}
     existing_hrns = []
     key_ids = []
-    person_keys = {} 
     results = table.find()
+   
     for result in results:
         existing_records[(result['hrn'], result['type'])] = result
         existing_hrns.append(result['hrn'])   
         
+    # create root authority if it doesn't exist
+    if root_auth not in  existing_hrns or \
+    (root_auth, 'authority') not in existing_records:
+        create_top_level_auth_records(root_auth)
+        if not root_auth == interface_hrn:
+            create_top_level_auth_records(interface_hrn)
+    
+        # create s user record for the slice manager Do we need this?
+        #create_sm_client_record()
+        
+        # create interface records ADDED 18 nov 11 Do we need this?
+    
+        create_interface_records()
+    
+        # add local root authority's cert  to trusted list ADDED 18 nov 11 Do we need this?
+        
+        authority = AuthHierarchy.get_auth_info(interface_hrn)
+        TrustedR.add_gid(authority.get_gid_object())
+
+
     #Get Senslab nodes 
    
     Driver = SlabDriver(config)
@@ -244,10 +240,8 @@ def main():
             (person['hrn'], 'user') not in existing_records :
             import_person(root_auth,person)
             import_slice(person)
-
-
-
-					
+				
+                                
     # remove stale records    
     system_records = [interface_hrn, root_auth, interface_hrn + '.slicemanager']
 
@@ -264,10 +258,6 @@ def main():
         found = False
         
         if type == 'authority':    
-            #for site in sites_dict:
-		#print "\t type : authority : ", site
-                #site_hrn = interface_hrn + "." + site['login_base']
-                #if site_hrn == record_hrn and site['site_id'] == record['pointer']:
             found = True
             print "\t \t Found :", found
             break
