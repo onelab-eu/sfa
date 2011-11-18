@@ -1,10 +1,13 @@
 #! /usr/bin/env python
 
 import sys
+
+from sfa.util.sfalogging import logger
 from sfa.client.sfi_commands import Commands
 from sfa.rspecs.rspec import RSpec
 from sfa.rspecs.version_manager import VersionManager
 
+logger.enable_console()
 command = Commands(usage="%prog [options] node1 node2...",
                    description="Add links to the RSpec. " +
                    "This command reads in an RSpec and outputs a modified " +
@@ -38,8 +41,7 @@ try:
     request_rspec.version.merge(ad_rspec)
     request_rspec.version.add_link_requests(link_tuples)
 except:
-    print >> sys.stderr, "FAILED: %s" % links
-    raise
+    logger.log_exc("sfiAddLinks FAILED with links %s" % links)
     sys.exit(1)
 print >>outfile, request_rspec.toxml()
 sys.exit(0)

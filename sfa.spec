@@ -1,6 +1,6 @@
 %define name sfa
 %define version 1.1
-%define taglevel 2
+%define taglevel 4
 
 %define release %{taglevel}%{?pldistro:.%{pldistro}}%{?date:.%{date}}
 %global python_sitearch	%( python -c "from distutils.sysconfig import get_python_lib; print get_python_lib(1)" )
@@ -197,6 +197,14 @@ fi
 [ "$1" -ge "1" ] && service sfa-cm restart || :
 
 %changelog
+* Fri Nov 18 2011 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-1.1-4
+- fixed links and attributes in rspecs
+- minor cleanup in the API methods, and more consistent names in manager methods
+
+* Thu Nov 17 2011 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-1.1-3
+- ongoing refoactoring towards more genericity
+- passes tests again although known issues remain with attributes/tags
+
 * Mon Nov 07 2011 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-1.1-2
 - checkpoint tag: use SFA_GENERIC_FLAVOUR instead of SFA_*_TYPE
 - improvements in the pgv2 rspecs

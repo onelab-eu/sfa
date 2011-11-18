@@ -13,9 +13,7 @@ ListResources
 ListSlices
 RedeemTicket
 Register
-RegisterPeerObject
 Remove
-RemovePeerObject
 RenewSliver
 Resolve
 ResolveGENI
@@ -25,11 +23,7 @@ Start
 Stop
 Update
 UpdateSliver
-get_aggregates
 get_key
-get_registries
 get_trusted_certs
-register_peer_object
-remove_peer_object
 reset_slice
 """.split()

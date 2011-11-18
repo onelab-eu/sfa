@@ -78,9 +78,9 @@ def clean_key_cred():
             os.unlink(f)
    
     # install the new key pair
-    # get_credential will take care of generating the new keypair
+    # GetCredential will take care of generating the new keypair
     # and credential 
-    get_credential()
+    GetCredential()
     
              
 def get_node_key(registry=None, verbose=False):
@@ -113,7 +113,7 @@ def create_server_keypair(keyfile=None, certfile=None, hrn="component", verbose=
     cert.save_to_file(certfile, save_parents=True)       
 
 @handle_gid_mismatch_exception
-def get_credential(registry=None, force=False, verbose=False):
+def GetCredential(registry=None, force=False, verbose=False):
     config = Config()
     hierarchy = Hierarchy()
     key_dir= hierarchy.basedir
@@ -169,7 +169,7 @@ def get_trusted_certs(registry=None, verbose=False):
     node_gid = GID(filename=node_gid_file)
     hrn = node_gid.get_hrn()
     # get credential
-    cred = get_credential(registry=registry, verbose=verbose)
+    cred = GetCredential(registry=registry, verbose=verbose)
     # make sure server key cert pair exists
     create_server_keypair(keyfile=keyfile, certfile=certfile, hrn=hrn, verbose=verbose)
     registry = server_proxy(url=registry, keyfile=keyfile, certfile=certfile)
@@ -214,7 +214,7 @@ def get_gids(registry=None, verbose=False):
     hrn = node_gid.get_hrn()
     interface_hrn = config.SFA_INTERFACE_HRN
     # get credential
-    cred = get_credential(registry=registry, verbose=verbose)
+    cred = GetCredential(registry=registry, verbose=verbose)
     # make sure server key cert pair exists
     create_server_keypair(keyfile=keyfile, certfile=certfile, hrn=hrn, verbose=verbose)
     registry = server_proxy(url=registry, keyfile=keyfile, certfile=certfile)

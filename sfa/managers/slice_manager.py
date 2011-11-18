@@ -96,12 +96,12 @@ class SliceManager:
             if stats_tags:
                 stats_tag = stats_tags[0]
             else:
-                stats_tag = etree.SubElement(rspec.xml.root, "statistics", call=callname)
+                stats_tag = rspec.xml.root.add_element("statistics", call=callname)
 
-            stat_tag = etree.SubElement(stats_tag, "aggregate", name=str(aggname), elapsed=str(elapsed), status=str(status))
+            stat_tag = stats_tag.add_element("aggregate", name=str(aggname), elapsed=str(elapsed), status=str(status))
 
             if exc_info:
-                exc_tag = etree.SubElement(stat_tag, "exc_info", name=str(exc_info[1]))
+                exc_tag = stat_tag.add_element("exc_info", name=str(exc_info[1]))
 
                 # formats the traceback as one big text blob
                 #exc_tag.text = "\n".join(traceback.format_exception(exc_info[0], exc_info[1], exc_info[2]))
@@ -109,7 +109,7 @@ class SliceManager:
                 # formats the traceback as a set of xml elements
                 tb = traceback.extract_tb(exc_info[2])
                 for item in tb:
-                    exc_frame = etree.SubElement(exc_tag, "tb_frame", filename=str(item[0]), line=str(item[1]), func=str(item[2]), code=str(item[3]))
+                    exc_frame = exc_tag.add_element("tb_frame", filename=str(item[0]), line=str(item[1]), func=str(item[2]), code=str(item[3]))
 
         except Exception, e:
             logger.warn("add_slicemgr_stat failed on  %s: %s" %(aggname, str(e)))
@@ -419,7 +419,7 @@ class SliceManager:
         return slices
     
     
-    def get_ticket(self, api, xrn, creds, rspec, users):
+    def GetTicket(self, api, xrn, creds, rspec, users):
         slice_hrn, type = urn_to_hrn(xrn)
         # get the netspecs contained within the clients rspec
         aggregate_rspecs = {}

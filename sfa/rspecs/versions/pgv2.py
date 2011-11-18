@@ -1,11 +1,11 @@
-from lxml import etree
 from copy import deepcopy
 from StringIO import StringIO
-from sfa.util.xrn import urn_to_sliver_id
+from sfa.util.xrn import Xrn, urn_to_sliver_id
 from sfa.util.plxrn import hostname_to_urn, xrn_to_hostname 
-from sfa.rspecs.rspec_version import BaseVersion
-from sfa.rspecs.rspec_elements import RSpecElement, RSpecElements
+from sfa.rspecs.baseversion import BaseVersion
 from sfa.rspecs.elements.versions.pgv2Link import PGv2Link
+from sfa.rspecs.elements.versions.pgv2Node import PGv2Node
+from sfa.rspecs.elements.versions.pgv2SliverType import PGv2SliverType
  
 class PGv2(BaseVersion):
     type = 'ProtoGENI'
@@ -18,58 +18,49 @@ class PGv2(BaseVersion):
         'planetlab': "http://www.planet-lab.org/resources/sfa/ext/planetlab/1",
     }
     namespaces = dict(extensions.items() + [('default', namespace)])
-    elements = []
 
-    def get_network(self):
-        network = None
-        nodes = self.xml.xpath('//default:node[@component_manager_id][1]', namespaces=self.namespaces)
-        if nodes:
-            network  = nodes[0].get('component_manager_id')
-        return network
-
+    # Networks    
     def get_networks(self):
-        networks = self.xml.xpath('//default:node[@component_manager_id]/@component_manager_id', namespaces=self.namespaces)
-        return set(networks)
+        networks = set()
+        nodes = self.xml.xpath('//default:node[@component_manager_id]', namespaces=self.namespaces)
+        for node in nodes: 
+            if 'component_manager_id' in node:
+                network_urn  = node.get('component_manager_id')
+                network_hrn = Xrn(network_urn).get_hrn()[0]
+                networks.add({'name': network_hrn})
+        return list(networks)
 
-    def get_node_element(self, hostname, network=None):
-        nodes = self.xml.xpath('//default:node[@component_id[contains(., "%s")]] | node[@component_id[contains(., "%s")]]' % (hostname, hostname), namespaces=self.namespaces)
-        if isinstance(nodes,list) and nodes:
-            return nodes[0]
-        else:
-            return None
+    # Nodes
 
-    def get_node_elements(self, network=None):
-        nodes = self.xml.xpath('//default:node | //node', namespaces=self.namespaces)
-        return nodes
+    def get_nodes(self, filter=None):
+        return PGv2Node.get_nodes(self.xml, filter)
 
+    def get_nodes_with_slivers(self):
+        return PGv2Node.get_nodes_with_slivers(self.xml)
 
-    def get_nodes(self, network=None):
-        xpath = '//default:node[@component_name]/@component_id | //node[@component_name]/@component_id'
-        nodes = self.xml.xpath(xpath, namespaces=self.namespaces)
-        nodes = [xrn_to_hostname(node) for node in nodes]
-        return nodes
+    def add_nodes(self, nodes, check_for_dupes=False):
+        return PGv2Node.add_nodes(self.xml, nodes)
+    
+    def merge_node(self, source_node_tag):
+        # this is untested
+        self.xml.root.append(deepcopy(source_node_tag))
 
-    def get_nodes_with_slivers(self, network=None):
-        if network:
-            nodes = self.xml.xpath('//default:node[@component_manager_id="%s"][sliver_type]/@component_id' % network, namespaces=self.namespaces)
-        else:
-            nodes = self.xml.xpath('//default:node[default:sliver_type]/@component_id', namespaces=self.namespaces)
-        nodes = [xrn_to_hostname(node) for node in nodes]
-        return nodes
-
-    def get_nodes_without_slivers(self, network=None):
-        return []
-
+    # Slivers
+    
     def get_sliver_attributes(self, hostname, network=None):
-        node = self.get_node_element(hostname, network)
-        sliver = node.xpath('./default:sliver_type', namespaces=self.namespaces)
-        if sliver is not None and isinstance(sliver, list):
-            sliver = sliver[0]
-        return self.attributes_list(sliver)
+        nodes = self.get_nodes({'component_id': '*%s*' %hostname})
+        attribs = []
+        if nodes is not None and isinstance(nodes, list) and len(nodes) > 0:
+            node = nodes[0]
+            sliver = node.xpath('./default:sliver_type', namespaces=self.namespaces)
+            if sliver is not None and isinstance(sliver, list) and len(sliver) > 0:
+                sliver = sliver[0]
+                #attribs = self.attributes_list(sliver)
+        return attribs
 
     def get_slice_attributes(self, network=None):
         slice_attributes = []
-        nodes_with_slivers = self.get_nodes_with_slivers(network)
+        nodes_with_slivers = self.get_nodes_with_slivers()
         # TODO: default sliver attributes in the PG rspec?
         default_ns_prefix = self.namespaces['default']
         for node in nodes_with_slivers:
@@ -92,18 +83,6 @@ class PGv2(BaseVersion):
 
         return slice_attributes
 
-    def get_links(self, network=None):
-        return PGv2Link.get_links(self.xml)
-
-    def get_link_requests(self):
-        return PGv2Link.get_link_requests(self.xml)  
-
-    def add_links(self, links):
-        PGv2Link.add_links(self.xml.root, links)
-
-    def add_link_requests(self, link_tuples, append=False):
-        PGv2Link.add_link_requests(self.xml.root, link_tuples, append)
-
     def attributes_list(self, elem):
         opts = []
         if elem is not None:
@@ -117,115 +96,70 @@ class PGv2(BaseVersion):
     def add_default_sliver_attribute(self, name, value, network=None):
         pass
 
-    def add_nodes(self, nodes, check_for_dupes=False):
-        if not isinstance(nodes, list):
-            nodes = [nodes]
-        for node in nodes:
-            urn = ""
-            if check_for_dupes and \
-              self.xml.xpath('//default:node[@component_uuid="%s"]' % urn, namespaces=self.namespaces):
-                # node already exists
-                continue
-
-            node_tag = etree.SubElement(self.xml.root, 'node', exclusive='false')
-            if 'network_urn' in node:
-                node_tag.set('component_manager_id', node['network_urn'])
-            if 'urn' in node:
-                node_tag.set('component_id', node['urn'])
-            if 'hostname' in node:
-                node_tag.set('component_name', node['hostname'])
-            # TODO: should replace plab-pc with pc model
-            node_type_tag = etree.SubElement(node_tag, 'hardware_type', name='plab-pc')
-            node_type_tag = etree.SubElement(node_tag, 'hardware_type', name='pc')
-            available_tag = etree.SubElement(node_tag, 'available', now='true')
-            sliver_type_tag = etree.SubElement(node_tag, 'sliver_type', name='plab-vserver')
-
-            pl_initscripts = node.get('pl_initscripts', {})
-            for pl_initscript in pl_initscripts.values():
-                etree.SubElement(sliver_type_tag, '{%s}initscript' % self.namespaces['planetlab'], name=pl_initscript['name'])
-
-            # protogeni uses the <sliver_type> tag to identify the types of
-            # vms available at the node.
-            # only add location tag if longitude and latitude are not null
-            if 'site' in node:
-                longitude = node['site'].get('longitude', None)
-                latitude = node['site'].get('latitude', None)
-                if longitude and latitude:
-                    location_tag = etree.SubElement(node_tag, 'location', country="us", \
-                                                    longitude=str(longitude), latitude=str(latitude))
-
-    def merge_node(self, source_node_tag):
-        # this is untested
-        self.xml.root.append(deepcopy(source_node_tag))
-
-    def add_slivers(self, slivers, sliver_urn=None, no_dupes=False, append=False):
-
+    def add_slivers(self, hostnames, attributes=[], sliver_urn=None, append=False):
         # all nodes hould already be present in the rspec. Remove all
         # nodes that done have slivers
-        slivers_dict = {}
-        for sliver in slivers:
-            if isinstance(sliver, basestring):
-                slivers_dict[sliver] = {'hostname': sliver}
-            elif isinstance(sliver, dict):
-                slivers_dict[sliver['hostname']] = sliver        
+        for hostname in hostnames:
+            node_elems = self.get_nodes({'component_id': '*%s*' % hostname})
+            if not node_elems:
+                continue
+            node_elem = node_elems[0]
+            
+            # determine sliver types for this node
+            valid_sliver_types = ['emulab-openvz', 'raw-pc', 'plab-vserver', 'plab-vnode']
+            requested_sliver_type = None
+            for sliver_type in node_elem.get('slivers', []):
+                if sliver_type.get('type') in valid_sliver_types:
+                    requested_sliver_type = sliver_type['type']
+            
+            if not requested_sliver_type:
+                continue
+            sliver = {'name': requested_sliver_type,
+                     'pl_tags': attributes}
 
-        nodes = self.get_node_elements()
-        for node in nodes:
-            urn = node.get('component_id')
-            hostname = xrn_to_hostname(urn)
-            if hostname not in slivers_dict and not append:
-                parent = node.getparent()
-                parent.remove(node)
-            else:
-                sliver_info = slivers_dict[hostname]
-                sliver_type_elements = node.xpath('./default:sliver_type', namespaces=self.namespaces)
-                available_sliver_types = [element.attrib['name'] for element in sliver_type_elements]
-                valid_sliver_types = ['emulab-openvz', 'raw-pc', 'plab-vserver', 'plab-vnode']
-                requested_sliver_type = None
-                for valid_sliver_type in valid_sliver_types:
-                    if valid_sliver_type in available_sliver_types:
-                        requested_sliver_type = valid_sliver_type
-                if requested_sliver_type:
-                    # remove existing sliver_type tags,it needs to be recreated
-                    sliver_elem = node.xpath('./default:sliver_type | ./sliver_type', namespaces=self.namespaces)
-                    if sliver_elem and isinstance(sliver_elem, list):
-                        sliver_elem = sliver_elem[0]
-                        node.remove(sliver_elem)
-                    # set the client id
-                    node.set('client_id', hostname)
-                    if sliver_urn:
-                        # set the sliver id
-                        slice_id = sliver_info.get('slice_id', -1)
-                        node_id = sliver_info.get('node_id', -1)
-                        sliver_id = urn_to_sliver_id(sliver_urn, slice_id, node_id)
-                        node.set('sliver_id', sliver_id)
+            # remove existing sliver_type tags
+            for sliver_type in node_elem.get('slivers', []):
+                node_elem.element.remove(sliver_type.element)
 
-                    # add the sliver element
-                    sliver_elem = etree.SubElement(node, 'sliver_type', name=requested_sliver_type)
-                    for tag in sliver_info.get('tags', []):
-                        if tag['tagname'] == 'flack_info':
-                            e = etree.SubElement(sliver_elem, '{%s}info' % self.namespaces['flack'], attrib=eval(tag['value']))
-                        elif tag['tagname'] == 'initscript':
-                            e = etree.SubElement(sliver_elem, '{%s}initscript' % self.namespaces['planetlab'], attrib={'name': tag['value']})                
-                else:
-                    # node isn't usable. just remove it from the request     
-                    parent = node.getparent()
-                    parent.remove(node)
+            # set the client id
+            node_elem.element.set('client_id', hostname)
+            if sliver_urn:
+                pass
+                # TODO
+                # set the sliver id
+                #slice_id = sliver_info.get('slice_id', -1)
+                #node_id = sliver_info.get('node_id', -1)
+                #sliver_id = urn_to_sliver_id(sliver_urn, slice_id, node_id)
+                #node_elem.set('sliver_id', sliver_id)
 
-    
+            # add the sliver type elemnt    
+            PGv2SliverType.add_slivers(node_elem.element, sliver)         
+
+        # remove all nodes without slivers
+        if not append:
+            for node_elem in self.get_nodes():
+                if not node_elem['client_id']:
+                    parent = node_elem.element.getparent()
+                    parent.remove(node_elem.element)
 
     def remove_slivers(self, slivers, network=None, no_dupes=False):
-        for sliver in slivers:
-            node_elem = self.get_node_element(sliver['hostname'])
-            sliver_elem = node_elem.xpath('./default:sliver_type', self.namespaces)
-            if sliver_elem != None and sliver_elem != []:
-                node_elem.remove(sliver_elem[0])
+        PGv2Node.remove_slivers(self.xml, slivers) 
 
-    def add_default_sliver_attribute(self, name, value, network=None):
-        pass
+    # Links
 
-    def add_interfaces(self, interfaces, no_dupes=False):
-        pass
+    def get_links(self, network=None):
+        return PGv2Link.get_links(self.xml)
+
+    def get_link_requests(self):
+        return PGv2Link.get_link_requests(self.xml)  
+
+    def add_links(self, links):
+        PGv2Link.add_links(self.xml.root, links)
+
+    def add_link_requests(self, link_tuples, append=False):
+        PGv2Link.add_link_requests(self.xml.root, link_tuples, append)
+
+    # Utility
 
     def merge(self, in_rspec):
         """
@@ -235,9 +169,9 @@ class PGv2(BaseVersion):
         # just copy over all the child elements under the root element
         if isinstance(in_rspec, RSpec):
             in_rspec = in_rspec.toxml()
-        tree = etree.parse(StringIO(in_rspec))
-        root = tree.getroot()
-        for child in root.getchildren():
+        
+        rspec = RSpec(in_rspec)
+        for child in rspec.xml.iterchildren():
             self.xml.root.append(child)
 
     def cleanup(self):
