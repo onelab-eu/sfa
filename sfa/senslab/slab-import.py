@@ -28,7 +28,7 @@ if not table.exists():
     table.create()
     
     
-def create_sm_client_record(self):
+def create_sm_client_record():
     """
     Create a user record for the Slicemanager service.
     """
@@ -205,7 +205,7 @@ def main():
             create_top_level_auth_records(interface_hrn)
     
         # create s user record for the slice manager Do we need this?
-        #create_sm_client_record()
+        create_sm_client_record()
         
         # create interface records ADDED 18 nov 11 Do we need this?
     
