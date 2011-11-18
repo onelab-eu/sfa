@@ -173,7 +173,7 @@ class SFAv1(BaseVersion):
     def add_links(self, links):
         networks = self.get_networks()
         if len(networks) > 0:
-            xml = networks[0]
+            xml = networks[0].element
         else:
             xml = self.xml
         PGv2Link.add_links(xml, links)
