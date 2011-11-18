@@ -53,7 +53,8 @@ def get_credential(api, xrn, type, is_self=False):
 
     # verify_cancreate_credential requires that the member lists
     # (researchers, pis, etc) be filled in
-    api.driver.fill_record_info(record, api.aggregates)
+    #api.driver.fill_record_info(record, api.aggregates)
+    api.driver.fill_record_info(record)
     record['enabled'] = True
     print>> sys.stderr , " \r\n    ++    REGISTRY get_credential hrn %s record['enabled'] %s is_self %s" %(hrn, record['enabled'], is_self)    
     if record['type']=='user':
@@ -169,7 +170,7 @@ def resolve(api, xrns, type=None, full=True):
     
     # convert local record objects to dicts
     records.extend([dict(record) for record in local_records])
-    print >>sys.stderr, "\r\n \t\t records extends %s" %(records)      
+    #print >>sys.stderr, "\r\n \t\t records extends %s" %(records)      
     if not records:
         raise RecordNotFound(str(hrns))
 
