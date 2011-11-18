@@ -55,6 +55,7 @@ Requires: pyOpenSSL >= 0.6
 Summary: the SFA layer around MyPLC
 Group: Applications/System
 Requires: sfa
+Requires: postgresql-python
 Requires: python-psycopg2
 Requires: myplc-config
 Requires: pyOpenSSL >= 0.7
