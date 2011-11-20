@@ -210,7 +210,7 @@ class Hierarchy:
        
         # create the authority if it doesnt alrady exist
         if not self.auth_exists(hrn):
-            self.AuthHierarchy.create_auth(hrn)
+            self.create_auth(hrn)
             
         
     def get_interface_auth_info(self, create=True):
