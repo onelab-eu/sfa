@@ -60,6 +60,8 @@ class Aggregate:
 
             for s1_node_id in site1['node_ids']:
                 for s2_node_id in site2['node_ids']:
+                    if s1_node_id not in nodes or s2_node_id not in nodes:
+                        continue
                     node1 = nodes[s1_node_id]
                     node2 = nodes[s2_node_id]
                     # set interfaces

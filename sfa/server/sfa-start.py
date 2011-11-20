@@ -64,77 +64,6 @@ def daemon():
     os.dup2(crashlog, 1)
     os.dup2(crashlog, 2)
 
-def init_server_key(server_key_file, server_cert_file, config, hierarchy):
-
-    hrn = config.SFA_INTERFACE_HRN.lower()
-    # check if the server's private key exists. If it doesnt,
-    # get the right one from the authorities directory. If it cant be
-    # found in the authorities directory, generate a random one
-    if not os.path.exists(server_key_file):
-        hrn = config.SFA_INTERFACE_HRN.lower()
-        hrn_parts = hrn.split(".")
-        rel_key_path = hrn
-        pkey_filename = hrn+".pkey"
-
-        # sub authority's have "." in their hrn. This must
-        # be converted to os.path separator
-        if len(hrn_parts) > 0:
-            rel_key_path = hrn.replace(".", os.sep)
-            pkey_filename= hrn_parts[-1]+".pkey"
-
-        key_file = os.sep.join([hierarchy.basedir, rel_key_path, pkey_filename])
-        if not os.path.exists(key_file):
-            # if it doesnt exist then this is probably a fresh interface
-            # with no records. Generate a random keypair for now
-            logger.debug("server's public key not found in %s" % key_file)
-
-            logger.debug("generating a random server key pair")
-            key = Keypair(create=True)
-            key.save_to_file(server_key_file)
-            init_server_cert(hrn, key, server_cert_file, self_signed=True)    
-
-        else:
-            # the pkey was found in the authorites directory. lets 
-            # copy it to where the server key should be and generate
-            # the cert
-            key = Keypair(filename=key_file)
-            key.save_to_file(server_key_file)
-            init_server_cert(hrn, key, server_cert_file)    
-
-    # If private key exists and cert doesnt, recreate cert
-    if (os.path.exists(server_key_file)) and (not os.path.exists(server_cert_file)):
-        key = Keypair(filename=server_key_file)
-        init_server_cert(hrn, key, server_cert_file)    
-
-
-def init_server_cert(hrn, key, server_cert_file, self_signed=False):
-    """
-    Setup the certificate for this server. Attempt to use gid before 
-    creating a self signed cert 
-    """
-    if self_signed:
-        init_self_signed_cert(hrn, key, server_cert_file)
-    else:
-        try:
-            # look for gid file
-            logger.debug("generating server cert from gid: %s"% hrn)
-            hierarchy = Hierarchy()
-            auth_info = hierarchy.get_auth_info(hrn)
-            gid = GID(filename=auth_info.gid_filename)
-            gid.save_to_file(filename=server_cert_file)
-        except:
-            # fall back to self signed cert
-            logger.debug("gid for %s not found" % hrn)
-            init_self_signed_cert(hrn, key, server_cert_file)        
-        
-def init_self_signed_cert(hrn, key, server_cert_file):
-    logger.debug("generating self signed cert")
-    # generate self signed certificate
-    cert = Certificate(subject=hrn)
-    cert.set_issuer(key=key, subject=hrn)
-    cert.set_pubkey(key)
-    cert.sign()
-    cert.save_to_file(server_cert_file)
 
 def install_peer_certs(server_key_file, server_cert_file):
     """
@@ -253,11 +182,12 @@ def main():
     
     config = Config()
     if config.SFA_API_DEBUG: pass
-    hierarchy = Hierarchy()
-    server_key_file = os.path.join(hierarchy.basedir, "server.key")
-    server_cert_file = os.path.join(hierarchy.basedir, "server.cert")
 
-    init_server_key(server_key_file, server_cert_file, config, hierarchy)
+    # ge the server's key and cert
+    hierarchy = Hierarchy()
+    auth_info = hierarchy.get_interface_auth_info() 
+    server_key_file = auth_info.get_privkey_filename()
+    server_cert_file = auth_info.get_gid_filename()
 
     if (options.daemon):  daemon()
     
