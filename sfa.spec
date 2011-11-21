@@ -31,6 +31,10 @@ Requires: python-ZSI
 Requires: python-lxml
 Requires: python-setuptools
 Requires: python-dateutil
+# for the registry
+Requires: postgresql >= 8.2, postgresql-server >= 8.2
+Requires: postgresql-python
+Requires: python-psycopg2
  
 # python 2.5 has uuid module added, for python 2.4 we still need it.
 # we can't really check for if we can load uuid as a python module,
@@ -55,7 +59,6 @@ Requires: pyOpenSSL >= 0.6
 Summary: the SFA layer around MyPLC
 Group: Applications/System
 Requires: sfa
-Requires: postgresql-python
 Requires: python-psycopg2
 Requires: myplc-config
 Requires: pyOpenSSL >= 0.7
