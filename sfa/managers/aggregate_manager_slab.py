@@ -22,7 +22,9 @@ from sfa.util.record import *
 from sfa.trust.credential import Credential
 import sfa.plc.peers as peers
 from sfa.plc.network import *
-from sfa.senslab.OARrestapi import *
+#from sfa.senslab.OARrestapi import *
+from sfa.senslab.slabdriver import SlabDriver
+from sfa.util.config import Config
 #from sfa.senslab.api import SfaAPI
 #from sfa.plc.aggregate import Aggregate
 #from sfa.plc.slices import *
@@ -348,8 +350,8 @@ def ListSlices(api, creds, call_id):
 def ListResources(api, creds, options,call_id):
 
     print >>sys.stderr, 'RESOURCES AGGREGATE'
-    OARImporter = OARapi()
-
+    #OARImporter = OARapi()
+    driver = SlabDriver(Config())
     if Callids().already_handled(call_id): return ""
     # get slice's hrn from options
     xrn = options.get('geni_slice_urn', '')
@@ -393,7 +395,7 @@ def ListResources(api, creds, options,call_id):
 
 
     rspec =  OAR_rspec.get_rspec(slice_xrn=xrn, version=rspec_version)
-    print >>sys.stderr, '\r\n OARImporter.GetNodes()', 	OARImporter.GetNodes()
+    print >>sys.stderr, '\r\n Slabdriver.GetNodes()', 	driver.GetNodes()
 
     print >>sys.stderr, '  \r\n **************RSPEC' , rspec
 

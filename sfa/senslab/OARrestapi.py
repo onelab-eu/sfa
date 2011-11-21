@@ -115,7 +115,8 @@ class OARGETParser:
 	def AddPosY(self,tuplelist,value):
 		tuplelist.append(('posy',value))	
 	
-	
+	def AddBootState(self,tuplelist,value):
+		tuplelist.append(('boot_state',str(value)))	
 	
 	def ParseVersion(self) : 
 		print self.raw_json
@@ -249,6 +250,7 @@ class OARGETParser:
 		'mobile': AddMobility,
 		'posx': AddPosX,
 		'posy': AddPosY,
+                'state':AddBootState,
 		}
 
 	
