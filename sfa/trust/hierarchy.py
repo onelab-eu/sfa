@@ -165,7 +165,6 @@ class Hierarchy:
         parent_urn = hrn_to_urn(parent_hrn, 'authority')
         if (parent_hrn) and (not self.auth_exists(parent_urn)) and (create_parents):
             self.create_auth(parent_urn, create_parents)
-
         (directory, gid_filename, privkey_filename, dbinfo_filename) = \
             self.get_auth_filenames(hrn)
 
@@ -200,7 +199,6 @@ class Hierarchy:
         """
         if not hrn:
             hrn = self.config.SFA_INTERFACE_HRN
-        
         # make sure parent exists
         parent_hrn = get_authority(hrn)
         if not parent_hrn:
@@ -258,13 +256,14 @@ class Hierarchy:
 
     def create_gid(self, xrn, uuid, pkey, CA=False):
         hrn, type = urn_to_hrn(xrn)
+        if not type:
+            type = 'authority'
         parent_hrn = get_authority(hrn)
         # Using hrn_to_urn() here to make sure the urn is in the right format
         # If xrn was a hrn instead of a urn, then the gid's urn will be
         # of type None 
         urn = hrn_to_urn(hrn, type)
         gid = GID(subject=hrn, uuid=uuid, hrn=hrn, urn=urn)
-
         # is this a CA cert
         if hrn == self.config.SFA_INTERFACE_HRN or not parent_hrn:
             # root or sub authority  

@@ -186,7 +186,7 @@ def main():
 
     # ge the server's key and cert
     hierarchy = Hierarchy()
-    auth_info = hierarchy.get_interface_auth_info() 
+    auth_info = hierarchy.get_interface_auth_info()
     server_key_file = auth_info.get_privkey_filename()
     server_cert_file = auth_info.get_gid_filename()
 
