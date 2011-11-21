@@ -106,11 +106,11 @@ class Config:
 
     def get_plc_dbinfo(self):
         return {
-            'dbname' : self.SFA_PLC_DB_NAME,
-            'address' : self.SFA_PLC_DB_HOST,
-            'port' : self.SFA_PLC_DB_PORT,
-            'user' : self.SFA_PLC_DB_USER,
-            'password' : self.SFA_PLC_DB_PASSWORD
+            'dbname' : self.SFA_DB_NAME,
+            'address' : self.SFA_DB_HOST,
+            'port' : self.SFA_DB_PORT,
+            'user' : self.SFA_DB_USER,
+            'password' : self.SFA_DB_PASSWORD
             }
 
     # TODO: find a better place to put this method
