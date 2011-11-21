@@ -40,7 +40,8 @@ from sfa.util.sfalogging import logger
 from sfa.util.xrn import get_authority, hrn_to_urn
 from sfa.util.config import Config
 import sfa.client.xmlrpcprotocol as xmlrpcprotocol
-
+from sfa.trust.gid import GID
+from sfa.trust.trustedroots import TrustedRoots
 from sfa.trust.certificate import Keypair, Certificate
 from sfa.trust.hierarchy import Hierarchy
 from sfa.trust.gid import GID
@@ -185,10 +186,13 @@ def main():
 
     # ge the server's key and cert
     hierarchy = Hierarchy()
-    auth_info = hierarchy.get_interface_auth_info() 
+    auth_info = hierarchy.get_interface_auth_info()
     server_key_file = auth_info.get_privkey_filename()
     server_cert_file = auth_info.get_gid_filename()
 
+    # ensure interface cert is present in trusted roots dir
+    trusted_roots = TrustedRoots(config.get_trustedroots_dir())
+    trusted_roots.add_gid(GID(filename=server_cert_file))
     if (options.daemon):  daemon()
     
     if options.trusted_certs:

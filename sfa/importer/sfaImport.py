@@ -75,6 +75,8 @@ class sfaImport:
         if not parent_hrn == hrn:
             self.create_top_level_auth_records(parent_hrn)
 
+        # enxure key and cert exists:
+        self.AuthHierarchy.create_top_level_auth(hrn)    
         # create the db record if it doesnt already exist    
         auth_info = self.AuthHierarchy.get_auth_info(hrn)
         table = SfaTable()
