@@ -214,11 +214,13 @@ class AggregateManagerMax (AggregateManager):
     
     ### GENI AM API Methods
     
-    def SliverStatus(self, api, slice_xrn, creds, call_id):
+    def SliverStatus(self, api, slice_xrn, creds, options={}):
+        call_id = options.get('call_id')
         if Callids().already_handled(call_id): return {}
         return self.slice_status(api, slice_xrn, creds)
     
-    def CreateSliver(self, api, slice_xrn, creds, rspec_string, users, call_id):
+    def CreateSliver(self, api, slice_xrn, creds, rspec_string, users, options={}):
+        call_id = options.get('call_id')
         if Callids().already_handled(call_id): return ""
         #TODO: create real CreateSliver response rspec
         ret = self.create_slice(api, slice_xrn, creds, rspec_string, users)
@@ -227,12 +229,14 @@ class AggregateManagerMax (AggregateManager):
         else:
             return "<?xml version=\"1.0\" ?> <RSpec type=\"SFA\"> Error! </RSpec>"
     
-    def DeleteSliver(self, api, xrn, creds, call_id):
+    def DeleteSliver(self, api, xrn, creds, options={}):
+        call_id = options.get('call_id')
         if Callids().already_handled(call_id): return ""
         return self.delete_slice(api, xrn, creds)
     
     # no caching
-    def ListResources(self, api, creds, options,call_id):
+    def ListResources(self, api, creds, options={}):
+        call_id = options.get('call_id')
         if Callids().already_handled(call_id): return ""
         # version_string = "rspec_%s" % (rspec_version.get_version_name())
         slice_urn = options.get('geni_slice_urn')

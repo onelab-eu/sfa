@@ -28,7 +28,7 @@ class AggregateManager:
         #self.caching=True
         self.caching=False
     
-    def GetVersion(self, api):
+    def GetVersion(self, api, options={}):
     
         version_manager = VersionManager()
         ad_rspec_versions = []
@@ -108,7 +108,8 @@ class AggregateManager:
     
             return reg_objects
     
-    def SliverStatus(self, api, slice_xrn, creds, call_id):
+    def SliverStatus(self, api, slice_xrn, creds, options={}):
+        call_id = options.get('call_id')
         if Callids().already_handled(call_id): return {}
     
         (hrn, _) = urn_to_hrn(slice_xrn)
@@ -158,11 +159,12 @@ class AggregateManager:
         result['geni_resources'] = resources
         return result
     
-    def CreateSliver(self, api, slice_xrn, creds, rspec_string, users, call_id):
+    def CreateSliver(self, api, slice_xrn, creds, rspec_string, users, options={}):
         """
         Create the sliver[s] (slice) at this aggregate.    
         Verify HRN and initialize the slice record in PLC if necessary.
         """
+        call_id = options.get('call_id')
         if Callids().already_handled(call_id): return ""
     
         aggregate = Aggregate(api)
@@ -201,7 +203,8 @@ class AggregateManager:
         return aggregate.get_rspec(slice_xrn=slice_xrn, version=rspec.version)
     
     
-    def RenewSliver(self, api, xrn, creds, expiration_time, call_id):
+    def RenewSliver(self, api, xrn, creds, expiration_time, options={}):
+        call_id = options.get('call_id')
         if Callids().already_handled(call_id): return True
         (hrn, _) = urn_to_hrn(xrn)
         slicename = hrn_to_pl_slicename(hrn)
@@ -250,7 +253,8 @@ class AggregateManager:
         # XX not implemented at this interface
         return 1
     
-    def DeleteSliver(self, api, xrn, creds, call_id):
+    def DeleteSliver(self, api, xrn, creds, options={}):
+        call_id = option.get('call_id')
         if Callids().already_handled(call_id): return ""
         (hrn, _) = urn_to_hrn(xrn)
         slicename = hrn_to_pl_slicename(hrn)
@@ -270,7 +274,8 @@ class AggregateManager:
                 api.driver.BindObjectToPeer('slice', slice['slice_id'], peer, slice['peer_slice_id'])
         return 1
     
-    def ListSlices(self, api, creds, call_id):
+    def ListSlices(self, api, creds, options={}):
+        call_id = option.get('call_id')
         if Callids().already_handled(call_id): return []
         # look in cache first
         if self.caching and api.cache:
@@ -289,7 +294,8 @@ class AggregateManager:
     
         return slice_urns
         
-    def ListResources(self, api, creds, options, call_id):
+    def ListResources(self, api, creds, options={}):
+        call_id = option.get('call_id')
         if Callids().already_handled(call_id): return ""
         # get slice's hrn from options
         xrn = options.get('geni_slice_urn', None)
@@ -323,7 +329,7 @@ class AggregateManager:
         return rspec
     
     
-    def GetTicket(self, api, xrn, creds, rspec, users):
+    def GetTicket(self, api, xrn, creds, rspec, users, options={}):
     
         (slice_hrn, _) = urn_to_hrn(xrn)
         slices = Slices(api)

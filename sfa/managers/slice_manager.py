@@ -26,7 +26,7 @@ class SliceManager:
         self.caching=True
         
     
-    def _call_id_supported(self, api, server):
+    def _options_supported(self, api, server):
         """
         Returns true if server support the optional call_id arg, false otherwise.
         """
@@ -39,8 +39,8 @@ class SliceManager:
             version_parts = code_tag_parts[0].split(".")
             major, minor = version_parts[0:2]
             rev = code_tag_parts[1]
-            if int(major) > 1:
-                if int(minor) > 0 or int(rev) > 20:
+            if int(major) >= 1:
+                if int(minor) >= 2:
                     return True
         return False
     
@@ -53,7 +53,7 @@ class SliceManager:
             logger.warning("GetVersion, falling back to xmlrpclib.ServerProxy internals")
             return server._ServerProxy__host + server._ServerProxy__handler
     
-    def GetVersion(self, api):
+    def GetVersion(self, api, options={}):
         # peers explicitly in aggregates.xml
         peers =dict ([ (peername,self.get_serverproxy_url(v)) for (peername,v) in api.aggregates.iteritems()
                        if peername != api.hrn])
@@ -114,16 +114,14 @@ class SliceManager:
         except Exception, e:
             logger.warn("add_slicemgr_stat failed on  %s: %s" %(aggname, str(e)))
     
-    def ListResources(self, api, creds, options, call_id):
+    def ListResources(self, api, creds, options={}):
         version_manager = VersionManager()
-        def _ListResources(aggregate, server, credential, opts, call_id):
+        def _ListResources(aggregate, server, credential, opts={}):
     
             my_opts = copy(opts)
             args = [credential, my_opts]
             tStart = time.time()
             try:
-                if self._call_id_supported(api, server):
-                    args.append(call_id)
                 version = api.get_cached_server_version(server)
                 # force ProtoGENI aggregates to give us a v2 RSpec
                 if 'sfa' not in version.keys():
@@ -133,7 +131,7 @@ class SliceManager:
             except Exception, e:
                 api.logger.log_exc("ListResources failed at %s" %(server.url))
                 return {"aggregate": aggregate, "elapsed": time.time()-tStart, "status": "exception", "exc_info": sys.exc_info()}
-    
+        call_id = options.get('call_id') 
         if Callids().already_handled(call_id): return ""
     
         # get slice's hrn from options
@@ -195,10 +193,10 @@ class SliceManager:
         return rspec.toxml()
     
     
-    def CreateSliver(self, api, xrn, creds, rspec_str, users, call_id):
+    def CreateSliver(self, api, xrn, creds, rspec_str, users, options={}):
     
         version_manager = VersionManager()
-        def _CreateSliver(aggregate, server, xrn, credential, rspec, users, call_id):
+        def _CreateSliver(aggregate, server, xrn, credential, rspec, users, options={}):
             tStart = time.time()
             try:
                 # Need to call GetVersion at an aggregate to determine the supported
@@ -214,14 +212,15 @@ class SliceManager:
                     rspec = rspec.toxml()
                     requested_users = sfa_to_pg_users_arg(users)
                 args = [xrn, credential, rspec, requested_users]
-                if self._call_id_supported(api, server):
-                    args.append(call_id)
+                if self._options_supported(api, server):
+                    args.append(options)
                 rspec = server.CreateSliver(*args)
                 return {"aggregate": aggregate, "rspec": rspec, "elapsed": time.time()-tStart, "status": "success"}
             except:
                 logger.log_exc('Something wrong in _CreateSliver with URL %s'%server.url)
                 return {"aggregate": aggregate, "elapsed": time.time()-tStart, "status": "exception", "exc_info": sys.exc_info()}
-    
+
+        call_id = option.get('call_id')
         if Callids().already_handled(call_id): return ""
         # Validate the RSpec against PlanetLab's schema --disabled for now
         # The schema used here needs to aggregate the PL and VINI schemas
@@ -267,14 +266,15 @@ class SliceManager:
                     api.logger.log_exc("SM.CreateSliver: Failed to merge aggregate rspec")
         return result_rspec.toxml()
     
-    def RenewSliver(self, api, xrn, creds, expiration_time, call_id):
-        def _RenewSliver(server, xrn, creds, expiration_time, call_id):
+    def RenewSliver(self, api, xrn, creds, expiration_time, options={}):
+        def _RenewSliver(server, xrn, creds, expiration_time, options={}):
             server_version = api.get_cached_server_version(server)
-            args =  [xrn, creds, expiration_time, call_id]
-            if self._call_id_supported(api, server):
-                args.append(call_id)
+            args =  [xrn, creds, expiration_time]
+            if self._options_supported(api, server):
+                args.append(options)
             return server.RenewSliver(*args)
     
+        call_id = option.get('call_id')
         if Callids().already_handled(call_id): return True
     
         (hrn, type) = urn_to_hrn(xrn)
@@ -298,14 +298,15 @@ class SliceManager:
         # 'and' the results
         return reduce (lambda x,y: x and y, threads.get_results() , True)
     
-    def DeleteSliver(self, api, xrn, creds, call_id):
-        def _DeleteSliver(server, xrn, creds, call_id):
+    def DeleteSliver(self, api, xrn, creds, options={}):
+        def _DeleteSliver(server, xrn, creds, options={}):
             server_version = api.get_cached_server_version(server)
             args =  [xrn, creds]
-            if self._call_id_supported(api, server):
-                args.append(call_id)
+            if self._options_supported(api, server):
+                args.append(options)
             return server.DeleteSliver(*args)
-    
+
+        call_id = option.get('call_id') 
         if Callids().already_handled(call_id): return ""
         (hrn, type) = urn_to_hrn(xrn)
         # get the callers hrn
@@ -330,14 +331,15 @@ class SliceManager:
     
     
     # first draft at a merging SliverStatus
-    def SliverStatus(self, api, slice_xrn, creds, call_id):
-        def _SliverStatus(server, xrn, creds, call_id):
+    def SliverStatus(self, api, slice_xrn, creds, options={}):
+        def _SliverStatus(server, xrn, creds, options={}):
             server_version = api.get_cached_server_version(server)
             args =  [xrn, creds]
-            if self._call_id_supported(api, server):
-                args.append(call_id)
+            if self._options_supported(api, server):
+                args.append(options)
             return server.SliverStatus(*args)
-        
+
+        call_id = options.get('call_id') 
         if Callids().already_handled(call_id): return {}
         # attempt to use delegated credential first
         cred = api.getDelegatedCredential(creds)
@@ -371,14 +373,15 @@ class SliceManager:
     
         return overall
     
-    def ListSlices(self, api, creds, call_id):
-        def _ListSlices(server, creds, call_id):
+    def ListSlices(self, api, creds, options={}):
+        def _ListSlices(server, creds, options={}):
             server_version = api.get_cached_server_version(server)
             args =  [creds]
-            if self._call_id_supported(api, server):
-                args.append(call_id)
+            if self._options_supported(api, server):
+                args.append(options)
             return server.ListSlices(*args)
-    
+
+        call_id = options.get('call_id') 
         if Callids().already_handled(call_id): return []
     
         # look in cache first
@@ -404,7 +407,7 @@ class SliceManager:
                 continue
             interface = api.aggregates[aggregate]
             server = api.server_proxy(interface, cred)
-            threads.run(_ListSlices, server, [cred], call_id)
+            threads.run(_ListSlices, server, [cred], call_id, options)
     
         # combime results
         results = threads.get_results()
@@ -419,7 +422,7 @@ class SliceManager:
         return slices
     
     
-    def GetTicket(self, api, xrn, creds, rspec, users):
+    def GetTicket(self, api, xrn, creds, rspec, users, options={}):
         slice_hrn, type = urn_to_hrn(xrn)
         # get the netspecs contained within the clients rspec
         aggregate_rspecs = {}
@@ -446,7 +449,7 @@ class SliceManager:
             
             interface = api.aggregates[aggregate]
             server = api.server_proxy(interface, cred)
-            threads.run(server.GetTicket, xrn, [cred], aggregate_rspec, users)
+            threads.run(server.GetTicket, xrn, [cred], aggregate_rspec, users, options)
     
         results = threads.get_results()
         

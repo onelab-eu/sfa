@@ -25,11 +25,11 @@ class CreateSliver(Method):
               Parameter(type([str]), "List of credentials")),
         Parameter(str, "RSpec"),
         Parameter(type([]), "List of user information"),
-        Parameter(str, "call_id"),
+        Parameter(dict, "options"),
         ]
     returns = Parameter(str, "Allocated RSpec")
 
-    def call(self, slice_xrn, creds, rspec, users, call_id=""):
+    def call(self, slice_xrn, creds, rspec, users, options={}):
         hrn, type = urn_to_hrn(slice_xrn)
 
         self.api.logger.info("interface: %s\ttarget-hrn: %s\tmethod-name: %s"%(self.api.interface, hrn, self.name))
@@ -52,7 +52,7 @@ class CreateSliver(Method):
         rspec = run_sfatables(chain_name, hrn, origin_hrn, rspec)
         slivers = RSpec(rspec).version.get_nodes_with_slivers()
         if slivers:
-            result = self.api.manager.CreateSliver(self.api, slice_xrn, creds, rspec, users, call_id)
+            result = self.api.manager.CreateSliver(self.api, slice_xrn, creds, rspec, users, options)
         else:
             result = rspec     
         return result

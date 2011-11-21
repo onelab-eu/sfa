@@ -19,12 +19,12 @@ class DeleteSliver(Method):
         Parameter(str, "Human readable name of slice to delete (hrn or urn)"),
         Mixed(Parameter(str, "Credential string"),
               Parameter(type([str]), "List of credentials")),
-        Parameter(str, "call_id"),
+        Parameter(dict, "options"),
         ]
 
     returns = Parameter(int, "1 if successful")
     
-    def call(self, xrn, creds, call_id=""):
+    def call(self, xrn, creds, options={}):
         (hrn, type) = urn_to_hrn(xrn)
         valid_creds = self.api.auth.checkCredentials(creds, 'deletesliver', hrn)
 
@@ -32,6 +32,6 @@ class DeleteSliver(Method):
         origin_hrn = Credential(string=valid_creds[0]).get_gid_caller().get_hrn()
         self.api.logger.info("interface: %s\tcaller-hrn: %s\ttarget-hrn: %s\tmethod-name: %s"%(self.api.interface, origin_hrn, hrn, self.name))
 
-        self.api.manager.DeleteSliver(self.api, xrn, creds, call_id)
+        self.api.manager.DeleteSliver(self.api, xrn, creds, options)
  
         return 1 

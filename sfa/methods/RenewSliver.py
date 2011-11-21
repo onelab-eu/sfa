@@ -20,11 +20,11 @@ class RenewSliver(Method):
         Parameter(str, "Slice URN"),
         Parameter(type([str]), "List of credentials"),
         Parameter(str, "Expiration time in RFC 3339 format"),
-        Parameter(str, "call_id"),
+        Parameter(dict, "Options"),
         ]
     returns = Parameter(bool, "Success or Failure")
 
-    def call(self, slice_xrn, creds, expiration_time, call_id=""):
+    def call(self, slice_xrn, creds, expiration_time, options={}):
 
         (hrn, type) = urn_to_hrn(slice_xrn)
 
@@ -40,5 +40,5 @@ class RenewSliver(Method):
             raise InsufficientRights('Renewsliver: Credential expires before requested expiration time')
         if requested_time > datetime.datetime.utcnow() + datetime.timedelta(days=max_renew_days):
             raise Exception('Cannot renew > %s days from now' % max_renew_days)
-        return self.api.manager.RenewSliver(self.api, slice_xrn, valid_creds, expiration_time, call_id)    
+        return self.api.manager.RenewSliver(self.api, slice_xrn, valid_creds, expiration_time, options)    
     

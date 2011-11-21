@@ -429,7 +429,7 @@ class Sfi:
         return version   
         
 
-    def server_supports_call_id_arg(self, server):
+    def server_supports_options_arg(self, server):
         """
         Returns true if server support the optional call_id arg, false otherwise. 
         """
@@ -441,11 +441,11 @@ class Sfi:
             version_parts = code_tag_parts[0].split(".")
             major, minor = version_parts[0], version_parts[1]
             rev = code_tag_parts[1]
-            if int(major) > 1:
-                if int(minor) > 0 or int(rev) > 20:
+            if int(major) >= 1:
+                if int(minor) >= 2:
                     return True
         return False                
-             
+        
     #
     # Get various credential and spec files
     #
@@ -929,8 +929,11 @@ class Sfi:
             delegated_cred = self.delegate_cred(user_cred, get_authority(self.authority))
             creds.append(delegated_cred)  
         server = self.server_proxy_from_opts(opts)
-        #results = server.ListSlices(creds, unique_call_id())
-        results = server.ListSlices(creds)
+        call_args = [creds]
+        if self.server_supports_options_arg(server):
+            options = {'call_id': unique_call_id()}
+            call_args.append(options)
+        results = server.ListSlices(*call_args)
         display_list(results)
         return
     
@@ -938,13 +941,12 @@ class Sfi:
     def resources(self, opts, args):
         user_cred = self.get_user_cred().save_to_string(save_parents=True)
         server = self.slicemgr
-        call_options = {}
         server = self.server_proxy_from_opts(opts)
         
         if args:
             cred = self.get_slice_cred(args[0]).save_to_string(save_parents=True)
             hrn = args[0]
-	    call_options = {'geni_slice_urn': hrn_to_urn(hrn, 'slice')}
+	    options = {'geni_slice_urn': hrn_to_urn(hrn, 'slice')}
         else:
             cred = user_cred
             hrn = None
@@ -958,18 +960,19 @@ class Sfi:
             server_version = self.get_cached_server_version(server)
             if 'sfa' in server_version:
                 # just request the version the client wants 
-                call_options['rspec_version'] = version_manager.get_version(opts.rspec_version).to_dict()
+                options['rspec_version'] = version_manager.get_version(opts.rspec_version).to_dict()
             else:
                 # this must be a protogeni aggregate. We should request a v2 ad rspec
                 # regardless of what the client user requested 
-                call_options['rspec_version'] = version_manager.get_version('ProtoGENI 2').to_dict()     
+                options['rspec_version'] = version_manager.get_version('ProtoGENI 2').to_dict()     
         #panos add info options
         if opts.info:
-            call_options['info'] = opts.info 
+            options['info'] = opts.info 
 
-        call_args = [creds, call_options]
-        if self.server_supports_call_id_arg(server):
-            call_args.append(unique_call_id())
+        call_args = [creds]
+        if self.server_supports_options_arg(server):
+            options = {'call_id': unique_call_id()}
+            call_args.append(options)
         result = server.ListResources(*call_args)
         if opts.file is None:
             display_rspec(result, opts.format)
@@ -1022,9 +1025,9 @@ class Sfi:
                 if delegated_cred:
                     creds.append(delegated_cred)
         call_args = [slice_urn, creds, rspec, users]
-        if self.server_supports_call_id_arg(server):
-            call_args.append(unique_call_id())
-
+        if self.server_supports_options_arg(server):
+            options = {'call_id': unique_call_id()}
+            call_args.append(options)
         result = server.CreateSliver(*call_args)
         if opts.file is None:
             print result
@@ -1095,10 +1098,10 @@ class Sfi:
             delegated_cred = self.delegate_cred(slice_cred, get_authority(self.authority))
             creds.append(delegated_cred)
         server = self.server_proxy_from_opts(opts)
-
         call_args = [slice_urn, creds]
-        if self.server_supports_call_id_arg(server):
-            call_args.append(unique_call_id())
+        if self.server_supports_options_arg(server):
+            options = {'call_id': unique_call_id()}
+            call_args.append(options)
         return server.DeleteSliver(*call_args) 
   
     # start named slice
@@ -1149,8 +1152,9 @@ class Sfi:
         time = args[1]
         
         call_args = [slice_urn, creds, time]
-        if self.server_supports_call_id_arg(server):
-            call_args.append(unique_call_id())
+        if self.server_supports_options_arg(server):
+            options = {'call_id': unique_call_id()}
+            call_args.append(options)
         return server.RenewSliver(*call_args)
 
 
@@ -1164,8 +1168,9 @@ class Sfi:
             creds.append(delegated_cred)
         server = self.server_proxy_from_opts(opts)
         call_args = [slice_urn, creds]
-        if self.server_supports_call_id_arg(server):
-            call_args.append(unique_call_id())
+        if self.server_supports_options_arg(server):
+            options = {'call_id': unique_call_id()}
+            call_args.append(options)
         result = server.SliverStatus(*call_args)
         print result
         if opts.file:
