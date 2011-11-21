@@ -942,7 +942,9 @@ class Sfi:
         user_cred = self.get_user_cred().save_to_string(save_parents=True)
         server = self.slicemgr
         server = self.server_proxy_from_opts(opts)
-        
+
+        options = {}
+
         if args:
             cred = self.get_slice_cred(args[0]).save_to_string(save_parents=True)
             hrn = args[0]
@@ -950,7 +952,7 @@ class Sfi:
         else:
             cred = user_cred
             hrn = None
-     
+
         creds = [cred]
         if opts.delegate:
             delegated_cred = self.delegate_cred(cred, get_authority(self.authority))
@@ -972,7 +974,7 @@ class Sfi:
         call_args = [creds]
         if self.server_supports_options_arg(server):
             options = {'call_id': unique_call_id()}
-            call_args.append(options)
+        call_args.append(options)
         result = server.ListResources(*call_args)
         if opts.file is None:
             display_rspec(result, opts.format)
