@@ -168,7 +168,7 @@ class SliceManager:
             # get the rspec from the aggregate
             interface = api.aggregates[aggregate]
             server = api.server_proxy(interface, cred)
-            threads.run(_ListResources, aggregate, server, [cred], options, call_id)
+            threads.run(_ListResources, aggregate, server, [cred], options)
     
     
         results = threads.get_results()
@@ -220,7 +220,7 @@ class SliceManager:
                 logger.log_exc('Something wrong in _CreateSliver with URL %s'%server.url)
                 return {"aggregate": aggregate, "elapsed": time.time()-tStart, "status": "exception", "exc_info": sys.exc_info()}
 
-        call_id = option.get('call_id')
+        call_id = options.get('call_id')
         if Callids().already_handled(call_id): return ""
         # Validate the RSpec against PlanetLab's schema --disabled for now
         # The schema used here needs to aggregate the PL and VINI schemas
@@ -274,7 +274,7 @@ class SliceManager:
                 args.append(options)
             return server.RenewSliver(*args)
     
-        call_id = option.get('call_id')
+        call_id = options.get('call_id')
         if Callids().already_handled(call_id): return True
     
         (hrn, type) = urn_to_hrn(xrn)
@@ -306,7 +306,7 @@ class SliceManager:
                 args.append(options)
             return server.DeleteSliver(*args)
 
-        call_id = option.get('call_id') 
+        call_id = options.get('call_id') 
         if Callids().already_handled(call_id): return ""
         (hrn, type) = urn_to_hrn(xrn)
         # get the callers hrn
@@ -407,7 +407,7 @@ class SliceManager:
                 continue
             interface = api.aggregates[aggregate]
             server = api.server_proxy(interface, cred)
-            threads.run(_ListSlices, server, [cred], call_id, options)
+            threads.run(_ListSlices, server, [cred], options)
     
         # combime results
         results = threads.get_results()

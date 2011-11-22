@@ -254,7 +254,7 @@ class AggregateManager:
         return 1
     
     def DeleteSliver(self, api, xrn, creds, options={}):
-        call_id = option.get('call_id')
+        call_id = options.get('call_id')
         if Callids().already_handled(call_id): return ""
         (hrn, _) = urn_to_hrn(xrn)
         slicename = hrn_to_pl_slicename(hrn)
@@ -275,7 +275,7 @@ class AggregateManager:
         return 1
     
     def ListSlices(self, api, creds, options={}):
-        call_id = option.get('call_id')
+        call_id = options.get('call_id')
         if Callids().already_handled(call_id): return []
         # look in cache first
         if self.caching and api.cache:
@@ -295,7 +295,7 @@ class AggregateManager:
         return slice_urns
         
     def ListResources(self, api, creds, options={}):
-        call_id = option.get('call_id')
+        call_id = options.get('call_id')
         if Callids().already_handled(call_id): return ""
         # get slice's hrn from options
         xrn = options.get('geni_slice_urn', None)
