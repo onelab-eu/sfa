@@ -942,14 +942,18 @@ class Sfi:
         user_cred = self.get_user_cred().save_to_string(save_parents=True)
         server = self.slicemgr
         server = self.server_proxy_from_opts(opts)
+   
+        options = {'call_id': unique_call_id()}
+        #panos add info options
+        if opts.info:
+            options['info'] = opts.info
         
         if args:
             cred = self.get_slice_cred(args[0]).save_to_string(save_parents=True)
             hrn = args[0]
-	    options = {'geni_slice_urn': hrn_to_urn(hrn, 'slice')}
+            options['geni_slice_urn'] = hrn_to_urn(hrn, 'slice')
         else:
             cred = user_cred
-            hrn = None
      
         creds = [cred]
         if opts.delegate:
@@ -965,14 +969,8 @@ class Sfi:
                 # this must be a protogeni aggregate. We should request a v2 ad rspec
                 # regardless of what the client user requested 
                 options['rspec_version'] = version_manager.get_version('ProtoGENI 2').to_dict()     
-        #panos add info options
-        if opts.info:
-            options['info'] = opts.info 
 
-        call_args = [creds]
-        if self.server_supports_options_arg(server):
-            options = {'call_id': unique_call_id()}
-            call_args.append(options)
+        call_args = [creds, options]
         result = server.ListResources(*call_args)
         if opts.file is None:
             display_rspec(result, opts.format)

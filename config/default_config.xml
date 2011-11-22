@@ -18,10 +18,25 @@ Thierry Parmentelat
       <description>Basic system variables.</description>
 
       <variablelist>
+        <variable id="generic_flavour" type="string">
+          <name>Generic Flavour</name>
+          <value>pl</value>
+          <description>This string refers to a class located in sfa.generic that describes 
+          which specific implementation needs to be used for api, manager and driver objects.
+          PlanetLab users do not need to change this setting.
+          </description>
+        </variable>
+
         <variable id="interface_hrn" type="string">
           <name>Human readable name</name>
           <value>plc</value>
           <description>The human readable name for this interface.</description>
+        </variable>
+
+        <variable id="am_api_version" type="string">
+          <name>Aggregate Manager API Version</name>
+          <value>1</value>
+          <description>The Aggregate API version</description>
         </variable>
 
         <variable id="credential_schema" type="string">
@@ -52,15 +67,6 @@ Thierry Parmentelat
             This functionality is used by the SFA web GUI. 
             </description> 
         </variable>
-
-	<variable id="generic_flavour" type="string">
-	  <name>Generic Flavour</name>
-	  <value>pl</value>
-	  <description>This string refers to a class located in sfa.generic that describes 
-	  which specific implementation needs to be used for api, manager and driver objects.
-	  PlanetLab users do not need to change this setting.
-	  </description>
-	</variable>
 
       </variablelist>
     </category>
