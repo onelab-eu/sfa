@@ -248,5 +248,5 @@ class SfaApi (XmlrpcApi):
             if hasattr(self.config, 'SFA_AM_API_VERSION') and \
               self.config.SFA_AM_API_VERSION == "2":
                 result = self.prepare_response_v2_am(result)
-        return XmlrpcApi.prepare_response(result, method)
+        return XmlrpcApi.prepare_response(self, result, method)
 
