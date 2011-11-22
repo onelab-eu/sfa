@@ -69,22 +69,22 @@ class PostgreSQL:
             if psycopg2:
                 try:
                     # Try UNIX socket first
-                    self.connection = psycopg2.connect(user = self.config.SFA_PLC_DB_USER,
-                                                       password = self.config.SFA_PLC_DB_PASSWORD,
-                                                       database = self.config.SFA_PLC_DB_NAME)
+                    self.connection = psycopg2.connect(user = self.config.SFA_DB_USER,
+                                                       password = self.config.SFA_DB_PASSWORD,
+                                                       database = self.config.SFA_DB_NAME)
                 except psycopg2.OperationalError:
                     # Fall back on TCP
-                    self.connection = psycopg2.connect(user = self.config.SFA_PLC_DB_USER,
-                                                       password = self.config.SFA_PLC_DB_PASSWORD,
-                                                       database = self.config.SFA_PLC_DB_NAME,
-                                                       host = self.config.SFA_PLC_DB_HOST,
-                                                       port = self.config.SFA_PLC_DB_PORT)
+                    self.connection = psycopg2.connect(user = self.config.SFA_DB_USER,
+                                                       password = self.config.SFA_DB_PASSWORD,
+                                                       database = self.config.SFA_DB_NAME,
+                                                       host = self.config.SFA_DB_HOST,
+                                                       port = self.config.SFA_DB_PORT)
                 self.connection.set_client_encoding("UNICODE")
             else:
-                self.connection = pgdb.connect(user = self.config.SFA_PLC_DB_USER,
-                                               password = self.config.SFA_PLC_DB_PASSWORD,
-                                               host = "%s:%d" % (self.config.SFA_PLC_DB_HOST, self.config.SFA_PLC_DB_PORT),
-                                               database = self.config.SFA_PLC_DB_NAME)
+                self.connection = pgdb.connect(user = self.config.SFA_DB_USER,
+                                               password = self.config.SFA_DB_PASSWORD,
+                                               host = "%s:%d" % (self.config.SFA_DB_HOST, self.config.SFA_DB_PORT),
+                                               database = self.config.SFA_DB_NAME)
 
         (self.rowcount, self.description, self.lastrowid) = \
                         (None, None, None)
