@@ -299,6 +299,7 @@ class AggregateManager:
         if Callids().already_handled(call_id): return ""
         # get slice's hrn from options
         xrn = options.get('geni_slice_urn', None)
+        cached = options.get('cached', True) 
         (hrn, _) = urn_to_hrn(xrn)
     
         version_manager = VersionManager()
@@ -311,7 +312,7 @@ class AggregateManager:
             version_string = version_string + "_"+options.get('info', 'default')
     
         # look in cache first
-        if self.caching and api.cache and not xrn:
+        if self.caching and api.cache and not xrn and cached:
             rspec = api.cache.get(version_string)
             if rspec:
                 api.logger.info("aggregate.ListResources: returning cached value for hrn %s"%hrn)
@@ -319,8 +320,8 @@ class AggregateManager:
     
         #panos: passing user-defined options
         #print "manager options = ",options
-        aggregate = Aggregate(api, options)
-        rspec =  aggregate.get_rspec(slice_xrn=xrn, version=rspec_version)
+        aggregate = Aggregate(api)
+        rspec =  aggregate.get_rspec(slice_xrn=xrn, version=rspec_version, options=options)
     
         # cache the result
         if self.caching and api.cache and not xrn:
