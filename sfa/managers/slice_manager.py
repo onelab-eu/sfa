@@ -65,15 +65,15 @@ class SliceManager:
                 ad_rspec_versions.append(rspec_version.to_dict())
             if rspec_version.content_type in ['*', 'request']:
                 request_rspec_versions.append(rspec_version.to_dict())
-        default_rspec_version = version_manager.get_version("sfa 1").to_dict()
         xrn=Xrn(api.hrn, 'authority+sa')
         version_more = {'interface':'slicemgr',
+                        'sfa': 1,
+                        'geni_api': api.config.SFA_AGGREGATE_API_VERSION,
                         'hrn' : xrn.get_hrn(),
                         'urn' : xrn.get_urn(),
                         'peers': peers,
-                        'request_rspec_versions': request_rspec_versions,
-                        'ad_rspec_versions': ad_rspec_versions,
-                        'default_ad_rspec': default_rspec_version
+                        'geni_request_rspec_versions': request_rspec_versions,
+                        'geni_ad_rspec_versions': ad_rspec_versions,
                     }
         sm_version=version_core(version_more)
         # local aggregate if present needs to have localhost resolved

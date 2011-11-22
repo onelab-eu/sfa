@@ -38,14 +38,14 @@ class AggregateManager:
                 ad_rspec_versions.append(rspec_version.to_dict())
             if rspec_version.content_type in ['*', 'request']:
                 request_rspec_versions.append(rspec_version.to_dict()) 
-        default_rspec_version = version_manager.get_version("sfa 1").to_dict()
         xrn=Xrn(api.hrn)
         version_more = {'interface':'aggregate',
+                        'sfa': 1,
+                        'geni_api': api.config.SFA_AGGREGATE_API_VERSION,
                         'testbed':'myplc',
                         'hrn':xrn.get_hrn(),
-                        'request_rspec_versions': request_rspec_versions,
-                        'ad_rspec_versions': ad_rspec_versions,
-                        'default_ad_rspec': default_rspec_version
+                        'geni_request_rspec_versions': request_rspec_versions,
+                        'geni_ad_rspec_versions': ad_rspec_versions,
                         }
         return version_core(version_more)
     
