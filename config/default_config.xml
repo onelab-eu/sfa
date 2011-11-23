@@ -194,6 +194,12 @@ Thierry Parmentelat
       <description>The settings that tell this SFA instance where to find its database. You can essentially leave this as-is unless you plan on hosting your data on some other box.</description>
 
       <variablelist>
+	<variable id="enabled" type="boolean">
+	  <name>Enabled</name>
+	  <value>true</value>
+	  <description>Enable the database server on this machine.</description>
+	</variable>
+
 	<variable id="host" type="hostname">
 	  <name>Database host</name>
 	  <value>localhost</value>

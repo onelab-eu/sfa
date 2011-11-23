@@ -27,6 +27,9 @@ Requires: m2crypto
 Requires: xmlsec1-openssl-devel
 Requires: libxslt-python
 Requires: python-ZSI
+# for uuidgen - used in db password generation
+# on f8 this actually comes with e2fsprogs, go figure
+Requires: util-linux-ng
 # xmlbuilder depends on  lxml
 Requires: python-lxml
 Requires: python-setuptools
