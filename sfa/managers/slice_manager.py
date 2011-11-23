@@ -65,15 +65,15 @@ class SliceManager:
                 ad_rspec_versions.append(rspec_version.to_dict())
             if rspec_version.content_type in ['*', 'request']:
                 request_rspec_versions.append(rspec_version.to_dict())
-        default_rspec_version = version_manager.get_version("sfa 1").to_dict()
         xrn=Xrn(api.hrn, 'authority+sa')
         version_more = {'interface':'slicemgr',
+                        'sfa': 1,
+                        'geni_api': api.config.SFA_AGGREGATE_API_VERSION,
                         'hrn' : xrn.get_hrn(),
                         'urn' : xrn.get_urn(),
                         'peers': peers,
-                        'request_rspec_versions': request_rspec_versions,
-                        'ad_rspec_versions': ad_rspec_versions,
-                        'default_ad_rspec': default_rspec_version
+                        'geni_request_rspec_versions': request_rspec_versions,
+                        'geni_ad_rspec_versions': ad_rspec_versions,
                     }
         sm_version=version_core(version_more)
         # local aggregate if present needs to have localhost resolved
@@ -168,7 +168,7 @@ class SliceManager:
             # get the rspec from the aggregate
             interface = api.aggregates[aggregate]
             server = api.server_proxy(interface, cred)
-            threads.run(_ListResources, aggregate, server, [cred], options, call_id)
+            threads.run(_ListResources, aggregate, server, [cred], options)
     
     
         results = threads.get_results()
@@ -220,7 +220,7 @@ class SliceManager:
                 logger.log_exc('Something wrong in _CreateSliver with URL %s'%server.url)
                 return {"aggregate": aggregate, "elapsed": time.time()-tStart, "status": "exception", "exc_info": sys.exc_info()}
 
-        call_id = option.get('call_id')
+        call_id = options.get('call_id')
         if Callids().already_handled(call_id): return ""
         # Validate the RSpec against PlanetLab's schema --disabled for now
         # The schema used here needs to aggregate the PL and VINI schemas
@@ -274,7 +274,7 @@ class SliceManager:
                 args.append(options)
             return server.RenewSliver(*args)
     
-        call_id = option.get('call_id')
+        call_id = options.get('call_id')
         if Callids().already_handled(call_id): return True
     
         (hrn, type) = urn_to_hrn(xrn)
@@ -306,7 +306,7 @@ class SliceManager:
                 args.append(options)
             return server.DeleteSliver(*args)
 
-        call_id = option.get('call_id') 
+        call_id = options.get('call_id') 
         if Callids().already_handled(call_id): return ""
         (hrn, type) = urn_to_hrn(xrn)
         # get the callers hrn
@@ -407,7 +407,7 @@ class SliceManager:
                 continue
             interface = api.aggregates[aggregate]
             server = api.server_proxy(interface, cred)
-            threads.run(_ListSlices, server, [cred], call_id, options)
+            threads.run(_ListSlices, server, [cred], options)
     
         # combime results
         results = threads.get_results()

@@ -23,10 +23,9 @@ class Aggregate:
     #panos new user options variable
     user_options = {}
 
-    def __init__(self, api, user_options={}):
+    def __init__(self, api):
         self.api = api
-        self.user_options = user_options
-
+    
     def get_sites(self, filter={}):
         sites = {}
         for site in self.api.driver.GetSites(filter):
@@ -136,12 +135,16 @@ class Aggregate:
         
         return (slice, slivers)
 
-    def get_nodes_and_links(self, slice=None,slivers=[]):
+    def get_nodes_and_links(self, slice=None,slivers=[], options={}):
         filter = {}
         tags_filter = {}
         if slice and 'node_ids' in slice and slice['node_ids']:
             filter['node_id'] = slice['node_ids']
             tags_filter=filter.copy()
+
+        geni_available = options.get('geni_available')    
+        if geni_available:
+            filter['boot_state'] = 'boot'     
         
         filter.update({'peer_id': None})
         nodes = self.api.driver.GetNodes(filter)
@@ -220,7 +223,7 @@ class Aggregate:
         return (rspec_nodes, links)
              
         
-    def get_rspec(self, slice_xrn=None, version = None):
+    def get_rspec(self, slice_xrn=None, version = None, options={}):
 
         version_manager = VersionManager()
         version = version_manager.get_version(version)
@@ -230,7 +233,7 @@ class Aggregate:
             rspec_version = version_manager._get_version(version.type, version.version, 'manifest')
 
         slice, slivers = self.get_slice_and_slivers(slice_xrn)
-        rspec = RSpec(version=rspec_version, user_options=self.user_options)
+        rspec = RSpec(version=rspec_version, user_options=options)
         if slice and 'expires' in slice:
             rspec.xml.set('expires',  epochparse(slice['expires']))
 

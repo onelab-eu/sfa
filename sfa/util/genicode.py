@@ -20,4 +20,3 @@ GENICODE = Enum(
     INPORGRESS=16,
     ALREADYEXISTS=17       
 )   
-

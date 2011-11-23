@@ -38,14 +38,14 @@ class AggregateManager:
                 ad_rspec_versions.append(rspec_version.to_dict())
             if rspec_version.content_type in ['*', 'request']:
                 request_rspec_versions.append(rspec_version.to_dict()) 
-        default_rspec_version = version_manager.get_version("sfa 1").to_dict()
         xrn=Xrn(api.hrn)
         version_more = {'interface':'aggregate',
+                        'sfa': 1,
+                        'geni_api': api.config.SFA_AGGREGATE_API_VERSION,
                         'testbed':'myplc',
                         'hrn':xrn.get_hrn(),
-                        'request_rspec_versions': request_rspec_versions,
-                        'ad_rspec_versions': ad_rspec_versions,
-                        'default_ad_rspec': default_rspec_version
+                        'geni_request_rspec_versions': request_rspec_versions,
+                        'geni_ad_rspec_versions': ad_rspec_versions,
                         }
         return version_core(version_more)
     
@@ -254,7 +254,7 @@ class AggregateManager:
         return 1
     
     def DeleteSliver(self, api, xrn, creds, options={}):
-        call_id = option.get('call_id')
+        call_id = options.get('call_id')
         if Callids().already_handled(call_id): return ""
         (hrn, _) = urn_to_hrn(xrn)
         slicename = hrn_to_pl_slicename(hrn)
@@ -275,7 +275,7 @@ class AggregateManager:
         return 1
     
     def ListSlices(self, api, creds, options={}):
-        call_id = option.get('call_id')
+        call_id = options.get('call_id')
         if Callids().already_handled(call_id): return []
         # look in cache first
         if self.caching and api.cache:
@@ -295,10 +295,11 @@ class AggregateManager:
         return slice_urns
         
     def ListResources(self, api, creds, options={}):
-        call_id = option.get('call_id')
+        call_id = options.get('call_id')
         if Callids().already_handled(call_id): return ""
         # get slice's hrn from options
         xrn = options.get('geni_slice_urn', None)
+        cached = options.get('cached', True) 
         (hrn, _) = urn_to_hrn(xrn)
     
         version_manager = VersionManager()
@@ -311,7 +312,7 @@ class AggregateManager:
             version_string = version_string + "_"+options.get('info', 'default')
     
         # look in cache first
-        if self.caching and api.cache and not xrn:
+        if self.caching and api.cache and not xrn and cached:
             rspec = api.cache.get(version_string)
             if rspec:
                 api.logger.info("aggregate.ListResources: returning cached value for hrn %s"%hrn)
@@ -319,8 +320,8 @@ class AggregateManager:
     
         #panos: passing user-defined options
         #print "manager options = ",options
-        aggregate = Aggregate(api, options)
-        rspec =  aggregate.get_rspec(slice_xrn=xrn, version=rspec_version)
+        aggregate = Aggregate(api)
+        rspec =  aggregate.get_rspec(slice_xrn=xrn, version=rspec_version, options=options)
     
         # cache the result
         if self.caching and api.cache and not xrn:
