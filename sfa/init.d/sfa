@@ -22,7 +22,7 @@ plc_whole_config=/etc/planetlab/plc_config.xml
 # SFA consolidated (merged) config file
 sfa_whole_config=/etc/sfa/sfa_config.xml
 # SFA local (site-dependent) file
-sfa_local_config=/etc/planetlab/configs/site.xml
+sfa_local_config=/etc/sfa/configs/site.xml
 
 # Source sfa shell config if present 
 [ -f /etc/sfa/sfa_config ] && . /etc/sfa/sfa_config
