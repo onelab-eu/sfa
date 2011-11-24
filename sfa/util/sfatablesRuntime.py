@@ -42,6 +42,6 @@ try:
 except:
     
     from sfa.util.logging import logger
-    def run_sfatables (, rspec, ____):
+    def run_sfatables (_,__,___, rspec, ____=None):
         logger.warning("Cannot import sfatables.runtime, please install package sfa-sfatables")
         return rspec
