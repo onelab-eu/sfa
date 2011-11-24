@@ -122,6 +122,7 @@ make VERSIONTAG="%{version}-%{taglevel}" SCMURL="%{SCMURL}"
 %install
 rm -rf $RPM_BUILD_ROOT
 make VERSIONTAG="%{version}-%{taglevel}" SCMURL="%{SCMURL}" install DESTDIR="$RPM_BUILD_ROOT"
+rm -rf $RPM_BUILD_ROOT/%{python_sitelib}/*egg-info
 
 %clean
 rm -rf $RPM_BUILD_ROOT
@@ -129,9 +130,7 @@ rm -rf $RPM_BUILD_ROOT
 %files
 # sfa and sfatables depend on each other.
 %{python_sitelib}/sfa
-%{python_sitelib}/sfa*egg-info
 %{python_sitelib}/xmlbuilder
-%{python_sitelib}/xmlbuilder*egg-info
 /etc/init.d/sfa
 %{_bindir}/sfa-start.py*
 %{_bindir}/keyconvert.py*
