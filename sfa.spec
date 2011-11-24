@@ -38,6 +38,8 @@ Requires: python-dateutil
 Requires: postgresql >= 8.2, postgresql-server >= 8.2
 Requires: postgresql-python
 Requires: python-psycopg2
+Requires: pyOpenSSL >= 0.7
+Requires: myplc-config
  
 # python 2.5 has uuid module added, for python 2.4 we still need it.
 # we can't really check for if we can load uuid as a python module,
@@ -57,8 +59,6 @@ Summary: the SFA layer around MyPLC
 Group: Applications/System
 Requires: sfa
 Requires: python-psycopg2
-Requires: myplc-config
-Requires: pyOpenSSL >= 0.7
 
 %package client
 Summary: the SFA experimenter-side CLI
