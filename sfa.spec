@@ -1,6 +1,6 @@
 %define name sfa
 %define version 1.1
-%define taglevel 4
+%define taglevel 5
 
 %define release %{taglevel}%{?pldistro:.%{pldistro}}%{?date:.%{date}}
 %global python_sitearch	%( python -c "from distutils.sysconfig import get_python_lib; print get_python_lib(1)" )
@@ -204,6 +204,14 @@ fi
 [ "$1" -ge "1" ] && service sfa-cm restart || :
 
 %changelog
+* Thu Nov 24 2011 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-1.1-5
+- sfa should now be started *before* the initial import
+- sfa to use its own database (default sfa) - can run without myplc
+- server calls support optional 'options'
+- client sends options in argument when needed
+- fix infinite getattr recursion in elements/element.py
+- error codes in line with geni
+
 * Fri Nov 18 2011 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-1.1-4
 - fixed links and attributes in rspecs
 - minor cleanup in the API methods, and more consistent names in manager methods
