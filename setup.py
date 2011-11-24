@@ -52,7 +52,6 @@ package_dirs = [
     'sfatables',
     'sfatables/commands',
     'sfatables/processors',
-    'flashpolicy',
     ]
 
 
