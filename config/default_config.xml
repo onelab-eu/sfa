@@ -220,7 +220,7 @@ Thierry Parmentelat
 
 	<variable id="user" type="string">
 	  <name>Database user</name>
-	  <value>pgsqluser</value>
+	  <value>sfadbuser</value>
 	  <description>When SFA gets co-hosted with a myplc, this should match the PLC config.</description>
 	</variable>
 
