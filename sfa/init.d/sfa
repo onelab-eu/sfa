@@ -21,6 +21,8 @@ postgresql_sysconfig=/etc/sysconfig/pgsql
 plc_whole_config=/etc/planetlab/plc_config.xml
 # SFA consolidated (merged) config file
 sfa_whole_config=/etc/sfa/sfa_config.xml
+# SFA default config (read-only template)
+sfa_default_config=/etc/sfa/default_config.xml
 # SFA local (site-dependent) file
 sfa_local_config=/etc/sfa/configs/site.xml
 
@@ -65,17 +67,14 @@ function reload () {
     # Regenerate the main configuration file from default values
     # overlaid with site-specific and current values.
     # Thierry -- 2007-07-05 : values in plc_config.xml are *not* taken into account here
-    files=(
-	/etc/sfa/default_config.xml 
-	/etc/sfa/configs/site.xml
-    )
+    files=( $sfa_default_config $sfa_local_config )
     for file in "${files[@]}" ; do
-	if [ -n "$force" -o $file -nt sfa_whole_config ] ; then
+	if [ -n "$force" -o $file -nt $sfa_whole_config ] ; then
 	    tmp=$(mktemp /tmp/sfa_config.xml.XXXXXX)
 	    plc-config --xml "${files[@]}" >$tmp
 	    if [ $? -eq 0 ] ; then
-		mv $tmp sfa_whole_config
-		chmod 444 sfa_whole_config
+		mv $tmp $sfa_whole_config
+		chmod 444 $sfa_whole_config
 	    else
 		echo "SFA: Warning: Invalid configuration file(s) detected"
 		rm -f $tmp
@@ -85,15 +84,15 @@ function reload () {
     done
 
     # Convert configuration to various formats
-    if [ -n "$force" -o sfa_whole_config -nt /etc/sfa/sfa_config ] ; then
-	plc-config --shell sfa_whole_config >/etc/sfa/sfa_config
+    if [ -n "$force" -o $sfa_whole_config -nt /etc/sfa/sfa_config ] ; then
+	plc-config --shell $sfa_whole_config >/etc/sfa/sfa_config
     fi
-    if [ -n "$force" -o sfa_whole_config -nt /etc/sfa/sfa_config.py ] ; then
-	plc-config --python sfa_whole_config >/etc/sfa/sfa_config.py
+    if [ -n "$force" -o $sfa_whole_config -nt /etc/sfa/sfa_config.py ] ; then
+	plc-config --python $sfa_whole_config >/etc/sfa/sfa_config.py
     fi
-#    if [ -n "$force" -o sfa_whole_config -nt /etc/sfa/php/sfa_config.php ] ; then
+#    if [ -n "$force" -o $sfa_whole_config -nt /etc/sfa/php/sfa_config.php ] ; then
 #	mkdir -p /etc/sfa/php
-#	plc-config --php  sfa_whole_config >/etc/sfa/php/sfa_config.php
+#	plc-config --php  $sfa_whole_config >/etc/sfa/php/sfa_config.php
 #    fi
 
     # [re]generate the sfa_component_config
@@ -168,23 +167,24 @@ function db_start () {
 	# Fix ownership (sed -i changes it)
 	chown postgres:postgres $postgresql_conf $pghba_conf
 
-	######## compute user and password
+	######## compute a password if needed
 	if [ -z "$SFA_DB_PASSWORD" ] ; then
 	    SFA_DB_PASSWORD=$(uuidgen)
 	    plc-config --category=sfa_db --variable=password --value="$SFA_DB_PASSWORD" --save=$sfa_local_config $sfa_local_config
-	    reload
+	    reload force
 	fi
 
     else
 
-        ######## we are colocated with a myplc - re-use the pgsql setup
+        ######## we are colocated with a myplc
+	# no need to worry about the pgsql setup (see /etc/plc.d/postgresql)
 	# myplc enforces the password for its user
 	PLC_DB_USER=$(plc-config --category=plc_db --variable=user)
 	PLC_DB_PASSWORD=$(plc-config --category=plc_db --variable=password)
 	# store this as the SFA user/password 
 	plc-config --category=sfa_db --variable=user --value=$PLC_DB_USER --save=$sfa_local_config $sfa_local_config
 	plc-config --category=sfa_db --variable=password --value=$PLC_DB_PASSWORD --save=$sfa_local_config $sfa_local_config
-	reload
+	reload force
     fi
 
     ######## Start up the server
@@ -208,8 +208,8 @@ function db_start () {
     # db
     if ! psql -U $SFA_DB_USER -c "" $SFA_DB_NAME >/dev/null 2>&1 ; then
 	createdb -U postgres --template=template0 --encoding=UNICODE --owner=$SFA_DB_USER $SFA_DB_NAME
-        # in case we'd like to ship the db schema separately 
-        #psql -U $SFA_DB_USER -f /etc/sfa/sfa.sql $SFA_DB_NAME
+        # xxx in case we'd like to ship the db schema separately
+        #psql -U $SFA_DB_USER -f /etc/sfa/or/someplace/else/sfa.sql $SFA_DB_NAME
     fi
     check
 
