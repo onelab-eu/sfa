@@ -128,8 +128,8 @@ class RegistryManager:
             if registry_hrn != api.hrn:
                 credential = api.getCredential()
                 interface = api.registries[registry_hrn]
-                server = api.server_proxy(interface, credential)
-                peer_records = server.Resolve(xrns, credential)
+                server_proxy = api.server_proxy(interface, credential)
+                peer_records = server_proxy.Resolve(xrns, credential)
                 records.extend([SfaRecord(dict=record).as_dict() for record in peer_records])
     
         # try resolving the remaining unfound records at the local registry
@@ -171,8 +171,8 @@ class RegistryManager:
         if registry_hrn != api.hrn:
             credential = api.getCredential()
             interface = api.registries[registry_hrn]
-            server = api.server_proxy(interface, credential)
-            record_list = server.List(xrn, credential)
+            server_proxy = api.server_proxy(interface, credential)
+            record_list = server_proxy.List(xrn, credential)
             records = [SfaRecord(dict=record).as_dict() for record in record_list]
         
         # if we still have not found the record yet, try the local registry
@@ -223,6 +223,7 @@ class RegistryManager:
             uuid = create_uuid()
             pkey = Keypair(create=True)
             if 'key' in record and record['key']:
+                # use only first key in record
                 if isinstance(record['key'], types.ListType):
                     pub_key = record['key'][0]
                 else:
