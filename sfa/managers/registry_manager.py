@@ -10,7 +10,7 @@ from sfa.util.faults import RecordNotFound, AccountNotEnabled, PermissionError, 
 from sfa.util.prefixTree import prefixTree
 from sfa.util.record import SfaRecord
 from sfa.util.table import SfaTable
-from sfa.util.xrn import Xrn, get_leaf, get_authority, hrn_to_urn, urn_to_hrn
+from sfa.util.xrn import Xrn, get_authority, hrn_to_urn, urn_to_hrn
 from sfa.util.plxrn import hrn_to_pl_login_base
 from sfa.util.version import version_core
 
@@ -54,9 +54,7 @@ class RegistryManager:
     
         # verify_cancreate_credential requires that the member lists
         # (researchers, pis, etc) be filled in
-        api.driver.fill_record_info(record, api.aggregates)
-        if record['type']=='user':
-           if not record['enabled']:
+        if not api.driver.is_enabled_entity (record, api.aggregates):
               raise AccountNotEnabled(": PlanetLab account %s is not enabled. Please contact your site PI" %(record['email']))
     
         # get the callers gid
@@ -95,13 +93,14 @@ class RegistryManager:
     
     def Resolve(self, api, xrns, type=None, full=True):
     
-        # load all known registry names into a prefix tree and attempt to find
-        # the longest matching prefix
         if not isinstance(xrns, types.ListType):
+            xrns = [xrns]
+            # try to infer type if not set and we get a single input
             if not type:
                 type = Xrn(xrns).get_type()
-            xrns = [xrns]
         hrns = [urn_to_hrn(xrn)[0] for xrn in xrns] 
+        # load all known registry names into a prefix tree and attempt to find
+        # the longest matching prefix
         # create a dict where key is a registry hrn and its value is a
         # hrns at that registry (determined by the known prefix tree).  
         xrn_dict = {}
@@ -133,21 +132,21 @@ class RegistryManager:
                 records.extend([SfaRecord(dict=record).as_dict() for record in peer_records])
     
         # try resolving the remaining unfound records at the local registry
-        remaining_hrns = set(hrns).difference([record['hrn'] for record in records])
-        # convert set to list
-        remaining_hrns = [hrn for hrn in remaining_hrns] 
+        local_hrns = list ( set(hrns).difference([record['hrn'] for record in records]) )
+        # 
         table = SfaTable()
-        local_records = table.findObjects({'hrn': remaining_hrns})
+        local_records = table.findObjects({'hrn': local_hrns})
+        # xxx driver todo
         if full:
             api.driver.fill_record_info(local_records, api.aggregates)
         
         # convert local record objects to dicts
         records.extend([dict(record) for record in local_records])
-        if not records:
-            raise RecordNotFound(str(hrns))
-    
         if type:
             records = filter(lambda rec: rec['type'] in [type], records)
+    
+        if not records:
+            raise RecordNotFound(str(hrns))
     
         return records
     
@@ -214,8 +213,6 @@ class RegistryManager:
            
         record = SfaRecord(dict = record)
         record['authority'] = get_authority(record['hrn'])
-        type = record['type']
-        hrn = record['hrn']
         auth_info = api.auth.get_auth_info(record['authority'])
         pub_key = None
         # make sure record has a gid
@@ -243,61 +240,17 @@ class RegistryManager:
             # get the GID from the newly created authority
             gid = auth_info.get_gid_object()
             record.set_gid(gid.save_to_string(save_parents=True))
-            pl_record = api.driver.sfa_fields_to_pl_fields(type, hrn, record)
-            sites = api.driver.GetSites([pl_record['login_base']])
-            if not sites:
-                pointer = api.driver.AddSite(pl_record)
-            else:
-                pointer = sites[0]['site_id']
-    
-            record.set_pointer(pointer)
-            record['pointer'] = pointer
+            pointer = api.driver.register (hrn, record, pub_key)
     
         elif (type == "slice"):
-            acceptable_fields=['url', 'instantiation', 'name', 'description']
-            pl_record = api.driver.sfa_fields_to_pl_fields(type, hrn, record)
-            for key in pl_record.keys():
-                if key not in acceptable_fields:
-                    pl_record.pop(key)
-            slices = api.driver.GetSlices([pl_record['name']])
-            if not slices:
-                 pointer = api.driver.AddSlice(pl_record)
-            else:
-                 pointer = slices[0]['slice_id']
-            record.set_pointer(pointer)
-            record['pointer'] = pointer
+            pointer = api.driver.register (hrn, record, pub_key)
     
         elif  (type == "user"):
-            persons = api.driver.GetPersons([record['email']])
-            if not persons:
-                pointer = api.driver.AddPerson(dict(record))
-            else:
-                pointer = persons[0]['person_id']
-    
-            if 'enabled' in record and record['enabled']:
-                api.driver.UpdatePerson(pointer, {'enabled': record['enabled']})
-            # add this persons to the site only if he is being added for the first
-            # time by sfa and doesont already exist in plc
-            if not persons or not persons[0]['site_ids']:
-                login_base = get_leaf(record['authority'])
-                api.driver.AddPersonToSite(pointer, login_base)
-    
-            # What roles should this user have?
-            api.driver.AddRoleToPerson('user', pointer)
-            # Add the user's key
-            if pub_key:
-                api.driver.AddPersonKey(pointer, {'key_type' : 'ssh', 'key' : pub_key})
+            pointer = api.driver.register (hrn, record, pub_key)
     
         elif (type == "node"):
-            pl_record = api.driver.sfa_fields_to_pl_fields(type, hrn, record)
-            login_base = hrn_to_pl_login_base(record['authority'])
-            nodes = api.driver.GetNodes([pl_record['hostname']])
-            if not nodes:
-                pointer = api.driver.AddNode(login_base, pl_record)
-            else:
-                pointer = nodes[0]['node_id']
-    
-        record['pointer'] = pointer
+            pointer = api.driver.register (hrn, record, pub_key)
+
         record.set_pointer(pointer)
         record_id = table.insert(record)
         record['record_id'] = record_id
