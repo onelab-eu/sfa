@@ -20,13 +20,13 @@ class UpdateSliver(CreateSliver):
               Parameter(type([str]), "List of credentials")),
         Parameter(str, "RSpec"),
         Parameter(type([]), "List of user information"),
-        Parameter(str, "call_id"),
+        Parameter(dict, "options"),
         ]
     returns = Parameter(str, "Allocated RSpec")
 
 
 
-    def call(self, slice_xrn, creds, rspec, users, call_id=""):
+    def call(self, slice_xrn, creds, rspec, users, options={}):
 
-        return CreateSliver.call(self, slice_xrn, creds, rspec, users, call_id)
+        return CreateSliver.call(self, slice_xrn, creds, rspec, users, options)
     

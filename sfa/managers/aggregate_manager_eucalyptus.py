@@ -444,7 +444,8 @@ class AggregateManagerEucalyptus:
                                 port=eucaPort,
                                 path=srvPath)
     
-    def ListResources(api, creds, options, call_id): 
+    def ListResources(api, creds, options={}):
+        call_id = options.get('call_id') 
         if Callids().already_handled(call_id): return ""
         # get slice's hrn from options
         xrn = options.get('geni_slice_urn', '')
@@ -540,7 +541,8 @@ class AggregateManagerEucalyptus:
     """
     Hook called via 'sfi.py create'
     """
-    def CreateSliver(api, slice_xrn, creds, xml, users, call_id):
+    def CreateSliver(api, slice_xrn, creds, xml, users, options={}):
+        call_id = options.get('call_id') 
         if Callids().already_handled(call_id): return ""
     
         logger = logging.getLogger('EucaAggregate')
@@ -677,7 +679,7 @@ class AggregateManagerEucalyptus:
             f.write("%s %s %s\n" % (instId, ipaddr, hrn))
         f.close()
     
-    def GetVersion(api):
+    def GetVersion(api, options={}):
 
         version_manager = VersionManager()
         ad_rspec_versions = []
@@ -687,13 +689,13 @@ class AggregateManagerEucalyptus:
                 ad_rspec_versions.append(rspec_version.to_dict())
             if rspec_version.content_type in ['*', 'request']:
                 request_rspec_versions.append(rspec_version.to_dict())
-        default_rspec_version = version_manager.get_version("sfa 1").to_dict()
         xrn=Xrn(api.hrn)
         version_more = {'interface':'aggregate',
+                        'sfa': 1,
+                        'geni_api': api.config.SFA_AGGREGATE_API_VERSION,
                         'testbed':'myplc',
                         'hrn':xrn.get_hrn(),
-                        'request_rspec_versions': request_rspec_versions,
-                        'ad_rspec_versions': ad_rspec_versions,
-                        'default_ad_rspec': default_rspec_version
+                        'geni_request_rspec_versions': request_rspec_versions,
+                        'geni_ad_rspec_versions': ad_rspec_versions,
                         }
         return version_core(version_more)

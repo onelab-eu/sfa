@@ -66,9 +66,8 @@ class sfaImport:
 
     def create_top_level_auth_records(self, hrn):
         """
-        Create top level records (includes root and sub authorities (local/remote)
+        Create top level db records (includes root and sub authorities (local/remote)
         """
-        urn = hrn_to_urn(hrn, 'authority')
         # make sure parent exists
         parent_hrn = get_authority(hrn)
         if not parent_hrn:
@@ -76,11 +75,8 @@ class sfaImport:
         if not parent_hrn == hrn:
             self.create_top_level_auth_records(parent_hrn)
 
-        # create the authority if it doesnt already exist 
-        if not self.AuthHierarchy.auth_exists(urn):
-            self.logger.info("Import: creating top level authorities")
-            self.AuthHierarchy.create_auth(urn)
-        
+        # enxure key and cert exists:
+        self.AuthHierarchy.create_top_level_auth(hrn)    
         # create the db record if it doesnt already exist    
         auth_info = self.AuthHierarchy.get_auth_info(hrn)
         table = SfaTable()

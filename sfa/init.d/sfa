@@ -8,31 +8,73 @@
 # description:   Wraps PLCAPI into the SFA compliant API
 #
 
-# Source config
-[ -f /etc/sfa/sfa_config ] && . /etc/sfa/sfa_config
-
 # source function library
 . /etc/init.d/functions
 
-# Regenerate configuration files - almost verbatim from plc.init
-reload ()
+# Default locations
+PGDATA=/var/lib/pgsql/data
+postgresql_conf=$PGDATA/postgresql.conf
+pghba_conf=$PGDATA/pg_hba.conf
+postgresql_sysconfig=/etc/sysconfig/pgsql
+
+# PLC consolidated (merged) config file
+plc_whole_config=/etc/planetlab/plc_config.xml
+# SFA consolidated (merged) config file
+sfa_whole_config=/etc/sfa/sfa_config.xml
+# SFA default config (read-only template)
+sfa_default_config=/etc/sfa/default_config.xml
+# SFA local (site-dependent) file
+sfa_local_config=/etc/sfa/configs/site.xml
+
+# Source sfa shell config if present 
+[ -f /etc/sfa/sfa_config ] && . /etc/sfa/sfa_config
+
+# Export so that we do not have to specify -p to psql invocations
+export PGPORT=$SFA_DB_PORT
+
+##########
+# Total number of errors
+ERRORS=0
+
+# Count the exit status of the last command
+check ()
 {
+    ERRORS=$(($ERRORS+$?))
+}
+
+# can't trust the return of service postgresql start / nor status
+function postgresql_check () {
+
+    # wait until postmaster is up and running - or 10s max
+    if status postmaster >& /dev/null && [ -f /var/lock/subsys/postgresql ] ; then
+	# The only way we can be sure is if we can access it
+	for i in $(seq 1 10) ; do
+	    # Must do this as the postgres user initially (before we
+	    # fix pg_hba.conf to passwordless localhost access).
+	    su -c 'psql -U postgres -c "" template1' postgres && return 0
+	    sleep 1
+	done
+    fi
+
+    return 1
+}
+
+
+# Regenerate configuration files - almost verbatim from plc.init
+function reload () {
     force=$1
 
     # Regenerate the main configuration file from default values
     # overlaid with site-specific and current values.
     # Thierry -- 2007-07-05 : values in plc_config.xml are *not* taken into account here
-    files=(
-	/etc/sfa/default_config.xml 
-	/etc/sfa/configs/site.xml
-    )
+    files=( $sfa_default_config $sfa_local_config )
     for file in "${files[@]}" ; do
-	if [ -n "$force" -o $file -nt /etc/sfa/sfa_config.xml ] ; then
+	if [ -n "$force" -o $file -nt $sfa_whole_config ] ; then
 	    tmp=$(mktemp /tmp/sfa_config.xml.XXXXXX)
 	    plc-config --xml "${files[@]}" >$tmp
 	    if [ $? -eq 0 ] ; then
-		mv $tmp /etc/sfa/sfa_config.xml
-		chmod 444 /etc/sfa/sfa_config.xml
+		mv $tmp $sfa_whole_config
+		chmod 444 $sfa_whole_config
 	    else
 		echo "SFA: Warning: Invalid configuration file(s) detected"
 		rm -f $tmp
@@ -42,24 +84,161 @@ reload ()
     done
 
     # Convert configuration to various formats
-    if [ -n "$force" -o /etc/sfa/sfa_config.xml -nt /etc/sfa/sfa_config ] ; then
-	plc-config --shell /etc/sfa/sfa_config.xml >/etc/sfa/sfa_config
+    if [ -n "$force" -o $sfa_whole_config -nt /etc/sfa/sfa_config ] ; then
+	plc-config --shell $sfa_whole_config >/etc/sfa/sfa_config
     fi
-    if [ -n "$force" -o /etc/sfa/sfa_config.xml -nt /etc/sfa/sfa_config.py ] ; then
-	plc-config --python /etc/sfa/sfa_config.xml >/etc/sfa/sfa_config.py
+    if [ -n "$force" -o $sfa_whole_config -nt /etc/sfa/sfa_config.py ] ; then
+	plc-config --python $sfa_whole_config >/etc/sfa/sfa_config.py
     fi
-#    if [ -n "$force" -o /etc/sfa/sfa_config.xml -nt /etc/sfa/php/sfa_config.php ] ; then
+#    if [ -n "$force" -o $sfa_whole_config -nt /etc/sfa/php/sfa_config.php ] ; then
 #	mkdir -p /etc/sfa/php
-#	plc-config --php  /etc/sfa/sfa_config.xml >/etc/sfa/php/sfa_config.php
+#	plc-config --php  $sfa_whole_config >/etc/sfa/php/sfa_config.php
 #    fi
 
     # [re]generate the sfa_component_config
-    gen-sfa-cm-config.py        
+    # this is a server-side thing but produces a file that somehow needs to be pushed
+    # on the planetlab nodes; in the case where sfa and myplc run on different boxes 
+    # (or there is no myplc at all) this should be turned off
+    # as the component manager is not operational yet we skip this for now
+    #gen-sfa-cm-config.py        
 }
 
-start() {
+### initialize DB (don't chkconfig postgresql on)
+function db_start () {
+    
+    # only if enabled
+    [ "$SFA_DB_ENABLED" == 1 ] || return
+
+    if ! rpm -q myplc >& /dev/null; then
+
+	######## standalone deployment - no colocated myplc
+
+	######## sysconfig 
+	# Set data directory and redirect startup output to /var/log/pgsql
+	mkdir -p $(dirname $postgresql_sysconfig)
+	# remove previous definitions
+	touch $postgresql_sysconfig
+	tmp=${postgresql_sysconfig}.new
+	( egrep -v '^(PGDATA=|PGLOG=|PGPORT=)' $postgresql_sysconfig 
+	    echo "PGDATA=$PGDATA"
+	    echo "PGLOG=/var/log/pgsql"
+	    echo "PGPORT=$PLC_DB_PORT"
+	) >> $tmp ; mv -f $tmp $postgresql_sysconfig
+
+	######## /var/lib/pgsql/data 
+	# Fix ownership (rpm installation may have changed it)
+	chown -R -H postgres:postgres $(dirname $PGDATA)
+
+	# PostgreSQL must be started at least once to bootstrap
+	# /var/lib/pgsql/data
+	if [ ! -f $postgresql_conf ] ; then
+	    service postgresql initdb &> /dev/null || :
+	    check
+	fi
+
+	######## /var/lib/pgsql/data/postgresql.conf
+	registry_ip=""
+	foo=$(python -c "import socket; print socket.gethostbyname(\"$SFA_REGISTRY_HOST\")") && registry_ip="$foo"
+	# Enable DB server. drop Postgresql<=7.x
+	# PostgreSQL >=8.0 defines listen_addresses
+	# listen on a specific IP + localhost, more robust when run within a vserver
+	sed -i -e '/^listen_addresses/d' $postgresql_conf
+	if [ -z "$registry_ip" ] ; then
+	    echo "listen_addresses = 'localhost'" >> $postgresql_conf
+	else
+	    echo "listen_addresses = '${registry_ip},localhost'" >> $postgresql_conf
+	fi
+	# tweak timezone to be 'UTC'
+	sed -i -e '/^timezone=/d' $postgresql_conf
+	echo "timezone='UTC'" >> $postgresql_conf
+
+	######## /var/lib/pgsql/data/pg_hba.conf
+	# Disable access to all DBs from all hosts
+	sed -i -e '/^\(host\|local\)/d' $pghba_conf
+
+	# Enable passwordless localhost access
+	echo "local all all trust" >>$pghba_conf
+	# grant access
+	(
+	    echo "host $SFA_DB_NAME $SFA_DB_USER 127.0.0.1/32 password"
+	    [ -n "$registry_ip" ] && echo "host $SFA_DB_NAME $SFA_DB_USER ${registry_ip}/32 password"
+	) >>$pghba_conf
+	
+	# Fix ownership (sed -i changes it)
+	chown postgres:postgres $postgresql_conf $pghba_conf
+
+	######## compute a password if needed
+	if [ -z "$SFA_DB_PASSWORD" ] ; then
+	    SFA_DB_PASSWORD=$(uuidgen)
+	    plc-config --category=sfa_db --variable=password --value="$SFA_DB_PASSWORD" --save=$sfa_local_config $sfa_local_config
+	    reload force
+	fi
+
+    else
+
+        ######## we are colocated with a myplc
+	# no need to worry about the pgsql setup (see /etc/plc.d/postgresql)
+	# myplc enforces the password for its user
+	PLC_DB_USER=$(plc-config --category=plc_db --variable=user)
+	PLC_DB_PASSWORD=$(plc-config --category=plc_db --variable=password)
+	# store this as the SFA user/password 
+	plc-config --category=sfa_db --variable=user --value=$PLC_DB_USER --save=$sfa_local_config $sfa_local_config
+	plc-config --category=sfa_db --variable=password --value=$PLC_DB_PASSWORD --save=$sfa_local_config $sfa_local_config
+	reload force
+    fi
+
+    ######## Start up the server
+    # not too nice, but.. when co-located with myplc we'll let it start/stop postgresql
+    if ! rpm -q myplc >& /dev/null ; then
+	echo STARTING...
+	service postgresql start >& /dev/null
+    fi
+    postgresql_check
+    check
+	
+    ######## make sure we have the user and db created
+    # user
+    if ! psql -U $SFA_DB_USER -c "" template1 >/dev/null 2>&1 ; then
+	psql -U postgres -c "CREATE USER $SFA_DB_USER PASSWORD '$SFA_DB_PASSWORD'" template1
+    else
+	psql -U postgres -c "ALTER USER $SFA_DB_USER WITH PASSWORD '$SFA_DB_PASSWORD'" template1
+    fi
+    check
+    
+    # db
+    if ! psql -U $SFA_DB_USER -c "" $SFA_DB_NAME >/dev/null 2>&1 ; then
+	createdb -U postgres --template=template0 --encoding=UNICODE --owner=$SFA_DB_USER $SFA_DB_NAME
+        # xxx in case we'd like to ship the db schema separately
+        #psql -U $SFA_DB_USER -f /etc/sfa/or/someplace/else/sfa.sql $SFA_DB_NAME
+    fi
+    check
+
+    MESSAGE=$"Checking for PostgreSQL server"
+    echo -n "$MESSAGE"
+    [ "$ERRORS" == 0 ] && success "$MESSAGE" || failure "$MESSAGE" ; echo
+}
+
+# shutdown DB
+function db_stop () {
+
+    # only if enabled
+    [ "$SFA_DB_ENABLED" == 1 ] || return
+
+    # not too nice, but.. when co-located with myplc we'll let it start/stop postgresql
+    if ! rpm -q myplc >& /dev/null ; then
+	service postgresql stop >& /dev/null
+	check
+	MESSAGE=$"Stopping PostgreSQL server"
+	echo -n "$MESSAGE"
+	[ "$ERRORS" == 0 ] && success "$MESSAGE" || failure "$MESSAGE" ; echo
+    fi
+}
+
+function start() {
     
     reload
+
+    db_start
 
     # install peer certs
     action $"SFA installing peer certs" daemon /usr/bin/sfa-start.py -t -d $OPTIONS 
@@ -80,16 +259,16 @@ start() {
         action "Flash Policy Server" daemon /usr/bin/sfa_flashpolicy.py --file="$SFA_FLASHPOLICY_CONFIG_FILE" --port=$SFA_FLASHPOLICY_PORT -d
     fi
 
-    RETVAL=$?
-    [ $RETVAL -eq 0 ] && touch /var/lock/subsys/sfa-start.py
+    touch /var/lock/subsys/sfa-start.py
 
 }
 
-stop() {
+function stop() {
     action $"Shutting down SFA" killproc sfa-start.py
-    RETVAL=$?
 
-    [ $RETVAL -eq 0 ] && rm -f /var/lock/subsys/sfa-start.py
+    db_stop
+
+    rm -f /var/lock/subsys/sfa-start.py
 }
 
 

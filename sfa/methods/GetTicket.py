@@ -29,12 +29,13 @@ class GetTicket(Method):
         Mixed(Parameter(str, "Credential string"),
               Parameter(type([str]), "List of credentials")),
         Parameter(str, "Resource specification (rspec)"),
-        Parameter(type([]), "List of user information")  
+        Parameter(type([]), "List of user information"),
+        Parameter(dict, "Options")  
         ]
 
     returns = Parameter(str, "String representation of a ticket object")
     
-    def call(self, xrn, creds, rspec, users):
+    def call(self, xrn, creds, rspec, users, options={}):
         hrn, type = urn_to_hrn(xrn)
         # Find the valid credentials
         valid_creds = self.api.auth.checkCredentials(creds, 'getticket', hrn)
@@ -51,5 +52,5 @@ class GetTicket(Method):
         rspec = run_sfatables(chain_name, hrn, origin_hrn, rspec)
         
         # remove nodes that are not available at this interface from the rspec
-        return self.api.manager.GetTicket(self.api, xrn, creds, rspec, users)
+        return self.api.manager.GetTicket(self.api, xrn, creds, rspec, users, options)
         

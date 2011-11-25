@@ -18,19 +18,25 @@ Thierry Parmentelat
       <description>Basic system variables.</description>
 
       <variablelist>
-	<variable id="generic_flavour" type="string">
-	  <name>Generic Flavour</name>
-	  <value>pl</value>
-	  <description>This string refers to a class located in sfa.generic that describes 
-	  which specific implementation needs to be used for api, manager and driver objects.
-	  PlanetLab users do not need to change this setting.
-	  </description>
-	</variable>
+        <variable id="generic_flavour" type="string">
+          <name>Generic Flavour</name>
+          <value>pl</value>
+          <description>This string refers to a class located in sfa.generic that describes 
+          which specific implementation needs to be used for api, manager and driver objects.
+          PlanetLab users do not need to change this setting.
+          </description>
+        </variable>
 
         <variable id="interface_hrn" type="string">
           <name>Human readable name</name>
           <value>plc</value>
           <description>The human readable name for this interface.</description>
+        </variable>
+
+        <variable id="aggregate_api_version" type="string">
+          <name>Aggregate Manager API Version</name>
+          <value>1</value>
+          <description>The Aggregate API version</description>
         </variable>
 
         <variable id="credential_schema" type="string">
@@ -110,6 +116,42 @@ Thierry Parmentelat
     </category>
 
     <!-- ======================================== -->
+    <category id="sfa_sm">
+      <name>Slice Manager</name>
+      <description>The settings that affect the slice manager that will run
+      as part of this SFA instance.</description>
+
+      <variablelist>
+	<variable id="enabled" type="boolean">
+	  <name>Enable Slice Manager</name>
+	  <value>true</value>
+	  <description>Allows this local SFA instance to run as a
+	  slice manager.</description>
+	</variable>
+
+	<variable id="type" type="string">
+	  <name>Slice Manager type</name>
+	  <value>pl</value>
+	  <description>The type of backend server for this
+	  slice manager. Not all slice managers are myplc.</description>
+	</variable>
+
+	<variable id="host" type="hostname">
+	  <name>Hostname</name>
+	  <value>localhost</value>
+	  <description>The hostname where the slice manager is expected to
+	  be found.</description>
+	</variable>
+
+	<variable id="port" type="int">
+	  <name>Port number</name>
+	  <value>12347</value>
+	  <description>The port where the slice manager is to be found.</description>
+	</variable>
+      </variablelist>
+    </category>
+
+    <!-- ======================================== -->
     <category id="sfa_aggregate">
       <name>Aggregate</name>
       <description>The settings that affect the aggregate manager that will run
@@ -153,38 +195,48 @@ Thierry Parmentelat
     </category>
 
     <!-- ======================================== -->
-    <category id="sfa_sm">
-      <name>Slice Manager</name>
-      <description>The settings that affect the slice manager that will run
-      as part of this SFA instance.</description>
+    <category id="sfa_db">
+      <name></name>
+      <description>The settings that tell this SFA instance where to find its database. You can essentially leave this as-is unless you plan on hosting your data on some other box.</description>
 
       <variablelist>
 	<variable id="enabled" type="boolean">
-	  <name>Enable Slice Manager</name>
+	  <name>Enabled</name>
 	  <value>true</value>
-	  <description>Allows this local SFA instance to run as a
-	  slice manager.</description>
-	</variable>
-
-	<variable id="type" type="string">
-	  <name>Slice Manager type</name>
-	  <value>pl</value>
-	  <description>The type of backend server for this
-	  slice manager. Not all slice managers are myplc.</description>
+	  <description>Enable the database server on this machine.</description>
 	</variable>
 
 	<variable id="host" type="hostname">
-	  <name>Hostname</name>
+	  <name>Database host</name>
 	  <value>localhost</value>
-	  <description>The hostname where the slice manager is expected to
-	  be found.</description>
+	  <description>The host where the SFA database can be reached.</description>
 	</variable>
 
 	<variable id="port" type="int">
-	  <name>Port number</name>
-	  <value>12347</value>
-	  <description>The port where the slice manager is to be found.</description>
+	  <name>Database port</name>
+	  <value>5432</value>
+	  <description>The port where the SFA database can be reached.</description>
 	</variable>
+
+	<variable id="user" type="string">
+	  <name>Database user</name>
+	  <value>sfadbuser</value>
+	  <description>When SFA gets co-hosted with a myplc, this should match the PLC config.</description>
+	</variable>
+
+	<variable id="password" type="string">
+	  <name>Database password</name>
+	  <value></value>
+	  <description>When SFA gets co-hosted with a myplc, this should match the PLC config.</description>
+	</variable>
+
+	<variable id="name" type="string">
+	  <name>Database name</name>
+	  <value>sfa</value>
+	  <description>SFA database name.</description>
+	</variable>
+
+
       </variablelist>
     </category>
 
@@ -212,39 +264,11 @@ Thierry Parmentelat
 	  <description>Full URL of PLC interface.</description>
 	</variable>
 
-	<variable id="db_name" type="string">
-	  <name>Database name</name>
-	  <value>planetlab5</value>
-	  <description>Planetlab database name.</description>
-	</variable>
-
-	<variable id="db_host" type="hostname">
-	  <name>Datbase host</name>
-	  <value>localhost</value>
-	  <description>The host where the PLC database can be reached.</description>
-	</variable>
-
-	<variable id="db_port" type="int">
-	  <name>Database port</name>
-	  <value>5432</value>
-	  <description>The port where the PLC database can be reached.</description>
-	</variable>
-
-	<variable id="db_user" type="string">
-	  <name>Database user</name>
-	  <value>pgsqluser</value>
-	  <description></description>
-	</variable>
-
-	<variable id="db_password" type="string">
-	  <name>Database password</name>
-	  <value></value>
-	  <description>The password for PLC_DB_USER.</description>
-	</variable>
-
       </variablelist>
     </category>
 
+
+    <!-- ======================================== -->
     <category id="sfa_flashpolicy">
       <name>SFA Flash Policy</name>
       <description>The settings that affect the flash policy server that will run

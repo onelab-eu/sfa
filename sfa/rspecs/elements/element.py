@@ -13,8 +13,8 @@ class Element(dict):
 
 
     def __getattr__(self, name):
-        if hasattr(self, name):
-            return getattr(self, name)
+        if hasattr(self.__dict__, name):
+            return getattr(self.__dict__, name)
         elif hasattr(self.element, name):
             return getattr(self.element, name)
         else:
