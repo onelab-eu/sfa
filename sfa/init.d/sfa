@@ -170,7 +170,7 @@ function db_start () {
 	######## compute a password if needed
 	if [ -z "$SFA_DB_PASSWORD" ] ; then
 	    SFA_DB_PASSWORD=$(uuidgen)
-	    plc-config --category=sfa_db --variable=password --value="$SFA_DB_PASSWORD" --save=$sfa_local_config $sfa_local_config
+	    plc-config --category=sfa_db --variable=password --value="$SFA_DB_PASSWORD" --save=$sfa_local_config $sfa_local_config >& /dev/null
 	    reload force
 	fi
 
@@ -182,8 +182,8 @@ function db_start () {
 	PLC_DB_USER=$(plc-config --category=plc_db --variable=user)
 	PLC_DB_PASSWORD=$(plc-config --category=plc_db --variable=password)
 	# store this as the SFA user/password 
-	plc-config --category=sfa_db --variable=user --value=$PLC_DB_USER --save=$sfa_local_config $sfa_local_config
-	plc-config --category=sfa_db --variable=password --value=$PLC_DB_PASSWORD --save=$sfa_local_config $sfa_local_config
+	plc-config --category=sfa_db --variable=user --value=$PLC_DB_USER --save=$sfa_local_config $sfa_local_config >& /dev/null
+	plc-config --category=sfa_db --variable=password --value=$PLC_DB_PASSWORD --save=$sfa_local_config $sfa_local_config >& /dev/null
 	reload force
     fi
 
@@ -199,9 +199,9 @@ function db_start () {
     ######## make sure we have the user and db created
     # user
     if ! psql -U $SFA_DB_USER -c "" template1 >/dev/null 2>&1 ; then
-	psql -U postgres -c "CREATE USER $SFA_DB_USER PASSWORD '$SFA_DB_PASSWORD'" template1
+	psql -U postgres -c "CREATE USER $SFA_DB_USER PASSWORD '$SFA_DB_PASSWORD'" template1 >& /dev/null
     else
-	psql -U postgres -c "ALTER USER $SFA_DB_USER WITH PASSWORD '$SFA_DB_PASSWORD'" template1
+	psql -U postgres -c "ALTER USER $SFA_DB_USER WITH PASSWORD '$SFA_DB_PASSWORD'" template1 >& /dev/null
     fi
     check
     
