@@ -80,9 +80,7 @@ def main():
        table.create()
 
     # create root authority 
-    sfaImporter.create_top_level_auth_records(root_auth)
-    if not root_auth == interface_hrn:
-        sfaImporter.create_top_level_auth_records(interface_hrn)
+    sfaImporter.create_top_level_auth_records(interface_hrn)
 
     # create s user record for the slice manager
     sfaImporter.create_sm_client_record()

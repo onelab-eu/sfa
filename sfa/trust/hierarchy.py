@@ -112,8 +112,8 @@ class Hierarchy:
     # @param basedir the base directory to store the hierarchy in
 
     def __init__(self, basedir = None):
+        self.config = Config()
         if not basedir:
-            self.config = Config()
             basedir = os.path.join(self.config.SFA_DATA_DIR, "authorities")
         self.basedir = basedir
     ##
@@ -165,7 +165,6 @@ class Hierarchy:
         parent_urn = hrn_to_urn(parent_hrn, 'authority')
         if (parent_hrn) and (not self.auth_exists(parent_urn)) and (create_parents):
             self.create_auth(parent_urn, create_parents)
-
         (directory, gid_filename, privkey_filename, dbinfo_filename) = \
             self.get_auth_filenames(hrn)
 
@@ -194,6 +193,32 @@ class Hierarchy:
         dbinfo_file.write(str(dbinfo))
         dbinfo_file.close()
 
+    def create_top_level_auth(self, hrn=None):
+        """
+        Create top level records (includes root and sub authorities (local/remote)
+        """
+        if not hrn:
+            hrn = self.config.SFA_INTERFACE_HRN
+        # make sure parent exists
+        parent_hrn = get_authority(hrn)
+        if not parent_hrn:
+            parent_hrn = hrn
+        if not parent_hrn == hrn:
+            self.create_top_level_auth(parent_hrn)
+       
+        # create the authority if it doesnt alrady exist
+        if not self.auth_exists(hrn):
+            self.create_auth(hrn)
+            
+        
+    def get_interface_auth_info(self, create=True):
+        hrn = self.config.SFA_INTERFACE_HRN
+        if not self.auth_exists(hrn):
+            if create==True:
+                self.create_top_level_auth(hrn) 
+            else:
+                raise MissingAuthority(hrn)
+        return self.get_auth_info(hrn)
     ##
     # Return the AuthInfo object for the specified authority. If the authority
     # does not exist, then an exception is thrown. As a side effect, disk files
@@ -231,13 +256,14 @@ class Hierarchy:
 
     def create_gid(self, xrn, uuid, pkey, CA=False):
         hrn, type = urn_to_hrn(xrn)
+        if not type:
+            type = 'authority'
         parent_hrn = get_authority(hrn)
         # Using hrn_to_urn() here to make sure the urn is in the right format
         # If xrn was a hrn instead of a urn, then the gid's urn will be
         # of type None 
         urn = hrn_to_urn(hrn, type)
         gid = GID(subject=hrn, uuid=uuid, hrn=hrn, urn=urn)
-
         # is this a CA cert
         if hrn == self.config.SFA_INTERFACE_HRN or not parent_hrn:
             # root or sub authority  

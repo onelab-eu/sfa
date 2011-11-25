@@ -40,7 +40,8 @@ from sfa.util.sfalogging import logger
 from sfa.util.xrn import get_authority, hrn_to_urn
 from sfa.util.config import Config
 import sfa.client.xmlrpcprotocol as xmlrpcprotocol
-
+from sfa.trust.gid import GID
+from sfa.trust.trustedroots import TrustedRoots
 from sfa.trust.certificate import Keypair, Certificate
 from sfa.trust.hierarchy import Hierarchy
 from sfa.trust.gid import GID
@@ -60,81 +61,13 @@ def daemon():
     devnull = os.open(os.devnull, os.O_RDWR)
     os.dup2(devnull, 0)
     # xxx fixme - this is just to make sure that nothing gets stupidly lost - should use devnull
-    crashlog = os.open('/var/log/httpd/sfa_access_log', os.O_RDWR | os.O_APPEND | os.O_CREAT, 0644)
+    logdir='/var/log/httpd'
+    # when installed in standalone we might not have httpd installed
+    if not os.path.isdir(logdir): os.mkdir('/var/log/httpd')
+    crashlog = os.open('%s/sfa_access_log'%logdir, os.O_RDWR | os.O_APPEND | os.O_CREAT, 0644)
     os.dup2(crashlog, 1)
     os.dup2(crashlog, 2)
 
-def init_server_key(server_key_file, server_cert_file, config, hierarchy):
-
-    hrn = config.SFA_INTERFACE_HRN.lower()
-    # check if the server's private key exists. If it doesnt,
-    # get the right one from the authorities directory. If it cant be
-    # found in the authorities directory, generate a random one
-    if not os.path.exists(server_key_file):
-        hrn = config.SFA_INTERFACE_HRN.lower()
-        hrn_parts = hrn.split(".")
-        rel_key_path = hrn
-        pkey_filename = hrn+".pkey"
-
-        # sub authority's have "." in their hrn. This must
-        # be converted to os.path separator
-        if len(hrn_parts) > 0:
-            rel_key_path = hrn.replace(".", os.sep)
-            pkey_filename= hrn_parts[-1]+".pkey"
-
-        key_file = os.sep.join([hierarchy.basedir, rel_key_path, pkey_filename])
-        if not os.path.exists(key_file):
-            # if it doesnt exist then this is probably a fresh interface
-            # with no records. Generate a random keypair for now
-            logger.debug("server's public key not found in %s" % key_file)
-
-            logger.debug("generating a random server key pair")
-            key = Keypair(create=True)
-            key.save_to_file(server_key_file)
-            init_server_cert(hrn, key, server_cert_file, self_signed=True)    
-
-        else:
-            # the pkey was found in the authorites directory. lets 
-            # copy it to where the server key should be and generate
-            # the cert
-            key = Keypair(filename=key_file)
-            key.save_to_file(server_key_file)
-            init_server_cert(hrn, key, server_cert_file)    
-
-    # If private key exists and cert doesnt, recreate cert
-    if (os.path.exists(server_key_file)) and (not os.path.exists(server_cert_file)):
-        key = Keypair(filename=server_key_file)
-        init_server_cert(hrn, key, server_cert_file)    
-
-
-def init_server_cert(hrn, key, server_cert_file, self_signed=False):
-    """
-    Setup the certificate for this server. Attempt to use gid before 
-    creating a self signed cert 
-    """
-    if self_signed:
-        init_self_signed_cert(hrn, key, server_cert_file)
-    else:
-        try:
-            # look for gid file
-            logger.debug("generating server cert from gid: %s"% hrn)
-            hierarchy = Hierarchy()
-            auth_info = hierarchy.get_auth_info(hrn)
-            gid = GID(filename=auth_info.gid_filename)
-            gid.save_to_file(filename=server_cert_file)
-        except:
-            # fall back to self signed cert
-            logger.debug("gid for %s not found" % hrn)
-            init_self_signed_cert(hrn, key, server_cert_file)        
-        
-def init_self_signed_cert(hrn, key, server_cert_file):
-    logger.debug("generating self signed cert")
-    # generate self signed certificate
-    cert = Certificate(subject=hrn)
-    cert.set_issuer(key=key, subject=hrn)
-    cert.set_pubkey(key)
-    cert.sign()
-    cert.save_to_file(server_cert_file)
 
 def install_peer_certs(server_key_file, server_cert_file):
     """
@@ -253,12 +186,16 @@ def main():
     
     config = Config()
     if config.SFA_API_DEBUG: pass
+
+    # ge the server's key and cert
     hierarchy = Hierarchy()
-    server_key_file = os.path.join(hierarchy.basedir, "server.key")
-    server_cert_file = os.path.join(hierarchy.basedir, "server.cert")
+    auth_info = hierarchy.get_interface_auth_info()
+    server_key_file = auth_info.get_privkey_filename()
+    server_cert_file = auth_info.get_gid_filename()
 
-    init_server_key(server_key_file, server_cert_file, config, hierarchy)
-
+    # ensure interface cert is present in trusted roots dir
+    trusted_roots = TrustedRoots(config.get_trustedroots_dir())
+    trusted_roots.add_gid(GID(filename=server_cert_file))
     if (options.daemon):  daemon()
     
     if options.trusted_certs:

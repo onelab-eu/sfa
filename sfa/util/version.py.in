@@ -4,9 +4,7 @@ scm_url="@SCMURL@"
 import socket
  
 def version_core (more={}):
-    core = { 'geni_api':1,
-             'sfa' : 1,
-             'code_tag' : version_tag,
+    core = { 'code_tag' : version_tag,
              'code_url' : scm_url,
              'hostname' : socket.gethostname(),
              }

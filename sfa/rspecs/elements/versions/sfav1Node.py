@@ -134,6 +134,11 @@ class SFAv1Node:
             node['slivers'] = SFAv1Sliver.get_slivers(node_elem)
             # get tags
             node['tags'] =  SFAv1PLTag.get_pl_tags(node_elem, ignore=Node.fields)
+
+            parent = node_elem.getparent()
+            if (parent != None) and (parent.tag=="network") and ("name" in parent.attrib):
+                node['network_name'] = parent.attrib['name']
+
             nodes.append(node)
         return nodes            
-            
+

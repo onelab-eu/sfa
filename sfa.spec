@@ -1,6 +1,6 @@
 %define name sfa
 %define version 1.1
-%define taglevel 4
+%define taglevel 5
 
 %define release %{taglevel}%{?pldistro:.%{pldistro}}%{?date:.%{date}}
 %global python_sitearch	%( python -c "from distutils.sysconfig import get_python_lib; print get_python_lib(1)" )
@@ -18,19 +18,28 @@ Vendor: PlanetLab
 Packager: PlanetLab Central <support@planet-lab.org>
 Distribution: PlanetLab %{plrelease}
 URL: %{SCMURL}
+
 Summary: the SFA python libraries
 Group: Applications/System
-
 BuildRequires: make
 Requires: python >= 2.5
 Requires: m2crypto
 Requires: xmlsec1-openssl-devel
 Requires: libxslt-python
 Requires: python-ZSI
+# for uuidgen - used in db password generation
+# on f8 this actually comes with e2fsprogs, go figure
+Requires: util-linux-ng
 # xmlbuilder depends on  lxml
 Requires: python-lxml
 Requires: python-setuptools
 Requires: python-dateutil
+# for the registry
+Requires: postgresql >= 8.2, postgresql-server >= 8.2
+Requires: postgresql-python
+Requires: python-psycopg2
+Requires: pyOpenSSL >= 0.7
+Requires: myplc-config
  
 # python 2.5 has uuid module added, for python 2.4 we still need it.
 # we can't really check for if we can load uuid as a python module,
@@ -45,19 +54,11 @@ Requires: python-dateutil
 #Requires: python-uuid
 #%endif
 
-%package cm
-Summary: the SFA layer around MyPLC NodeManager
-Group: Applications/System
-Requires: sfa
-Requires: pyOpenSSL >= 0.6
-
 %package plc
 Summary: the SFA layer around MyPLC
 Group: Applications/System
 Requires: sfa
 Requires: python-psycopg2
-Requires: myplc-config
-Requires: pyOpenSSL >= 0.7
 
 %package client
 Summary: the SFA experimenter-side CLI
@@ -69,6 +70,12 @@ Requires: pyOpenSSL >= 0.7
 Summary: sfatables policy tool for SFA
 Group: Applications/System
 Requires: sfa
+
+%package cm
+Summary: the SFA layer around MyPLC NodeManager
+Group: Applications/System
+Requires: sfa
+Requires: pyOpenSSL >= 0.6
 
 %package flashpolicy
 Summary: SFA support for flash clients
@@ -83,10 +90,6 @@ Requires: sfa
 %description
 This package provides the python libraries for the PlanetLab implementation of SFA
 
-%description cm
-This package implements the SFA interface which serves as a layer
-between the existing PlanetLab NodeManager interfaces and the SFA API.
- 
 %description plc
 This package implements the SFA interface which serves as a layer
 between the existing PlanetLab interfaces and the SFA API.
@@ -100,6 +103,10 @@ sfatables is a tool for defining access and admission control policies
 in an SFA network, in much the same way as iptables is for ip
 networks. This is the command line interface to manage sfatables
 
+%description cm
+This package implements the SFA interface which serves as a layer
+between the existing PlanetLab NodeManager interfaces and the SFA API.
+ 
 %description flashpolicy
 This package provides support for adobe flash client applications.  
  
@@ -115,29 +122,26 @@ make VERSIONTAG="%{version}-%{taglevel}" SCMURL="%{SCMURL}"
 %install
 rm -rf $RPM_BUILD_ROOT
 make VERSIONTAG="%{version}-%{taglevel}" SCMURL="%{SCMURL}" install DESTDIR="$RPM_BUILD_ROOT"
+rm -rf $RPM_BUILD_ROOT/%{python_sitelib}/*egg-info
 
 %clean
 rm -rf $RPM_BUILD_ROOT
 
 %files
-# sfa and sfatables depend each other.
+# sfa and sfatables depend on each other.
+%{python_sitelib}/sfa
+%{python_sitelib}/xmlbuilder
+/etc/init.d/sfa
 %{_bindir}/sfa-start.py*
-/etc/sfatables/*
-%{python_sitelib}/*
 %{_bindir}/keyconvert.py*
-/var/www/html/wsdl/*.wsdl
-
-%files cm
-/etc/init.d/sfa-cm
-%{_bindir}/sfa_component_setup.py*
-# cron jobs here 
-
-%files plc
-%defattr(-,root,root)
+%{_bindir}/sfa-config-tty
 %config /etc/sfa/default_config.xml
 %config (noreplace) /etc/sfa/aggregates.xml
 %config (noreplace) /etc/sfa/registries.xml
-/etc/init.d/sfa
+/var/www/html/wsdl/*.wsdl
+
+%files plc
+%defattr(-,root,root)
 /etc/sfa/pl.rng
 /etc/sfa/credential.xsd
 /etc/sfa/top.xsd
@@ -145,10 +149,9 @@ rm -rf $RPM_BUILD_ROOT
 /etc/sfa/xml.xsd
 /etc/sfa/protogeni-rspec-common.xsd
 /etc/sfa/topology
-%{_bindir}/sfa-config-tty
 %{_bindir}/sfa-import-plc.py*
-%{_bindir}/sfa-clean-peer-records.py*
 %{_bindir}/sfa-nuke-plc.py*
+%{_bindir}/sfa-clean-peer-records.py*
 %{_bindir}/gen-sfa-cm-config.py*
 %{_bindir}/sfa-ca.py*
 
@@ -161,7 +164,14 @@ rm -rf $RPM_BUILD_ROOT
 %{_bindir}/sfadump.py*
 
 %files sfatables
+/etc/sfatables/*
 %{_bindir}/sfatables
+%{python_sitelib}/sfatables
+
+%files cm
+/etc/init.d/sfa-cm
+%{_bindir}/sfa_component_setup.py*
+# cron jobs here 
 
 %files flashpolicy
 %{_bindir}/sfa_flashpolicy.py*
@@ -197,6 +207,14 @@ fi
 [ "$1" -ge "1" ] && service sfa-cm restart || :
 
 %changelog
+* Thu Nov 24 2011 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-1.1-5
+- sfa should now be started *before* the initial import
+- sfa to use its own database (default sfa) - can run without myplc
+- server calls support optional 'options'
+- client sends options in argument when needed
+- fix infinite getattr recursion in elements/element.py
+- error codes in line with geni
+
 * Fri Nov 18 2011 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-1.1-4
 - fixed links and attributes in rspecs
 - minor cleanup in the API methods, and more consistent names in manager methods
