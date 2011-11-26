@@ -48,7 +48,7 @@ class PlDriver (Driver, PlShell):
 
     ########## disabled users 
     def is_enabled_entity (self, record, aggregates):
-        self.fill_record_info(record, api.aggregates)
+        self.fill_record_info(record, aggregates)
         if record['type'] == 'user':
             return record['enabled']
         # only users can be disabled
