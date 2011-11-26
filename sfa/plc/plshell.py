@@ -26,33 +26,43 @@ class PlShell:
                     'get_nodes':'GetNodes',
                     }
 
+
+    # use the 'capability' auth mechanism for higher performance when the PLC db is local    
     def __init__ ( self, config ) :
-        self.url = config.SFA_PLC_URL
-        # xxx attempt to use the 'capability' auth mechanism for higher performance
-        # when the PLC db is local
-        # xxx todo
-        is_local = False
+        url = config.SFA_PLC_URL
+        # try to figure if the url is local
+        hostname=urlparse(url).hostname
+        is_local=False
+        if hostname == 'localhost': is_local=True
+        # otherwise compare IP addresses
+        url_ip=socket.gethostbyname(hostname)
+        local_ip=socket.gethostbyname(socket.gethostname())
+        if url_ip==local_ip: is_local=True
+
         if is_local:
             try:
+                # too bad this is not installed properly
+                plcapi_path="/usr/share/plc_api"
+                if plcapi_path not in sys.path: sys.path.append(plcapi_path)
                 import PLC.Shell
                 plc_direct_access=True
             except:
                 plc_direct_access=False
         if is_local and plc_direct_access:
-            logger.info('plshell - capability access')
+            logger.debug('plshell access - capability')
             self.plauth = { 'AuthMethod': 'capability',
-                            'UserName':   config.SFA_PLC_USER,
+                            'Username':   config.SFA_PLC_USER,
                             'AuthString': config.SFA_PLC_PASSWORD,
                             }
             self.proxy = PLC.Shell.Shell ()
 
         else:
-            logger.info('plshell - xmlrpc access')
+            logger.debug('plshell access - xmlrpc')
             self.plauth = { 'AuthMethod': 'password',
                             'Username':   config.SFA_PLC_USER,
                             'AuthString': config.SFA_PLC_PASSWORD,
                             }
-            self.proxy = xmlrpclib.Server(self.url, verbose = 0, allow_none = True)
+            self.proxy = xmlrpclib.Server(url, verbose = 0, allow_none = True)
 
     def __getattr__(self, name):
         def func(*args, **kwds):
