@@ -1,4 +1,7 @@
+import sys
 import xmlrpclib
+import socket
+from urlparse import urlparse
 
 from sfa.util.sfalogging import logger
 
@@ -72,6 +75,6 @@ class PlShell:
             if not actual_name:
                 raise Exception, "Illegal method call %s for PL driver"%(name)
             result=getattr(self.proxy, actual_name)(self.plauth, *args, **kwds)
-            logger.info('%s (%s) returned ... %s'%(name,actual_name,result))
+            logger.debug('%s (%s) returned ... %s'%(name,actual_name,result))
             return result
         return func
