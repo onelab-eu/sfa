@@ -52,17 +52,12 @@ class sfaImport:
        self.AuthHierarchy = Hierarchy()
        self.config = Config()
        self.TrustedRoots = TrustedRoots(Config.get_trustedroots_dir(self.config))
-       self.plc_auth = self.config.get_plc_auth()
        self.root_auth = self.config.SFA_REGISTRY_ROOT_AUTH
         
-       # connect to planetlab
-       self.shell = None
-       if "Url" in self.plc_auth:
-          from sfa.plc.remoteshell import RemoteShell
-          self.shell = RemoteShell(self.logger)
-       else:
-          import PLC.Shell
-          self.shell = PLC.Shell.Shell(globals = globals())        
+       # should use a driver instead...
+       from sfa.plc.plshell import PlShell
+       # how to connect to planetlab 
+       self.shell = PlShell (self.config)
 
     def create_top_level_auth_records(self, hrn):
         """
@@ -145,7 +140,7 @@ class sfaImport:
             key_ids = person["key_ids"]
             # get the user's private key from the SSH keys they have uploaded
             # to planetlab
-            keys = self.shell.GetKeys(self.plc_auth, key_ids)
+            keys = self.shell.GetKeys(key_ids)
             key = keys[0]['key']
             pkey = None
             try:

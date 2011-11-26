@@ -70,9 +70,9 @@ def main():
     interface_hrn = config.SFA_INTERFACE_HRN
     keys_filename = config.config_path + os.sep + 'person_keys.py' 
     sfaImporter = sfaImport()
-    if config.SFA_API_DEBUG: sfaImporter.logger.setLevelDebug()
+    logger=sfaImporter.logger
+    if config.SFA_API_DEBUG: logger.setLevelDebug()
     shell = sfaImporter.shell
-    plc_auth = sfaImporter.plc_auth 
     
     # initialize registry db table
     table = SfaTable()
@@ -86,11 +86,11 @@ def main():
     sfaImporter.create_sm_client_record()
 
     # create interface records
-    sfaImporter.logger.info("Import: creating interface records")
+    logger.info("Import: creating interface records")
     sfaImporter.create_interface_records()
 
     # add local root authority's cert  to trusted list
-    sfaImporter.logger.info("Import: adding " + interface_hrn + " to trusted list")
+    logger.info("Import: adding " + interface_hrn + " to trusted list")
     authority = sfaImporter.AuthHierarchy.get_auth_info(interface_hrn)
     sfaImporter.TrustedRoots.add_gid(authority.get_gid_object())
 
@@ -112,13 +112,13 @@ def main():
         existing_hrns.append(result['hrn']) 
             
     # Get all plc sites
-    sites = shell.GetSites(plc_auth, {'peer_id': None})
+    sites = shell.GetSites({'peer_id': None})
     sites_dict = {}
     for site in sites:
         sites_dict[site['login_base']] = site 
     
     # Get all plc users
-    persons = shell.GetPersons(plc_auth, {'peer_id': None, 'enabled': True}, 
+    persons = shell.GetPersons({'peer_id': None, 'enabled': True}, 
                                ['person_id', 'email', 'key_ids', 'site_ids'])
     persons_dict = {}
     for person in persons:
@@ -126,7 +126,7 @@ def main():
         key_ids.extend(person['key_ids'])
 
     # Get all public keys
-    keys = shell.GetKeys(plc_auth, {'peer_id': None, 'key_id': key_ids})
+    keys = shell.GetKeys( {'peer_id': None, 'key_id': key_ids})
     keys_dict = {}
     for key in keys:
         keys_dict[key['key_id']] = key['key']
@@ -140,20 +140,20 @@ def main():
         person_keys[person['person_id']] = pubkeys
 
     # Get all plc nodes  
-    nodes = shell.GetNodes(plc_auth, {'peer_id': None}, ['node_id', 'hostname', 'site_id'])
+    nodes = shell.GetNodes( {'peer_id': None}, ['node_id', 'hostname', 'site_id'])
     nodes_dict = {}
     for node in nodes:
         nodes_dict[node['node_id']] = node
 
     # Get all plc slices
-    slices = shell.GetSlices(plc_auth, {'peer_id': None}, ['slice_id', 'name'])
+    slices = shell.GetSlices( {'peer_id': None}, ['slice_id', 'name'])
     slices_dict = {}
     for slice in slices:
         slices_dict[slice['slice_id']] = slice
     # start importing 
     for site in sites:
         site_hrn = _get_site_hrn(interface_hrn, site)
-        sfaImporter.logger.info("Importing site: %s" % site_hrn)
+        logger.info("Importing site: %s" % site_hrn)
 
         # import if hrn is not in list of existing hrns or if the hrn exists
         # but its not a site record
@@ -272,7 +272,7 @@ def main():
             sfaImporter.delete_record(record_hrn, type) 
                                    
     # save pub keys
-    sfaImporter.logger.info('Import: saving current pub keys')
+    logger.info('Import: saving current pub keys')
     save_keys(keys_filename, person_keys)                
         
 if __name__ == "__main__":
