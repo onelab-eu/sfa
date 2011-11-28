@@ -14,8 +14,10 @@ class SFAv1Sliver:
             slivers = [slivers]
         for sliver in slivers:
             sliver_elem = xml.add_instance('sliver', sliver, ['name'])
-            for tag in sliver.get('tags', []):
-                SFAv1Sliver.add_sliver_attribute(sliver_elem, tag['tagname'], tag['value'])
+            tags = sliver.get('tags', [])
+            if tags:
+                for tag in tags:
+                    SFAv1Sliver.add_sliver_attribute(sliver_elem, tag['tagname'], tag['value'])
             if sliver.get('sliver_id'):
                 sliver_id_leaf = Xrn(sliver.get('sliver_id')).get_leaf()
                 sliver_id_parts = sliver_id_leaf.split(':')

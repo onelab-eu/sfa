@@ -62,9 +62,11 @@ class SFAv1Node:
             #    bw_unallocated = etree.SubElement(node_elem, 'bw_unallocated', units='kbps').text = str(int(node['bw_unallocated'])/1000)
 
             PGv2Services.add_services(node_elem, node.get('services', []))
-            for tag in node.get('tags', []):
-                tag_elem = node_elem.add_element(tag['tagname'])
-                tag_elem.set_text(tag['value'])
+            tags = node.get('tags', [])
+            if tags:
+                for tag in tags:
+                    tag_elem = node_elem.add_element(tag['tagname'])
+                    tag_elem.set_text(tag['value'])
             SFAv1Sliver.add_slivers(node_elem, node.get('slivers', []))
 
     @staticmethod 

@@ -44,10 +44,15 @@ class PGRSpecConverter:
         sfa_version = version_manager._get_version('sfa', '1')    
         sfa_rspec = RSpec(version=sfa_version)
 
+        #nodes = pg_rspec.version.get_nodes()
+        #sfa_rspec.version.add_nodes(nodes())
+        #sfa_rspec.version.add_links(pg_rspec.version.get_links())
+        #return sfa_rspec.toxml() 
+
         # get network
-        network_urn = pg_rspec.version.get_network()
-        network,  _ = urn_to_hrn(network_urn)
-        network_element = sfa_rspec.xml.add_element('network', {'name': network, 'id': network})
+        networks = pg_rspec.version.get_networks()
+        network_hrn = networks[0]
+        network_element = sfa_rspec.xml.add_element('network', name=network_hrn, id=network_hrn)
         
         # get nodes
         pg_nodes_elements = pg_rspec.version.get_node_elements()
@@ -57,18 +62,18 @@ class PGRSpecConverter:
             attribs = dict(pg_node_element.attrib.items()) 
             attribs['id'] = 'n'+str(i)
             
-            node_element = sfa_rspec.xml.add_element('node', attribs, parent=network_element)
+            node_element = network_element.add_element('node')
+            for attrib in attribs:
+                node_element.set(attrib, attribs[attrib])
             urn = pg_node_element.xpath('@component_id', namespaces=pg_rspec.namespaces)
             if urn:
                 urn = urn[0]
                 hostname = Xrn.urn_split(urn)[-1]
-                hostname_element = sfa_rspec.xml.add_element('hostname', parent=node_element, text=hostname)
+                hostname_element = node_element.add_element('hostname')
+                hostname_element.set_text(hostname)
                 if hostname in nodes_with_slivers:
-                    sfa_rspec.xml.add_element('sliver', parent=node_element)
+                    node_element.add_element('sliver')  
                      
-            urn_element = sfa_rspec.xml.add_element('urn', parent=node_element, text=urn)
-
-
             # just copy over remaining child elements  
             for child in pg_node_element.getchildren():
                 node_element.append(transform(child).getroot())
