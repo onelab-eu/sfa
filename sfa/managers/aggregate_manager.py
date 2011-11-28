@@ -25,8 +25,8 @@ class AggregateManager:
 
     def __init__ (self):
         # xxx Thierry : caching at the aggregate level sounds wrong...
-        #self.caching=True
-        self.caching=False
+        self.caching=True
+        #self.caching=False
     
     def GetVersion(self, api, options={}):
     
