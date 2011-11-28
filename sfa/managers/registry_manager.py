@@ -55,7 +55,7 @@ class RegistryManager:
     
         # verify_cancreate_credential requires that the member lists
         # (researchers, pis, etc) be filled in
-        if not self.driver.is_enabled_entity (record, api.aggregates):
+        if not self.driver.is_enabled_entity (record):
               raise AccountNotEnabled(": PlanetLab account %s is not enabled. Please contact your site PI" %(record['email']))
     
         # get the callers gid
@@ -137,9 +137,23 @@ class RegistryManager:
         # 
         table = SfaTable()
         local_records = table.findObjects({'hrn': local_hrns})
-        # xxx driver todo
+        
         if full:
-            self.driver.fill_record_info(local_records, api.aggregates)
+            # in full mode we get as much info as we can, which involves contacting the 
+            # testbed for getting implementation details about the record
+            self.driver.fill_record_info(local_records)
+            # also we fill the 'url' field for known authorities
+            # used to be in the driver code, sounds like a poorman thing though
+            def solve_neighbour_url (record):
+                if not record['type'].startswith('authority'): return 
+                hrn=record['hrn']
+                for neighbour_dict in [ api.aggregates, api.registries ]:
+                    if hrn in neighbour_dict:
+                        record['url']=neighbour_dict[hrn].get_url()
+                        return 
+            [ solve_neighbour_url (record) for record in local_records ]
+                    
+        
         
         # convert local record objects to dicts
         records.extend([dict(record) for record in local_records])
@@ -220,12 +234,11 @@ class RegistryManager:
         if 'gid' not in record:
             uuid = create_uuid()
             pkey = Keypair(create=True)
-            if 'key' in record and record['key']:
+            if 'keys' in record and record['keys']:
+                pub_key=record['keys']
                 # use only first key in record
-                if isinstance(record['key'], types.ListType):
-                    pub_key = record['key'][0]
-                else:
-                    pub_key = record['key']
+                if isinstance(record['keys'], types.ListType):
+                    pub_key = record['keys'][0]
                 pkey = convert_public_key(pub_key)
     
             gid_object = api.auth.hierarchy.create_gid(urn, uuid, pkey)
@@ -244,7 +257,7 @@ class RegistryManager:
 
         # update testbed-specific data f needed
         logger.info("Getting driver from manager=%s"%self)
-        pointer = self.driver.register (hrn, record, pub_key)
+        pointer = self.driver.register (record, hrn, pub_key)
 
         record.set_pointer(pointer)
         record_id = table.insert(record)
@@ -268,73 +281,41 @@ class RegistryManager:
         record = records[0]
         record['last_updated'] = time.gmtime()
     
-        # Update_membership needs the membership lists in the existing record
-        # filled in, so it can see if members were added or removed
-        self.driver.fill_record_info(record, api.aggregates)
-    
+        # validate the type
+        if type not in ['authority', 'slice', 'node', 'user']:
+            raise UnknownSfaType(type) 
+
         # Use the pointer from the existing record, not the one that the user
         # gave us. This prevents the user from inserting a forged pointer
         pointer = record['pointer']
+    
+        # is the a change in keys ?
+        new_key=None
+        if type=='user':
+            if 'keys' in new_record and new_record['keys']:
+                new_key=new_record['keys']
+                if isinstance (new_key,types.ListType):
+                    new_key=new_key[0]
+
+        # Update_membership needs the membership lists in the existing record
+        # filled in, so it can see if members were added or removed
+        self.driver.fill_record_info(record)
+    
         # update the PLC information that was specified with the record
+        if not self.driver.update (record, new_record, hrn, new_key):
+            logger.warning("driver.update failed")
     
-        if (type == "authority"):
-            self.driver.UpdateSite(pointer, new_record)
-    
-        elif type == "slice":
-            pl_record=self.driver.sfa_fields_to_pl_fields(type, hrn, new_record)
-            if 'name' in pl_record:
-                pl_record.pop('name')
-                self.driver.UpdateSlice(pointer, pl_record)
-    
-        elif type == "user":
-            # SMBAKER: UpdatePerson only allows a limited set of fields to be
-            #    updated. Ideally we should have a more generic way of doing
-            #    this. I copied the field names from UpdatePerson.py...
-            update_fields = {}
-            all_fields = new_record
-            for key in all_fields.keys():
-                if key in ['first_name', 'last_name', 'title', 'email',
-                           'password', 'phone', 'url', 'bio', 'accepted_aup',
-                           'enabled']:
-                    update_fields[key] = all_fields[key]
-            self.driver.UpdatePerson(pointer, update_fields)
-    
-            if 'key' in new_record and new_record['key']:
-                # must check this key against the previous one if it exists
-                persons = self.driver.GetPersons([pointer], ['key_ids'])
-                person = persons[0]
-                keys = person['key_ids']
-                keys = self.driver.GetKeys(person['key_ids'])
-                key_exists = False
-                if isinstance(new_record['key'], types.ListType):
-                    new_key = new_record['key'][0]
-                else:
-                    new_key = new_record['key']
-                
-                # Delete all stale keys
-                for key in keys:
-                    if new_record['key'] != key['key']:
-                        self.driver.DeleteKey(key['key_id'])
-                    else:
-                        key_exists = True
-                if not key_exists:
-                    self.driver.AddPersonKey(pointer, {'key_type': 'ssh', 'key': new_key})
-    
-                # update the openssl key and gid
-                pkey = convert_public_key(new_key)
-                uuid = create_uuid()
-                gid_object = api.auth.hierarchy.create_gid(urn, uuid, pkey)
-                gid = gid_object.save_to_string(save_parents=True)
-                record['gid'] = gid
-                record = SfaRecord(dict=record)
-                table.update(record)
-    
-        elif type == "node":
-            self.driver.UpdateNode(pointer, new_record)
-    
-        else:
-            raise UnknownSfaType(type)
-    
+        # take new_key into account
+        if new_key:
+            # update the openssl key and gid
+            pkey = convert_public_key(new_key)
+            uuid = create_uuid()
+            gid_object = api.auth.hierarchy.create_gid(urn, uuid, pkey)
+            gid = gid_object.save_to_string(save_parents=True)
+            record['gid'] = gid
+            record = SfaRecord(dict=record)
+            table.update(record)
+        
         # update membership for researchers, pis, owners, operators
         self.driver.update_membership(record, new_record)
         
@@ -355,7 +336,7 @@ class RegistryManager:
         record = records[0]
         type = record['type']
         
-        if not type in ['slice', 'user', 'node', 'authority'] :
+        if type not in ['slice', 'user', 'node', 'authority'] :
             raise UnknownSfaType(type)
 
         credential = api.getCredential()
@@ -370,8 +351,12 @@ class RegistryManager:
                         result=registries[registry].remove_peer_object(credential, record, origin_hrn)
                     except:
                         pass
+
         # call testbed callback first
-        self.driver.remove(record)
+        # IIUC this is done on the local testbed TOO because of the refreshpeer link
+        if not self.driver.remove(record):
+            logger.warning("driver.remove failed")
+
         # delete from sfa db
         table.remove(record)
     

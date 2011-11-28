@@ -1,5 +1,5 @@
 #
-from sfa.util.faults import MissingSfaInfo
+from sfa.util.faults import MissingSfaInfo, UnknownSfaType
 from sfa.util.sfalogging import logger
 from sfa.util.table import SfaTable
 from sfa.util.defaultdict import defaultdict
@@ -47,15 +47,15 @@ class PlDriver (Driver, PlShell):
                     rspec_type == 'eucalyptus' or rspec_type == 'max')
 
     ########## disabled users 
-    def is_enabled_entity (self, record, aggregates):
-        self.fill_record_info(record, aggregates)
+    def is_enabled_entity (self, record):
+        self.fill_record_info(record)
         if record['type'] == 'user':
             return record['enabled']
         # only users can be disabled
         return True
 
     ########## 
-    def register (self, hrn, sfa_record, pub_key):
+    def register (self, sfa_record, hrn, pub_key):
         type = sfa_record['type']
         pl_record = self.sfa_fields_to_pl_fields(type, hrn, sfa_record)
 
@@ -108,6 +108,62 @@ class PlDriver (Driver, PlShell):
     
         return pointer
         
+    ##########
+    # xxx actually old_sfa_record comes filled with plc stuff as well in the original code
+    def update (self, old_sfa_record, new_sfa_record, hrn, new_key):
+        pointer = old_sfa_record['pointer']
+        type = old_sfa_record['type']
+
+        # new_key implemented for users only
+        if new_key and type not in [ 'user' ]:
+            raise UnknownSfaType(type)
+
+        if (type == "authority"):
+            self.UpdateSite(pointer, new_sfa_record)
+    
+        elif type == "slice":
+            pl_record=self.sfa_fields_to_pl_fields(type, hrn, new_sfa_record)
+            if 'name' in pl_record:
+                pl_record.pop('name')
+                self.UpdateSlice(pointer, pl_record)
+    
+        elif type == "user":
+            # SMBAKER: UpdatePerson only allows a limited set of fields to be
+            #    updated. Ideally we should have a more generic way of doing
+            #    this. I copied the field names from UpdatePerson.py...
+            update_fields = {}
+            all_fields = new_sfa_record
+            for key in all_fields.keys():
+                if key in ['first_name', 'last_name', 'title', 'email',
+                           'password', 'phone', 'url', 'bio', 'accepted_aup',
+                           'enabled']:
+                    update_fields[key] = all_fields[key]
+            self.UpdatePerson(pointer, update_fields)
+    
+            if new_key:
+                # must check this key against the previous one if it exists
+                persons = self.GetPersons([pointer], ['key_ids'])
+                person = persons[0]
+                keys = person['key_ids']
+                keys = self.GetKeys(person['key_ids'])
+                
+                # Delete all stale keys
+                key_exists = False
+                for key in keys:
+                    if new_key != key['key']:
+                        self.DeleteKey(key['key_id'])
+                    else:
+                        key_exists = True
+                if not key_exists:
+                    self.AddPersonKey(pointer, {'key_type': 'ssh', 'key': new_key})
+    
+        elif type == "node":
+            self.UpdateNode(pointer, new_sfa_record)
+
+        return True
+        
+
+    ##########
     def remove (self, sfa_record):
         type=sfa_record['type']
         pointer=sfa_record['pointer']
@@ -126,6 +182,8 @@ class PlDriver (Driver, PlShell):
         elif type == 'authority':
             if self.GetSites(pointer):
                 self.DeleteSite(pointer)
+
+        return True
 
 
 
@@ -178,7 +236,7 @@ class PlDriver (Driver, PlShell):
         return pl_record
 
     ####################
-    def fill_record_info(self, records, aggregates):
+    def fill_record_info(self, records):
         """
         Given a (list of) SFA record, fill in the PLC specific 
         and SFA specific fields in the record. 
@@ -187,16 +245,14 @@ class PlDriver (Driver, PlShell):
             records = [records]
 
         self.fill_record_pl_info(records)
-        self.fill_record_sfa_info(records, aggregates)
+        self.fill_record_sfa_info(records)
 
     def fill_record_pl_info(self, records):
         """
         Fill in the planetlab specific fields of a SFA record. This
         involves calling the appropriate PLC method to retrieve the 
         database record for the object.
-        
-        PLC data is filled into the pl_info field of the record.
-    
+            
         @param record: record to fill in field (in/out param)     
         """
         # get ids by type
@@ -333,7 +389,7 @@ class PlDriver (Driver, PlShell):
         return records   
 
     # aggregates is basically api.aggregates
-    def fill_record_sfa_info(self, records, aggregates):
+    def fill_record_sfa_info(self, records):
 
         def startswith(prefix, values):
             return [value for value in values if value.startswith(prefix)]
@@ -414,10 +470,6 @@ class PlDriver (Driver, PlShell):
                 
             elif (type.startswith("authority")):
                 record['url'] = None
-                if record['hrn'] in aggregates:
-                    
-                    record['url'] = aggregates[record['hrn']].get_url()
-
                 if record['pointer'] != -1:
                     record['PI'] = []
                     record['operator'] = []
