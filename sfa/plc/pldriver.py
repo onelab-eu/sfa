@@ -108,6 +108,28 @@ class PlDriver (Driver, PlShell):
     
         return pointer
         
+    def remove (self, sfa_record):
+        type=sfa_record['type']
+        pointer=sfa_record['pointer']
+        if type == 'user':
+            persons = self.GetPersons(pointer)
+            # only delete this person if he has site ids. if he doesnt, it probably means
+            # he was just removed from a site, not actually deleted
+            if persons and persons[0]['site_ids']:
+                self.DeletePerson(pointer)
+        elif type == 'slice':
+            if self.GetSlices(pointer):
+                self.DeleteSlice(pointer)
+        elif type == 'node':
+            if self.GetNodes(pointer):
+                self.DeleteNode(pointer)
+        elif type == 'authority':
+            if self.GetSites(pointer):
+                self.DeleteSite(pointer)
+
+
+
+
 
     ##
     # Convert SFA fields to PLC fields for use when registering up updating
@@ -431,7 +453,9 @@ class PlDriver (Driver, PlShell):
                                         self.AddPersonToSlice,
                                         self.DeletePersonFromSlice)
         elif record.type == "authority":
-            # xxx TODO
+            logger.info("update_membership 'autority' not implemented")
+            pass
+        else:
             pass
 
     def update_membership_list(self, oldRecord, record, listName, addFunc, delFunc):

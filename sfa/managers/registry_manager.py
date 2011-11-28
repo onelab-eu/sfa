@@ -13,6 +13,7 @@ from sfa.util.table import SfaTable
 from sfa.util.xrn import Xrn, get_authority, hrn_to_urn, urn_to_hrn
 from sfa.util.plxrn import hrn_to_pl_login_base
 from sfa.util.version import version_core
+from sfa.util.sfalogging import logger
 
 from sfa.trust.gid import GID 
 from sfa.trust.credential import Credential
@@ -54,7 +55,7 @@ class RegistryManager:
     
         # verify_cancreate_credential requires that the member lists
         # (researchers, pis, etc) be filled in
-        if not api.driver.is_enabled_entity (record, api.aggregates):
+        if not self.driver.is_enabled_entity (record, api.aggregates):
               raise AccountNotEnabled(": PlanetLab account %s is not enabled. Please contact your site PI" %(record['email']))
     
         # get the callers gid
@@ -138,7 +139,7 @@ class RegistryManager:
         local_records = table.findObjects({'hrn': local_hrns})
         # xxx driver todo
         if full:
-            api.driver.fill_record_info(local_records, api.aggregates)
+            self.driver.fill_record_info(local_records, api.aggregates)
         
         # convert local record objects to dicts
         records.extend([dict(record) for record in local_records])
@@ -240,23 +241,17 @@ class RegistryManager:
             # get the GID from the newly created authority
             gid = auth_info.get_gid_object()
             record.set_gid(gid.save_to_string(save_parents=True))
-            pointer = api.driver.register (hrn, record, pub_key)
-    
-        elif (type == "slice"):
-            pointer = api.driver.register (hrn, record, pub_key)
-    
-        elif  (type == "user"):
-            pointer = api.driver.register (hrn, record, pub_key)
-    
-        elif (type == "node"):
-            pointer = api.driver.register (hrn, record, pub_key)
+
+        # update testbed-specific data f needed
+        logger.info("Getting driver from manager=%s"%self)
+        pointer = self.driver.register (hrn, record, pub_key)
 
         record.set_pointer(pointer)
         record_id = table.insert(record)
         record['record_id'] = record_id
     
         # update membership for researchers, pis, owners, operators
-        api.driver.update_membership(None, record)
+        self.driver.update_membership(None, record)
     
         return record.get_gid_object().save_to_string(save_parents=True)
     
@@ -275,7 +270,7 @@ class RegistryManager:
     
         # Update_membership needs the membership lists in the existing record
         # filled in, so it can see if members were added or removed
-        api.driver.fill_record_info(record, api.aggregates)
+        self.driver.fill_record_info(record, api.aggregates)
     
         # Use the pointer from the existing record, not the one that the user
         # gave us. This prevents the user from inserting a forged pointer
@@ -283,13 +278,13 @@ class RegistryManager:
         # update the PLC information that was specified with the record
     
         if (type == "authority"):
-            api.driver.UpdateSite(pointer, new_record)
+            self.driver.UpdateSite(pointer, new_record)
     
         elif type == "slice":
-            pl_record=api.driver.sfa_fields_to_pl_fields(type, hrn, new_record)
+            pl_record=self.driver.sfa_fields_to_pl_fields(type, hrn, new_record)
             if 'name' in pl_record:
                 pl_record.pop('name')
-                api.driver.UpdateSlice(pointer, pl_record)
+                self.driver.UpdateSlice(pointer, pl_record)
     
         elif type == "user":
             # SMBAKER: UpdatePerson only allows a limited set of fields to be
@@ -302,14 +297,14 @@ class RegistryManager:
                            'password', 'phone', 'url', 'bio', 'accepted_aup',
                            'enabled']:
                     update_fields[key] = all_fields[key]
-            api.driver.UpdatePerson(pointer, update_fields)
+            self.driver.UpdatePerson(pointer, update_fields)
     
             if 'key' in new_record and new_record['key']:
                 # must check this key against the previous one if it exists
-                persons = api.driver.GetPersons([pointer], ['key_ids'])
+                persons = self.driver.GetPersons([pointer], ['key_ids'])
                 person = persons[0]
                 keys = person['key_ids']
-                keys = api.driver.GetKeys(person['key_ids'])
+                keys = self.driver.GetKeys(person['key_ids'])
                 key_exists = False
                 if isinstance(new_record['key'], types.ListType):
                     new_key = new_record['key'][0]
@@ -319,11 +314,11 @@ class RegistryManager:
                 # Delete all stale keys
                 for key in keys:
                     if new_record['key'] != key['key']:
-                        api.driver.DeleteKey(key['key_id'])
+                        self.driver.DeleteKey(key['key_id'])
                     else:
                         key_exists = True
                 if not key_exists:
-                    api.driver.AddPersonKey(pointer, {'key_type': 'ssh', 'key': new_key})
+                    self.driver.AddPersonKey(pointer, {'key_type': 'ssh', 'key': new_key})
     
                 # update the openssl key and gid
                 pkey = convert_public_key(new_key)
@@ -335,13 +330,13 @@ class RegistryManager:
                 table.update(record)
     
         elif type == "node":
-            api.driver.UpdateNode(pointer, new_record)
+            self.driver.UpdateNode(pointer, new_record)
     
         else:
             raise UnknownSfaType(type)
     
         # update membership for researchers, pis, owners, operators
-        api.driver.update_membership(record, new_record)
+        self.driver.update_membership(record, new_record)
         
         return 1 
     
@@ -359,7 +354,10 @@ class RegistryManager:
         if not records: raise RecordNotFound(hrn)
         record = records[0]
         type = record['type']
-    
+        
+        if not type in ['slice', 'user', 'node', 'authority'] :
+            raise UnknownSfaType(type)
+
         credential = api.getCredential()
         registries = api.registries
     
@@ -372,36 +370,22 @@ class RegistryManager:
                         result=registries[registry].remove_peer_object(credential, record, origin_hrn)
                     except:
                         pass
-        if type == "user":
-            persons = api.driver.GetPersons(record['pointer'])
-            # only delete this person if he has site ids. if he doesnt, it probably means
-            # he was just removed from a site, not actually deleted
-            if persons and persons[0]['site_ids']:
-                api.driver.DeletePerson(record['pointer'])
-        elif type == "slice":
-            if api.driver.GetSlices(record['pointer']):
-                api.driver.DeleteSlice(record['pointer'])
-        elif type == "node":
-            if api.driver.GetNodes(record['pointer']):
-                api.driver.DeleteNode(record['pointer'])
-        elif type == "authority":
-            if api.driver.GetSites(record['pointer']):
-                api.driver.DeleteSite(record['pointer'])
-        else:
-            raise UnknownSfaType(type)
-    
+        # call testbed callback first
+        self.driver.remove(record)
+        # delete from sfa db
         table.remove(record)
     
         return 1
 
+    # This is a PLC-specific thing...
     def get_key_from_incoming_ip (self, api):
         # verify that the callers's ip address exist in the db and is an interface
         # for a node in the db
         (ip, port) = api.remote_addr
-        interfaces = api.driver.GetInterfaces({'ip': ip}, ['node_id'])
+        interfaces = self.driver.GetInterfaces({'ip': ip}, ['node_id'])
         if not interfaces:
             raise NonExistingRecord("no such ip %(ip)s" % locals())
-        nodes = api.driver.GetNodes([interfaces[0]['node_id']], ['node_id', 'hostname'])
+        nodes = self.driver.GetNodes([interfaces[0]['node_id']], ['node_id', 'hostname'])
         if not nodes:
             raise NonExistingRecord("no such node using ip %(ip)s" % locals())
         node = nodes[0]

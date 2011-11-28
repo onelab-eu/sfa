@@ -19,3 +19,7 @@ class Driver:
     # -1 if this feature is not relevant 
     # here type will be 'authority'
     def register (self, hrn, sfa_record, pub_key) : return -1
+
+    # incoming record is the existing sfa_record
+    # no retcod expected for now
+    def remove (self, sfa_record): return None
