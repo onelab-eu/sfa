@@ -92,7 +92,7 @@ class SFAv1Node:
         for hostname in hostnames:
             nodes = SFAv1Node.get_nodes(xml, {'component_id': '*%s*' % hostname})
             for node in nodes:
-                slivers = SFAv1Slivers.get_slivers(node.element)
+                slivers = SFAv1Sliver.get_slivers(node.element)
                 for sliver in slivers:
                     node.element.remove(sliver.element)
         
@@ -137,9 +137,11 @@ class SFAv1Node:
             # get tags
             node['tags'] =  SFAv1PLTag.get_pl_tags(node_elem, ignore=Node.fields)
 
-            parent = node_elem.getparent()
-            if (parent != None) and (parent.tag=="network") and ("name" in parent.attrib):
-                node['network_name'] = parent.attrib['name']
+            # temporary... play nice with old slice manager rspec
+            if not node['component_name']:
+                hostname_elem = node_elem.find("hostname")
+                if hostname_elem != None:
+                    node['component_name'] = hostname_elem.text
 
             nodes.append(node)
         return nodes            
