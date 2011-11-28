@@ -16,7 +16,7 @@ class ReturnValue(dict):
 
     @staticmethod
     def get_key_value(key, return_value):
-        if isinstance(return_value, dict):
+        if isinstance(return_value, dict) and return_value.has_key(key):
             return return_value.get(key)
         else:
             return return_value              
