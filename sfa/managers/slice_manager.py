@@ -261,7 +261,7 @@ class SliceManager:
             self.add_slicemgr_stat(result_rspec, "CreateSliver", result["aggregate"], result["elapsed"], result["status"], result.get("exc_info",None))
             if result["status"]=="success":
                 try:
-                    result_rspec.version.merge(ReturnValue.get_value(rresult["rspec"]))
+                    result_rspec.version.merge(ReturnValue.get_value(result["rspec"]))
                 except:
                     api.logger.log_exc("SM.CreateSliver: Failed to merge aggregate rspec")
         return result_rspec.toxml()
