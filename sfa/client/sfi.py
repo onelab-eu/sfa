@@ -4,6 +4,7 @@
 
 import sys
 sys.path.append('.')
+
 import os, os.path
 import tempfile
 import socket
@@ -13,21 +14,25 @@ import pickle
 from lxml import etree
 from StringIO import StringIO
 from optparse import OptionParser
-from sfa.client.client_helper import pg_users_arg, sfa_users_arg
-from sfa.util.sfalogging import sfi_logger
+
 from sfa.trust.certificate import Keypair, Certificate
 from sfa.trust.gid import GID
 from sfa.trust.credential import Credential
 from sfa.trust.sfaticket import SfaTicket
-from sfa.util.record import SfaRecord, UserRecord, SliceRecord, NodeRecord, AuthorityRecord
-from sfa.rspecs.rspec import RSpec
-from sfa.rspecs.rspec_converter import RSpecConverter
+
+from sfa.util.sfalogging import sfi_logger
 from sfa.util.xrn import get_leaf, get_authority, hrn_to_urn
-import sfa.client.xmlrpcprotocol as xmlrpcprotocol
 from sfa.util.config import Config
 from sfa.util.version import version_core
 from sfa.util.cache import Cache
+from sfa.util.record import SfaRecord, UserRecord, SliceRecord, NodeRecord, AuthorityRecord
+
+from sfa.rspecs.rspec import RSpec
+from sfa.rspecs.rspec_converter import RSpecConverter
 from sfa.rspecs.version_manager import VersionManager
+
+import sfa.client.xmlrpcprotocol as xmlrpcprotocol
+from sfa.client.client_helper import pg_users_arg, sfa_users_arg
 
 AGGREGATE_PORT=12346
 CM_PORT=12346
