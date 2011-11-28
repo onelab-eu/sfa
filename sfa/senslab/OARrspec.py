@@ -43,11 +43,12 @@ class OARrspec:
     prepared=False
     #panos new user options variable
     user_options = {}
-
-    def __init__(self ,api, user_options={}):
+    
+    def __init__(self ,api):
+    #def __init__(self ,api, user_options={}):
 	self.OARImporter = OARapi()	
         self.driver = SlabDriver(Config())
-	self.user_options = user_options
+	#self.user_options = user_options
 	self.api = api 
 	print >>sys.stderr,"\r\n \r\n \t\t_____________INIT OARRSPEC__ api : %s" %(api)
 
