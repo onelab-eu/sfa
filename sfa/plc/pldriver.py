@@ -17,8 +17,7 @@ def list_to_dict(recs, key):
     convert a list of dictionaries into a dictionary keyed on the 
     specified dictionary key 
     """
-    keys = [rec[key] for rec in recs]
-    return dict(zip(keys, recs))
+    return dict ( [ (rec[key],rec) for rec in recs ] )
 
 #
 # inheriting Driver is not very helpful in the PL case but
@@ -30,7 +29,8 @@ def list_to_dict(recs, key):
 # 
 # so OTOH we inherit PlShell just so one can do driver.GetNodes
 # which would not make much sense in the context of other testbeds
-# so ultimately PlDriver might just as well drop the PlShell inheritance
+# so ultimately PlDriver should drop the PlShell inheritance
+# and would have a driver.shell reference to a PlShell instead
 # 
 class PlDriver (Driver, PlShell):
 
@@ -505,7 +505,7 @@ class PlDriver (Driver, PlShell):
                                         self.AddPersonToSlice,
                                         self.DeletePersonFromSlice)
         elif record.type == "authority":
-            logger.info("update_membership 'autority' not implemented")
+            logger.info("update_membership 'authority' not implemented")
             pass
         else:
             pass
@@ -525,8 +525,6 @@ class PlDriver (Driver, PlShell):
         # build a list of the new person ids, by looking up each person to get
         # their pointer
         newIdList = []
-        # xxx thgen fixme - use SfaTable hardwired for now 
-        #table = self.SfaTable()
         table = SfaTable()
         records = table.find({'type': 'user', 'hrn': newList})
         for rec in records:

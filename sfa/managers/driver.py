@@ -23,21 +23,21 @@ class Driver:
         return -1
 
     # incoming record is the existing sfa_record
-    # error message logged if result is False
+    # expected retcod boolean, error message logged if result is False
     def remove (self, sfa_record): 
         return True
 
     # incoming are the sfa_record:
     # (*) old_sfa_record is what we have in the db for that hrn
     # (*) new_sfa_record is what was passed in the Update call
-    # error message logged if result is False
+    # expected retcod boolean, error message logged if result is False
     # NOTE 1. about keys
     # this is confusing because a user may have several ssh keys in 
     # the planetlab database, but we need to pick one to generate its cert
     # so as much as in principle we should be able to use new_sfa_record['keys']
-    # the manager code actually picks one, and it's safer to pass it along
-    # rather than depending on the driver code to do the same
-    # xxx 
+    # the manager code actually picks one (the first one), and it seems safer
+    # to pass it along rather than depending on the driver code to do the same
+    #
     # NOTE 2. about keys
     # when changing the ssh key through this method the gid gets changed too
     # should anything be passed back to the caller in this case ?
