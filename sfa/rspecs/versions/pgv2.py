@@ -19,16 +19,23 @@ class PGv2(BaseVersion):
     }
     namespaces = dict(extensions.items() + [('default', namespace)])
 
-    # Networks    
+    # Networks
     def get_networks(self):
-        networks = set()
-        nodes = self.xml.xpath('//default:node[@component_manager_id] | //node:[@component_manager_id]', namespaces=self.namespaces)
-        for node in nodes: 
-            if 'component_manager_id' in node:
-                network_urn  = node.get('component_manager_id')
-                network_hrn = Xrn(network_urn).get_hrn()[0]
-                networks.add({'name': network_hrn})
-        return list(networks)
+        network_names = set()
+        nodes = self.xml.xpath('//default:node[@component_manager_id] | //node[@component_manager_id]', namespaces=self.namespaces)
+        for node in nodes:
+            if 'component_manager_id' in node.attrib:
+                network_urn = node.get('component_manager_id')
+                if network_urn.startswith("urn:"):
+                    network_hrn = Xrn(network_urn).get_hrn()[0]
+                else:
+                    # some component_manager_ids are hrns instead of urns??
+                    network_hrn = network_urn
+                network_names.add(network_hrn)
+                print "PPP", network_names, network_hrn, network_urn
+        network_names = list(network_names)
+        networks = [{"name": x} for x in network_names]
+        return networks
 
     # Nodes
 
