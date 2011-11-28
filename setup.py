@@ -52,9 +52,10 @@ package_dirs = [
     'sfatables',
     'sfatables/commands',
     'sfatables/processors',
-    'flashpolicy',
     ]
 
+
+initscripts = [ 'sfa', 'sfa-cm' ]
 
 data_files = [('/etc/sfa/', [ 'config/aggregates.xml',
                               'config/registries.xml',
@@ -71,7 +72,7 @@ data_files = [('/etc/sfa/', [ 'config/aggregates.xml',
                             ]),
               ('/etc/sfatables/matches/', glob('sfatables/matches/*.xml')),
               ('/etc/sfatables/targets/', glob('sfatables/targets/*.xml')),
-              ('/etc/init.d/', ['sfa/init.d/sfa', 'sfa/init.d/sfa-cm'])]
+              ('/etc/init.d/', [ "sfa/init.d/%s"%x for x in initscripts ])]
 
 # add sfatables processors as data_files
 processor_files = [f for f in glob('sfatables/processors/*') if os.path.isfile(f)]
@@ -82,15 +83,13 @@ for d in processor_subdirs:
     d_files = [f for f in glob(d + '/*') if os.path.isfile(f)]
     data_files.append((etc_dir, processor_files))
 
-initscripts = [ '/etc/init.d/sfa', '/etc/init.d/sfa-cm' ]
-
 if sys.argv[1] in ['uninstall', 'remove', 'delete', 'clean']:
     python_path = sys.path
     site_packages_path = [ os.path.join(p,'sfa') for p in python_path if p.endswith('site-packages')]
     site_packages_path += [ os.path.join(p,'sfatables') for p in python_path if p.endswith('site-packages')]
     remove_dirs = ['/etc/sfa/', '/etc/sfatables'] + site_packages_path
     remove_bins = [ '/usr/bin/' + os.path.basename(bin) for bin in bins ]
-    remove_files = remove_bins + initscripts
+    remove_files = remove_bins + [ "/etc/init.d/%s"%x for x in initscripts ]
 
     # remove files   
     for filepath in remove_files:

@@ -22,7 +22,7 @@ class PGv2(BaseVersion):
     # Networks    
     def get_networks(self):
         networks = set()
-        nodes = self.xml.xpath('//default:node[@component_manager_id]', namespaces=self.namespaces)
+        nodes = self.xml.xpath('//default:node[@component_manager_id] | //node:[@component_manager_id]', namespaces=self.namespaces)
         for node in nodes: 
             if 'component_manager_id' in node:
                 network_urn  = node.get('component_manager_id')
@@ -167,12 +167,24 @@ class PGv2(BaseVersion):
         """
         from sfa.rspecs.rspec import RSpec
         # just copy over all the child elements under the root element
-        if isinstance(in_rspec, RSpec):
-            in_rspec = in_rspec.toxml()
+        if isinstance(in_rspec, basestring):
+            in_rspec = RSpec(in_rspec)
+
+        nodes = in_rspec.version.get_nodes()
+        # protogeni rspecs need to advertise the availabel sliver types
+        for node in nodes:
+            if not node.has_key('sliver') or not node['sliver']:
+                node['sliver'] = {'name': 'plab-vserver'}
+            
+        self.add_nodes(nodes)
+        self.add_links(in_rspec.version.get_links())
         
-        rspec = RSpec(in_rspec)
-        for child in rspec.xml.iterchildren():
-            self.xml.root.append(child)
+        #
+        #rspec = RSpec(in_rspec)
+        #for child in rspec.xml.iterchildren():
+        #    self.xml.root.append(child)
+        
+        
 
     def cleanup(self):
         # remove unncecessary elements, attributes

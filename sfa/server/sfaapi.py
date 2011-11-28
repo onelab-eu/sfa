@@ -1,15 +1,16 @@
 import os, os.path
 import datetime
 
-from sfa.util.faults import SfaAPIError
+from sfa.util.faults import SfaFault, SfaAPIError
 from sfa.util.config import Config
 from sfa.util.cache import Cache
 from sfa.trust.auth import Auth
 from sfa.trust.certificate import Keypair, Certificate
 from sfa.trust.credential import Credential
 from sfa.trust.rights import determine_rights
-
 from sfa.server.xmlrpcapi import XmlrpcApi
+from sfa.util.genicode import GENICODE
+from sfa.client.return_value import ReturnValue
 
 # thgen xxx fixme this is wrong all right, but temporary, will use generic
 from sfa.util.table import SfaTable
@@ -201,7 +202,53 @@ class SfaApi (XmlrpcApi):
         if self.cache:
             server_version = self.cache.get(cache_key)
         if not server_version:
-            server_version = server.GetVersion()
+            result = server.GetVersion()
+            server_version = ReturnValue.get_value(result)
             # cache version for 24 hours
             self.cache.add(cache_key, server_version, ttl= 60*60*24)
         return server_version
+
+
+    def get_geni_code(self, result):
+        code = {
+            'geni_code': GENICODE.SUCCESS, 
+            'am_type': 'sfa',
+            'am_code': None,
+        }
+        if isinstance(result, SfaFault):
+            code['geni_code'] = result.faultCode
+            code['am_code'] = result.faultCode                        
+                
+        return code
+
+    def get_geni_value(self, result):
+        value = result
+        if isinstance(result, SfaFault):
+            value = ""
+        return value
+
+    def get_geni_output(self, result):
+        output = ""
+        if isinstance(result, SfaFault):
+            output = result.faultString 
+        return output
+
+    def prepare_response_v2_am(self, result):
+        response = {
+            'code': self.get_geni_code(result),
+            'value': self.get_geni_value(result),
+            'output': self.get_geni_output(result),
+        }
+        return response
+    
+    def prepare_response(self, result, method=""):
+        """
+        Converts the specified result into a standard GENI compliant 
+        response  
+        """
+        if self.interface.lower() in ['aggregate', 'slicemgr']: 
+            if hasattr(self.config, 'SFA_AGGREGATE_API_VERSION') and \
+              self.config.SFA_AGGREGATE_API_VERSION == 2:
+                result = self.prepare_response_v2_am(result)
+        return XmlrpcApi.prepare_response(self, result, method)
+

@@ -12,20 +12,18 @@ from sfa.util.sfalogging import logger
 from sfa.util.xrn import Xrn, urn_to_hrn
 from sfa.util.version import version_core
 from sfa.util.callids import Callids
-
 from sfa.server.threadmanager import ThreadManager
-
 from sfa.rspecs.rspec_converter import RSpecConverter
 from sfa.rspecs.version_manager import VersionManager
 from sfa.rspecs.rspec import RSpec 
 from sfa.client.client_helper import sfa_to_pg_users_arg
+from sfa.client.return_value import ReturnValue
 
 class SliceManager:
     def __init__ (self):
     #    self.caching=False
         self.caching=True
         
-    
     def _options_supported(self, api, server):
         """
         Returns true if server support the optional call_id arg, false otherwise.
@@ -65,15 +63,15 @@ class SliceManager:
                 ad_rspec_versions.append(rspec_version.to_dict())
             if rspec_version.content_type in ['*', 'request']:
                 request_rspec_versions.append(rspec_version.to_dict())
-        default_rspec_version = version_manager.get_version("sfa 1").to_dict()
         xrn=Xrn(api.hrn, 'authority+sa')
         version_more = {'interface':'slicemgr',
+                        'sfa': 1,
+                        'geni_api': api.config.SFA_AGGREGATE_API_VERSION,
                         'hrn' : xrn.get_hrn(),
                         'urn' : xrn.get_urn(),
                         'peers': peers,
-                        'request_rspec_versions': request_rspec_versions,
-                        'ad_rspec_versions': ad_rspec_versions,
-                        'default_ad_rspec': default_rspec_version
+                        'geni_request_rspec_versions': request_rspec_versions,
+                        'geni_ad_rspec_versions': ad_rspec_versions,
                     }
         sm_version=version_core(version_more)
         # local aggregate if present needs to have localhost resolved
@@ -124,7 +122,9 @@ class SliceManager:
             try:
                 version = api.get_cached_server_version(server)
                 # force ProtoGENI aggregates to give us a v2 RSpec
-                if 'sfa' not in version.keys():
+                if 'sfa' in version.keys():
+                    my_opts['rspec_version'] = version_manager.get_version('SFA 1').to_dict()
+                else:
                     my_opts['rspec_version'] = version_manager.get_version('ProtoGENI 2').to_dict()
                 rspec = server.ListResources(*args)
                 return {"aggregate": aggregate, "rspec": rspec, "elapsed": time.time()-tStart, "status": "success"}
@@ -168,7 +168,7 @@ class SliceManager:
             # get the rspec from the aggregate
             interface = api.aggregates[aggregate]
             server = api.server_proxy(interface, cred)
-            threads.run(_ListResources, aggregate, server, [cred], options, call_id)
+            threads.run(_ListResources, aggregate, server, [cred], options)
     
     
         results = threads.get_results()
@@ -182,7 +182,7 @@ class SliceManager:
             self.add_slicemgr_stat(rspec, "ListResources", result["aggregate"], result["elapsed"], result["status"], result.get("exc_info",None))
             if result["status"]=="success":
                 try:
-                    rspec.version.merge(result["rspec"])
+                    rspec.version.merge(ReturnValue.get_value(result["rspec"]))
                 except:
                     api.logger.log_exc("SM.ListResources: Failed to merge aggregate rspec")
     
@@ -220,7 +220,7 @@ class SliceManager:
                 logger.log_exc('Something wrong in _CreateSliver with URL %s'%server.url)
                 return {"aggregate": aggregate, "elapsed": time.time()-tStart, "status": "exception", "exc_info": sys.exc_info()}
 
-        call_id = option.get('call_id')
+        call_id = options.get('call_id')
         if Callids().already_handled(call_id): return ""
         # Validate the RSpec against PlanetLab's schema --disabled for now
         # The schema used here needs to aggregate the PL and VINI schemas
@@ -261,7 +261,7 @@ class SliceManager:
             self.add_slicemgr_stat(result_rspec, "CreateSliver", result["aggregate"], result["elapsed"], result["status"], result.get("exc_info",None))
             if result["status"]=="success":
                 try:
-                    result_rspec.version.merge(result["rspec"])
+                    result_rspec.version.merge(ReturnValue.get_value(result["rspec"]))
                 except:
                     api.logger.log_exc("SM.CreateSliver: Failed to merge aggregate rspec")
         return result_rspec.toxml()
@@ -274,7 +274,7 @@ class SliceManager:
                 args.append(options)
             return server.RenewSliver(*args)
     
-        call_id = option.get('call_id')
+        call_id = options.get('call_id')
         if Callids().already_handled(call_id): return True
     
         (hrn, type) = urn_to_hrn(xrn)
@@ -296,7 +296,8 @@ class SliceManager:
             server = api.server_proxy(interface, cred)
             threads.run(_RenewSliver, server, xrn, [cred], expiration_time, call_id)
         # 'and' the results
-        return reduce (lambda x,y: x and y, threads.get_results() , True)
+        results = [ReturnValue.get_value(result) for result in threads.get_results()]
+        return reduce (lambda x,y: x and y, results , True)
     
     def DeleteSliver(self, api, xrn, creds, options={}):
         def _DeleteSliver(server, xrn, creds, options={}):
@@ -306,7 +307,7 @@ class SliceManager:
                 args.append(options)
             return server.DeleteSliver(*args)
 
-        call_id = option.get('call_id') 
+        call_id = options.get('call_id') 
         if Callids().already_handled(call_id): return ""
         (hrn, type) = urn_to_hrn(xrn)
         # get the callers hrn
@@ -350,7 +351,7 @@ class SliceManager:
             interface = api.aggregates[aggregate]
             server = api.server_proxy(interface, cred)
             threads.run (_SliverStatus, server, slice_xrn, [cred], call_id)
-        results = threads.get_results()
+        results = [ReturnValue.get_value(result) for result in threads.get_results()]
     
         # get rid of any void result - e.g. when call_id was hit where by convention we return {}
         results = [ result for result in results if result and result['geni_resources']]
@@ -407,10 +408,10 @@ class SliceManager:
                 continue
             interface = api.aggregates[aggregate]
             server = api.server_proxy(interface, cred)
-            threads.run(_ListSlices, server, [cred], call_id, options)
+            threads.run(_ListSlices, server, [cred], options)
     
         # combime results
-        results = threads.get_results()
+        results = [ReturnValue.get_value(result) for result in threads.get_results()]
         slices = []
         for result in results:
             slices.extend(result)

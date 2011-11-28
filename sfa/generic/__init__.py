@@ -46,7 +46,7 @@ class Generic:
     # see pl.py for an example
     # some descendant of SfaApi
     def api_class (self) : pass
-    # in practical terms these are modules for now
+    # the python classes to use to build up the context
     def registry_class (self) : pass
     def slicemgr_class (self) : pass
     def aggregate_class (self) : pass
@@ -64,9 +64,10 @@ class Generic:
         driver = self.make_driver (api.config, api.interface)
         ### arrange stuff together
         # add a manager wrapper
-        manager = ManagerWrapper(manager,api.interface)
-        api.manager=manager
+        manager_wrap = ManagerWrapper(manager,api.interface)
+        api.manager=manager_wrap
         # insert driver in manager
+        logger.info("Setting manager.driver, manager=%s"%manager)
         manager.driver=driver
         # add it in api as well for convenience
         api.driver=driver

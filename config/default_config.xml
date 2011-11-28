@@ -18,10 +18,25 @@ Thierry Parmentelat
       <description>Basic system variables.</description>
 
       <variablelist>
+        <variable id="generic_flavour" type="string">
+          <name>Generic Flavour</name>
+          <value>pl</value>
+          <description>This string refers to a class located in sfa.generic that describes 
+          which specific implementation needs to be used for api, manager and driver objects.
+          PlanetLab users do not need to change this setting.
+          </description>
+        </variable>
+
         <variable id="interface_hrn" type="string">
           <name>Human readable name</name>
           <value>plc</value>
           <description>The human readable name for this interface.</description>
+        </variable>
+
+        <variable id="aggregate_api_version" type="int">
+          <name>Aggregate Manager API Version</name>
+          <value>1</value>
+          <description>The Aggregate API version</description>
         </variable>
 
         <variable id="credential_schema" type="string">
@@ -52,15 +67,6 @@ Thierry Parmentelat
             This functionality is used by the SFA web GUI. 
             </description> 
         </variable>
-
-	<variable id="generic_flavour" type="string">
-	  <name>Generic Flavour</name>
-	  <value>pl</value>
-	  <description>This string refers to a class located in sfa.generic that describes 
-	  which specific implementation needs to be used for api, manager and driver objects.
-	  PlanetLab users do not need to change this setting.
-	  </description>
-	</variable>
 
       </variablelist>
     </category>
@@ -194,6 +200,12 @@ Thierry Parmentelat
       <description>The settings that tell this SFA instance where to find its database. You can essentially leave this as-is unless you plan on hosting your data on some other box.</description>
 
       <variablelist>
+	<variable id="enabled" type="boolean">
+	  <name>Enabled</name>
+	  <value>true</value>
+	  <description>Enable the database server on this machine.</description>
+	</variable>
+
 	<variable id="host" type="hostname">
 	  <name>Database host</name>
 	  <value>localhost</value>
@@ -208,7 +220,7 @@ Thierry Parmentelat
 
 	<variable id="user" type="string">
 	  <name>Database user</name>
-	  <value>pgsqluser</value>
+	  <value>sfadbuser</value>
 	  <description>When SFA gets co-hosted with a myplc, this should match the PLC config.</description>
 	</variable>
 

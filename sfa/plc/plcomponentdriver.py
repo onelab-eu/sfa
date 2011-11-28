@@ -51,7 +51,7 @@ class PlComponentDriver:
         cert.save_to_file(certfile)
         registry = self.get_registry()
         # the registry will scp the key onto the node
-        registry.get_key()        
+        registry.get_key_from_incoming_ip()        
 
     # override the method in SfaApi
     def getCredential(self):

@@ -1,6 +1,7 @@
 from sfa.rspecs.elements.element import Element  
 from sfa.rspecs.elements.execute import Execute  
 from sfa.rspecs.elements.install import Install  
+from sfa.rspecs.elements.services import Services  
 from sfa.rspecs.elements.login import Login
 
 class PGv2Services:

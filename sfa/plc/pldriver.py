@@ -1,11 +1,14 @@
 #
-from sfa.util.faults import MissingSfaInfo
+from sfa.util.faults import MissingSfaInfo, UnknownSfaType
 from sfa.util.sfalogging import logger
 from sfa.util.table import SfaTable
 from sfa.util.defaultdict import defaultdict
 
-from sfa.util.xrn import hrn_to_urn
+from sfa.util.xrn import hrn_to_urn, get_leaf
 from sfa.util.plxrn import slicename_to_hrn, hostname_to_hrn, hrn_to_pl_slicename, hrn_to_pl_login_base
+
+# the driver interface, mostly provides default behaviours
+from sfa.managers.driver import Driver
 
 from sfa.plc.plshell import PlShell
 
@@ -14,10 +17,19 @@ def list_to_dict(recs, key):
     convert a list of dictionaries into a dictionary keyed on the 
     specified dictionary key 
     """
-    keys = [rec[key] for rec in recs]
-    return dict(zip(keys, recs))
+    return dict ( [ (rec[key],rec) for rec in recs ] )
 
-class PlDriver (PlShell):
+#
+# PlShell is just an xmlrpc serverproxy where methods
+# can be sent as-is; it takes care of authentication
+# from the global config
+# 
+# so we inherit PlShell just so one can do driver.GetNodes
+# which would not make much sense in the context of other testbeds
+# so ultimately PlDriver should drop the PlShell inheritance
+# and would have a driver.shell reference to a PlShell instead
+# 
+class PlDriver (Driver, PlShell):
 
     def __init__ (self, config):
         PlShell.__init__ (self, config)
@@ -31,70 +43,219 @@ class PlDriver (PlShell):
         assert (rspec_type == 'pl' or rspec_type == 'vini' or \
                     rspec_type == 'eucalyptus' or rspec_type == 'max')
 
+    ########## disabled users 
+    def is_enabled (self, record):
+        self.fill_record_info(record, deep=False)
+        if record['type'] == 'user':
+            return record['enabled']
+        # only users can be disabled
+        return True
+
+    def augment_records_with_testbed_info (self, sfa_records):
+        return self.fill_record_info (sfa_records, deep=True)
+
+    ########## 
+    def register (self, sfa_record, hrn, pub_key):
+        type = sfa_record['type']
+        pl_record = self.sfa_fields_to_pl_fields(type, hrn, sfa_record)
+
+        if type == 'authority':
+            sites = self.GetSites([pl_record['login_base']])
+            if not sites:
+                pointer = self.AddSite(pl_record)
+            else:
+                pointer = sites[0]['site_id']
+
+        elif type == 'slice':
+            acceptable_fields=['url', 'instantiation', 'name', 'description']
+            for key in pl_record.keys():
+                if key not in acceptable_fields:
+                    pl_record.pop(key)
+            slices = self.GetSlices([pl_record['name']])
+            if not slices:
+                 pointer = self.AddSlice(pl_record)
+            else:
+                 pointer = slices[0]['slice_id']
+
+        elif type == 'user':
+            persons = self.GetPersons([sfa_record['email']])
+            if not persons:
+                pointer = self.AddPerson(dict(sfa_record))
+            else:
+                pointer = persons[0]['person_id']
+    
+            if 'enabled' in sfa_record and sfa_record['enabled']:
+                self.UpdatePerson(pointer, {'enabled': sfa_record['enabled']})
+            # add this person to the site only if she is being added for the first
+            # time by sfa and doesont already exist in plc
+            if not persons or not persons[0]['site_ids']:
+                login_base = get_leaf(sfa_record['authority'])
+                self.AddPersonToSite(pointer, login_base)
+    
+            # What roles should this user have?
+            self.AddRoleToPerson('user', pointer)
+            # Add the user's key
+            if pub_key:
+                self.AddPersonKey(pointer, {'key_type' : 'ssh', 'key' : pub_key})
+
+        elif type == 'node':
+            login_base = hrn_to_pl_login_base(sfa_record['authority'])
+            nodes = api.driver.GetNodes([pl_record['hostname']])
+            if not nodes:
+                pointer = api.driver.AddNode(login_base, pl_record)
+            else:
+                pointer = nodes[0]['node_id']
+    
+        return pointer
+        
+    ##########
+    # xxx actually old_sfa_record comes filled with plc stuff as well in the original code
+    def update (self, old_sfa_record, new_sfa_record, hrn, new_key):
+        pointer = old_sfa_record['pointer']
+        type = old_sfa_record['type']
+
+        # new_key implemented for users only
+        if new_key and type not in [ 'user' ]:
+            raise UnknownSfaType(type)
+
+        if (type == "authority"):
+            self.UpdateSite(pointer, new_sfa_record)
+    
+        elif type == "slice":
+            pl_record=self.sfa_fields_to_pl_fields(type, hrn, new_sfa_record)
+            if 'name' in pl_record:
+                pl_record.pop('name')
+                self.UpdateSlice(pointer, pl_record)
+    
+        elif type == "user":
+            # SMBAKER: UpdatePerson only allows a limited set of fields to be
+            #    updated. Ideally we should have a more generic way of doing
+            #    this. I copied the field names from UpdatePerson.py...
+            update_fields = {}
+            all_fields = new_sfa_record
+            for key in all_fields.keys():
+                if key in ['first_name', 'last_name', 'title', 'email',
+                           'password', 'phone', 'url', 'bio', 'accepted_aup',
+                           'enabled']:
+                    update_fields[key] = all_fields[key]
+            self.UpdatePerson(pointer, update_fields)
+    
+            if new_key:
+                # must check this key against the previous one if it exists
+                persons = self.GetPersons([pointer], ['key_ids'])
+                person = persons[0]
+                keys = person['key_ids']
+                keys = self.GetKeys(person['key_ids'])
+                
+                # Delete all stale keys
+                key_exists = False
+                for key in keys:
+                    if new_key != key['key']:
+                        self.DeleteKey(key['key_id'])
+                    else:
+                        key_exists = True
+                if not key_exists:
+                    self.AddPersonKey(pointer, {'key_type': 'ssh', 'key': new_key})
+    
+        elif type == "node":
+            self.UpdateNode(pointer, new_sfa_record)
+
+        return True
+        
+
+    ##########
+    def remove (self, sfa_record):
+        type=sfa_record['type']
+        pointer=sfa_record['pointer']
+        if type == 'user':
+            persons = self.GetPersons(pointer)
+            # only delete this person if he has site ids. if he doesnt, it probably means
+            # he was just removed from a site, not actually deleted
+            if persons and persons[0]['site_ids']:
+                self.DeletePerson(pointer)
+        elif type == 'slice':
+            if self.GetSlices(pointer):
+                self.DeleteSlice(pointer)
+        elif type == 'node':
+            if self.GetNodes(pointer):
+                self.DeleteNode(pointer)
+        elif type == 'authority':
+            if self.GetSites(pointer):
+                self.DeleteSite(pointer)
+
+        return True
+
+
+
+
+
     ##
     # Convert SFA fields to PLC fields for use when registering up updating
     # registry record in the PLC database
     #
-    # @param type type of record (user, slice, ...)
-    # @param hrn human readable name
-    # @param sfa_fields dictionary of SFA fields
-    # @param pl_fields dictionary of PLC fields (output)
 
-    def sfa_fields_to_pl_fields(self, type, hrn, record):
-
-        def convert_ints(tmpdict, int_fields):
-            for field in int_fields:
-                if field in tmpdict:
-                    tmpdict[field] = int(tmpdict[field])
+    def sfa_fields_to_pl_fields(self, type, hrn, sfa_record):
 
         pl_record = {}
-        #for field in record:
-        #    pl_record[field] = record[field]
  
         if type == "slice":
-            if not "instantiation" in pl_record:
-                pl_record["instantiation"] = "plc-instantiated"
             pl_record["name"] = hrn_to_pl_slicename(hrn)
-	    if "url" in record:
-               pl_record["url"] = record["url"]
-	    if "description" in record:
-	        pl_record["description"] = record["description"]
-	    if "expires" in record:
-	        pl_record["expires"] = int(record["expires"])
+            if "instantiation" in sfa_record:
+                pl_record['instantiation']=sfa_record['instantiation']
+            else:
+                pl_record["instantiation"] = "plc-instantiated"
+	    if "url" in sfa_record:
+               pl_record["url"] = sfa_record["url"]
+	    if "description" in sfa_record:
+	        pl_record["description"] = sfa_record["description"]
+	    if "expires" in sfa_record:
+	        pl_record["expires"] = int(sfa_record["expires"])
 
         elif type == "node":
             if not "hostname" in pl_record:
-                if not "hostname" in record:
+                # fetch from sfa_record
+                if "hostname" not in sfa_record:
                     raise MissingSfaInfo("hostname")
-                pl_record["hostname"] = record["hostname"]
-            if not "model" in pl_record:
+                pl_record["hostname"] = sfa_record["hostname"]
+            if "model" in sfa_record: 
+                pl_record["model"] = sfa_record["model"]
+            else:
                 pl_record["model"] = "geni"
 
         elif type == "authority":
             pl_record["login_base"] = hrn_to_pl_login_base(hrn)
-
-            if not "name" in pl_record:
+            if "name" not in sfa_record:
                 pl_record["name"] = hrn
-
-            if not "abbreviated_name" in pl_record:
+            if "abbreviated_name" not in sfa_record:
                 pl_record["abbreviated_name"] = hrn
-
-            if not "enabled" in pl_record:
+            if "enabled" not in sfa_record:
                 pl_record["enabled"] = True
-
-            if not "is_public" in pl_record:
+            if "is_public" not in sfa_record:
                 pl_record["is_public"] = True
 
         return pl_record
+
+    ####################
+    def fill_record_info(self, records, deep=False):
+        """
+        Given a (list of) SFA record, fill in the PLC specific 
+        and SFA specific fields in the record. 
+        """
+        if not isinstance(records, list):
+            records = [records]
+
+        self.fill_record_pl_info(records)
+        if deep:
+            self.fill_record_hrns(records)
+            self.fill_record_sfa_info(records)
+        return records
 
     def fill_record_pl_info(self, records):
         """
         Fill in the planetlab specific fields of a SFA record. This
         involves calling the appropriate PLC method to retrieve the 
         database record for the object.
-        
-        PLC data is filled into the pl_info field of the record.
-    
+            
         @param record: record to fill in field (in/out param)     
         """
         # get ids by type
@@ -153,9 +314,6 @@ class PlDriver (PlShell):
                     pubkeys = [keys[key_id]['key'] for key_id in record['key_ids'] if key_id in keys] 
                     record['keys'] = pubkeys
 
-        # fill in record hrns
-        records = self.fill_record_hrns(records)   
- 
         return records
 
     def fill_record_hrns(self, records):
@@ -231,7 +389,7 @@ class PlDriver (PlShell):
         return records   
 
     # aggregates is basically api.aggregates
-    def fill_record_sfa_info(self, records, aggregates):
+    def fill_record_sfa_info(self, records):
 
         def startswith(prefix, values):
             return [value for value in values if value.startswith(prefix)]
@@ -274,7 +432,7 @@ class PlDriver (PlShell):
         person_list, persons = [], {}
         person_list = table.find({'type': 'user', 'pointer': person_ids})
         # create a hrns keyed on the sfa record's pointer.
-        # Its possible for  multiple records to have the same pointer so
+        # Its possible for multiple records to have the same pointer so
         # the dict's value will be a list of hrns.
         persons = defaultdict(list)
         for person in person_list:
@@ -312,10 +470,6 @@ class PlDriver (PlShell):
                 
             elif (type.startswith("authority")):
                 record['url'] = None
-                if record['hrn'] in aggregates:
-                    
-                    record['url'] = aggregates[record['hrn']].get_url()
-
                 if record['pointer'] != -1:
                     record['PI'] = []
                     record['operator'] = []
@@ -344,64 +498,24 @@ class PlDriver (PlShell):
                 # xxx TODO: PostalAddress, Phone
             record.update(sfa_info)
 
-    def fill_record_info(self, records, aggregates):
-        """
-        Given a SFA record, fill in the PLC specific and SFA specific
-        fields in the record. 
-        """
-        if not isinstance(records, list):
-            records = [records]
 
-        self.fill_record_pl_info(records)
-        self.fill_record_sfa_info(records, aggregates)
-
-    def update_membership_list(self, oldRecord, record, listName, addFunc, delFunc):
-        # get a list of the HRNs that are members of the old and new records
-        if oldRecord:
-            oldList = oldRecord.get(listName, [])
+    ####################
+    # plcapi works by changes, compute what needs to be added/deleted
+    def update_relation (self, subject_type, target_type, subject_id, target_ids):
+        # hard-wire the code for slice/user for now
+        if subject_type =='slice' and target_type == 'user':
+            subject=self.GetSlices (subject_id)[0]
+            current_target_ids = subject['person_ids']
+            add_target_ids = list ( set (target_ids).difference(current_target_ids))
+            del_target_ids = list ( set (current_target_ids).difference(target_ids))
+            logger.info ("subject_id = %s (type=%s)"%(subject_id,type(subject_id)))
+            for target_id in add_target_ids:
+                self.AddPersonToSlice (target_id,subject_id)
+                logger.info ("add_target_id = %s (type=%s)"%(target_id,type(target_id)))
+            for target_id in del_target_ids:
+                logger.info ("del_target_id = %s (type=%s)"%(target_id,type(target_id)))
+                self.DeletePersonFromSlice (target_id, subject_id)
         else:
-            oldList = []     
-        newList = record.get(listName, [])
+            logger.info('unexpected relation to maintain, %s -> %s'%(subject_type,target_type))
 
-        # if the lists are the same, then we don't have to update anything
-        if (oldList == newList):
-            return
-
-        # build a list of the new person ids, by looking up each person to get
-        # their pointer
-        newIdList = []
-        # xxx thgen fixme - use SfaTable hardwired for now 
-        #table = self.SfaTable()
-        table = SfaTable()
-        records = table.find({'type': 'user', 'hrn': newList})
-        for rec in records:
-            newIdList.append(rec['pointer'])
-
-        # build a list of the old person ids from the person_ids field 
-        if oldRecord:
-            oldIdList = oldRecord.get("person_ids", [])
-            containerId = oldRecord.get_pointer()
-        else:
-            # if oldRecord==None, then we are doing a Register, instead of an
-            # update.
-            oldIdList = []
-            containerId = record.get_pointer()
-
-    # add people who are in the new list, but not the oldList
-        for personId in newIdList:
-            if not (personId in oldIdList):
-                addFunc(personId, containerId)
-
-        # remove people who are in the old list, but not the new list
-        for personId in oldIdList:
-            if not (personId in newIdList):
-                delFunc(personId, containerId)
-
-    def update_membership(self, oldRecord, record):
-        if record.type == "slice":
-            self.update_membership_list(oldRecord, record, 'researcher',
-                                        self.AddPersonToSlice,
-                                        self.DeletePersonFromSlice)
-        elif record.type == "authority":
-            # xxx TODO
-            pass
+        
