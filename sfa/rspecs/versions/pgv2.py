@@ -22,7 +22,7 @@ class PGv2(BaseVersion):
     # Networks    
     def get_networks(self):
         networks = set()
-        nodes = self.xml.xpath('//default:node[@component_manager_id]', namespaces=self.namespaces)
+        nodes = self.xml.xpath('//default:node[@component_manager_id] | //node:[@component_manager_id]', namespaces=self.namespaces)
         for node in nodes: 
             if 'component_manager_id' in node:
                 network_urn  = node.get('component_manager_id')

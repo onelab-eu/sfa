@@ -12,20 +12,18 @@ from sfa.util.sfalogging import logger
 from sfa.util.xrn import Xrn, urn_to_hrn
 from sfa.util.version import version_core
 from sfa.util.callids import Callids
-
 from sfa.server.threadmanager import ThreadManager
-
 from sfa.rspecs.rspec_converter import RSpecConverter
 from sfa.rspecs.version_manager import VersionManager
 from sfa.rspecs.rspec import RSpec 
 from sfa.client.client_helper import sfa_to_pg_users_arg
+from sfa.client.return_value import ReturnValue
 
 class SliceManager:
     def __init__ (self):
     #    self.caching=False
         self.caching=True
         
-    
     def _options_supported(self, api, server):
         """
         Returns true if server support the optional call_id arg, false otherwise.
@@ -124,7 +122,9 @@ class SliceManager:
             try:
                 version = api.get_cached_server_version(server)
                 # force ProtoGENI aggregates to give us a v2 RSpec
-                if 'sfa' not in version.keys():
+                if 'sfa' in version.keys():
+                    my_opts['rspec_version'] = version_manager.get_version('SFA 1').to_dict()
+                else:
                     my_opts['rspec_version'] = version_manager.get_version('ProtoGENI 2').to_dict()
                 rspec = server.ListResources(*args)
                 return {"aggregate": aggregate, "rspec": rspec, "elapsed": time.time()-tStart, "status": "success"}
@@ -182,7 +182,7 @@ class SliceManager:
             self.add_slicemgr_stat(rspec, "ListResources", result["aggregate"], result["elapsed"], result["status"], result.get("exc_info",None))
             if result["status"]=="success":
                 try:
-                    rspec.version.merge(result["rspec"])
+                    rspec.version.merge(ReturnValue.get_value(result["rspec"]))
                 except:
                     api.logger.log_exc("SM.ListResources: Failed to merge aggregate rspec")
     
@@ -261,7 +261,7 @@ class SliceManager:
             self.add_slicemgr_stat(result_rspec, "CreateSliver", result["aggregate"], result["elapsed"], result["status"], result.get("exc_info",None))
             if result["status"]=="success":
                 try:
-                    result_rspec.version.merge(result["rspec"])
+                    result_rspec.version.merge(ReturnValue.get_value(rresult["rspec"]))
                 except:
                     api.logger.log_exc("SM.CreateSliver: Failed to merge aggregate rspec")
         return result_rspec.toxml()
@@ -296,7 +296,8 @@ class SliceManager:
             server = api.server_proxy(interface, cred)
             threads.run(_RenewSliver, server, xrn, [cred], expiration_time, call_id)
         # 'and' the results
-        return reduce (lambda x,y: x and y, threads.get_results() , True)
+        results = [ReturnValue.get_value(result) for result in threads.get_results()]
+        return reduce (lambda x,y: x and y, results , True)
     
     def DeleteSliver(self, api, xrn, creds, options={}):
         def _DeleteSliver(server, xrn, creds, options={}):
@@ -350,7 +351,7 @@ class SliceManager:
             interface = api.aggregates[aggregate]
             server = api.server_proxy(interface, cred)
             threads.run (_SliverStatus, server, slice_xrn, [cred], call_id)
-        results = threads.get_results()
+        results = [ReturnValue.get_value(result) for result in threads.get_results()]
     
         # get rid of any void result - e.g. when call_id was hit where by convention we return {}
         results = [ result for result in results if result and result['geni_resources']]
@@ -410,7 +411,7 @@ class SliceManager:
             threads.run(_ListSlices, server, [cred], options)
     
         # combime results
-        results = threads.get_results()
+        results = [ReturnValue.get_value(result) for result in threads.get_results()]
         slices = []
         for result in results:
             slices.extend(result)

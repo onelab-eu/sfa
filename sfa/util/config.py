@@ -69,6 +69,9 @@ class Config:
             if not hasattr(self, 'SFA_MAX_SLICE_RENEW'):
                 self.SFA_MAX_SLICE_RENEW=60
 
+            if not hasattr(self, 'SFA_AGGREGATE_API_VERSION'):
+                self.SFA_AGGREGATE_API_VERSION=1 
+
             # create the data directory if it doesnt exist
             if not os.path.isdir(self.SFA_DATA_DIR):
                 try:

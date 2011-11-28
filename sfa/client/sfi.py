@@ -28,6 +28,7 @@ from sfa.util.config import Config
 from sfa.util.version import version_core
 from sfa.util.cache import Cache
 from sfa.rspecs.version_manager import VersionManager
+from sfa.client.return_value import ReturnValue
 
 AGGREGATE_PORT=12346
 CM_PORT=12346
@@ -419,12 +420,12 @@ class Sfi:
             version = cache.get(cache_key)
             
         if not version: 
-            version = server.GetVersion()
+            result = server.GetVersion()
+            version= ReturnValue.get_value(result)
             # cache version for 24 hours
             cache.add(cache_key, version, ttl= 60*60*24)
             self.logger.info("Updating cache file %s" % cache_file)
             cache.save_to_file(cache_file)
-
 
         return version   
         
@@ -912,7 +913,8 @@ class Sfi:
                 server=self.registry
             else:
                 server = self.server_proxy_from_opts(opts)
-            version=server.GetVersion()
+            result = server.GetVersion()
+            version = ReturnValue.get_value(result)
         for (k,v) in version.iteritems():
             print "%-20s: %s"%(k,v)
         if opts.file:
@@ -933,8 +935,9 @@ class Sfi:
         if self.server_supports_options_arg(server):
             options = {'call_id': unique_call_id()}
             call_args.append(options)
-        results = server.ListSlices(*call_args)
-        display_list(results)
+        result = server.ListSlices(*call_args)
+        value = ReturnValue.get_value(result)
+        display_list(value)
         return
     
     # show rspec for named slice
@@ -972,10 +975,11 @@ class Sfi:
 
         call_args = [creds, options]
         result = server.ListResources(*call_args)
+        value = ReturnValue.get_value(result)
         if opts.file is None:
-            display_rspec(result, opts.format)
+            display_rspec(value, opts.format)
         else:
-            save_rspec_to_file(result, opts.file)
+            save_rspec_to_file(value, opts.file)
         return
 
     # created named slice with given rspec
@@ -1027,11 +1031,12 @@ class Sfi:
             options = {'call_id': unique_call_id()}
             call_args.append(options)
         result = server.CreateSliver(*call_args)
+        value = ReturnValue.get_value(result)
         if opts.file is None:
-            print result
+            print value
         else:
-            save_rspec_to_file (result, opts.file)
-        return result
+            save_rspec_to_file (value, opts.file)
+        return value
 
     # get a ticket for the specified slice
     def get_ticket(self, opts, args):
@@ -1153,7 +1158,9 @@ class Sfi:
         if self.server_supports_options_arg(server):
             options = {'call_id': unique_call_id()}
             call_args.append(options)
-        return server.RenewSliver(*call_args)
+        result =  server.RenewSliver(*call_args)
+        value = ReturnValue.get_value(result)
+        return value
 
 
     def status(self, opts, args):
@@ -1170,9 +1177,10 @@ class Sfi:
             options = {'call_id': unique_call_id()}
             call_args.append(options)
         result = server.SliverStatus(*call_args)
-        print result
+        value = ReturnValue.get_value(result)
+        print value
         if opts.file:
-            save_variable_to_file(result, opts.file, opts.fileformat)
+            save_variable_to_file(value, opts.file, opts.fileformat)
 
 
     def shutdown(self, opts, args):
