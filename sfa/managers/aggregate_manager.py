@@ -40,7 +40,7 @@ class AggregateManager:
                 request_rspec_versions.append(rspec_version.to_dict()) 
         xrn=Xrn(api.hrn)
         version_more = {'interface':'aggregate',
-                        'sfa': 1,
+                        'sfa': 2,
                         'geni_api': api.config.SFA_AGGREGATE_API_VERSION,
                         'testbed':'myplc',
                         'hrn':xrn.get_hrn(),
