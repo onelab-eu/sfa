@@ -246,7 +246,7 @@ class SfaApi (XmlrpcApi):
         Converts the specified result into a standard GENI compliant 
         response  
         """
-        if self.interface.lower() == 'aggregate': 
+        if self.interface.lower() in ['aggregate', 'slicemgr']: 
             if hasattr(self.config, 'SFA_AGGREGATE_API_VERSION') and \
               self.config.SFA_AGGREGATE_API_VERSION == 2:
                 result = self.prepare_response_v2_am(result)
