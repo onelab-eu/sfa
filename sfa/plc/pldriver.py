@@ -44,12 +44,15 @@ class PlDriver (Driver, PlShell):
                     rspec_type == 'eucalyptus' or rspec_type == 'max')
 
     ########## disabled users 
-    def is_enabled_entity (self, record):
-        self.fill_record_info(record)
+    def is_enabled (self, record):
+        self.fill_record_info(record, deep=False)
         if record['type'] == 'user':
             return record['enabled']
         # only users can be disabled
         return True
+
+    def augment_records_with_testbed_info (self, sfa_records):
+        return self.fill_record_info (sfa_records, deep=True)
 
     ########## 
     def register (self, sfa_record, hrn, pub_key):
@@ -233,7 +236,7 @@ class PlDriver (Driver, PlShell):
         return pl_record
 
     ####################
-    def fill_record_info(self, records):
+    def fill_record_info(self, records, deep=False):
         """
         Given a (list of) SFA record, fill in the PLC specific 
         and SFA specific fields in the record. 
@@ -242,7 +245,10 @@ class PlDriver (Driver, PlShell):
             records = [records]
 
         self.fill_record_pl_info(records)
-        self.fill_record_sfa_info(records)
+        if deep:
+            self.fill_record_hrns(records)
+            self.fill_record_sfa_info(records)
+        return records
 
     def fill_record_pl_info(self, records):
         """
@@ -308,9 +314,6 @@ class PlDriver (Driver, PlShell):
                     pubkeys = [keys[key_id]['key'] for key_id in record['key_ids'] if key_id in keys] 
                     record['keys'] = pubkeys
 
-        # fill in record hrns
-        records = self.fill_record_hrns(records)   
- 
         return records
 
     def fill_record_hrns(self, records):

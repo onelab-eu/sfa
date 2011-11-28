@@ -11,9 +11,16 @@ class Driver:
     # when running GetCredential
     # This is to reflect the 'enabled' user field in planetlab testbeds
     # expected retcod boolean
-    def is_enabled_entity (self, record) : 
+    def is_enabled (self, record) : 
         return True
-    
+
+    # the following is used in Resolve (registry) when run in full mode
+    #     after looking up the sfa db, we wish to be able to display
+    #     testbed-specific info as well
+    # this at minima should fill in the 'researcher' field for slice records
+    def augment_records_with_testbed_info (self, sfa_records):
+        return sfa_records
+
     # incoming record, as provided by the client to the Register API call
     # expected retcod 'pointer'
     # 'pointer' is typically an int db id, that makes sense in the testbed environment

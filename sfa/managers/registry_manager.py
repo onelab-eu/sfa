@@ -55,7 +55,7 @@ class RegistryManager:
     
         # verify_cancreate_credential requires that the member lists
         # (researchers, pis, etc) be filled in
-        if not self.driver.is_enabled_entity (record):
+        if not self.driver.is_enabled (record):
               raise AccountNotEnabled(": PlanetLab account %s is not enabled. Please contact your site PI" %(record['email']))
     
         # get the callers gid
@@ -141,7 +141,7 @@ class RegistryManager:
         if full:
             # in full mode we get as much info as we can, which involves contacting the 
             # testbed for getting implementation details about the record
-            self.driver.fill_record_info(local_records)
+            self.driver.augment_records_with_testbed_info(local_records)
             # also we fill the 'url' field for known authorities
             # used to be in the driver code, sounds like a poorman thing though
             def solve_neighbour_url (record):
