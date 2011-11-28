@@ -36,6 +36,7 @@ class Config:
             # path to configuration data
             self.config_path = os.path.dirname(config_file)
             
+            ### xxx todo implement defaults in default_config.xml 
             # path to server data
             if not hasattr(self, 'SFA_DATA_DIR'):
                 # default to /var/lib/sfa not specified in config
@@ -46,28 +47,11 @@ class Config:
                 
             # path to config data
             if not hasattr(self, 'SFA_CONFIG_DIR'):
-                # default to /var/lib/sfa not specified in config
+                # default to /etc/sfa not specified in config
                 self.SFA_CONFIG_DIR="/etc/sfa"
 
             if not hasattr(self, 'SFA_REGISTRY_LEVEL1_AUTH'):
                 self.SFA_REGISTRY_LEVEL1_AUTH=None
-
-            # define interface types
-            # this will determine which manager to use
-            if not hasattr(self, 'SFA_REGISTRY_TYPE'):
-                self.SFA_REGISTRY_TYPE='pl'
-
-            if not hasattr(self, 'SFA_AGGREGATE_TYPE'):
-                self.SFA_AGGREGATE_TYPE='pl'
-
-            if not hasattr(self, 'SFA_SM_TYPE'):
-                self.SFA_SM_TYPE='pl'
-
-            if not hasattr(self, 'SFA_CM_TYPE'):
-                self.SFA_COMPONENT_TYPE='pl'
-
-            if not hasattr(self, 'SFA_MAX_SLICE_RENEW'):
-                self.SFA_MAX_SLICE_RENEW=60
 
             # create the data directory if it doesnt exist
             if not os.path.isdir(self.SFA_DATA_DIR):
