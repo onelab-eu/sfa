@@ -212,6 +212,22 @@ class RegistryManager:
         gid = api.auth.hierarchy.create_gid(xrn, create_uuid(), pkey) 
         return gid.save_to_string(save_parents=True)
         
+    # utility for handling relationships among the SFA objects 
+    # given that the SFA db does not handle this sort of relationsships
+    # it will rely on side-effects in the testbed to keep this persistent
+    # field_key is the name of one field in the record, typically 'researcher' for a 'slice' record
+    # hrns is the list of hrns that should be linked to the subject from now on
+    # target_type would be e.g. 'user' in the 'slice' x 'researcher' example
+    def update_relation (self, sfa_record, field_key, hrns, target_type):
+        # locate the linked objects in our db
+        subject_type=sfa_record['type']
+        subject_id=sfa_record['pointer']
+        table = SfaTable()
+        link_sfa_records = table.find ({'type':target_type, 'hrn': hrns})
+        link_ids = [ rec.get('pointer') for rec in link_sfa_records ]
+        self.driver.update_relation (subject_type, target_type, subject_id, link_ids)
+        
+
     def Register(self, api, record):
     
         hrn, type = record['hrn'], record['type']
@@ -264,7 +280,7 @@ class RegistryManager:
         record['record_id'] = record_id
     
         # update membership for researchers, pis, owners, operators
-        self.driver.update_membership(None, record)
+        self.update_relation(record, 'researcher', record.get('researcher'), 'user')
     
         return record.get_gid_object().save_to_string(save_parents=True)
     
@@ -297,10 +313,6 @@ class RegistryManager:
                 if isinstance (new_key,types.ListType):
                     new_key=new_key[0]
 
-        # Update_membership needs the membership lists in the existing record
-        # filled in, so it can see if members were added or removed
-        self.driver.fill_record_info(record)
-    
         # update the PLC information that was specified with the record
         if not self.driver.update (record, new_record, hrn, new_key):
             logger.warning("driver.update failed")
@@ -317,7 +329,7 @@ class RegistryManager:
             table.update(record)
         
         # update membership for researchers, pis, owners, operators
-        self.driver.update_membership(record, new_record)
+        self.update_relation(record, 'researcher', new_record.get('researcher'), 'user')
         
         return 1 
     

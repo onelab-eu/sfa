@@ -20,14 +20,11 @@ def list_to_dict(recs, key):
     return dict ( [ (rec[key],rec) for rec in recs ] )
 
 #
-# inheriting Driver is not very helpful in the PL case but
-# makes sense in the general case
-# 
 # PlShell is just an xmlrpc serverproxy where methods
 # can be sent as-is; it takes care of authentication
 # from the global config
 # 
-# so OTOH we inherit PlShell just so one can do driver.GetNodes
+# so we inherit PlShell just so one can do driver.GetNodes
 # which would not make much sense in the context of other testbeds
 # so ultimately PlDriver should drop the PlShell inheritance
 # and would have a driver.shell reference to a PlShell instead
@@ -498,54 +495,24 @@ class PlDriver (Driver, PlShell):
                 # xxx TODO: PostalAddress, Phone
             record.update(sfa_info)
 
+
     ####################
-    def update_membership(self, oldRecord, record):
-        if record.type == "slice":
-            self.update_membership_list(oldRecord, record, 'researcher',
-                                        self.AddPersonToSlice,
-                                        self.DeletePersonFromSlice)
-        elif record.type == "authority":
-            logger.info("update_membership 'authority' not implemented")
-            pass
+    # plcapi works by changes, compute what needs to be added/deleted
+    def update_relation (self, subject_type, target_type, subject_id, target_ids):
+        # hard-wire the code for slice/user for now
+        if subject_type =='slice' and target_type == 'user':
+            subject=self.GetSlices (subject_id)[0]
+            current_target_ids = subject['person_ids']
+            add_target_ids = list ( set (target_ids).difference(current_target_ids))
+            del_target_ids = list ( set (current_target_ids).difference(target_ids))
+            logger.info ("subject_id = %s (type=%s)"%(subject_id,type(subject_id)))
+            for target_id in add_target_ids:
+                self.AddPersonToSlice (target_id,subject_id)
+                logger.info ("add_target_id = %s (type=%s)"%(target_id,type(target_id)))
+            for target_id in del_target_ids:
+                logger.info ("del_target_id = %s (type=%s)"%(target_id,type(target_id)))
+                self.DeletePersonFromSlice (target_id, subject_id)
         else:
-            pass
+            logger.info('unexpected relation to maintain, %s -> %s'%(subject_type,target_type))
 
-    def update_membership_list(self, oldRecord, record, listName, addFunc, delFunc):
-        # get a list of the HRNs that are members of the old and new records
-        if oldRecord:
-            oldList = oldRecord.get(listName, [])
-        else:
-            oldList = []     
-        newList = record.get(listName, [])
-
-        # if the lists are the same, then we don't have to update anything
-        if (oldList == newList):
-            return
-
-        # build a list of the new person ids, by looking up each person to get
-        # their pointer
-        newIdList = []
-        table = SfaTable()
-        records = table.find({'type': 'user', 'hrn': newList})
-        for rec in records:
-            newIdList.append(rec['pointer'])
-
-        # build a list of the old person ids from the person_ids field 
-        if oldRecord:
-            oldIdList = oldRecord.get("person_ids", [])
-            containerId = oldRecord.get_pointer()
-        else:
-            # if oldRecord==None, then we are doing a Register, instead of an
-            # update.
-            oldIdList = []
-            containerId = record.get_pointer()
-
-    # add people who are in the new list, but not the oldList
-        for personId in newIdList:
-            if not (personId in oldIdList):
-                addFunc(personId, containerId)
-
-        # remove people who are in the old list, but not the new list
-        for personId in oldIdList:
-            if not (personId in newIdList):
-                delFunc(personId, containerId)
+        
