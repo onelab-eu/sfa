@@ -423,7 +423,7 @@ class Sfi:
 
         if cache:
             version = cache.get(cache_key)
-            
+
         if not version: 
             result = server.GetVersion()
             version= ReturnValue.get_value(result)
