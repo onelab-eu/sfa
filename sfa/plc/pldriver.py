@@ -45,14 +45,14 @@ class PlDriver (Driver, PlShell):
 
     ########## disabled users 
     def is_enabled (self, record):
-        self.fill_record_info(record, deep=False)
+        # the incoming record was augmented already, so 'enabled' should be set
         if record['type'] == 'user':
             return record['enabled']
         # only users can be disabled
         return True
 
     def augment_records_with_testbed_info (self, sfa_records):
-        return self.fill_record_info (sfa_records, deep=True)
+        return self.fill_record_info (sfa_records)
 
     ########## 
     def register (self, sfa_record, hrn, pub_key):
@@ -236,7 +236,7 @@ class PlDriver (Driver, PlShell):
         return pl_record
 
     ####################
-    def fill_record_info(self, records, deep=False):
+    def fill_record_info(self, records):
         """
         Given a (list of) SFA record, fill in the PLC specific 
         and SFA specific fields in the record. 
@@ -245,9 +245,8 @@ class PlDriver (Driver, PlShell):
             records = [records]
 
         self.fill_record_pl_info(records)
-        if deep:
-            self.fill_record_hrns(records)
-            self.fill_record_sfa_info(records)
+        self.fill_record_hrns(records)
+        self.fill_record_sfa_info(records)
         return records
 
     def fill_record_pl_info(self, records):
@@ -502,7 +501,7 @@ class PlDriver (Driver, PlShell):
     ####################
     # plcapi works by changes, compute what needs to be added/deleted
     def update_relation (self, subject_type, target_type, subject_id, target_ids):
-        # hard-wire the code for slice/user for now
+        # hard-wire the code for slice/user for now, could be smarter if needed
         if subject_type =='slice' and target_type == 'user':
             subject=self.GetSlices (subject_id)[0]
             current_target_ids = subject['person_ids']

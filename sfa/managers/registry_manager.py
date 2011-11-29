@@ -55,6 +55,7 @@ class RegistryManager:
     
         # verify_cancreate_credential requires that the member lists
         # (researchers, pis, etc) be filled in
+        self.driver.augment_records_with_testbed_info (record)
         if not self.driver.is_enabled (record):
               raise AccountNotEnabled(": PlanetLab account %s is not enabled. Please contact your site PI" %(record['email']))
     
@@ -211,10 +212,20 @@ class RegistryManager:
             pkey = certificate.get_pubkey()    
         gid = api.auth.hierarchy.create_gid(xrn, create_uuid(), pkey) 
         return gid.save_to_string(save_parents=True)
-        
+    
+    ####################
     # utility for handling relationships among the SFA objects 
     # given that the SFA db does not handle this sort of relationsships
     # it will rely on side-effects in the testbed to keep this persistent
+    
+    # subject_record describes the subject of the relationships
+    # ref_record contains the target values for the various relationships we need to manage
+    # (to begin with, this is just the slice x person relationship)
+    def update_relations (self, subject_record, ref_record):
+        type=subject_record['type']
+        if type=='slice':
+            self.update_relation(subject_record, 'researcher', ref_record.get('researcher'), 'user')
+        
     # field_key is the name of one field in the record, typically 'researcher' for a 'slice' record
     # hrns is the list of hrns that should be linked to the subject from now on
     # target_type would be e.g. 'user' in the 'slice' x 'researcher' example
@@ -280,8 +291,8 @@ class RegistryManager:
         record['record_id'] = record_id
     
         # update membership for researchers, pis, owners, operators
-        self.update_relation(record, 'researcher', record.get('researcher'), 'user')
-    
+        self.update_relations (record, record)
+        
         return record.get_gid_object().save_to_string(save_parents=True)
     
     def Update(self, api, record_dict):
@@ -329,7 +340,7 @@ class RegistryManager:
             table.update(record)
         
         # update membership for researchers, pis, owners, operators
-        self.update_relation(record, 'researcher', new_record.get('researcher'), 'user')
+        self.update_relations (record, new_record)
         
         return 1 
     
