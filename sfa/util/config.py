@@ -76,12 +76,6 @@ class Config:
 
         return (aggr_mgr_ip,aggr_mgr_port)
 
-    def get_aggregate_type(self):
-        if (hasattr(self,'SFA_AGGREGATE_TYPE')):
-            return self.SFA_AGGREGATE_TYPE
-        else:
-            return "pl"
-
     def get_interface_hrn(self):
         if (hasattr(self,'SFA_INTERFACE_HRN')):
             return self.SFA_INTERFACE_HRN

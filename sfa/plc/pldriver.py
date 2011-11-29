@@ -35,13 +35,6 @@ class PlDriver (Driver, PlShell):
         PlShell.__init__ (self, config)
  
         self.hrn = config.SFA_INTERFACE_HRN
-        # xxx thgen fixme - use SfaTable hardwired for now 
-        # will need to extend generic to support multiple storage systems
-        #self.SfaTable = SfaTable
-        # Initialize the PLC shell only if SFA wraps a myPLC
-        rspec_type = config.get_aggregate_type()
-        assert (rspec_type == 'pl' or rspec_type == 'vini' or \
-                    rspec_type == 'eucalyptus' or rspec_type == 'max')
 
     ########## disabled users 
     def is_enabled (self, record):

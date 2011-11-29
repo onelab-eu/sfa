@@ -16,11 +16,6 @@ SFA_API_DEBUG=1
 # Enable the registry interface 
 SFA_REGISTRY_ENABLED=0
 
-#
-# The type of backend server for this registry
-# Some registries may not be myplc 
-SFA_REGISTRY_TYPE='pl'
-
 # Root Auth
 # The hrn of the registry's root auth
 SFA_REGISTRY_ROOT_AUTH="plc"
@@ -31,6 +26,8 @@ SFA_REGISTRY_ROOT_AUTH="plc"
 # interface is a sub authority)
 # xxx could be determined from hrn above
 SFA_REGISTRY_LEVEL1_AUTH=""
+
+SFA_GENERIC_FLAVOUR='pl'
 
 # Hostname
 # The fully qualified hostname of the registry server
@@ -46,12 +43,6 @@ SFA_REGISTRY_PORT=12345
 ## Enable aggregate inteface
 ## Enable the aggregate inteface.
 SFA_AGGREGATE_ENABLED=0
-
-# Aggregate Type
-#
-# The type of backend server for this aggregate
-# Some aggregates may not be myplc 
-SFA_AGGREGATE_TYPE='pl'
 
 #
 #
@@ -69,14 +60,6 @@ SFA_AGGREGATE_PORT=12346
 # Enabled
 # Enable the slice manager  
 SFA_SM_ENABLED=0
-
-# Slice Manager type
-#
-## The type of backend server for this slice manager
-## The slice manager doesnt rely on a specific backend server so 
-## you probably will never need to change this type unless you 
-## need to reimplement the slice manager
-SFA_SM_TYPE='pl' 
 
 # Host
 ## The fully qualified hostname or IP address of the slice manager server

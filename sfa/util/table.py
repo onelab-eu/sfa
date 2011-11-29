@@ -34,6 +34,7 @@ class SfaTable(list):
         if tables:
             return True
         return False
+
     def db_fields(self, obj=None):
         
         db_fields = self.db.fields(self.SFA_TABLE_PREFIX)
