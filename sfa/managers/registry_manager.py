@@ -8,8 +8,6 @@ import commands
 from sfa.util.faults import RecordNotFound, AccountNotEnabled, PermissionError, MissingAuthority, \
     UnknownSfaType, ExistingRecord, NonExistingRecord
 from sfa.util.prefixTree import prefixTree
-from sfa.util.record import SfaRecord
-from sfa.util.table import SfaTable
 from sfa.util.xrn import Xrn, get_authority, hrn_to_urn, urn_to_hrn
 from sfa.util.plxrn import hrn_to_pl_login_base
 from sfa.util.version import version_core
@@ -19,6 +17,9 @@ from sfa.trust.gid import GID
 from sfa.trust.credential import Credential
 from sfa.trust.certificate import Certificate, Keypair, convert_public_key
 from sfa.trust.gid import create_uuid
+
+from sfa.storage.record import SfaRecord
+from sfa.storage.table import SfaTable
 
 class RegistryManager:
 

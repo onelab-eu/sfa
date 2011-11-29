@@ -37,6 +37,7 @@ bins = [
 package_dirs = [
     'sfa', 
     'sfa/trust',
+    'sfa/storage',
     'sfa/util', 
     'sfa/client',
     'sfa/server',

@@ -2,18 +2,21 @@ import os, os.path
 import datetime
 
 from sfa.util.faults import SfaFault, SfaAPIError
+from sfa.util.genicode import GENICODE
 from sfa.util.config import Config
 from sfa.util.cache import Cache
 from sfa.trust.auth import Auth
+
 from sfa.trust.certificate import Keypair, Certificate
 from sfa.trust.credential import Credential
 from sfa.trust.rights import determine_rights
+
 from sfa.server.xmlrpcapi import XmlrpcApi
-from sfa.util.genicode import GENICODE
+
 from sfa.client.return_value import ReturnValue
 
 # thgen xxx fixme this is wrong all right, but temporary, will use generic
-from sfa.util.table import SfaTable
+from sfa.storage.table import SfaTable
 
 ####################
 class SfaApi (XmlrpcApi): 

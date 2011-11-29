@@ -16,7 +16,7 @@ import inspect
 from types import *
 from optparse import OptionParser
 
-from sfa.util.parameter import Parameter,Mixed
+from sfa.storage.parameter import Parameter,Mixed
 
 import globals
 

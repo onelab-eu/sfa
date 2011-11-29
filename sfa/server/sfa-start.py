@@ -136,8 +136,8 @@ def update_cert_records(gids):
     Removes old records from the db.
     """
     # import SfaTable here so this module can be loaded by PlcComponentApi
-    from sfa.util.table import SfaTable
-    from sfa.util.record import SfaRecord
+    from sfa.storage.table import SfaTable
+    from sfa.storage.record import SfaRecord
     if not gids:
         return
     table = SfaTable()

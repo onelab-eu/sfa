@@ -1,11 +1,12 @@
 #
 from sfa.util.faults import MissingSfaInfo, UnknownSfaType
 from sfa.util.sfalogging import logger
-from sfa.util.table import SfaTable
 from sfa.util.defaultdict import defaultdict
-
 from sfa.util.xrn import hrn_to_urn, get_leaf
 from sfa.util.plxrn import slicename_to_hrn, hostname_to_hrn, hrn_to_pl_slicename, hrn_to_pl_login_base
+
+# one would think the driver should not need to mess with the SFA db, but..
+from sfa.storage.table import SfaTable
 
 # the driver interface, mostly provides default behaviours
 from sfa.managers.driver import Driver
@@ -418,8 +419,6 @@ class PlDriver (Driver, PlShell):
         # we obtain
         
         # get the sfa records
-        # xxx thgen fixme - use SfaTable hardwired for now 
-        # table = self.SfaTable()
         table = SfaTable()
         person_list, persons = [], {}
         person_list = table.find({'type': 'user', 'pointer': person_ids})

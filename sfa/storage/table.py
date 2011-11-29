@@ -6,10 +6,11 @@
 from types import StringTypes
 
 from sfa.util.config import Config
-from sfa.util.parameter import Parameter
-from sfa.util.filter import Filter
-from sfa.util.PostgreSQL import PostgreSQL
-from sfa.util.record import SfaRecord, AuthorityRecord, NodeRecord, SliceRecord, UserRecord
+
+from sfa.storage.parameter import Parameter
+from sfa.storage.filter import Filter
+from sfa.storage.PostgreSQL import PostgreSQL
+from sfa.storage.record import SfaRecord, AuthorityRecord, NodeRecord, SliceRecord, UserRecord
 
 class SfaTable(list):
 

@@ -7,10 +7,10 @@ import time
 from types import IntType, LongType, StringTypes
 import textwrap
 
-
 from sfa.util.sfalogging import logger
 from sfa.util.faults import SfaFault, SfaInvalidAPIMethod, SfaInvalidArgumentCount, SfaInvalidArgument
-from sfa.util.parameter import Parameter, Mixed, python_type, xmlrpc_type
+
+from sfa.storage.parameter import Parameter, Mixed, python_type, xmlrpc_type
 
 class Method:
     """

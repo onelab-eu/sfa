@@ -25,14 +25,15 @@ from sfa.util.xrn import get_leaf, get_authority, hrn_to_urn
 from sfa.util.config import Config
 from sfa.util.version import version_core
 from sfa.util.cache import Cache
-from sfa.util.record import SfaRecord, UserRecord, SliceRecord, NodeRecord, AuthorityRecord
+
+from sfa.storage.record import SfaRecord, UserRecord, SliceRecord, NodeRecord, AuthorityRecord
 
 from sfa.rspecs.rspec import RSpec
 from sfa.rspecs.rspec_converter import RSpecConverter
 from sfa.rspecs.version_manager import VersionManager
-from sfa.client.return_value import ReturnValue
 
 import sfa.client.xmlrpcprotocol as xmlrpcprotocol
+from sfa.client.return_value import ReturnValue
 from sfa.client.client_helper import pg_users_arg, sfa_users_arg
 
 AGGREGATE_PORT=12346

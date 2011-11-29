@@ -1,16 +1,9 @@
 from types import StringTypes
-try:
-    set
-except NameError:
-    from sets import Set
-    set = Set
-
-try: import pgdb
-except: pass
+import pgdb
  
 from sfa.util.faults import SfaInvalidArgument
-from sfa.util.parameter import Parameter, Mixed, python_type
 
+from sfa.storage.parameter import Parameter, Mixed, python_type
 
 class Filter(Parameter, dict):
     """
