@@ -32,7 +32,6 @@ class PGv2(BaseVersion):
                     # some component_manager_ids are hrns instead of urns??
                     network_hrn = network_urn
                 network_names.add(network_hrn)
-                print "PPP", network_names, network_hrn, network_urn
         network_names = list(network_names)
         networks = [{"name": x} for x in network_names]
         return networks
