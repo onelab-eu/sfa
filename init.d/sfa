@@ -85,10 +85,10 @@ function reload () {
 
     # Convert configuration to various formats
     if [ -n "$force" -o $sfa_whole_config -nt /etc/sfa/sfa_config ] ; then
-	plc-config --shell $sfa_whole_config >/etc/sfa/sfa_config
+	plc-config --shell $sfa_whole_config > /etc/sfa/sfa_config
     fi
     if [ -n "$force" -o $sfa_whole_config -nt /etc/sfa/sfa_config.py ] ; then
-	plc-config --python $sfa_whole_config >/etc/sfa/sfa_config.py
+	plc-config --python $sfa_whole_config > /etc/sfa/sfa_config.py
     fi
 #    if [ -n "$force" -o $sfa_whole_config -nt /etc/sfa/php/sfa_config.php ] ; then
 #	mkdir -p /etc/sfa/php
@@ -101,6 +101,10 @@ function reload () {
     # (or there is no myplc at all) this should be turned off
     # as the component manager is not operational yet we skip this for now
     #gen-sfa-cm-config.py        
+
+    # reload the shell version
+    [ -f /etc/sfa/sfa_config ] && . /etc/sfa/sfa_config
+
 }
 
 ### initialize DB (don't chkconfig postgresql on)
@@ -209,7 +213,7 @@ function db_start () {
     if ! psql -U $SFA_DB_USER -c "" $SFA_DB_NAME >/dev/null 2>&1 ; then
 	createdb -U postgres --template=template0 --encoding=UNICODE --owner=$SFA_DB_USER $SFA_DB_NAME
 	check
-        # xxx in case we'd like to ship the db schema separately
+        # install db schema
         psql -U $SFA_DB_USER -f /usr/share/sfa/sfa.sql $SFA_DB_NAME
 	check
     fi
