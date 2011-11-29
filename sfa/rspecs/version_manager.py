@@ -31,7 +31,7 @@ class VersionManager:
         retval = None
         for version in self.versions:
             if type is None or type.lower() == version.type.lower():
-                if version_num is None or version_num == version.version:
+                if version_num is None or str(version_num) == version.version:
                     if content_type is None or content_type.lower() == version.content_type.lower() \
                       or version.content_type == '*':
                         retval = version
