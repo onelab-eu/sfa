@@ -1,6 +1,8 @@
 from sfa.util.method import Method
-from sfa.util.parameter import Parameter
+
 from sfa.trust.credential import Credential
+
+from sfa.storage.parameter import Parameter
 
 class Update(Method):
     """

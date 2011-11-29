@@ -1,6 +1,7 @@
 from sfa.util.xrn import urn_to_hrn
 from sfa.util.method import Method
-from sfa.util.parameter import Parameter, Mixed
+
+from sfa.storage.parameter import Parameter, Mixed
 
 class SliverStatus(Method):
     """

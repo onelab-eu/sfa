@@ -23,10 +23,11 @@ import sys
 from optparse import OptionParser
 
 from sfa.util.config import Config
-from sfa.util.table import SfaTable
 
 from sfa.trust.gid import GID, create_uuid
 from sfa.trust.hierarchy import Hierarchy
+
+from sfa.storage.table import SfaTable
 
 def main():
     args = sys.argv

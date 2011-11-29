@@ -9,16 +9,17 @@
 ##
 
 from sfa.util.sfalogging import _SfaLogger
-
-from sfa.util.record import SfaRecord
-from sfa.util.table import SfaTable
 from sfa.util.xrn import get_authority, hrn_to_urn
 from sfa.util.plxrn import email_to_hrn
 from sfa.util.config import Config
+
 from sfa.trust.certificate import convert_public_key, Keypair
 from sfa.trust.trustedroots import TrustedRoots
 from sfa.trust.hierarchy import Hierarchy
 from sfa.trust.gid import create_uuid
+
+from sfa.storage.record import SfaRecord
+from sfa.storage.table import SfaTable
 
 
 def _un_unicode(str):

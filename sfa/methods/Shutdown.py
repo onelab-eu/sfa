@@ -1,4 +1,5 @@
-from sfa.util.parameter import Parameter
+from sfa.storage.parameter import Parameter
+
 from sfa.methods.Stop import Stop
 
 class Shutdown(Stop):

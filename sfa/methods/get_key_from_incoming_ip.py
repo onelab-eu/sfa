@@ -1,6 +1,7 @@
 from sfa.util.method import Method
-from sfa.util.parameter import Parameter
 from sfa.util.sfalogging import logger
+
+from sfa.storage.parameter import Parameter
 
 class get_key_from_incoming_ip(Method):
     """

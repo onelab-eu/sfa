@@ -1,11 +1,12 @@
 #
 from sfa.util.faults import MissingSfaInfo, UnknownSfaType
 from sfa.util.sfalogging import logger
-from sfa.util.table import SfaTable
 from sfa.util.defaultdict import defaultdict
-
 from sfa.util.xrn import hrn_to_urn, get_leaf
 from sfa.util.plxrn import slicename_to_hrn, hostname_to_hrn, hrn_to_pl_slicename, hrn_to_pl_login_base
+
+# one would think the driver should not need to mess with the SFA db, but..
+from sfa.storage.table import SfaTable
 
 # the driver interface, mostly provides default behaviours
 from sfa.managers.driver import Driver
@@ -35,24 +36,17 @@ class PlDriver (Driver, PlShell):
         PlShell.__init__ (self, config)
  
         self.hrn = config.SFA_INTERFACE_HRN
-        # xxx thgen fixme - use SfaTable hardwired for now 
-        # will need to extend generic to support multiple storage systems
-        #self.SfaTable = SfaTable
-        # Initialize the PLC shell only if SFA wraps a myPLC
-        rspec_type = config.get_aggregate_type()
-        assert (rspec_type == 'pl' or rspec_type == 'vini' or \
-                    rspec_type == 'eucalyptus' or rspec_type == 'max')
 
     ########## disabled users 
     def is_enabled (self, record):
-        self.fill_record_info(record, deep=False)
+        # the incoming record was augmented already, so 'enabled' should be set
         if record['type'] == 'user':
             return record['enabled']
         # only users can be disabled
         return True
 
     def augment_records_with_testbed_info (self, sfa_records):
-        return self.fill_record_info (sfa_records, deep=True)
+        return self.fill_record_info (sfa_records)
 
     ########## 
     def register (self, sfa_record, hrn, pub_key):
@@ -236,7 +230,7 @@ class PlDriver (Driver, PlShell):
         return pl_record
 
     ####################
-    def fill_record_info(self, records, deep=False):
+    def fill_record_info(self, records):
         """
         Given a (list of) SFA record, fill in the PLC specific 
         and SFA specific fields in the record. 
@@ -245,9 +239,8 @@ class PlDriver (Driver, PlShell):
             records = [records]
 
         self.fill_record_pl_info(records)
-        if deep:
-            self.fill_record_hrns(records)
-            self.fill_record_sfa_info(records)
+        self.fill_record_hrns(records)
+        self.fill_record_sfa_info(records)
         return records
 
     def fill_record_pl_info(self, records):
@@ -426,8 +419,6 @@ class PlDriver (Driver, PlShell):
         # we obtain
         
         # get the sfa records
-        # xxx thgen fixme - use SfaTable hardwired for now 
-        # table = self.SfaTable()
         table = SfaTable()
         person_list, persons = [], {}
         person_list = table.find({'type': 'user', 'pointer': person_ids})
@@ -502,7 +493,7 @@ class PlDriver (Driver, PlShell):
     ####################
     # plcapi works by changes, compute what needs to be added/deleted
     def update_relation (self, subject_type, target_type, subject_id, target_ids):
-        # hard-wire the code for slice/user for now
+        # hard-wire the code for slice/user for now, could be smarter if needed
         if subject_type =='slice' and target_type == 'user':
             subject=self.GetSlices (subject_id)[0]
             current_target_ids = subject['person_ids']
