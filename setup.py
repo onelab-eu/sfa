@@ -73,7 +73,9 @@ data_files = [('/etc/sfa/', [ 'config/aggregates.xml',
                             ]),
               ('/etc/sfatables/matches/', glob('sfatables/matches/*.xml')),
               ('/etc/sfatables/targets/', glob('sfatables/targets/*.xml')),
-              ('/etc/init.d/', [ "init.d/%s"%x for x in initscripts ])]
+              ('/etc/init.d/', [ "init.d/%s"%x for x in initscripts ]),
+              ('/usr/share/sfa/', [ 'sfa/storage/sfa.sql' ] ),
+              ]
 
 # add sfatables processors as data_files
 processor_files = [f for f in glob('sfatables/processors/*') if os.path.isfile(f)]

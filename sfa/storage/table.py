@@ -56,34 +56,34 @@ class SfaTable(list):
 
 
     def create(self):
-        
-        querystr = "CREATE TABLE " + self.tablename + " ( \
-                record_id serial PRIMARY KEY , \
-                hrn text NOT NULL, \
-                authority text NOT NULL, \
-                peer_authority text, \
-                gid text, \
-                type text NOT NULL, \
-                pointer integer, \
-                date_created timestamp without time zone NOT NULL DEFAULT CURRENT_TIMESTAMP, \
-                last_updated timestamp without time zone NOT NULL DEFAULT CURRENT_TIMESTAMP);"
-        template = "CREATE INDEX %s_%s_idx ON %s (%s);"
-        indexes = [template % ( self.tablename, field, self.tablename, field) \
-                   for field in ['hrn', 'type', 'authority', 'peer_authority', 'pointer']]
-        # IF EXISTS doenst exist in postgres < 8.2
-        try:
-            self.db.do('DROP TABLE IF EXISTS ' + self.tablename)
-        except:
-            try:
-                self.db.do('DROP TABLE' + self.tablename)
-            except:
-                pass
-         
-        self.db.do(querystr)
-        for index in indexes:
-            self.db.do(index)
-        
-        self.db.commit()
+        pass
+#        querystr = "CREATE TABLE " + self.tablename + " ( \
+#                record_id serial PRIMARY KEY , \
+#                hrn text NOT NULL, \
+#                authority text NOT NULL, \
+#                peer_authority text, \
+#                gid text, \
+#                type text NOT NULL, \
+#                pointer integer, \
+#                date_created timestamp without time zone NOT NULL DEFAULT CURRENT_TIMESTAMP, \
+#                last_updated timestamp without time zone NOT NULL DEFAULT CURRENT_TIMESTAMP);"
+#        template = "CREATE INDEX %s_%s_idx ON %s (%s);"
+#        indexes = [template % ( self.tablename, field, self.tablename, field) \
+#                   for field in ['hrn', 'type', 'authority', 'peer_authority', 'pointer']]
+#        # IF EXISTS doenst exist in postgres < 8.2
+#        try:
+#            self.db.do('DROP TABLE IF EXISTS ' + self.tablename)
+#        except:
+#            try:
+#                self.db.do('DROP TABLE' + self.tablename)
+#            except:
+#                pass
+#         
+#        self.db.do(querystr)
+#        for index in indexes:
+#            self.db.do(index)
+#        
+#        self.db.commit()
     
     def remove(self, record):
         params = {'record_id': record['record_id']}

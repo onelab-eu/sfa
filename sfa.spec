@@ -125,6 +125,8 @@ make VERSIONTAG="%{version}-%{taglevel}" SCMURL="%{SCMURL}"
 rm -rf $RPM_BUILD_ROOT
 make VERSIONTAG="%{version}-%{taglevel}" SCMURL="%{SCMURL}" install DESTDIR="$RPM_BUILD_ROOT"
 rm -rf $RPM_BUILD_ROOT/%{python_sitelib}/*egg-info
+# this gets duplicated
+rm -rf $RPM_BUILD_ROOT/usr/share/sfa/sfa.sql
 
 %clean
 rm -rf $RPM_BUILD_ROOT
@@ -140,6 +142,7 @@ rm -rf $RPM_BUILD_ROOT
 %config /etc/sfa/default_config.xml
 %config (noreplace) /etc/sfa/aggregates.xml
 %config (noreplace) /etc/sfa/registries.xml
+/usr/share/sfa/sfa.sql
 /var/www/html/wsdl/*.wsdl
 
 %files plc
