@@ -11,6 +11,7 @@ import time
 from sfa.senslab.OARrestapi import OARapi
 from sfa.senslab.LDAPapi import LDAPapi
 from sfa.senslab.slabdriver import SlabDriver
+from sfa.senslab.slabpostgres import SlabDB
 from sfa.util.config import Config
 from sfa.util.xrn import hrn_to_urn, get_authority,Xrn,get_leaf
 from sfa.util.table import SfaTable
@@ -24,6 +25,7 @@ config = Config()
 TrustedR = TrustedRoots(Config.get_trustedroots_dir(config))
 AuthHierarchy = Hierarchy()
 table = SfaTable()
+db = SlabDB()
 if not table.exists():
     table.create()
     
@@ -151,17 +153,21 @@ def import_slice(person):
    
     extime = datetime.datetime.utcnow()
     slice_record['date_created'] = int(time.mktime(extime.timetuple()))
-				
+    #special slice table for Senslab, to store nodes info (OAR) 			
 
     existing_records = table.find({'hrn': slice_record['hrn'], 'type': 'slice'})
     if not existing_records:
         print>>sys.stderr, " \r\n \t slab-import : slice record %s inserted" %(slice_record['hrn'])
         table.insert(slice_record)
+        #table.insert_slice(person)
+        db.insert_slice(person)
+
     else:
         print>>sys.stderr, " \r\n \t slab-import : slice record %s updated" %(slice_record['hrn'])
         existing_record = existing_records[0]
         slice_record['record_id'] = existing_record['record_id']
-        table.update(slice_record)        
+        table.update(slice_record)
+        db.update_slice(slice_record)   
         
 def delete_record( hrn, type):
     # delete the record
@@ -179,7 +185,9 @@ def hostname_to_hrn(root_auth,hostname):
     
 def main():
 
-    
+    if not db.exists('slice'):
+        db.createtable('slice')
+        
     if not config.SFA_REGISTRY_ENABLED:
         sys.exit(0)
     root_auth = config.SFA_REGISTRY_ROOT_AUTH
@@ -224,9 +232,7 @@ def main():
     #print "\r\n NODES8DICT ",nodes_dict
     
     ldap_person_list = Driver.GetPersons()
-    
 
-   
         # import node records
     for node in nodes_dict:
         hrn =  hostname_to_hrn( root_auth, node['hostname'])
