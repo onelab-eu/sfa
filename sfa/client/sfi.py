@@ -25,15 +25,14 @@ from sfa.util.xrn import get_leaf, get_authority, hrn_to_urn
 from sfa.util.config import Config
 from sfa.util.version import version_core
 from sfa.util.cache import Cache
-
-from sfa.storage.record import SfaRecord, UserRecord, SliceRecord, NodeRecord, AuthorityRecord
+from sfa.util.record import SfaRecord, UserRecord, SliceRecord, NodeRecord, AuthorityRecord
 
 from sfa.rspecs.rspec import RSpec
 from sfa.rspecs.rspec_converter import RSpecConverter
 from sfa.rspecs.version_manager import VersionManager
+from sfa.client.return_value import ReturnValue
 
 import sfa.client.xmlrpcprotocol as xmlrpcprotocol
-from sfa.client.return_value import ReturnValue
 from sfa.client.client_helper import pg_users_arg, sfa_users_arg
 
 AGGREGATE_PORT=12346
@@ -979,13 +978,8 @@ class Sfi:
                 # regardless of what the client user requested 
                 options['rspec_version'] = version_manager.get_version('ProtoGENI 2').to_dict()     
 
-        options['rspec_version']['type'] = options['rspec_version']['type'].lower() 
-        options['rspec_version']['version'] = long(options['rspec_version']['version'])
-        options['geni_compressed'] = True 
-        print options['rspec_version']
         call_args = [creds, options]
         result = server.ListResources(*call_args)
-        print result
         value = ReturnValue.get_value(result)
         if opts.file is None:
             display_rspec(value, opts.format)
