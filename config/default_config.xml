@@ -33,7 +33,7 @@ Thierry Parmentelat
           <description>The human readable name for this interface.</description>
         </variable>
 
-        <variable id="aggregate_api_version" type="string">
+        <variable id="aggregate_api_version" type="int">
           <name>Aggregate Manager API Version</name>
           <value>1</value>
           <description>The Aggregate API version</description>
