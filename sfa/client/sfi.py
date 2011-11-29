@@ -979,8 +979,13 @@ class Sfi:
                 # regardless of what the client user requested 
                 options['rspec_version'] = version_manager.get_version('ProtoGENI 2').to_dict()     
 
+        options['rspec_version']['type'] = options['rspec_version']['type'].lower() 
+        options['rspec_version']['version'] = long(options['rspec_version']['version'])
+        options['geni_compressed'] = True 
+        print options['rspec_version']
         call_args = [creds, options]
         result = server.ListResources(*call_args)
+        print result
         value = ReturnValue.get_value(result)
         if opts.file is None:
             display_rspec(value, opts.format)
