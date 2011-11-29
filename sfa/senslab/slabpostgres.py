@@ -1,10 +1,3 @@
-###########################################################################
-#    Copyright (C) 2011 by                                       
-#    <savakian@sfa2.grenoble.senslab.info>                                                             
-#
-# Copyright: See COPYING file that comes with this distribution
-#
-###########################################################################
 import psycopg2
 import psycopg2.extensions
 psycopg2.extensions.register_type(psycopg2.extensions.UNICODE)
@@ -12,22 +5,24 @@ psycopg2.extensions.register_type(psycopg2.extensions.UNICODE)
 psycopg2.extensions.register_type(psycopg2._psycopg.UNICODEARRAY)
 from sfa.util.config import Config
 from sfa.util.table import SfaTable
+from sfa.util.sfalogging import logger
 # allow to run sfa2wsdl if this is missing (for mac)
 import sys
 try: import pgdb
 except: print >> sys.stderr, "WARNING, could not import pgdb"
 
-slice_table = {'oar_job_id':'integer DEFAULT -1', 'record_id_user':'integer PRIMARY KEY references sfa ON DELETE CASCADE ON UPDATE CASCADE', 'record_id_slice':'integer', 'slice_hrn':'text NOT NULL'}
+#Dict holding the columns names of the table as keys
+#and their type, used for creation of the table
+slice_table = {'record_id_user':'integer PRIMARY KEY references sfa ON DELETE CASCADE ON UPDATE CASCADE','oar_job_id':'integer DEFAULT -1',  'record_id_slice':'integer', 'slice_hrn':'text NOT NULL'}
+
+#Dict with all the specific senslab tables
 tablenames_dict = {'slice': slice_table}
 
 class SlabDB:
     def __init__(self):
         self.config = Config()
-        self.debug = False
-
         self.connection = None
 
-    #@handle_exception
     def cursor(self):
         if self.connection is None:
             # (Re)initialize database connection
@@ -59,12 +54,17 @@ class SlabDB:
 
         return self.connection.cursor()
         
+    #Close connection to database
     def close(self):
         if self.connection is not None:
             self.connection.close()
             self.connection = None
             
     def exists(self, tablename):
+        """
+        Checks if the table specified as tablename exists.
+    
+        """
         mark = self.cursor()
         sql = "SELECT * from pg_tables"
         mark.execute(sql)
@@ -79,15 +79,26 @@ class SlabDB:
         return False
     
     def createtable(self, tablename ):
+        """
+        Creates the specifed table. Uses the global dictionnary holding the tablenames and
+        the table schema.
+    
+        """
         mark = self.cursor()
         tablelist =[]
+        if tablename not in tablenames_dict:
+            logger.error("Tablename unknown - creation failed")
+            return
+            
         T  = tablenames_dict[tablename]
+        
         for k in T.keys(): 
             tmp = str(k) +' ' + T[k]
             tablelist.append(tmp)
-        end = ",".join(tablelist)
+            
+        end_of_statement = ",".join(tablelist)
         
-        statement = "CREATE TABLE " + tablename + " ("+ end +");"
+        statement = "CREATE TABLE " + tablename + " ("+ end_of_statement +");"
      
         #template = "CREATE INDEX %s_%s_idx ON %s (%s);"
         #indexes = [template % ( self.tablename, field, self.tablename, field) \
@@ -106,59 +117,62 @@ class SlabDB:
             #self.db.do(index)
         self.connection.commit()
         mark.close()
-        #self.connection.close()
         self.close()
         return
     
-        
-    def findRecords(self,table, column, operator, string):
-        mark = self.cursor()
-    
-        statement =  'SELECT * FROM ' + table + ' WHERE ' + column + ' ' + operator + ' ' + ' \'' + string +'\''
-        mark.execute(statement) 
-        record = mark.fetchall() 
-        mark.close()
-        self.connection.close()
-        return record
+
 
 
     def insert(self, table, columns,values):
-         mark = self.cursor()
-         statement = "INSERT INTO " + table + \
-                       "(" + ",".join(columns) + ") " + \
-                       "VALUES(" + ", ".join(values) + ");"
-
-         #statement = 'INSERT INTO ' + table + ' (' + columns + ') VALUES (' + values + ')' 
-         print>>sys.stderr, " \r\n insert statement", statement
-         mark.execute(statement) 
-         self.connection.commit()
-         mark.close()
-         #self.connection.close()
-         self.close()
-         return
+        """
+        Inserts data (values) into the columns of the specified table. 
     
-    def insert_slice(self, person_rec):
+        """
+        mark = self.cursor()
+        statement = "INSERT INTO " + table + \
+                    "(" + ",".join(columns) + ") " + \
+                    "VALUES(" + ", ".join(values) + ");"
+
+        mark.execute(statement) 
+        self.connection.commit()
+        mark.close()
+        self.close()
+        return
+    
+    def insert_slab_slice(self, person_rec):
+        """
+        Inserts information about a user and his slice into the slice table. 
+    
+        """
         sfatable = SfaTable()
         keys = slice_table.keys()
         
-        #returns a list of records (dicts)
+        #returns a list of records from the sfa table (dicts)
         #the filters specified will return only one matching record, into a list of dicts
+        #Finds the slice associated with the user (Senslabs slices  hrns contains the user hrn)
 
         userrecord = sfatable.find({'hrn': person_rec['hrn'], 'type':'user'})
-
         slicerec =  sfatable.find({'hrn': person_rec['hrn']+'_slice', 'type':'slice'})
-        if (isinstance (userrecord, list)):
-            userrecord = userrecord[0]
-        if (isinstance (slicerec, list)):
-            slicerec = slicerec[0]
-        
-        values = [ '-1', ' \''+ str(slicerec['hrn']) + '\'', str(userrecord['record_id']), str( slicerec['record_id'])]
-
-        self.insert('slice', keys, values)
+        if slicerec :
+            if (isinstance (userrecord, list)):
+                userrecord = userrecord[0]
+            if (isinstance (slicerec, list)):
+                slicerec = slicerec[0]
+                
+            oar_dflt_jobid = -1
+            values = [ str(oar_dflt_jobid), ' \''+ str(slicerec['hrn']) + '\'', str(userrecord['record_id']), str( slicerec['record_id'])]
+    
+            self.insert('slice', keys, values)
+        else :
+            logger.error("Trying to import a not senslab slice")
         return
         
+        
     def update(self, table, column_names, values, whereclause, valueclause):
-
+        """
+        Updates a record in a given table. 
+    
+        """
         #Creates the values string for the update SQL command
         if len(column_names) is not len(values):
             return
@@ -172,19 +186,21 @@ class SlabDB:
                 
         statement = "UPDATE %s SET %s WHERE %s = %s" % \
                     (table, ", ".join(valueslist), whereclause, valueclause)
-        print >>sys.stderr, "\r\n \r\n \t SLABPOSTGRES.PY UPDATE statement    ", statement
+
         mark = self.cursor()
         mark.execute(statement) 
         self.connection.commit()
         mark.close()
         self.close()
-        #self.connection.close()
+
         return
 
-    def update_slice(self, slice_rec):
+    def update_senslab_slice(self, slice_rec):
         sfatable = SfaTable()
         userhrn = slice_rec['hrn'].strip('_slice')
-        userrecords = sfatable.find({'hrn': userhrn, 'type':'user'})
+        userrecord = sfatable.find({'hrn': userhrn, 'type':'user'})
+        if (isinstance (userrecord, list)):
+                userrecord = userrecord[0]
         columns = [ 'record_user_id', 'oar_job_id']
         values = [slice_rec['record_user_id'],slice_rec['oar_job_id']]
         self.update('slice',columns, values,'record_slice_id', slice_rec['record_slice_id'])

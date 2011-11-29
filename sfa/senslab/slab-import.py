@@ -159,15 +159,15 @@ def import_slice(person):
     if not existing_records:
         print>>sys.stderr, " \r\n \t slab-import : slice record %s inserted" %(slice_record['hrn'])
         table.insert(slice_record)
-        #table.insert_slice(person)
-        db.insert_slice(person)
+        #table.insert_slab_slice(person)
+        db.insert_slab_slice(person)
 
     else:
         print>>sys.stderr, " \r\n \t slab-import : slice record %s updated" %(slice_record['hrn'])
         existing_record = existing_records[0]
         slice_record['record_id'] = existing_record['record_id']
         table.update(slice_record)
-        db.update_slice(slice_record)   
+        db.update_senslab_slice(slice_record)   
         
 def delete_record( hrn, type):
     # delete the record
