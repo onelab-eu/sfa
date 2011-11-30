@@ -142,7 +142,7 @@ class SliceManager:
     
         # get the rspec's return format from options
         rspec_version = version_manager.get_version(options.get('rspec_version'))
-        version_string = "rspec_%s" % (rspec_version.to_string())
+        version_string = "rspec_%s" % (rspec_version)
     
         # look in cache first
         if self.caching and api.cache and not xrn:
