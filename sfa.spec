@@ -1,6 +1,6 @@
 %define name sfa
 %define version 2.0
-%define taglevel 0
+%define taglevel 1
 
 %define release %{taglevel}%{?pldistro:.%{pldistro}}%{?date:.%{date}}
 %global python_sitearch	%( python -c "from distutils.sysconfig import get_python_lib; print get_python_lib(1)" )
@@ -212,6 +212,23 @@ fi
 [ "$1" -ge "1" ] && service sfa-cm restart || :
 
 %changelog
+* Wed Nov 30 2011 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-2.0-1
+- cleaned up all references to SFA_*_TYPE in config
+- enable cache at the aggregate by default
+- registry now uses the driver in a sensible way (see managers/driver.py)
+- slice manager supports sfav1/pgv2 neighbours
+- get_key renamed into get_key_from_incoming_ip
+- new sfa.storage module for record/table and all db-related stuff
+- db schema in sfa.storage.sfa.sql
+- init.d and cron.d move one step up
+- cleaned up rspec/ directory
+- add deps to pyopenssl and myplc-config
+- start support for new API (return value)
+- plc.remoteshell removed, use plshell instead
+- plshell uses a 'capability' auth method whenever possible
+- various tweaks in rspec elements
+- made dependency on sfatables softer
+
 * Thu Nov 24 2011 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-1.1-5
 - sfa should now be started *before* the initial import
 - sfa to use its own database (default sfa) - can run without myplc
