@@ -4,9 +4,6 @@ from sfa.rspecs.baseversion import BaseVersion
 from sfa.util.sfalogging import logger    
 
 class VersionManager:
-    default_type = 'SFA'
-    default_version_num = '1'     
-        
     def __init__(self):
         self.versions = []
         self.load_versions()
@@ -36,7 +33,7 @@ class VersionManager:
                       or version.content_type == '*':
                         retval = version
         if not retval:
-            raise InvalidRSpecVersion("No such version format: %s version: %s type:%s "% (type, version_num, content_type))
+            raise InvalidRSpecVersion("No such version: %s %s %s "% (type, version_num, content_type))
         return retval
 
     def get_version(self, version=None):
@@ -57,7 +54,7 @@ class VersionManager:
         elif isinstance(version, BaseVersion):
             retval = version
         else:
-            retval = self._get_version(self.default_type, self.default_version_num)   
+            raise InvalidRSpecVersion("No such version: %s "% str(version))
  
         return retval
 
