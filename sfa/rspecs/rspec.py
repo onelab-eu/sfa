@@ -46,8 +46,8 @@ class RSpec:
         else:
             #raise InvalidRSpec('unknown rspec schema: %s' % schema)
             # TODO: Should start raising an exception once SFA defines a schema.
-            # for now we just use the default  
-            self.version = self.version_manager.get_version()
+            # for now we just  default to sfa 
+            self.version = self.version_manager.get_version({'type':'sfa','version': '1'})
         self.version.xml = self.xml    
         self.namespaces = self.xml.namespaces
     
