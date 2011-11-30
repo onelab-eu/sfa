@@ -98,7 +98,7 @@ def get_node_key(registry=None, verbose=False):
     cert.save_to_file(certfile)
     
     registry = server_proxy(url = registry, keyfile=keyfile, certfile=certfile)    
-    registry.get_key()
+    registry.get_key_from_incoming_ip()
 
 def create_server_keypair(keyfile=None, certfile=None, hrn="component", verbose=False):
     """

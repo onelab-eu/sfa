@@ -1,5 +1,6 @@
 from sfa.util.method import Method
-from sfa.util.parameter import Parameter
+
+from sfa.storage.parameter import Parameter
 
 
 class GetVersion(Method):

@@ -8,9 +8,9 @@ from types import StringTypes
 
 from sfa.trust.gid import GID
 
-from sfa.util.parameter import Parameter
+from sfa.storage.parameter import Parameter
 from sfa.util.xrn import get_authority
-from sfa.util.row import Row
+from sfa.storage.row import Row
 from sfa.util.xml import XML 
 
 class SfaRecord(Row):

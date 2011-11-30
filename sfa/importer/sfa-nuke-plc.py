@@ -11,8 +11,9 @@ import sys
 import os
 from optparse import OptionParser
 
-from sfa.util.table import SfaTable
 from sfa.util.sfalogging import logger
+
+from sfa.storage.table import SfaTable
 
 def main():
    usage="%prog: trash the registry DB (the 'sfa' table in the 'planetlab5' database)"

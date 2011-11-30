@@ -8,11 +8,13 @@ import xmlrpclib
 from types import StringTypes, ListType
 from optparse import OptionParser
 
+from sfa.util.sfalogging import logger
+
 from sfa.trust.certificate import Certificate
 from sfa.trust.credential import Credential
 from sfa.trust.gid import GID
-from sfa.util.record import SfaRecord
-from sfa.util.sfalogging import logger
+
+from sfa.storage.record import SfaRecord
 
 def determine_sfa_filekind(fn):
 

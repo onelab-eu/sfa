@@ -255,6 +255,22 @@ class InvalidRSpec(SfaFault):
     def __str__(self):
         return repr(self.value)
 
+class InvalidRSpecVersion(SfaFault):
+    def __init__(self, value, extra = None):
+        self.value = value
+        faultString = "Invalid RSpec version: %(value)s" % locals()
+        SfaFault.__init__(self, GENICODE.BADVERSION, faultString, extra)
+    def __str__(self):
+        return repr(self.value)
+
+class UnsupportedRSpecVersion(SfaFault):
+    def __init__(self, value, extra = None):
+        self.value = value
+        faultString = "Unsupported RSpec version: %(value)s" % locals()
+        SfaFault.__init__(self, GENICODE.UNSUPPORTED, faultString, extra)
+    def __str__(self):
+        return repr(self.value)
+
 class InvalidRSpecElement(SfaFault):
     def __init__(self, value, extra = None):
         self.value = value

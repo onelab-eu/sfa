@@ -1,5 +1,6 @@
 from sfa.util.method import Method
-from sfa.util.parameter import Parameter, Mixed
+
+from sfa.storage.parameter import Parameter, Mixed
 
 class RedeemTicket(Method):
     """

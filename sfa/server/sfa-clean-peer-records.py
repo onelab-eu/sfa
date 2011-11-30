@@ -5,16 +5,18 @@ import os
 import traceback
 import socket
 
-import sfa.client.xmlrpcprotocol as xmlrpcprotocol 
-from sfa.util.table import SfaTable
 from sfa.util.prefixTree import prefixTree
 from sfa.util.config import Config
-
-from sfa.generic import Generic
 
 from sfa.trust.certificate import Keypair
 from sfa.trust.hierarchy import Hierarchy
 from sfa.server.registry import Registries
+
+from sfa.storage.table import SfaTable
+
+import sfa.client.xmlrpcprotocol as xmlrpcprotocol 
+
+from sfa.generic import Generic
 
 def main():
     config = Config()

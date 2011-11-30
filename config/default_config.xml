@@ -33,7 +33,7 @@ Thierry Parmentelat
           <description>The human readable name for this interface.</description>
         </variable>
 
-        <variable id="aggregate_api_version" type="string">
+        <variable id="aggregate_api_version" type="int">
           <name>Aggregate Manager API Version</name>
           <value>1</value>
           <description>The Aggregate API version</description>
@@ -85,13 +85,6 @@ Thierry Parmentelat
 	  registry.</description>
 	</variable>
 
-	<variable id="type" type="string">
-	  <name>Registry type</name>
-	  <value>pl</value>
-	  <description>The type of backend server for this
-	  registry. Some registries may not be myplc.</description>
-	</variable>
-
 	<variable id="host" type="hostname">
 	  <name>Hostname</name>
 	  <value>localhost</value>
@@ -129,13 +122,6 @@ Thierry Parmentelat
 	  slice manager.</description>
 	</variable>
 
-	<variable id="type" type="string">
-	  <name>Slice Manager type</name>
-	  <value>pl</value>
-	  <description>The type of backend server for this
-	  slice manager. Not all slice managers are myplc.</description>
-	</variable>
-
 	<variable id="host" type="hostname">
 	  <name>Hostname</name>
 	  <value>localhost</value>
@@ -165,13 +151,6 @@ Thierry Parmentelat
 	  aggregate manager.</description>
 	</variable>
 
-	<variable id="type" type="string">
-	  <name>Aggregate type</name>
-	  <value>pl</value>
-	  <description>The type of backend server for this
-	  aggregate. Some aggregates may not be myplc.</description>
-	</variable>
-    
     <variable id="rspec_schema" type="string">
       <name>RSpec Schema</name>
       <value>/etc/sfa/pl.rng</value>
