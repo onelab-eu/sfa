@@ -3,7 +3,7 @@ import zlib
 from sfa.util.xrn import urn_to_hrn
 from sfa.util.method import Method
 from sfa.util.sfatablesRuntime import run_sfatables
-from sfa.util.faults import InvalidRSpecVersion
+from sfa.util.faults import SfaInvalidArgument
 from sfa.trust.credential import Credential
 
 from sfa.storage.parameter import Parameter, Mixed
@@ -27,8 +27,8 @@ class ListResources(Method):
         self.api.logger.info("interface: %s\tmethod-name: %s" % (self.api.interface, self.name))
        
         # client must specify a version
-        if not options.get('rspec_version'):
-            raise InvalidRSpecVersion('Must specify an rspec version option. rspec_version cannot be null')
+        if not options.get('geni_rspec_version'):
+            raise SfaInvalidArgument('Must specify an rspec version option. geni_rspec_version cannot be null')
  
         # get slice's hrn from options    
         xrn = options.get('geni_slice_urn', '')

@@ -1,5 +1,5 @@
 import os
-from sfa.util.faults import InvalidRSpec, InvalidRSpecVersion
+from sfa.util.faults import InvalidRSpec, UnsupportedRSpecVersion
 from sfa.rspecs.baseversion import BaseVersion 
 from sfa.util.sfalogging import logger    
 
@@ -33,7 +33,7 @@ class VersionManager:
                       or version.content_type == '*':
                         retval = version
         if not retval:
-            raise InvalidRSpecVersion("No such version: %s %s %s "% (type, version_num, content_type))
+            raise UnvalidRSpecVersion("%s %s is not suported here"% (type, version_num, content_type))
         return retval
 
     def get_version(self, version=None):

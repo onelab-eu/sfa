@@ -973,12 +973,13 @@ class Sfi:
             server_version = self.get_cached_server_version(server)
             if 'sfa' in server_version:
                 # just request the version the client wants 
-                options['rspec_version'] = version_manager.get_version(opts.rspec_version).to_dict()
+                options['geni_rspec_version'] = version_manager.get_version(opts.rspec_version).to_dict()
             else:
                 # this must be a protogeni aggregate. We should request a v2 ad rspec
                 # regardless of what the client user requested 
-                options['rspec_version'] = version_manager.get_version('ProtoGENI 2').to_dict()     
-
+                options['geni_rspec_version'] = version_manager.get_version('ProtoGENI 2').to_dict()     
+        options['geni_rspec_version'] = {'type': 'geni', 'version': '3.0'}
+ 
         call_args = [creds, options]
         result = server.ListResources(*call_args)
         value = ReturnValue.get_value(result)
