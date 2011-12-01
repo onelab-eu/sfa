@@ -54,7 +54,7 @@ class VersionManager:
         elif isinstance(version, BaseVersion):
             retval = version
         else:
-            raise InvalidRSpecVersion("No such version: %s "% str(version))
+            raise InvalidRSpec("No such version: %s "% str(version))
  
         return retval
 
