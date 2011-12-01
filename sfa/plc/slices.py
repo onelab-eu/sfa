@@ -17,7 +17,7 @@ class Slices:
     def __init__(self, api, ttl = .5, origin_hrn=None):
         self.api = api
         #filepath = path + os.sep + filename
-        self.policy = Policy(self.api)    
+#        self.policy = Policy(self.api)    
         self.origin_hrn = origin_hrn
         self.registry = api.registries[api.hrn]
         self.credential = api.getCredential()

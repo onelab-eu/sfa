@@ -56,7 +56,7 @@ class AggregateManager:
         """
         hrn, _ = urn_to_hrn(slice_xrn)
     
-        hrn_auth = get_authority(hrn)
+        #hrn_auth = get_authority(hrn)
     
         # Build up objects that an SFA registry would return if SFA
         # could contact the slice's registry directly
@@ -168,7 +168,7 @@ class AggregateManager:
         call_id = options.get('call_id')
         if Callids().already_handled(call_id): return ""
     
-        aggregate = Aggregate(api)
+        aggregate = Aggregate(self.driver)
         slices = Slices(api)
         (hrn, _) = urn_to_hrn(slice_xrn)
         peer = slices.get_peer(hrn)
@@ -321,7 +321,7 @@ class AggregateManager:
     
         #panos: passing user-defined options
         #print "manager options = ",options
-        aggregate = Aggregate(api)
+        aggregate = Aggregate(self.driver)
         rspec =  aggregate.get_rspec(slice_xrn=xrn, version=rspec_version, options=options)
     
         # cache the result

@@ -25,18 +25,18 @@ class Aggregate:
     #panos new user options variable
     user_options = {}
 
-    def __init__(self, api):
-        self.api = api
+    def __init__(self, driver):
+        self.driver = driver
     
     def get_sites(self, filter={}):
         sites = {}
-        for site in self.api.driver.GetSites(filter):
+        for site in self.driver.GetSites(filter):
             sites[site['site_id']] = site
         return sites
 
     def get_interfaces(self, filter={}):
         interfaces = {}
-        for interface in self.api.driver.GetInterfaces(filter):
+        for interface in self.driver.GetInterfaces(filter):
             iface = Interface()
             if interface['bwlimit']:
                 interface['bwlimit'] = str(int(interface['bwlimit'])/1000)
@@ -56,8 +56,8 @@ class Aggregate:
             site1 = sites[site_id1]
             site2 = sites[site_id2]
             # get hrns
-            site1_hrn = self.api.driver.hrn + '.' + site1['login_base']
-            site2_hrn = self.api.driver.hrn + '.' + site2['login_base']
+            site1_hrn = self.driver.hrn + '.' + site1['login_base']
+            site2_hrn = self.driver.hrn + '.' + site2['login_base']
 
             for s1_node_id in site1['node_ids']:
                 for s2_node_id in site2['node_ids']:
@@ -67,9 +67,9 @@ class Aggregate:
                     node2 = nodes[s2_node_id]
                     # set interfaces
                     # just get first interface of the first node
-                    if1_xrn = PlXrn(auth=self.api.driver.hrn, interface='node%s:eth0' % (node1['node_id']))
+                    if1_xrn = PlXrn(auth=self.driver.hrn, interface='node%s:eth0' % (node1['node_id']))
                     if1_ipv4 = interfaces[node1['interface_ids'][0]]['ip']
-                    if2_xrn = PlXrn(auth=self.api.driver.hrn, interface='node%s:eth0' % (node2['node_id']))
+                    if2_xrn = PlXrn(auth=self.driver.hrn, interface='node%s:eth0' % (node2['node_id']))
                     if2_ipv4 = interfaces[node2['interface_ids'][0]]['ip']
 
                     if1 = Interface({'component_id': if1_xrn.urn, 'ipv4': if1_ipv4} )
@@ -80,22 +80,22 @@ class Aggregate:
                     link['interface1'] = if1
                     link['interface2'] = if2
                     link['component_name'] = "%s:%s" % (site1['login_base'], site2['login_base'])
-                    link['component_id'] = PlXrn(auth=self.api.driver.hrn, interface=link['component_name']).get_urn()
-                    link['component_manager_id'] =  hrn_to_urn(self.api.driver.hrn, 'authority+am')
+                    link['component_id'] = PlXrn(auth=self.driver.hrn, interface=link['component_name']).get_urn()
+                    link['component_manager_id'] =  hrn_to_urn(self.driver.hrn, 'authority+am')
                     links.append(link)
 
         return links
 
     def get_node_tags(self, filter={}):
         node_tags = {}
-        for node_tag in self.api.driver.GetNodeTags(filter):
+        for node_tag in self.driver.GetNodeTags(filter):
             node_tags[node_tag['node_tag_id']] = node_tag
         return node_tags
 
     def get_pl_initscripts(self, filter={}):
         pl_initscripts = {}
         filter.update({'enabled': True})
-        for initscript in self.api.driver.GetInitScripts(filter):
+        for initscript in self.driver.GetInitScripts(filter):
             pl_initscripts[initscript['initscript_id']] = initscript
         return pl_initscripts
 
@@ -111,7 +111,7 @@ class Aggregate:
         slice_urn = hrn_to_urn(slice_xrn, 'slice')
         slice_hrn, _ = urn_to_hrn(slice_xrn)
         slice_name = hrn_to_pl_slicename(slice_hrn)
-        slices = self.api.driver.GetSlices(slice_name)
+        slices = self.driver.GetSlices(slice_name)
         if not slices:
             return (slice, slivers)
         slice = slices[0]
@@ -125,7 +125,7 @@ class Aggregate:
             slivers[node_id]= sliver
 
         # sort sliver attributes by node id    
-        tags = self.api.driver.GetSliceTags({'slice_tag_id': slice['slice_tag_ids']})
+        tags = self.driver.GetSliceTags({'slice_tag_id': slice['slice_tag_ids']})
         for tag in tags:
             # most likely a default/global sliver attribute (node_id == None)
             if tag['node_id'] not in slivers:
@@ -149,7 +149,7 @@ class Aggregate:
             filter['boot_state'] = 'boot'     
         
         filter.update({'peer_id': None})
-        nodes = self.api.driver.GetNodes(filter)
+        nodes = self.driver.GetNodes(filter)
        
         site_ids = []
         interface_ids = []
@@ -182,10 +182,10 @@ class Aggregate:
             # xxx how to retrieve site['login_base']
             site_id=node['site_id']
             site=sites_dict[site_id]
-            rspec_node['component_id'] = hostname_to_urn(self.api.driver.hrn, site['login_base'], node['hostname'])
+            rspec_node['component_id'] = hostname_to_urn(self.driver.hrn, site['login_base'], node['hostname'])
             rspec_node['component_name'] = node['hostname']
-            rspec_node['component_manager_id'] = self.api.driver.hrn
-            rspec_node['authority_id'] = hrn_to_urn(PlXrn.site_hrn(self.api.driver.hrn, site['login_base']), 'authority+sa')
+            rspec_node['component_manager_id'] = self.driver.hrn
+            rspec_node['authority_id'] = hrn_to_urn(PlXrn.site_hrn(self.driver.hrn, site['login_base']), 'authority+sa')
             rspec_node['boot_state'] = node['boot_state']
             rspec_node['exclusive'] = 'False'
             rspec_node['hardware_types']= [HardwareType({'name': 'plab-pc'}),
@@ -204,7 +204,7 @@ class Aggregate:
             for if_id in node['interface_ids']:
                 interface = Interface(interfaces[if_id]) 
                 interface['ipv4'] = interface['ip']
-                interface['component_id'] = PlXrn(auth=self.api.driver.hrn, 
+                interface['component_id'] = PlXrn(auth=self.driver.hrn, 
                                                   interface='node%s:eth%s' % (node['node_id'], if_count)).get_urn()
                 rspec_node['interfaces'].append(interface)
                 if_count+=1

@@ -23,13 +23,14 @@ from sfa.util.callids import Callids
 #from sfa.util.sfalogging import logger
 from sfa.util.version import version_core
 from sfa.trust.credential import Credential
-from sfa.server.sfaapi import SfaApi
 from sfa.plc.aggregate import Aggregate
 from sfa.plc.slices import Slice, Slices
 from sfa.rspecs.version_manager import VersionManager
 from sfa.rspecs.rspec import RSpec
 # not sure what this used to be nor where it is now defined
 #from sfa.rspecs.sfa_rspec import sfa_rspec_version
+# most likely this should now be
+#from sfa.rspecs.version_manager import VersionManager
 
 ##
 # Meta data of an instance.
@@ -548,7 +549,7 @@ class AggregateManagerEucalyptus:
         logger = logging.getLogger('EucaAggregate')
         logger.debug("In CreateSliver")
     
-        aggregate = Aggregate(api)
+        aggregate = Aggregate(self.driver)
         slices = Slices(api)
         (hrn, type) = urn_to_hrn(slice_xrn)
         peer = slices.get_peer(hrn)

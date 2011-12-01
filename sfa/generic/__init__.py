@@ -75,7 +75,7 @@ class Generic:
 
     def make_manager (self, interface):
         """
-        interface expected in ['registry', 'aggregate', 'slice', 'component']
+        interface expected in ['registry', 'aggregate', 'slicemgr', 'component']
         flavour is e.g. 'pl' or 'max' or whatever
         """
         flavour = self.flavour
@@ -83,9 +83,12 @@ class Generic:
         
         classname = "%s_manager_class"%interface
         try:
-            module = getattr(self,classname)()
-            logger.debug("%s : %s"%(message,module))
-            return module
+            module_or_class = getattr(self,classname)()
+            logger.debug("%s : %s"%(message,module_or_class))
+            # this gets passed to ManagerWrapper that will call the class constructor 
+            # if it's a class, or use the module as is if it's a module
+            # so bottom line is, don't try the constructor here
+            return module_or_class
         except:
             logger.log_exc_critical(message)
         
