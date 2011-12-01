@@ -107,7 +107,7 @@ class OARrspec:
                 #node['tags'] = tags
 
         self.prepared = True 
-        print >>sys.stderr, "\r\n OARrspec  prepare node 10",self.nodes[10]  
+        #print >>sys.stderr, "\r\n OARrspec  prepare node 10",self.nodes[10]  
 	#print >>sys.stderr, " \r\n \t\t prepare prepare_nodes \r\n %s " %(self.nodes)
         
     def get_nodes(self):

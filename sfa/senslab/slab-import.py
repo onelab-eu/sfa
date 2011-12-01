@@ -102,7 +102,7 @@ def import_node(hrn, node):
 
     node_record = table.find({'type': 'node', 'hrn': hrn})
     pkey = Keypair(create=True)        
-    print>>sys.stderr, " \r\n \t slab-import : hrn %s" %(hrn )
+    
     urn = hrn_to_urn(hrn, 'node')
     node_gid = AuthHierarchy.create_gid(urn, create_uuid(), pkey)
     node_record = SfaRecord(hrn=hrn, gid=node_gid, type="node", pointer=node['node_id'])
@@ -184,7 +184,7 @@ def main():
         sys.exit(0)
     root_auth = config.SFA_REGISTRY_ROOT_AUTH
     interface_hrn = config.SFA_INTERFACE_HRN
-    print interface_hrn, root_auth
+
     
     #Get all records in the sfa table   
     # create dict of all existing sfa records

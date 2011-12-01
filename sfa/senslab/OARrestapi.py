@@ -119,7 +119,7 @@ class OARGETParser:
 		tuplelist.append(('boot_state',str(value)))	
 	
 	def ParseVersion(self) : 
-		print self.raw_json
+		#print self.raw_json
 		#print >>sys.stderr, self.raw_json
 		if 'oar_version' in self.raw_json :
 			self.version_json_dict.update(api_version=self.raw_json['api_version'] ,

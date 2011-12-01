@@ -1,6 +1,6 @@
 # sfa should not depend on sfatables
 # if the sfatables.runtime import fails, just define run_sfatables as identity
-
+import sys
 try:
     from sfatables.runtime import SFATablesRules
 
@@ -27,9 +27,10 @@ try:
         """
         if not context_callback:
             context_callback = fetch_context
-
+    
         chain = chain.upper()
         rules = SFATablesRules(chain)
+        print>>sys.stderr, " \r\n \r\n \t\t \t sfaTablesRuntime.py run_sfatables context_callback %s  chain %s rules %s " %(context_callback,chain, rules )
         if rules.sorted_rule_list:
             contexts = rules.contexts
             request_context = context_callback(hrn, origin_hrn, contexts)
