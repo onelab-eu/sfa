@@ -12,6 +12,7 @@ from sfa.util.callids import Callids
 
 from sfa.trust.sfaticket import SfaTicket
 from sfa.trust.credential import Credential
+
 from sfa.rspecs.version_manager import VersionManager
 from sfa.rspecs.rspec import RSpec
 

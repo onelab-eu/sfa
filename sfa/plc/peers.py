@@ -2,7 +2,7 @@ from sfa.util.xrn import get_authority
 from types import StringTypes
 
 def get_peer(api, hrn):
-    # Becaues of myplc federation,  we first need to determine if this
+    # Because of myplc native federation,  we first need to determine if this
     # slice belongs to out local plc or a myplc peer. We will assume it
     # is a local site, unless we find out otherwise
     peer = None

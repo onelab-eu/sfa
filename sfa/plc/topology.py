@@ -15,16 +15,7 @@ class Topology(set):
 
     def __init__(self, config_file = "/etc/sfa/topology"):
         set.__init__(self) 
-        self.config_file = None
-        self.config_path = None
-        self.load(config_file)
-
-    def load(self, config_file):
         try:
-            
-            self.config_file = config_file
-            # path to configuration data
-            self.config_path = os.path.dirname(config_file)
             # load the links
             f = open(config_file, 'r')
             for line in f:

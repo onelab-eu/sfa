@@ -1,6 +1,6 @@
 #!/usr/bin/python
 from sfa.util.xrn import hrn_to_urn, urn_to_hrn, urn_to_sliver_id
-from sfa.util.plxrn import PlXrn, hostname_to_urn, hrn_to_pl_slicename
+from sfa.util.sfatime import epochparse
 
 from sfa.rspecs.rspec import RSpec
 from sfa.rspecs.elements.hardware_type import HardwareType
@@ -12,10 +12,12 @@ from sfa.rspecs.elements.location import Location
 from sfa.rspecs.elements.interface import Interface
 from sfa.rspecs.elements.services import Services
 from sfa.rspecs.elements.pltag import PLTag
-from sfa.util.topology import Topology
 from sfa.rspecs.version_manager import VersionManager
+
+from sfa.util.plxrn import PlXrn, hostname_to_urn, hrn_to_pl_slicename
 from sfa.plc.vlink import get_tc_rate
-from sfa.util.sfatime import epochparse
+from sfa.plc.topology import Topology
+
 
 class Aggregate:
 
@@ -54,8 +56,8 @@ class Aggregate:
             site1 = sites[site_id1]
             site2 = sites[site_id2]
             # get hrns
-            site1_hrn = self.api.hrn + '.' + site1['login_base']
-            site2_hrn = self.api.hrn + '.' + site2['login_base']
+            site1_hrn = self.api.driver.hrn + '.' + site1['login_base']
+            site2_hrn = self.api.driver.hrn + '.' + site2['login_base']
 
             for s1_node_id in site1['node_ids']:
                 for s2_node_id in site2['node_ids']:
@@ -65,9 +67,9 @@ class Aggregate:
                     node2 = nodes[s2_node_id]
                     # set interfaces
                     # just get first interface of the first node
-                    if1_xrn = PlXrn(auth=self.api.hrn, interface='node%s:eth0' % (node1['node_id']))
+                    if1_xrn = PlXrn(auth=self.api.driver.hrn, interface='node%s:eth0' % (node1['node_id']))
                     if1_ipv4 = interfaces[node1['interface_ids'][0]]['ip']
-                    if2_xrn = PlXrn(auth=self.api.hrn, interface='node%s:eth0' % (node2['node_id']))
+                    if2_xrn = PlXrn(auth=self.api.driver.hrn, interface='node%s:eth0' % (node2['node_id']))
                     if2_ipv4 = interfaces[node2['interface_ids'][0]]['ip']
 
                     if1 = Interface({'component_id': if1_xrn.urn, 'ipv4': if1_ipv4} )
@@ -78,8 +80,8 @@ class Aggregate:
                     link['interface1'] = if1
                     link['interface2'] = if2
                     link['component_name'] = "%s:%s" % (site1['login_base'], site2['login_base'])
-                    link['component_id'] = PlXrn(auth=self.api.hrn, interface=link['component_name']).get_urn()
-                    link['component_manager_id'] =  hrn_to_urn(self.api.hrn, 'authority+am')
+                    link['component_id'] = PlXrn(auth=self.api.driver.hrn, interface=link['component_name']).get_urn()
+                    link['component_manager_id'] =  hrn_to_urn(self.api.driver.hrn, 'authority+am')
                     links.append(link)
 
         return links
@@ -180,10 +182,10 @@ class Aggregate:
             # xxx how to retrieve site['login_base']
             site_id=node['site_id']
             site=sites_dict[site_id]
-            rspec_node['component_id'] = hostname_to_urn(self.api.hrn, site['login_base'], node['hostname'])
+            rspec_node['component_id'] = hostname_to_urn(self.api.driver.hrn, site['login_base'], node['hostname'])
             rspec_node['component_name'] = node['hostname']
-            rspec_node['component_manager_id'] = self.api.hrn
-            rspec_node['authority_id'] = hrn_to_urn(PlXrn.site_hrn(self.api.hrn, site['login_base']), 'authority+sa')
+            rspec_node['component_manager_id'] = self.api.driver.hrn
+            rspec_node['authority_id'] = hrn_to_urn(PlXrn.site_hrn(self.api.driver.hrn, site['login_base']), 'authority+sa')
             rspec_node['boot_state'] = node['boot_state']
             rspec_node['exclusive'] = 'False'
             rspec_node['hardware_types']= [HardwareType({'name': 'plab-pc'}),
@@ -202,7 +204,8 @@ class Aggregate:
             for if_id in node['interface_ids']:
                 interface = Interface(interfaces[if_id]) 
                 interface['ipv4'] = interface['ip']
-                interface['component_id'] = PlXrn(auth=self.api.hrn, interface='node%s:eth%s' % (node['node_id'], if_count)).get_urn()
+                interface['component_id'] = PlXrn(auth=self.api.driver.hrn, 
+                                                  interface='node%s:eth%s' % (node['node_id'], if_count)).get_urn()
                 rspec_node['interfaces'].append(interface)
                 if_count+=1
 
