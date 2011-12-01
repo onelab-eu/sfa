@@ -36,14 +36,27 @@ CREATE AGGREGATE array_accum (
     initcond = '{}'
 );
 
+-- Valid record types
+CREATE TABLE record_types (
+       record_type text PRIMARY KEY
+) WITH OIDS;
+INSERT INTO record_types (record_type) VALUES ('authority');
+INSERT INTO record_types (record_type) VALUES ('authority+sa');
+INSERT INTO record_types (record_type) VALUES ('authority+am');
+INSERT INTO record_types (record_type) VALUES ('authority+sm');
+INSERT INTO record_types (record_type) VALUES ('user');
+INSERT INTO record_types (record_type) VALUES ('slice');
+INSERT INTO record_types (record_type) VALUES ('node');
+
+
 -- main table 
-CREATE TABLE sfa ( 
+CREATE TABLE records ( 
     record_id serial PRIMARY KEY , 
     hrn text NOT NULL, 
     authority text NOT NULL, 
     peer_authority text, 
     gid text, 
-    type text NOT NULL, 
+    type text REFERENCES record_types, 
     pointer integer, 
     date_created timestamp without time zone NOT NULL DEFAULT CURRENT_TIMESTAMP, 
     last_updated timestamp without time zone NOT NULL DEFAULT CURRENT_TIMESTAMP

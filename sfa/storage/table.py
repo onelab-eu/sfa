@@ -14,7 +14,7 @@ from sfa.storage.record import SfaRecord, AuthorityRecord, NodeRecord, SliceReco
 
 class SfaTable(list):
 
-    SFA_TABLE_PREFIX = "sfa"
+    SFA_TABLE_PREFIX = "records"
 
     def __init__(self, record_filter = None):
 
