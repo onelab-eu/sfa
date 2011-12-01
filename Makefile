@@ -143,6 +143,7 @@ else
 	+$(RSYNC)  $(BINS) $(SSHURL)/usr/bin/
 	+$(RSYNC) ./init.d/sfa  $(SSHURL)/etc/init.d/
 	+$(RSYNC) ./config/default_config.xml $(SSHURL)/etc/sfa/
+	+$(RSYNC) ./sfa/storage/sfa.sql $(SSHURL)/usr/share/sfa/
 	$(SSHCOMMAND) exec service sfa restart
 endif
 

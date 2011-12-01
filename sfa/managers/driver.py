@@ -18,6 +18,10 @@ class Driver:
     #     after looking up the sfa db, we wish to be able to display
     #     testbed-specific info as well
     # this at minima should fill in the 'researcher' field for slice records
+    # as this information is then used to compute rights
+    # roadmap: there is an intention to redesign the SFA database so as to clear up 
+    # this constraint, based on the principle that SFA should not rely on the
+    # testbed database to perform such a core operation (i.e. getting rights right)
     def augment_records_with_testbed_info (self, sfa_records):
         return sfa_records
 
@@ -25,7 +29,6 @@ class Driver:
     # expected retcod 'pointer'
     # 'pointer' is typically an int db id, that makes sense in the testbed environment
     # -1 if this feature is not relevant 
-    # here type will be 'authority'
     def register (self, sfa_record, hrn, pub_key) : 
         return -1
 
