@@ -17,6 +17,7 @@ from sfa.senslab.OARrestapi import OARapi
 from sfa.senslab.LDAPapi import LDAPapi
 from sfa.senslab.SenslabImportUsers import SenslabImportUsers
 from sfa.senslab.parsing import parse_filter
+from sfa.senslab.slabpostgres import SlabDB
 
 def list_to_dict(recs, key):
     """
@@ -291,8 +292,7 @@ class SlabDriver ():
 
         def startswith(prefix, values):
             return [value for value in values if value.startswith(prefix)]
-	
-   	SenslabUsers = SenslabImportUsers()
+
         # get person ids
         person_ids = []
         site_ids = []
@@ -405,13 +405,32 @@ class SlabDriver ():
 
     def fill_record_info(self, records):
         """
-        Given a SFA record, fill in the PLC specific and SFA specific
+        Given a SFA record, fill in the senslab specific and SFA specific
         fields in the record. 
         """
 	
-        if not isinstance(records, list):
-            records = [records]
+        if isinstance(records, list):
+            records = records[0]
 	print >>sys.stderr, "\r\n \t\t BEFORE fill_record_pl_info %s" %(records)	
+        
+       
+        if records['type'] == 'slice':
+            db = SlabDB()
+            sfatable = SfaTable()
+            recslice = db.find('slice',str(records['hrn']))
+            if isinstance(recslice,list) and len(recslice) == 1:
+                recslice = recslice[0]
+            recuser = sfatable.find(  recslice['record_id_user'], ['hrn'])
+            
+            print >>sys.stderr, "\r\n \t\t  SLABDRIVER.PY fill_record_info %s" %(recuser)
+            records['type']
+            if isinstance(recuser,list) and len(recuser) == 1:
+                recuser = recuser[0]	          
+            records.update({'PI':[recuser['hrn']],
+            'researcher': [recuser['hrn']],
+            'name':records['hrn'], 'oar_job_id':recslice['oar_job_id'],
+            'person_ids':[recslice['record_id_user']]})
+
         #self.fill_record_pl_info(records)
 	##print >>sys.stderr, "\r\n \t\t after fill_record_pl_info %s" %(records)	
         #self.fill_record_sfa_info(records)
@@ -458,6 +477,7 @@ class SlabDriver ():
                 delFunc(self.plauth, personId, containerId)
 
     def update_membership(self, oldRecord, record):
+        print >>sys.stderr, " \r\n \r\n ***SLABDRIVER.PY update_membership record ", record
         if record.type == "slice":
             self.update_membership_list(oldRecord, record, 'researcher',
                                         self.users.AddPersonToSlice,

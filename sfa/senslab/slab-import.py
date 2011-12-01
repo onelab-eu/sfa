@@ -1,10 +1,4 @@
-###########################################################################
-#    Copyright (C) 2011 by root                                      
-#    <root@FlabFedora2>                                                             
-#
-# Copyright: See COPYING file that comes with this distribution
-#
-###########################################################################
+
 import sys
 import datetime
 import time
@@ -13,6 +7,7 @@ from sfa.senslab.LDAPapi import LDAPapi
 from sfa.senslab.slabdriver import SlabDriver
 from sfa.senslab.slabpostgres import SlabDB
 from sfa.util.config import Config
+from sfa.util.plxrn import PlXrn
 from sfa.util.xrn import hrn_to_urn, get_authority,Xrn,get_leaf
 from sfa.util.table import SfaTable
 from sfa.util.record import SfaRecord
@@ -106,7 +101,8 @@ def import_node(hrn, node):
         hrn = hrn[:64]
 
     node_record = table.find({'type': 'node', 'hrn': hrn})
-    pkey = Keypair(create=True)
+    pkey = Keypair(create=True)        
+    print>>sys.stderr, " \r\n \t slab-import : hrn %s" %(hrn )
     urn = hrn_to_urn(hrn, 'node')
     node_gid = AuthHierarchy.create_gid(urn, create_uuid(), pkey)
     node_record = SfaRecord(hrn=hrn, gid=node_gid, type="node", pointer=node['node_id'])
@@ -115,7 +111,7 @@ def import_node(hrn, node):
     node_record['date_created'] = int(time.mktime(extime.timetuple()))
     existing_records = table.find({'hrn': hrn, 'type': 'node', 'pointer': node['node_id']})
     if not existing_records:
-        print>>sys.stderr, " \r\n \t slab-import : node record %s inserted" %(node_record['hrn'])
+        print>>sys.stderr, " \r\n \t slab-import : node record %s inserted" %(node_record )
         table.insert(node_record)
     else:
         existing_record = existing_records[0]
@@ -159,7 +155,6 @@ def import_slice(person):
     if not existing_records:
         print>>sys.stderr, " \r\n \t slab-import : slice record %s inserted" %(slice_record['hrn'])
         table.insert(slice_record)
-        #table.insert_slab_slice(person)
         db.insert_slab_slice(person)
 
     else:
@@ -176,12 +171,9 @@ def delete_record( hrn, type):
         print>>sys.stderr, " \r\n \t slab-import : record %s deleted" %(record['hrn'])
         table.remove(record)
                 
-def hostname_to_hrn(root_auth,hostname):
-    # keep only the first part of the DNS name
-    #hrn='.'.join( [auth,hostname.split(".")[0] ] )
-    # escape the '.' in the hostname
-    hrn='.'.join( [root_auth,Xrn.escape(hostname)] )
-    return hrn_to_urn(hrn,'node')
+def hostname_to_hrn(root_auth,login_base,hostname):
+    return PlXrn(auth=auth,hostname=login_base+'_'+hostname).get_hrn()
+
     
 def main():
 
@@ -235,7 +227,9 @@ def main():
 
         # import node records
     for node in nodes_dict:
-        hrn =  hostname_to_hrn( root_auth, node['hostname'])
+        # Sandrine
+        # A changer pour l utilisation du nouveau OAR de prod, le site etant contenu dans le hostname
+        hrn =  hostname_to_hrn( root_auth,node['site_login_base'], node['hostname'])
         if hrn not in existing_hrns or \
         (hrn, 'node') not in existing_records:
             import_node(hrn, node)

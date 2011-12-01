@@ -15,6 +15,7 @@ from sfa.util.xrn import hrn_to_urn, urn_to_hrn, urn_to_sliver_id
 from sfa.util.plxrn import PlXrn, hostname_to_urn, hrn_to_pl_slicename
 
 from sfa.rspecs.rspec import RSpec
+from sfa.rspecs.elements.location import Location
 from sfa.rspecs.elements.hardware_type import HardwareType
 from sfa.rspecs.elements.node import Node
 #from sfa.rspecs.elements.link import Link
@@ -155,6 +156,10 @@ class OARrspec:
             rspec_node['component_manager_id'] = hrn_to_urn(self.driver.root_auth, 'authority+sa')
             rspec_node['authority_id'] = hrn_to_urn(PlXrn.site_hrn(self.driver.root_auth, node['site_login_base']), 'authority+sa')
             rspec_node['boot_state'] = node['boot_state']
+            if node['posx'] and node['posy']:  
+                location = Location({'longitude':node['posx'], 'latitude': node['posy']})
+                rspec_node['location'] = location
+
             rspec_node['exclusive'] = 'True'
             rspec_node['hardware_types']= [HardwareType({'name': 'senslab sensor node'})]
             # only doing this because protogeni rspec needs

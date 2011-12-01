@@ -49,9 +49,6 @@ class SlabDB:
                                                host = "%s:%d" % (self.config.SFA_PLC_DB_HOST, self.config.SFA_PLC_DB_PORT),
                                                database = self.config.SFA_PLC_DB_NAME)
 
-        (self.rowcount, self.description, self.lastrowid) = \
-                        (None, None, None)
-
         return self.connection.cursor()
         
     #Close connection to database
@@ -60,19 +57,47 @@ class SlabDB:
             self.connection.close()
             self.connection = None
             
+    def selectall(self, query,  hashref = True, key_field = None):
+        """
+        Return each row as a dictionary keyed on field name (like DBI
+        selectrow_hashref()). If key_field is specified, return rows
+        as a dictionary keyed on the specified field (like DBI
+        selectall_hashref()).
+
+        """
+        cursor = self.cursor()
+        cursor.execute(query)
+        rows = cursor.fetchall()
+        cursor.close()
+        self.connection.commit()
+
+        if hashref or key_field is not None:
+            # Return each row as a dictionary keyed on field name
+            # (like DBI selectrow_hashref()).
+            labels = [column[0] for column in cursor.description]
+            rows = [dict(zip(labels, row)) for row in rows]
+
+        if key_field is not None and key_field in labels:
+            # Return rows as a dictionary keyed on the specified field
+            # (like DBI selectall_hashref()).
+            return dict([(row[key_field], row) for row in rows])
+        else:
+            return rows
+        
+        
     def exists(self, tablename):
         """
         Checks if the table specified as tablename exists.
     
         """
-        mark = self.cursor()
+        #mark = self.cursor()
         sql = "SELECT * from pg_tables"
-        mark.execute(sql)
-        rows = mark.fetchall()
-        mark.close()
-        labels = [column[0] for column in mark.description]
-        rows = [dict(zip(labels, row)) for row in rows]
-
+        #mark.execute(sql)
+        #rows = mark.fetchall()
+        #mark.close()
+        #labels = [column[0] for column in mark.description]
+        #rows = [dict(zip(labels, row)) for row in rows]
+        rows = self.selectall(sql)
         rows = filter(lambda row: row['tablename'].startswith(tablename), rows)
         if rows:
             return True
@@ -207,4 +232,42 @@ class SlabDB:
         return 
         
        
+    def find(self, tablename,record_filter = None, columns=None):
+        if not columns:
+            columns = "*"
+        else:
+            columns = ",".join(columns)
+        sql = "SELECT %s FROM %s WHERE True " % (columns, tablename)
+        
+        #if isinstance(record_filter, (list, tuple, set)):
+            #ints = filter(lambda x: isinstance(x, (int, long)), record_filter)
+            #strs = filter(lambda x: isinstance(x, StringTypes), record_filter)
+            #record_filter = Filter(SfaRecord.all_fields, {'record_id': ints, 'hrn': strs})
+            #sql += "AND (%s) %s " % record_filter.sql("OR") 
+        #elif isinstance(record_filter, dict):
+            #record_filter = Filter(SfaRecord.all_fields, record_filter)        
+            #sql += " AND (%s) %s" % record_filter.sql("AND")
+        #elif isinstance(record_filter, StringTypes):
+            #record_filter = Filter(SfaRecord.all_fields, {'hrn':[record_filter]})    
+            #sql += " AND (%s) %s" % record_filter.sql("AND")
+        #elif isinstance(record_filter, int):
+            #record_filter = Filter(SfaRecord.all_fields, {'record_id':[record_filter]})    
+            #sql += " AND (%s) %s" % record_filter.sql("AND")
+       
+        if isinstance(record_filter, dict):
+            for k in record_filter.keys():
+                sql += "AND "+' \''+ str(k) + '\''+ '='+' \''+ str(record_filter[k])+'\''
+            
+        elif isinstance(record_filter, str):
+            sql += "AND slice_hrn ="+ ' \''+record_filter+'\''
+
+        #elif isinstance(record_filter, int):
+            #record_filter = Filter(SfaRecord.all_fields, {'record_id':[record_filter]})    
+            #sql += " AND (%s) %s" % record_filter.sql("AND")
+        sql +=  ";"
+        print>>sys.stderr, " \r\n \r\n \t SLABPOSTGRES.PY find : sql %s record_filter  %s %s" %(sql, record_filter , type(record_filter))
+        results = self.selectall(sql)
+        if isinstance(results, dict):
+            results = [results]
+        return results
        
