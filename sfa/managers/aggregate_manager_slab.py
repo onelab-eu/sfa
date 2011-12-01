@@ -40,7 +40,7 @@ class AggregateManager:
                 request_rspec_versions.append(rspec_version.to_dict()) 
         xrn=Xrn(api.hrn)
         version_more = {'interface':'aggregate',
-                        'sfa': 1,
+                        'sfa': 2,
                         'geni_api': api.config.SFA_AGGREGATE_API_VERSION,
                         'testbed':'myplc',
                         'hrn':xrn.get_hrn(),
@@ -304,8 +304,8 @@ class AggregateManager:
     
         version_manager = VersionManager()
         # get the rspec's return format from options
-        rspec_version = version_manager.get_version(options.get('rspec_version'))
-        version_string = "rspec_%s" % (rspec_version.to_string())
+        rspec_version = version_manager.get_version(options.get('geni_rspec_version'))
+        version_string = "rspec_%s" % (rspec_version)
     
         #panos adding the info option to the caching key (can be improved)
         if options.get('info'):
@@ -322,7 +322,7 @@ class AggregateManager:
         #print "manager options = ",options
         aggregate = OARrspec(api)
         #aggregate = Aggregate(api)
-        rspec =  aggregate.get_rspec(slice_xrn=xrn, version=rspec_version)
+        rspec =  aggregate.get_rspec(slice_xrn=xrn, version=rspec_version, options=options)
     
         # cache the result
         if self.caching and api.cache and not xrn:

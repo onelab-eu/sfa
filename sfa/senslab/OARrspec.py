@@ -42,73 +42,16 @@ class OARrspec:
     node_tags = {}
     
     prepared=False
-    #panos new user options variable
+
     user_options = {}
     
     def __init__(self ,api):
-    #def __init__(self ,api, user_options={}):
 	self.OARImporter = OARapi()	
         self.driver = SlabDriver(Config())
-	#self.user_options = user_options
 	self.api = api 
 	print >>sys.stderr,"\r\n \r\n \t\t_____________INIT OARRSPEC__ api : %s" %(api)
 
-    def prepare_sites(self, force=False):
-	print >>sys.stderr,'\r\n \r\n ++++++++++++++\t\t prepare_sites'
-        if not self.sites or force:  
-             for site in self.OARImporter.GetSites():
-		print >>sys.stderr,'prepare_sites : site ', site		    
-                self.sites[site['site_id']] = site
-	
-    
-    def prepare_nodes(self, force=False):
-        if not self.nodes or force:
-            for node in self.driver.GetNodes():
-            #for node in self.OARImporter.GetNodes():
-                self.nodes[node['node_id']] = node
-		
-    #def prepare_interfaces(self, force=False):
-        #if not self.interfaces or force:
-            #for interface in self.api.plshell.GetInterfaces(self.api.plauth):
-                #self.interfaces[interface['interface_id']] = interface
 
-    #def prepare_node_tags(self, force=False):
-        #if not self.node_tags or force:
-            #for node_tag in self.api.plshell.GetNodeTags(self.api.plauth):
-                #self.node_tags[node_tag['node_tag_id']] = node_tag
-		
-    def prepare_links(self, force=False):
-        if not self.links or force:
-            pass
-
-    def prepare(self, force=False):
-        if not self.prepared or force:
-            #self.prepare_sites(force)
-            self.prepare_nodes(force)
-            
-            #self.prepare_links(force)
-            #self.prepare_interfaces(force)
-            #self.prepare_node_tags(force)	    
-            # add site/interface info to nodes
-            for node_id in self.nodes:
-                node = self.nodes[node_id]
-                #site = self.sites[node['site_id']]
-                #interfaces = [self.interfaces[interface_id] for interface_id in node['interface_ids']]
-                #tags = [self.node_tags[tag_id] for tag_id in node['node_tag_ids']]
-		node['network'] = self.driver.root_auth	
-                node['network_urn'] = hrn_to_urn(node['network'], 'authority+am')
-                #node['urn'] = hostname_to_urn(node['network'], node['site_login_base'], node['hostname'])
-                node['site_urn'] = hrn_to_urn(PlXrn.site_hrn(node['network'], node['site_login_base']), 'authority+sa') 
-                node['urn'] = hostname_to_urn(node['network'], node['site_login_base'], node['hostname'])
-                #node['urn'] = PlXrn(auth=node['network']+'.',hostname=node['hostname']).get_urn()
-
-                #node['site'] = site
-                #node['interfaces'] = interfaces
-                #node['tags'] = tags
-
-        self.prepared = True 
-        #print >>sys.stderr, "\r\n OARrspec  prepare node 10",self.nodes[10]  
-	#print >>sys.stderr, " \r\n \t\t prepare prepare_nodes \r\n %s " %(self.nodes)
         
     def get_nodes(self):
         filtre = {}
@@ -197,22 +140,21 @@ class OARrspec:
         return (rspec_nodes)
         
 #from plc/aggregate.py 
-    def get_rspec(self, slice_xrn=None, version = None):
+    def get_rspec(self, slice_xrn=None, version = None, options={}):
 	print>>sys.stderr, " \r\n OARrspec \t\t get_rspec **************\r\n" 
-        #self.prepare()
+      
 	
         rspec = None
 	version_manager = VersionManager()
 	version = version_manager.get_version(version)
-        #rspec_version = RSpecVersion(version)
-	#print >>sys.stderr, '\r\n \t\t rspec_version type',version_manager['type']
+     
 	
 	if not slice_xrn:
             rspec_version = version_manager._get_version(version.type, version.version, 'ad')
         else:
             rspec_version = version_manager._get_version(version.type, version.version, 'manifest')
       
-        rspec = RSpec(version=rspec_version, user_options=self.user_options)
+        rspec = RSpec(version=rspec_version, user_options=options)
         
         nodes = self.get_nodes()
         rspec.version.add_nodes(nodes)
