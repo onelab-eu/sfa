@@ -390,13 +390,14 @@ class Slices:
                     user_found = False
                     for existing_user in existing_site_persons_list:
                         for site_id in existing_user['site_ids']:
-                            site = sites[site_id]
-                            if login_base == site['login_base'] and \
-                               existing_user['email'].startswith(requested_user['username']):
-                                existing_user_ids.append(existing_user['email'])
-                                users_dict[existing_user['email']] = requested_user
-                                user_found = True
-                                break
+                            if site_id in sites:
+                                site = sites[site_id]
+                                if login_base == site['login_base'] and \
+                                   existing_user['email'].startswith(requested_user['username']):
+                                    existing_user_ids.append(existing_user['email'])
+                                    users_dict[existing_user['email']] = requested_user
+                                    user_found = True
+                                    break
                         if user_found:
                             break
       
