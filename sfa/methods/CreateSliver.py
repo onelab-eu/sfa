@@ -1,12 +1,9 @@
-from sfa.util.faults import SfaInvalidArgument
+from sfa.util.faults import SfaInvalidArgument, InvalidRSpec
 from sfa.util.xrn import urn_to_hrn
 from sfa.util.method import Method
 from sfa.util.sfatablesRuntime import run_sfatables
-
 from sfa.trust.credential import Credential
-
 from sfa.storage.parameter import Parameter, Mixed
-
 from sfa.rspecs.rspec import RSpec
 
 class CreateSliver(Method):
@@ -54,8 +51,7 @@ class CreateSliver(Method):
         self.api.logger.debug("CreateSliver: sfatables on chain %s"%chain_name)
         rspec = run_sfatables(chain_name, hrn, origin_hrn, rspec)
         slivers = RSpec(rspec).version.get_nodes_with_slivers()
-        if slivers:
-            result = self.api.manager.CreateSliver(self.api, slice_xrn, creds, rspec, users, options)
-        else:
-            result = rspec     
+        if not slivers:
+            raise InvalidRSpec("Missing <sliver_type> or <sliver> element. Request rspec must explicitly allocate slivers")    
+        result = self.api.manager.CreateSliver(self.api, slice_xrn, creds, rspec, users, options)
         return result
