@@ -1,4 +1,5 @@
-from sfa.util.parameter import Parameter, Mixed
+from sfa.storage.parameter import Parameter, Mixed
+
 from sfa.methods.CreateSliver import CreateSliver
 
 class UpdateSliver(CreateSliver):

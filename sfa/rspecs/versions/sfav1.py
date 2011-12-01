@@ -142,7 +142,7 @@ class SFAv1(BaseVersion):
             defaults = network_tag.add_element('sliver_defaults')
         elif isinstance(defaults, list):
             defaults = defaults[0]
-        Sfav1Sliver.add_sliver_attribute(defaults, name, value)
+        SFAv1Sliver.add_sliver_attribute(defaults, name, value)
 
     def get_default_sliver_attributes(self, network=None):
         if network:
@@ -150,14 +150,14 @@ class SFAv1(BaseVersion):
         else:
             defaults = self.xml.xpath("//sliver_defaults")
         if not defaults: return []
-        return Sfav1Sliver.get_sliver_attributes(defaults)
+        return SFAv1Sliver.get_sliver_attributes(defaults[0])
     
     def remove_default_sliver_attribute(self, name, value, network=None):
         if network:
             defaults = self.xml.xpath("//network[@name='%s']/sliver_defaults" % network)
         else:
             defaults = self.xml.xpath("//sliver_defaults" % network)
-        attribs = Sfav1Sliver.get_sliver_attributes(defaults)
+        attribs = SFAv1Sliver.get_sliver_attributes(defaults)
         for attrib in attribs:
             if attrib['name'] == name and attrib['value'] == value:
                 attrib.element.delete()    

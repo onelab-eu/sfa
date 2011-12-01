@@ -90,7 +90,7 @@ force:
 
 ##########
 tags:	
-	find . -type f | egrep -v '/\.git/|/\.svn/|TAGS|~$$|\.(py[co]|doc|html|pdf|png|svg|out|bak|xml|dg)$$' | xargs etags
+	find . -type f | egrep -v '/\.git/|/\.svn/|TAGS|AA-|~$$|\.(py[co]|doc|html|pdf|png|svg|out|bak|xml|dg)$$' | xargs etags
 .PHONY: tags
 
 signatures:
@@ -141,7 +141,7 @@ else
 	+$(RSYNC) ./sfa/ $(SSHURL)/usr/lib\*/python2.\*/site-packages/sfa/
 	+$(RSYNC) ./tests/ $(SSHURL)/root/tests-sfa
 	+$(RSYNC)  $(BINS) $(SSHURL)/usr/bin/
-	+$(RSYNC) ./sfa/init.d/sfa  $(SSHURL)/etc/init.d/
+	+$(RSYNC) ./init.d/sfa  $(SSHURL)/etc/init.d/
 	+$(RSYNC) ./config/default_config.xml $(SSHURL)/etc/sfa/
 	$(SSHCOMMAND) exec service sfa restart
 endif

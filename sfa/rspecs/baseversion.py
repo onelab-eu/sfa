@@ -24,7 +24,7 @@ class BaseVersion:
             'extensions': self.extensions
         }
 
-    def to_string(self):
+    def __str__(self):
         return "%s %s" % (self.type, self.version)
     
 

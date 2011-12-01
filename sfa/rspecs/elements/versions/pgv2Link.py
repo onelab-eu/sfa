@@ -15,15 +15,16 @@ class PGv2Link:
             if 'component_manager' in link and link['component_manager']:
                 cm_element = link_elem.add_element('component_manager', name=link['component_manager'])
             # set interface_ref elements
-            for if_ref in [link['interface1'], link['interface2']]:
-                link_elem.add_instance('interface_ref', if_ref, Interface.fields)
-            # set property elements
-            prop1 = link_elem.add_element('property', source_id = link['interface1']['component_id'],
-                dest_id = link['interface2']['component_id'], capacity=link['capacity'], 
-                latency=link['latency'], packet_loss=link['packet_loss'])
-            prop2 = link_elem.add_element('property', source_id = link['interface2']['component_id'],
-                dest_id = link['interface1']['component_id'], capacity=link['capacity'], 
-                latency=link['latency'], packet_loss=link['packet_loss'])
+            if link.get('interface1') and link.get('interface2'):
+                for if_ref in [link['interface1'], link['interface2']]:
+                    link_elem.add_instance('interface_ref', if_ref, Interface.fields)
+                # set property elements
+                prop1 = link_elem.add_element('property', source_id = link['interface1']['component_id'],
+                    dest_id = link['interface2']['component_id'], capacity=link['capacity'], 
+                    latency=link['latency'], packet_loss=link['packet_loss'])
+                prop2 = link_elem.add_element('property', source_id = link['interface2']['component_id'],
+                    dest_id = link['interface1']['component_id'], capacity=link['capacity'], 
+                    latency=link['latency'], packet_loss=link['packet_loss'])
             if link.get('type'):
                 type_elem = link_elem.add_element('link_type', name=link['type'])            
  

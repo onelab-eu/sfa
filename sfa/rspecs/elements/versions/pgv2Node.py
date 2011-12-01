@@ -25,16 +25,18 @@ class PGv2Node:
                 component_name = xrn_to_hostname(node['component_id'])
                 node_elem.set('component_name', component_name)
             # set hardware types
-            for hardware_type in node.get('hardware_types', []): 
-                node_elem.add_instance('hardware_type', hardware_type, HardwareType.fields)
+            if node.get('hardware_types'):
+                for hardware_type in node.get('hardware_types', []): 
+                    node_elem.add_instance('hardware_type', hardware_type, HardwareType.fields)
             # set location
             if node.get('location'):
                 node_elem.add_instance('location', node['location'], Location.fields)       
             # set interfaces
-            for interface in  node.get('interfaces', []):
-                node_elem.add_instance('interface', interface, ['component_id', 'client_id', 'ipv4'])
+            if node.get('interfaces'):
+                for interface in  node.get('interfaces', []):
+                    node_elem.add_instance('interface', interface, ['component_id', 'client_id', 'ipv4'])
             # set available element
-            if node.get('boot_state', '').lower() == 'boot':
+            if node.get('boot_state') and node.get('boot_state').lower() == 'boot':
                 available_elem = node_elem.add_element('available', now='True')
             else:
                 available_elem = node_elem.add_element('available', now='False')
@@ -47,8 +49,9 @@ class PGv2Node:
                 slivers = Sliver({'type': 'plab-vserver'})
                 # we must also advertise the available initscripts
                 slivers['tags'] = []
-                for initscript in node.get('pl_initscripts', []):
-                    slivers['tags'].append({'name': 'initscript', 'value': initscript['name']})
+                if node.get('pl_initscripts'): 
+                    for initscript in node.get('pl_initscripts', []):
+                        slivers['tags'].append({'name': 'initscript', 'value': initscript['name']})
             PGv2SliverType.add_slivers(node_elem, slivers)
         
         return node_elems

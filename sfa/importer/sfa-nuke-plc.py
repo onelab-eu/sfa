@@ -11,8 +11,9 @@ import sys
 import os
 from optparse import OptionParser
 
-from sfa.util.table import SfaTable
 from sfa.util.sfalogging import logger
+
+from sfa.storage.table import SfaTable
 
 def main():
    usage="%prog: trash the registry DB (the 'sfa' table in the 'planetlab5' database)"
@@ -27,7 +28,7 @@ def main():
       sys.exit(1)
    logger.info("Purging SFA records from database")
    table = SfaTable()
-   table.sfa_records_purge()
+   table.nuke()
 
    if options.clean_certs:
       # remove the server certificate and all gids found in /var/lib/sfa/authorities

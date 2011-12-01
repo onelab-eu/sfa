@@ -1,19 +1,25 @@
 import types
 import time 
+# for get_key_from_incoming_ip
+import tempfile
+import os
+import commands
 
 from sfa.util.faults import RecordNotFound, AccountNotEnabled, PermissionError, MissingAuthority, \
-    UnknownSfaType, ExistingRecord
+    UnknownSfaType, ExistingRecord, NonExistingRecord
 from sfa.util.prefixTree import prefixTree
-from sfa.util.record import SfaRecord
-from sfa.util.table import SfaTable
-from sfa.util.xrn import Xrn, get_leaf, get_authority, hrn_to_urn, urn_to_hrn
+from sfa.util.xrn import Xrn, get_authority, hrn_to_urn, urn_to_hrn
 from sfa.util.plxrn import hrn_to_pl_login_base
 from sfa.util.version import version_core
+from sfa.util.sfalogging import logger
 
 from sfa.trust.gid import GID 
 from sfa.trust.credential import Credential
 from sfa.trust.certificate import Certificate, Keypair, convert_public_key
 from sfa.trust.gid import create_uuid
+
+from sfa.storage.record import SfaRecord
+from sfa.storage.table import SfaTable
 
 class RegistryManager:
 
@@ -50,9 +56,8 @@ class RegistryManager:
     
         # verify_cancreate_credential requires that the member lists
         # (researchers, pis, etc) be filled in
-        api.driver.fill_record_info(record, api.aggregates)
-        if record['type']=='user':
-           if not record['enabled']:
+        self.driver.augment_records_with_testbed_info (record)
+        if not self.driver.is_enabled (record):
               raise AccountNotEnabled(": PlanetLab account %s is not enabled. Please contact your site PI" %(record['email']))
     
         # get the callers gid
@@ -91,13 +96,14 @@ class RegistryManager:
     
     def Resolve(self, api, xrns, type=None, full=True):
     
-        # load all known registry names into a prefix tree and attempt to find
-        # the longest matching prefix
         if not isinstance(xrns, types.ListType):
+            xrns = [xrns]
+            # try to infer type if not set and we get a single input
             if not type:
                 type = Xrn(xrns).get_type()
-            xrns = [xrns]
         hrns = [urn_to_hrn(xrn)[0] for xrn in xrns] 
+        # load all known registry names into a prefix tree and attempt to find
+        # the longest matching prefix
         # create a dict where key is a registry hrn and its value is a
         # hrns at that registry (determined by the known prefix tree).  
         xrn_dict = {}
@@ -124,26 +130,40 @@ class RegistryManager:
             if registry_hrn != api.hrn:
                 credential = api.getCredential()
                 interface = api.registries[registry_hrn]
-                server = api.server_proxy(interface, credential)
-                peer_records = server.Resolve(xrns, credential)
+                server_proxy = api.server_proxy(interface, credential)
+                peer_records = server_proxy.Resolve(xrns, credential)
                 records.extend([SfaRecord(dict=record).as_dict() for record in peer_records])
     
         # try resolving the remaining unfound records at the local registry
-        remaining_hrns = set(hrns).difference([record['hrn'] for record in records])
-        # convert set to list
-        remaining_hrns = [hrn for hrn in remaining_hrns] 
+        local_hrns = list ( set(hrns).difference([record['hrn'] for record in records]) )
+        # 
         table = SfaTable()
-        local_records = table.findObjects({'hrn': remaining_hrns})
+        local_records = table.findObjects({'hrn': local_hrns})
+        
         if full:
-            api.driver.fill_record_info(local_records, api.aggregates)
+            # in full mode we get as much info as we can, which involves contacting the 
+            # testbed for getting implementation details about the record
+            self.driver.augment_records_with_testbed_info(local_records)
+            # also we fill the 'url' field for known authorities
+            # used to be in the driver code, sounds like a poorman thing though
+            def solve_neighbour_url (record):
+                if not record['type'].startswith('authority'): return 
+                hrn=record['hrn']
+                for neighbour_dict in [ api.aggregates, api.registries ]:
+                    if hrn in neighbour_dict:
+                        record['url']=neighbour_dict[hrn].get_url()
+                        return 
+            [ solve_neighbour_url (record) for record in local_records ]
+                    
+        
         
         # convert local record objects to dicts
         records.extend([dict(record) for record in local_records])
-        if not records:
-            raise RecordNotFound(str(hrns))
-    
         if type:
             records = filter(lambda rec: rec['type'] in [type], records)
+    
+        if not records:
+            raise RecordNotFound(str(hrns))
     
         return records
     
@@ -167,8 +187,8 @@ class RegistryManager:
         if registry_hrn != api.hrn:
             credential = api.getCredential()
             interface = api.registries[registry_hrn]
-            server = api.server_proxy(interface, credential)
-            record_list = server.List(xrn, credential)
+            server_proxy = api.server_proxy(interface, credential)
+            record_list = server_proxy.List(xrn, credential)
             records = [SfaRecord(dict=record).as_dict() for record in record_list]
         
         # if we still have not found the record yet, try the local registry
@@ -193,7 +213,33 @@ class RegistryManager:
             pkey = certificate.get_pubkey()    
         gid = api.auth.hierarchy.create_gid(xrn, create_uuid(), pkey) 
         return gid.save_to_string(save_parents=True)
+    
+    ####################
+    # utility for handling relationships among the SFA objects 
+    # given that the SFA db does not handle this sort of relationsships
+    # it will rely on side-effects in the testbed to keep this persistent
+    
+    # subject_record describes the subject of the relationships
+    # ref_record contains the target values for the various relationships we need to manage
+    # (to begin with, this is just the slice x person relationship)
+    def update_relations (self, subject_record, ref_record):
+        type=subject_record['type']
+        if type=='slice':
+            self.update_relation(subject_record, 'researcher', ref_record.get('researcher'), 'user')
         
+    # field_key is the name of one field in the record, typically 'researcher' for a 'slice' record
+    # hrns is the list of hrns that should be linked to the subject from now on
+    # target_type would be e.g. 'user' in the 'slice' x 'researcher' example
+    def update_relation (self, sfa_record, field_key, hrns, target_type):
+        # locate the linked objects in our db
+        subject_type=sfa_record['type']
+        subject_id=sfa_record['pointer']
+        table = SfaTable()
+        link_sfa_records = table.find ({'type':target_type, 'hrn': hrns})
+        link_ids = [ rec.get('pointer') for rec in link_sfa_records ]
+        self.driver.update_relation (subject_type, target_type, subject_id, link_ids)
+        
+
     def Register(self, api, record):
     
         hrn, type = record['hrn'], record['type']
@@ -210,19 +256,17 @@ class RegistryManager:
            
         record = SfaRecord(dict = record)
         record['authority'] = get_authority(record['hrn'])
-        type = record['type']
-        hrn = record['hrn']
         auth_info = api.auth.get_auth_info(record['authority'])
         pub_key = None
         # make sure record has a gid
         if 'gid' not in record:
             uuid = create_uuid()
             pkey = Keypair(create=True)
-            if 'key' in record and record['key']:
-                if isinstance(record['key'], types.ListType):
-                    pub_key = record['key'][0]
-                else:
-                    pub_key = record['key']
+            if 'keys' in record and record['keys']:
+                pub_key=record['keys']
+                # use only first key in record
+                if isinstance(record['keys'], types.ListType):
+                    pub_key = record['keys'][0]
                 pkey = convert_public_key(pub_key)
     
             gid_object = api.auth.hierarchy.create_gid(urn, uuid, pkey)
@@ -238,68 +282,18 @@ class RegistryManager:
             # get the GID from the newly created authority
             gid = auth_info.get_gid_object()
             record.set_gid(gid.save_to_string(save_parents=True))
-            pl_record = api.driver.sfa_fields_to_pl_fields(type, hrn, record)
-            sites = api.driver.GetSites([pl_record['login_base']])
-            if not sites:
-                pointer = api.driver.AddSite(pl_record)
-            else:
-                pointer = sites[0]['site_id']
-    
-            record.set_pointer(pointer)
-            record['pointer'] = pointer
-    
-        elif (type == "slice"):
-            acceptable_fields=['url', 'instantiation', 'name', 'description']
-            pl_record = api.driver.sfa_fields_to_pl_fields(type, hrn, record)
-            for key in pl_record.keys():
-                if key not in acceptable_fields:
-                    pl_record.pop(key)
-            slices = api.driver.GetSlices([pl_record['name']])
-            if not slices:
-                 pointer = api.driver.AddSlice(pl_record)
-            else:
-                 pointer = slices[0]['slice_id']
-            record.set_pointer(pointer)
-            record['pointer'] = pointer
-    
-        elif  (type == "user"):
-            persons = api.driver.GetPersons([record['email']])
-            if not persons:
-                pointer = api.driver.AddPerson(dict(record))
-            else:
-                pointer = persons[0]['person_id']
-    
-            if 'enabled' in record and record['enabled']:
-                api.driver.UpdatePerson(pointer, {'enabled': record['enabled']})
-            # add this persons to the site only if he is being added for the first
-            # time by sfa and doesont already exist in plc
-            if not persons or not persons[0]['site_ids']:
-                login_base = get_leaf(record['authority'])
-                api.driver.AddPersonToSite(pointer, login_base)
-    
-            # What roles should this user have?
-            api.driver.AddRoleToPerson('user', pointer)
-            # Add the user's key
-            if pub_key:
-                api.driver.AddPersonKey(pointer, {'key_type' : 'ssh', 'key' : pub_key})
-    
-        elif (type == "node"):
-            pl_record = api.driver.sfa_fields_to_pl_fields(type, hrn, record)
-            login_base = hrn_to_pl_login_base(record['authority'])
-            nodes = api.driver.GetNodes([pl_record['hostname']])
-            if not nodes:
-                pointer = api.driver.AddNode(login_base, pl_record)
-            else:
-                pointer = nodes[0]['node_id']
-    
-        record['pointer'] = pointer
+
+        # update testbed-specific data f needed
+        logger.info("Getting driver from manager=%s"%self)
+        pointer = self.driver.register (record, hrn, pub_key)
+
         record.set_pointer(pointer)
         record_id = table.insert(record)
         record['record_id'] = record_id
     
         # update membership for researchers, pis, owners, operators
-        api.driver.update_membership(None, record)
-    
+        self.update_relations (record, record)
+        
         return record.get_gid_object().save_to_string(save_parents=True)
     
     def Update(self, api, record_dict):
@@ -315,75 +309,39 @@ class RegistryManager:
         record = records[0]
         record['last_updated'] = time.gmtime()
     
-        # Update_membership needs the membership lists in the existing record
-        # filled in, so it can see if members were added or removed
-        api.driver.fill_record_info(record, api.aggregates)
-    
+        # validate the type
+        if type not in ['authority', 'slice', 'node', 'user']:
+            raise UnknownSfaType(type) 
+
         # Use the pointer from the existing record, not the one that the user
         # gave us. This prevents the user from inserting a forged pointer
         pointer = record['pointer']
+    
+        # is the a change in keys ?
+        new_key=None
+        if type=='user':
+            if 'keys' in new_record and new_record['keys']:
+                new_key=new_record['keys']
+                if isinstance (new_key,types.ListType):
+                    new_key=new_key[0]
+
         # update the PLC information that was specified with the record
+        if not self.driver.update (record, new_record, hrn, new_key):
+            logger.warning("driver.update failed")
     
-        if (type == "authority"):
-            api.driver.UpdateSite(pointer, new_record)
-    
-        elif type == "slice":
-            pl_record=api.driver.sfa_fields_to_pl_fields(type, hrn, new_record)
-            if 'name' in pl_record:
-                pl_record.pop('name')
-                api.driver.UpdateSlice(pointer, pl_record)
-    
-        elif type == "user":
-            # SMBAKER: UpdatePerson only allows a limited set of fields to be
-            #    updated. Ideally we should have a more generic way of doing
-            #    this. I copied the field names from UpdatePerson.py...
-            update_fields = {}
-            all_fields = new_record
-            for key in all_fields.keys():
-                if key in ['first_name', 'last_name', 'title', 'email',
-                           'password', 'phone', 'url', 'bio', 'accepted_aup',
-                           'enabled']:
-                    update_fields[key] = all_fields[key]
-            api.driver.UpdatePerson(pointer, update_fields)
-    
-            if 'key' in new_record and new_record['key']:
-                # must check this key against the previous one if it exists
-                persons = api.driver.GetPersons([pointer], ['key_ids'])
-                person = persons[0]
-                keys = person['key_ids']
-                keys = api.driver.GetKeys(person['key_ids'])
-                key_exists = False
-                if isinstance(new_record['key'], types.ListType):
-                    new_key = new_record['key'][0]
-                else:
-                    new_key = new_record['key']
-                
-                # Delete all stale keys
-                for key in keys:
-                    if new_record['key'] != key['key']:
-                        api.driver.DeleteKey(key['key_id'])
-                    else:
-                        key_exists = True
-                if not key_exists:
-                    api.driver.AddPersonKey(pointer, {'key_type': 'ssh', 'key': new_key})
-    
-                # update the openssl key and gid
-                pkey = convert_public_key(new_key)
-                uuid = create_uuid()
-                gid_object = api.auth.hierarchy.create_gid(urn, uuid, pkey)
-                gid = gid_object.save_to_string(save_parents=True)
-                record['gid'] = gid
-                record = SfaRecord(dict=record)
-                table.update(record)
-    
-        elif type == "node":
-            api.driver.UpdateNode(pointer, new_record)
-    
-        else:
-            raise UnknownSfaType(type)
-    
+        # take new_key into account
+        if new_key:
+            # update the openssl key and gid
+            pkey = convert_public_key(new_key)
+            uuid = create_uuid()
+            gid_object = api.auth.hierarchy.create_gid(urn, uuid, pkey)
+            gid = gid_object.save_to_string(save_parents=True)
+            record['gid'] = gid
+            record = SfaRecord(dict=record)
+            table.update(record)
+        
         # update membership for researchers, pis, owners, operators
-        api.driver.update_membership(record, new_record)
+        self.update_relations (record, new_record)
         
         return 1 
     
@@ -401,7 +359,10 @@ class RegistryManager:
         if not records: raise RecordNotFound(hrn)
         record = records[0]
         type = record['type']
-    
+        
+        if type not in ['slice', 'user', 'node', 'authority'] :
+            raise UnknownSfaType(type)
+
         credential = api.getCredential()
         registries = api.registries
     
@@ -414,24 +375,77 @@ class RegistryManager:
                         result=registries[registry].remove_peer_object(credential, record, origin_hrn)
                     except:
                         pass
-        if type == "user":
-            persons = api.driver.GetPersons(record['pointer'])
-            # only delete this person if he has site ids. if he doesnt, it probably means
-            # he was just removed from a site, not actually deleted
-            if persons and persons[0]['site_ids']:
-                api.driver.DeletePerson(record['pointer'])
-        elif type == "slice":
-            if api.driver.GetSlices(record['pointer']):
-                api.driver.DeleteSlice(record['pointer'])
-        elif type == "node":
-            if api.driver.GetNodes(record['pointer']):
-                api.driver.DeleteNode(record['pointer'])
-        elif type == "authority":
-            if api.driver.GetSites(record['pointer']):
-                api.driver.DeleteSite(record['pointer'])
-        else:
-            raise UnknownSfaType(type)
-    
+
+        # call testbed callback first
+        # IIUC this is done on the local testbed TOO because of the refreshpeer link
+        if not self.driver.remove(record):
+            logger.warning("driver.remove failed")
+
+        # delete from sfa db
         table.remove(record)
     
         return 1
+
+    # This is a PLC-specific thing...
+    def get_key_from_incoming_ip (self, api):
+        # verify that the callers's ip address exist in the db and is an interface
+        # for a node in the db
+        (ip, port) = api.remote_addr
+        interfaces = self.driver.GetInterfaces({'ip': ip}, ['node_id'])
+        if not interfaces:
+            raise NonExistingRecord("no such ip %(ip)s" % locals())
+        nodes = self.driver.GetNodes([interfaces[0]['node_id']], ['node_id', 'hostname'])
+        if not nodes:
+            raise NonExistingRecord("no such node using ip %(ip)s" % locals())
+        node = nodes[0]
+       
+        # look up the sfa record
+        table = SfaTable()
+        records = table.findObjects({'type': 'node', 'pointer': node['node_id']})
+        if not records:
+            raise RecordNotFound("pointer:" + str(node['node_id']))  
+        record = records[0]
+        
+        # generate a new keypair and gid
+        uuid = create_uuid()
+        pkey = Keypair(create=True)
+        urn = hrn_to_urn(record['hrn'], record['type'])
+        gid_object = api.auth.hierarchy.create_gid(urn, uuid, pkey)
+        gid = gid_object.save_to_string(save_parents=True)
+        record['gid'] = gid
+        record.set_gid(gid)
+
+        # update the record
+        table.update(record)
+  
+        # attempt the scp the key
+        # and gid onto the node
+        # this will only work for planetlab based components
+        (kfd, key_filename) = tempfile.mkstemp() 
+        (gfd, gid_filename) = tempfile.mkstemp() 
+        pkey.save_to_file(key_filename)
+        gid_object.save_to_file(gid_filename, save_parents=True)
+        host = node['hostname']
+        key_dest="/etc/sfa/node.key"
+        gid_dest="/etc/sfa/node.gid" 
+        scp = "/usr/bin/scp" 
+        #identity = "/etc/planetlab/root_ssh_key.rsa"
+        identity = "/etc/sfa/root_ssh_key"
+        scp_options=" -i %(identity)s " % locals()
+        scp_options+="-o StrictHostKeyChecking=no " % locals()
+        scp_key_command="%(scp)s %(scp_options)s %(key_filename)s root@%(host)s:%(key_dest)s" %\
+                         locals()
+        scp_gid_command="%(scp)s %(scp_options)s %(gid_filename)s root@%(host)s:%(gid_dest)s" %\
+                         locals()    
+
+        all_commands = [scp_key_command, scp_gid_command]
+        
+        for command in all_commands:
+            (status, output) = commands.getstatusoutput(command)
+            if status:
+                raise Exception, output
+
+        for filename in [key_filename, gid_filename]:
+            os.unlink(filename)
+
+        return 1 

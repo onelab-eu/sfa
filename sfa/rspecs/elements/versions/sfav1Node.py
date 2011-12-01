@@ -62,9 +62,11 @@ class SFAv1Node:
             #    bw_unallocated = etree.SubElement(node_elem, 'bw_unallocated', units='kbps').text = str(int(node['bw_unallocated'])/1000)
 
             PGv2Services.add_services(node_elem, node.get('services', []))
-            for tag in node.get('tags', []):
-                tag_elem = node_elem.add_element(tag['tagname'])
-                tag_elem.set_text(tag['value'])
+            tags = node.get('tags', [])
+            if tags:
+                for tag in tags:
+                    tag_elem = node_elem.add_element(tag['tagname'])
+                    tag_elem.set_text(tag['value'])
             SFAv1Sliver.add_slivers(node_elem, node.get('slivers', []))
 
     @staticmethod 
@@ -90,7 +92,7 @@ class SFAv1Node:
         for hostname in hostnames:
             nodes = SFAv1Node.get_nodes(xml, {'component_id': '*%s*' % hostname})
             for node in nodes:
-                slivers = SFAv1Slivers.get_slivers(node.element)
+                slivers = SFAv1Sliver.get_slivers(node.element)
                 for sliver in slivers:
                     node.element.remove(sliver.element)
         
@@ -135,9 +137,11 @@ class SFAv1Node:
             # get tags
             node['tags'] =  SFAv1PLTag.get_pl_tags(node_elem, ignore=Node.fields)
 
-            parent = node_elem.getparent()
-            if (parent != None) and (parent.tag=="network") and ("name" in parent.attrib):
-                node['network_name'] = parent.attrib['name']
+            # temporary... play nice with old slice manager rspec
+            if not node['component_name']:
+                hostname_elem = node_elem.find("hostname")
+                if hostname_elem != None:
+                    node['component_name'] = hostname_elem.text
 
             nodes.append(node)
         return nodes            

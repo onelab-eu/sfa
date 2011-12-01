@@ -111,6 +111,7 @@ class XmlrpcApi:
             callablemethod = getattr(module, classname)(self)
             return getattr(module, classname)(self)
         except (ImportError, AttributeError):
+            self.logger.log_exc("Error importing method: %s" % method)
             raise SfaInvalidAPIMethod, method
 
     def call(self, source, method, *args):
