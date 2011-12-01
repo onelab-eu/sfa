@@ -346,17 +346,20 @@ class Slices:
 
         users_dict = {} 
         for user in users:
+            hrn, type = urn_to_hrn(user['urn'])
+            username = get_leaf(hrn)
+            login_base = get_leaf(get_authority(user['urn']))
+            user['username'] = username
+            user['site'] = login_base
+
             if 'append' in user and user['append'] == False:
                 append = False
+                
             if 'email' in user:
                 users_by_email[user['email']] = user
                 users_dict[user['email']] = user
-            elif 'urn' in user:
-                hrn, type = urn_to_hrn(user['urn'])
-                username = get_leaf(hrn) 
-                login_base = get_leaf(get_authority(user['urn']))
-                user['username'] = username 
-                users_by_site[login_base].append(user)
+            else:
+                users_by_site[user['site']].append(user)
 
         existing_user_ids = []
         if users_by_email:
@@ -447,7 +450,7 @@ class Slices:
             self.api.driver.UpdatePerson(person['person_id'], {'enabled': True})
             
             # add person to site
-            self.api.driver.AddPersonToSite(added_user_id, login_base)
+            self.api.driver.AddPersonToSite(added_user_id, added_user['site'])
 
             for key_string in added_user.get('keys', []):
                 key = {'key':key_string, 'key_type':'ssh'}
