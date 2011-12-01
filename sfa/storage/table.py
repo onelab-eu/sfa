@@ -28,14 +28,6 @@ class SfaTable(list):
             for record in records:
                 self.append(record)             
 
-    def exists(self):
-        sql = "SELECT * from pg_tables"
-        tables = self.db.selectall(sql)
-        tables = filter(lambda row: row['tablename'].startswith(self.SFA_TABLE_PREFIX), tables)
-        if tables:
-            return True
-        return False
-
     def db_fields(self, obj=None):
         
         db_fields = self.db.fields(self.SFA_TABLE_PREFIX)
@@ -55,36 +47,14 @@ class SfaTable(list):
         return False
 
 
-    def create(self):
-        pass
-#        querystr = "CREATE TABLE " + self.tablename + " ( \
-#                record_id serial PRIMARY KEY , \
-#                hrn text NOT NULL, \
-#                authority text NOT NULL, \
-#                peer_authority text, \
-#                gid text, \
-#                type text NOT NULL, \
-#                pointer integer, \
-#                date_created timestamp without time zone NOT NULL DEFAULT CURRENT_TIMESTAMP, \
-#                last_updated timestamp without time zone NOT NULL DEFAULT CURRENT_TIMESTAMP);"
-#        template = "CREATE INDEX %s_%s_idx ON %s (%s);"
-#        indexes = [template % ( self.tablename, field, self.tablename, field) \
-#                   for field in ['hrn', 'type', 'authority', 'peer_authority', 'pointer']]
-#        # IF EXISTS doenst exist in postgres < 8.2
-#        try:
-#            self.db.do('DROP TABLE IF EXISTS ' + self.tablename)
-#        except:
-#            try:
-#                self.db.do('DROP TABLE' + self.tablename)
-#            except:
-#                pass
-#         
-#        self.db.do(querystr)
-#        for index in indexes:
-#            self.db.do(index)
-#        
-#        self.db.commit()
-    
+    def clear (self):
+        self.db.do("DELETE from %s"%self.tablename)
+        self.db.commit()
+
+    # what sfa-nuke does
+    def nuke (self):
+        self.clear()
+
     def remove(self, record):
         params = {'record_id': record['record_id']}
         template = "DELETE FROM %s " % self.tablename
@@ -179,16 +149,3 @@ class SfaTable(list):
         return result_rec_list
 
 
-    def drop(self):
-        try:
-            self.db.do('DROP TABLE IF EXISTS ' + self.tablename)
-            self.db.commit()
-        except:
-            try:
-                self.db.do('DROP TABLE ' + self.tablename)
-                self.db.commit()
-            except:
-                pass
-    
-    def sfa_records_purge(self):
-        self.drop()
