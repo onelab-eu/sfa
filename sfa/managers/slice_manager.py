@@ -141,7 +141,7 @@ class SliceManager:
             del(options['geni_compressed'])
     
         # get the rspec's return format from options
-        rspec_version = version_manager.get_version(options.get('rspec_version'))
+        rspec_version = version_manager.get_version(options.get('geni_rspec_version'))
         version_string = "rspec_%s" % (rspec_version)
     
         # look in cache first
@@ -172,7 +172,7 @@ class SliceManager:
     
     
         results = threads.get_results()
-        rspec_version = version_manager.get_version(options.get('rspec_version'))
+        rspec_version = version_manager.get_version(options.get('geni_rspec_version'))
         if xrn:    
             result_version = version_manager._get_version(rspec_version.type, rspec_version.version, 'manifest')
         else: 

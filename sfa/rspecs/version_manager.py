@@ -32,6 +32,8 @@ class VersionManager:
                     if content_type is None or content_type.lower() == version.content_type.lower() \
                       or version.content_type == '*':
                         retval = version
+                        ### sounds like we should be glad with the first match, not the last one
+                        break
         if not retval:
             raise UnvalidRSpecVersion("%s %s is not suported here"% (type, version_num, content_type))
         return retval
@@ -54,7 +56,7 @@ class VersionManager:
         elif isinstance(version, BaseVersion):
             retval = version
         else:
-            raise InvalidRSpecVersion("No such version: %s "% str(version))
+            raise UnsupportedRSpecVersion("No such version: %s "% str(version))
  
         return retval
 
