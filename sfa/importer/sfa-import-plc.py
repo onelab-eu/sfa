@@ -77,8 +77,6 @@ def main():
     
     # initialize registry db table
     table = SfaTable()
-    if not table.exists():
-       table.create()
 
     # create root authority 
     sfaImporter.create_top_level_auth_records(interface_hrn)
