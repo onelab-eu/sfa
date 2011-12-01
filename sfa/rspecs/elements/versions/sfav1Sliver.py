@@ -1,4 +1,5 @@
 from sfa.util.xrn import Xrn
+from sfa.util.plxrn import PlXrn
 from sfa.util.xml import XmlElement
 from sfa.rspecs.elements.element import Element
 from sfa.rspecs.elements.sliver import Sliver
@@ -19,9 +20,7 @@ class SFAv1Sliver:
                 for tag in tags:
                     SFAv1Sliver.add_sliver_attribute(sliver_elem, tag['tagname'], tag['value'])
             if sliver.get('sliver_id'):
-                sliver_id_leaf = Xrn(sliver.get('sliver_id')).get_leaf()
-                sliver_id_parts = sliver_id_leaf.split(':')
-                name = sliver_id_parts[0]
+                name = PlXrn(xrn=sliver.get('sliver_id')).pl_slicename()
                 sliver_elem.set('name', name)
 
     @staticmethod
