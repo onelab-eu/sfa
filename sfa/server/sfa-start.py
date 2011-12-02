@@ -25,10 +25,6 @@
 # TODO: Can all three servers use the same "registry" certificate?
 ##
 
-# TCP ports for the three servers
-#registry_port=12345
-#aggregate_port=12346
-#slicemgr_port=12347
 ### xxx todo not in the config yet
 component_port=12346
 import os, os.path
@@ -46,7 +42,6 @@ from sfa.trust.hierarchy import Hierarchy
 from sfa.trust.gid import GID
 
 from sfa.server.sfaapi import SfaApi
-
 from sfa.server.registry import Registries
 from sfa.server.aggregate import Aggregates
 

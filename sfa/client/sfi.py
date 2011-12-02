@@ -948,7 +948,6 @@ class Sfi:
     # show rspec for named slice
     def resources(self, opts, args):
         user_cred = self.get_user_cred().save_to_string(save_parents=True)
-        server = self.slicemgr
         server = self.server_proxy_from_opts(opts)
    
         options = {'call_id': unique_call_id()}
