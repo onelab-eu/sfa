@@ -6,7 +6,7 @@ from optparse import OptionParser
 
 from sfa.util.faults import ConnectionKeyGIDMismatch
 from sfa.util.config import Config
-import sfa.client.xmlrpcprotocol as xmlrpcprotocol
+import sfa.client.sfaprotocol as sfaprotocol
 from sfa.util.plxrn import hrn_to_pl_slicename, slicename_to_hrn
 
 from sfa.trust.certificate import Keypair, Certificate
@@ -48,7 +48,7 @@ def server_proxy(url=None, port=None, keyfile=None, certfile=None,verbose=False)
     if verbose:
         print "Contacting registry at: %(url)s" % locals()
 
-    server = xmlrpcprotocol.server_proxy(url, keyfile, certfile)
+    server = sfaprotocol.server_proxy(url, keyfile, certfile)
     return server    
     
 

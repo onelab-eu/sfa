@@ -39,7 +39,6 @@ from optparse import OptionParser
 from sfa.util.sfalogging import logger
 from sfa.util.xrn import get_authority, hrn_to_urn
 from sfa.util.config import Config
-import sfa.client.xmlrpcprotocol as xmlrpcprotocol
 from sfa.trust.gid import GID
 from sfa.trust.trustedroots import TrustedRoots
 from sfa.trust.certificate import Keypair, Certificate

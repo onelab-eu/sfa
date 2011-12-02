@@ -33,7 +33,7 @@ from sfa.rspecs.rspec_converter import RSpecConverter
 from sfa.rspecs.version_manager import VersionManager
 from sfa.client.return_value import ReturnValue
 
-import sfa.client.xmlrpcprotocol as xmlrpcprotocol
+import sfa.client.sfaprotocol as sfaprotocol
 from sfa.client.client_helper import pg_users_arg, sfa_users_arg
 
 AGGREGATE_PORT=12346
@@ -400,14 +400,13 @@ class Sfi:
        # Get key and certificate
        key_file = self.get_key_file()
        cert_file = self.get_cert_file(key_file)
-       self.key = Keypair(filename=key_file) 
        self.key_file = key_file
        self.cert_file = cert_file
        self.cert = GID(filename=cert_file)
        self.logger.info("Contacting Registry at: %s"%self.reg_url)
-       self.registry = xmlrpcprotocol.server_proxy(self.reg_url, key_file, cert_file, timeout=self.options.timeout, verbose=self.options.debug)  
+       self.registry = sfaprotocol.server_proxy(self.reg_url, key_file, cert_file, timeout=self.options.timeout, verbose=self.options.debug)  
        self.logger.info("Contacting Slice Manager at: %s"%self.sm_url)
-       self.slicemgr = xmlrpcprotocol.server_proxy(self.sm_url, key_file, cert_file, timeout=self.options.timeout, verbose=self.options.debug)
+       self.slicemgr = sfaprotocol.server_proxy(self.sm_url, key_file, cert_file, timeout=self.options.timeout, verbose=self.options.debug)
        return
 
     def get_cached_server_version(self, server):
@@ -500,7 +499,7 @@ class Sfi:
             self.logger.info("Getting Registry issued cert")
             self.read_config()
             # *hack.  need to set registyr before _get_gid() is called 
-            self.registry = xmlrpcprotocol.server_proxy(self.reg_url, key_file, cert_file, timeout=self.options.timeout, verbose=self.options.debug)
+            self.registry = sfaprotocol.server_proxy(self.reg_url, key_file, cert_file, timeout=self.options.timeout, verbose=self.options.debug)
             gid = self._get_gid(type='user')
             self.registry = None 
             self.logger.info("Writing certificate to %s"%cert_file)
@@ -673,7 +672,7 @@ class Sfi:
         host_parts = host.split('/')
         host_parts[0] = host_parts[0] + ":" + str(port)
         url =  "http://%s" %  "/".join(host_parts)    
-        return xmlrpcprotocol.server_proxy(url, keyfile, certfile, timeout=self.options.timeout, verbose=self.options.debug)
+        return sfaprotocol.server_proxy(url, keyfile, certfile, timeout=self.options.timeout, verbose=self.options.debug)
 
     # xxx opts could be retrieved in self.options
     def server_proxy_from_opts(self, opts):
@@ -853,7 +852,7 @@ class Sfi:
         elif record['type'] in ["slice"]:
             try:
                 cred = self.get_slice_cred(record.get_name()).save_to_string(save_parents=True)
-            except xmlrpcprotocol.ServerException, e:
+            except sfaprotocol.ServerException, e:
                # XXX smbaker -- once we have better error return codes, update this
                # to do something better than a string compare
                if "Permission error" in e.args[0]:
