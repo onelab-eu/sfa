@@ -28,7 +28,10 @@ class ListResources(Method):
        
         # client must specify a version
         if not options.get('geni_rspec_version'):
-            raise SfaInvalidArgument('Must specify an rspec version option. geni_rspec_version cannot be null')
+            if options.get('rspec_version'):
+                options['geni_rspec_version'] = options['rspec_version']
+            else:
+                raise SfaInvalidArgument('Must specify an rspec version option. geni_rspec_version cannot be null')
  
         # get slice's hrn from options    
         xrn = options.get('geni_slice_urn', '')
