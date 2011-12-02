@@ -361,21 +361,29 @@ class Slices:
             else:
                 users_by_site[user['site']].append(user)
 
-        existing_user_ids = []
+	# start building a list of existing users
+	existing_user_ids = []
+        existing_user_ids_filter = []
         if users_by_email:
+            existing_user_ids_filter.extend(users_by_email.keys())
+	if users_by_site:
+	    for login_base in users_by_site:
+		users = users_by_site[login_base]
+		for user in users:	
+		    existing_user_ids_filter.append(user['username']+'@geni.net')		
+	if existing_user_ids_filter:			
             # get existing users by email 
-            existing_users = self.api.driver.GetPersons({'email': users_by_email.keys()}, 
+            existing_users = self.api.driver.GetPersons({'email': existing_user_ids_filter}, 
                                                         ['person_id', 'key_ids', 'email'])
             existing_user_ids.extend([user['email'] for user in existing_users])
-
+	
         if users_by_site:
             # get a list of user sites (based on requeste user urns
             site_list = self.api.driver.GetSites(users_by_site.keys(), \
                 ['site_id', 'login_base', 'person_ids'])
+            # get all existing users at these sites
             sites = {}
             site_user_ids = []
-            
-            # get all existing users at these sites
             for site in site_list:
                 sites[site['site_id']] = site
                 site_user_ids.extend(site['person_ids'])
@@ -393,7 +401,7 @@ class Slices:
                             if site_id in sites:
                                 site = sites[site_id]
                                 if login_base == site['login_base'] and \
-                                   existing_user['email'].startswith(requested_user['username']):
+                                   existing_user['email'].startswith(requested_user['username']+'@'):
                                     existing_user_ids.append(existing_user['email'])
                                     users_dict[existing_user['email']] = requested_user
                                     user_found = True
@@ -405,7 +413,6 @@ class Slices:
                         fake_email = requested_user['username'] + '@geni.net'
                         users_dict[fake_email] = requested_user
                 
-
         # requested slice users        
         requested_user_ids = users_dict.keys()
         # existing slice users
