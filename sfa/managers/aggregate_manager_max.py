@@ -81,6 +81,66 @@ class AggregateManagerMax (AggregateManager):
         if indx1!=-1 and indx2>indx1:
             xml = text[indx1:indx2+len(tag)+2]
         return xml
+
+    # formerly in aggregate_manager.py but got unused in there...    
+    def _get_registry_objects(self, slice_xrn, creds, users):
+        """
+    
+        """
+        hrn, _ = urn_to_hrn(slice_xrn)
+    
+        #hrn_auth = get_authority(hrn)
+    
+        # Build up objects that an SFA registry would return if SFA
+        # could contact the slice's registry directly
+        reg_objects = None
+    
+        if users:
+            # dont allow special characters in the site login base
+            #only_alphanumeric = re.compile('[^a-zA-Z0-9]+')
+            #login_base = only_alphanumeric.sub('', hrn_auth[:20]).lower()
+            slicename = hrn_to_pl_slicename(hrn)
+            login_base = slicename.split('_')[0]
+            reg_objects = {}
+            site = {}
+            site['site_id'] = 0
+            site['name'] = 'geni.%s' % login_base 
+            site['enabled'] = True
+            site['max_slices'] = 100
+    
+            # Note:
+            # Is it okay if this login base is the same as one already at this myplc site?
+            # Do we need uniqueness?  Should use hrn_auth instead of just the leaf perhaps?
+            site['login_base'] = login_base
+            site['abbreviated_name'] = login_base
+            site['max_slivers'] = 1000
+            reg_objects['site'] = site
+    
+            slice = {}
+            
+            # get_expiration always returns a normalized datetime - no need to utcparse
+            extime = Credential(string=creds[0]).get_expiration()
+            # If the expiration time is > 60 days from now, set the expiration time to 60 days from now
+            if extime > datetime.datetime.utcnow() + datetime.timedelta(days=60):
+                extime = datetime.datetime.utcnow() + datetime.timedelta(days=60)
+            slice['expires'] = int(time.mktime(extime.timetuple()))
+            slice['hrn'] = hrn
+            slice['name'] = hrn_to_pl_slicename(hrn)
+            slice['url'] = hrn
+            slice['description'] = hrn
+            slice['pointer'] = 0
+            reg_objects['slice_record'] = slice
+    
+            reg_objects['users'] = {}
+            for user in users:
+                user['key_ids'] = []
+                hrn, _ = urn_to_hrn(user['urn'])
+                user['email'] = hrn_to_pl_slicename(hrn) + "@geni.net"
+                user['first_name'] = hrn
+                user['last_name'] = hrn
+                reg_objects['users'][user['email']] = user
+    
+            return reg_objects
     
     def prepare_slice(self, api, slice_xrn, creds, users):
         reg_objects = self._get_registry_objects(slice_xrn, creds, users)
