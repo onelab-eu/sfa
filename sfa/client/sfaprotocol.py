@@ -3,7 +3,11 @@
 import xmlrpclib
 from httplib import HTTPS, HTTPSConnection
 
-from sfa.util.sfalogging import logger
+try:
+    from sfa.util.sfalogging import logger
+except:
+    import logging
+    logger=logging.getLogger('sfaprotocol')
 
 ##
 # ServerException, ExceptionUnmarshaller
