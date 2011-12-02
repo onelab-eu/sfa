@@ -19,8 +19,8 @@ from sfa.rspecs.rspec import RSpec
 from sfa.server.sfaapi import SfaApi
 
 import sfa.plc.peers as peers
-from sfa.plc.aggregate import Aggregate
-from sfa.plc.slices import Slices
+from sfa.plc.plaggregate import PlAggregate
+from sfa.plc.plslices import PlSlices
 
 class AggregateManager:
 
@@ -168,8 +168,8 @@ class AggregateManager:
         call_id = options.get('call_id')
         if Callids().already_handled(call_id): return ""
     
-        aggregate = Aggregate(self.driver)
-        slices = Slices(api)
+        aggregate = PlAggregate(self.driver)
+        slices = PlSlices(api)
         (hrn, _) = urn_to_hrn(slice_xrn)
         peer = slices.get_peer(hrn)
         sfa_peer = slices.get_sfa_peer(hrn)
@@ -321,7 +321,7 @@ class AggregateManager:
     
         #panos: passing user-defined options
         #print "manager options = ",options
-        aggregate = Aggregate(self.driver)
+        aggregate = PlAggregate(self.driver)
         rspec =  aggregate.get_rspec(slice_xrn=xrn, version=rspec_version, options=options)
     
         # cache the result
@@ -334,7 +334,7 @@ class AggregateManager:
     def GetTicket(self, api, xrn, creds, rspec, users, options={}):
     
         (slice_hrn, _) = urn_to_hrn(xrn)
-        slices = Slices(api)
+        slices = PlSlices(api)
         peer = slices.get_peer(slice_hrn)
         sfa_peer = slices.get_sfa_peer(slice_hrn)
     

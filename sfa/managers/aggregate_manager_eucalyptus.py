@@ -23,8 +23,10 @@ from sfa.util.callids import Callids
 #from sfa.util.sfalogging import logger
 from sfa.util.version import version_core
 from sfa.trust.credential import Credential
-from sfa.plc.aggregate import Aggregate
-from sfa.plc.slices import Slice, Slices
+from sfa.plc.plaggregate import PlAggregate
+# No Slice symbol in there
+#from sfa.plc.plslices import Slice, Slices
+from sfa.plc.plslices import PlSlices
 from sfa.rspecs.version_manager import VersionManager
 from sfa.rspecs.rspec import RSpec
 # not sure what this used to be nor where it is now defined
@@ -549,8 +551,8 @@ class AggregateManagerEucalyptus:
         logger = logging.getLogger('EucaAggregate')
         logger.debug("In CreateSliver")
     
-        aggregate = Aggregate(self.driver)
-        slices = Slices(api)
+        aggregate = PlAggregate(self.driver)
+        slices = PlSlices(api)
         (hrn, type) = urn_to_hrn(slice_xrn)
         peer = slices.get_peer(hrn)
         sfa_peer = slices.get_sfa_peer(hrn)

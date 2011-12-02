@@ -19,7 +19,7 @@ from sfa.plc.vlink import get_tc_rate
 from sfa.plc.topology import Topology
 
 
-class Aggregate:
+class PlAggregate:
 
     api = None
     #panos new user options variable

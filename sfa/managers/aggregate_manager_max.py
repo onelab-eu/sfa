@@ -14,7 +14,7 @@ from sfa.util.xrn import urn_to_hrn, hrn_to_urn, Xrn
 
 from sfa.managers.aggregate_manager import AggregateManager
 
-from sfa.plc.slices import Slices
+from sfa.plc.plslices import PlSlices
 
 class AggregateManagerMax (AggregateManager):
 
@@ -85,7 +85,7 @@ class AggregateManagerMax (AggregateManager):
     def prepare_slice(self, api, slice_xrn, creds, users):
         reg_objects = self._get_registry_objects(slice_xrn, creds, users)
         (hrn, type) = urn_to_hrn(slice_xrn)
-        slices = Slices(api)
+        slices = PlSlices(api)
         peer = slices.get_peer(hrn)
         sfa_peer = slices.get_sfa_peer(hrn)
         slice_record=None
