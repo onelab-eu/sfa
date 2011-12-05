@@ -23,7 +23,7 @@ class ListResources(Method):
         ]
     returns = Parameter(str, "List of resources")
 
-    def call(self, creds, options={}):
+    def call(self, creds, options):
         self.api.logger.info("interface: %s\tmethod-name: %s" % (self.api.interface, self.name))
        
         # client must specify a version
