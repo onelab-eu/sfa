@@ -2,6 +2,8 @@
 
 # sfi -- slice-based facility interface
 
+# xxx NOTE this will soon be reviewed to take advantage of sfaclientlib
+
 import sys
 sys.path.append('.')
 
