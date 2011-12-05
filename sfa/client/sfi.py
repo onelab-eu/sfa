@@ -500,8 +500,9 @@ class Sfi:
         try:
             self.logger.info("Getting Registry issued cert")
             self.read_config()
-            # *hack.  need to set registyr before _get_gid() is called 
-            self.registry = sfaprotocol.server_proxy(self.reg_url, key_file, cert_file, timeout=self.options.timeout, verbose=self.options.debug)
+            # *hack.  need to set registry before _get_gid() is called 
+            self.registry = sfaprotocol.server_proxy(self.reg_url, key_file, cert_file, 
+                                                     timeout=self.options.timeout, verbose=self.options.debug)
             gid = self._get_gid(type='user')
             self.registry = None 
             self.logger.info("Writing certificate to %s"%cert_file)
@@ -674,7 +675,8 @@ class Sfi:
         host_parts = host.split('/')
         host_parts[0] = host_parts[0] + ":" + str(port)
         url =  "http://%s" %  "/".join(host_parts)    
-        return sfaprotocol.server_proxy(url, keyfile, certfile, timeout=self.options.timeout, verbose=self.options.debug)
+        return sfaprotocol.server_proxy(url, keyfile, certfile, timeout=self.options.timeout, 
+                                        verbose=self.options.debug)
 
     # xxx opts could be retrieved in self.options
     def server_proxy_from_opts(self, opts):
@@ -746,7 +748,7 @@ class Sfi:
         records = self.registry.Resolve(hrn, user_cred)
         records = filter_records(opts.type, records)
         if not records:
-            print "No record of type", opts.type
+            self.logger.error("No record of type %s"% opts.type)
         for record in records:
             if record['type'] in ['user']:
                 record = UserRecord(dict=record)
