@@ -152,5 +152,9 @@ fastsync:
 	+$(RSYNC) ./sfa/ $(SSHURL)/usr/lib\*/python2.\*/site-packages/sfa/
 	$(SSHCOMMAND) exec service sfa restart
 
-.PHONY: sync
+clientsync:
+	+$(RSYNC)  $(BINS) $(SSHURL)/usr/bin/
+
+.PHONY: sync fastsync clientsync
+
 ##########
