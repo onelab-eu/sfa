@@ -1000,15 +1000,16 @@ class Sfi:
         slice_urn = hrn_to_urn(slice_hrn, 'slice')
         user_cred = self.get_user_cred()
         slice_cred = self.get_slice_cred(slice_hrn).save_to_string(save_parents=True)
-
-        if hasattr(opts, 'aggregate') and opts.aggregate:
-            delegated_cred = None
-        else:
-            # delegate the cred to the callers root authority
-            delegated_cred = self.delegate_cred(slice_cred, get_authority(self.authority)+'.slicemanager')
-            #delegated_cred = self.delegate_cred(slice_cred, get_authority(slice_hrn))
-            #creds.append(delegated_cred)
-
+        delegated_cred = None
+        if server_version.get('interface') == 'slicemgr':
+            # delegate our cred to the slice manager
+            # do not delegate cred to slicemgr...not working at the moment
+            pass
+            #if server_version.get('hrn'):
+            #    delegated_cred = self.delegate_cred(slice_cred, server_version['hrn'])
+            #elif server_version.get('urn'):
+            #    delegated_cred = self.delegate_cred(slice_cred, urn_to_hrn(server_version['urn']))
+                 
         rspec_file = self.get_rspec_file(args[1])
         rspec = open(rspec_file).read()
 
