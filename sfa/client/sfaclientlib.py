@@ -1,3 +1,4 @@
+# Thierry Parmentelat -- INRIA
 #
 # a minimal library for writing "lightweight" SFA clients
 #
@@ -6,9 +7,12 @@ import os,os.path
 
 import sfa.util.sfalogging
 
-from sfa.trust.gid import GID
+# what we use on GID actually is inherited from Certificate
+#from sfa.trust.gid import GID
 from sfa.trust.certificate import Keypair, Certificate
-from sfa.trust.credential import Credential
+# what we need in the Credential class essentially amounts to saving the incoming result
+# in a file as the output from the registry already is under xml format
+#from sfa.trust.credential import Credential
 
 import sfa.client.sfaprotocol as sfaprotocol
 
@@ -32,7 +36,6 @@ class SfaServerProxy:
         def func(*args, **kwds):
             return getattr(self.serverproxy, name)(*args, **kwds)
         return func
-    
 
 ########## 
 # a helper class to implement the bootstrapping of crypto. material
@@ -70,44 +73,77 @@ class SfaClientBootstrap:
             print 'special case for logger'
             logger = sfa.util.sfalogging.logger
         self.logger=logger
-    
+
+    #################### public interface
+
+    # xxx should that be called in the constructor ?
+    # typically user_private_key is ~/.ssh/id_rsa
+    def init_private_key_if_missing (self, user_private_key):
+        private_key_filename=self.private_key_filename()
+        if not os.path.isfile (private_key_filename):
+            key=self.plain_read(user_private_key)
+            self.plain_write(private_key_filename, key)
+            os.chmod(private_key_filename,os.stat(user_private_key).st_mode)
+            self.logger.debug("SfaClientBootstrap: Copied private key from %s into %s"%\
+                                  (user_private_key,private_key_filename))
+        
+    # make sure we have the GID at hand
+    def bootstrap_gid (self):
+        if self.any_certificate_filename() is None:
+            self.get_self_signed_cert()
+        self.get_credential()
+        self.get_gid()
+
+    def server_proxy (self, url):
+        return SfaServerProxy (url, self.private_key_filename(), self.gid_filename())
+
+    def get_credential_string (self):
+        return self.plain_read (self.get_credential())
+
+    # more to come to get credentials about other objects (authority/slice)
+
+    #################### private details
     # stupid stuff
     def fullpath (self, file): return os.path.join (self.dir,file)
     # %s -> self.hrn
     def fullpath_format(self,format): return self.fullpath (format%self.hrn)
 
-    def private_key_file (self): 
+    def private_key_filename (self): 
         return self.fullpath_format ("%s.pkey")
-
-    def self_signed_cert_file (self): 
+    def self_signed_cert_filename (self): 
         return self.fullpath_format ("%s.sscert")
-    def credential_file (self): 
+    def credential_filename (self): 
         return self.fullpath_format ("%s.user.cred")
-    def gid_file (self): 
+    def gid_filename (self): 
         return self.fullpath_format ("%s.user.gid")
 
+# optimizing dependencies
+# originally we used classes GID or Credential or Certificate 
+# like e.g. 
+#        return Credential(filename=self.get_credential()).save_to_string()
+# but in order to make it simpler to other implementations/languages..
+    def plain_read (self, filename):
+        infile=file(filename,"r")
+        result=infile.read()
+        infile.close()
+        return result
+
+    def plain_write (self, filename, contents):
+        outfile=file(filename,"w")
+        result=outfile.write(contents)
+        outfile.close()
+
+    # the private key
     def check_private_key (self):
-        if not os.path.isfile (self.private_key_file()):
-            raise Exception,"No such file %s"%self.private_key_file()
+        if not os.path.isfile (self.private_key_filename()):
+            raise Exception,"No such file %s"%self.private_key_filename()
         return True
 
-    # typically user_private_key is ~/.ssh/id_rsa
-    def init_private_key_if_missing (self, user_private_key):
-        private_key_file=self.private_key_file()
-        if not os.path.isfile (private_key_file):
-            infile=file(user_private_key)
-            outfile=file(private_key_file,'w')
-            outfile.write(infile.read())
-            outfile.close()
-            infile.close()
-            os.chmod(private_key_file,os.stat(user_private_key).st_mode)
-            self.logger.debug("SfaClientBootstrap: Copied private key from %s into %s"%\
-                                  (user_private_key,private_key_file))
-        
-
-    # get any certificate, gid preferred
-    def preferred_certificate_file (self):
-        attempts=[ self.gid_file(), self.self_signed_cert_file() ]
+    # get any certificate
+    # rationale  for this method, once we have the gid, it's actually safe
+    # to remove the .sscert
+    def any_certificate_filename (self):
+        attempts=[ self.gid_filename(), self.self_signed_cert_filename() ]
         for attempt in attempts:
             if os.path.isfile (attempt): return attempt
         return None
@@ -116,8 +152,8 @@ class SfaClientBootstrap:
     # unconditionnally
     def create_self_signed_certificate (self,output):
         self.check_private_key()
-        private_key_file = self.private_key_file()
-        keypair=Keypair(filename=private_key_file)
+        private_key_filename = self.private_key_filename()
+        keypair=Keypair(filename=private_key_filename)
         self_signed = Certificate (subject = self.hrn)
         self_signed.set_pubkey (keypair)
         self_signed.set_issuer (keypair, self.hrn)
@@ -128,67 +164,51 @@ class SfaClientBootstrap:
         return output
 
     def get_self_signed_cert (self):
-        self_signed_cert_file = self.self_signed_cert_file()
-        if os.path.isfile (self_signed_cert_file):
-            return self_signed_cert_file
-        return self.create_self_signed_certificate(self_signed_cert_file)
+        self_signed_cert_filename = self.self_signed_cert_filename()
+        if os.path.isfile (self_signed_cert_filename):
+            return self_signed_cert_filename
+        return self.create_self_signed_certificate(self_signed_cert_filename)
         
     ### step2 
     # unconditionnally
     def retrieve_credential (self, output):
         self.check_private_key()
-        certificate_file = self.preferred_certificate_file()
-        registry_proxy = SfaServerProxy (self.registry_url, self.private_key_file(),
-                                         certificate_file)
-        certificate = Certificate (filename=certificate_file)
-        certificate_string = certificate.save_to_string(save_parents=True)
+        certificate_filename = self.any_certificate_filename()
+        certificate_string = self.plain_read (certificate_filename)
+        registry_proxy = SfaServerProxy (self.registry_url, self.private_key_filename(),
+                                         certificate_filename)
         credential_string=registry_proxy.GetSelfCredential (certificate_string, self.hrn, "user")
-        credential = Credential (string=credential_string)
-        credential.save_to_file (output, save_parents=True)
+        self.plain_write (output, credential_string)
         self.logger.debug("SfaClientBootstrap: Wrote result of GetSelfCredential in %s"%output)
         return output
 
     def get_credential (self):
-        credential_file = self.credential_file ()
-        if os.path.isfile(credential_file): 
-            return credential_file
-        return self.retrieve_credential (credential_file)
-
-    def get_credential_string (self):
-        return Credential(filename=self.get_credential()).save_to_string()
+        credential_filename = self.credential_filename ()
+        if os.path.isfile(credential_filename): 
+            return credential_filename
+        return self.retrieve_credential (credential_filename)
 
     ### step3
     # unconditionnally
     def retrieve_gid (self, hrn, type, output):
          self.check_private_key()
-         certificate_file = self.preferred_certificate_file()
-         registry_proxy = SfaServerProxy (self.registry_url, self.private_key_file(),
-                                          certificate_file)
-         credential_string=Credential(filename=self.credential_file()).save_to_string()
+         certificate_filename = self.any_certificate_filename()
+         registry_proxy = SfaServerProxy (self.registry_url, self.private_key_filename(),
+                                          certificate_filename)
+         credential_string=self.plain_read (self.get_credential())
          records = registry_proxy.Resolve (hrn, credential_string)
          records=[record for record in records if record['type']==type]
          if not records:
              # RecordNotFound
              raise Exception, "hrn %s (%s) unknown to registry %s"%(hrn,type,self.registry_url)
          record=records[0]
-         gid=GID(string=record['gid'])
-         gid.save_to_file (filename=output)
+         self.plain_write (output, record['gid'])
          self.logger.debug("SfaClientBootstrap: Wrote GID for %s (%s) in %s"% (hrn,type,output))
          return output
 
     def get_gid (self):
-        gid_file=self.gid_file()
-        if os.path.isfile(gid_file): 
-            return gid_file
-        return self.retrieve_gid(self.hrn, "user", gid_file)
-
-    # make sure we have the GID at hand
-    def bootstrap_gid (self):
-        if self.preferred_certificate_file() is None:
-            self.get_self_signed_cert()
-        self.get_credential()
-        self.get_gid()
-
-    def server_proxy (self, url):
-        return SfaServerProxy (url, self.private_key_file(), self.gid_file())
+        gid_filename=self.gid_filename()
+        if os.path.isfile(gid_filename): 
+            return gid_filename
+        return self.retrieve_gid(self.hrn, "user", gid_filename)
 
