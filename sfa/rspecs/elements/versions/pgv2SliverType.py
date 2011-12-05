@@ -36,6 +36,8 @@ class PGv2SliverType:
             sliver = Sliver(sliver_elem.attrib,sliver_elem)
             if 'component_id' in xml.attrib:     
                 sliver['component_id'] = xml.attrib['component_id']
+            if 'name' in sliver_elem.attrib:
+                sliver['type'] = sliver_elem.attrib['name']
             slivers.append(sliver)
         return slivers
 
