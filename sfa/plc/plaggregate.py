@@ -1,5 +1,5 @@
 #!/usr/bin/python
-from sfa.util.xrn import hrn_to_urn, urn_to_hrn, urn_to_sliver_id
+from sfa.util.xrn import Xrn, hrn_to_urn, urn_to_hrn, urn_to_sliver_id
 from sfa.util.sfatime import epochparse
 
 from sfa.rspecs.rspec import RSpec
@@ -184,7 +184,7 @@ class PlAggregate:
             site=sites_dict[site_id]
             rspec_node['component_id'] = hostname_to_urn(self.driver.hrn, site['login_base'], node['hostname'])
             rspec_node['component_name'] = node['hostname']
-            rspec_node['component_manager_id'] = self.driver.hrn
+            rspec_node['component_manager_id'] = Xrn(self.driver.hrn, 'authority+cm').get_urn()
             rspec_node['authority_id'] = hrn_to_urn(PlXrn.site_hrn(self.driver.hrn, site['login_base']), 'authority+sa')
             rspec_node['boot_state'] = node['boot_state']
             rspec_node['exclusive'] = 'False'
