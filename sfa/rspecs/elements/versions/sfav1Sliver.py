@@ -34,7 +34,7 @@ class SFAv1Sliver:
         for elem in xml.iterchildren():
             if elem.tag not in Sliver.fields:
                 xml_element = XmlElement(elem, xml.namespaces)
-                instance = Element(xml_element)
+                instance = Element(fields=xml_element, element=elem)
                 instance['name'] = elem.tag
                 instance['value'] = elem.text
                 attribs.append(instance)
