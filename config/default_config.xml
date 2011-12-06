@@ -33,12 +33,6 @@ Thierry Parmentelat
           <description>The human readable name for this interface.</description>
         </variable>
 
-        <variable id="aggregate_api_version" type="int">
-          <name>Aggregate Manager API Version</name>
-          <value>1</value>
-          <description>The Aggregate API version</description>
-        </variable>
-
         <variable id="credential_schema" type="string">
           <name>Credential Schema</name>
           <value>/etc/sfa/credential.xsd</value>
@@ -169,6 +163,13 @@ Thierry Parmentelat
 	  <value>12346</value>
 	  <description>The port where the aggregate is to be found.</description>
 	</variable>
+
+        <variable id="api_version" type="int">
+          <name>Aggregate Manager API Version</name>
+          <value>1</value>
+          <description>The Aggregate API version</description>
+        </variable>
+
       </variablelist>
 
     </category>
