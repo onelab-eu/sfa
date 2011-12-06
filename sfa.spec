@@ -127,6 +127,8 @@ make VERSIONTAG="%{version}-%{taglevel}" SCMURL="%{SCMURL}" install DESTDIR="$RP
 rm -rf $RPM_BUILD_ROOT/%{python_sitelib}/*egg-info
 # this gets duplicated
 rm -rf $RPM_BUILD_ROOT/%{python_sitelib}/sfa/storage/sfa.sql
+# create symlinks
+(cd $RPM_BUILD_ROOT/%{_bindir}; ln -s sfi.py sfi; ln -s sfascan.py sfascan)
 
 %clean
 rm -rf $RPM_BUILD_ROOT
@@ -163,6 +165,7 @@ rm -rf $RPM_BUILD_ROOT
 %files client
 %config (noreplace) /etc/sfa/sfi_config
 %{_bindir}/sfi*
+%{_bindir}/sfascan*
 %{_bindir}/getNodes.py*
 %{_bindir}/getRecord.py*
 %{_bindir}/setRecord.py*
