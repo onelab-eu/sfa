@@ -219,9 +219,16 @@ class Sfi:
         ("get_trusted_certs", "cred"),
         ]
 
-    def print_command_help (self):
-        print "%18s %-15s %s"%("command","args","description")
-        print 80*'-'
+    def print_command_help (self, options):
+        verbose=getattr(options,'verbose')
+        format3="%18s %-15s %s"
+        line=80*'-'
+        if not verbose:
+            print format3%("command","cmd_args","description")
+            print line
+        else:
+            print line
+            self.create_parser().print_help()
         for command in self.available_names:
             args=self.available_dict[command]
             method=getattr(self,command,None)
@@ -230,7 +237,11 @@ class Sfi:
             if not doc: doc="*** no doc found ***"
             doc=doc.strip(" \t\n")
             doc=doc.replace("\n","\n"+35*' ')
-            print "%18s %-15s %s"%(command,args,doc)
+            if verbose:
+                print line
+            print format3%(command,args,doc)
+            if verbose:
+                self.create_cmd_parser(command).print_help()
 
     def create_cmd_parser(self, command):
         if command not in self.available_dict:
@@ -240,7 +251,7 @@ class Sfi:
             self.logger.critical(msg)
             sys.exit(2)
 
-        parser = OptionParser(usage="sfi [sfi_options] %s [options] %s" \
+        parser = OptionParser(usage="sfi [sfi_options] %s [cmd_options] %s" \
                                      % (command, self.available_dict[command]))
 
         # user specifies remote aggregate/sm/component                          
@@ -321,14 +332,14 @@ class Sfi:
     def create_parser(self):
 
         # Generate command line parser
-        parser = OptionParser(usage="sfi [options] command [command_options] [command_args]",
+        parser = OptionParser(usage="sfi [sfi_options] command [cmd_options] [cmd_args]",
                              description="Commands: %s"%(" ".join(self.available_names)))
         parser.add_option("-r", "--registry", dest="registry",
                          help="root registry", metavar="URL", default=None)
         parser.add_option("-s", "--slicemgr", dest="sm",
                          help="slice manager", metavar="URL", default=None)
         parser.add_option("-d", "--dir", dest="sfi_dir",
-                         help="config & working directory - default is " + Sfi.default_sfi_dir(),
+                         help="config & working directory - default is %default",
                          metavar="PATH", default=Sfi.default_sfi_dir())
         parser.add_option("-u", "--user", dest="user",
                          help="user name", metavar="HRN", default=None)
@@ -368,7 +379,7 @@ class Sfi:
         self.sfi_parser = self.create_parser()
         (options, args) = self.sfi_parser.parse_args()
         if options.command_help: 
-            self.print_command_help()
+            self.print_command_help(options)
             sys.exit(1)
         self.options = options
 
@@ -378,6 +389,7 @@ class Sfi:
  
         if len(args) <= 0:
             self.logger.critical("No command given. Use -h for help.")
+            self.print_command_help(options)
             return -1
     
         command = args[0]
