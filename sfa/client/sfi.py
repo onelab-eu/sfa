@@ -8,7 +8,7 @@ import sys
 sys.path.append('.')
 
 import os, os.path
-import tempfile
+#import tempfile
 import socket
 import datetime
 import codecs
@@ -167,6 +167,13 @@ class Sfi:
     
     required_options=['verbose',  'debug',  'registry',  'sm',  'auth',  'user']
 
+    @staticmethod
+    def default_sfi_dir ():
+        if os.path.isfile("./sfi_config"): 
+            return os.getcwd()
+        else:
+            return os.path.expanduser("~/.sfi/")
+
     # dummy to meet Sfi's expectations for its 'options' field
     # i.e. s/t we can do setattr on
     class DummyOptions:
@@ -176,10 +183,7 @@ class Sfi:
         if options is None: options=Sfi.DummyOptions()
         for opt in Sfi.required_options:
             if not hasattr(options,opt): setattr(options,opt,None)
-        if not hasattr(options,'sfi_dir'): options.sfi_dir=os.path.expanduser("~/.sfi/")
-        # xxx oops, this is dangerous, sounds like ww sometimes have discrepency
-        # would be safer to remove self.sfi_dir altogether
-        self.sfi_dir = options.sfi_dir
+        if not hasattr(options,'sfi_dir'): options.sfi_dir=Sfi.default_sfi_dir()
         self.options = options
         self.slicemgr = None
         self.registry = None
@@ -189,14 +193,12 @@ class Sfi:
         self.logger = sfi_logger
         self.logger.enable_console()
    
-    def create_cmd_parser(self, command, additional_cmdargs=None):
+    def create_cmd_parser(self, command):
         cmdargs = {"list": "authority",
                   "show": "name",
                   "remove": "name",
                   "add": "record",
                   "update": "record",
-                  "aggregates": "[name]",
-                  "registries": "[name]",
                   "create_gid": "[name]",
                   "get_gid": [],  
                   "get_trusted_certs": "cred",
@@ -215,9 +217,6 @@ class Sfi:
                   "shutdown": "name",
                   "version": "",  
                  }
-
-        if additional_cmdargs:
-            cmdargs.update(additional_cmdargs)
 
         if command not in cmdargs:
             msg="Invalid command\n"
@@ -313,10 +312,9 @@ class Sfi:
                          help="root registry", metavar="URL", default=None)
         parser.add_option("-s", "--slicemgr", dest="sm",
                          help="slice manager", metavar="URL", default=None)
-        default_sfi_dir = os.path.expanduser("~/.sfi/")
         parser.add_option("-d", "--dir", dest="sfi_dir",
-                         help="config & working directory - default is " + default_sfi_dir,
-                         metavar="PATH", default=default_sfi_dir)
+                         help="config & working directory - default is " + Sfi.default_sfi_dir(),
+                         metavar="PATH", default=Sfi.default_sfi_dir())
         parser.add_option("-u", "--user", dest="user",
                          help="user name", metavar="HRN", default=None)
         parser.add_option("-a", "--auth", dest="auth",
@@ -639,21 +637,6 @@ class Sfi:
           self.logger.critical("No such registry record file %s"%record)
           sys.exit(1)
     
-    def load_publickey_string(self, fn):
-       f = file(fn, "r")
-       key_string = f.read()
-    
-       # if the filename is a private key file, then extract the public key
-       if "PRIVATE KEY" in key_string:
-           outfn = tempfile.mktemp()
-           cmd = "openssl rsa -in " + fn + " -pubout -outform PEM -out " + outfn
-           os.system(cmd)
-           f = file(outfn, "r")
-           key_string = f.read()
-           os.remove(outfn)
-    
-       return key_string
-
     # xxx opts undefined
     def get_component_proxy_from_hrn(self, hrn):
         # direct connection to the nodes component manager interface
@@ -699,9 +682,6 @@ class Sfi:
     # Registry-related commands
     #==========================================================================
   
-    def dispatch(self, command, cmd_opts, cmd_args):
-        return getattr(self, command)(cmd_opts, cmd_args)
-
     def create_gid(self, opts, args):
         if len(args) < 1:
             self.print_help()
@@ -712,7 +692,7 @@ class Sfi:
         if opts.file:
             filename = opts.file
         else:
-            filename = os.sep.join([self.sfi_dir, '%s.gid' % target_hrn])
+            filename = os.sep.join([self.options.sfi_dir, '%s.gid' % target_hrn])
         self.logger.info("writing %s gid to %s" % (target_hrn, filename))
         GID(string=gid).save_to_file(filename)
          
@@ -884,32 +864,6 @@ class Sfi:
             self.logger.debug('Sfi.get_trusted_certs -> %r'%cert.get_subject())
         return 
 
-    def aggregates(self, opts, args):
-        """
-        return a list of details about known aggregates
-        """
-        user_cred = self.get_user_cred().save_to_string(save_parents=True)
-        hrn = None
-        if args:
-            hrn = args[0]
-
-        result = self.registry.get_aggregates(user_cred, hrn)
-        display_list(result)
-        return 
-
-    def registries(self, opts, args):
-        """
-        return a list of details about known registries
-        """
-        user_cred = self.get_user_cred().save_to_string(save_parents=True)
-        hrn = None
-        if args:
-            hrn = args[0]
-        result = self.registry.get_registries(user_cred, hrn)
-        display_list(result)
-        return
-
- 
     # ==================================================================
     # Slice-related commands
     # ==================================================================
@@ -1212,6 +1166,9 @@ class Sfi:
     #
     # Main: parse arguments and dispatch to command
     #
+    def dispatch(self, command, cmd_opts, cmd_args):
+        return getattr(self, command)(cmd_opts, cmd_args)
+
     def main(self):
         self.sfi_parser = self.create_parser()
         (options, args) = self.sfi_parser.parse_args()
