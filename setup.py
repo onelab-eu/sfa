@@ -19,6 +19,7 @@ bins = [
     'sfa/server/sfa-clean-peer-records.py', 
     'sfa/server/sfa_component_setup.py', 
     'sfa/client/sfi.py', 
+    'sfa/client/sfascan.py', 
     'sfa/client/getNodes.py',
     'sfa/client/getRecord.py',
     'sfa/client/setRecord.py',
