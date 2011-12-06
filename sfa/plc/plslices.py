@@ -230,7 +230,7 @@ class PlSlices:
             slice_tags.append({'name': 'vini_topo', 'value': 'manual', 'node_id': node_id})
             #self.api.driver.AddSliceTag(slice['name'], 'topo_rspec', str([topo_rspec]), node_id) 
 
-        self.verify_slice_attributes(slice, slice_tags, append=True, admin=True)
+        self.verify_slice_attributes(slice, slice_tags, {'append': True}, admin=True)
                         
         
 
@@ -270,7 +270,7 @@ class PlSlices:
 
         return slice
 
-    def verify_site(self, slice_xrn, slice_record={}, peer=None, sfa_peer=None):
+    def verify_site(self, slice_xrn, slice_record={}, peer=None, sfa_peer=None, options={}):
         (slice_hrn, type) = urn_to_hrn(slice_xrn)
         site_hrn = get_authority(slice_hrn)
         # login base can't be longer than 20 characters
@@ -307,7 +307,7 @@ class PlSlices:
         
         return site        
 
-    def verify_slice(self, slice_hrn, slice_record, peer, sfa_peer):
+    def verify_slice(self, slice_hrn, slice_record, peer, sfa_peer, options={}):
         slicename = hrn_to_pl_slicename(slice_hrn)
         parts = slicename.split("_")
         login_base = parts[0]
@@ -340,10 +340,9 @@ class PlSlices:
         return slice
 
     #def get_existing_persons(self, users):
-    def verify_persons(self, slice_hrn, slice_record, users, peer, sfa_peer, append=True):
+    def verify_persons(self, slice_hrn, slice_record, users, peer, sfa_peer, options={}):
         users_by_email = {}
         users_by_site = defaultdict(list)
-
         users_dict = {} 
         for user in users:
             hrn, type = urn_to_hrn(user['urn'])
@@ -352,26 +351,23 @@ class PlSlices:
             user['username'] = username
             user['site'] = login_base
 
-            if 'append' in user and user['append'] == False:
-                append = False
-                
             if 'email' in user:
                 users_by_email[user['email']] = user
                 users_dict[user['email']] = user
             else:
                 users_by_site[user['site']].append(user)
 
-	# start building a list of existing users
-	existing_user_ids = []
+        # start building a list of existing users
+        existing_user_ids = []
         existing_user_ids_filter = []
         if users_by_email:
             existing_user_ids_filter.extend(users_by_email.keys())
-	if users_by_site:
-	    for login_base in users_by_site:
-		users = users_by_site[login_base]
-		for user in users:	
-		    existing_user_ids_filter.append(user['username']+'@geni.net')		
-	if existing_user_ids_filter:			
+        if users_by_site:
+            for login_base in users_by_site:
+                users = users_by_site[login_base]
+                for user in users:	
+                    existing_user_ids_filter.append(user['username']+'@geni.net')		
+        if existing_user_ids_filter:			
             # get existing users by email 
             existing_users = self.api.driver.GetPersons({'email': existing_user_ids_filter}, 
                                                         ['person_id', 'key_ids', 'email'])
@@ -428,13 +424,15 @@ class PlSlices:
         updated_user_ids = set(existing_slice_user_ids).intersection(requested_user_ids)
 
         # Remove stale users (only if we are not appending).
+        # Append by default.
+        append = options.get('append', True)
         if append == False:
             for removed_user_id in removed_user_ids:
                 self.api.driver.DeletePersonFromSlice(removed_user_id, slice_record['name'])
         # update_existing users
         updated_users_list = [user for user in existing_slice_users if user['email'] in \
           updated_user_ids]
-        self.verify_keys(existing_slice_users, updated_users_list, peer, append)
+        self.verify_keys(existing_slice_users, updated_users_list, peer, options)
 
         added_persons = []
         # add new users
@@ -480,7 +478,7 @@ class PlSlices:
         return added_persons
             
 
-    def verify_keys(self, persons, users, peer, append=True):
+    def verify_keys(self, persons, users, peer, options={}):
         # existing keys 
         key_ids = []
         for person in persons:
@@ -519,6 +517,7 @@ class PlSlices:
                             self.api.driver.BindObjectToPeer('person', person['person_id'], peer['shortname'], user['person_id'])
         
         # remove old keys (only if we are not appending)
+        append = options.get('append', True)
         if append == False: 
             removed_keys = set(existing_keys).difference(requested_keys)
             for existing_key_id in keydict:
@@ -530,7 +529,8 @@ class PlSlices:
                     except:
                         pass   
 
-    def verify_slice_attributes(self, slice, requested_slice_attributes, append=False, admin=False):
+    def verify_slice_attributes(self, slice, requested_slice_attributes, options={}, admin=False):
+        append = options.get('append', True)
         # get list of attributes users ar able to manage
         filter = {'category': '*slice*'}
         if not admin:
@@ -543,7 +543,7 @@ class PlSlices:
         removed_slice_attributes = []
         ignored_slice_attribute_names = []
         existing_slice_attributes = self.api.driver.GetSliceTags({'slice_id': slice['slice_id']})
-
+        
         # get attributes that should be removed
         for slice_tag in existing_slice_attributes:
             if slice_tag['tagname'] in ignored_slice_attribute_names:

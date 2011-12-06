@@ -1027,10 +1027,12 @@ or currently provisioned resources  (ListResources)
                 creds = [slice_cred]
                 if delegated_cred:
                     creds.append(delegated_cred)
-        call_args = [slice_urn, creds, rspec, users]
+        # do not append users, keys, or slice tags. Anything 
+        # not contained in this request will be removed from the slice 
+        options = {'append': False}
         if self.server_supports_options_arg(server):
-            options = {'call_id': unique_call_id()}
-            call_args.append(options)
+            options['call_id'] = unique_call_id()
+        call_args = [slice_urn, creds, rspec, users, options]
         result = server.CreateSliver(*call_args)
         value = ReturnValue.get_value(result)
         if opts.file is None:

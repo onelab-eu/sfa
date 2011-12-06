@@ -123,13 +123,13 @@ class AggregateManager:
         requested_attributes = rspec.version.get_slice_attributes()
         
         # ensure site record exists
-        site = slices.verify_site(hrn, slice_record, peer, sfa_peer)
+        site = slices.verify_site(hrn, slice_record, peer, sfa_peer, options=options)
         # ensure slice record exists
-        slice = slices.verify_slice(hrn, slice_record, peer, sfa_peer)
+        slice = slices.verify_slice(hrn, slice_record, peer, sfa_peer, options=options)
         # ensure person records exists
-        persons = slices.verify_persons(hrn, slice, users, peer, sfa_peer)
+        persons = slices.verify_persons(hrn, slice, users, peer, sfa_peer, options=options)
         # ensure slice attributes exists
-        slices.verify_slice_attributes(slice, requested_attributes)
+        slices.verify_slice_attributes(slice, requested_attributes, options=options)
         
         # add/remove slice from nodes
         requested_slivers = [node.get('component_name') for node in rspec.version.get_nodes_with_slivers()]
