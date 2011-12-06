@@ -7,7 +7,10 @@ import socket
 import traceback
 from urlparse import urlparse
 
-import pygraphviz
+try:
+    import pygraphviz
+except:
+    print 'Warning, could not import pygraphviz, test mode only'
 
 from optparse import OptionParser
 
@@ -148,6 +151,7 @@ class Interface:
             client.read_config()
             key_file = client.get_key_file()
             cert_file = client.get_cert_file(key_file)
+            logger.debug("using key %s & cert %s"%(key_file,cert_file))
             url=self.url()
             logger.info('issuing GetVersion at %s'%url)
             # setting timeout here seems to get the call to fail - even though the response time is fast
@@ -291,6 +295,9 @@ default_outfiles=['sfa.png','sfa.svg','sfa.dot']
 def main():
     usage="%prog [options] url-entry-point(s)"
     parser=OptionParser(usage=usage)
+    parser.add_option("-d", "--dir", dest="sfi_dir",
+                      help="config & working directory - default is " + Sfi.default_sfi_dir(),
+                      metavar="PATH", default=Sfi.default_sfi_dir())
     parser.add_option("-o","--output",action='append',dest='outfiles',default=[],
                       help="output filenames (cumulative) - defaults are %r"%default_outfiles)
     parser.add_option("-l","--left-to-right",action="store_true",dest="left_to_right",default=False,
@@ -325,13 +332,18 @@ def main():
         options.outfiles=default_outfiles
     scanner=SfaScan(left_to_right=options.left_to_right, verbose=bool_verbose)
     entries = [ Interface(entry) for entry in args ]
-    g=scanner.graph(entries)
-    logger.info("creating layout")
-    g.layout(prog='dot')
-    for outfile in options.outfiles:
-        logger.info("drawing in %s"%outfile)
-        g.draw(outfile)
-    logger.info("done")
+    try:
+        g=scanner.graph(entries)
+        logger.info("creating layout")
+        g.layout(prog='dot')
+        for outfile in options.outfiles:
+            logger.info("drawing in %s"%outfile)
+            g.draw(outfile)
+        logger.info("done")
+    # test mode when pygraphviz is not available
+    except:
+        entry=entries[0]
+        print "GetVersion at %s returned %s"%(entry.url(),entry.get_version())
 
 if __name__ == '__main__':
     main()
