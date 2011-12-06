@@ -1,6 +1,6 @@
 %define name sfa
 %define version 2.0
-%define taglevel 1
+%define taglevel 2
 
 %define release %{taglevel}%{?pldistro:.%{pldistro}}%{?date:.%{date}}
 %global python_sitearch	%( python -c "from distutils.sysconfig import get_python_lib; print get_python_lib(1)" )
@@ -215,6 +215,15 @@ fi
 [ "$1" -ge "1" ] && service sfa-cm restart || :
 
 %changelog
+* Tue Dec 06 2011 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-2.0-2
+- various fixes in rspecs for sfav1&slice tags
+- uses 'geni_rspec_version' and not just 'rspec_version'
+- example flavour for the max testbed
+- embryo for an sfa client library
+- topology.py moved into plc
+- sql: table is named records; record_types are enforced
+- sql: table creation cleaned up
+
 * Wed Nov 30 2011 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-2.0-1
 - cleaned up all references to SFA_*_TYPE in config
 - enable cache at the aggregate by default
