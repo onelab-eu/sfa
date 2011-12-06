@@ -8,7 +8,6 @@ import sys
 sys.path.append('.')
 
 import os, os.path
-#import tempfile
 import socket
 import datetime
 import codecs
@@ -192,41 +191,57 @@ class Sfi:
         self.hashrequest = False
         self.logger = sfi_logger
         self.logger.enable_console()
+        self.available_names = [ tuple[0] for tuple in Sfi.available ]
+        self.available_dict = dict (Sfi.available)
    
-    def create_cmd_parser(self, command):
-        cmdargs = {"list": "authority",
-                  "show": "name",
-                  "remove": "name",
-                  "add": "record",
-                  "update": "record",
-                  "create_gid": "[name]",
-                  "get_gid": [],  
-                  "get_trusted_certs": "cred",
-                  "slices": "",
-                  "resources": "[name]",
-                  "create": "name rspec",
-                  "get_ticket": "name rspec",
-                  "redeem_ticket": "ticket",
-                  "delete": "name",
-                  "reset": "name",
-                  "start": "name",
-                  "stop": "name",
-                  "delegate": "name",
-                  "status": "name",
-                  "renew": "name",
-                  "shutdown": "name",
-                  "version": "",  
-                 }
+    # tuples command-name expected-args in the order in which they should appear in the help
+    available = [ 
+        ("version", ""),  
+        ("list", "authority"),
+        ("show", "name"),
+        ("add", "record"),
+        ("update", "record"),
+        ("remove", "name"),
+        ("slices", ""),
+        ("resources", "[slice_hrn]"),
+        ("create", "slice_hrn rspec"),
+        ("delete", "slice_hrn"),
+        ("status", "slice_hrn"),
+        ("start", "slice_hrn"),
+        ("stop", "slice_hrn"),
+        ("reset", "slice_hrn"),
+        ("renew", "slice_hrn time"),
+        ("shutdown", "slice_hrn"),
+        ("get_ticket", "slice_hrn rspec"),
+        ("redeem_ticket", "ticket"),
+        ("delegate", "name"),
+        ("create_gid", "[name]"),
+        ("get_trusted_certs", "cred"),
+        ]
 
-        if command not in cmdargs:
+    def print_command_help (self):
+        print "%18s %-15s %s"%("command","args","description")
+        print 80*'-'
+        for command in self.available_names:
+            args=self.available_dict[command]
+            method=getattr(self,command,None)
+            doc=""
+            if method: doc=getattr(method,'__doc__',"")
+            if not doc: doc="*** no doc found ***"
+            doc=doc.strip(" \t\n")
+            doc=doc.replace("\n","\n"+35*' ')
+            print "%18s %-15s %s"%(command,args,doc)
+
+    def create_cmd_parser(self, command):
+        if command not in self.available_dict:
             msg="Invalid command\n"
             msg+="Commands: "
-            msg += ','.join(cmdargs.keys())            
+            msg += ','.join(self.available_names)            
             self.logger.critical(msg)
             sys.exit(2)
 
         parser = OptionParser(usage="sfi [sfi_options] %s [options] %s" \
-                                     % (command, cmdargs[command]))
+                                     % (command, self.available_dict[command]))
 
         # user specifies remote aggregate/sm/component                          
         if command in ("resources", "slices", "create", "delete", "start", "stop", 
@@ -307,7 +322,7 @@ class Sfi:
 
         # Generate command line parser
         parser = OptionParser(usage="sfi [options] command [command_options] [command_args]",
-                             description="Commands: gid,list,show,remove,add,update,nodes,slices,resources,create,delete,start,stop,reset")
+                             description="Commands: %s"%(" ".join(self.available_names)))
         parser.add_option("-r", "--registry", dest="registry",
                          help="root registry", metavar="URL", default=None)
         parser.add_option("-s", "--slicemgr", dest="sm",
@@ -330,12 +345,63 @@ class Sfi:
                          action="store_true", dest="hashrequest", default=False,
                          help="Create a hash of the request that will be authenticated on the server")
         parser.add_option("-t", "--timeout", dest="timeout", default=None,
-                         help="Amout of time tom wait before timing out the request")
+                         help="Amout of time to wait before timing out the request")
+        parser.add_option("-?", "--commands", 
+                         action="store_true", dest="command_help", default=False,
+                         help="one page summary on commands & exit")
         parser.disable_interspersed_args()
 
         return parser
         
 
+    def print_help (self):
+        self.sfi_parser.print_help()
+        self.cmd_parser.print_help()
+
+    #
+    # Main: parse arguments and dispatch to command
+    #
+    def dispatch(self, command, cmd_opts, cmd_args):
+        return getattr(self, command)(cmd_opts, cmd_args)
+
+    def main(self):
+        self.sfi_parser = self.create_parser()
+        (options, args) = self.sfi_parser.parse_args()
+        if options.command_help: 
+            self.print_command_help()
+            sys.exit(1)
+        self.options = options
+
+        self.logger.setLevelFromOptVerbose(self.options.verbose)
+        if options.hashrequest:
+            self.hashrequest = True
+ 
+        if len(args) <= 0:
+            self.logger.critical("No command given. Use -h for help.")
+            return -1
+    
+        command = args[0]
+        self.cmd_parser = self.create_cmd_parser(command)
+        (cmd_opts, cmd_args) = self.cmd_parser.parse_args(args[1:])
+
+        self.set_servers()
+        self.logger.info("Command=%s" % command)
+        if command in ("resources"):
+            self.logger.debug("resources cmd_opts %s" % cmd_opts.format)
+        elif command in ("list", "show", "remove"):
+            self.logger.debug("cmd_opts.type %s" % cmd_opts.type)
+        self.logger.debug('cmd_args %s' % cmd_args)
+
+        try:
+            self.dispatch(command, cmd_opts, cmd_args)
+        except KeyError:
+            self.logger.critical ("Unknown command %s"%command)
+            raise
+            sys.exit(1)
+    
+        return
+    
+    ####################
     def read_config(self):
        config_file = os.path.join(self.options.sfi_dir,"sfi_config")
        try:
@@ -519,17 +585,16 @@ class Sfi:
             gid = GID(filename=file)
         return gid
 
-    # xxx opts unused
-    def get_gid(self, opts, args):
-        """
-        Get the specify gid and save it to file
-        """
-        hrn = None
-        if args:
-            hrn = args[0]
-        gid = self._get_gid(hrn)
-        self.logger.debug("Sfi.get_gid-> %s" % gid.save_to_string(save_parents=True))
-        return gid
+# seems useless
+#    # xxx opts unused
+#    def get_gid(self, opts, args):
+#        """ Get the specify gid and save it to file """
+#        hrn = None
+#        if args:
+#            hrn = args[0]
+#        gid = self._get_gid(hrn)
+#        self.logger.debug("Sfi.get_gid-> %s" % gid.save_to_string(save_parents=True))
+#        return gid
 
     def _get_gid(self, hrn=None, type=None):
         """
@@ -615,6 +680,30 @@ class Sfi:
         return cred
  
     
+    def delegate_cred(self, object_cred, hrn):
+        # the gid and hrn of the object we are delegating
+        if isinstance(object_cred, str):
+            object_cred = Credential(string=object_cred) 
+        object_gid = object_cred.get_gid_object()
+        object_hrn = object_gid.get_hrn()
+    
+        if not object_cred.get_privileges().get_all_delegate():
+            self.logger.error("Object credential %s does not have delegate bit set"%object_hrn)
+            return
+
+        # the delegating user's gid
+        caller_gid = self._get_gid(self.user)
+        caller_gidfile = os.path.join(self.options.sfi_dir, self.user + ".gid")
+  
+        # the gid of the user who will be delegated to
+        delegee_gid = self._get_gid(hrn)
+        delegee_hrn = delegee_gid.get_hrn()
+        delegee_gidfile = os.path.join(self.options.sfi_dir, delegee_hrn + ".gid")
+        delegee_gid.save_to_file(filename=delegee_gidfile)
+        dcred = object_cred.delegate(delegee_gidfile, self.get_key_file(), caller_gidfile)
+        return dcred.save_to_string(save_parents=True)
+     
+    ######################################## miscell utilities
     def get_rspec_file(self, rspec):
        if (os.path.isabs(rspec)):
           file = rspec
@@ -682,23 +771,29 @@ class Sfi:
     # Registry-related commands
     #==========================================================================
   
-    def create_gid(self, opts, args):
-        if len(args) < 1:
-            self.print_help()
-            sys.exit(1)
-        target_hrn = args[0]
-        user_cred = self.get_user_cred().save_to_string(save_parents=True)
-        gid = self.registry.CreateGid(user_cred, target_hrn, self.cert.save_to_string())
-        if opts.file:
-            filename = opts.file
+    def version(self, opts, args):
+        """
+        display an SFA server version (GetVersion) 
+or version information about sfi itself
+        """
+        if opts.version_local:
+            version=version_core()
         else:
-            filename = os.sep.join([self.options.sfi_dir, '%s.gid' % target_hrn])
-        self.logger.info("writing %s gid to %s" % (target_hrn, filename))
-        GID(string=gid).save_to_file(filename)
-         
-     
-    # list entires in named authority registry
+            if opts.version_registry:
+                server=self.registry
+            else:
+                server = self.server_proxy_from_opts(opts)
+            result = server.GetVersion()
+            version = ReturnValue.get_value(result)
+        for (k,v) in version.iteritems():
+            print "%-20s: %s"%(k,v)
+        if opts.file:
+            save_variable_to_file(version, opts.file, opts.fileformat)
+
     def list(self, opts, args):
+        """
+        list entries in named authority registry (List)
+        """
         if len(args)!= 1:
             self.print_help()
             sys.exit(1)
@@ -718,8 +813,10 @@ class Sfi:
             save_records_to_file(opts.file, list, opts.fileformat)
         return
     
-    # show named registry record
     def show(self, opts, args):
+        """
+        show details about named registry record (Resolve)
+        """
         if len(args)!= 1:
             self.print_help()
             sys.exit(1)
@@ -748,69 +845,8 @@ class Sfi:
             save_records_to_file(opts.file, records, opts.fileformat)
         return
     
-    def delegate(self, opts, args):
-
-        delegee_hrn = args[0]
-        if opts.delegate_user:
-            user_cred = self.get_user_cred()
-            cred = self.delegate_cred(user_cred, delegee_hrn)
-        elif opts.delegate_slice:
-            slice_cred = self.get_slice_cred(opts.delegate_slice)
-            cred = self.delegate_cred(slice_cred, delegee_hrn)
-        else:
-            self.logger.warning("Must specify either --user or --slice <hrn>")
-            return
-        delegated_cred = Credential(string=cred)
-        object_hrn = delegated_cred.get_gid_object().get_hrn()
-        if opts.delegate_user:
-            dest_fn = os.path.join(self.options.sfi_dir, get_leaf(delegee_hrn) + "_"
-                                  + get_leaf(object_hrn) + ".cred")
-        elif opts.delegate_slice:
-            dest_fn = os.path.join(self.options.sfi_dir, get_leaf(delegee_hrn) + "_slice_"
-                                  + get_leaf(object_hrn) + ".cred")
-
-        delegated_cred.save_to_file(dest_fn, save_parents=True)
-
-        self.logger.info("delegated credential for %s to %s and wrote to %s"%(object_hrn, delegee_hrn,dest_fn))
-    
-    def delegate_cred(self, object_cred, hrn):
-        # the gid and hrn of the object we are delegating
-        if isinstance(object_cred, str):
-            object_cred = Credential(string=object_cred) 
-        object_gid = object_cred.get_gid_object()
-        object_hrn = object_gid.get_hrn()
-    
-        if not object_cred.get_privileges().get_all_delegate():
-            self.logger.error("Object credential %s does not have delegate bit set"%object_hrn)
-            return
-
-        # the delegating user's gid
-        caller_gid = self._get_gid(self.user)
-        caller_gidfile = os.path.join(self.options.sfi_dir, self.user + ".gid")
-  
-        # the gid of the user who will be delegated to
-        delegee_gid = self._get_gid(hrn)
-        delegee_hrn = delegee_gid.get_hrn()
-        delegee_gidfile = os.path.join(self.options.sfi_dir, delegee_hrn + ".gid")
-        delegee_gid.save_to_file(filename=delegee_gidfile)
-        dcred = object_cred.delegate(delegee_gidfile, self.get_key_file(), caller_gidfile)
-        return dcred.save_to_string(save_parents=True)
-     
-    # removed named registry record
-    #   - have to first retrieve the record to be removed
-    def remove(self, opts, args):
-        auth_cred = self.get_auth_cred().save_to_string(save_parents=True)
-        if len(args)!=1:
-            self.print_help()
-            sys.exit(1)
-        hrn = args[0]
-        type = opts.type 
-        if type in ['all']:
-            type = '*'
-        return self.registry.Remove(hrn, auth_cred, type)
-    
-    # add named registry record
     def add(self, opts, args):
+        "add record into registry from xml file (Register)"
         auth_cred = self.get_auth_cred().save_to_string(save_parents=True)
         if len(args)!=1:
             self.print_help()
@@ -820,8 +856,8 @@ class Sfi:
         record = load_record_from_file(rec_file).as_dict()
         return self.registry.Register(record, auth_cred)
     
-    # update named registry entry
     def update(self, opts, args):
+        "update record into registry from xml file (Update)"
         user_cred = self.get_user_cred()
         if len(args)!=1:
             self.print_help()
@@ -852,42 +888,24 @@ class Sfi:
         record = record.as_dict()
         return self.registry.Update(record, cred)
   
-    def get_trusted_certs(self, opts, args):
-        """
-        return uhe trusted certs at this interface 
-        """ 
-        trusted_certs = self.registry.get_trusted_certs()
-        for trusted_cert in trusted_certs:
-            gid = GID(string=trusted_cert)
-            gid.dump()
-            cert = Certificate(string=trusted_cert)
-            self.logger.debug('Sfi.get_trusted_certs -> %r'%cert.get_subject())
-        return 
-
+    def remove(self, opts, args):
+        "remove registry record by name (Remove)"
+        auth_cred = self.get_auth_cred().save_to_string(save_parents=True)
+        if len(args)!=1:
+            self.print_help()
+            sys.exit(1)
+        hrn = args[0]
+        type = opts.type 
+        if type in ['all']:
+            type = '*'
+        return self.registry.Remove(hrn, auth_cred, type)
+    
     # ==================================================================
     # Slice-related commands
     # ==================================================================
 
-    def version(self, opts, args):
-        if opts.version_local:
-            version=version_core()
-        else:
-            if opts.version_registry:
-                server=self.registry
-            else:
-                server = self.server_proxy_from_opts(opts)
-            result = server.GetVersion()
-            version = ReturnValue.get_value(result)
-        for (k,v) in version.iteritems():
-            print "%-20s: %s"%(k,v)
-        if opts.file:
-            save_variable_to_file(version, opts.file, opts.fileformat)
-
-    # list instantiated slices
     def slices(self, opts, args):
-        """
-        list instantiated slices
-        """
+        "list instantiated slices (ListSlices) - returns urn's"
         user_cred = self.get_user_cred().save_to_string(save_parents=True)
         creds = [user_cred]
         if opts.delegate:
@@ -905,6 +923,10 @@ class Sfi:
     
     # show rspec for named slice
     def resources(self, opts, args):
+        """
+        with no arg, discover available resources,
+or currently provisioned resources  (ListResources)
+        """
         user_cred = self.get_user_cred().save_to_string(save_parents=True)
         server = self.server_proxy_from_opts(opts)
    
@@ -946,8 +968,10 @@ class Sfi:
             save_rspec_to_file(value, opts.file)
         return
 
-    # created named slice with given rspec
     def create(self, opts, args):
+        """
+        create or update named slice with given rspec
+        """
         server = self.server_proxy_from_opts(opts)
         server_version = self.get_cached_server_version(server)
         slice_hrn = args[0]
@@ -1003,8 +1027,131 @@ class Sfi:
             save_rspec_to_file (value, opts.file)
         return value
 
-    # get a ticket for the specified slice
+    def delete(self, opts, args):
+        """
+        delete named slice (DeleteSliver)
+        """
+        slice_hrn = args[0]
+        slice_urn = hrn_to_urn(slice_hrn, 'slice') 
+        slice_cred = self.get_slice_cred(slice_hrn).save_to_string(save_parents=True)
+        creds = [slice_cred]
+        if opts.delegate:
+            delegated_cred = self.delegate_cred(slice_cred, get_authority(self.authority))
+            creds.append(delegated_cred)
+        server = self.server_proxy_from_opts(opts)
+        call_args = [slice_urn, creds]
+        if self.server_supports_options_arg(server):
+            options = {'call_id': unique_call_id()}
+            call_args.append(options)
+        return server.DeleteSliver(*call_args) 
+  
+    def status(self, opts, args):
+        """
+        retrieve slice status (SliverStatus)
+        """
+        slice_hrn = args[0]
+        slice_urn = hrn_to_urn(slice_hrn, 'slice') 
+        slice_cred = self.get_slice_cred(slice_hrn).save_to_string(save_parents=True)
+        creds = [slice_cred]
+        if opts.delegate:
+            delegated_cred = self.delegate_cred(slice_cred, get_authority(self.authority))
+            creds.append(delegated_cred)
+        server = self.server_proxy_from_opts(opts)
+        call_args = [slice_urn, creds]
+        if self.server_supports_options_arg(server):
+            options = {'call_id': unique_call_id()}
+            call_args.append(options)
+        result = server.SliverStatus(*call_args)
+        value = ReturnValue.get_value(result)
+        print value
+        if opts.file:
+            save_variable_to_file(value, opts.file, opts.fileformat)
+
+    def start(self, opts, args):
+        """
+        start named slice (Start)
+        """
+        slice_hrn = args[0]
+        slice_urn = hrn_to_urn(slice_hrn, 'slice') 
+        slice_cred = self.get_slice_cred(args[0]).save_to_string(save_parents=True)
+        creds = [slice_cred]
+        if opts.delegate:
+            delegated_cred = self.delegate_cred(slice_cred, get_authority(self.authority))
+            creds.append(delegated_cred)
+        server = self.server_proxy_from_opts(opts)
+        return server.Start(slice_urn, creds)
+    
+    def stop(self, opts, args):
+        """
+        stop named slice (Stop)
+        """
+        slice_hrn = args[0]
+        slice_urn = hrn_to_urn(slice_hrn, 'slice') 
+        slice_cred = self.get_slice_cred(args[0]).save_to_string(save_parents=True)
+        creds = [slice_cred]
+        if opts.delegate:
+            delegated_cred = self.delegate_cred(slice_cred, get_authority(self.authority))
+            creds.append(delegated_cred)
+        server = self.server_proxy_from_opts(opts)
+        return server.Stop(slice_urn, creds)
+    
+    # reset named slice
+    def reset(self, opts, args):
+        """
+        reset named slice (reset_slice)
+        """
+        slice_hrn = args[0]
+        slice_urn = hrn_to_urn(slice_hrn, 'slice') 
+        server = self.server_proxy_from_opts(opts)
+        slice_cred = self.get_slice_cred(args[0]).save_to_string(save_parents=True)
+        creds = [slice_cred]
+        if opts.delegate:
+            delegated_cred = self.delegate_cred(slice_cred, get_authority(self.authority))
+            creds.append(delegated_cred)
+        return server.reset_slice(creds, slice_urn)
+
+    def renew(self, opts, args):
+        """
+        renew slice (RenewSliver)
+        """
+        slice_hrn = args[0]
+        slice_urn = hrn_to_urn(slice_hrn, 'slice') 
+        server = self.server_proxy_from_opts(opts)
+        slice_cred = self.get_slice_cred(args[0]).save_to_string(save_parents=True)
+        creds = [slice_cred]
+        if opts.delegate:
+            delegated_cred = self.delegate_cred(slice_cred, get_authority(self.authority))
+            creds.append(delegated_cred)
+        time = args[1]
+        
+        call_args = [slice_urn, creds, time]
+        if self.server_supports_options_arg(server):
+            options = {'call_id': unique_call_id()}
+            call_args.append(options)
+        result =  server.RenewSliver(*call_args)
+        value = ReturnValue.get_value(result)
+        return value
+
+
+    def shutdown(self, opts, args):
+        """
+        shutdown named slice (Shutdown)
+        """
+        slice_hrn = args[0]
+        slice_urn = hrn_to_urn(slice_hrn, 'slice') 
+        slice_cred = self.get_slice_cred(slice_hrn).save_to_string(save_parents=True)
+        creds = [slice_cred]
+        if opts.delegate:
+            delegated_cred = self.delegate_cred(slice_cred, get_authority(self.authority))
+            creds.append(delegated_cred)
+        server = self.server_proxy_from_opts(opts)
+        return server.Shutdown(slice_urn, creds)         
+    
+
     def get_ticket(self, opts, args):
+        """
+        get a ticket for the specified slice
+        """
         slice_hrn, rspec_path = args[0], args[1]
         slice_urn = hrn_to_urn(slice_hrn, 'slice')
         user_cred = self.get_user_cred()
@@ -1023,6 +1170,10 @@ class Sfi:
         ticket.save_to_file(filename=file, save_parents=True)
 
     def redeem_ticket(self, opts, args):
+        """
+        Connects to nodes in a slice and redeems a ticket
+(slice hrn is retrieved from the ticket)
+        """
         ticket_file = args[0]
         
         # get slice hrn from the ticket
@@ -1047,7 +1198,7 @@ class Sfi:
             try:
                 self.logger.info("Calling redeem_ticket at %(hostname)s " % locals())
                 server = self.server_proxy(hostname, CM_PORT, self.key_file, \
-                                         self.cert_file, self.options.debug)
+                                               self.cert_file, self.options.debug)
                 server.RedeemTicket(ticket.save_to_string(save_parents=True), slice_cred)
                 self.logger.info("Success")
             except socket.gaierror:
@@ -1056,152 +1207,62 @@ class Sfi:
                 self.logger.log_exc(e.message)
         return
  
-    # delete named slice
-    def delete(self, opts, args):
-        slice_hrn = args[0]
-        slice_urn = hrn_to_urn(slice_hrn, 'slice') 
-        slice_cred = self.get_slice_cred(slice_hrn).save_to_string(save_parents=True)
-        creds = [slice_cred]
-        if opts.delegate:
-            delegated_cred = self.delegate_cred(slice_cred, get_authority(self.authority))
-            creds.append(delegated_cred)
-        server = self.server_proxy_from_opts(opts)
-        call_args = [slice_urn, creds]
-        if self.server_supports_options_arg(server):
-            options = {'call_id': unique_call_id()}
-            call_args.append(options)
-        return server.DeleteSliver(*call_args) 
-  
-    # start named slice
-    def start(self, opts, args):
-        slice_hrn = args[0]
-        slice_urn = hrn_to_urn(slice_hrn, 'slice') 
-        slice_cred = self.get_slice_cred(args[0]).save_to_string(save_parents=True)
-        creds = [slice_cred]
-        if opts.delegate:
-            delegated_cred = self.delegate_cred(slice_cred, get_authority(self.authority))
-            creds.append(delegated_cred)
-        server = self.server_proxy_from_opts(opts)
-        return server.Start(slice_urn, creds)
-    
-    # stop named slice
-    def stop(self, opts, args):
-        slice_hrn = args[0]
-        slice_urn = hrn_to_urn(slice_hrn, 'slice') 
-        slice_cred = self.get_slice_cred(args[0]).save_to_string(save_parents=True)
-        creds = [slice_cred]
-        if opts.delegate:
-            delegated_cred = self.delegate_cred(slice_cred, get_authority(self.authority))
-            creds.append(delegated_cred)
-        server = self.server_proxy_from_opts(opts)
-        return server.Stop(slice_urn, creds)
-    
-    # reset named slice
-    def reset(self, opts, args):
-        slice_hrn = args[0]
-        slice_urn = hrn_to_urn(slice_hrn, 'slice') 
-        server = self.server_proxy_from_opts(opts)
-        slice_cred = self.get_slice_cred(args[0]).save_to_string(save_parents=True)
-        creds = [slice_cred]
-        if opts.delegate:
-            delegated_cred = self.delegate_cred(slice_cred, get_authority(self.authority))
-            creds.append(delegated_cred)
-        return server.reset_slice(creds, slice_urn)
-
-    def renew(self, opts, args):
-        slice_hrn = args[0]
-        slice_urn = hrn_to_urn(slice_hrn, 'slice') 
-        server = self.server_proxy_from_opts(opts)
-        slice_cred = self.get_slice_cred(args[0]).save_to_string(save_parents=True)
-        creds = [slice_cred]
-        if opts.delegate:
-            delegated_cred = self.delegate_cred(slice_cred, get_authority(self.authority))
-            creds.append(delegated_cred)
-        time = args[1]
-        
-        call_args = [slice_urn, creds, time]
-        if self.server_supports_options_arg(server):
-            options = {'call_id': unique_call_id()}
-            call_args.append(options)
-        result =  server.RenewSliver(*call_args)
-        value = ReturnValue.get_value(result)
-        return value
-
-
-    def status(self, opts, args):
-        slice_hrn = args[0]
-        slice_urn = hrn_to_urn(slice_hrn, 'slice') 
-        slice_cred = self.get_slice_cred(slice_hrn).save_to_string(save_parents=True)
-        creds = [slice_cred]
-        if opts.delegate:
-            delegated_cred = self.delegate_cred(slice_cred, get_authority(self.authority))
-            creds.append(delegated_cred)
-        server = self.server_proxy_from_opts(opts)
-        call_args = [slice_urn, creds]
-        if self.server_supports_options_arg(server):
-            options = {'call_id': unique_call_id()}
-            call_args.append(options)
-        result = server.SliverStatus(*call_args)
-        value = ReturnValue.get_value(result)
-        print value
-        if opts.file:
-            save_variable_to_file(value, opts.file, opts.fileformat)
-
-
-    def shutdown(self, opts, args):
-        slice_hrn = args[0]
-        slice_urn = hrn_to_urn(slice_hrn, 'slice') 
-        slice_cred = self.get_slice_cred(slice_hrn).save_to_string(save_parents=True)
-        creds = [slice_cred]
-        if opts.delegate:
-            delegated_cred = self.delegate_cred(slice_cred, get_authority(self.authority))
-            creds.append(delegated_cred)
-        server = self.server_proxy_from_opts(opts)
-        return server.Shutdown(slice_urn, creds)         
-    
-    def print_help (self):
-        self.sfi_parser.print_help()
-        self.cmd_parser.print_help()
-
-    #
-    # Main: parse arguments and dispatch to command
-    #
-    def dispatch(self, command, cmd_opts, cmd_args):
-        return getattr(self, command)(cmd_opts, cmd_args)
-
-    def main(self):
-        self.sfi_parser = self.create_parser()
-        (options, args) = self.sfi_parser.parse_args()
-        self.options = options
-
-        self.logger.setLevelFromOptVerbose(self.options.verbose)
-        if options.hashrequest:
-            self.hashrequest = True
- 
-        if len(args) <= 0:
-            self.logger.critical("No command given. Use -h for help.")
-            return -1
-    
-        command = args[0]
-        self.cmd_parser = self.create_cmd_parser(command)
-        (cmd_opts, cmd_args) = self.cmd_parser.parse_args(args[1:])
-
-        self.set_servers()
-        self.logger.info("Command=%s" % command)
-        if command in ("resources"):
-            self.logger.debug("resources cmd_opts %s" % cmd_opts.format)
-        elif command in ("list", "show", "remove"):
-            self.logger.debug("cmd_opts.type %s" % cmd_opts.type)
-        self.logger.debug('cmd_args %s' % cmd_args)
-
-        try:
-            self.dispatch(command, cmd_opts, cmd_args)
-        except KeyError:
-            self.logger.critical ("Unknown command %s"%command)
-            raise
+    def create_gid(self, opts, args):
+        """
+        Create a GID (CreateGid)
+        """
+        if len(args) < 1:
+            self.print_help()
             sys.exit(1)
+        target_hrn = args[0]
+        user_cred = self.get_user_cred().save_to_string(save_parents=True)
+        gid = self.registry.CreateGid(user_cred, target_hrn, self.cert.save_to_string())
+        if opts.file:
+            filename = opts.file
+        else:
+            filename = os.sep.join([self.options.sfi_dir, '%s.gid' % target_hrn])
+        self.logger.info("writing %s gid to %s" % (target_hrn, filename))
+        GID(string=gid).save_to_file(filename)
+         
+
+    def delegate(self, opts, args):
+        """
+        (locally) create delegate credential for use by given hrn
+        """
+        delegee_hrn = args[0]
+        if opts.delegate_user:
+            user_cred = self.get_user_cred()
+            cred = self.delegate_cred(user_cred, delegee_hrn)
+        elif opts.delegate_slice:
+            slice_cred = self.get_slice_cred(opts.delegate_slice)
+            cred = self.delegate_cred(slice_cred, delegee_hrn)
+        else:
+            self.logger.warning("Must specify either --user or --slice <hrn>")
+            return
+        delegated_cred = Credential(string=cred)
+        object_hrn = delegated_cred.get_gid_object().get_hrn()
+        if opts.delegate_user:
+            dest_fn = os.path.join(self.options.sfi_dir, get_leaf(delegee_hrn) + "_"
+                                  + get_leaf(object_hrn) + ".cred")
+        elif opts.delegate_slice:
+            dest_fn = os.path.join(self.options.sfi_dir, get_leaf(delegee_hrn) + "_slice_"
+                                  + get_leaf(object_hrn) + ".cred")
+
+        delegated_cred.save_to_file(dest_fn, save_parents=True)
+
+        self.logger.info("delegated credential for %s to %s and wrote to %s"%(object_hrn, delegee_hrn,dest_fn))
     
-        return
-    
+    def get_trusted_certs(self, opts, args):
+        """
+        return uhe trusted certs at this interface (get_trusted_certs)
+        """ 
+        trusted_certs = self.registry.get_trusted_certs()
+        for trusted_cert in trusted_certs:
+            gid = GID(string=trusted_cert)
+            gid.dump()
+            cert = Certificate(string=trusted_cert)
+            self.logger.debug('Sfi.get_trusted_certs -> %r'%cert.get_subject())
+        return 
+
 if __name__ == "__main__":
     Sfi().main()
