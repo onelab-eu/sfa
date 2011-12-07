@@ -30,10 +30,15 @@ sfa/util/version.py: sfa/util/version.py.in
 
 xmlbuilder-install:
 	cd xmlbuilder-0.9 && python setup.py install --root=$(DESTDIR) && cd -
- 
+	rm -rf $(DESTDIR)/usr/lib*/python*/site-packages/*egg-info
+
+# postinstall steps - various cleanups and tweaks for a nicer rpm
 python-install:
 	python setup.py install --root=$(DESTDIR)	
 	chmod 444 $(DESTDIR)/etc/sfa/default_config.xml
+	rm -rf $(DESTDIR)/usr/lib*/python*/site-packages/*egg-info
+	rm -rf $(DESTDIR)/usr/lib*/python*/site-packages/sfa/storage/sfa.sql
+	(cd $(DESTDIR)/usr/bin ; ln -s sfi.py sfi; ln -s sfascan.py sfascan)
 
 python-clean: version-clean
 	python setup.py clean

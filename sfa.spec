@@ -32,7 +32,7 @@ Requires: python-ZSI
 # for uuidgen - used in db password generation
 # on f8 this actually comes with e2fsprogs, go figure
 Requires: util-linux-ng
-# xmlbuilder depends on  lxml
+# xmlbuilder depends on lxml
 Requires: python-lxml
 Requires: python-setuptools
 Requires: python-dateutil
@@ -42,6 +42,7 @@ Requires: postgresql-python
 Requires: python-psycopg2
 Requires: pyOpenSSL >= 0.7
 Requires: myplc-config
+Requires: python-xmlbuilder
  
 # python 2.5 has uuid module added, for python 2.4 we still need it.
 # we can't really check for if we can load uuid as a python module,
@@ -84,6 +85,11 @@ Summary: SFA support for flash clients
 Group: Applications/System
 Requires: sfa
 
+%package xmlbuilder
+Summary: third-party xmlbuilder tool
+Group: Applications/System
+Provides: python-xmlbuilder
+
 %package tests
 Summary: unit tests suite for SFA
 Group: Applications/System
@@ -108,10 +114,14 @@ networks. This is the command line interface to manage sfatables
 %description cm
 This package implements the SFA interface which serves as a layer
 between the existing PlanetLab NodeManager interfaces and the SFA API.
- 
+
 %description flashpolicy
 This package provides support for adobe flash client applications.  
- 
+
+%description xmlbuilder
+This package contains the xmlbuilder python library, packaged for
+convenience as it is not supported by fedora
+
 %description tests
 Provides some binary unit tests in /usr/share/sfa/tests
 
@@ -124,11 +134,6 @@ make VERSIONTAG="%{version}-%{taglevel}" SCMURL="%{SCMURL}"
 %install
 rm -rf $RPM_BUILD_ROOT
 make VERSIONTAG="%{version}-%{taglevel}" SCMURL="%{SCMURL}" install DESTDIR="$RPM_BUILD_ROOT"
-rm -rf $RPM_BUILD_ROOT/%{python_sitelib}/*egg-info
-# this gets duplicated
-rm -rf $RPM_BUILD_ROOT/%{python_sitelib}/sfa/storage/sfa.sql
-# create symlinks
-(cd $RPM_BUILD_ROOT/%{_bindir}; ln -s sfi.py sfi; ln -s sfascan.py sfascan)
 
 %clean
 rm -rf $RPM_BUILD_ROOT
@@ -136,7 +141,6 @@ rm -rf $RPM_BUILD_ROOT
 %files
 # sfa and sfatables depend on each other.
 %{python_sitelib}/sfa
-%{python_sitelib}/xmlbuilder
 /etc/init.d/sfa
 %{_bindir}/sfa-start.py*
 %{_bindir}/keyconvert.py*
@@ -145,6 +149,7 @@ rm -rf $RPM_BUILD_ROOT
 %config (noreplace) /etc/sfa/aggregates.xml
 %config (noreplace) /etc/sfa/registries.xml
 /usr/share/sfa/sfa.sql
+/usr/share/sfa/examples
 /var/www/html/wsdl/*.wsdl
 
 %files plc
@@ -185,6 +190,9 @@ rm -rf $RPM_BUILD_ROOT
 %files flashpolicy
 %{_bindir}/sfa_flashpolicy.py*
 /etc/sfa/sfa_flashpolicy_config.xml
+
+%files xmlbuilder
+%{python_sitelib}/xmlbuilder
 
 %files tests
 %{_datadir}/sfa/tests
