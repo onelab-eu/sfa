@@ -89,9 +89,13 @@ sfa/methods/__init__.py:
 force:
 
 ##########
+# a lot of stuff in the working dir is just noise
+scan:
+	@find . -type f | egrep -v '^\./\.|/\.git/|/\.svn/|TAGS|AA-|~$$|egg-info|\.(py[co]|doc|html|pdf|png|svg|out|bak|xml|dg)$$' 
 tags:	
-	find . -type f | egrep -v '/\.git/|/\.svn/|TAGS|AA-|~$$|\.(py[co]|doc|html|pdf|png|svg|out|bak|xml|dg)$$' | xargs etags
-.PHONY: tags
+	$(MAKE) scan | xargs etags
+
+.PHONY: scan tags
 
 signatures:
 	(cd sfa/methods; grep 'def.*call' *.py > SIGNATURES)
