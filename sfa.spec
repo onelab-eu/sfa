@@ -165,9 +165,11 @@ rm -rf $RPM_BUILD_ROOT
 %files client
 %config (noreplace) /etc/sfa/sfi_config
 %{_bindir}/sfi*.py*
+%{_bindir}/sfi
 %{_bindir}/get*.py*
 %{_bindir}/setRecord.py*
 %{_bindir}/sfascan.py*
+%{_bindir}/sfascan
 %{_bindir}/sfadump.py*
 
 %files sfatables
