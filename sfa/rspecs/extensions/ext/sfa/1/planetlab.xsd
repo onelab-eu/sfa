@@ -14,4 +14,18 @@ xmlns:planetlab="http://www.planet-lab.org/resources/sfa/ext/planetlab/1">
        <xs:attribute name="name" use="required"/>
      </xs:complexType>
    </xs:element>
+   <xs:element name="attribute">
+     <xs:complexType>
+       <xs:attribute name="name" use="required">
+        <xs:annotation>
+          <xs:documentation>Name of this attribute</xs:documentation>
+        </xs:annotation>
+       </xs:attribute>
+       <xs:attribute name="value" use="required">
+        <xs:annotation>
+          <xs:documentation>Value associated with this attribute</xs:documentation>
+        </xs:annotation>
+       </xs:attribute>      
+     </xs:complexType>
+   </xs:element> 
 </xs:schema>
