@@ -1,6 +1,3 @@
-#! /usr/bin/env python
-
-# sfi -- slice-based facility interface
 
 # xxx NOTE this will soon be reviewed to take advantage of sfaclientlib
 
@@ -1278,5 +1275,3 @@ or currently provisioned resources  (ListResources)
             self.logger.debug('Sfi.get_trusted_certs -> %r'%cert.get_subject())
         return 
 
-if __name__ == "__main__":
-    Sfi().main()

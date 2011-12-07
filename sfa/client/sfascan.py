@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 import sys, os.path
 import pickle
 import time
@@ -217,7 +215,7 @@ class Interface:
             layout['fillcolor']='gray'
         return layout
 
-class SfaScan:
+class Scanner:
 
     # provide the entry points (a list of interfaces)
     def __init__ (self, left_to_right=False, verbose=False):
@@ -290,60 +288,60 @@ class SfaScan:
                     logger.error("MISSED interface with node %s"%node)
     
 
-default_outfiles=['sfa.png','sfa.svg','sfa.dot']
+class SfaScan:
 
-def main():
-    usage="%prog [options] url-entry-point(s)"
-    parser=OptionParser(usage=usage)
-    parser.add_option("-d", "--dir", dest="sfi_dir",
-                      help="config & working directory - default is " + Sfi.default_sfi_dir(),
-                      metavar="PATH", default=Sfi.default_sfi_dir())
-    parser.add_option("-o","--output",action='append',dest='outfiles',default=[],
-                      help="output filenames (cumulative) - defaults are %r"%default_outfiles)
-    parser.add_option("-l","--left-to-right",action="store_true",dest="left_to_right",default=False,
-                      help="instead of top-to-bottom")
-    parser.add_option("-v", "--verbose", action="count", dest="verbose", default=0,
-                      help="verbose - can be repeated for more verbosity")
-    parser.add_option("-c", "--clean-cache",action='store_true',
-                      dest='clean_cache',default=False,
-                      help='clean/trash version cache and exit')
-    parser.add_option("-s","--show-cache",action='store_true',
-                      dest='show_cache',default=False,
-                      help='show/display version cache')
-    
-    (options,args)=parser.parse_args()
-    logger.enable_console()
-    # apply current verbosity to logger
-    logger.setLevelFromOptVerbose(options.verbose)
-    # figure if we need to be verbose for these local classes that only have a bool flag
-    bool_verbose=logger.getBoolVerboseFromOpt(options.verbose)
+    default_outfiles=['sfa.png','sfa.svg','sfa.dot']
 
-    if options.show_cache: 
-        VersionCache().show()
-        sys.exit(0)
-    if options.clean_cache:
-        VersionCache().clean()
-        sys.exit(0)
-    if not args:
-        parser.print_help()
-        sys.exit(1)
+    def main(self):
+        usage="%prog [options] url-entry-point(s)"
+        parser=OptionParser(usage=usage)
+        parser.add_option("-d", "--dir", dest="sfi_dir",
+                          help="config & working directory - default is " + Sfi.default_sfi_dir(),
+                          metavar="PATH", default=Sfi.default_sfi_dir())
+        parser.add_option("-o","--output",action='append',dest='outfiles',default=[],
+                          help="output filenames (cumulative) - defaults are %r"%SfaScan.default_outfiles)
+        parser.add_option("-l","--left-to-right",action="store_true",dest="left_to_right",default=False,
+                          help="instead of top-to-bottom")
+        parser.add_option("-v", "--verbose", action="count", dest="verbose", default=0,
+                          help="verbose - can be repeated for more verbosity")
+        parser.add_option("-c", "--clean-cache",action='store_true',
+                          dest='clean_cache',default=False,
+                          help='clean/trash version cache and exit')
+        parser.add_option("-s","--show-cache",action='store_true',
+                          dest='show_cache',default=False,
+                          help='show/display version cache')
         
-    if not options.outfiles:
-        options.outfiles=default_outfiles
-    scanner=SfaScan(left_to_right=options.left_to_right, verbose=bool_verbose)
-    entries = [ Interface(entry) for entry in args ]
-    try:
-        g=scanner.graph(entries)
-        logger.info("creating layout")
-        g.layout(prog='dot')
-        for outfile in options.outfiles:
-            logger.info("drawing in %s"%outfile)
-            g.draw(outfile)
-        logger.info("done")
-    # test mode when pygraphviz is not available
-    except:
-        entry=entries[0]
-        print "GetVersion at %s returned %s"%(entry.url(),entry.get_version())
+        (options,args)=parser.parse_args()
+        logger.enable_console()
+        # apply current verbosity to logger
+        logger.setLevelFromOptVerbose(options.verbose)
+        # figure if we need to be verbose for these local classes that only have a bool flag
+        bool_verbose=logger.getBoolVerboseFromOpt(options.verbose)
+    
+        if options.show_cache: 
+            VersionCache().show()
+            sys.exit(0)
+        if options.clean_cache:
+            VersionCache().clean()
+            sys.exit(0)
+        if not args:
+            parser.print_help()
+            sys.exit(1)
+            
+        if not options.outfiles:
+            options.outfiles=SfaScan.default_outfiles
+        scanner=Scanner(left_to_right=options.left_to_right, verbose=bool_verbose)
+        entries = [ Interface(entry) for entry in args ]
+        try:
+            g=scanner.graph(entries)
+            logger.info("creating layout")
+            g.layout(prog='dot')
+            for outfile in options.outfiles:
+                logger.info("drawing in %s"%outfile)
+                g.draw(outfile)
+            logger.info("done")
+        # test mode when pygraphviz is not available
+        except:
+            entry=entries[0]
+            print "GetVersion at %s returned %s"%(entry.url(),entry.get_version())
 
-if __name__ == '__main__':
-    main()

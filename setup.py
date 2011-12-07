@@ -9,7 +9,8 @@ from glob import glob
 import shutil
 from distutils.core import setup
 
-bins = [ 
+bins = glob("sfa/clientbin/*.py") + \
+    [ 
     'config/sfa-config-tty',
     'config/gen-sfa-cm-config.py',
     'sfa/importer/sfa-import-plc.py', 
@@ -18,18 +19,6 @@ bins = [
     'sfa/server/sfa-start.py', 
     'sfa/server/sfa-clean-peer-records.py', 
     'sfa/server/sfa_component_setup.py', 
-    'sfa/client/sfi.py', 
-    'sfa/client/sfascan.py', 
-    'sfa/client/getNodes.py',
-    'sfa/client/getRecord.py',
-    'sfa/client/setRecord.py',
-    'sfa/client/sfadump.py',
-    'sfa/client/sfiListNodes.py',
-    'sfa/client/sfiListSlivers.py',
-    'sfa/client/sfiAddSliver.py',
-    'sfa/client/sfiDeleteSliver.py',
-    'sfa/client/sfiAddAttribute.py',
-    'sfa/client/sfiDeleteAttribute.py',
     'sfatables/sfatables',
     'keyconvert/keyconvert.py',
     'flashpolicy/sfa_flashpolicy.py',
@@ -55,7 +44,6 @@ package_dirs = [
     'sfatables/commands',
     'sfatables/processors',
     ]
-
 
 initscripts = [ 'sfa', 'sfa-cm' ]
 

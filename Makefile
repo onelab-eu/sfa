@@ -127,13 +127,11 @@ RSYNC_EXCLUDES		:= --exclude .svn --exclude .git --exclude '*~' --exclude TAGS $
 RSYNC_COND_DRY_RUN	:= $(if $(findstring n,$(MAKEFLAGS)),--dry-run,)
 RSYNC			:= rsync -a -v $(RSYNC_COND_DRY_RUN) --no-owner $(RSYNC_EXCLUDES)
 
-CLIENTS = sfi.py sfascan.py getNodes.py getRecord.py setRecord.py \
-sfiAddAttribute.py sfiAddSliver.py sfiDeleteAttribute.py sfiDeleteSliver.py sfiListNodes.py \
-sfiListSlivers.py sfadump.py
+CLIENTS = $(shell ls sfa/clientbin/*.py)
 
 BINS =	./config/sfa-config-tty ./config/gen-sfa-cm-config.py \
 	./sfa/importer/sfa-import-plc.py ./sfa/importer/sfa-nuke-plc.py ./sfa/server/sfa-start.py \
-	$(foreach client,$(CLIENTS),./sfa/client/$(client))
+	$(CLIENTS)
 
 sync:
 ifeq (,$(SSHURL))
