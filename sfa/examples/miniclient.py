@@ -21,12 +21,15 @@ logger.debug('sfaclientsample: Using directory %s'%dir)
 
 ###
 
-# this uses a test vplc from the onelab test infrastructure
-registry_url="http://vplc08.pl.sophia.inria.fr:12345/"
-aggregate_url="http://vplc08.pl.sophia.inria.fr:12347/"
+# this uses a test sfa deployment at openlab
+registry_url="http://sfa1.pl.sophia.inria.fr:12345/"
+aggregate_url="http://sfa1.pl.sophia.inria.fr:12347/"
 # this is where the private key sits - would be ~/.ssh/id_rsa in most cases
-# but in this context 
-private_key="test_private_key"
+# but in this context, create this local file
+# the tests key pair can be found in
+# http://git.onelab.eu/?p=tests.git;a=blob;f=system/config_default.py
+# search for public_key / private_key
+private_key="miniclient-private-key"
 # user hrn
 hrn="pla.inri.fake-pi1"
 
