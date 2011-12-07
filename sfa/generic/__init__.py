@@ -35,7 +35,7 @@ class Generic:
         #mixed = flavour.capitalize()
         module_path="sfa.generic.%s"%flavour
         classname="%s"%flavour
-        logger.info("Generic.the_flavour with flavour=%s"%flavour)
+        logger.debug("Generic.the_flavour with flavour=%s"%flavour)
         try:
             module = __import__ (module_path, globals(), locals(), [classname])
             return getattr(module, classname)(flavour,config)
@@ -67,7 +67,7 @@ class Generic:
         manager_wrap = ManagerWrapper(manager,api.interface)
         api.manager=manager_wrap
         # insert driver in manager
-        logger.info("Setting manager.driver, manager=%s"%manager)
+        logger.debug("Setting manager.driver, manager=%s"%manager)
         manager.driver=driver
         # add it in api as well for convenience
         api.driver=driver
