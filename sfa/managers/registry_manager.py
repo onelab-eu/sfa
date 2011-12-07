@@ -27,7 +27,7 @@ class RegistryManager:
 
     # The GENI GetVersion call
     def GetVersion(self, api, options={}):
-        peers = dict ( [ (hrn,interface._ServerProxy__host) for (hrn,interface) in api.registries.iteritems() 
+        peers = dict ( [ (hrn,interface.get_url()) for (hrn,interface) in api.registries.iteritems() 
                        if hrn != api.hrn])
         xrn=Xrn(api.hrn)
         return version_core({'interface':'registry',

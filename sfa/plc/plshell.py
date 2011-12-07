@@ -37,10 +37,14 @@ class PlShell:
         hostname=urlparse(url).hostname
         is_local=False
         if hostname == 'localhost': is_local=True
-        # otherwise compare IP addresses
-        url_ip=socket.gethostbyname(hostname)
-        local_ip=socket.gethostbyname(socket.gethostname())
-        if url_ip==local_ip: is_local=True
+        # otherwise compare IP addresses; 
+        # this might fail for any number of reasons, so let's harden that
+        try:
+            url_ip=socket.gethostbyname(hostname)
+            local_ip=socket.gethostbyname(socket.gethostname())
+            if url_ip==local_ip: is_local=True
+        except:
+            pass
 
         if is_local:
             try:

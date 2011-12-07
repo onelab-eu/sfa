@@ -42,18 +42,9 @@ class SliceManager:
                     return True
         return False
     
-    # we have specialized xmlrpclib.ServerProxy to remember the input url
-    # OTOH it's not clear if we're only dealing with XMLRPCServerProxy instances
-    def get_serverproxy_url (self, server):
-        try:
-            return server.get_url()
-        except:
-            logger.warning("GetVersion, falling back to xmlrpclib.ServerProxy internals")
-            return server._ServerProxy__host + server._ServerProxy__handler
-    
     def GetVersion(self, api, options={}):
         # peers explicitly in aggregates.xml
-        peers =dict ([ (peername,self.get_serverproxy_url(v)) for (peername,v) in api.aggregates.iteritems()
+        peers =dict ([ (peername,interface.get_url()) for (peername,interface) in api.aggregates.iteritems()
                        if peername != api.hrn])
         version_manager = VersionManager()
         ad_rspec_versions = []
@@ -76,7 +67,7 @@ class SliceManager:
         sm_version=version_core(version_more)
         # local aggregate if present needs to have localhost resolved
         if api.hrn in api.aggregates:
-            local_am_url=self.get_serverproxy_url(api.aggregates[api.hrn])
+            local_am_url=api.aggregates[api.hrn].get_url()
             sm_version['peers'][api.hrn]=local_am_url.replace('localhost',sm_version['hostname'])
         return sm_version
     
