@@ -31,7 +31,7 @@ from sfa.rspecs.rspec_converter import RSpecConverter
 from sfa.rspecs.version_manager import VersionManager
 from sfa.client.return_value import ReturnValue
 
-import sfa.client.sfaprotocol as sfaprotocol
+from sfa.client.sfaserverproxy import SfaServerProxy, ServerException
 from sfa.client.client_helper import pg_users_arg, sfa_users_arg
 
 AGGREGATE_PORT=12346
@@ -479,9 +479,9 @@ class Sfi:
        self.cert_file = cert_file
        self.cert = GID(filename=cert_file)
        self.logger.info("Contacting Registry at: %s"%self.reg_url)
-       self.registry = sfaprotocol.server_proxy(self.reg_url, key_file, cert_file, timeout=self.options.timeout, verbose=self.options.debug)  
+       self.registry = SfaServerProxy(self.reg_url, key_file, cert_file, timeout=self.options.timeout, verbose=self.options.debug)  
        self.logger.info("Contacting Slice Manager at: %s"%self.sm_url)
-       self.slicemgr = sfaprotocol.server_proxy(self.sm_url, key_file, cert_file, timeout=self.options.timeout, verbose=self.options.debug)
+       self.slicemgr = SfaServerProxy(self.sm_url, key_file, cert_file, timeout=self.options.timeout, verbose=self.options.debug)
        return
 
     def get_cached_server_version(self, server):
@@ -574,7 +574,7 @@ class Sfi:
             self.logger.info("Getting Registry issued cert")
             self.read_config()
             # *hack.  need to set registry before _get_gid() is called 
-            self.registry = sfaprotocol.server_proxy(self.reg_url, key_file, cert_file, 
+            self.registry = SfaServerProxy(self.reg_url, key_file, cert_file, 
                                                      timeout=self.options.timeout, verbose=self.options.debug)
             gid = self._get_gid(type='user')
             self.registry = None 
@@ -756,7 +756,7 @@ class Sfi:
         host_parts = host.split('/')
         host_parts[0] = host_parts[0] + ":" + str(port)
         url =  "http://%s" %  "/".join(host_parts)    
-        return sfaprotocol.server_proxy(url, keyfile, certfile, timeout=self.options.timeout, 
+        return SfaServerProxy(url, keyfile, certfile, timeout=self.options.timeout, 
                                         verbose=self.options.debug)
 
     # xxx opts could be retrieved in self.options
@@ -881,7 +881,7 @@ or version information about sfi itself
         elif record['type'] in ["slice"]:
             try:
                 cred = self.get_slice_cred(record.get_name()).save_to_string(save_parents=True)
-            except sfaprotocol.ServerException, e:
+            except ServerException, e:
                # XXX smbaker -- once we have better error return codes, update this
                # to do something better than a string compare
                if "Permission error" in e.args[0]:

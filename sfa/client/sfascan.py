@@ -14,7 +14,7 @@ from optparse import OptionParser
 
 from sfa.client.sfi import Sfi
 from sfa.util.sfalogging import logger, DEBUG
-import sfa.client.sfaprotocol as sfaprotocol
+from sfa.client.sfaserverproxy import SfaServerProxy
 
 def url_hostname_port (url):
     if url.find("://")<0:
@@ -153,8 +153,8 @@ class Interface:
             url=self.url()
             logger.info('issuing GetVersion at %s'%url)
             # setting timeout here seems to get the call to fail - even though the response time is fast
-            #server=sfaprotocol.server_proxy(url, key_file, cert_file, verbose=self.verbose, timeout=options.timeout)
-            server=sfaprotocol.server_proxy(url, key_file, cert_file, verbose=self.verbose)
+            #server=SfaServerProxy(url, key_file, cert_file, verbose=self.verbose, timeout=options.timeout)
+            server=SfaServerProxy(url, key_file, cert_file, verbose=self.verbose)
             self._version=server.GetVersion()
         except:
             logger.log_exc("failed to get version")

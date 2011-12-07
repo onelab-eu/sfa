@@ -1,5 +1,4 @@
-#from sfa.util.faults import *
-import sfa.client.sfaprotocol as sfaprotocol
+from sfa.client.sfaserverproxy import SfaServerProxy
 from sfa.util.xml import XML
 
 # GeniLight client support is optional
@@ -31,7 +30,7 @@ class Interface:
             # xxx url and self.api are undefined
             server = GeniClientLight(url, self.api.key_file, self.api.cert_file)
         else:
-            server = sfaprotocol.server_proxy(self.get_url(), key_file, cert_file, timeout) 
+            server = SfaServerProxy(self.get_url(), key_file, cert_file, timeout) 
  
         return server       
 ##

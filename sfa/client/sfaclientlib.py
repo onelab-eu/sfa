@@ -7,35 +7,10 @@ import os,os.path
 
 import sfa.util.sfalogging
 
-# what we use on GID actually is inherited from Certificate
-#from sfa.trust.gid import GID
+from sfa.client.sfaserverproxy import SfaServerProxy
+
+# see optimizing dependencies below
 from sfa.trust.certificate import Keypair, Certificate
-# what we need in the Credential class essentially amounts to saving the incoming result
-# in a file as the output from the registry already is under xml format
-#from sfa.trust.credential import Credential
-
-import sfa.client.sfaprotocol as sfaprotocol
-
-class SfaServerProxy:
-
-    def __init__ (self, url, keyfile, certfile, verbose=False, timeout=None):
-        self.url=url
-        self.keyfile=keyfile
-        self.certfile=certfile
-        self.verbose=verbose
-        self.timeout=timeout
-        # an instance of xmlrpclib.ServerProxy
-        self.serverproxy=sfaprotocol.server_proxy \
-            (self.url, self.keyfile, self.certfile, self.timeout, self.verbose)
-
-    # this is python magic to return the code to run when 
-    # SfaServerProxy receives a method call
-    # so essentially we send the same method with identical arguments
-    # to the server_proxy object
-    def __getattr__(self, name):
-        def func(*args, **kwds):
-            return getattr(self.serverproxy, name)(*args, **kwds)
-        return func
 
 ########## 
 # a helper class to implement the bootstrapping of crypto. material
