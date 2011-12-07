@@ -64,7 +64,7 @@ data_files = [ ('/etc/sfa/', [ 'config/aggregates.xml',
                ('/etc/sfatables/targets/', glob('sfatables/targets/*.xml')),
                ('/etc/init.d/', [ "init.d/%s"%x for x in initscripts ]),
                ('/usr/share/sfa/', [ 'sfa/storage/sfa.sql' ] ),
-               ('/usr/share/sfa/examples/', glob('sfa/examples/*' ) ),
+               ('/usr/share/sfa/examples/', glob('sfa/examples/*' ) + [ 'cron.d/sfa.cron' ] ),
               ]
 
 # add sfatables processors as data_files
