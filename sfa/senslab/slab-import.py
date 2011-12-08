@@ -172,7 +172,7 @@ def delete_record( hrn, type):
         table.remove(record)
                 
 def hostname_to_hrn(root_auth,login_base,hostname):
-    return PlXrn(auth=auth,hostname=login_base+'_'+hostname).get_hrn()
+    return PlXrn(auth=root_auth,hostname=login_base+'_'+hostname).get_hrn()
 
     
 def main():
