@@ -21,26 +21,16 @@ from sfa.client.return_value import ReturnValue
 
 class SliceManager:
     def __init__ (self):
-    #    self.caching=False
+        # xxx todo should be configurable 
+        # self.caching=False
         self.caching=True
         
     def _options_supported(self, api, server):
         """
-        Returns true if server support the optional call_id arg, false otherwise.
+        Returns true if server supports the extra 'options' arg. to API calls
         """
         server_version = api.get_cached_server_version(server)
-    
-        if 'sfa' in server_version:
-            code_tag = server_version['code_tag']
-            code_tag_parts = code_tag.split("-")
-    
-            version_parts = code_tag_parts[0].split(".")
-            major, minor = version_parts[0:2]
-            rev = code_tag_parts[1]
-            if int(major) >= 1:
-                if int(minor) >= 2:
-                    return True
-        return False
+        return server_version.has_key ('options_support')
     
     def GetVersion(self, api, options={}):
         # peers explicitly in aggregates.xml

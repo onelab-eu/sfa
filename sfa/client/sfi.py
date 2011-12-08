@@ -29,10 +29,10 @@ from sfa.storage.record import SfaRecord, UserRecord, SliceRecord, NodeRecord, A
 from sfa.rspecs.rspec import RSpec
 from sfa.rspecs.rspec_converter import RSpecConverter
 from sfa.rspecs.version_manager import VersionManager
-from sfa.client.return_value import ReturnValue
 
 from sfa.client.sfaserverproxy import SfaServerProxy, ServerException
 from sfa.client.client_helper import pg_users_arg, sfa_users_arg
+from sfa.client.return_value import ReturnValue
 
 AGGREGATE_PORT=12346
 CM_PORT=12346
@@ -510,22 +510,12 @@ class Sfi:
         return version   
         
 
-    def server_supports_options_arg(self, server):
+    def server_supports_call_id(self, server):
         """
         Returns true if server support the optional call_id arg, false otherwise. 
         """
         server_version = self.get_cached_server_version(server)
-        if 'sfa' in server_version and 'code_tag' in server_version:
-            code_tag = server_version['code_tag']
-            code_tag_parts = code_tag.split("-")
-            
-            version_parts = code_tag_parts[0].split(".")
-            major, minor = version_parts[0], version_parts[1]
-            rev = code_tag_parts[1]
-            if int(major) >= 1:
-                if int(minor) >= 2:
-                    return True
-        return False                
+        return server_version.has_key ('call_id_support')
         
     #
     # Get various credential and spec files
@@ -922,7 +912,7 @@ or version information about sfi itself
             creds.append(delegated_cred)  
         server = self.server_proxy_from_opts(opts)
         call_args = [creds]
-        if self.server_supports_options_arg(server):
+        if self.server_supports_call_id(server):
             options = {'call_id': unique_call_id()}
             call_args.append(options)
         result = server.ListSlices(*call_args)
@@ -1027,7 +1017,7 @@ or currently provisioned resources  (ListResources)
         # do not append users, keys, or slice tags. Anything 
         # not contained in this request will be removed from the slice 
         options = {'append': False}
-        if self.server_supports_options_arg(server):
+        if self.server_supports_call_id(server):
             options['call_id'] = unique_call_id()
         call_args = [slice_urn, creds, rspec, users, options]
         result = server.CreateSliver(*call_args)
@@ -1051,7 +1041,7 @@ or currently provisioned resources  (ListResources)
             creds.append(delegated_cred)
         server = self.server_proxy_from_opts(opts)
         call_args = [slice_urn, creds]
-        if self.server_supports_options_arg(server):
+        if self.server_supports_call_id(server):
             options = {'call_id': unique_call_id()}
             call_args.append(options)
         return server.DeleteSliver(*call_args) 
@@ -1069,7 +1059,7 @@ or currently provisioned resources  (ListResources)
             creds.append(delegated_cred)
         server = self.server_proxy_from_opts(opts)
         call_args = [slice_urn, creds]
-        if self.server_supports_options_arg(server):
+        if self.server_supports_call_id(server):
             options = {'call_id': unique_call_id()}
             call_args.append(options)
         result = server.SliverStatus(*call_args)
@@ -1136,7 +1126,7 @@ or currently provisioned resources  (ListResources)
         time = args[1]
         
         call_args = [slice_urn, creds, time]
-        if self.server_supports_options_arg(server):
+        if self.server_supports_call_id(server):
             options = {'call_id': unique_call_id()}
             call_args.append(options)
         result =  server.RenewSliver(*call_args)
