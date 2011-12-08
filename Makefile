@@ -165,3 +165,13 @@ clientsync:
 .PHONY: sync fastsync clientsync
 
 ##########
+CLIENTLIBFILES= \
+sfa/examples/miniclient.py \
+sfa/__init__.py \
+sfa/client/{sfaserverproxy,sfaclientlib,__init__}.py \
+sfa/trust/{certificate,__init__}.py \
+sfa/util/{sfalogging,faults,genicode,enumeration,__init__}.py 
+
+clientlibsync: 
+	@[ -d "$(CLIENTLIBTARGET)" ] || { echo "You need to set the make variable CLIENTLIBTARGET"; exit 1; }
+	rsync -av --relative $(CLIENTLIBFILES) $(CLIENTLIBTARGET)
