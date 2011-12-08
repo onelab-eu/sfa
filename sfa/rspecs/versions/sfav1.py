@@ -139,9 +139,12 @@ class SFAv1(BaseVersion):
         if network:
             defaults = self.xml.xpath("//network[@name='%s']/sliver_defaults" % network)
         else:
-            defaults = self.xml.xpath("//sliver_defaults" % network)
-        if not defaults :
-            network_tag = self.xml.xpath("//network[@name='%s']" % network)
+            defaults = self.xml.xpath("//sliver_defaults")
+        if not defaults:
+            if network:
+                network_tag = self.xml.xpath("//network[@name='%s']" % network)
+            else:
+                network_tag = self.xml.xpath("//network")    
             if isinstance(network_tag, list):
                 network_tag = network_tag[0]
             defaults = network_tag.add_element('sliver_defaults')

@@ -133,10 +133,10 @@ class AggregateManager:
         
         # add/remove slice from nodes
         requested_slivers = [node.get('component_name') for node in rspec.version.get_nodes_with_slivers()]
-        slices.verify_slice_nodes(slice, requested_slivers, peer) 
+        nodes = slices.verify_slice_nodes(slice, requested_slivers, peer) 
    
         # add/remove links links 
-        slices.verify_slice_links(slice, rspec.version.get_link_requests(), aggregate)
+        slices.verify_slice_links(slice, rspec.version.get_link_requests(), nodes)
     
         # handle MyPLC peer association.
         # only used by plc and ple.

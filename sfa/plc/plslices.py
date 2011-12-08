@@ -166,7 +166,7 @@ class PlSlices:
 
     def verify_slice_nodes(self, slice, requested_slivers, peer):
         
-        nodes = self.api.driver.GetNodes(slice['node_ids'], ['hostname'])
+        nodes = self.api.driver.GetNodes(slice['node_ids'], ['node_id', 'hostname', 'interface_ids'])
         current_slivers = [node['hostname'] for node in nodes]
 
         # remove nodes not in rspec
@@ -183,6 +183,7 @@ class PlSlices:
 
         except: 
             self.api.logger.log_exc('Failed to add/remove slice from nodes')
+        return nodes
 
     def free_egre_key(self):
         used = set()
@@ -198,10 +199,22 @@ class PlSlices:
 
         return str(key)
 
-    def verify_slice_links(self, slice, links, aggregate):
+    def verify_slice_links(self, slice, requested_links, nodes):
         # nodes is undefined here
-        if not links:
+        if not requested_links:
             return
+   
+        # build dict of nodes 
+        nodes_dict = {}
+        interface_ids = []
+        for node in nodes:
+            nodes_dict[node['node_id']] = node
+            interface_ids.extend(node['interface_ids'])
+        # build dict of interfaces
+        interfaces = self.api.driver.GetInterfaces(interface_ids)
+        interfaces_dict = {}
+        for interface in interfaces:
+            interfaces_dict[interface['interface_id']] = interface 
 
         slice_tags = []
         
@@ -215,13 +228,13 @@ class PlSlices:
         # need to update the attribute string?
         slice_tags.append({'name': 'capabilities', 'value': 'CAP_NET_ADMIN'}) 
         
-        for link in links:
+        for link in requested_links:
             # get the ip address of the first node in the link
             ifname1 = Xrn(link['interface1']['component_id']).get_leaf()
-            (node, device) = ifname1.split(':')
-            node_id = int(node.replace('node', ''))
-            node = aggregate.nodes[node_id]
-            if1 = aggregate.interfaces[node['interface_ids'][0]]
+            (node_raw, device) = ifname1.split(':')
+            node_id = int(node_raw.replace('node', ''))
+            node = nodes_dict[node_id]
+            if1 = interfaces_dict[node['interface_ids'][0]]
             ipaddr = if1['ip']
             topo_rspec = VLink.get_topo_rspec(link, ipaddr)
             # set topo_rspec tag

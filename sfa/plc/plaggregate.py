@@ -21,13 +21,10 @@ from sfa.plc.topology import Topology
 
 class PlAggregate:
 
-    api = None
-    #panos new user options variable
-    user_options = {}
-
     def __init__(self, driver):
         self.driver = driver
-    
+        self.user_options = {}
+ 
     def get_sites(self, filter={}):
         sites = {}
         for site in self.driver.GetSites(filter):
@@ -245,10 +242,12 @@ class PlAggregate:
         rspec.version.add_links(links)
         
         # add sliver defaults
-        default_sliver_attribs = slivers.get(None, [])
-        for sliver_attrib in default_sliver_attribs:
-            rspec.version.add_default_sliver_attribute(sliver_attrib['name'], sliver_attrib['value'])  
-        
+        default_sliver = slivers.get(None, [])
+        if default_sliver:
+            default_sliver_attribs = default_sliver.get('tags', [])
+            for attrib in default_sliver_attribs:
+                logger.info(attrib)
+                rspec.version.add_default_sliver_attribute(attrib['tagname'], attrib['value'])
         return rspec.toxml()
 
 
