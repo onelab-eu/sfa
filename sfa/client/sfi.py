@@ -543,6 +543,7 @@ class Sfi:
         gid = self.get_cached_gid(gidfile)
         if not gid:
             user_cred = self.get_user_cred()
+            print>>sys.stderr, " \r\n \t SFI.PY _get_gid "
             records = self.registry.Resolve(hrn, user_cred.save_to_string(save_parents=True))
             if not records:
                 raise RecordNotFound(args[0])
@@ -1003,7 +1004,9 @@ class Sfi:
             delegated_cred = None
         else:
             # delegate the cred to the callers root authority
-            delegated_cred = self.delegate_cred(slice_cred, get_authority(self.authority)+'.slicemanager')
+            print>>sys.stderr, "  \r\n \r\n \t SFI.PY get_authority(self.authority+'.slicemanager') %s self.authority %s  slice_cred \t %s  "  %(get_authority(self.authority+'.slicemanager'), self.authority, slice_cred)
+            delegated_cred = self.delegate_cred(slice_cred, get_authority(self.authority+'.slicemanager'))
+
             #delegated_cred = self.delegate_cred(slice_cred, get_authority(slice_hrn))
             #creds.append(delegated_cred)
 
@@ -1016,11 +1019,13 @@ class Sfi:
         #    keys: [<ssh key A>, <ssh key B>]
         #  }]
         users = []
+        print>>sys.stderr, " \r\n SFI.PY create slice_urn ", slice_urn
         slice_records = self.registry.Resolve(slice_urn, [user_cred.save_to_string(save_parents=True)])
         if slice_records and 'researcher' in slice_records[0] and slice_records[0]['researcher']!=[]:
             slice_record = slice_records[0]
             user_hrns = slice_record['researcher']
             user_urns = [hrn_to_urn(hrn, 'user') for hrn in user_hrns]
+            print>>sys.stderr, " \r\n SFI.PY create  user_urns %s \r\n \t slice_records %s"%( user_urns,slice_records)
             user_records = self.registry.Resolve(user_urns, [user_cred.save_to_string(save_parents=True)])
 
             if 'sfa' not in server_version:
@@ -1030,6 +1035,7 @@ class Sfi:
                 rspec = RSpecConverter.to_pg_rspec(rspec.toxml(), content_type='request')
                 creds = [slice_cred]
             else:
+                print >>sys.stderr, "\r\n \r\n \r\n WOOOOOO"
                 users = sfa_users_arg(user_records, slice_record)
                 creds = [slice_cred]
                 if delegated_cred:
@@ -1037,7 +1043,8 @@ class Sfi:
         call_args = [slice_urn, creds, rspec, users]
         if self.server_supports_options_arg(server):
             options = {'call_id': unique_call_id()}
-            call_args.append(options)
+            call_args.append(options) 
+        print>>sys.stderr, " \r\n SFI.PY create  user" ,users
         result = server.CreateSliver(*call_args)
         value = ReturnValue.get_value(result)
         if opts.file is None:

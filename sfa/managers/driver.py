@@ -2,7 +2,7 @@
 # an attempt to document what a driver class should provide, 
 # and implement reasonable defaults
 #
-
+import sys
 class Driver:
     
     def __init__ (self): pass
@@ -19,6 +19,7 @@ class Driver:
     #     testbed-specific info as well
     # this at minima should fill in the 'researcher' field for slice records
     def augment_records_with_testbed_info (self, sfa_records):
+        print >>sys.stderr, "  \r\n \r\n DRIVER.PY augment_records_with_testbed_info sfa_records ",sfa_records
         return sfa_records
 
     # incoming record, as provided by the client to the Register API call

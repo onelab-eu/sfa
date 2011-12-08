@@ -18,6 +18,14 @@ class LDAPapi :
 	
 		self.auth=Auth()
 		gid=authinfo.get_gid_object()
+                self.ldapdictlist = ['type',
+                                'pkey',
+                                'uid',
+				'serial',
+				'authority',
+				'peer_authority',
+				'pointer' ,
+				'hrn']
 	
 	def ldapFind(self, record_filter = None, columns=None):
 

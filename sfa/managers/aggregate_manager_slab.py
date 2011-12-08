@@ -19,7 +19,7 @@ from sfa.server.sfaapi import SfaApi
 from sfa.senslab.OARrspec import OARrspec
 import sfa.plc.peers as peers
 #from sfa.plc.aggregate import Aggregate
-from sfa.plc.slices import Slices
+from sfa.senslab.slices import Slices
 
 class AggregateManager:
 
@@ -166,8 +166,8 @@ class AggregateManager:
         """
         call_id = options.get('call_id')
         if Callids().already_handled(call_id): return ""
-    
-        aggregate = Aggregate(api)
+        aggregate = OARrspec(api)
+        #aggregate = Aggregate(api)
         slices = Slices(api)
         (hrn, _) = urn_to_hrn(slice_xrn)
         peer = slices.get_peer(hrn)
@@ -175,6 +175,7 @@ class AggregateManager:
         slice_record=None    
         if users:
             slice_record = users[0].get('slice_record', {})
+            print >>sys.stderr, " \r\n \t AGGREGATESLAB.PY Slice slice_record : ", slice_record
     
         # parse rspec
         rspec = RSpec(rspec_string)
@@ -183,18 +184,22 @@ class AggregateManager:
         # ensure site record exists
         site = slices.verify_site(hrn, slice_record, peer, sfa_peer)
         # ensure slice record exists
+        print>>sys.stderr, " \r\n \t AGGREGATESLAB.PY Slice users : ", users
         slice = slices.verify_slice(hrn, slice_record, peer, sfa_peer)
+        print >>sys.stderr, " \r\n \t AGGREGATESLAB.PY Slice slice : ", slice
         # ensure person records exists
-        persons = slices.verify_persons(hrn, slice, users, peer, sfa_peer)
+        persons = slices.verify_persons(hrn, slice, users)
+        #persons = slices.verify_persons(hrn, slice, users, peer, sfa_peer)
         # ensure slice attributes exists
-        slices.verify_slice_attributes(slice, requested_attributes)
+        #slices.verify_slice_attributes(slice, requested_attributes)
         
         # add/remove slice from nodes
         requested_slivers = [node.get('component_name') for node in rspec.version.get_nodes_with_slivers()]
+        print >>sys.stderr, " \r\n \t AGGREGATESLAB.PY Slice requested_slivers : ", requested_slivers
         slices.verify_slice_nodes(slice, requested_slivers, peer) 
    
         # add/remove links links 
-        slices.verify_slice_links(slice, rspec.version.get_link_requests(), aggregate)
+        #slices.verify_slice_links(slice, rspec.version.get_link_requests(), aggregate)
     
         # handle MyPLC peer association.
         # only used by plc and ple.

@@ -55,10 +55,19 @@ class SlabDriver ():
       
 	
     def GetPersons(self, person_filter=None, return_fields=None):
-
+        
         person_list = self.ldap.ldapFind({'authority': self.root_auth })
+        
+        #check = False
+        #if person_filter and isinstance(person_filter, dict):
+            #for k in  person_filter.keys():
+                #if k in person_list[0].keys():
+                    #check = True
+                    
         return_person_list = parse_filter(person_list,person_filter ,'persons', return_fields)
-        return return_person_list
+        if return_person_list:
+            print>>sys.stderr, " \r\n GetPersons person_filter %s return_fields %s return_person_list %s " %(person_filter,return_fields,return_person_list)
+            return return_person_list
     
     def GetNodes(self,node_filter= None, return_fields=None):
 		
@@ -73,6 +82,32 @@ class SlabDriver ():
         return_node_list= parse_filter(node_dict.values(),node_filter ,'node', return_fields)
         return return_node_list
     
+    def GetSites(self, auth, site_filter = None, return_fields=None):
+        self.oar.parser.SendRequest("GET_resources_full")
+        site_dict = self.oar.parser.GetSitesFromOARParse()
+        return_site_list = []
+        site = site_dict.values()[0]
+        if not (site_filter or return_fields):
+                return_site_list = site_dict.values()
+                return return_site_list
+        
+        return_site_list = parse_filter(site_dict.values(),site_filter ,'site', return_fields)
+        return return_site_list
+    
+    def GetSlices(self,slice_filter = None, return_fields=None):
+        db = SlabDB()
+        return_slice_list =[]
+        sliceslist = db.find('slice',columns = ['slice_hrn', 'record_id_slice','record_id_user'])
+        print >>sys.stderr, " \r\n \r\n SLABDRIVER.PY  GetSlices  slices %s" %(sliceslist)
+        #slicesdict = sliceslist[0]
+        if not (slice_filter or return_fields):
+                return_slice_list = sliceslist
+                return  return_slice_list
+        
+        return_slice_list  = parse_filter(sliceslist, slice_filter,'slice', return_fields)
+        print >>sys.stderr, " \r\n \r\n SLABDRIVER.PY  GetSlices  return_slice_list %s" %(return_slice_list)
+        return return_slice_list
+       
     ##
     # Convert SFA fields to PLC fields for use when registering up updating
     # registry record in the PLC database
@@ -208,7 +243,15 @@ class SlabDriver ():
         records = self.fill_record_hrns(records)   
 
         return records
-
+                 
+                 
+                 
+    def AddSliceToNodes(self, slice_name, added_nodes):
+        return 
+    
+    def DeleteSliceFromNodes(self, slice_name, deleted_nodes):
+        return   
+    
     def fill_record_hrns(self, records):
         """
         convert pl ids to hrns
@@ -408,10 +451,10 @@ class SlabDriver ():
         Given a SFA record, fill in the senslab specific and SFA specific
         fields in the record. 
         """
-	
+	print >>sys.stderr, "\r\n \t\t BEFORE fill_record_pl_info %s" %(records)	
         if isinstance(records, list):
             records = records[0]
-	print >>sys.stderr, "\r\n \t\t BEFORE fill_record_pl_info %s" %(records)	
+	#print >>sys.stderr, "\r\n \t\t BEFORE fill_record_pl_info %s" %(records)	
         
        
         if records['type'] == 'slice':
@@ -429,6 +472,8 @@ class SlabDriver ():
             records.update({'PI':[recuser['hrn']],
             'researcher': [recuser['hrn']],
             'name':records['hrn'], 'oar_job_id':recslice['oar_job_id'],
+            
+            'node_ids': [],
             'person_ids':[recslice['record_id_user']]})
 
         #self.fill_record_pl_info(records)

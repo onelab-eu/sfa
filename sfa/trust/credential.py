@@ -26,7 +26,7 @@
 # Credentials are signed XML files that assign a subject gid privileges to an object gid
 ##
 
-import os
+import os,sys
 from types import StringTypes
 import datetime
 from StringIO import StringIO
@@ -160,8 +160,10 @@ class Signature(object):
 
 
     def get_refid(self):
+        #print>>sys.stderr," \r\n \r\n credential.py Signature get_refid\ self.refid %s " %(self.refid)
         if not self.refid:
             self.decode()
+            #print>>sys.stderr," \r\n \r\n credential.py Signature get_refid self.refid %s " %(self.refid)
         return self.refid
 
     def get_xml(self):
@@ -588,18 +590,23 @@ class Credential(object):
     
     def updateRefID(self):
         if not self.parent:
-            self.set_refid('ref0')
+            self.set_refid('ref0') 
+            #print>>sys.stderr, " \r\n \r\n updateRefID next_cred ref0 "
             return []
         
         refs = []
 
         next_cred = self.parent
+       
         while next_cred:
+          
             refs.append(next_cred.get_refid())
             if next_cred.parent:
                 next_cred = next_cred.parent
+                #print>>sys.stderr, " \r\n \r\n updateRefID next_cred "
             else:
                 next_cred = None
+                #print>>sys.stderr, " \r\n \r\n updateRefID next_cred NONE"
 
         
         # Find a unique refid for this credential
@@ -804,10 +811,12 @@ class Credential(object):
                     # Failures here include unreadable files
                     # or non PEM files
                     trusted_cert_objects.append(GID(filename=f))
+                    #print>>sys.stderr, " \r\n \t\t\t credential.py verify trusted_certs %s" %(GID(filename=f).get_hrn())
                     ok_trusted_certs.append(f)
                 except Exception, exc:
                     logger.error("Failed to load trusted cert from %s: %r", f, exc)
             trusted_certs = ok_trusted_certs
+            #print>>sys.stderr, " \r\n \t\t\t credential.py verify trusted_certs elemnebts %s" %(len(trusted_certs))
 
         # Use legacy verification if this is a legacy credential
         if self.legacy:
@@ -833,7 +842,8 @@ class Credential(object):
             # Verify the gids of this cred and of its parents
             for cur_cred in self.get_credential_list():
                 cur_cred.get_gid_object().verify_chain(trusted_cert_objects)
-                cur_cred.get_gid_caller().verify_chain(trusted_cert_objects)
+                cur_cred.get_gid_caller().verify_chain(trusted_cert_objects)        
+                #print>>sys.stderr, " \r\n \t\t\t credential.py verify cur_cred get_gid_object hrn %s get_gid_caller %s" %(cur_cred.get_gid_object().get_hrn(),cur_cred.get_gid_caller().get_hrn()) 
 
         refs = []
         refs.append("Sig_%s" % self.get_refid())
@@ -841,7 +851,7 @@ class Credential(object):
         parentRefs = self.updateRefID()
         for ref in parentRefs:
             refs.append("Sig_%s" % ref)
-
+            #print>>sys.stderr, " \r\n \t\t\t credential.py verify trusted_certs refs",  ref 
         for ref in refs:
             # If caller explicitly passed in None that means skip xmlsec1 validation.
             # Strange and not typical
@@ -852,6 +862,7 @@ class Credential(object):
 #                (self.xmlsec_path, ref, cert_args, filename)
             verified = os.popen('%s --verify --node-id "%s" %s %s 2>&1' \
                             % (self.xmlsec_path, ref, cert_args, filename)).read()
+            #print>>sys.stderr, " \r\n \t\t\t credential.py verify filename %s verified %s " %(filename,verified)             
             if not verified.strip().startswith("OK"):
                 # xmlsec errors have a msg= which is the interesting bit.
                 mstart = verified.find("msg=")
@@ -862,11 +873,12 @@ class Credential(object):
                     msg = verified[mstart:mend]
                 raise CredentialNotVerifiable("xmlsec1 error verifying cred %s using Signature ID %s: %s %s" % (self.get_summary_tostring(), ref, msg, verified.strip()))
         os.remove(filename)
-
+        
+        #print>>sys.stderr, " \r\n \t\t\t credential.py HUMMM parents %s", self.parent
         # Verify the parents (delegation)
         if self.parent:
             self.verify_parent(self.parent)
-
+        #print>>sys.stderr, " \r\n \t\t\t credential.py verify trusted_certs parents" 
         # Make sure the issuer is the target's authority, and is
         # itself a valid GID
         self.verify_issuer(trusted_cert_objects)
@@ -969,6 +981,7 @@ class Credential(object):
     # . The expiry time on the child must be no later than the parent
     # . The signer of the child must be the owner of the parent        
     def verify_parent(self, parent_cred):
+        #print>>sys.stderr, " \r\n\r\n \t verify_parent parent_cred.get_gid_caller().save_to_string(False) %s  self.get_signature().get_issuer_gid().save_to_string(False) %s" %(parent_cred.get_gid_caller().get_hrn(),self.get_signature().get_issuer_gid().get_hrn())
         # make sure the rights given to the child are a subset of the
         # parents rights (and check delegate bits)
         if not parent_cred.get_privileges().is_superset(self.get_privileges()):

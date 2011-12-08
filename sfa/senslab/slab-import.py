@@ -17,6 +17,7 @@ from sfa.trust.gid import create_uuid
 from sfa.trust.trustedroots import TrustedRoots
 
 config = Config()
+interface_hrn = config.SFA_INTERFACE_HRN
 TrustedR = TrustedRoots(Config.get_trustedroots_dir(config))
 AuthHierarchy = Hierarchy()
 table = SfaTable()
@@ -111,7 +112,7 @@ def import_node(hrn, node):
     node_record['date_created'] = int(time.mktime(extime.timetuple()))
     existing_records = table.find({'hrn': hrn, 'type': 'node', 'pointer': node['node_id']})
     if not existing_records:
-        print>>sys.stderr, " \r\n \t slab-import : node record %s inserted" %(node_record )
+        print>>sys.stderr, " \r\n \t slab-import : node record %s inserted" %(node['node_id'])
         table.insert(node_record)
     else:
         existing_record = existing_records[0]
@@ -172,7 +173,7 @@ def delete_record( hrn, type):
         table.remove(record)
                 
 def hostname_to_hrn(root_auth,login_base,hostname):
-    return PlXrn(auth=auth,hostname=login_base+'_'+hostname).get_hrn()
+    return PlXrn(auth=root_auth,hostname=login_base+'_'+hostname).get_hrn()
 
     
 def main():

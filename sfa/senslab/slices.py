@@ -24,110 +24,110 @@ class Slices:
         self.nodes = []
         self.persons = []
 
-    def get_slivers(self, xrn, node=None):
-        hrn, type = urn_to_hrn(xrn)
+    #def get_slivers(self, xrn, node=None):
+        #hrn, type = urn_to_hrn(xrn)
          
-        slice_name = hrn_to_pl_slicename(hrn)
-        # XX Should we just call PLCAPI.GetSliceTicket(slice_name) instead
-        # of doing all of this?
-        #return self.api.driver.GetSliceTicket(self.auth, slice_name) 
+        #slice_name = hrn_to_pl_slicename(hrn)
+        ## XX Should we just call PLCAPI.GetSliceTicket(slice_name) instead
+        ## of doing all of this?
+        ##return self.api.driver.GetSliceTicket(self.auth, slice_name) 
         
-        # from PLCAPI.GetSlivers.get_slivers()
-        slice_fields = ['slice_id', 'name', 'instantiation', 'expires', 'person_ids', 'slice_tag_ids']
-        slices = self.api.driver.GetSlices(slice_name, slice_fields)
-        # Build up list of users and slice attributes
-        person_ids = set()
-        all_slice_tag_ids = set()
-        for slice in slices:
-            person_ids.update(slice['person_ids'])
-            all_slice_tag_ids.update(slice['slice_tag_ids'])
-        person_ids = list(person_ids)
-        all_slice_tag_ids = list(all_slice_tag_ids)
-        # Get user information
-        all_persons_list = self.api.driver.GetPersons({'person_id':person_ids,'enabled':True}, ['person_id', 'enabled', 'key_ids'])
-        all_persons = {}
-        for person in all_persons_list:
-            all_persons[person['person_id']] = person        
+        ## from PLCAPI.GetSlivers.get_slivers()
+        #slice_fields = ['slice_id', 'name', 'instantiation', 'expires', 'person_ids', 'slice_tag_ids']
+        #slices = self.api.driver.GetSlices(slice_name, slice_fields)
+        ## Build up list of users and slice attributes
+        #person_ids = set()
+        #all_slice_tag_ids = set()
+        #for slice in slices:
+            #person_ids.update(slice['person_ids'])
+            #all_slice_tag_ids.update(slice['slice_tag_ids'])
+        #person_ids = list(person_ids)
+        #all_slice_tag_ids = list(all_slice_tag_ids)
+        ## Get user information
+        #all_persons_list = self.api.driver.GetPersons({'person_id':person_ids,'enabled':True}, ['person_id', 'enabled', 'key_ids'])
+        #all_persons = {}
+        #for person in all_persons_list:
+            #all_persons[person['person_id']] = person        
 
-        # Build up list of keys
-        key_ids = set()
-        for person in all_persons.values():
-            key_ids.update(person['key_ids'])
-        key_ids = list(key_ids)
-        # Get user account keys
-        all_keys_list = self.api.driver.GetKeys(key_ids, ['key_id', 'key', 'key_type'])
-        all_keys = {}
-        for key in all_keys_list:
-            all_keys[key['key_id']] = key
-        # Get slice attributes
-        all_slice_tags_list = self.api.driver.GetSliceTags(all_slice_tag_ids)
-        all_slice_tags = {}
-        for slice_tag in all_slice_tags_list:
-            all_slice_tags[slice_tag['slice_tag_id']] = slice_tag
+        ## Build up list of keys
+        #key_ids = set()
+        #for person in all_persons.values():
+            #key_ids.update(person['key_ids'])
+        #key_ids = list(key_ids)
+        ## Get user account keys
+        #all_keys_list = self.api.driver.GetKeys(key_ids, ['key_id', 'key', 'key_type'])
+        #all_keys = {}
+        #for key in all_keys_list:
+            #all_keys[key['key_id']] = key
+        ## Get slice attributes
+        #all_slice_tags_list = self.api.driver.GetSliceTags(all_slice_tag_ids)
+        #all_slice_tags = {}
+        #for slice_tag in all_slice_tags_list:
+            #all_slice_tags[slice_tag['slice_tag_id']] = slice_tag
            
-        slivers = []
-        for slice in slices:
-            keys = []
-            for person_id in slice['person_ids']:
-                if person_id in all_persons:
-                    person = all_persons[person_id]
-                    if not person['enabled']:
-                        continue
-                    for key_id in person['key_ids']:
-                        if key_id in all_keys:
-                            key = all_keys[key_id]
-                            keys += [{'key_type': key['key_type'],
-                                    'key': key['key']}]
-            attributes = []
-            # All (per-node and global) attributes for this slice
-            slice_tags = []
-            for slice_tag_id in slice['slice_tag_ids']:
-                if slice_tag_id in all_slice_tags:
-                    slice_tags.append(all_slice_tags[slice_tag_id]) 
-            # Per-node sliver attributes take precedence over global
-            # slice attributes, so set them first.
-            # Then comes nodegroup slice attributes
-            # Followed by global slice attributes
-            sliver_attributes = []
+        #slivers = []
+        #for slice in slices:
+            #keys = []
+            #for person_id in slice['person_ids']:
+                #if person_id in all_persons:
+                    #person = all_persons[person_id]
+                    #if not person['enabled']:
+                        #continue
+                    #for key_id in person['key_ids']:
+                        #if key_id in all_keys:
+                            #key = all_keys[key_id]
+                            #keys += [{'key_type': key['key_type'],
+                                    #'key': key['key']}]
+            #attributes = []
+            ## All (per-node and global) attributes for this slice
+            #slice_tags = []
+            #for slice_tag_id in slice['slice_tag_ids']:
+                #if slice_tag_id in all_slice_tags:
+                    #slice_tags.append(all_slice_tags[slice_tag_id]) 
+            ## Per-node sliver attributes take precedence over global
+            ## slice attributes, so set them first.
+            ## Then comes nodegroup slice attributes
+            ## Followed by global slice attributes
+            #sliver_attributes = []
 
-            if node is not None:
-                for sliver_attribute in filter(lambda a: a['node_id'] == node['node_id'], slice_tags):
-                    sliver_attributes.append(sliver_attribute['tagname'])
-                    attributes.append({'tagname': sliver_attribute['tagname'],
-                                    'value': sliver_attribute['value']})
+            #if node is not None:
+                #for sliver_attribute in filter(lambda a: a['node_id'] == node['node_id'], slice_tags):
+                    #sliver_attributes.append(sliver_attribute['tagname'])
+                    #attributes.append({'tagname': sliver_attribute['tagname'],
+                                    #'value': sliver_attribute['value']})
 
-            # set nodegroup slice attributes
-            for slice_tag in filter(lambda a: a['nodegroup_id'] in node['nodegroup_ids'], slice_tags):
-                # Do not set any nodegroup slice attributes for
-                # which there is at least one sliver attribute
-                # already set.
-                if slice_tag not in slice_tags:
-                    attributes.append({'tagname': slice_tag['tagname'],
-                        'value': slice_tag['value']})
+            ## set nodegroup slice attributes
+            #for slice_tag in filter(lambda a: a['nodegroup_id'] in node['nodegroup_ids'], slice_tags):
+                ## Do not set any nodegroup slice attributes for
+                ## which there is at least one sliver attribute
+                ## already set.
+                #if slice_tag not in slice_tags:
+                    #attributes.append({'tagname': slice_tag['tagname'],
+                        #'value': slice_tag['value']})
 
-            for slice_tag in filter(lambda a: a['node_id'] is None, slice_tags):
-                # Do not set any global slice attributes for
-                # which there is at least one sliver attribute
-                # already set.
-                if slice_tag['tagname'] not in sliver_attributes:
-                    attributes.append({'tagname': slice_tag['tagname'],
-                                   'value': slice_tag['value']})
+            #for slice_tag in filter(lambda a: a['node_id'] is None, slice_tags):
+                ## Do not set any global slice attributes for
+                ## which there is at least one sliver attribute
+                ## already set.
+                #if slice_tag['tagname'] not in sliver_attributes:
+                    #attributes.append({'tagname': slice_tag['tagname'],
+                                   #'value': slice_tag['value']})
 
-            # XXX Sanity check; though technically this should be a system invariant
-            # checked with an assertion
-            if slice['expires'] > MAXINT:  slice['expires']= MAXINT
+            ## XXX Sanity check; though technically this should be a system invariant
+            ## checked with an assertion
+            #if slice['expires'] > MAXINT:  slice['expires']= MAXINT
             
-            slivers.append({
-                'hrn': hrn,
-                'name': slice['name'],
-                'slice_id': slice['slice_id'],
-                'instantiation': slice['instantiation'],
-                'expires': slice['expires'],
-                'keys': keys,
-                'attributes': attributes
-            })
+            #slivers.append({
+                #'hrn': hrn,
+                #'name': slice['name'],
+                #'slice_id': slice['slice_id'],
+                #'instantiation': slice['instantiation'],
+                #'expires': slice['expires'],
+                #'keys': keys,
+                #'attributes': attributes
+            #})
 
-        return slivers
+        #return slivers
  
     def get_peer(self, xrn):
         hrn, type = urn_to_hrn(xrn)
@@ -165,21 +165,23 @@ class Slices:
         return sfa_peer
 
     def verify_slice_nodes(self, slice, requested_slivers, peer):
-        
-        nodes = self.api.driver.GetNodes(slice['node_ids'], ['hostname'])
-        current_slivers = [node['hostname'] for node in nodes]
-
-        # remove nodes not in rspec
-        deleted_nodes = list(set(current_slivers).difference(requested_slivers))
-
+        current_slivers = []
+        if slice['node_ids']:
+            nodes = self.api.driver.GetNodes(slice['node_ids'], ['hostname'])
+            current_slivers = [node['hostname'] for node in nodes]
+    
+            # remove nodes not in rspec
+            deleted_nodes = list(set(current_slivers).difference(requested_slivers))
+    
         # add nodes from rspec
         added_nodes = list(set(requested_slivers).difference(current_slivers))        
-
+        print>>sys.stderr , "\r\n \r\n \t slices.py  verify_slice_nodes added_nodes" , added_nodes
         try:
             if peer:
                 self.api.driver.UnBindObjectFromPeer('slice', slice['slice_id'], peer['shortname'])
             self.api.driver.AddSliceToNodes(slice['name'], added_nodes)
-            self.api.driver.DeleteSliceFromNodes(slice['name'], deleted_nodes)
+            if deleted_nodes:
+                self.api.driver.DeleteSliceFromNodes(slice['name'], deleted_nodes)
 
         except: 
             self.api.logger.log_exc('Failed to add/remove slice from nodes')
@@ -199,38 +201,10 @@ class Slices:
         return str(key)
 
     def verify_slice_links(self, slice, links, aggregate):
-        # nodes is undefined here
-        if not links:
+
             return
 
-        slice_tags = []
-        
-        # set egre key
-        slice_tags.append({'name': 'egre_key', 'value': self.free_egre_key()})
-    
-        # set netns
-        slice_tags.append({'name': 'netns', 'value': '1'})
-
-        # set cap_net_admin 
-        # need to update the attribute string?
-        slice_tags.append({'name': 'capabilities', 'value': 'CAP_NET_ADMIN'}) 
-        
-        for link in links:
-            # get the ip address of the first node in the link
-            ifname1 = Xrn(link['interface1']['component_id']).get_leaf()
-            (node, device) = ifname1.split(':')
-            node_id = int(node.replace('node', ''))
-            node = aggregate.nodes[node_id]
-            if1 = aggregate.interfaces[node['interface_ids'][0]]
-            ipaddr = if1['ip']
-            topo_rspec = VLink.get_topo_rspec(link, ipaddr)
-            # set topo_rspec tag
-            slice_tags.append({'name': 'topo_rspec', 'value': str([topo_rspec]), 'node_id': node_id})
-            # set vini_topo tag
-            slice_tags.append({'name': 'vini_topo', 'value': 'manual', 'node_id': node_id})
-            #self.api.driver.AddSliceTag(slice['name'], 'topo_rspec', str([topo_rspec]), node_id) 
-
-        self.verify_slice_attributes(slice, slice_tags, append=True, admin=True)
+       
                         
         
 
@@ -317,7 +291,8 @@ class Slices:
         if not slices:
             slice = {'name': slicename,
                      'url': slice_record.get('url', slice_hrn), 
-                     'description': slice_record.get('description', slice_hrn)}
+                     #'description': slice_record.get('description', slice_hrn)
+                     }
             # add the slice                          
             slice['slice_id'] = self.api.driver.AddSlice(slice)
             slice['node_ids'] = []
@@ -331,6 +306,9 @@ class Slices:
                 self.registry.register_peer_object(self.credential, peer_dict)
         else:
             slice = slices[0]
+            slice.update(slice_record)
+            del slice['last_updated']
+            del slice['date_created']
             if peer:
                 slice['peer_slice_id'] = slice_record.get('slice_id', None)
                 # unbind from peer so we can modify if necessary. Will bind back later
@@ -342,104 +320,123 @@ class Slices:
         return slice
 
     #def get_existing_persons(self, users):
-    def verify_persons(self, slice_hrn, slice_record, users, peer, sfa_peer, append=True):
-        users_by_email = {}
-        users_by_site = defaultdict(list)
-
-        users_dict = {} 
-        for user in users:
-            if 'append' in user and user['append'] == False:
-                append = False
-            if 'email' in user:
-                users_by_email[user['email']] = user
-                users_dict[user['email']] = user
-            elif 'urn' in user:
-                hrn, type = urn_to_hrn(user['urn'])
-                username = get_leaf(hrn) 
-                login_base = get_leaf(get_authority(user['urn']))
-                user['username'] = username 
-                users_by_site[login_base].append(user)
-
-        existing_user_ids = []
-        if users_by_email:
-            # get existing users by email 
-            existing_users = self.api.driver.GetPersons({'email': users_by_email.keys()}, 
-                                                        ['person_id', 'key_ids', 'email'])
-            existing_user_ids.extend([user['email'] for user in existing_users])
-
-        if users_by_site:
-            # get a list of user sites (based on requeste user urns
-            site_list = self.api.driver.GetSites(users_by_site.keys(), \
-                ['site_id', 'login_base', 'person_ids'])
-            sites = {}
-            site_user_ids = []
-            
-            # get all existing users at these sites
-            for site in site_list:
-                sites[site['site_id']] = site
-                site_user_ids.extend(site['person_ids'])
-
-            existing_site_persons_list = self.api.driver.GetPersons(site_user_ids,  
-                                                                    ['person_id', 'key_ids', 'email', 'site_ids'])
-
-            # all requested users are either existing users or new (added) users      
-            for login_base in users_by_site:
-                requested_site_users = users_by_site[login_base]
-                for requested_user in requested_site_users:
-                    user_found = False
-                    for existing_user in existing_site_persons_list:
-                        for site_id in existing_user['site_ids']:
-                            site = sites[site_id]
-                            if login_base == site['login_base'] and \
-                               existing_user['email'].startswith(requested_user['username']):
-                                existing_user_ids.append(existing_user['email'])
-                                users_dict[existing_user['email']] = requested_user
-                                user_found = True
-                                break
-                        if user_found:
-                            break
+    def verify_persons(self, slice_hrn, slice_record, users, append=True):
+        users_by_id = {}
+        users_by_hrn = {}
+        users_dict = {}
       
-                    if user_found == False:
-                        fake_email = requested_user['username'] + '@geni.net'
-                        users_dict[fake_email] = requested_user
+        for user in users:
+            if 'person_id' in user and 'hrn' in user:
+                users_by_id[user['person_id']] = user
+                users_dict[user['person_id']] = {'person_id':user['person_id'], 'hrn':user['hrn']}
+           
+                #hrn, type = urn_to_hrn(user['urn'])
+                #username = get_leaf(hrn) 
+                #login_base = get_leaf(get_authority(user['urn']))
+                #user['username'] = username 
+                #users_by_site[login_base].append(user)
+                users_by_hrn[user['hrn']] = user
+                users_dict[user['hrn']] = {'person_id':user['person_id'], 'hrn':user['hrn']}
+       
+        existing_user_ids = []
+        existing_users= []
+        if users_by_hrn:
+            # get existing users by email 
+           
+            existing_users = self.api.driver.GetPersons({'hrn': users_by_hrn.keys()}, 
+                                                        ['hrn'])
+            #print>>sys.stderr, " \r\n \r\n \t slices.py HEEEEEEEEY===========verify_person  existing_users %s users_dict %s  " %(existing_users, users_dict) 
+            #existing_user_ids = [(users_dict[user['hrn']]['hrn'],users_dict[user['hrn']]['person_id'] ) for user in existing_users]
+            for user in existing_users :
+                for  k in users_dict[user['hrn']] :
+                    existing_user_ids.append (users_dict[user['hrn']][k])
+
+            #print>>sys.stderr, " \r\n \r\n slices.py verify_person   existing_user_ids %s " %(existing_user_ids)
+        #if users_by_id:
+            #existing_user_ids.extend([user for user in users_by_id])
+        #if users_by_site:
+            ## get a list of user sites (based on requeste user urns
+            #site_list = self.api.driver.GetSites(users_by_site.keys(), \
+                #['site_id', 'login_base', 'person_ids'])
+            #sites = {}
+            #site_user_ids = []
+            
+            ## get all existing users at these sites
+            #for site in site_list:
+                #sites[site['site_id']] = site
+                #site_user_ids.extend(site['person_ids'])
+
+            #existing_site_persons_list = self.api.driver.GetPersons(site_user_ids,  
+                                                                    #['person_id', 'key_ids', 'email', 'site_ids'])
+
+            ## all requested users are either existing users or new (added) users      
+            #for login_base in users_by_site:
+                #requested_site_users = users_by_site[login_base]
+                #for requested_user in requested_site_users:
+                    #user_found = False
+                    #for existing_user in existing_site_persons_list:
+                        #for site_id in existing_user['site_ids']:
+                            #site = sites[site_id]
+                            #if login_base == site['login_base'] and \
+                               #existing_user['email'].startswith(requested_user['username']):
+                                #existing_user_ids.append(existing_user['email'])
+                                #users_dict[existing_user['email']] = requested_user
+                                #user_found = True
+                                #break
+                        #if user_found:
+                            #break
+      
+                    #if user_found == False:
+                        #fake_email = requested_user['username'] + '@geni.net'
+                        #users_dict[fake_email] = requested_user
                 
 
         # requested slice users        
         requested_user_ids = users_dict.keys()
         # existing slice users
-        existing_slice_users_filter = {'person_id': slice_record.get('person_ids', [])}
-        existing_slice_users = self.api.driver.GetPersons(existing_slice_users_filter,
-                                                          ['person_id', 'key_ids', 'email'])
-        existing_slice_user_ids = [user['email'] for user in existing_slice_users]
+        existing_slice_users_filter = {'hrn': slice_record.get('PI', [])}
+        #print>>sys.stderr, " \r\n \r\n slices.py verify_person requested_user_ids %s existing_slice_users_filter %s slice_record %s" %(requested_user_ids,existing_slice_users_filter,slice_record)
         
+        existing_slice_users = self.api.driver.GetPersons(existing_slice_users_filter,['hrn'])
+        existing_slice_user_ids = []
+        for user in existing_slice_users :
+            for  k in users_dict[user['hrn']] :
+                    existing_slice_user_ids.append (users_dict[user['hrn']][k])
+                    #existing_slice_user_ids = [user['hrn'] for user in existing_slice_users]
+                    
+        #print>>sys.stderr, " \r\n \r\n slices.py verify_person requested_user_ids %s  existing_slice_user_ids%s " %(requested_user_ids,existing_slice_user_ids)
         # users to be added, removed or updated
-        added_user_ids = set(requested_user_ids).difference(existing_user_ids)
+        added_user_ids = set(requested_user_ids).difference(set(existing_user_ids))
         added_slice_user_ids = set(requested_user_ids).difference(existing_slice_user_ids)
         removed_user_ids = set(existing_slice_user_ids).difference(requested_user_ids)
+        #print>>sys.stderr, " \r\n \r\n slices.py verify_persons  existing_slice_user_ids %s  requested_user_ids %s " %(existing_slice_user_ids,requested_user_ids)
         updated_user_ids = set(existing_slice_user_ids).intersection(requested_user_ids)
-
+        #print>>sys.stderr, " \r\n \r\n slices.py verify_persons  added_user_ids %s added_slice_user_ids %s " %(added_user_ids,added_slice_user_ids)
+        #print>>sys.stderr, " \r\n \r\n slices.py verify_persons  removed_user_ids %s updated_user_ids %s " %(removed_user_ids,updated_user_ids)
         # Remove stale users (only if we are not appending).
         if append == False:
             for removed_user_id in removed_user_ids:
                 self.api.driver.DeletePersonFromSlice(removed_user_id, slice_record['name'])
         # update_existing users
-        updated_users_list = [user for user in existing_slice_users if user['email'] in \
+        updated_users_list = [user for user in existing_slice_users if user['hrn'] in \
           updated_user_ids]
-        self.verify_keys(existing_slice_users, updated_users_list, peer, append)
+        #self.verify_keys(existing_slice_users, updated_users_list, peer, append)
 
         added_persons = []
         # add new users
         for added_user_id in added_user_ids:
             added_user = users_dict[added_user_id]
-            hrn, type = urn_to_hrn(added_user['urn'])  
+            #hrn, type = urn_to_hrn(added_user['urn'])  
             person = {
-                'first_name': added_user.get('first_name', hrn),
-                'last_name': added_user.get('last_name', hrn),
-                'email': added_user_id,
-                'peer_person_id': None,
-                'keys': [],
-                'key_ids': added_user.get('key_ids', []),
-            }
+                #'first_name': added_user.get('first_name', hrn),
+                #'last_name': added_user.get('last_name', hrn),
+                'person_id': added_user_id,
+                #'peer_person_id': None,
+                #'keys': [],
+                #'key_ids': added_user.get('key_ids', []),
+                
+            } 
+            #print>>sys.stderr, " \r\n \r\n slices.py verify_persons   added_user_ids %s " %(added_user_ids)
             person['person_id'] = self.api.driver.AddPerson(person)
             if peer:
                 person['peer_person_id'] = added_user['person_id']
@@ -449,18 +446,18 @@ class Slices:
             self.api.driver.UpdatePerson(person['person_id'], {'enabled': True})
             
             # add person to site
-            self.api.driver.AddPersonToSite(added_user_id, login_base)
+            #self.api.driver.AddPersonToSite(added_user_id, login_base)
 
-            for key_string in added_user.get('keys', []):
-                key = {'key':key_string, 'key_type':'ssh'}
-                key['key_id'] = self.api.driver.AddPersonKey(person['person_id'], key)
-                person['keys'].append(key)
+            #for key_string in added_user.get('keys', []):
+                #key = {'key':key_string, 'key_type':'ssh'}
+                #key['key_id'] = self.api.driver.AddPersonKey(person['person_id'], key)
+                #person['keys'].append(key)
 
             # add the registry record
-            if sfa_peer:
-                peer_dict = {'type': 'user', 'hrn': hrn, 'peer_authority': sfa_peer, \
-                    'pointer': person['person_id']}
-                self.registry.register_peer_object(self.credential, peer_dict)
+            #if sfa_peer:
+                #peer_dict = {'type': 'user', 'hrn': hrn, 'peer_authority': sfa_peer, \
+                    #'pointer': person['person_id']}
+                #self.registry.register_peer_object(self.credential, peer_dict)
     
         for added_slice_user_id in added_slice_user_ids.union(added_user_ids):
             # add person to the slice 

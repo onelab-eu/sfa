@@ -45,7 +45,7 @@ class SenslabImportUsers:
 				def_slice.update(dflt_slice)
 				self.slices_list.append(def_slice)
 	
-		print>>sys.stderr, "InitSlices SliceLIST", self.slices_list
+		#print>>sys.stderr, "InitSlices SliceLIST", self.slices_list
 		
 	def InitPersons(self):	
 		persons_per_site = {}

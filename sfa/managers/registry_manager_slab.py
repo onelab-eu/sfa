@@ -108,6 +108,7 @@ def Resolve(api, xrns, type=None, full=True):
 
     # load all known registry names into a prefix tree and attempt to find
     # the longest matching prefix
+    print >>sys.stderr , '\t\t REGISTRY MANAGER : resolve=========api ', api
     print >>sys.stderr , '\t\t REGISTRY MANAGER : resolve=========xrns ', xrns
     if not isinstance(xrns, types.ListType):
         if not type:

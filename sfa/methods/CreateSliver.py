@@ -2,7 +2,7 @@ from sfa.util.faults import SfaInvalidArgument
 from sfa.util.xrn import urn_to_hrn
 from sfa.util.method import Method
 from sfa.util.sfatablesRuntime import run_sfatables
-
+import sys
 from sfa.trust.credential import Credential
 
 from sfa.storage.parameter import Parameter, Mixed
@@ -36,7 +36,7 @@ class CreateSliver(Method):
         hrn, type = urn_to_hrn(slice_xrn)
 
         self.api.logger.info("interface: %s\ttarget-hrn: %s\tmethod-name: %s"%(self.api.interface, hrn, self.name))
-
+        print >>sys.stderr, " \r\n \r\n Createsliver.py call %s\ttarget-hrn: %s\tmethod-name: %s "%(self.api.interface, hrn, self.name)
         # Find the valid credentials
         valid_creds = self.api.auth.checkCredentials(creds, 'createsliver', hrn)
         origin_hrn = Credential(string=valid_creds[0]).get_gid_caller().get_hrn()
@@ -53,7 +53,8 @@ class CreateSliver(Method):
             chain_name = 'FORWARD-INCOMING'
         self.api.logger.debug("CreateSliver: sfatables on chain %s"%chain_name)
         rspec = run_sfatables(chain_name, hrn, origin_hrn, rspec)
-        slivers = RSpec(rspec).version.get_nodes_with_slivers()
+        slivers = RSpec(rspec).version.get_nodes_with_slivers()        
+        print >>sys.stderr, " \r\n \r\n Createsliver.py call users : ", users
         if slivers:
             result = self.api.manager.CreateSliver(self.api, slice_xrn, creds, rspec, users, options)
         else:

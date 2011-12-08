@@ -165,6 +165,7 @@ class OARGETParser:
 		if self.version_json_dict['apilib_version'] != "0.2.10" :
 			self.raw_json = self.raw_json['items']
 		self.ParseNodes()
+                self.ParseSites()
 
 		
 		
@@ -193,29 +194,29 @@ class OARGETParser:
 	#Retourne liste de dictionnaires contenant attributs des sites	
 	def ParseSites(self):
 		nodes_per_site = {}
+                
 		# Create a list of nodes per  site_id
 		for node_id in self.node_dictlist.keys():
 			node  = self.node_dictlist[node_id]
-			if node['site_id'] not in nodes_per_site.keys():
-				nodes_per_site[node['site_id']] = []
-				nodes_per_site[node['site_id']].append(node['node_id'])
+			if node['site_login_base'] not in nodes_per_site.keys():
+				nodes_per_site[node['site_login_base']] = []
+				nodes_per_site[node['site_login_base']].append(node['node_id'])
 			else:
-				if node['node_id'] not in nodes_per_site[node['site_id']]:
-					nodes_per_site[node['site_id']].append(node['node_id'])
+				if node['node_id'] not in nodes_per_site[node['site_login_base']]:
+					nodes_per_site[node['site_login_base']].append(node['node_id'])
 		#Create a site dictionary with key is site_login_base (name of the site)
 		# and value is a dictionary of properties, including the list of the node_ids
 		for node_id in self.node_dictlist.keys():
 			node  = self.node_dictlist[node_id]
-			if node['site_id'] not in self.site_dict.keys():
-				self.site_dict[node['site_login_base']] = [('site_id',node['site_id']),\
-									 ('login_base', node['site_login_base']),\
-									('node_ids',nodes_per_site[node['site_id']]),\
+			if node['site_login_base'] not in self.site_dict.keys():
+				self.site_dict[node['site_login_base']] = [('login_base', node['site_login_base']),\
+									('node_ids',nodes_per_site[node['site_login_base']]),\
 									('latitude',"48.83726"),\
-									('longitude',"- 2.10336"),('name',"demolab"),\
+									('longitude',"- 2.10336"),('name',"senslab"),\
 									('pcu_ids', []), ('max_slices', None), ('ext_consortium_id', None),\
 									('max_slivers', None), ('is_public', True), ('peer_site_id', None),\
-									('abbreviated_name', "demolab"), ('address_ids', []),\
-									('url', "http,//www.sdemolab.fr"), ('person_ids', []),\
+									('abbreviated_name', "senslab"), ('address_ids', []),\
+									('url', "http,//www.senslab.info"), ('person_ids', []),\
 									('site_tag_ids', []), ('enabled', True),  ('slice_ids', []),\
 									('date_created', None), ('peer_id', None),]
 				self.site_dict[node['site_login_base']] = dict(self.site_dict[node['site_login_base']])
