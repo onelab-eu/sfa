@@ -81,7 +81,7 @@ def list_resources ():
     credentials = [ credential ]
     options = {}
     options [ 'geni_rspec_version' ] = version_dict
-#    options [ 'call_id' ] = unique_call_id()
+    options [ 'call_id' ] = unique_call_id()
     list_resources = bootstrap.server_proxy (aggregate_url).ListResources(credentials,options)
     print "miniclient: ListResources at %s returned : %s"%(aggregate_url,truncate(list_resources))
 
@@ -92,17 +92,16 @@ def list_slice_resources ():
     options = { }
     options [ 'geni_rspec_version' ] = version_dict
     options [ 'geni_slice_urn' ] = slice_urn
-#    options [ 'call_id' ] = unique_call_id()
+    options [ 'call_id' ] = unique_call_id()
     list_resources = bootstrap.server_proxy (aggregate_url).ListResources(credentials,options)
     print "miniclient: ListResources at %s for slice %s returned : %s"%(aggregate_url,slice_urn,truncate(list_resources))
-    
     
     
 
 def main ():
     get_version(registry_url)
     get_version(aggregate_url)
-#    list_resources()
-#    list_slice_resources()
+    list_resources()
+    list_slice_resources()
 
 main()
