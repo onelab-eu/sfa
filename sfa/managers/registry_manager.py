@@ -283,8 +283,7 @@ class RegistryManager:
             gid = auth_info.get_gid_object()
             record.set_gid(gid.save_to_string(save_parents=True))
 
-        # update testbed-specific data f needed
-        logger.info("Getting driver from manager=%s"%self)
+        # update testbed-specific data if needed
         pointer = self.driver.register (record, hrn, pub_key)
 
         record.set_pointer(pointer)
