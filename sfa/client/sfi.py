@@ -383,7 +383,7 @@ class Sfi:
         self.logger.setLevelFromOptVerbose(self.options.verbose)
         if options.hashrequest:
             self.hashrequest = True
- 
+
         if len(args) <= 0:
             self.logger.critical("No command given. Use -h for help.")
             self.print_command_help(options)
@@ -412,58 +412,58 @@ class Sfi:
     
     ####################
     def read_config(self):
-       config_file = os.path.join(self.options.sfi_dir,"sfi_config")
-       try:
-          config = Config (config_file)
-       except:
-          self.logger.critical("Failed to read configuration file %s"%config_file)
-          self.logger.info("Make sure to remove the export clauses and to add quotes")
-          if self.options.verbose==0:
-              self.logger.info("Re-run with -v for more details")
-          else:
-              self.logger.log_exc("Could not read config file %s"%config_file)
-          sys.exit(1)
-    
-       errors = 0
-       # Set SliceMgr URL
-       if (self.options.sm is not None):
-          self.sm_url = self.options.sm
-       elif hasattr(config, "SFI_SM"):
-          self.sm_url = config.SFI_SM
-       else:
-          self.logger.error("You need to set e.g. SFI_SM='http://your.slicemanager.url:12347/' in %s" % config_file)
-          errors += 1 
-    
-       # Set Registry URL
-       if (self.options.registry is not None):
-          self.reg_url = self.options.registry
-       elif hasattr(config, "SFI_REGISTRY"):
-          self.reg_url = config.SFI_REGISTRY
-       else:
-          self.logger.errors("You need to set e.g. SFI_REGISTRY='http://your.registry.url:12345/' in %s" % config_file)
-          errors += 1 
-          
+        config_file = os.path.join(self.options.sfi_dir,"sfi_config")
+        try:
+           config = Config (config_file)
+        except:
+           self.logger.critical("Failed to read configuration file %s"%config_file)
+           self.logger.info("Make sure to remove the export clauses and to add quotes")
+           if self.options.verbose==0:
+               self.logger.info("Re-run with -v for more details")
+           else:
+               self.logger.log_exc("Could not read config file %s"%config_file)
+           sys.exit(1)
+     
+        errors = 0
+        # Set SliceMgr URL
+        if (self.options.sm is not None):
+           self.sm_url = self.options.sm
+        elif hasattr(config, "SFI_SM"):
+           self.sm_url = config.SFI_SM
+        else:
+           self.logger.error("You need to set e.g. SFI_SM='http://your.slicemanager.url:12347/' in %s" % config_file)
+           errors += 1 
+     
+        # Set Registry URL
+        if (self.options.registry is not None):
+           self.reg_url = self.options.registry
+        elif hasattr(config, "SFI_REGISTRY"):
+           self.reg_url = config.SFI_REGISTRY
+        else:
+           self.logger.errors("You need to set e.g. SFI_REGISTRY='http://your.registry.url:12345/' in %s" % config_file)
+           errors += 1 
+           
 
-       # Set user HRN
-       if (self.options.user is not None):
-          self.user = self.options.user
-       elif hasattr(config, "SFI_USER"):
-          self.user = config.SFI_USER
-       else:
-          self.logger.errors("You need to set e.g. SFI_USER='plc.princeton.username' in %s" % config_file)
-          errors += 1 
-    
-       # Set authority HRN
-       if (self.options.auth is not None):
-          self.authority = self.options.auth
-       elif hasattr(config, "SFI_AUTH"):
-          self.authority = config.SFI_AUTH
-       else:
-          self.logger.error("You need to set e.g. SFI_AUTH='plc.princeton' in %s" % config_file)
-          errors += 1 
-    
-       if errors:
-          sys.exit(1)
+        # Set user HRN
+        if (self.options.user is not None):
+           self.user = self.options.user
+        elif hasattr(config, "SFI_USER"):
+           self.user = config.SFI_USER
+        else:
+           self.logger.errors("You need to set e.g. SFI_USER='plc.princeton.username' in %s" % config_file)
+           errors += 1 
+     
+        # Set authority HRN
+        if (self.options.auth is not None):
+           self.authority = self.options.auth
+        elif hasattr(config, "SFI_AUTH"):
+           self.authority = config.SFI_AUTH
+        else:
+           self.logger.error("You need to set e.g. SFI_AUTH='plc.princeton' in %s" % config_file)
+           errors += 1 
+     
+        if errors:
+           sys.exit(1)
 
 
     #
@@ -471,18 +471,18 @@ class Sfi:
     #
     def set_servers(self):
 
-       self.read_config() 
-       # Get key and certificate
-       key_file = self.get_key_file()
-       cert_file = self.get_cert_file(key_file)
-       self.key_file = key_file
-       self.cert_file = cert_file
-       self.cert = GID(filename=cert_file)
-       self.logger.info("Contacting Registry at: %s"%self.reg_url)
-       self.registry = SfaServerProxy(self.reg_url, key_file, cert_file, timeout=self.options.timeout, verbose=self.options.debug)  
-       self.logger.info("Contacting Slice Manager at: %s"%self.sm_url)
-       self.slicemgr = SfaServerProxy(self.sm_url, key_file, cert_file, timeout=self.options.timeout, verbose=self.options.debug)
-       return
+        self.read_config() 
+        # Get key and certificate
+        key_file = self.get_key_file()
+        cert_file = self.get_cert_file(key_file)
+        self.key_file = key_file
+        self.cert_file = cert_file
+        self.cert = GID(filename=cert_file)
+        self.logger.info("Contacting Registry at: %s"%self.reg_url)
+        self.registry = SfaServerProxy(self.reg_url, key_file, cert_file, timeout=self.options.timeout, verbose=self.options.debug)  
+        self.logger.info("Contacting Slice Manager at: %s"%self.sm_url)
+        self.slicemgr = SfaServerProxy(self.sm_url, key_file, cert_file, timeout=self.options.timeout, verbose=self.options.debug)
+        return
 
     def get_cached_server_version(self, server):
         # check local cache first
@@ -595,7 +595,7 @@ class Sfi:
         
         if not hrn:
             hrn = self.user
- 
+
         gidfile = os.path.join(self.options.sfi_dir, hrn + ".gid")
         gid = self.get_cached_gid(gidfile)
         if not gid:
@@ -629,7 +629,7 @@ class Sfi:
                datetime.datetime.today() < credential.get_expiration():
                 return credential
         return None 
- 
+
     def get_user_cred(self):
         file = os.path.join(self.options.sfi_dir, self.user.replace(self.authority + '.', '') + ".cred")
         return self.get_cred(file, 'user', self.user)
@@ -644,7 +644,7 @@ class Sfi:
     def get_slice_cred(self, name):
         file = os.path.join(self.options.sfi_dir, "slice_" + get_leaf(name) + ".cred")
         return self.get_cred(file, 'slice', name)
- 
+
     def get_cred(self, file, type, hrn):
         # attempt to load a cached credential 
         cred = self.get_cached_credential(file)    
@@ -670,7 +670,7 @@ class Sfi:
             self.logger.info("Writing %s credential to %s" %(type, file))
 
         return cred
- 
+
     
     def delegate_cred(self, object_cred, hrn):
         # the gid and hrn of the object we are delegating
@@ -729,7 +729,7 @@ class Sfi:
         record = records[0]
   
         return self.server_proxy(record['hostname'], CM_PORT, self.key_file, self.cert_file)
- 
+
     def server_proxy(self, host, port, keyfile, certfile):
         """
         Return an instance of an xmlrpc server connection    
@@ -754,8 +754,8 @@ class Sfi:
             server = self.server_proxy(opts.aggregate, opts.port, self.key_file, self.cert_file)
         # direct connection to the nodes component manager interface
         if hasattr(opts, 'component') and opts.component:
-            server = self.get_component_proxy_from_hrn(opts.component)    
- 
+            server = self.get_component_proxy_from_hrn(opts.component)
+
         return server
     #==========================================================================
     # Following functions implement the commands
@@ -949,7 +949,7 @@ or currently provisioned resources  (ListResources)
                 api_options['geni_rspec_version'] = version_manager.get_version('ProtoGENI 2').to_dict()     
         else:
             api_options['geni_rspec_version'] = {'type': 'geni', 'version': '3.0'}
- 
+
         result = server.ListResources(creds, api_options)
         value = ReturnValue.get_value(result)
         if opts.file is None:
@@ -1190,7 +1190,7 @@ or currently provisioned resources  (ListResources)
             except Exception, e:
                 self.logger.log_exc(e.message)
         return
- 
+
     def create_gid(self, opts, args):
         """
         Create a GID (CreateGid)
