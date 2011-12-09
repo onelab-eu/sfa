@@ -233,7 +233,7 @@ class SliceManager:
             interface = api.aggregates[aggregate]
             server = api.server_proxy(interface, cred)
             # Just send entire RSpec to each aggregate
-            threads.run(_CreateSliver, aggregate, server, xrn, [cred], rspec.toxml(), users, call_id)
+            threads.run(_CreateSliver, aggregate, server, xrn, [cred], rspec.toxml(), users, options)
                 
         results = threads.get_results()
         manifest_version = version_manager._get_version(rspec.version.type, rspec.version.version, 'manifest')
@@ -275,7 +275,7 @@ class SliceManager:
                 continue
             interface = api.aggregates[aggregate]
             server = api.server_proxy(interface, cred)
-            threads.run(_RenewSliver, server, xrn, [cred], expiration_time, call_id)
+            threads.run(_RenewSliver, server, xrn, [cred], expiration_time, options)
         # 'and' the results
         results = [ReturnValue.get_value(result) for result in threads.get_results()]
         return reduce (lambda x,y: x and y, results , True)
@@ -307,7 +307,7 @@ class SliceManager:
                 continue
             interface = api.aggregates[aggregate]
             server = api.server_proxy(interface, cred)
-            threads.run(_DeleteSliver, server, xrn, [cred], call_id)
+            threads.run(_DeleteSliver, server, xrn, [cred], options)
         threads.get_results()
         return 1
     
@@ -331,7 +331,7 @@ class SliceManager:
         for aggregate in api.aggregates:
             interface = api.aggregates[aggregate]
             server = api.server_proxy(interface, cred)
-            threads.run (_SliverStatus, server, slice_xrn, [cred], call_id)
+            threads.run (_SliverStatus, server, slice_xrn, [cred], options)
         results = [ReturnValue.get_value(result) for result in threads.get_results()]
     
         # get rid of any void result - e.g. when call_id was hit where by convention we return {}
