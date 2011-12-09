@@ -69,7 +69,7 @@ class PlShell:
                             'Username':   config.SFA_PLC_USER,
                             'AuthString': config.SFA_PLC_PASSWORD,
                             }
-            self.proxy = xmlrpclib.Server(url, verbose = 0, allow_none = True)
+            self.proxy = xmlrpclib.Server(url, verbose = False, allow_none = True)
 
     def __getattr__(self, name):
         def func(*args, **kwds):

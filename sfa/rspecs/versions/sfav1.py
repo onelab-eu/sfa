@@ -114,7 +114,7 @@ class SFAv1(BaseVersion):
                 SFAv1Sliver.add_sliver_attribute(sliver, name, value)
         else:
             # should this be an assert / raise an exception?
-            print "WARNING: failed to find component_id", component_id
+            logger.error("WARNING: failed to find component_id %s" % component_id)
 
     def get_sliver_attributes(self, component_id, network=None):
         nodes = self.get_nodes({'component_id': '*%s*' % component_id})
