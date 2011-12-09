@@ -544,26 +544,13 @@ class Sfi:
         self.bootstrap = bootstrap
 
 
-    # xxx this too should be handled in bootstrap
-    def get_cached_credential(self, file):
-        """
-        Return a cached credential only if it hasn't expired.
-        """
-        if (os.path.isfile(file)):
-            credential = Credential(filename=file)
-            # make sure it isnt expired 
-            if not credential.get_expiration or \
-               datetime.datetime.today() < credential.get_expiration():
-                return credential
-        return None 
-
-    def get_auth_cred(self):
+    def my_authority_credential_string(self):
         if not self.authority:
             self.logger.critical("no authority specified. Use -a or set SF_AUTH")
             sys.exit(-1)
         return self.bootstrap.authority_credential_string (self.authority)
 
-    def get_slice_cred(self, name):
+    def slice_credential_string(self, name):
         return self.bootstrap.slice_credential_string (name)
 
     # xxx should be supported by sfaclientbootstrap as well
@@ -727,7 +714,7 @@ or version information about sfi itself
     
     def add(self, opts, args):
         "add record into registry from xml file (Register)"
-        auth_cred = self.get_auth_cred()
+        auth_cred = self.my_authority_credential_string()
         if len(args)!=1:
             self.print_help()
             sys.exit(1)
@@ -747,21 +734,21 @@ or version information about sfi itself
             if record.get_name() == self.user:
                 cred = self.my_credential_string
             else:
-                cred = self.get_auth_cred()
+                cred = self.my_authority_credential_string()
         elif record['type'] in ["slice"]:
             try:
-                cred = self.get_slice_cred(record.get_name())
+                cred = self.slice_credential_string(record.get_name())
             except ServerException, e:
                # XXX smbaker -- once we have better error return codes, update this
                # to do something better than a string compare
                if "Permission error" in e.args[0]:
-                   cred = self.get_auth_cred()
+                   cred = self.my_authority_credential_string()
                else:
                    raise
         elif record.get_type() in ["authority"]:
-            cred = self.get_auth_cred()
+            cred = self.my_authority_credential_string()
         elif record.get_type() == 'node':
-            cred = self.get_auth_cred()
+            cred = self.my_authority_credential_string()
         else:
             raise "unknown record type" + record.get_type()
         record = record.as_dict()
@@ -769,7 +756,7 @@ or version information about sfi itself
   
     def remove(self, opts, args):
         "remove registry record by name (Remove)"
-        auth_cred = self.get_auth_cred()
+        auth_cred = self.my_authority_credential_string()
         if len(args)!=1:
             self.print_help()
             sys.exit(1)
@@ -812,7 +799,7 @@ or currently provisioned resources  (ListResources)
             api_options['info'] = opts.info
         
         if args:
-            cred = self.get_slice_cred(args[0])
+            cred = self.slice_credential_string(args[0])
             hrn = args[0]
             api_options['geni_slice_urn'] = hrn_to_urn(hrn, 'slice')
         else:
@@ -851,7 +838,7 @@ or currently provisioned resources  (ListResources)
         server_version = self.get_cached_server_version(server)
         slice_hrn = args[0]
         slice_urn = hrn_to_urn(slice_hrn, 'slice')
-        slice_cred = self.get_slice_cred(slice_hrn)
+        slice_cred = self.slice_credential_string(slice_hrn)
         delegated_cred = None
         if server_version.get('interface') == 'slicemgr':
             # delegate our cred to the slice manager
@@ -908,7 +895,7 @@ or currently provisioned resources  (ListResources)
         """
         slice_hrn = args[0]
         slice_urn = hrn_to_urn(slice_hrn, 'slice') 
-        slice_cred = self.get_slice_cred(slice_hrn)
+        slice_cred = self.slice_credential_string(slice_hrn)
         creds = [slice_cred]
         if opts.delegate:
             delegated_cred = self.delegate_cred(slice_cred, get_authority(self.authority))
@@ -924,7 +911,7 @@ or currently provisioned resources  (ListResources)
         """
         slice_hrn = args[0]
         slice_urn = hrn_to_urn(slice_hrn, 'slice') 
-        slice_cred = self.get_slice_cred(slice_hrn)
+        slice_cred = self.slice_credential_string(slice_hrn)
         creds = [slice_cred]
         if opts.delegate:
             delegated_cred = self.delegate_cred(slice_cred, get_authority(self.authority))
@@ -944,7 +931,7 @@ or currently provisioned resources  (ListResources)
         """
         slice_hrn = args[0]
         slice_urn = hrn_to_urn(slice_hrn, 'slice') 
-        slice_cred = self.get_slice_cred(args[0])
+        slice_cred = self.slice_credential_string(args[0])
         creds = [slice_cred]
         if opts.delegate:
             delegated_cred = self.delegate_cred(slice_cred, get_authority(self.authority))
@@ -958,7 +945,7 @@ or currently provisioned resources  (ListResources)
         """
         slice_hrn = args[0]
         slice_urn = hrn_to_urn(slice_hrn, 'slice') 
-        slice_cred = self.get_slice_cred(args[0])
+        slice_cred = self.slice_credential_string(args[0])
         creds = [slice_cred]
         if opts.delegate:
             delegated_cred = self.delegate_cred(slice_cred, get_authority(self.authority))
@@ -974,7 +961,7 @@ or currently provisioned resources  (ListResources)
         slice_hrn = args[0]
         slice_urn = hrn_to_urn(slice_hrn, 'slice') 
         server = self.server_proxy_from_opts(opts)
-        slice_cred = self.get_slice_cred(args[0])
+        slice_cred = self.slice_credential_string(args[0])
         creds = [slice_cred]
         if opts.delegate:
             delegated_cred = self.delegate_cred(slice_cred, get_authority(self.authority))
@@ -988,7 +975,7 @@ or currently provisioned resources  (ListResources)
         slice_hrn = args[0]
         slice_urn = hrn_to_urn(slice_hrn, 'slice') 
         server = self.server_proxy_from_opts(opts)
-        slice_cred = self.get_slice_cred(args[0])
+        slice_cred = self.slice_credential_string(args[0])
         creds = [slice_cred]
         if opts.delegate:
             delegated_cred = self.delegate_cred(slice_cred, get_authority(self.authority))
@@ -1007,7 +994,7 @@ or currently provisioned resources  (ListResources)
         """
         slice_hrn = args[0]
         slice_urn = hrn_to_urn(slice_hrn, 'slice') 
-        slice_cred = self.get_slice_cred(slice_hrn)
+        slice_cred = self.slice_credential_string(slice_hrn)
         creds = [slice_cred]
         if opts.delegate:
             delegated_cred = self.delegate_cred(slice_cred, get_authority(self.authority))
@@ -1022,7 +1009,7 @@ or currently provisioned resources  (ListResources)
         """
         slice_hrn, rspec_path = args[0], args[1]
         slice_urn = hrn_to_urn(slice_hrn, 'slice')
-        slice_cred = self.get_slice_cred(slice_hrn)
+        slice_cred = self.slice_credential_string(slice_hrn)
         creds = [slice_cred]
         if opts.delegate:
             delegated_cred = self.delegate_cred(slice_cred, get_authority(self.authority))
@@ -1050,7 +1037,7 @@ or currently provisioned resources  (ListResources)
         slice_hrn = ticket.gidObject.get_hrn()
         slice_urn = hrn_to_urn(slice_hrn, 'slice') 
         #slice_hrn = ticket.attributes['slivers'][0]['hrn']
-        slice_cred = self.get_slice_cred(slice_hrn)
+        slice_cred = self.slice_credential_string(slice_hrn)
         
         # get a list of node hostnames from the RSpec 
         tree = etree.parse(StringIO(ticket.rspec))
@@ -1098,7 +1085,7 @@ or currently provisioned resources  (ListResources)
         if opts.delegate_user:
             cred = self.delegate_cred(self.my_credential_string, delegee_hrn, 'user')
         elif opts.delegate_slice:
-            slice_cred = self.get_slice_cred(opts.delegate_slice)
+            slice_cred = self.slice_credential_string(opts.delegate_slice)
             cred = self.delegate_cred(slice_cred, delegee_hrn, 'slice')
         else:
             self.logger.warning("Must specify either --user or --slice <hrn>")
