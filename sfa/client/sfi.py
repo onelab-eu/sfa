@@ -395,11 +395,6 @@ class Sfi:
 
         self.set_servers()
         self.logger.info("Command=%s" % command)
-        if command in ("resources"):
-            self.logger.debug("resources cmd_opts %s" % cmd_opts.format)
-        elif command in ("list", "show", "remove"):
-            self.logger.debug("cmd_opts.type %s" % cmd_opts.type)
-        self.logger.debug('cmd_args %s' % cmd_args)
 
         try:
             self.dispatch(command, cmd_opts, cmd_args)
