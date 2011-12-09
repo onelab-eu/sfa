@@ -54,9 +54,6 @@ def truncate(content, length=20, suffix='...'):
     else:
         return content[:length+1]+ ' '+suffix
 
-def has_call_id (server_version):
-    return server_version.has_key('call_id_support')
-
 
 ### issue a GetVersion call
 ### this assumes we've already somehow initialized the certificate
@@ -67,7 +64,6 @@ def get_version (url):
     server_version = server_proxy.GetVersion()
     print "miniclient: GetVersion at %s returned:"%(url)
     for (k,v) in server_version.iteritems(): print "miniclient: \tversion[%s]=%s"%(k,truncate(v))
-    print "has-call-id=",has_call_id(server_version)
 
 # version_dict = {'type': 'SFA', 'version': '1', }
 
