@@ -349,6 +349,7 @@ class Sfi:
                           help="Debug (xml-rpc) protocol messages")
         parser.add_option("-p", "--protocol", dest="protocol", default="xmlrpc",
                          help="RPC protocol (xmlrpc or soap)")
+        # would it make sense to use ~/.ssh/id_rsa as a default here ?
         parser.add_option("-k", "--private-key",
                          action="store", dest="user_private_key", default=None,
                          help="point to the private key file to use if not yet installed in sfi_dir")
@@ -517,11 +518,12 @@ class Sfi:
     # init self-signed cert, user credentials and gid
     def bootstrap (self):
         bootstrap = SfaClientBootstrap (self.user, self.reg_url, self.options.sfi_dir)
-        # xxx todo : add a -k option to specify an external private key to install in workdir
+        # if -k is provided, use this to initialize private key
         if self.options.user_private_key:
             bootstrap.init_private_key_if_missing (self.options.user_private_key)
         else:
-            # trigger legacy compat code if needed
+            # trigger legacy compat code if needed 
+            # the name has changed from just <leaf>.pkey to <hrn>.pkey
             if not os.path.isfile(bootstrap.private_key_filename()):
                 self.logger.info ("private key not found, trying legacy name")
                 try:
@@ -537,8 +539,8 @@ class Sfi:
         bootstrap.bootstrap_my_gid()
         # extract what's needed
         self.private_key = bootstrap.private_key()
-        self.my_gid = bootstrap.my_gid ()
         self.my_credential_string = bootstrap.my_credential_string ()
+        self.my_gid = bootstrap.my_gid ()
         self.bootstrap = bootstrap
 
 
@@ -564,7 +566,7 @@ class Sfi:
     def get_slice_cred(self, name):
         return self.bootstrap.slice_credential_string (name)
 
-    # should be supported by sfaclientbootstrap
+    # xxx should be supported by sfaclientbootstrap as well
     def delegate_cred(self, object_cred, hrn, type='authority'):
         # the gid and hrn of the object we are delegating
         if isinstance(object_cred, str):
@@ -608,13 +610,12 @@ class Sfi:
           self.logger.critical("No such registry record file %s"%record)
           sys.exit(1)
     
-    # xxx opts undefined
     def get_component_proxy_from_hrn(self, hrn):
         # direct connection to the nodes component manager interface
         records = self.registry.Resolve(hrn, self.my_credential_string)
         records = filter_records('node', records)
         if not records:
-            self.logger.warning("No such component:%r"% opts.component)
+            self.logger.warning("No such component:%r"% hrn)
         record = records[0]
   
         return self.server_proxy(record['hostname'], CM_PORT, self.private_key, self.my_gid)
@@ -629,7 +630,7 @@ class Sfi:
         host_parts[0] = host_parts[0] + ":" + str(port)
         url =  "http://%s" %  "/".join(host_parts)    
         return SfaServerProxy(url, keyfile, certfile, timeout=self.options.timeout, 
-                                        verbose=self.options.debug)
+                              verbose=self.options.debug)
 
     # xxx opts could be retrieved in self.options
     def server_proxy_from_opts(self, opts):
