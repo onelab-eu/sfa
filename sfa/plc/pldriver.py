@@ -499,12 +499,12 @@ class PlDriver (Driver, PlShell):
             current_target_ids = subject['person_ids']
             add_target_ids = list ( set (target_ids).difference(current_target_ids))
             del_target_ids = list ( set (current_target_ids).difference(target_ids))
-            logger.info ("subject_id = %s (type=%s)"%(subject_id,type(subject_id)))
+            logger.debug ("subject_id = %s (type=%s)"%(subject_id,type(subject_id)))
             for target_id in add_target_ids:
                 self.AddPersonToSlice (target_id,subject_id)
-                logger.info ("add_target_id = %s (type=%s)"%(target_id,type(target_id)))
+                logger.debug ("add_target_id = %s (type=%s)"%(target_id,type(target_id)))
             for target_id in del_target_ids:
-                logger.info ("del_target_id = %s (type=%s)"%(target_id,type(target_id)))
+                logger.debug ("del_target_id = %s (type=%s)"%(target_id,type(target_id)))
                 self.DeletePersonFromSlice (target_id, subject_id)
         else:
             logger.info('unexpected relation to maintain, %s -> %s'%(subject_type,target_type))
