@@ -30,6 +30,7 @@ from sfa.rspecs.rspec import RSpec
 from sfa.rspecs.rspec_converter import RSpecConverter
 from sfa.rspecs.version_manager import VersionManager
 
+from sfa.client.sfaclientlib import SfaClientBootstrap
 from sfa.client.sfaserverproxy import SfaServerProxy, ServerException
 from sfa.client.client_helper import pg_users_arg, sfa_users_arg
 from sfa.client.return_value import ReturnValue
@@ -185,7 +186,6 @@ class Sfi:
         self.registry = None
         self.user = None
         self.authority = None
-        self.hashrequest = False
         self.logger = sfi_logger
         self.logger.enable_console()
         self.available_names = [ tuple[0] for tuple in Sfi.available ]
@@ -349,9 +349,9 @@ class Sfi:
                           help="Debug (xml-rpc) protocol messages")
         parser.add_option("-p", "--protocol", dest="protocol", default="xmlrpc",
                          help="RPC protocol (xmlrpc or soap)")
-        parser.add_option("-k", "--hashrequest",
-                         action="store_true", dest="hashrequest", default=False,
-                         help="Create a hash of the request that will be authenticated on the server")
+        parser.add_option("-k", "--private-key",
+                         action="store", dest="user_private_key", default=None,
+                         help="point to the private key file to use if not yet installed in sfi_dir")
         parser.add_option("-t", "--timeout", dest="timeout", default=None,
                          help="Amout of time to wait before timing out the request")
         parser.add_option("-?", "--commands", 
@@ -381,8 +381,6 @@ class Sfi:
         self.options = options
 
         self.logger.setLevelFromOptVerbose(self.options.verbose)
-        if options.hashrequest:
-            self.hashrequest = True
 
         if len(args) <= 0:
             self.logger.critical("No command given. Use -h for help.")
@@ -393,6 +391,8 @@ class Sfi:
         self.cmd_parser = self.create_cmd_parser(command)
         (cmd_opts, cmd_args) = self.cmd_parser.parse_args(args[1:])
 
+        self.read_config () 
+        self.bootstrap ()
         self.set_servers()
         self.logger.info("Command=%s" % command)
 
@@ -466,17 +466,13 @@ class Sfi:
     #
     def set_servers(self):
 
-        self.read_config() 
         # Get key and certificate
-        key_file = self.get_key_file()
-        cert_file = self.get_cert_file(key_file)
-        self.key_file = key_file
-        self.cert_file = cert_file
-        self.cert = GID(filename=cert_file)
         self.logger.info("Contacting Registry at: %s"%self.reg_url)
-        self.registry = SfaServerProxy(self.reg_url, key_file, cert_file, timeout=self.options.timeout, verbose=self.options.debug)  
+        self.registry = SfaServerProxy(self.reg_url, self.private_key, self.my_gid, 
+                                       timeout=self.options.timeout, verbose=self.options.debug)  
         self.logger.info("Contacting Slice Manager at: %s"%self.sm_url)
-        self.slicemgr = SfaServerProxy(self.sm_url, key_file, cert_file, timeout=self.options.timeout, verbose=self.options.debug)
+        self.slicemgr = SfaServerProxy(self.sm_url, self.private_key, self.my_gid,
+                                       timeout=self.options.timeout, verbose=self.options.debug)
         return
 
     def get_cached_server_version(self, server):
@@ -518,101 +514,35 @@ class Sfi:
     #   - bootstrap slice credential from user credential
     #
     
-    
-    def get_key_file(self):
-       file = os.path.join(self.options.sfi_dir, self.user.replace(self.authority + '.', '') + ".pkey")
-       if (os.path.isfile(file)):
-          return file
-       else:
-          self.logger.error("Key file %s does not exist"%file)
-          sys.exit(-1)
-       return
-    
-    def get_cert_file(self, key_file):
-    
-        cert_file = os.path.join(self.options.sfi_dir, self.user.replace(self.authority + '.', '') + ".cert")
-        if (os.path.isfile(cert_file)):
-            # we'd perfer to use Registry issued certs instead of self signed certs. 
-            # if this is a Registry cert (GID) then we are done 
-            gid = GID(filename=cert_file)
-            if gid.get_urn():
-                return cert_file
-
-        # generate self signed certificate
-        k = Keypair(filename=key_file)
-        cert = Certificate(subject=self.user)
-        cert.set_pubkey(k)
-        cert.set_issuer(k, self.user)
-        cert.sign()
-        self.logger.info("Writing self-signed certificate to %s"%cert_file)
-        cert.save_to_file(cert_file)
-        self.cert = cert
-        # try to get registry issued cert
-        try:
-            self.logger.info("Getting Registry issued cert")
-            self.read_config()
-            # *hack.  need to set registry before _get_gid() is called 
-            self.registry = SfaServerProxy(self.reg_url, key_file, cert_file, 
-                                                     timeout=self.options.timeout, verbose=self.options.debug)
-            gid = self._get_gid(type='user')
-            self.registry = None 
-            self.logger.info("Writing certificate to %s"%cert_file)
-            gid.save_to_file(cert_file)
-        except:
-            self.logger.info("Failed to download Registry issued cert")
-
-        return cert_file
-
-    def get_cached_gid(self, file):
-        """
-        Return a cached gid    
-        """
-        gid = None 
-        if (os.path.isfile(file)):
-            gid = GID(filename=file)
-        return gid
-
-# seems useless
-#    # xxx opts unused
-#    def get_gid(self, opts, args):
-#        """ Get the specify gid and save it to file """
-#        hrn = None
-#        if args:
-#            hrn = args[0]
-#        gid = self._get_gid(hrn)
-#        self.logger.debug("Sfi.get_gid-> %s" % gid.save_to_string(save_parents=True))
-#        return gid
-
-    def _get_gid(self, hrn=None, type=None):
-        """
-        git_gid helper. Retrive the gid from the registry and save it to file.
-        """
-        
-        if not hrn:
-            hrn = self.user
-
-        gidfile = os.path.join(self.options.sfi_dir, hrn + ".gid")
-        gid = self.get_cached_gid(gidfile)
-        if not gid:
-            user_cred = self.get_user_cred()
-            records = self.registry.Resolve(hrn, user_cred.save_to_string(save_parents=True))
-            if not records:
-                raise RecordNotFound(args[0])
-            record = records[0]
-            if type:
-                record=None
-                for rec in records:
-                   if type == rec['type']:
-                        record = rec 
-            if not record:
-                raise RecordNotFound(args[0])
+    # init self-signed cert, user credentials and gid
+    def bootstrap (self):
+        bootstrap = SfaClientBootstrap (self.user, self.reg_url, self.options.sfi_dir)
+        # xxx todo : add a -k option to specify an external private key to install in workdir
+        if self.options.user_private_key:
+            bootstrap.init_private_key_if_missing (self.options.user_private_key)
+        else:
+            # trigger legacy compat code if needed
+            if not os.path.isfile(bootstrap.private_key_filename()):
+                self.logger.info ("private key not found, trying legacy name")
+                try:
+                    legacy_private_key = os.path.join (self.options.sfi_dir, "%s.pkey"%get_leaf(self.user))
+                    self.logger.debug("legacy_private_key=%s"%legacy_private_key)
+                    bootstrap.init_private_key_if_missing (legacy_private_key)
+                    self.logger.info("Copied private key from legacy location %s"%legacy_private_key)
+                except:
+                    self.logger.log_exc("Can't find private key ")
+                    sys.exit(1)
             
-            gid = GID(string=record['gid'])
-            self.logger.info("Writing gid to %s"%gidfile)
-            gid.save_to_file(filename=gidfile)
-        return gid   
-                
-     
+        # make it bootstrap
+        bootstrap.bootstrap_my_gid()
+        # extract what's needed
+        self.private_key = bootstrap.private_key()
+        self.my_gid = bootstrap.my_gid ()
+        self.my_credential_string = bootstrap.my_credential_string ()
+        self.bootstrap = bootstrap
+
+
+    # xxx this too should be handled in bootstrap
     def get_cached_credential(self, file):
         """
         Return a cached credential only if it hasn't expired.
@@ -625,49 +555,17 @@ class Sfi:
                 return credential
         return None 
 
-    def get_user_cred(self):
-        file = os.path.join(self.options.sfi_dir, self.user.replace(self.authority + '.', '') + ".cred")
-        return self.get_cred(file, 'user', self.user)
-
     def get_auth_cred(self):
         if not self.authority:
             self.logger.critical("no authority specified. Use -a or set SF_AUTH")
             sys.exit(-1)
-        file = os.path.join(self.options.sfi_dir, self.authority + ".cred")
-        return self.get_cred(file, 'authority', self.authority)
+        return self.bootstrap.authority_credential_string (self.authority)
 
     def get_slice_cred(self, name):
-        file = os.path.join(self.options.sfi_dir, "slice_" + get_leaf(name) + ".cred")
-        return self.get_cred(file, 'slice', name)
+        return self.bootstrap.slice_credential_string (name)
 
-    def get_cred(self, file, type, hrn):
-        # attempt to load a cached credential 
-        cred = self.get_cached_credential(file)    
-        if not cred:
-            if type in ['user']:
-                cert_string = self.cert.save_to_string(save_parents=True)
-                user_name = self.user.replace(self.authority + ".", '')
-                if user_name.count(".") > 0:
-                    user_name = user_name.replace(".", '_')
-                    self.user = self.authority + "." + user_name
-                cred_str = self.registry.GetSelfCredential(cert_string, hrn, "user")
-            else:
-                # bootstrap slice credential from user credential
-                user_cred = self.get_user_cred().save_to_string(save_parents=True)
-                cred_str = self.registry.GetCredential(user_cred, hrn, type)
-            
-            if not cred_str:
-                self.logger.critical("Failed to get %s credential" % type)
-                sys.exit(-1)
-                
-            cred = Credential(string=cred_str)
-            cred.save_to_file(file, save_parents=True)
-            self.logger.info("Writing %s credential to %s" %(type, file))
-
-        return cred
-
-    
-    def delegate_cred(self, object_cred, hrn):
+    # should be supported by sfaclientbootstrap
+    def delegate_cred(self, object_cred, hrn, type='authority'):
         # the gid and hrn of the object we are delegating
         if isinstance(object_cred, str):
             object_cred = Credential(string=object_cred) 
@@ -679,15 +577,12 @@ class Sfi:
             return
 
         # the delegating user's gid
-        caller_gid = self._get_gid(self.user)
-        caller_gidfile = os.path.join(self.options.sfi_dir, self.user + ".gid")
+        caller_gidfile = self.my_gid()
   
         # the gid of the user who will be delegated to
-        delegee_gid = self._get_gid(hrn)
+        delegee_gid = self.bootstrap.gid(hrn,type)
         delegee_hrn = delegee_gid.get_hrn()
-        delegee_gidfile = os.path.join(self.options.sfi_dir, delegee_hrn + ".gid")
-        delegee_gid.save_to_file(filename=delegee_gidfile)
-        dcred = object_cred.delegate(delegee_gidfile, self.get_key_file(), caller_gidfile)
+        dcred = object_cred.delegate(delegee_gid, self.private_key, caller_gidfile)
         return dcred.save_to_string(save_parents=True)
      
     ######################################## miscell utilities
@@ -716,14 +611,13 @@ class Sfi:
     # xxx opts undefined
     def get_component_proxy_from_hrn(self, hrn):
         # direct connection to the nodes component manager interface
-        user_cred = self.get_user_cred().save_to_string(save_parents=True)
-        records = self.registry.Resolve(hrn, user_cred)
+        records = self.registry.Resolve(hrn, self.my_credential_string)
         records = filter_records('node', records)
         if not records:
             self.logger.warning("No such component:%r"% opts.component)
         record = records[0]
   
-        return self.server_proxy(record['hostname'], CM_PORT, self.key_file, self.cert_file)
+        return self.server_proxy(record['hostname'], CM_PORT, self.private_key, self.my_gid)
 
     def server_proxy(self, host, port, keyfile, certfile):
         """
@@ -746,7 +640,7 @@ class Sfi:
         server = self.slicemgr
         # direct connection to an aggregate
         if hasattr(opts, 'aggregate') and opts.aggregate:
-            server = self.server_proxy(opts.aggregate, opts.port, self.key_file, self.cert_file)
+            server = self.server_proxy(opts.aggregate, opts.port, self.private_key, self.my_gid)
         # direct connection to the nodes component manager interface
         if hasattr(opts, 'component') and opts.component:
             server = self.get_component_proxy_from_hrn(opts.component)
@@ -785,9 +679,8 @@ or version information about sfi itself
             self.print_help()
             sys.exit(1)
         hrn = args[0]
-        user_cred = self.get_user_cred().save_to_string(save_parents=True)
         try:
-            list = self.registry.List(hrn, user_cred)
+            list = self.registry.List(hrn, self.my_credential_string)
         except IndexError:
             raise Exception, "Not enough parameters for the 'list' command"
 
@@ -808,8 +701,7 @@ or version information about sfi itself
             self.print_help()
             sys.exit(1)
         hrn = args[0]
-        user_cred = self.get_user_cred().save_to_string(save_parents=True)
-        records = self.registry.Resolve(hrn, user_cred)
+        records = self.registry.Resolve(hrn, self.my_credential_string)
         records = filter_records(opts.type, records)
         if not records:
             self.logger.error("No record of type %s"% opts.type)
@@ -834,7 +726,7 @@ or version information about sfi itself
     
     def add(self, opts, args):
         "add record into registry from xml file (Register)"
-        auth_cred = self.get_auth_cred().save_to_string(save_parents=True)
+        auth_cred = self.get_auth_cred()
         if len(args)!=1:
             self.print_help()
             sys.exit(1)
@@ -845,31 +737,30 @@ or version information about sfi itself
     
     def update(self, opts, args):
         "update record into registry from xml file (Update)"
-        user_cred = self.get_user_cred()
         if len(args)!=1:
             self.print_help()
             sys.exit(1)
         rec_file = self.get_record_file(args[0])
         record = load_record_from_file(rec_file)
         if record['type'] == "user":
-            if record.get_name() == user_cred.get_gid_object().get_hrn():
-                cred = user_cred.save_to_string(save_parents=True)
+            if record.get_name() == self.user:
+                cred = self.my_credential_string
             else:
-                cred = self.get_auth_cred().save_to_string(save_parents=True)
+                cred = self.get_auth_cred()
         elif record['type'] in ["slice"]:
             try:
-                cred = self.get_slice_cred(record.get_name()).save_to_string(save_parents=True)
+                cred = self.get_slice_cred(record.get_name())
             except ServerException, e:
                # XXX smbaker -- once we have better error return codes, update this
                # to do something better than a string compare
                if "Permission error" in e.args[0]:
-                   cred = self.get_auth_cred().save_to_string(save_parents=True)
+                   cred = self.get_auth_cred()
                else:
                    raise
         elif record.get_type() in ["authority"]:
-            cred = self.get_auth_cred().save_to_string(save_parents=True)
+            cred = self.get_auth_cred()
         elif record.get_type() == 'node':
-            cred = self.get_auth_cred().save_to_string(save_parents=True)
+            cred = self.get_auth_cred()
         else:
             raise "unknown record type" + record.get_type()
         record = record.as_dict()
@@ -877,7 +768,7 @@ or version information about sfi itself
   
     def remove(self, opts, args):
         "remove registry record by name (Remove)"
-        auth_cred = self.get_auth_cred().save_to_string(save_parents=True)
+        auth_cred = self.get_auth_cred()
         if len(args)!=1:
             self.print_help()
             sys.exit(1)
@@ -893,10 +784,9 @@ or version information about sfi itself
 
     def slices(self, opts, args):
         "list instantiated slices (ListSlices) - returns urn's"
-        user_cred = self.get_user_cred().save_to_string(save_parents=True)
-        creds = [user_cred]
+        creds = [self.my_credential_string]
         if opts.delegate:
-            delegated_cred = self.delegate_cred(user_cred, get_authority(self.authority))
+            delegated_cred = self.delegate_cred(self.my_credential_string, get_authority(self.authority))
             creds.append(delegated_cred)  
         server = self.server_proxy_from_opts(opts)
         api_options = {}
@@ -912,7 +802,6 @@ or version information about sfi itself
         with no arg, discover available resources,
 or currently provisioned resources  (ListResources)
         """
-        user_cred = self.get_user_cred().save_to_string(save_parents=True)
         server = self.server_proxy_from_opts(opts)
    
         api_options = {}
@@ -922,11 +811,11 @@ or currently provisioned resources  (ListResources)
             api_options['info'] = opts.info
         
         if args:
-            cred = self.get_slice_cred(args[0]).save_to_string(save_parents=True)
+            cred = self.get_slice_cred(args[0])
             hrn = args[0]
             api_options['geni_slice_urn'] = hrn_to_urn(hrn, 'slice')
         else:
-            cred = user_cred
+            cred = self.my_credential_string
      
         creds = [cred]
         if opts.delegate:
@@ -961,8 +850,7 @@ or currently provisioned resources  (ListResources)
         server_version = self.get_cached_server_version(server)
         slice_hrn = args[0]
         slice_urn = hrn_to_urn(slice_hrn, 'slice')
-        user_cred = self.get_user_cred()
-        slice_cred = self.get_slice_cred(slice_hrn).save_to_string(save_parents=True)
+        slice_cred = self.get_slice_cred(slice_hrn)
         delegated_cred = None
         if server_version.get('interface') == 'slicemgr':
             # delegate our cred to the slice manager
@@ -982,12 +870,12 @@ or currently provisioned resources  (ListResources)
         #    keys: [<ssh key A>, <ssh key B>]
         #  }]
         users = []
-        slice_records = self.registry.Resolve(slice_urn, [user_cred.save_to_string(save_parents=True)])
+        slice_records = self.registry.Resolve(slice_urn, [self.my_credential_string])
         if slice_records and 'researcher' in slice_records[0] and slice_records[0]['researcher']!=[]:
             slice_record = slice_records[0]
             user_hrns = slice_record['researcher']
             user_urns = [hrn_to_urn(hrn, 'user') for hrn in user_hrns]
-            user_records = self.registry.Resolve(user_urns, [user_cred.save_to_string(save_parents=True)])
+            user_records = self.registry.Resolve(user_urns, [self.my_credential_string])
 
             if 'sfa' not in server_version:
                 users = pg_users_arg(user_records)
@@ -1019,7 +907,7 @@ or currently provisioned resources  (ListResources)
         """
         slice_hrn = args[0]
         slice_urn = hrn_to_urn(slice_hrn, 'slice') 
-        slice_cred = self.get_slice_cred(slice_hrn).save_to_string(save_parents=True)
+        slice_cred = self.get_slice_cred(slice_hrn)
         creds = [slice_cred]
         if opts.delegate:
             delegated_cred = self.delegate_cred(slice_cred, get_authority(self.authority))
@@ -1035,7 +923,7 @@ or currently provisioned resources  (ListResources)
         """
         slice_hrn = args[0]
         slice_urn = hrn_to_urn(slice_hrn, 'slice') 
-        slice_cred = self.get_slice_cred(slice_hrn).save_to_string(save_parents=True)
+        slice_cred = self.get_slice_cred(slice_hrn)
         creds = [slice_cred]
         if opts.delegate:
             delegated_cred = self.delegate_cred(slice_cred, get_authority(self.authority))
@@ -1055,7 +943,7 @@ or currently provisioned resources  (ListResources)
         """
         slice_hrn = args[0]
         slice_urn = hrn_to_urn(slice_hrn, 'slice') 
-        slice_cred = self.get_slice_cred(args[0]).save_to_string(save_parents=True)
+        slice_cred = self.get_slice_cred(args[0])
         creds = [slice_cred]
         if opts.delegate:
             delegated_cred = self.delegate_cred(slice_cred, get_authority(self.authority))
@@ -1069,7 +957,7 @@ or currently provisioned resources  (ListResources)
         """
         slice_hrn = args[0]
         slice_urn = hrn_to_urn(slice_hrn, 'slice') 
-        slice_cred = self.get_slice_cred(args[0]).save_to_string(save_parents=True)
+        slice_cred = self.get_slice_cred(args[0])
         creds = [slice_cred]
         if opts.delegate:
             delegated_cred = self.delegate_cred(slice_cred, get_authority(self.authority))
@@ -1085,7 +973,7 @@ or currently provisioned resources  (ListResources)
         slice_hrn = args[0]
         slice_urn = hrn_to_urn(slice_hrn, 'slice') 
         server = self.server_proxy_from_opts(opts)
-        slice_cred = self.get_slice_cred(args[0]).save_to_string(save_parents=True)
+        slice_cred = self.get_slice_cred(args[0])
         creds = [slice_cred]
         if opts.delegate:
             delegated_cred = self.delegate_cred(slice_cred, get_authority(self.authority))
@@ -1099,7 +987,7 @@ or currently provisioned resources  (ListResources)
         slice_hrn = args[0]
         slice_urn = hrn_to_urn(slice_hrn, 'slice') 
         server = self.server_proxy_from_opts(opts)
-        slice_cred = self.get_slice_cred(args[0]).save_to_string(save_parents=True)
+        slice_cred = self.get_slice_cred(args[0])
         creds = [slice_cred]
         if opts.delegate:
             delegated_cred = self.delegate_cred(slice_cred, get_authority(self.authority))
@@ -1118,7 +1006,7 @@ or currently provisioned resources  (ListResources)
         """
         slice_hrn = args[0]
         slice_urn = hrn_to_urn(slice_hrn, 'slice') 
-        slice_cred = self.get_slice_cred(slice_hrn).save_to_string(save_parents=True)
+        slice_cred = self.get_slice_cred(slice_hrn)
         creds = [slice_cred]
         if opts.delegate:
             delegated_cred = self.delegate_cred(slice_cred, get_authority(self.authority))
@@ -1133,8 +1021,7 @@ or currently provisioned resources  (ListResources)
         """
         slice_hrn, rspec_path = args[0], args[1]
         slice_urn = hrn_to_urn(slice_hrn, 'slice')
-        user_cred = self.get_user_cred()
-        slice_cred = self.get_slice_cred(slice_hrn).save_to_string(save_parents=True)
+        slice_cred = self.get_slice_cred(slice_hrn)
         creds = [slice_cred]
         if opts.delegate:
             delegated_cred = self.delegate_cred(slice_cred, get_authority(self.authority))
@@ -1162,8 +1049,7 @@ or currently provisioned resources  (ListResources)
         slice_hrn = ticket.gidObject.get_hrn()
         slice_urn = hrn_to_urn(slice_hrn, 'slice') 
         #slice_hrn = ticket.attributes['slivers'][0]['hrn']
-        user_cred = self.get_user_cred()
-        slice_cred = self.get_slice_cred(slice_hrn).save_to_string(save_parents=True)
+        slice_cred = self.get_slice_cred(slice_hrn)
         
         # get a list of node hostnames from the RSpec 
         tree = etree.parse(StringIO(ticket.rspec))
@@ -1176,8 +1062,8 @@ or currently provisioned resources  (ListResources)
         for hostname in hostnames:
             try:
                 self.logger.info("Calling redeem_ticket at %(hostname)s " % locals())
-                server = self.server_proxy(hostname, CM_PORT, self.key_file, \
-                                               self.cert_file, self.options.debug)
+                server = self.server_proxy(hostname, CM_PORT, self.private_key, \
+                                               self.my_gid, verbose=self.options.debug)
                 server.RedeemTicket(ticket.save_to_string(save_parents=True), slice_cred)
                 self.logger.info("Success")
             except socket.gaierror:
@@ -1194,8 +1080,7 @@ or currently provisioned resources  (ListResources)
             self.print_help()
             sys.exit(1)
         target_hrn = args[0]
-        user_cred = self.get_user_cred().save_to_string(save_parents=True)
-        gid = self.registry.CreateGid(user_cred, target_hrn, self.cert.save_to_string())
+        gid = self.registry.CreateGid(self.my_credential_string, target_hrn, self.bootstrap.my_gid_string())
         if opts.file:
             filename = opts.file
         else:
@@ -1210,11 +1095,10 @@ or currently provisioned resources  (ListResources)
         """
         delegee_hrn = args[0]
         if opts.delegate_user:
-            user_cred = self.get_user_cred()
-            cred = self.delegate_cred(user_cred, delegee_hrn)
+            cred = self.delegate_cred(self.my_credential_string, delegee_hrn, 'user')
         elif opts.delegate_slice:
             slice_cred = self.get_slice_cred(opts.delegate_slice)
-            cred = self.delegate_cred(slice_cred, delegee_hrn)
+            cred = self.delegate_cred(slice_cred, delegee_hrn, 'slice')
         else:
             self.logger.warning("Must specify either --user or --slice <hrn>")
             return
