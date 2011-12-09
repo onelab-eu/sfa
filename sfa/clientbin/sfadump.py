@@ -4,7 +4,6 @@ from __future__ import with_statement
 import sys
 import os, os.path
 import tempfile
-import xmlrpclib
 from types import StringTypes, ListType
 from optparse import OptionParser
 

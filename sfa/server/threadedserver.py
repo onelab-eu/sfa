@@ -11,6 +11,7 @@ import socket
 import traceback
 import threading
 from Queue import Queue
+import xmlrpclib
 import SocketServer
 import BaseHTTPServer
 import SimpleXMLRPCServer
