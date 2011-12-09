@@ -1,6 +1,6 @@
 %define name sfa
 %define version 2.0
-%define taglevel 2
+%define taglevel 3
 
 %define release %{taglevel}%{?pldistro:.%{pldistro}}%{?date:.%{date}}
 %global python_sitearch	%( python -c "from distutils.sysconfig import get_python_lib; print get_python_lib(1)" )
@@ -224,6 +224,11 @@ fi
 [ "$1" -ge "1" ] && service sfa-cm restart || :
 
 %changelog
+* Fri Dec 09 2011 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-2.0-3
+- client side revisited with a bootstrap library
+- client side has a new source layout
+- various (nasty) bug fixes wrt options and call_id
+
 * Tue Dec 06 2011 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-2.0-2
 - various fixes in rspecs for sfav1&slice tags
 - uses 'geni_rspec_version' and not just 'rspec_version'
