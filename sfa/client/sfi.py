@@ -182,8 +182,6 @@ class Sfi:
             if not hasattr(options,opt): setattr(options,opt,None)
         if not hasattr(options,'sfi_dir'): options.sfi_dir=Sfi.default_sfi_dir()
         self.options = options
-        self.slicemgr = None
-        self.registry = None
         self.user = None
         self.authority = None
         self.logger = sfi_logger
@@ -394,7 +392,6 @@ class Sfi:
 
         self.read_config () 
         self.bootstrap ()
-        self.set_servers()
         self.logger.info("Command=%s" % command)
 
         try:
@@ -460,47 +457,6 @@ class Sfi:
      
         if errors:
            sys.exit(1)
-
-
-    #
-    # Establish Connection to SliceMgr and Registry Servers
-    #
-    def set_servers(self):
-
-        # Get key and certificate
-        self.logger.info("Contacting Registry at: %s"%self.reg_url)
-        self.registry = SfaServerProxy(self.reg_url, self.private_key, self.my_gid, 
-                                       timeout=self.options.timeout, verbose=self.options.debug)  
-        self.logger.info("Contacting Slice Manager at: %s"%self.sm_url)
-        self.slicemgr = SfaServerProxy(self.sm_url, self.private_key, self.my_gid,
-                                       timeout=self.options.timeout, verbose=self.options.debug)
-        return
-
-    def get_cached_server_version(self, server):
-        # check local cache first
-        cache = None
-        version = None 
-        cache_file = os.path.join(self.options.sfi_dir,'sfi_cache.dat')
-        cache_key = server.url + "-version"
-        try:
-            cache = Cache(cache_file)
-        except IOError:
-            cache = Cache()
-            self.logger.info("Local cache not found at: %s" % cache_file)
-
-        if cache:
-            version = cache.get(cache_key)
-
-        if not version: 
-            result = server.GetVersion()
-            version= ReturnValue.get_value(result)
-            # cache version for 24 hours
-            cache.add(cache_key, version, ttl= 60*60*24)
-            self.logger.info("Updating cache file %s" % cache_file)
-            cache.save_to_file(cache_file)
-
-        return version   
-        
 
     #
     # Get various credential and spec files
@@ -574,6 +530,91 @@ class Sfi:
         dcred = object_cred.delegate(delegee_gid, self.private_key, caller_gidfile)
         return dcred.save_to_string(save_parents=True)
      
+    #
+    # Management of the servers
+    # 
+
+    def registry (self):
+        if not hasattr (self, 'registry_proxy'):
+            self.logger.info("Contacting Registry at: %s"%self.reg_url)
+            self.registry_proxy = SfaServerProxy(self.reg_url, self.private_key, self.my_gid, 
+                                                 timeout=self.options.timeout, verbose=self.options.debug)  
+        return self.registry_proxy
+
+    def slicemgr (self):
+        if not hasattr (self, 'slicemgr_proxy'):
+            self.logger.info("Contacting Slice Manager at: %s"%self.sm_url)
+            self.slicemgr_proxy = SfaServerProxy(self.sm_url, self.private_key, self.my_gid, 
+                                                 timeout=self.options.timeout, verbose=self.options.debug)  
+        return self.slicemgr_proxy
+
+    # all this c... messing with hosts and urls and other -a -c -p options sounds just plain wrong
+    # couldn't we just have people select their slice API url with -s no matter what else ?
+    def server_proxy(self, host, port, keyfile, certfile):
+        """
+        Return an instance of an xmlrpc server connection    
+        """
+        # port is appended onto the domain, before the path. Should look like:
+        # http://domain:port/path
+        host_parts = host.split('/')
+        host_parts[0] = host_parts[0] + ":" + str(port)
+        url =  "http://%s" %  "/".join(host_parts)    
+        return SfaServerProxy(url, keyfile, certfile, timeout=self.options.timeout, 
+                              verbose=self.options.debug)
+
+    # xxx opts could be retrieved in self.options
+    def server_proxy_from_opts(self, opts):
+        """
+        Return instance of an xmlrpc connection to a slice manager, aggregate
+        or component server depending on the specified opts
+        """
+        # direct connection to the nodes component manager interface
+        if hasattr(opts, 'component') and opts.component:
+            server = self.component_proxy_from_hrn(opts.component)
+        # direct connection to an aggregate
+        elif hasattr(opts, 'aggregate') and opts.aggregate:
+            server = self.server_proxy(opts.aggregate, opts.port, self.private_key, self.my_gid)
+        else:
+            server = self.slicemgr()
+        return server
+
+    def component_proxy_from_hrn(self, hrn):
+        # direct connection to the nodes component manager interface
+        records = self.registry.Resolve(hrn, self.my_credential_string)
+        records = filter_records('node', records)
+        if not records:
+            self.logger.warning("No such component:%r"% hrn)
+        record = records[0]
+  
+        return self.server_proxy(record['hostname'], CM_PORT, self.private_key, self.my_gid)
+
+
+    def get_cached_server_version(self, server):
+        # check local cache first
+        cache = None
+        version = None 
+        cache_file = os.path.join(self.options.sfi_dir,'sfi_cache.dat')
+        cache_key = server.url + "-version"
+        try:
+            cache = Cache(cache_file)
+        except IOError:
+            cache = Cache()
+            self.logger.info("Local cache not found at: %s" % cache_file)
+
+        if cache:
+            version = cache.get(cache_key)
+
+        if not version: 
+            result = server.GetVersion()
+            version= ReturnValue.get_value(result)
+            # cache version for 24 hours
+            cache.add(cache_key, version, ttl= 60*60*24)
+            self.logger.info("Updating cache file %s" % cache_file)
+            cache.save_to_file(cache_file)
+
+        return version   
+        
+
     ######################################## miscell utilities
     def get_rspec_file(self, rspec):
        if (os.path.isabs(rspec)):
@@ -597,43 +638,7 @@ class Sfi:
           self.logger.critical("No such registry record file %s"%record)
           sys.exit(1)
     
-    def get_component_proxy_from_hrn(self, hrn):
-        # direct connection to the nodes component manager interface
-        records = self.registry.Resolve(hrn, self.my_credential_string)
-        records = filter_records('node', records)
-        if not records:
-            self.logger.warning("No such component:%r"% hrn)
-        record = records[0]
-  
-        return self.server_proxy(record['hostname'], CM_PORT, self.private_key, self.my_gid)
 
-    def server_proxy(self, host, port, keyfile, certfile):
-        """
-        Return an instance of an xmlrpc server connection    
-        """
-        # port is appended onto the domain, before the path. Should look like:
-        # http://domain:port/path
-        host_parts = host.split('/')
-        host_parts[0] = host_parts[0] + ":" + str(port)
-        url =  "http://%s" %  "/".join(host_parts)    
-        return SfaServerProxy(url, keyfile, certfile, timeout=self.options.timeout, 
-                              verbose=self.options.debug)
-
-    # xxx opts could be retrieved in self.options
-    def server_proxy_from_opts(self, opts):
-        """
-        Return instance of an xmlrpc connection to a slice manager, aggregate
-        or component server depending on the specified opts
-        """
-        server = self.slicemgr
-        # direct connection to an aggregate
-        if hasattr(opts, 'aggregate') and opts.aggregate:
-            server = self.server_proxy(opts.aggregate, opts.port, self.private_key, self.my_gid)
-        # direct connection to the nodes component manager interface
-        if hasattr(opts, 'component') and opts.component:
-            server = self.get_component_proxy_from_hrn(opts.component)
-
-        return server
     #==========================================================================
     # Following functions implement the commands
     #
@@ -649,7 +654,7 @@ or version information about sfi itself
             version=version_core()
         else:
             if opts.version_registry:
-                server=self.registry
+                server=self.registry()
             else:
                 server = self.server_proxy_from_opts(opts)
             result = server.GetVersion()
@@ -668,7 +673,7 @@ or version information about sfi itself
             sys.exit(1)
         hrn = args[0]
         try:
-            list = self.registry.List(hrn, self.my_credential_string)
+            list = self.registry().List(hrn, self.my_credential_string)
         except IndexError:
             raise Exception, "Not enough parameters for the 'list' command"
 
@@ -689,7 +694,7 @@ or version information about sfi itself
             self.print_help()
             sys.exit(1)
         hrn = args[0]
-        records = self.registry.Resolve(hrn, self.my_credential_string)
+        records = self.registry().Resolve(hrn, self.my_credential_string)
         records = filter_records(opts.type, records)
         if not records:
             self.logger.error("No record of type %s"% opts.type)
@@ -721,7 +726,7 @@ or version information about sfi itself
         record_filepath = args[0]
         rec_file = self.get_record_file(record_filepath)
         record = load_record_from_file(rec_file).as_dict()
-        return self.registry.Register(record, auth_cred)
+        return self.registry().Register(record, auth_cred)
     
     def update(self, opts, args):
         "update record into registry from xml file (Update)"
@@ -752,7 +757,7 @@ or version information about sfi itself
         else:
             raise "unknown record type" + record.get_type()
         record = record.as_dict()
-        return self.registry.Update(record, cred)
+        return self.registry().Update(record, cred)
   
     def remove(self, opts, args):
         "remove registry record by name (Remove)"
@@ -764,7 +769,7 @@ or version information about sfi itself
         type = opts.type 
         if type in ['all']:
             type = '*'
-        return self.registry.Remove(hrn, auth_cred, type)
+        return self.registry().Remove(hrn, auth_cred, type)
     
     # ==================================================================
     # Slice-related commands
@@ -858,12 +863,12 @@ or currently provisioned resources  (ListResources)
         #    keys: [<ssh key A>, <ssh key B>]
         #  }]
         users = []
-        slice_records = self.registry.Resolve(slice_urn, [self.my_credential_string])
+        slice_records = self.registry().Resolve(slice_urn, [self.my_credential_string])
         if slice_records and 'researcher' in slice_records[0] and slice_records[0]['researcher']!=[]:
             slice_record = slice_records[0]
             user_hrns = slice_record['researcher']
             user_urns = [hrn_to_urn(hrn, 'user') for hrn in user_hrns]
-            user_records = self.registry.Resolve(user_urns, [self.my_credential_string])
+            user_records = self.registry().Resolve(user_urns, [self.my_credential_string])
 
             if 'sfa' not in server_version:
                 users = pg_users_arg(user_records)
@@ -1068,7 +1073,7 @@ or currently provisioned resources  (ListResources)
             self.print_help()
             sys.exit(1)
         target_hrn = args[0]
-        gid = self.registry.CreateGid(self.my_credential_string, target_hrn, self.bootstrap.my_gid_string())
+        gid = self.registry().CreateGid(self.my_credential_string, target_hrn, self.bootstrap.my_gid_string())
         if opts.file:
             filename = opts.file
         else:
@@ -1107,7 +1112,7 @@ or currently provisioned resources  (ListResources)
         """
         return uhe trusted certs at this interface (get_trusted_certs)
         """ 
-        trusted_certs = self.registry.get_trusted_certs()
+        trusted_certs = self.registry().get_trusted_certs()
         for trusted_cert in trusted_certs:
             gid = GID(string=trusted_cert)
             gid.dump()
