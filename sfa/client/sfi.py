@@ -510,13 +510,6 @@ class Sfi:
         return version   
         
 
-    def server_supports_call_id(self, server):
-        """
-        Returns true if server support the optional call_id arg, false otherwise. 
-        """
-        server_version = self.get_cached_server_version(server)
-        return server_version.has_key ('call_id_support')
-        
     #
     # Get various credential and spec files
     #
@@ -911,11 +904,9 @@ or version information about sfi itself
             delegated_cred = self.delegate_cred(user_cred, get_authority(self.authority))
             creds.append(delegated_cred)  
         server = self.server_proxy_from_opts(opts)
-        call_args = [creds]
-        if self.server_supports_call_id(server):
-            options = {'call_id': unique_call_id()}
-            call_args.append(options)
-        result = server.ListSlices(*call_args)
+        api_options = {}
+        api_options ['call_id'] = unique_call_id()
+        result = server.ListSlices(creds, api_options)
         value = ReturnValue.get_value(result)
         display_list(value)
         return
@@ -929,15 +920,16 @@ or currently provisioned resources  (ListResources)
         user_cred = self.get_user_cred().save_to_string(save_parents=True)
         server = self.server_proxy_from_opts(opts)
    
-        options = {'call_id': unique_call_id()}
-        #panos add info options
+        api_options = {}
+        api_options ['call_id'] = unique_call_id()
+        #panos add info api_options
         if opts.info:
-            options['info'] = opts.info
+            api_options['info'] = opts.info
         
         if args:
             cred = self.get_slice_cred(args[0]).save_to_string(save_parents=True)
             hrn = args[0]
-            options['geni_slice_urn'] = hrn_to_urn(hrn, 'slice')
+            api_options['geni_slice_urn'] = hrn_to_urn(hrn, 'slice')
         else:
             cred = user_cred
      
@@ -950,16 +942,15 @@ or currently provisioned resources  (ListResources)
             server_version = self.get_cached_server_version(server)
             if 'sfa' in server_version:
                 # just request the version the client wants 
-                options['geni_rspec_version'] = version_manager.get_version(opts.rspec_version).to_dict()
+                api_options['geni_rspec_version'] = version_manager.get_version(opts.rspec_version).to_dict()
             else:
                 # this must be a protogeni aggregate. We should request a v2 ad rspec
                 # regardless of what the client user requested 
-                options['geni_rspec_version'] = version_manager.get_version('ProtoGENI 2').to_dict()     
+                api_options['geni_rspec_version'] = version_manager.get_version('ProtoGENI 2').to_dict()     
         else:
-            options['geni_rspec_version'] = {'type': 'geni', 'version': '3.0'}
+            api_options['geni_rspec_version'] = {'type': 'geni', 'version': '3.0'}
  
-        call_args = [creds, options]
-        result = server.ListResources(*call_args)
+        result = server.ListResources(creds, api_options)
         value = ReturnValue.get_value(result)
         if opts.file is None:
             display_rspec(value, opts.format)
@@ -1016,11 +1007,10 @@ or currently provisioned resources  (ListResources)
                     creds.append(delegated_cred)
         # do not append users, keys, or slice tags. Anything 
         # not contained in this request will be removed from the slice 
-        options = {'append': False}
-        if self.server_supports_call_id(server):
-            options['call_id'] = unique_call_id()
-        call_args = [slice_urn, creds, rspec, users, options]
-        result = server.CreateSliver(*call_args)
+        api_options = {}
+        api_options ['append'] = False
+        api_options ['call_id'] = unique_call_id()
+        result = server.CreateSliver(slice_urn, creds, rspec, users, api_options)
         value = ReturnValue.get_value(result)
         if opts.file is None:
             print value
@@ -1040,11 +1030,9 @@ or currently provisioned resources  (ListResources)
             delegated_cred = self.delegate_cred(slice_cred, get_authority(self.authority))
             creds.append(delegated_cred)
         server = self.server_proxy_from_opts(opts)
-        call_args = [slice_urn, creds]
-        if self.server_supports_call_id(server):
-            options = {'call_id': unique_call_id()}
-            call_args.append(options)
-        return server.DeleteSliver(*call_args) 
+        api_options = {}
+        api_options ['call_id'] = unique_call_id()
+        return server.DeleteSliver(slice_urn, creds, api_options) 
   
     def status(self, opts, args):
         """
@@ -1058,11 +1046,9 @@ or currently provisioned resources  (ListResources)
             delegated_cred = self.delegate_cred(slice_cred, get_authority(self.authority))
             creds.append(delegated_cred)
         server = self.server_proxy_from_opts(opts)
-        call_args = [slice_urn, creds]
-        if self.server_supports_call_id(server):
-            options = {'call_id': unique_call_id()}
-            call_args.append(options)
-        result = server.SliverStatus(*call_args)
+        api_options = {}
+        api_options ['call_id'] = unique_call_id()
+        result = server.SliverStatus(slice_urn, creds, api_options)
         value = ReturnValue.get_value(result)
         print value
         if opts.file:
@@ -1124,12 +1110,9 @@ or currently provisioned resources  (ListResources)
             delegated_cred = self.delegate_cred(slice_cred, get_authority(self.authority))
             creds.append(delegated_cred)
         time = args[1]
-        
-        call_args = [slice_urn, creds, time]
-        if self.server_supports_call_id(server):
-            options = {'call_id': unique_call_id()}
-            call_args.append(options)
-        result =  server.RenewSliver(*call_args)
+        api_options = {}
+        api_options ['call_id'] = unique_call_id()
+        result =  server.RenewSliver(slice_urn, creds, time, api_options)
         value = ReturnValue.get_value(result)
         return value
 
