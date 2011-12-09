@@ -315,3 +315,8 @@ class SfaClientBootstrap:
     def authority_credential_string (self, hrn): 
         self.authority_credential(hrn)
         return self.plain_read(self.authority_credential_filename(hrn))
+
+    # for consistency
+    def private_key (self):
+        self.assert_private_key()
+        return self.private_key_filename()
