@@ -277,9 +277,8 @@ class SfaClientBootstrap:
                 except IOError:
                     raise 
                 except:
-                    self.logger.log_exc()
+                    self.logger.log_exc("Could not produce/retrieve %s"%filename)
                     raise Exception, "Could not produce/retrieve %s"%filename
-            wrapped.__name__=f.__name__
             return wrapped
         return wrap
 
