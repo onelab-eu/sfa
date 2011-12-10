@@ -614,6 +614,30 @@ class Sfi:
 
         return version   
         
+    ### resurrect this temporarily
+    def server_supports_options_arg(self, server):
+        """
+        Returns true if server support the optional call_id arg, false otherwise. 
+        """
+        server_version = self.get_cached_server_version(server)
+        return True
+        # need to rewrite this 
+        if 'sfa' in server_version and 'code_tag' in server_version:
+            code_tag = server_version['code_tag']
+            code_tag_parts = code_tag.split("-")
+            
+            version_parts = code_tag_parts[0].split(".")
+            major, minor = version_parts[0], version_parts[1]
+            rev = code_tag_parts[1]
+            if int(major) >= 1:
+                if int(minor) >= 2:
+                    return True
+        return False                
+
+    ### ois = options if supported
+    def ois (self, server, option_dict):
+        if self.server_supports_options_arg (server) : return [option_dict]
+        else: return []
 
     ######################################## miscell utilities
     def get_rspec_file(self, rspec):
@@ -784,7 +808,7 @@ or version information about sfi itself
         server = self.server_proxy_from_opts(opts)
         api_options = {}
         api_options ['call_id'] = unique_call_id()
-        result = server.ListSlices(creds, api_options)
+        result = server.ListSlices(creds, *self.ois(server,api_options))
         value = ReturnValue.get_value(result)
         display_list(value)
         return
@@ -827,7 +851,7 @@ or currently provisioned resources  (ListResources)
         else:
             api_options['geni_rspec_version'] = {'type': 'geni', 'version': '3.0'}
 
-        result = server.ListResources(creds, api_options)
+        result = server.ListResources(creds, *self.ois(server,api_options))
         value = ReturnValue.get_value(result)
         if opts.file is None:
             display_rspec(value, opts.format)
@@ -886,7 +910,7 @@ or currently provisioned resources  (ListResources)
         api_options = {}
         api_options ['append'] = False
         api_options ['call_id'] = unique_call_id()
-        result = server.CreateSliver(slice_urn, creds, rspec, users, api_options)
+        result = server.CreateSliver(slice_urn, creds, rspec, users, *self.ois(server,api_options))
         value = ReturnValue.get_value(result)
         if opts.file is None:
             print value
@@ -908,7 +932,7 @@ or currently provisioned resources  (ListResources)
         server = self.server_proxy_from_opts(opts)
         api_options = {}
         api_options ['call_id'] = unique_call_id()
-        return server.DeleteSliver(slice_urn, creds, api_options) 
+        return server.DeleteSliver(slice_urn, creds, *self.ois(server,api_options))
   
     def status(self, opts, args):
         """
@@ -924,7 +948,7 @@ or currently provisioned resources  (ListResources)
         server = self.server_proxy_from_opts(opts)
         api_options = {}
         api_options ['call_id'] = unique_call_id()
-        result = server.SliverStatus(slice_urn, creds, api_options)
+        result = server.SliverStatus(slice_urn, creds, *self.ois(server,api_options))
         value = ReturnValue.get_value(result)
         print value
         if opts.file:
@@ -942,6 +966,7 @@ or currently provisioned resources  (ListResources)
             delegated_cred = self.delegate_cred(slice_cred, get_authority(self.authority))
             creds.append(delegated_cred)
         server = self.server_proxy_from_opts(opts)
+        # xxx Thierry - does this not need an api_options as well
         return server.Start(slice_urn, creds)
     
     def stop(self, opts, args):
@@ -988,7 +1013,7 @@ or currently provisioned resources  (ListResources)
         time = args[1]
         api_options = {}
         api_options ['call_id'] = unique_call_id()
-        result =  server.RenewSliver(slice_urn, creds, time, api_options)
+        result =  server.RenewSliver(slice_urn, creds, time, *self.ois(server,api_options))
         value = ReturnValue.get_value(result)
         return value
 
