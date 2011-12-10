@@ -203,6 +203,9 @@ class PlAggregate:
                 interface['ipv4'] = interface['ip']
                 interface['component_id'] = PlXrn(auth=self.driver.hrn, 
                                                   interface='node%s:eth%s' % (node['node_id'], if_count)).get_urn()
+                # interfaces in the manifest need a client id
+                if slice:
+                    interface['client_id'] = "%s:%s" % (node['node_id'], if_id)            
                 rspec_node['interfaces'].append(interface)
                 if_count+=1
 
