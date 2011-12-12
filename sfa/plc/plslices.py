@@ -306,12 +306,12 @@ class PlSlices:
             # exempt federated sites from monitor policies
             self.api.driver.AddSiteTag(site['site_id'], 'exempt_site_until', "20200101")
             
-            # is this still necessary?
-            # add record to the local registry 
-            if sfa_peer and slice_record:
-                peer_dict = {'type': 'authority', 'hrn': site_hrn, \
-                             'peer_authority': sfa_peer, 'pointer': site['site_id']}
-                self.registry.register_peer_object(self.credential, peer_dict)
+#            # is this still necessary?
+#            # add record to the local registry 
+#            if sfa_peer and slice_record:
+#                peer_dict = {'type': 'authority', 'hrn': site_hrn, \
+#                             'peer_authority': sfa_peer, 'pointer': site['site_id']}
+#                self.registry.register_peer_object(self.credential, peer_dict)
         else:
             site =  sites[0]
             if peer:
@@ -336,10 +336,10 @@ class PlSlices:
             if peer:
                 slice['peer_slice_id'] = slice_record.get('slice_id', None) 
             # mark this slice as an sfa peer record
-            if sfa_peer:
-                peer_dict = {'type': 'slice', 'hrn': slice_hrn, 
-                             'peer_authority': sfa_peer, 'pointer': slice['slice_id']}
-                self.registry.register_peer_object(self.credential, peer_dict)
+#            if sfa_peer:
+#                peer_dict = {'type': 'slice', 'hrn': slice_hrn, 
+#                             'peer_authority': sfa_peer, 'pointer': slice['slice_id']}
+#                self.registry.register_peer_object(self.credential, peer_dict)
         else:
             slice = slices[0]
             if peer:
@@ -477,10 +477,10 @@ class PlSlices:
                 person['keys'].append(key)
 
             # add the registry record
-            if sfa_peer:
-                peer_dict = {'type': 'user', 'hrn': hrn, 'peer_authority': sfa_peer, \
-                    'pointer': person['person_id']}
-                self.registry.register_peer_object(self.credential, peer_dict)
+#            if sfa_peer:
+#                peer_dict = {'type': 'user', 'hrn': hrn, 'peer_authority': sfa_peer, \
+#                    'pointer': person['person_id']}
+#                self.registry.register_peer_object(self.credential, peer_dict)
     
         for added_slice_user_id in added_slice_user_ids.union(added_user_ids):
             # add person to the slice 
