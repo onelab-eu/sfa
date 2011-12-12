@@ -35,7 +35,6 @@ from sfa.client.sfaserverproxy import SfaServerProxy, ServerException
 from sfa.client.client_helper import pg_users_arg, sfa_users_arg
 from sfa.client.return_value import ReturnValue
 
-AGGREGATE_PORT=12346
 CM_PORT=12346
 
 # utility methods here
@@ -236,9 +235,9 @@ class Sfi:
                 print line
             print format3%(command,args,doc)
             if verbose:
-                self.create_cmd_parser(command).print_help()
+                self.create_command_parser(command).print_help()
 
-    def create_cmd_parser(self, command):
+    def create_command_parser(self, command):
         if command not in self.available_dict:
             msg="Invalid command\n"
             msg+="Commands: "
@@ -252,10 +251,6 @@ class Sfi:
         # user specifies remote aggregate/sm/component                          
         if command in ("resources", "slices", "create", "delete", "start", "stop", 
                        "restart", "shutdown",  "get_ticket", "renew", "status"):
-            parser.add_option("-a", "--aggregate", dest="aggregate",
-                             default=None, help="aggregate host")
-            parser.add_option("-p", "--port", dest="port",
-                             default=AGGREGATE_PORT, help="aggregate port")
             parser.add_option("-c", "--component", dest="component", default=None,
                              help="component hrn")
             parser.add_option("-d", "--delegate", dest="delegate", default=None, 
@@ -310,13 +305,9 @@ class Sfi:
                             help="delegate slice credential", metavar="HRN", default=None)
         
         if command in ("version"):
-            parser.add_option("-a", "--aggregate", dest="aggregate",
-                             default=None, help="aggregate host")
-            parser.add_option("-p", "--port", dest="port",
-                             default=AGGREGATE_PORT, help="aggregate port")
             parser.add_option("-R","--registry-version",
                               action="store_true", dest="version_registry", default=False,
-                              help="probe registry version instead of slicemgr")
+                              help="probe registry version instead of sliceapi")
             parser.add_option("-l","--local",
                               action="store_true", dest="version_local", default=False,
                               help="display version of the local client")
@@ -331,8 +322,8 @@ class Sfi:
                              description="Commands: %s"%(" ".join(self.available_names)))
         parser.add_option("-r", "--registry", dest="registry",
                          help="root registry", metavar="URL", default=None)
-        parser.add_option("-s", "--slicemgr", dest="sm",
-                         help="slice manager", metavar="URL", default=None)
+        parser.add_option("-s", "--sliceapi", dest="sm", default=None, metavar="URL",
+                         help="slice API - in general a SM URL, but can be used to talk to an aggregate")
         parser.add_option("-d", "--dir", dest="sfi_dir",
                          help="config & working directory - default is %default",
                          metavar="PATH", default=Sfi.default_sfi_dir())
@@ -363,13 +354,13 @@ class Sfi:
 
     def print_help (self):
         self.sfi_parser.print_help()
-        self.cmd_parser.print_help()
+        self.command_parser.print_help()
 
     #
     # Main: parse arguments and dispatch to command
     #
-    def dispatch(self, command, cmd_opts, cmd_args):
-        return getattr(self, command)(cmd_opts, cmd_args)
+    def dispatch(self, command, command_options, command_args):
+        return getattr(self, command)(command_options, command_args)
 
     def main(self):
         self.sfi_parser = self.create_parser()
@@ -387,15 +378,16 @@ class Sfi:
             return -1
     
         command = args[0]
-        self.cmd_parser = self.create_cmd_parser(command)
-        (cmd_opts, cmd_args) = self.cmd_parser.parse_args(args[1:])
+        self.command_parser = self.create_command_parser(command)
+        (command_options, command_args) = self.command_parser.parse_args(args[1:])
+        self.command_options = command_options
 
         self.read_config () 
         self.bootstrap ()
         self.logger.info("Command=%s" % command)
 
         try:
-            self.dispatch(command, cmd_opts, cmd_args)
+            self.dispatch(command, command_options, command_args)
         except KeyError:
             self.logger.critical ("Unknown command %s"%command)
             raise
@@ -426,7 +418,7 @@ class Sfi:
         else:
            self.logger.error("You need to set e.g. SFI_SM='http://your.slicemanager.url:12347/' in %s" % config_file)
            errors += 1 
-     
+
         # Set Registry URL
         if (self.options.registry is not None):
            self.reg_url = self.options.registry
@@ -435,7 +427,6 @@ class Sfi:
         else:
            self.logger.errors("You need to set e.g. SFI_REGISTRY='http://your.registry.url:12345/' in %s" % config_file)
            errors += 1 
-           
 
         # Set user HRN
         if (self.options.user is not None):
@@ -445,7 +436,7 @@ class Sfi:
         else:
            self.logger.errors("You need to set e.g. SFI_USER='plc.princeton.username' in %s" % config_file)
            errors += 1 
-     
+
         # Set authority HRN
         if (self.options.auth is not None):
            self.authority = self.options.auth
@@ -454,7 +445,7 @@ class Sfi:
         else:
            self.logger.error("You need to set e.g. SFI_AUTH='plc.princeton' in %s" % config_file)
            errors += 1 
-     
+
         if errors:
            sys.exit(1)
 
@@ -535,59 +526,33 @@ class Sfi:
     # 
 
     def registry (self):
+        # cache the result
         if not hasattr (self, 'registry_proxy'):
             self.logger.info("Contacting Registry at: %s"%self.reg_url)
             self.registry_proxy = SfaServerProxy(self.reg_url, self.private_key, self.my_gid, 
                                                  timeout=self.options.timeout, verbose=self.options.debug)  
         return self.registry_proxy
 
-    def slicemgr (self):
-        if not hasattr (self, 'slicemgr_proxy'):
-            self.logger.info("Contacting Slice Manager at: %s"%self.sm_url)
-            self.slicemgr_proxy = SfaServerProxy(self.sm_url, self.private_key, self.my_gid, 
-                                                 timeout=self.options.timeout, verbose=self.options.debug)  
-        return self.slicemgr_proxy
-
-    # all this c... messing with hosts and urls and other -a -c -p options sounds just plain wrong
-    # couldn't we just have people select their slice API url with -s no matter what else ?
-    def server_proxy(self, host, port, keyfile, certfile):
-        """
-        Return an instance of an xmlrpc server connection    
-        """
-        # port is appended onto the domain, before the path. Should look like:
-        # http://domain:port/path
-        host_parts = host.split('/')
-        host_parts[0] = host_parts[0] + ":" + str(port)
-        url =  "http://%s" %  "/".join(host_parts)    
-        return SfaServerProxy(url, keyfile, certfile, timeout=self.options.timeout, 
-                              verbose=self.options.debug)
-
-    # xxx opts could be retrieved in self.options
-    def server_proxy_from_opts(self, opts):
-        """
-        Return instance of an xmlrpc connection to a slice manager, aggregate
-        or component server depending on the specified opts
-        """
-        # direct connection to the nodes component manager interface
-        if hasattr(opts, 'component') and opts.component:
-            server = self.component_proxy_from_hrn(opts.component)
-        # direct connection to an aggregate
-        elif hasattr(opts, 'aggregate') and opts.aggregate:
-            server = self.server_proxy(opts.aggregate, opts.port, self.private_key, self.my_gid)
-        else:
-            server = self.slicemgr()
-        return server
-
-    def component_proxy_from_hrn(self, hrn):
-        # direct connection to the nodes component manager interface
-        records = self.registry.Resolve(hrn, self.my_credential_string)
-        records = filter_records('node', records)
-        if not records:
-            self.logger.warning("No such component:%r"% hrn)
-        record = records[0]
-  
-        return self.server_proxy(record['hostname'], CM_PORT, self.private_key, self.my_gid)
-
+    def sliceapi (self):
+        # cache the result
+        if not hasattr (self, 'sliceapi_proxy'):
+            # if the command exposes the --component option, figure it's hostname and connect at CM_PORT
+            if hasattr(self.command_options,'component') and self.command_options.component:
+                # resolve the hrn at the registry
+                node_hrn = self.command_options.component
+                records = self.registry().Resolve(node_hrn, self.my_credential_string)
+                records = filter_records('node', records)
+                if not records:
+                    self.logger.warning("No such component:%r"% opts.component)
+                record = records[0]
+                cm_url = "http://%s:%d/"%(record['hostname'],CM_PORT)
+                self.sliceapi_proxy=SfaServerProxy(cm_url, self.private_key, self.my_gid)
+            else:
+                # otherwise use what was provided as --sliceapi, or SFI_SM in the config
+                self.logger.info("Contacting Slice Manager at: %s"%self.sm_url)
+                self.sliceapi_proxy = SfaServerProxy(self.sm_url, self.private_key, self.my_gid, 
+                                                     timeout=self.options.timeout, verbose=self.options.debug)  
+        return self.sliceapi_proxy
 
     def get_cached_server_version(self, server):
         # check local cache first
@@ -614,14 +579,14 @@ class Sfi:
 
         return version   
         
-    ### resurrect this temporarily
+    ### resurrect this temporarily so we can support V1 aggregates for a while
     def server_supports_options_arg(self, server):
         """
         Returns true if server support the optional call_id arg, false otherwise. 
         """
         server_version = self.get_cached_server_version(server)
         return True
-        # need to rewrite this 
+        # xxx need to rewrite this 
         if 'sfa' in server_version and 'code_tag' in server_version:
             code_tag = server_version['code_tag']
             code_tag_parts = code_tag.split("-")
@@ -669,26 +634,26 @@ class Sfi:
     # Registry-related commands
     #==========================================================================
   
-    def version(self, opts, args):
+    def version(self, options, args):
         """
         display an SFA server version (GetVersion) 
 or version information about sfi itself
         """
-        if opts.version_local:
+        if options.version_local:
             version=version_core()
         else:
-            if opts.version_registry:
+            if options.version_registry:
                 server=self.registry()
             else:
-                server = self.server_proxy_from_opts(opts)
+                server = self.sliceapi()
             result = server.GetVersion()
             version = ReturnValue.get_value(result)
         for (k,v) in version.iteritems():
             print "%-20s: %s"%(k,v)
-        if opts.file:
-            save_variable_to_file(version, opts.file, opts.fileformat)
+        if options.file:
+            save_variable_to_file(version, options.file, options.fileformat)
 
-    def list(self, opts, args):
+    def list(self, options, args):
         """
         list entries in named authority registry (List)
         """
@@ -703,14 +668,14 @@ or version information about sfi itself
 
         # filter on person, slice, site, node, etc.
         # THis really should be in the self.filter_records funct def comment...
-        list = filter_records(opts.type, list)
+        list = filter_records(options.type, list)
         for record in list:
             print "%s (%s)" % (record['hrn'], record['type'])
-        if opts.file:
-            save_records_to_file(opts.file, list, opts.fileformat)
+        if options.file:
+            save_records_to_file(options.file, list, options.fileformat)
         return
     
-    def show(self, opts, args):
+    def show(self, options, args):
         """
         show details about named registry record (Resolve)
         """
@@ -719,9 +684,9 @@ or version information about sfi itself
             sys.exit(1)
         hrn = args[0]
         records = self.registry().Resolve(hrn, self.my_credential_string)
-        records = filter_records(opts.type, records)
+        records = filter_records(options.type, records)
         if not records:
-            self.logger.error("No record of type %s"% opts.type)
+            self.logger.error("No record of type %s"% options.type)
         for record in records:
             if record['type'] in ['user']:
                 record = UserRecord(dict=record)
@@ -733,15 +698,15 @@ or version information about sfi itself
                 record = AuthorityRecord(dict=record)
             else:
                 record = SfaRecord(dict=record)
-            if (opts.format == "text"): 
+            if (options.format == "text"): 
                 record.dump()  
             else:
                 print record.save_to_string() 
-        if opts.file:
-            save_records_to_file(opts.file, records, opts.fileformat)
+        if options.file:
+            save_records_to_file(options.file, records, options.fileformat)
         return
     
-    def add(self, opts, args):
+    def add(self, options, args):
         "add record into registry from xml file (Register)"
         auth_cred = self.my_authority_credential_string()
         if len(args)!=1:
@@ -752,7 +717,7 @@ or version information about sfi itself
         record = load_record_from_file(rec_file).as_dict()
         return self.registry().Register(record, auth_cred)
     
-    def update(self, opts, args):
+    def update(self, options, args):
         "update record into registry from xml file (Update)"
         if len(args)!=1:
             self.print_help()
@@ -783,14 +748,14 @@ or version information about sfi itself
         record = record.as_dict()
         return self.registry().Update(record, cred)
   
-    def remove(self, opts, args):
+    def remove(self, options, args):
         "remove registry record by name (Remove)"
         auth_cred = self.my_authority_credential_string()
         if len(args)!=1:
             self.print_help()
             sys.exit(1)
         hrn = args[0]
-        type = opts.type 
+        type = options.type 
         if type in ['all']:
             type = '*'
         return self.registry().Remove(hrn, auth_cred, type)
@@ -799,33 +764,31 @@ or version information about sfi itself
     # Slice-related commands
     # ==================================================================
 
-    def slices(self, opts, args):
+    def slices(self, options, args):
         "list instantiated slices (ListSlices) - returns urn's"
         creds = [self.my_credential_string]
-        if opts.delegate:
+        if options.delegate:
             delegated_cred = self.delegate_cred(self.my_credential_string, get_authority(self.authority))
             creds.append(delegated_cred)  
-        server = self.server_proxy_from_opts(opts)
         api_options = {}
         api_options ['call_id'] = unique_call_id()
+        server = self.sliceapi()
         result = server.ListSlices(creds, *self.ois(server,api_options))
         value = ReturnValue.get_value(result)
         display_list(value)
         return
     
     # show rspec for named slice
-    def resources(self, opts, args):
+    def resources(self, options, args):
         """
         with no arg, discover available resources,
 or currently provisioned resources  (ListResources)
         """
-        server = self.server_proxy_from_opts(opts)
-   
         api_options = {}
         api_options ['call_id'] = unique_call_id()
         #panos add info api_options
-        if opts.info:
-            api_options['info'] = opts.info
+        if options.info:
+            api_options['info'] = options.info
         
         if args:
             cred = self.slice_credential_string(args[0])
@@ -834,16 +797,17 @@ or currently provisioned resources  (ListResources)
         else:
             cred = self.my_credential_string
      
+        server = self.sliceapi()
         creds = [cred]
-        if opts.delegate:
+        if options.delegate:
             delegated_cred = self.delegate_cred(cred, get_authority(self.authority))
             creds.append(delegated_cred)
-        if opts.rspec_version:
+        if options.rspec_version:
             version_manager = VersionManager()
             server_version = self.get_cached_server_version(server)
             if 'sfa' in server_version:
                 # just request the version the client wants 
-                api_options['geni_rspec_version'] = version_manager.get_version(opts.rspec_version).to_dict()
+                api_options['geni_rspec_version'] = version_manager.get_version(options.rspec_version).to_dict()
             else:
                 # this must be a protogeni aggregate. We should request a v2 ad rspec
                 # regardless of what the client user requested 
@@ -853,17 +817,17 @@ or currently provisioned resources  (ListResources)
 
         result = server.ListResources(creds, *self.ois(server,api_options))
         value = ReturnValue.get_value(result)
-        if opts.file is None:
-            display_rspec(value, opts.format)
+        if options.file is None:
+            display_rspec(value, options.format)
         else:
-            save_rspec_to_file(value, opts.file)
+            save_rspec_to_file(value, options.file)
         return
 
-    def create(self, opts, args):
+    def create(self, options, args):
         """
         create or update named slice with given rspec
         """
-        server = self.server_proxy_from_opts(opts)
+        server = self.sliceapi()
         server_version = self.get_cached_server_version(server)
         slice_hrn = args[0]
         slice_urn = hrn_to_urn(slice_hrn, 'slice')
@@ -912,13 +876,13 @@ or currently provisioned resources  (ListResources)
         api_options ['call_id'] = unique_call_id()
         result = server.CreateSliver(slice_urn, creds, rspec, users, *self.ois(server,api_options))
         value = ReturnValue.get_value(result)
-        if opts.file is None:
+        if options.file is None:
             print value
         else:
-            save_rspec_to_file (value, opts.file)
+            save_rspec_to_file (value, options.file)
         return value
 
-    def delete(self, opts, args):
+    def delete(self, options, args):
         """
         delete named slice (DeleteSliver)
         """
@@ -926,15 +890,15 @@ or currently provisioned resources  (ListResources)
         slice_urn = hrn_to_urn(slice_hrn, 'slice') 
         slice_cred = self.slice_credential_string(slice_hrn)
         creds = [slice_cred]
-        if opts.delegate:
+        if options.delegate:
             delegated_cred = self.delegate_cred(slice_cred, get_authority(self.authority))
             creds.append(delegated_cred)
-        server = self.server_proxy_from_opts(opts)
+        server = self.sliceapi()
         api_options = {}
         api_options ['call_id'] = unique_call_id()
         return server.DeleteSliver(slice_urn, creds, *self.ois(server,api_options))
   
-    def status(self, opts, args):
+    def status(self, options, args):
         """
         retrieve slice status (SliverStatus)
         """
@@ -942,19 +906,19 @@ or currently provisioned resources  (ListResources)
         slice_urn = hrn_to_urn(slice_hrn, 'slice') 
         slice_cred = self.slice_credential_string(slice_hrn)
         creds = [slice_cred]
-        if opts.delegate:
+        if options.delegate:
             delegated_cred = self.delegate_cred(slice_cred, get_authority(self.authority))
             creds.append(delegated_cred)
-        server = self.server_proxy_from_opts(opts)
+        server = self.sliceapi()
         api_options = {}
         api_options ['call_id'] = unique_call_id()
         result = server.SliverStatus(slice_urn, creds, *self.ois(server,api_options))
         value = ReturnValue.get_value(result)
         print value
-        if opts.file:
-            save_variable_to_file(value, opts.file, opts.fileformat)
+        if options.file:
+            save_variable_to_file(value, options.file, options.fileformat)
 
-    def start(self, opts, args):
+    def start(self, options, args):
         """
         start named slice (Start)
         """
@@ -962,14 +926,14 @@ or currently provisioned resources  (ListResources)
         slice_urn = hrn_to_urn(slice_hrn, 'slice') 
         slice_cred = self.slice_credential_string(args[0])
         creds = [slice_cred]
-        if opts.delegate:
+        if options.delegate:
             delegated_cred = self.delegate_cred(slice_cred, get_authority(self.authority))
             creds.append(delegated_cred)
-        server = self.server_proxy_from_opts(opts)
-        # xxx Thierry - does this not need an api_options as well
+        server = self.sliceapi()
+        # xxx Thierry - does this not need an api_options as well ?
         return server.Start(slice_urn, creds)
     
-    def stop(self, opts, args):
+    def stop(self, options, args):
         """
         stop named slice (Stop)
         """
@@ -977,37 +941,37 @@ or currently provisioned resources  (ListResources)
         slice_urn = hrn_to_urn(slice_hrn, 'slice') 
         slice_cred = self.slice_credential_string(args[0])
         creds = [slice_cred]
-        if opts.delegate:
+        if options.delegate:
             delegated_cred = self.delegate_cred(slice_cred, get_authority(self.authority))
             creds.append(delegated_cred)
-        server = self.server_proxy_from_opts(opts)
+        server = self.sliceapi()
         return server.Stop(slice_urn, creds)
     
     # reset named slice
-    def reset(self, opts, args):
+    def reset(self, options, args):
         """
         reset named slice (reset_slice)
         """
         slice_hrn = args[0]
         slice_urn = hrn_to_urn(slice_hrn, 'slice') 
-        server = self.server_proxy_from_opts(opts)
+        server = self.sliceapi()
         slice_cred = self.slice_credential_string(args[0])
         creds = [slice_cred]
-        if opts.delegate:
+        if options.delegate:
             delegated_cred = self.delegate_cred(slice_cred, get_authority(self.authority))
             creds.append(delegated_cred)
         return server.reset_slice(creds, slice_urn)
 
-    def renew(self, opts, args):
+    def renew(self, options, args):
         """
         renew slice (RenewSliver)
         """
         slice_hrn = args[0]
         slice_urn = hrn_to_urn(slice_hrn, 'slice') 
-        server = self.server_proxy_from_opts(opts)
+        server = self.sliceapi()
         slice_cred = self.slice_credential_string(args[0])
         creds = [slice_cred]
-        if opts.delegate:
+        if options.delegate:
             delegated_cred = self.delegate_cred(slice_cred, get_authority(self.authority))
             creds.append(delegated_cred)
         time = args[1]
@@ -1018,7 +982,7 @@ or currently provisioned resources  (ListResources)
         return value
 
 
-    def shutdown(self, opts, args):
+    def shutdown(self, options, args):
         """
         shutdown named slice (Shutdown)
         """
@@ -1026,14 +990,14 @@ or currently provisioned resources  (ListResources)
         slice_urn = hrn_to_urn(slice_hrn, 'slice') 
         slice_cred = self.slice_credential_string(slice_hrn)
         creds = [slice_cred]
-        if opts.delegate:
+        if options.delegate:
             delegated_cred = self.delegate_cred(slice_cred, get_authority(self.authority))
             creds.append(delegated_cred)
-        server = self.server_proxy_from_opts(opts)
+        server = self.sliceapi()
         return server.Shutdown(slice_urn, creds)         
     
 
-    def get_ticket(self, opts, args):
+    def get_ticket(self, options, args):
         """
         get a ticket for the specified slice
         """
@@ -1041,19 +1005,19 @@ or currently provisioned resources  (ListResources)
         slice_urn = hrn_to_urn(slice_hrn, 'slice')
         slice_cred = self.slice_credential_string(slice_hrn)
         creds = [slice_cred]
-        if opts.delegate:
+        if options.delegate:
             delegated_cred = self.delegate_cred(slice_cred, get_authority(self.authority))
             creds.append(delegated_cred)
         rspec_file = self.get_rspec_file(rspec_path) 
         rspec = open(rspec_file).read()
-        server = self.server_proxy_from_opts(opts)
+        server = self.sliceapi()
         ticket_string = server.GetTicket(slice_urn, creds, rspec, [])
         file = os.path.join(self.options.sfi_dir, get_leaf(slice_hrn) + ".ticket")
         self.logger.info("writing ticket to %s"%file)
         ticket = SfaTicket(string=ticket_string)
         ticket.save_to_file(filename=file, save_parents=True)
 
-    def redeem_ticket(self, opts, args):
+    def redeem_ticket(self, options, args):
         """
         Connects to nodes in a slice and redeems a ticket
 (slice hrn is retrieved from the ticket)
@@ -1090,7 +1054,7 @@ or currently provisioned resources  (ListResources)
                 self.logger.log_exc(e.message)
         return
 
-    def create_gid(self, opts, args):
+    def create_gid(self, options, args):
         """
         Create a GID (CreateGid)
         """
@@ -1099,33 +1063,33 @@ or currently provisioned resources  (ListResources)
             sys.exit(1)
         target_hrn = args[0]
         gid = self.registry().CreateGid(self.my_credential_string, target_hrn, self.bootstrap.my_gid_string())
-        if opts.file:
-            filename = opts.file
+        if options.file:
+            filename = options.file
         else:
             filename = os.sep.join([self.options.sfi_dir, '%s.gid' % target_hrn])
         self.logger.info("writing %s gid to %s" % (target_hrn, filename))
         GID(string=gid).save_to_file(filename)
          
 
-    def delegate(self, opts, args):
+    def delegate(self, options, args):
         """
         (locally) create delegate credential for use by given hrn
         """
         delegee_hrn = args[0]
-        if opts.delegate_user:
+        if options.delegate_user:
             cred = self.delegate_cred(self.my_credential_string, delegee_hrn, 'user')
-        elif opts.delegate_slice:
-            slice_cred = self.slice_credential_string(opts.delegate_slice)
+        elif options.delegate_slice:
+            slice_cred = self.slice_credential_string(options.delegate_slice)
             cred = self.delegate_cred(slice_cred, delegee_hrn, 'slice')
         else:
             self.logger.warning("Must specify either --user or --slice <hrn>")
             return
         delegated_cred = Credential(string=cred)
         object_hrn = delegated_cred.get_gid_object().get_hrn()
-        if opts.delegate_user:
+        if options.delegate_user:
             dest_fn = os.path.join(self.options.sfi_dir, get_leaf(delegee_hrn) + "_"
                                   + get_leaf(object_hrn) + ".cred")
-        elif opts.delegate_slice:
+        elif options.delegate_slice:
             dest_fn = os.path.join(self.options.sfi_dir, get_leaf(delegee_hrn) + "_slice_"
                                   + get_leaf(object_hrn) + ".cred")
 
@@ -1133,7 +1097,7 @@ or currently provisioned resources  (ListResources)
 
         self.logger.info("delegated credential for %s to %s and wrote to %s"%(object_hrn, delegee_hrn,dest_fn))
     
-    def get_trusted_certs(self, opts, args):
+    def get_trusted_certs(self, options, args):
         """
         return uhe trusted certs at this interface (get_trusted_certs)
         """ 
