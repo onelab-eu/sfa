@@ -1,5 +1,8 @@
-
-# xxx NOTE this will soon be reviewed to take advantage of sfaclientlib
+# 
+# sfi.py - basic SFA command-line client
+# the actual binary in sfa/clientbin essentially runs main()
+# this module is used in sfascan
+# 
 
 import sys
 sys.path.append('.')
@@ -12,6 +15,7 @@ import pickle
 from lxml import etree
 from StringIO import StringIO
 from optparse import OptionParser
+from pprint import PrettyPrinter
 
 from sfa.trust.certificate import Keypair, Certificate
 from sfa.trust.gid import GID
@@ -648,8 +652,8 @@ or version information about sfi itself
                 server = self.sliceapi()
             result = server.GetVersion()
             version = ReturnValue.get_value(result)
-        for (k,v) in version.iteritems():
-            print "%-20s: %s"%(k,v)
+        pprinter = PrettyPrinter(indent=4)
+        pprinter.pprint(version)
         if options.file:
             save_variable_to_file(version, options.file, options.fileformat)
 
