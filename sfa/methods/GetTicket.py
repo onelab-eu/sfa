@@ -36,7 +36,7 @@ class GetTicket(Method):
 
     returns = Parameter(str, "String representation of a ticket object")
     
-    def call(self, xrn, creds, rspec, users, options={}):
+    def call(self, xrn, creds, rspec, users, options):
         hrn, type = urn_to_hrn(xrn)
         # Find the valid credentials
         valid_creds = self.api.auth.checkCredentials(creds, 'getticket', hrn)

@@ -447,7 +447,7 @@ class AggregateManagerEucalyptus:
                                 port=eucaPort,
                                 path=srvPath)
     
-    def ListResources(api, creds, options={}):
+    def ListResources(api, creds, options):
         call_id = options.get('call_id') 
         if Callids().already_handled(call_id): return ""
         # get slice's hrn from options
@@ -544,7 +544,7 @@ class AggregateManagerEucalyptus:
     """
     Hook called via 'sfi.py create'
     """
-    def CreateSliver(api, slice_xrn, creds, xml, users, options={}):
+    def CreateSliver(api, slice_xrn, creds, xml, users, options):
         call_id = options.get('call_id') 
         if Callids().already_handled(call_id): return ""
     
@@ -682,7 +682,7 @@ class AggregateManagerEucalyptus:
             f.write("%s %s %s\n" % (instId, ipaddr, hrn))
         f.close()
     
-    def GetVersion(api, options={}):
+    def GetVersion(api):
 
         version_manager = VersionManager()
         ad_rspec_versions = []

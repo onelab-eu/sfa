@@ -7,7 +7,6 @@ def version_core (more={}):
     core = { 'code_tag' : version_tag,
              'code_url' : scm_url,
              'hostname' : socket.gethostname(),
-             'options_support' : True,
              }
     core.update(more)
     return core

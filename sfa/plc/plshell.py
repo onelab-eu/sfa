@@ -40,6 +40,8 @@ class PlShell:
         # otherwise compare IP addresses; 
         # this might fail for any number of reasons, so let's harden that
         try:
+            # xxx todo this seems to result in a DNS request for each incoming request to the AM
+            # should be cached or improved
             url_ip=socket.gethostbyname(hostname)
             local_ip=socket.gethostbyname(socket.gethostname())
             if url_ip==local_ip: is_local=True

@@ -9,9 +9,9 @@ class GetVersion(Method):
     @return version
     """
     interfaces = ['registry','aggregate', 'slicemgr', 'component']
-    accepts = [Parameter(dict, "Options")]
+    accepts = []
     returns = Parameter(dict, "Version information")
 
-    def call(self, options={}):
+    def call(self):
         self.api.logger.info("interface: %s\tmethod-name: %s" % (self.api.interface, self.name))
-        return self.api.manager.GetVersion(self.api, options)
+        return self.api.manager.GetVersion(self.api)

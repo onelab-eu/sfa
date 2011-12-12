@@ -29,7 +29,7 @@ class CreateSliver(Method):
         ]
     returns = Parameter(str, "Allocated RSpec")
 
-    def call(self, slice_xrn, creds, rspec, users, options={}):
+    def call(self, slice_xrn, creds, rspec, users, options):
         hrn, type = urn_to_hrn(slice_xrn)
 
         self.api.logger.info("interface: %s\ttarget-hrn: %s\tmethod-name: %s"%(self.api.interface, hrn, self.name))

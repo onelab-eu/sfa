@@ -22,7 +22,7 @@ class ListSlices(Method):
 
     returns = Parameter(list, "List of slice names")
     
-    def call(self, creds, options={}):
+    def call(self, creds, options):
         valid_creds = self.api.auth.checkCredentials(creds, 'listslices')
 
         #log the call

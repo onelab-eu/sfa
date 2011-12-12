@@ -19,7 +19,7 @@ class SliverStatus(Method):
         ]
     returns = Parameter(dict, "Status details")
 
-    def call(self, slice_xrn, creds, options={}):
+    def call(self, slice_xrn, creds, options):
         hrn, type = urn_to_hrn(slice_xrn)
         valid_creds = self.api.auth.checkCredentials(creds, 'sliverstatus', hrn)
 
