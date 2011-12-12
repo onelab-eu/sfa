@@ -1,6 +1,7 @@
 #!/usr/bin/python
 from sfa.util.xrn import Xrn, hrn_to_urn, urn_to_hrn, urn_to_sliver_id
 from sfa.util.sfatime import epochparse
+from sfa.util.sfalogging import logger
 
 from sfa.rspecs.rspec import RSpec
 from sfa.rspecs.elements.hardware_type import HardwareType
