@@ -552,7 +552,7 @@ class AggregateManagerEucalyptus:
         logger.debug("In CreateSliver")
     
         aggregate = PlAggregate(self.driver)
-        slices = PlSlices(api)
+        slices = PlSlices(self.driver)
         (hrn, type) = urn_to_hrn(slice_xrn)
         peer = slices.get_peer(hrn)
         sfa_peer = slices.get_sfa_peer(hrn)

@@ -24,7 +24,6 @@ class PlAggregate:
 
     def __init__(self, driver):
         self.driver = driver
-        self.user_options = {}
  
     def get_sites(self, filter={}):
         sites = {}

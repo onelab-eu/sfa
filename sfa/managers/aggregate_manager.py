@@ -1,10 +1,9 @@
-import datetime
 import time
 import sys
 
 from sfa.util.sfalogging import logger
 from sfa.util.faults import RecordNotFound, SliverDoesNotExist
-from sfa.util.xrn import get_authority, hrn_to_urn, urn_to_hrn, Xrn, urn_to_sliver_id
+from sfa.util.xrn import Xrn, get_authority, hrn_to_urn, urn_to_hrn, urn_to_sliver_id
 from sfa.util.plxrn import slicename_to_hrn, hrn_to_pl_slicename
 from sfa.util.version import version_core
 from sfa.util.sfatime import utcparse
@@ -29,77 +28,32 @@ class AggregateManager:
         self.caching=True
         #self.caching=False
     
+    # essentially a union of the core version, the generic version (this code) and
+    # whatever the driver needs to expose
     def GetVersion(self, api):
     
-        version_manager = VersionManager()
-        ad_rspec_versions = []
-        request_rspec_versions = []
-        for rspec_version in version_manager.versions:
-            if rspec_version.content_type in ['*', 'ad']:
-                ad_rspec_versions.append(rspec_version.to_dict())
-            if rspec_version.content_type in ['*', 'request']:
-                request_rspec_versions.append(rspec_version.to_dict()) 
         xrn=Xrn(api.hrn)
-        version_more = {'interface':'aggregate',
-                        'sfa': 2,
-                        'geni_api': api.config.SFA_AGGREGATE_API_VERSION,
-                        'testbed':'myplc',
-                        'hrn':xrn.get_hrn(),
-                        'geni_request_rspec_versions': request_rspec_versions,
-                        'geni_ad_rspec_versions': ad_rspec_versions,
-                        }
-        return version_core(version_more)
+        version = version_core()
+        version_generic = {'interface':'aggregate',
+                           'sfa': 2,
+                           'geni_api': api.config.SFA_AGGREGATE_API_VERSION,
+                           'hrn':xrn.get_hrn(),
+                           'urn':xrn.get_urn(),
+                           }
+        version.update(version_generic)
+        testbed_version = self.driver.aggregate_version()
+        version.update(testbed_version)
+        return version
     
-    def SliverStatus(self, api, slice_xrn, creds, options):
+    def SliverStatus (self, api, slice_xrn, creds, options):
         call_id = options.get('call_id')
         if Callids().already_handled(call_id): return {}
     
-        (hrn, _) = urn_to_hrn(slice_xrn)
-        # find out where this slice is currently running
-        slicename = hrn_to_pl_slicename(hrn)
-        
-        slices = api.driver.GetSlices([slicename], ['slice_id', 'node_ids','person_ids','name','expires'])
-        if len(slices) == 0:        
-            raise Exception("Slice %s not found (used %s as slicename internally)" % (slice_xrn, slicename))
-        slice = slices[0]
-        
-        # report about the local nodes only
-        nodes = api.driver.GetNodes({'node_id':slice['node_ids'],'peer_id':None},
-                                     ['node_id', 'hostname', 'site_id', 'boot_state', 'last_contact'])
-        site_ids = [node['site_id'] for node in nodes]
-    
-        result = {}
-        top_level_status = 'unknown'
-        if nodes:
-            top_level_status = 'ready'
-        slice_urn = Xrn(slice_xrn, 'slice').get_urn()
-        result['geni_urn'] = slice_urn
-        result['pl_login'] = slice['name']
-        result['pl_expires'] = datetime.datetime.fromtimestamp(slice['expires']).ctime()
-        
-        resources = []
-        for node in nodes:
-            res = {}
-            res['pl_hostname'] = node['hostname']
-            res['pl_boot_state'] = node['boot_state']
-            res['pl_last_contact'] = node['last_contact']
-            if node['last_contact'] is not None:
-                res['pl_last_contact'] = datetime.datetime.fromtimestamp(node['last_contact']).ctime()
-            sliver_id = urn_to_sliver_id(slice_urn, slice['slice_id'], node['node_id']) 
-            res['geni_urn'] = sliver_id
-            if node['boot_state'] == 'boot':
-                res['geni_status'] = 'ready'
-            else:
-                res['geni_status'] = 'failed'
-                top_level_status = 'failed' 
-                
-            res['geni_error'] = ''
-    
-            resources.append(res)
-            
-        result['geni_status'] = top_level_status
-        result['geni_resources'] = resources
-        return result
+        xrn = Xrn(slice_xrn)
+        slice_urn=xrn.get_urn()
+        slice_hrn=xrn.get_hrn()
+
+        return self.driver.sliver_status (slice_urn, slice_hrn)
     
     def CreateSliver(self, api, slice_xrn, creds, rspec_string, users, options):
         """
@@ -109,58 +63,21 @@ class AggregateManager:
         call_id = options.get('call_id')
         if Callids().already_handled(call_id): return ""
     
-        aggregate = PlAggregate(self.driver)
-        slices = PlSlices(api)
-        (hrn, _) = urn_to_hrn(slice_xrn)
-        peer = slices.get_peer(hrn)
-        sfa_peer = slices.get_sfa_peer(hrn)
-        slice_record=None    
-        if users:
-            slice_record = users[0].get('slice_record', {})
-    
-        # parse rspec
-        rspec = RSpec(rspec_string)
-        requested_attributes = rspec.version.get_slice_attributes()
-        
-        # ensure site record exists
-        site = slices.verify_site(hrn, slice_record, peer, sfa_peer, options=options)
-        # ensure slice record exists
-        slice = slices.verify_slice(hrn, slice_record, peer, sfa_peer, options=options)
-        # ensure person records exists
-        persons = slices.verify_persons(hrn, slice, users, peer, sfa_peer, options=options)
-        # ensure slice attributes exists
-        slices.verify_slice_attributes(slice, requested_attributes, options=options)
-        
-        # add/remove slice from nodes
-        requested_slivers = [node.get('component_name') for node in rspec.version.get_nodes_with_slivers()]
-        nodes = slices.verify_slice_nodes(slice, requested_slivers, peer) 
-   
-        # add/remove links links 
-        slices.verify_slice_links(slice, rspec.version.get_link_requests(), nodes)
-    
-        # handle MyPLC peer association.
-        # only used by plc and ple.
-        slices.handle_peer(site, slice, persons, peer)
-        
-        return aggregate.get_rspec(slice_xrn=slice_xrn, version=rspec.version)
-    
+        xrn = Xrn(slice_xrn)
+        slice_urn=xrn.get_urn()
+        slice_hrn=xrn.get_hrn()
+
+        return self.driver.create_sliver (slice_urn, slice_hrn, creds, rspec_string, users, options)
     
     def RenewSliver(self, api, xrn, creds, expiration_time, options):
         call_id = options.get('call_id')
         if Callids().already_handled(call_id): return True
-        (hrn, _) = urn_to_hrn(xrn)
-        slicename = hrn_to_pl_slicename(hrn)
-        slices = api.driver.GetSlices({'name': slicename}, ['slice_id'])
-        if not slices:
-            raise RecordNotFound(hrn)
-        slice = slices[0]
-        requested_time = utcparse(expiration_time)
-        record = {'expires': int(time.mktime(requested_time.timetuple()))}
-        try:
-            api.driver.UpdateSlice(slice['slice_id'], record)
-            return True
-        except:
-            return False
+        
+        xrn = Xrn(slice_xrn)
+        slice_urn=xrn.get_urn()
+        slice_hrn=xrn.get_hrn()
+
+        return self.driver.renew_sliver (slice_urn, slice_hrn, creds, expiration_time, options)
     
     def start_slice(self, api, xrn, creds):
         (hrn, _) = urn_to_hrn(xrn)
@@ -275,7 +192,7 @@ class AggregateManager:
     def GetTicket(self, api, xrn, creds, rspec, users, options):
     
         (slice_hrn, _) = urn_to_hrn(xrn)
-        slices = PlSlices(api)
+        slices = PlSlices(self.driver)
         peer = slices.get_peer(slice_hrn)
         sfa_peer = slices.get_sfa_peer(slice_hrn)
     

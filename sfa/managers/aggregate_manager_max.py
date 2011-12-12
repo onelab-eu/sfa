@@ -145,7 +145,7 @@ class AggregateManagerMax (AggregateManager):
     def prepare_slice(self, api, slice_xrn, creds, users):
         reg_objects = self._get_registry_objects(slice_xrn, creds, users)
         (hrn, type) = urn_to_hrn(slice_xrn)
-        slices = PlSlices(api)
+        slices = PlSlices(self.driver)
         peer = slices.get_peer(hrn)
         sfa_peer = slices.get_sfa_peer(hrn)
         slice_record=None

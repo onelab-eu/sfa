@@ -1,3 +1,4 @@
+import datetime
 #
 from sfa.util.faults import MissingSfaInfo, UnknownSfaType
 from sfa.util.sfalogging import logger
@@ -8,10 +9,17 @@ from sfa.util.plxrn import slicename_to_hrn, hostname_to_hrn, hrn_to_pl_slicenam
 # one would think the driver should not need to mess with the SFA db, but..
 from sfa.storage.table import SfaTable
 
+from sfa.rspecs.version_manager import VersionManager
+from sfa.rspecs.rspec import RSpec
+
 # the driver interface, mostly provides default behaviours
 from sfa.managers.driver import Driver
 
 from sfa.plc.plshell import PlShell
+
+import sfa.plc.peers as peers
+from sfa.plc.plaggregate import PlAggregate
+from sfa.plc.plslices import PlSlices
 
 def list_to_dict(recs, key):
     """
@@ -34,8 +42,11 @@ class PlDriver (Driver, PlShell):
 
     def __init__ (self, config):
         PlShell.__init__ (self, config)
+        Driver.__init__ (self, config)
  
-        self.hrn = config.SFA_INTERFACE_HRN
+    ########################################
+    ########## registry oriented
+    ########################################
 
     ########## disabled users 
     def is_enabled (self, record):
@@ -510,3 +521,121 @@ class PlDriver (Driver, PlShell):
             logger.info('unexpected relation to maintain, %s -> %s'%(subject_type,target_type))
 
         
+    ########################################
+    ########## aggregate oriented
+    ########################################
+
+    def testbed_name (self): return "myplc"
+
+    # 'geni_request_rspec_versions' and 'geni_ad_rspec_versions' are mandatory
+    def aggregate_version (self):
+        version_manager = VersionManager()
+        ad_rspec_versions = []
+        request_rspec_versions = []
+        for rspec_version in version_manager.versions:
+            if rspec_version.content_type in ['*', 'ad']:
+                ad_rspec_versions.append(rspec_version.to_dict())
+            if rspec_version.content_type in ['*', 'request']:
+                request_rspec_versions.append(rspec_version.to_dict()) 
+        return {
+            'testbed':self.testbed_name(),
+            'geni_request_rspec_versions': request_rspec_versions,
+            'geni_ad_rspec_versions': ad_rspec_versions,
+            }
+
+    def sliver_status (self, slice_urn, slice_hrn):
+        # find out where this slice is currently running
+        slicename = hrn_to_pl_slicename(slice_hrn)
+        
+        slices = self.GetSlices([slicename], ['slice_id', 'node_ids','person_ids','name','expires'])
+        if len(slices) == 0:        
+            raise Exception("Slice %s not found (used %s as slicename internally)" % (slice_xrn, slicename))
+        slice = slices[0]
+        
+        # report about the local nodes only
+        nodes = self.GetNodes({'node_id':slice['node_ids'],'peer_id':None},
+                              ['node_id', 'hostname', 'site_id', 'boot_state', 'last_contact'])
+        site_ids = [node['site_id'] for node in nodes]
+    
+        result = {}
+        top_level_status = 'unknown'
+        if nodes:
+            top_level_status = 'ready'
+        result['geni_urn'] = slice_urn
+        result['pl_login'] = slice['name']
+        result['pl_expires'] = datetime.datetime.fromtimestamp(slice['expires']).ctime()
+        
+        resources = []
+        for node in nodes:
+            res = {}
+            res['pl_hostname'] = node['hostname']
+            res['pl_boot_state'] = node['boot_state']
+            res['pl_last_contact'] = node['last_contact']
+            if node['last_contact'] is not None:
+                res['pl_last_contact'] = datetime.datetime.fromtimestamp(node['last_contact']).ctime()
+            sliver_id = urn_to_sliver_id(slice_urn, slice['slice_id'], node['node_id']) 
+            res['geni_urn'] = sliver_id
+            if node['boot_state'] == 'boot':
+                res['geni_status'] = 'ready'
+            else:
+                res['geni_status'] = 'failed'
+                top_level_status = 'failed' 
+                
+            res['geni_error'] = ''
+    
+            resources.append(res)
+            
+        result['geni_status'] = top_level_status
+        result['geni_resources'] = resources
+        return result
+
+    def create_sliver (self, slice_urn, slice_hrn, creds, rspec_string, users, options):
+
+        aggregate = PlAggregate(self)
+        slices = PlSlices(self)
+        peer = slices.get_peer(slice_hrn)
+        sfa_peer = slices.get_sfa_peer(slice_hrn)
+        slice_record=None    
+        if users:
+            slice_record = users[0].get('slice_record', {})
+    
+        # parse rspec
+        rspec = RSpec(rspec_string)
+        requested_attributes = rspec.version.get_slice_attributes()
+        
+        # ensure site record exists
+        site = slices.verify_site(slice_hrn, slice_record, peer, sfa_peer, options=options)
+        # ensure slice record exists
+        slice = slices.verify_slice(slice_hrn, slice_record, peer, sfa_peer, options=options)
+        # ensure person records exists
+        persons = slices.verify_persons(slice_hrn, slice, users, peer, sfa_peer, options=options)
+        # ensure slice attributes exists
+        slices.verify_slice_attributes(slice, requested_attributes, options=options)
+        
+        # add/remove slice from nodes
+        requested_slivers = [node.get('component_name') for node in rspec.version.get_nodes_with_slivers()]
+        nodes = slices.verify_slice_nodes(slice, requested_slivers, peer) 
+   
+        # add/remove links links 
+        slices.verify_slice_links(slice, rspec.version.get_link_requests(), nodes)
+    
+        # handle MyPLC peer association.
+        # only used by plc and ple.
+        slices.handle_peer(site, slice, persons, peer)
+        
+        return aggregate.get_rspec(slice_xrn=slice_urn, version=rspec.version)
+
+    def renew_sliver (self, slice_urn, slice_hrn, creds, expiration_time, options):
+        slicename = hrn_to_pl_slicename(slice_hrn)
+        slices = self.driver.GetSlices({'name': slicename}, ['slice_id'])
+        if not slices:
+            raise RecordNotFound(slice_hrn)
+        slice = slices[0]
+        requested_time = utcparse(expiration_time)
+        record = {'expires': int(time.mktime(requested_time.timetuple()))}
+        try:
+            self.driver.UpdateSlice(slice['slice_id'], record)
+            return True
+        except:
+            return False
+

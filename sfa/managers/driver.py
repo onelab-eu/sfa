@@ -5,7 +5,13 @@
 
 class Driver:
     
-    def __init__ (self): pass
+    def __init__ (self, config): 
+        # this is the hrn attached to the running server
+        self.hrn = config.SFA_INTERFACE_HRN
+
+    ########################################
+    ########## registry oriented
+    ########################################
 
     # redefine this if you want to check again records 
     # when running GetCredential
@@ -53,3 +59,30 @@ class Driver:
     # should anything be passed back to the caller in this case ?
     def update (self, old_sfa_record, new_sfa_record, hrn, new_key): 
         return True
+
+    ########################################
+    ########## aggregate oriented
+    ########################################
+    
+    # a name for identifying the kind of testbed
+    def testbed_name (self): return "undefined"
+
+    # a dictionary that gets appended to the generic answer to GetVersion
+    # 'geni_request_rspec_versions' and 'geni_ad_rspec_versions' are mandatory
+    def aggregate_version (self): return {}
+
+    # the answer to SliverStatus on a given slice
+    def sliver_status (self, slice_urn, slice_hrn): return {}
+
+    # the answer to CreateSliver on a given slice
+    # expected to return a valid rspec 
+    # identical to ListResources after the slice was modified
+    def create_sliver (self, slice_urn, slice_hrn, creds, rspec_string, users, options):
+        return "dummy Driver.create_sliver needs to be redefined"
+
+    # the answer to RenewSliver
+    # expected to return a boolean to indicate success
+    def renew_sliver (self, slice_urn, slice_hrn, creds, expiration_time, options):
+        return False
+    
+    
