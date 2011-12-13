@@ -913,12 +913,12 @@ or with an slice hrn, shows currently provisioned resources
         # not contained in this request will be removed from the slice
 
         # CreateSliver has supported the options argument for a while now so it should
-        # be safe to assume this server support it 
+        # be safe to assume this server support it
         api_options = {}
         api_options ['append'] = False
         api_options ['call_id'] = unique_call_id()
 
-        result = server.CreateSliver(slice_urn, creds, rspec, users, api_options)
+        result = server.CreateSliver(slice_urn, creds, rspec, users, *self.ois(server, api_options))
         value = ReturnValue.get_value(result)
         if options.file is None:
             print value
@@ -966,12 +966,11 @@ or with an slice hrn, shows currently provisioned resources
         if options.delegate:
             delegated_cred = self.delegate_cred(slice_cred, get_authority(self.authority))
             creds.append(delegated_cred)
-        call_args.append(creds)
 
         # options and call_id when supported
         api_options = {}
 	api_options['call_id']=unique_call_id()
-        result = server.SliverStatus(slice_urn, creds, self.ois(server,api_options))
+        result = server.SliverStatus(slice_urn, creds, *self.ois(server,api_options))
         value = ReturnValue.get_value(result)
         print value
         if options.file:
