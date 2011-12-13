@@ -26,7 +26,7 @@ class RegistryManager:
     def __init__ (self): pass
 
     # The GENI GetVersion call
-    def GetVersion(self, api):
+    def GetVersion(self, api, options):
         peers = dict ( [ (hrn,interface.get_url()) for (hrn,interface) in api.registries.iteritems() 
                        if hrn != api.hrn])
         xrn=Xrn(api.hrn)

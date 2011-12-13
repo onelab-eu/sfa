@@ -682,7 +682,7 @@ class AggregateManagerEucalyptus:
             f.write("%s %s %s\n" % (instId, ipaddr, hrn))
         f.close()
     
-    def GetVersion(api):
+    def GetVersion(api, options):
 
         version_manager = VersionManager()
         ad_rspec_versions = []
@@ -695,7 +695,7 @@ class AggregateManagerEucalyptus:
         xrn=Xrn(api.hrn)
         version_more = {'interface':'aggregate',
                         'sfa': 1,
-                        'geni_api': api.config.SFA_AGGREGATE_API_VERSION,
+                        'geni_api': '2',
                         'testbed':'myplc',
                         'hrn':xrn.get_hrn(),
                         'geni_request_rspec_versions': request_rspec_versions,

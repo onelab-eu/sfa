@@ -82,6 +82,7 @@ class XMLRPCTransport(xmlrpclib.Transport):
 class XMLRPCServerProxy(xmlrpclib.ServerProxy):
     def __init__(self, url, transport, allow_none=True, verbose=False):
         # remember url for GetVersion
+        # xxx not sure this is still needed as SfaServerProxy has this too
         self.url=url
         xmlrpclib.ServerProxy.__init__(self, url, transport, allow_none=allow_none, verbose=verbose)
 

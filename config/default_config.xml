@@ -164,12 +164,6 @@ Thierry Parmentelat
 	  <description>The port where the aggregate is to be found.</description>
 	</variable>
 
-        <variable id="api_version" type="int">
-          <name>Aggregate Manager API Version</name>
-          <value>1</value>
-          <description>The Aggregate API version</description>
-        </variable>
-
       </variablelist>
 
     </category>

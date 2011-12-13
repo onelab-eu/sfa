@@ -25,7 +25,7 @@ class SliceManager:
         # self.caching=False
         self.caching=True
         
-    def GetVersion(self, api):
+    def GetVersion(self, api, options):
         # peers explicitly in aggregates.xml
         peers =dict ([ (peername,interface.get_url()) for (peername,interface) in api.aggregates.iteritems()
                        if peername != api.hrn])
@@ -40,7 +40,7 @@ class SliceManager:
         xrn=Xrn(api.hrn, 'authority+sa')
         version_more = {'interface':'slicemgr',
                         'sfa': 2,
-                        'geni_api': api.config.SFA_AGGREGATE_API_VERSION,
+                        'geni_api': 2,
                         'hrn' : xrn.get_hrn(),
                         'urn' : xrn.get_urn(),
                         'peers': peers,

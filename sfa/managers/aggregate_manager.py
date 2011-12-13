@@ -30,13 +30,13 @@ class AggregateManager:
     
     # essentially a union of the core version, the generic version (this code) and
     # whatever the driver needs to expose
-    def GetVersion(self, api):
+    def GetVersion(self, api, options):
     
         xrn=Xrn(api.hrn)
         version = version_core()
         version_generic = {'interface':'aggregate',
                            'sfa': 2,
-                           'geni_api': api.config.SFA_AGGREGATE_API_VERSION,
+                           'geni_api': 2,
                            'hrn':xrn.get_hrn(),
                            'urn':xrn.get_urn(),
                            }

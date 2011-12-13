@@ -9,9 +9,12 @@ class GetVersion(Method):
     @return version
     """
     interfaces = ['registry','aggregate', 'slicemgr', 'component']
-    accepts = []
+    accepts = [
+        Parameter(dict, "Options")
+        ]
     returns = Parameter(dict, "Version information")
 
-    def call(self):
+    # API v2 specifies options is optional, so..
+    def call(self, options={}):
         self.api.logger.info("interface: %s\tmethod-name: %s" % (self.api.interface, self.name))
-        return self.api.manager.GetVersion(self.api)
+        return self.api.manager.GetVersion(self.api, options)
