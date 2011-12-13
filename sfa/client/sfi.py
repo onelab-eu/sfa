@@ -796,8 +796,8 @@ or version information about sfi itself
     # show rspec for named slice
     def resources(self, options, args):
         """
-        with no arg, discover available resources,
-or currently provisioned resources  (ListResources)
+        with no arg, discover available resources, (ListResources)
+or with an slice hrn, shows currently provisioned resources
         """
         server = self.sliceapi()
         call_args = []
