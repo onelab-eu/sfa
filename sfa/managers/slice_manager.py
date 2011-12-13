@@ -39,7 +39,7 @@ class SliceManager:
                 request_rspec_versions.append(rspec_version.to_dict())
         xrn=Xrn(api.hrn, 'authority+sa')
         version_more = {'interface':'slicemgr',
-                        'sfa': 1,
+                        'sfa': 2,
                         'geni_api': api.config.SFA_AGGREGATE_API_VERSION,
                         'hrn' : xrn.get_hrn(),
                         'urn' : xrn.get_urn(),
