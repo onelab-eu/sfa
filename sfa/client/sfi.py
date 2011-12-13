@@ -340,8 +340,6 @@ class Sfi:
         parser.add_option("-D", "--debug",
                           action="store_true", dest="debug", default=False,
                           help="Debug (xml-rpc) protocol messages")
-        parser.add_option("-p", "--protocol", dest="protocol", default="xmlrpc",
-                         help="RPC protocol (xmlrpc or soap)")
         # would it make sense to use ~/.ssh/id_rsa as a default here ?
         parser.add_option("-k", "--private-key",
                          action="store", dest="user_private_key", default=None,
