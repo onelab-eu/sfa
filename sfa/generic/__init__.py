@@ -60,6 +60,8 @@ class Generic:
         if not 'interface' in kwargs:
             logger.critical("Generic.make_api: no interface found")
         api = self.api_class()(*args, **kwargs)
+        # xxx can probably drop support for managers implemented as modules 
+        # which makes it a bit awkward
         manager_class_or_module = self.make_manager(api.interface)
         driver = self.make_driver (api.config, api.interface)
         ### arrange stuff together
