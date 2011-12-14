@@ -18,6 +18,9 @@ from sfa.plc.plslices import PlSlices
 
 class AggregateManagerMax (AggregateManager):
 
+    def __init__ (self, config):
+        pass
+
     RSPEC_TMP_FILE_PREFIX = "/tmp/max_rspec"
     
     # execute shell command and return both exit code and text output

@@ -71,6 +71,16 @@ class Driver:
     # 'geni_request_rspec_versions' and 'geni_ad_rspec_versions' are mandatory
     def aggregate_version (self): return {}
 
+    # the answer to ListSlices, a list of slice urns
+    def list_slices (self, creds, options):
+        return []
+
+    # answer to ListResources
+    # first 2 args are None in case of resource discovery
+    # expected : rspec (xml string)
+    def list_resources (self, slice_urn, slice_hrn, creds, options):
+        return "dummy Driver.list_resources needs to be redefined"
+
     # the answer to SliverStatus on a given slice
     def sliver_status (self, slice_urn, slice_hrn): return {}
 
@@ -80,9 +90,27 @@ class Driver:
     def create_sliver (self, slice_urn, slice_hrn, creds, rspec_string, users, options):
         return "dummy Driver.create_sliver needs to be redefined"
 
+    # the answer to DeleteSliver on a given slice
+    def delete_sliver (self, slice_urn, slice_hrn, creds, options):
+        return "dummy Driver.delete_sliver needs to be redefined"
+
     # the answer to RenewSliver
     # expected to return a boolean to indicate success
     def renew_sliver (self, slice_urn, slice_hrn, creds, expiration_time, options):
         return False
-    
-    
+
+    # the answer to start_slice/stop_slice
+    # 1 means success, otherwise raise exception
+    def start_slice (self, slice_urn, slice_xrn, creds):
+        return 1
+    def stop_slice (self, slice_urn, slice_xrn, creds):
+        return 1
+    # somehow this one does not have creds - not implemented in PL anyways
+    def reset_slice (self, slice_urn, slice_xrn, creds):
+        return 1
+
+    # the answer to GetTicket
+    # expected is a ticket, i.e. a certificate, as a string
+    def get_ticket (self, slice_urn, slice_xrn, creds, rspec, options):
+        return "dummy Driver.get_ticket needs to be redefined"
+

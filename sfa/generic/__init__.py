@@ -60,15 +60,16 @@ class Generic:
         if not 'interface' in kwargs:
             logger.critical("Generic.make_api: no interface found")
         api = self.api_class()(*args, **kwargs)
-        manager = self.make_manager(api.interface)
+        manager_class_or_module = self.make_manager(api.interface)
         driver = self.make_driver (api.config, api.interface)
         ### arrange stuff together
         # add a manager wrapper
-        manager_wrap = ManagerWrapper(manager,api.interface)
+        manager_wrap = ManagerWrapper(manager_class_or_module,api.interface,api.config)
         api.manager=manager_wrap
         # insert driver in manager
-        logger.debug("Setting manager.driver, manager=%s"%manager)
-        manager.driver=driver
+        logger.debug("Setting manager.driver, manager=%s"%manager_class_or_module)
+        # xxx this should go into the object and not the class !?!
+        manager_class_or_module.driver=driver
         # add it in api as well for convenience
         api.driver=driver
         return api

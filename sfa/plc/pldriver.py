@@ -1,13 +1,20 @@
+import time
 import datetime
 #
-from sfa.util.faults import MissingSfaInfo, UnknownSfaType
+from sfa.util.faults import MissingSfaInfo, UnknownSfaType, \
+    RecordNotFound, SfaNotImplemented, SliverDoesNotExist
+
 from sfa.util.sfalogging import logger
 from sfa.util.defaultdict import defaultdict
-from sfa.util.xrn import hrn_to_urn, get_leaf
-from sfa.util.plxrn import slicename_to_hrn, hostname_to_hrn, hrn_to_pl_slicename, hrn_to_pl_login_base
+from sfa.util.sfatime import utcparse
+from sfa.util.xrn import hrn_to_urn, get_leaf, urn_to_sliver_id
+from sfa.util.cache import Cache
 
 # one would think the driver should not need to mess with the SFA db, but..
 from sfa.storage.table import SfaTable
+
+# used to be used in get_ticket
+#from sfa.trust.sfaticket import SfaTicket
 
 from sfa.rspecs.version_manager import VersionManager
 from sfa.rspecs.rspec import RSpec
@@ -16,10 +23,11 @@ from sfa.rspecs.rspec import RSpec
 from sfa.managers.driver import Driver
 
 from sfa.plc.plshell import PlShell
-
 import sfa.plc.peers as peers
 from sfa.plc.plaggregate import PlAggregate
 from sfa.plc.plslices import PlSlices
+from sfa.util.plxrn import slicename_to_hrn, hostname_to_hrn, hrn_to_pl_slicename, hrn_to_pl_login_base
+
 
 def list_to_dict(recs, key):
     """
@@ -40,9 +48,17 @@ def list_to_dict(recs, key):
 # 
 class PlDriver (Driver, PlShell):
 
+    # the cache instance is a class member so it survives across incoming requests
+    cache = None
+
     def __init__ (self, config):
         PlShell.__init__ (self, config)
         Driver.__init__ (self, config)
+        self.cache=None
+        if config.SFA_AGGREGATE_CACHING:
+            if PlDriver.cache is None:
+                PlDriver.cache = Cache()
+            self.cache = PlDriver.cache
  
     ########################################
     ########## registry oriented
@@ -105,9 +121,9 @@ class PlDriver (Driver, PlShell):
 
         elif type == 'node':
             login_base = hrn_to_pl_login_base(sfa_record['authority'])
-            nodes = api.driver.GetNodes([pl_record['hostname']])
+            nodes = self.GetNodes([pl_record['hostname']])
             if not nodes:
-                pointer = api.driver.AddNode(login_base, pl_record)
+                pointer = self.AddNode(login_base, pl_record)
             else:
                 pointer = nodes[0]['node_id']
     
@@ -392,7 +408,6 @@ class PlDriver (Driver, PlShell):
             
         return records   
 
-    # aggregates is basically api.aggregates
     def fill_record_sfa_info(self, records):
 
         def startswith(prefix, values):
@@ -543,13 +558,66 @@ class PlDriver (Driver, PlShell):
             'geni_ad_rspec_versions': ad_rspec_versions,
             }
 
+    def list_slices (self, creds, options):
+        # look in cache first
+        if self.cache:
+            slices = self.cache.get('slices')
+            if slices:
+                logger.debug("PlDriver.list_slices returns from cache")
+                return slices
+    
+        # get data from db 
+        slices = self.GetSlices({'peer_id': None}, ['name'])
+        slice_hrns = [slicename_to_hrn(self.hrn, slice['name']) for slice in slices]
+        slice_urns = [hrn_to_urn(slice_hrn, 'slice') for slice_hrn in slice_hrns]
+    
+        # cache the result
+        if self.cache:
+            logger.debug ("PlDriver.list_slices stores value in cache")
+            self.cache.add('slices', slice_urns) 
+    
+        return slice_urns
+        
+    # first 2 args are None in case of resource discovery
+    def list_resources (self, slice_urn, slice_hrn, creds, options):
+        cached_requested = options.get('cached', True) 
+    
+        version_manager = VersionManager()
+        # get the rspec's return format from options
+        rspec_version = version_manager.get_version(options.get('geni_rspec_version'))
+        version_string = "rspec_%s" % (rspec_version)
+    
+        #panos adding the info option to the caching key (can be improved)
+        if options.get('info'):
+            version_string = version_string + "_"+options.get('info', 'default')
+    
+        # look in cache first
+        if cached_requested and self.cache and not slice_hrn:
+            rspec = self.cache.get(version_string)
+            if rspec:
+                logger.debug("PlDriver.ListResources: returning cached advertisement")
+                return rspec 
+    
+        #panos: passing user-defined options
+        #print "manager options = ",options
+        aggregate = PlAggregate(self)
+        rspec =  aggregate.get_rspec(slice_xrn=slice_urn, version=rspec_version, 
+                                     options=options)
+    
+        # cache the result
+        if self.cache and not slice_hrn:
+            logger.debug("PlDriver.ListResources: stores advertisement in cache")
+            self.cache.add(version_string, rspec)
+    
+        return rspec
+    
     def sliver_status (self, slice_urn, slice_hrn):
         # find out where this slice is currently running
         slicename = hrn_to_pl_slicename(slice_hrn)
         
         slices = self.GetSlices([slicename], ['slice_id', 'node_ids','person_ids','name','expires'])
         if len(slices) == 0:        
-            raise Exception("Slice %s not found (used %s as slicename internally)" % (slice_xrn, slicename))
+            raise SliverDoesNotExist("%s (used %s as slicename internally)" % (slice_hrn, slicename))
         slice = slices[0]
         
         # report about the local nodes only
@@ -625,17 +693,138 @@ class PlDriver (Driver, PlShell):
         
         return aggregate.get_rspec(slice_xrn=slice_urn, version=rspec.version)
 
+    def delete_sliver (self, slice_urn, slice_hrn, creds, options):
+        slicename = hrn_to_pl_slicename(slice_hrn)
+        slices = self.GetSlices({'name': slicename})
+        if not slices:
+            return 1
+        slice = slices[0]
+    
+        # determine if this is a peer slice
+        # xxx I wonder if this would not need to use PlSlices.get_peer instead 
+        # in which case plc.peers could be deprecated as this here
+        # is the only/last call to this last method in plc.peers
+        peer = peers.get_peer(self, slice_hrn)
+        try:
+            if peer:
+                self.UnBindObjectFromPeer('slice', slice['slice_id'], peer)
+            self.DeleteSliceFromNodes(slicename, slice['node_ids'])
+        finally:
+            if peer:
+                self.BindObjectToPeer('slice', slice['slice_id'], peer, slice['peer_slice_id'])
+        return 1
+    
     def renew_sliver (self, slice_urn, slice_hrn, creds, expiration_time, options):
         slicename = hrn_to_pl_slicename(slice_hrn)
-        slices = self.driver.GetSlices({'name': slicename}, ['slice_id'])
+        slices = self.GetSlices({'name': slicename}, ['slice_id'])
         if not slices:
             raise RecordNotFound(slice_hrn)
         slice = slices[0]
         requested_time = utcparse(expiration_time)
         record = {'expires': int(time.mktime(requested_time.timetuple()))}
         try:
-            self.driver.UpdateSlice(slice['slice_id'], record)
+            self.UpdateSlice(slice['slice_id'], record)
             return True
         except:
             return False
 
+    # remove the 'enabled' tag 
+    def start_slice (self, slice_urn, slice_hrn, creds):
+        slicename = hrn_to_pl_slicename(slice_hrn)
+        slices = self.GetSlices({'name': slicename}, ['slice_id'])
+        if not slices:
+            raise RecordNotFound(slice_hrn)
+        slice_id = slices[0]['slice_id']
+        slice_tags = self.GetSliceTags({'slice_id': slice_id, 'tagname': 'enabled'}, ['slice_tag_id'])
+        # just remove the tag if it exists
+        if slice_tags:
+            self.DeleteSliceTag(slice_tags[0]['slice_tag_id'])
+        return 1
+
+    # set the 'enabled' tag to 0
+    def stop_slice (self, slice_urn, slice_hrn, creds):
+        slicename = hrn_to_pl_slicename(slice_hrn)
+        slices = self.GetSlices({'name': slicename}, ['slice_id'])
+        if not slices:
+            raise RecordNotFound(slice_hrn)
+        slice_id = slices[0]['slice_id']
+        slice_tags = self.GetSliceTags({'slice_id': slice_id, 'tagname': 'enabled'})
+        if not slice_tags:
+            self.AddSliceTag(slice_id, 'enabled', '0')
+        elif slice_tags[0]['value'] != "0":
+            tag_id = slice_tags[0]['slice_tag_id']
+            self.UpdateSliceTag(tag_id, '0')
+        return 1
+    
+    def reset_slice (self, slice_urn, slice_hrn, creds):
+        raise SfaNotImplemented ("reset_slice not available at this interface")
+    
+    # xxx this code is quite old and has not run for ages
+    # it is obviously totally broken and needs a rewrite
+    def get_ticket (self, slice_urn, slice_hrn, creds, rspec_string, options):
+        raise SfaNotImplemented,"PlDriver.get_ticket needs a rewrite"
+# please keep this code for future reference
+#        slices = PlSlices(self)
+#        peer = slices.get_peer(slice_hrn)
+#        sfa_peer = slices.get_sfa_peer(slice_hrn)
+#    
+#        # get the slice record
+#        credential = api.getCredential()
+#        interface = api.registries[api.hrn]
+#        registry = api.server_proxy(interface, credential)
+#        records = registry.Resolve(xrn, credential)
+#    
+#        # make sure we get a local slice record
+#        record = None
+#        for tmp_record in records:
+#            if tmp_record['type'] == 'slice' and \
+#               not tmp_record['peer_authority']:
+#    #Error (E0602, GetTicket): Undefined variable 'SliceRecord'
+#                slice_record = SliceRecord(dict=tmp_record)
+#        if not record:
+#            raise RecordNotFound(slice_hrn)
+#        
+#        # similar to CreateSliver, we must verify that the required records exist
+#        # at this aggregate before we can issue a ticket
+#        # parse rspec
+#        rspec = RSpec(rspec_string)
+#        requested_attributes = rspec.version.get_slice_attributes()
+#    
+#        # ensure site record exists
+#        site = slices.verify_site(slice_hrn, slice_record, peer, sfa_peer)
+#        # ensure slice record exists
+#        slice = slices.verify_slice(slice_hrn, slice_record, peer, sfa_peer)
+#        # ensure person records exists
+#    # xxx users is undefined in this context
+#        persons = slices.verify_persons(slice_hrn, slice, users, peer, sfa_peer)
+#        # ensure slice attributes exists
+#        slices.verify_slice_attributes(slice, requested_attributes)
+#        
+#        # get sliver info
+#        slivers = slices.get_slivers(slice_hrn)
+#    
+#        if not slivers:
+#            raise SliverDoesNotExist(slice_hrn)
+#    
+#        # get initscripts
+#        initscripts = []
+#        data = {
+#            'timestamp': int(time.time()),
+#            'initscripts': initscripts,
+#            'slivers': slivers
+#        }
+#    
+#        # create the ticket
+#        object_gid = record.get_gid_object()
+#        new_ticket = SfaTicket(subject = object_gid.get_subject())
+#        new_ticket.set_gid_caller(api.auth.client_gid)
+#        new_ticket.set_gid_object(object_gid)
+#        new_ticket.set_issuer(key=api.key, subject=self.hrn)
+#        new_ticket.set_pubkey(object_gid.get_pubkey())
+#        new_ticket.set_attributes(data)
+#        new_ticket.set_rspec(rspec)
+#        #new_ticket.set_parent(api.auth.hierarchy.get_auth_ticket(auth_hrn))
+#        new_ticket.encode()
+#        new_ticket.sign()
+#    
+#        return new_ticket.save_to_string(save_parents=True)

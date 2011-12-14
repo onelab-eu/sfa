@@ -23,7 +23,7 @@ from sfa.storage.table import SfaTable
 
 class RegistryManager:
 
-    def __init__ (self): pass
+    def __init__ (self, config): pass
 
     # The GENI GetVersion call
     def GetVersion(self, api, options):

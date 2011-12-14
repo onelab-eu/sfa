@@ -12,18 +12,28 @@ from sfa.util.sfalogging import logger
 from sfa.util.xrn import Xrn, urn_to_hrn
 from sfa.util.version import version_core
 from sfa.util.callids import Callids
+from sfa.util.cache import Cache
+
 from sfa.server.threadmanager import ThreadManager
+
 from sfa.rspecs.rspec_converter import RSpecConverter
 from sfa.rspecs.version_manager import VersionManager
 from sfa.rspecs.rspec import RSpec 
+
 from sfa.client.client_helper import sfa_to_pg_users_arg
 from sfa.client.return_value import ReturnValue
 
 class SliceManager:
-    def __init__ (self):
-        # xxx todo should be configurable 
-        # self.caching=False
-        self.caching=True
+
+    # the cache instance is a class member so it survives across incoming requests
+    cache = None
+
+    def __init__ (self, config):
+        self.cache=None
+        if config.SFA_SM_CACHING:
+            if SliceManager.cache is None:
+                SliceManager.cache = Cache()
+            self.cache = SliceManager.cache
         
     def GetVersion(self, api, options):
         # peers explicitly in aggregates.xml
@@ -121,9 +131,10 @@ class SliceManager:
         version_string = "rspec_%s" % (rspec_version)
     
         # look in cache first
-        if self.caching and api.cache and not xrn:
-            rspec =  api.cache.get(version_string)
+        if self.cache and not xrn:
+            rspec =  self.cache.get(version_string)
             if rspec:
+                api.logger.debug("SliceManager.ListResources returns cached advertisement")
                 return rspec
     
         # get the callers hrn
@@ -164,8 +175,9 @@ class SliceManager:
                     api.logger.log_exc("SM.ListResources: Failed to merge aggregate rspec")
     
         # cache the result
-        if self.caching and api.cache and not xrn:
-            api.cache.add(version_string, rspec.toxml())
+        if self.cache and not xrn:
+            api.logger.debug("SliceManager.ListResources caches advertisement")
+            self.cache.add(version_string, rspec.toxml())
     
         return rspec.toxml()
 
@@ -346,9 +358,11 @@ class SliceManager:
             return server.ListSlices(creds, options)
 
         # look in cache first
-        if self.caching and api.cache:
-            slices = api.cache.get('slices')
+        # xxx is this really frequent enough that it is worth being cached ?
+        if self.cache:
+            slices = self.cache.get('slices')
             if slices:
+                api.logger.debug("SliceManager.ListSlices returns from cache")
                 return slices
     
         # get the callers hrn
@@ -377,8 +391,9 @@ class SliceManager:
             slices.extend(result)
     
         # cache the result
-        if self.caching and api.cache:
-            api.cache.add('slices', slices)
+        if self.cache:
+            api.logger.debug("SliceManager.ListSlices caches value")
+            self.cache.add('slices', slices)
     
         return slices
     

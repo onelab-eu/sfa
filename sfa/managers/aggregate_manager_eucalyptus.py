@@ -286,7 +286,7 @@ class AggregateManagerEucalyptus:
     _inited=False
 
     # the init_server mechanism has vanished
-    def __init__ (self):
+    def __init__ (self, config):
         if AggregateManagerEucalyptus._inited: return
         AggregateManagerEucalyptus.init_server()
 
