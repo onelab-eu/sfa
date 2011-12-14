@@ -166,6 +166,7 @@ class Slices:
 
     def verify_slice_nodes(self, slice, requested_slivers, peer):
         current_slivers = []
+        deleted_nodes = []
         if slice['node_ids']:
             nodes = self.api.driver.GetNodes(slice['node_ids'], ['hostname'])
             current_slivers = [node['hostname'] for node in nodes]
@@ -175,11 +176,15 @@ class Slices:
     
         # add nodes from rspec
         added_nodes = list(set(requested_slivers).difference(current_slivers))        
-        print>>sys.stderr , "\r\n \r\n \t slices.py  verify_slice_nodes added_nodes" , added_nodes
+        print>>sys.stderr , "\r\n \r\n \t slices.py  verify_slice_nodes added_nodes %s slice %s" %( added_nodes,slice)
         try:
             if peer:
                 self.api.driver.UnBindObjectFromPeer('slice', slice['slice_id'], peer['shortname'])
-            self.api.driver.AddSliceToNodes(slice['name'], added_nodes)
+            #PI is a list, get the only username in this list
+            #so that the OAR/LDAP knows the user: remove the authority from the name
+            tmp=  slice['PI'][0].split(".")
+            username = tmp[(len(tmp)-1)]
+            self.api.driver.AddSliceToNodes(slice['name'], added_nodes, username)
             if deleted_nodes:
                 self.api.driver.DeleteSliceFromNodes(slice['name'], deleted_nodes)
 

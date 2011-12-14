@@ -13,7 +13,7 @@ from sfa.util.plxrn import slicename_to_hrn, hostname_to_hrn, hrn_to_pl_slicenam
 # SlabDriver should be really only about talking to the senslab testbed
 
 ## thierry : please avoid wildcard imports :)
-from sfa.senslab.OARrestapi import OARapi
+from sfa.senslab.OARrestapi import OARapi, OARrestapi
 from sfa.senslab.LDAPapi import LDAPapi
 from sfa.senslab.SenslabImportUsers import SenslabImportUsers
 from sfa.senslab.parsing import parse_filter
@@ -246,9 +246,36 @@ class SlabDriver ():
                  
                  
                  
-    def AddSliceToNodes(self, slice_name, added_nodes):
+    def AddSliceToNodes(self,  slice_name, added_nodes, slice_user=None):
+        print>>sys.stderr, "\r\n \r\n AddSliceToNodes  slice_name %s added_nodes %s username %s" %(slice_name,added_nodes,slice_user )
+        site_list = []
+        nodeid_list =[]
+        resource = ""
+        reqdict = {}
+        reqdict['property'] ="network_address in ("
+        for node in added_nodes:
+            #Get the ID of the node : remove the root auth and put the site in a separate list
+            tmp = node.strip(self.root_auth+".")
+            l = tmp.split("_")
+             
+            nodeid= (l[len(l)-1]) 
+            reqdict['property'] += "'"+ nodeid +"', "
+            nodeid_list.append(nodeid)
+            site_list.append( l[0] )
+            
+        reqdict['property'] =  reqdict['property'][0: len( reqdict['property'])-2] +")"
+        reqdict['resource'] ="network_address="+ str(len(nodeid_list))
+        reqdict['resource']+= ",walltime=" + str(00) + ":" + str(05) + ":" + str(00)
+        reqdict['script_path'] = "/bin/sleep "
+
+        print>>sys.stderr, "\r\n \r\n AddSliceToNodes reqdict   %s \r\n site_list   %s"  %(reqdict,site_list)   
+        OAR = OARrestapi()
+        OAR.POSTRequestToOARRestAPI('POST_job',reqdict,slice_user)
         return 
     
+
+        
+        
     def DeleteSliceFromNodes(self, slice_name, deleted_nodes):
         return   
     

@@ -34,13 +34,15 @@ POSTformat = {  #'yaml': {'content':"text/yaml", 'object':yaml}
 #'http': {'content':"applicaton/x-www-form-urlencoded",'object': html},
 }
 
+OARpostdatareqfields = {'resource' :"/nodes=", 'command':"sleep", 'workdir':"/home/", 'walltime':""}
+
 class OARrestapi:
     def __init__(self):
         self.oarserver= {}
         self.oarserver['ip'] = OARIP
         self.oarserver['port'] = 80
         self.oarserver['uri'] = None
-        self.oarserver['postformat'] = None	
+        self.oarserver['postformat'] = 'json'	
             
     def GETRequestToOARRestAPI(self, request ): 
         self.oarserver['uri'] = OARrequests_get_uri_dict[request]
@@ -60,35 +62,60 @@ class OARrestapi:
 
 		
 		
-    def POSTRequestToOARRestAPI(self, request,format, datadict): 
-        self.oarserver['uri'] = OARrequest_post_uri_dict[request] 
-        if format in POSTformat:
-            if format is 'json':
-                data = json.dumps(datadict)
-             
-            try :
-                conn = httplib.HTTPConnection(self.oarserver['ip'],self.oarserver['port'])
-                conn.putrequest("POST",self.oarserver['uri'] )
-                self.oarserver['postformat'] = POSTformat[format]
-                conn.putheader('content-type', self.oarserver['postformat']['content'])
-                conn.putheader('content-length', str(len(data))) 
-                conn.endheaders()
-                conn.send(data)
-                resp = ( conn.getresponse()).read()
-                conn.close()
+    def POSTRequestToOARRestAPI(self, request, datadict, username):
+        #first check that all params for are OK 
+        print>>sys.stderr, " \r\n \r\n POSTRequestToOARRestAPI username",username
+        try:
+            self.oarserver['uri'] = OARrequest_post_uri_dict[request] 
+        except:
+            print>>sys.stderr, " \r\n \r\n POSTRequestToOARRestAPI request not in OARrequest_post_uri_dict"
+            return
+        #if format in POSTformat:
+            #if format is 'json':
+        data = json.dumps(datadict)
+        headers = {'X-REMOTE_IDENT':username,\
+                'content-type':POSTformat['json']['content'],\
+                'content-length':str(len(data))}     
+        try :
+            #self.oarserver['postformat'] = POSTformat[format]
+            
+            print>>sys.stderr, "\r\n POSTRequestToOARRestAPI   headers %s uri %s" %(headers,self.oarserver['uri'])
+            conn = httplib.HTTPConnection(self.oarserver['ip'],self.oarserver['port'])
+            conn.request("POST",self.oarserver['uri'],data,headers )
+            resp = ( conn.getresponse()).read()
+            conn.close()
+            
+            #conn = httplib.HTTPConnection(self.oarserver['ip'],self.oarserver['port'])
+            #conn.putrequest("POST",self.oarserver['uri'] )
+            #self.oarserver['postformat'] = POSTformat[format]
+            #conn.putheader('HTTP X-REMOTE_IDENT', 'avakian')
+            #conn.putheader('content-type', self.oarserver['postformat']['content'])
+            #conn.putheader('content-length', str(len(data))) 
+            #conn.endheaders()
+            #conn.send(data)
+            #resp = ( conn.getresponse()).read()
+            #conn.close()
 
-            except:
-                raise ServerError("POST_OAR_SRVR : error")
-                    
-            try:
-                answer = self.oarserver['postformat']['object'].loads(resp)
-                return answer
+        except:
+            print>>sys.stderr, "\r\n POSTRequestToOARRestAPI  ERROR: data %s \r\n \t\n \t\t headers %s uri %s" %(data,headers,self.oarserver['uri'])
+            #raise ServerError("POST_OAR_SRVR : error")
+                
+        try:
+            answer = json.loads(resp)
+            print>>sys.stderr, "\r\n POSTRequestToOARRestAPI : ", answer
+            return answer
 
-            except ValueError:
-                raise ServerError("Failed to parse Server Response:" + answer)
-        else:
-            print>>sys.stderr, "\r\n POSTRequestToOARRestAPI : ERROR_POST_FORMAT"
-			
+        except ValueError:
+            raise ServerError("Failed to parse Server Response:" + answer)
+
+
+    #def createjobrequest(self, nodelist):
+        #datadict = dict(zip(self.OARpostdatareqfields.keys(), self.OARpostdatareqfields.values())
+        #for k in datadict:
+                #if k is 'resource':
+                    #for node in nodelist:
+                    #datadict[k] += str(nodelist)
+
 			
 class OARGETParser:
 
@@ -183,7 +210,9 @@ class OARGETParser:
     #of the node properties and properties'values.
     def ParseNodes(self):  
         node_id = None
+        #print >>sys.stderr, " \r\n \r\n \t\t OARrestapi.py ParseNodes self.raw_json %s" %(self.raw_json)
         for dictline in self.raw_json:
+            #print >>sys.stderr, " \r\n \r\n \t\t OARrestapi.py ParseNodes dictline %s hey" %(dictline)
             for k in dictline.keys():
                 if k in self.resources_fulljson_dict:
                     # dictionary is empty and/or a new node has to be inserted 

@@ -30,6 +30,8 @@ from sfa.rspecs.version_manager import VersionManager
 #from sfa.plc.vlink import get_tc_rate
 from sfa.util.sfatime import epochparse
 
+def hostname_to_hrn(root_auth,login_base,hostname):
+    return PlXrn(auth=root_auth,hostname=login_base+'_'+hostname).get_hrn()
 
 class OARrspec:
 
@@ -62,7 +64,7 @@ class OARrspec:
         
         #filter.update({'peer_id': None})
         nodes = self.driver.GetNodes(filtre)
-        
+       
         #site_ids = []
         interface_ids = []
         tag_ids = []
@@ -90,10 +92,12 @@ class OARrspec:
             #if node['slice_ids_whitelist']:
                 #if not slice or slice['slice_id'] not in node['slice_ids_whitelist']:
                     #continue
+            node['hostname'] = hostname_to_hrn( self.driver.root_auth,node['site_login_base'], node['hostname'])
             rspec_node = Node()
             # xxx how to retrieve site['login_base']
             #site_id=node['site_id']
             #site=sites_dict[site_id]
+            
             rspec_node['component_id'] = hostname_to_urn(self.driver.root_auth, node['site_login_base'], node['hostname'])
             rspec_node['component_name'] = node['hostname']
             rspec_node['component_manager_id'] = hrn_to_urn(self.driver.root_auth, 'authority+sa')
