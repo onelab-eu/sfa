@@ -1,6 +1,6 @@
 %define name sfa
 %define version 2.0
-%define taglevel 4
+%define taglevel 5
 
 %define release %{taglevel}%{?pldistro:.%{pldistro}}%{?date:.%{date}}
 %global python_sitearch	%( python -c "from distutils.sysconfig import get_python_lib; print get_python_lib(1)" )
@@ -224,6 +224,15 @@ fi
 [ "$1" -ge "1" ] && service sfa-cm restart || :
 
 %changelog
+* Wed Dec 14 2011 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-2.0-5
+- client: sfi -a / -p deprecated (use -s instead)
+- client: sfi cleaned up
+- client: sfi has backward support for APIv1 aggregates again
+- server: only APIv2 is supported and should be rather strict
+- server: settings for turning on/off caching in sm or am
+- server: plc-dependant code has moved from aggregate to pldriver
+- server: driver interface extended accordingly
+
 * Fri Dec 09 2011 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-2.0-4
 - screwed up previous tag
 
