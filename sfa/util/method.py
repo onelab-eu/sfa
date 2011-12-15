@@ -75,14 +75,12 @@ class Method:
             for name, value, expected in zip(max_args, args, self.accepts):
                 self.type_check(name, value, expected, args)
 
-            if self.api.config.SFA_API_DEBUG:
-                logger.debug("method.__call__ [%s] : BEG %s"%(self.api.interface,methodname))
+            logger.debug("method.__call__ [%s] : BEG %s"%(self.api.interface,methodname))
             result = self.call(*args, **kwds)
 
             runtime = time.time() - start
-            if self.api.config.SFA_API_DEBUG or hasattr(self, 'message'):
-                logger.debug("method.__call__ [%s] : END %s in %02f s (%s)"%\
-                                       (self.api.interface,methodname,runtime,getattr(self,'message',"[no-msg]")))
+            logger.debug("method.__call__ [%s] : END %s in %02f s (%s)"%\
+                             (self.api.interface,methodname,runtime,getattr(self,'message',"[no-msg]")))
 
             return result
 
