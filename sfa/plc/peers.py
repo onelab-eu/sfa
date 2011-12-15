@@ -13,7 +13,7 @@ def get_peer(pldriver, hrn):
     # get this site's authority (sfa root authority or sub authority)
     site_authority = get_authority(slice_authority).lower()
     # check if we are already peered with this site_authority, if so
-    peers = pldriver.GetPeers( {}, ['peer_id', 'peername', 'shortname', 'hrn_root'])
+    peers = pldriver.shell.GetPeers( {}, ['peer_id', 'peername', 'shortname', 'hrn_root'])
     for peer_record in peers:
         names = [name.lower() for name in peer_record.values() if isinstance(name, StringTypes)]
         if site_authority in names:

@@ -41,19 +41,14 @@ def list_to_dict(recs, key):
 # can be sent as-is; it takes care of authentication
 # from the global config
 # 
-# so we inherit PlShell just so one can do driver.GetNodes
-# which would not make much sense in the context of other testbeds
-# so ultimately PlDriver should drop the PlShell inheritance
-# and would have a driver.shell reference to a PlShell instead
-# 
-class PlDriver (Driver, PlShell):
+class PlDriver (Driver):
 
     # the cache instance is a class member so it survives across incoming requests
     cache = None
 
     def __init__ (self, config):
-        PlShell.__init__ (self, config)
         Driver.__init__ (self, config)
+        self.shell = PlShell (config)
         self.cache=None
         if config.SFA_AGGREGATE_CACHING:
             if PlDriver.cache is None:
@@ -81,9 +76,9 @@ class PlDriver (Driver, PlShell):
         pl_record = self.sfa_fields_to_pl_fields(type, hrn, sfa_record)
 
         if type == 'authority':
-            sites = self.GetSites([pl_record['login_base']])
+            sites = self.shell.GetSites([pl_record['login_base']])
             if not sites:
-                pointer = self.AddSite(pl_record)
+                pointer = self.shell.AddSite(pl_record)
             else:
                 pointer = sites[0]['site_id']
 
@@ -92,38 +87,38 @@ class PlDriver (Driver, PlShell):
             for key in pl_record.keys():
                 if key not in acceptable_fields:
                     pl_record.pop(key)
-            slices = self.GetSlices([pl_record['name']])
+            slices = self.shell.GetSlices([pl_record['name']])
             if not slices:
-                 pointer = self.AddSlice(pl_record)
+                 pointer = self.shell.AddSlice(pl_record)
             else:
                  pointer = slices[0]['slice_id']
 
         elif type == 'user':
-            persons = self.GetPersons([sfa_record['email']])
+            persons = self.shell.GetPersons([sfa_record['email']])
             if not persons:
-                pointer = self.AddPerson(dict(sfa_record))
+                pointer = self.shell.AddPerson(dict(sfa_record))
             else:
                 pointer = persons[0]['person_id']
     
             if 'enabled' in sfa_record and sfa_record['enabled']:
-                self.UpdatePerson(pointer, {'enabled': sfa_record['enabled']})
+                self.shell.UpdatePerson(pointer, {'enabled': sfa_record['enabled']})
             # add this person to the site only if she is being added for the first
             # time by sfa and doesont already exist in plc
             if not persons or not persons[0]['site_ids']:
                 login_base = get_leaf(sfa_record['authority'])
-                self.AddPersonToSite(pointer, login_base)
+                self.shell.AddPersonToSite(pointer, login_base)
     
             # What roles should this user have?
-            self.AddRoleToPerson('user', pointer)
+            self.shell.AddRoleToPerson('user', pointer)
             # Add the user's key
             if pub_key:
-                self.AddPersonKey(pointer, {'key_type' : 'ssh', 'key' : pub_key})
+                self.shell.AddPersonKey(pointer, {'key_type' : 'ssh', 'key' : pub_key})
 
         elif type == 'node':
             login_base = hrn_to_pl_login_base(sfa_record['authority'])
-            nodes = self.GetNodes([pl_record['hostname']])
+            nodes = self.shell.GetNodes([pl_record['hostname']])
             if not nodes:
-                pointer = self.AddNode(login_base, pl_record)
+                pointer = self.shell.AddNode(login_base, pl_record)
             else:
                 pointer = nodes[0]['node_id']
     
@@ -140,13 +135,13 @@ class PlDriver (Driver, PlShell):
             raise UnknownSfaType(type)
 
         if (type == "authority"):
-            self.UpdateSite(pointer, new_sfa_record)
+            self.shell.UpdateSite(pointer, new_sfa_record)
     
         elif type == "slice":
             pl_record=self.sfa_fields_to_pl_fields(type, hrn, new_sfa_record)
             if 'name' in pl_record:
                 pl_record.pop('name')
-                self.UpdateSlice(pointer, pl_record)
+                self.shell.UpdateSlice(pointer, pl_record)
     
         elif type == "user":
             # SMBAKER: UpdatePerson only allows a limited set of fields to be
@@ -159,27 +154,27 @@ class PlDriver (Driver, PlShell):
                            'password', 'phone', 'url', 'bio', 'accepted_aup',
                            'enabled']:
                     update_fields[key] = all_fields[key]
-            self.UpdatePerson(pointer, update_fields)
+            self.shell.UpdatePerson(pointer, update_fields)
     
             if new_key:
                 # must check this key against the previous one if it exists
-                persons = self.GetPersons([pointer], ['key_ids'])
+                persons = self.shell.GetPersons([pointer], ['key_ids'])
                 person = persons[0]
                 keys = person['key_ids']
-                keys = self.GetKeys(person['key_ids'])
+                keys = self.shell.GetKeys(person['key_ids'])
                 
                 # Delete all stale keys
                 key_exists = False
                 for key in keys:
                     if new_key != key['key']:
-                        self.DeleteKey(key['key_id'])
+                        self.shell.DeleteKey(key['key_id'])
                     else:
                         key_exists = True
                 if not key_exists:
-                    self.AddPersonKey(pointer, {'key_type': 'ssh', 'key': new_key})
+                    self.shell.AddPersonKey(pointer, {'key_type': 'ssh', 'key': new_key})
     
         elif type == "node":
-            self.UpdateNode(pointer, new_sfa_record)
+            self.shell.UpdateNode(pointer, new_sfa_record)
 
         return True
         
@@ -189,20 +184,20 @@ class PlDriver (Driver, PlShell):
         type=sfa_record['type']
         pointer=sfa_record['pointer']
         if type == 'user':
-            persons = self.GetPersons(pointer)
+            persons = self.shell.GetPersons(pointer)
             # only delete this person if he has site ids. if he doesnt, it probably means
             # he was just removed from a site, not actually deleted
             if persons and persons[0]['site_ids']:
-                self.DeletePerson(pointer)
+                self.shell.DeletePerson(pointer)
         elif type == 'slice':
-            if self.GetSlices(pointer):
-                self.DeleteSlice(pointer)
+            if self.shell.GetSlices(pointer):
+                self.shell.DeleteSlice(pointer)
         elif type == 'node':
-            if self.GetNodes(pointer):
-                self.DeleteNode(pointer)
+            if self.shell.GetNodes(pointer):
+                self.shell.DeleteNode(pointer)
         elif type == 'authority':
-            if self.GetSites(pointer):
-                self.DeleteSite(pointer)
+            if self.shell.GetSites(pointer):
+                self.shell.DeleteSite(pointer)
 
         return True
 
@@ -292,16 +287,16 @@ class PlDriver (Driver, PlShell):
         # get pl records
         nodes, sites, slices, persons, keys = {}, {}, {}, {}, {}
         if node_ids:
-            node_list = self.GetNodes(node_ids)
+            node_list = self.shell.GetNodes(node_ids)
             nodes = list_to_dict(node_list, 'node_id')
         if site_ids:
-            site_list = self.GetSites(site_ids)
+            site_list = self.shell.GetSites(site_ids)
             sites = list_to_dict(site_list, 'site_id')
         if slice_ids:
-            slice_list = self.GetSlices(slice_ids)
+            slice_list = self.shell.GetSlices(slice_ids)
             slices = list_to_dict(slice_list, 'slice_id')
         if person_ids:
-            person_list = self.GetPersons(person_ids)
+            person_list = self.shell.GetPersons(person_ids)
             persons = list_to_dict(person_list, 'person_id')
             for person in persons:
                 key_ids.extend(persons[person]['key_ids'])
@@ -310,7 +305,7 @@ class PlDriver (Driver, PlShell):
                       'slice': slices, 'user': persons}
 
         if key_ids:
-            key_list = self.GetKeys(key_ids)
+            key_list = self.shell.GetKeys(key_ids)
             keys = list_to_dict(key_list, 'key_id')
 
         # fill record info
@@ -358,16 +353,16 @@ class PlDriver (Driver, PlShell):
         # get pl records
         slices, persons, sites, nodes = {}, {}, {}, {}
         if site_ids:
-            site_list = self.GetSites(site_ids, ['site_id', 'login_base'])
+            site_list = self.shell.GetSites(site_ids, ['site_id', 'login_base'])
             sites = list_to_dict(site_list, 'site_id')
         if person_ids:
-            person_list = self.GetPersons(person_ids, ['person_id', 'email'])
+            person_list = self.shell.GetPersons(person_ids, ['person_id', 'email'])
             persons = list_to_dict(person_list, 'person_id')
         if slice_ids:
-            slice_list = self.GetSlices(slice_ids, ['slice_id', 'name'])
+            slice_list = self.shell.GetSlices(slice_ids, ['slice_id', 'name'])
             slices = list_to_dict(slice_list, 'slice_id')       
         if node_ids:
-            node_list = self.GetNodes(node_ids, ['node_id', 'hostname'])
+            node_list = self.shell.GetNodes(node_ids, ['node_id', 'hostname'])
             nodes = list_to_dict(node_list, 'node_id')
        
         # convert ids to hrns
@@ -427,7 +422,7 @@ class PlDriver (Driver, PlShell):
         site_pis = {}
         if site_ids:
             pi_filter = {'|roles': ['pi'], '|site_ids': site_ids} 
-            pi_list = self.GetPersons(pi_filter, ['person_id', 'site_ids'])
+            pi_list = self.shell.GetPersons(pi_filter, ['person_id', 'site_ids'])
             for pi in pi_list:
                 # we will need the pi's hrns also
                 person_ids.append(pi['person_id'])
@@ -457,7 +452,7 @@ class PlDriver (Driver, PlShell):
 
         # get the pl records
         pl_person_list, pl_persons = [], {}
-        pl_person_list = self.GetPersons(person_ids, ['person_id', 'roles'])
+        pl_person_list = self.shell.GetPersons(person_ids, ['person_id', 'roles'])
         pl_persons = list_to_dict(pl_person_list, 'person_id')
 
         # fill sfa info
@@ -521,17 +516,17 @@ class PlDriver (Driver, PlShell):
     def update_relation (self, subject_type, target_type, subject_id, target_ids):
         # hard-wire the code for slice/user for now, could be smarter if needed
         if subject_type =='slice' and target_type == 'user':
-            subject=self.GetSlices (subject_id)[0]
+            subject=self.shell.GetSlices (subject_id)[0]
             current_target_ids = subject['person_ids']
             add_target_ids = list ( set (target_ids).difference(current_target_ids))
             del_target_ids = list ( set (current_target_ids).difference(target_ids))
             logger.debug ("subject_id = %s (type=%s)"%(subject_id,type(subject_id)))
             for target_id in add_target_ids:
-                self.AddPersonToSlice (target_id,subject_id)
+                self.shell.AddPersonToSlice (target_id,subject_id)
                 logger.debug ("add_target_id = %s (type=%s)"%(target_id,type(target_id)))
             for target_id in del_target_ids:
                 logger.debug ("del_target_id = %s (type=%s)"%(target_id,type(target_id)))
-                self.DeletePersonFromSlice (target_id, subject_id)
+                self.shell.DeletePersonFromSlice (target_id, subject_id)
         else:
             logger.info('unexpected relation to maintain, %s -> %s'%(subject_type,target_type))
 
@@ -567,7 +562,7 @@ class PlDriver (Driver, PlShell):
                 return slices
     
         # get data from db 
-        slices = self.GetSlices({'peer_id': None}, ['name'])
+        slices = self.shell.GetSlices({'peer_id': None}, ['name'])
         slice_hrns = [slicename_to_hrn(self.hrn, slice['name']) for slice in slices]
         slice_urns = [hrn_to_urn(slice_hrn, 'slice') for slice_hrn in slice_hrns]
     
@@ -615,13 +610,13 @@ class PlDriver (Driver, PlShell):
         # find out where this slice is currently running
         slicename = hrn_to_pl_slicename(slice_hrn)
         
-        slices = self.GetSlices([slicename], ['slice_id', 'node_ids','person_ids','name','expires'])
+        slices = self.shell.GetSlices([slicename], ['slice_id', 'node_ids','person_ids','name','expires'])
         if len(slices) == 0:        
             raise SliverDoesNotExist("%s (used %s as slicename internally)" % (slice_hrn, slicename))
         slice = slices[0]
         
         # report about the local nodes only
-        nodes = self.GetNodes({'node_id':slice['node_ids'],'peer_id':None},
+        nodes = self.shell.GetNodes({'node_id':slice['node_ids'],'peer_id':None},
                               ['node_id', 'hostname', 'site_id', 'boot_state', 'last_contact'])
         site_ids = [node['site_id'] for node in nodes]
     
@@ -695,7 +690,7 @@ class PlDriver (Driver, PlShell):
 
     def delete_sliver (self, slice_urn, slice_hrn, creds, options):
         slicename = hrn_to_pl_slicename(slice_hrn)
-        slices = self.GetSlices({'name': slicename})
+        slices = self.shell.GetSlices({'name': slicename})
         if not slices:
             return 1
         slice = slices[0]
@@ -707,23 +702,23 @@ class PlDriver (Driver, PlShell):
         peer = peers.get_peer(self, slice_hrn)
         try:
             if peer:
-                self.UnBindObjectFromPeer('slice', slice['slice_id'], peer)
-            self.DeleteSliceFromNodes(slicename, slice['node_ids'])
+                self.shell.UnBindObjectFromPeer('slice', slice['slice_id'], peer)
+            self.shell.DeleteSliceFromNodes(slicename, slice['node_ids'])
         finally:
             if peer:
-                self.BindObjectToPeer('slice', slice['slice_id'], peer, slice['peer_slice_id'])
+                self.shell.BindObjectToPeer('slice', slice['slice_id'], peer, slice['peer_slice_id'])
         return 1
     
     def renew_sliver (self, slice_urn, slice_hrn, creds, expiration_time, options):
         slicename = hrn_to_pl_slicename(slice_hrn)
-        slices = self.GetSlices({'name': slicename}, ['slice_id'])
+        slices = self.shell.GetSlices({'name': slicename}, ['slice_id'])
         if not slices:
             raise RecordNotFound(slice_hrn)
         slice = slices[0]
         requested_time = utcparse(expiration_time)
         record = {'expires': int(time.mktime(requested_time.timetuple()))}
         try:
-            self.UpdateSlice(slice['slice_id'], record)
+            self.shell.UpdateSlice(slice['slice_id'], record)
             return True
         except:
             return False
@@ -731,29 +726,29 @@ class PlDriver (Driver, PlShell):
     # remove the 'enabled' tag 
     def start_slice (self, slice_urn, slice_hrn, creds):
         slicename = hrn_to_pl_slicename(slice_hrn)
-        slices = self.GetSlices({'name': slicename}, ['slice_id'])
+        slices = self.shell.GetSlices({'name': slicename}, ['slice_id'])
         if not slices:
             raise RecordNotFound(slice_hrn)
         slice_id = slices[0]['slice_id']
-        slice_tags = self.GetSliceTags({'slice_id': slice_id, 'tagname': 'enabled'}, ['slice_tag_id'])
+        slice_tags = self.shell.GetSliceTags({'slice_id': slice_id, 'tagname': 'enabled'}, ['slice_tag_id'])
         # just remove the tag if it exists
         if slice_tags:
-            self.DeleteSliceTag(slice_tags[0]['slice_tag_id'])
+            self.shell.DeleteSliceTag(slice_tags[0]['slice_tag_id'])
         return 1
 
     # set the 'enabled' tag to 0
     def stop_slice (self, slice_urn, slice_hrn, creds):
         slicename = hrn_to_pl_slicename(slice_hrn)
-        slices = self.GetSlices({'name': slicename}, ['slice_id'])
+        slices = self.shell.GetSlices({'name': slicename}, ['slice_id'])
         if not slices:
             raise RecordNotFound(slice_hrn)
         slice_id = slices[0]['slice_id']
-        slice_tags = self.GetSliceTags({'slice_id': slice_id, 'tagname': 'enabled'})
+        slice_tags = self.shell.GetSliceTags({'slice_id': slice_id, 'tagname': 'enabled'})
         if not slice_tags:
-            self.AddSliceTag(slice_id, 'enabled', '0')
+            self.shell.AddSliceTag(slice_id, 'enabled', '0')
         elif slice_tags[0]['value'] != "0":
             tag_id = slice_tags[0]['slice_tag_id']
-            self.UpdateSliceTag(tag_id, '0')
+            self.shell.UpdateSliceTag(tag_id, '0')
         return 1
     
     def reset_slice (self, slice_urn, slice_hrn, creds):
