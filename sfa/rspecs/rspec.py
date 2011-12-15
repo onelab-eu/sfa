@@ -2,7 +2,7 @@
 from datetime import datetime, timedelta
 
 from sfa.util.xml import XML, XpathFilter
-from sfa.util.faults import InvalidRSpecElement
+from sfa.util.faults import InvalidRSpecElement, InvalidRSpec
 
 from sfa.rspecs.rspec_elements import RSpecElement, RSpecElements 
 from sfa.rspecs.version_manager import VersionManager
