@@ -9,7 +9,6 @@
 
 import sys
 import traceback
-import xmlrpclib
 from mod_python import apache
 
 from sfa.util.sfalogging import logger

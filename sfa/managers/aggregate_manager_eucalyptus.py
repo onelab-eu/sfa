@@ -23,13 +23,16 @@ from sfa.util.callids import Callids
 #from sfa.util.sfalogging import logger
 from sfa.util.version import version_core
 from sfa.trust.credential import Credential
-from sfa.server.sfaapi import SfaApi
-from sfa.plc.aggregate import Aggregate
-from sfa.plc.slices import Slice, Slices
+from sfa.plc.plaggregate import PlAggregate
+# No Slice symbol in there
+#from sfa.plc.plslices import Slice, Slices
+from sfa.plc.plslices import PlSlices
 from sfa.rspecs.version_manager import VersionManager
 from sfa.rspecs.rspec import RSpec
 # not sure what this used to be nor where it is now defined
 #from sfa.rspecs.sfa_rspec import sfa_rspec_version
+# most likely this should now be
+#from sfa.rspecs.version_manager import VersionManager
 
 ##
 # Meta data of an instance.
@@ -283,7 +286,7 @@ class AggregateManagerEucalyptus:
     _inited=False
 
     # the init_server mechanism has vanished
-    def __init__ (self):
+    def __init__ (self, config):
         if AggregateManagerEucalyptus._inited: return
         AggregateManagerEucalyptus.init_server()
 
@@ -444,7 +447,7 @@ class AggregateManagerEucalyptus:
                                 port=eucaPort,
                                 path=srvPath)
     
-    def ListResources(api, creds, options={}):
+    def ListResources(api, creds, options):
         call_id = options.get('call_id') 
         if Callids().already_handled(call_id): return ""
         # get slice's hrn from options
@@ -541,15 +544,15 @@ class AggregateManagerEucalyptus:
     """
     Hook called via 'sfi.py create'
     """
-    def CreateSliver(api, slice_xrn, creds, xml, users, options={}):
+    def CreateSliver(api, slice_xrn, creds, xml, users, options):
         call_id = options.get('call_id') 
         if Callids().already_handled(call_id): return ""
     
         logger = logging.getLogger('EucaAggregate')
         logger.debug("In CreateSliver")
     
-        aggregate = Aggregate(api)
-        slices = Slices(api)
+        aggregate = PlAggregate(self.driver)
+        slices = PlSlices(self.driver)
         (hrn, type) = urn_to_hrn(slice_xrn)
         peer = slices.get_peer(hrn)
         sfa_peer = slices.get_sfa_peer(hrn)
@@ -679,7 +682,7 @@ class AggregateManagerEucalyptus:
             f.write("%s %s %s\n" % (instId, ipaddr, hrn))
         f.close()
     
-    def GetVersion(api, options={}):
+    def GetVersion(api, options):
 
         version_manager = VersionManager()
         ad_rspec_versions = []
@@ -692,7 +695,7 @@ class AggregateManagerEucalyptus:
         xrn=Xrn(api.hrn)
         version_more = {'interface':'aggregate',
                         'sfa': 1,
-                        'geni_api': api.config.SFA_AGGREGATE_API_VERSION,
+                        'geni_api': '2',
                         'testbed':'myplc',
                         'hrn':xrn.get_hrn(),
                         'geni_request_rspec_versions': request_rspec_versions,

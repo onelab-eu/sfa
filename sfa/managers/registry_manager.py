@@ -23,11 +23,11 @@ from sfa.storage.table import SfaTable
 
 class RegistryManager:
 
-    def __init__ (self): pass
+    def __init__ (self, config): pass
 
     # The GENI GetVersion call
-    def GetVersion(self, api):
-        peers = dict ( [ (hrn,interface._ServerProxy__host) for (hrn,interface) in api.registries.iteritems() 
+    def GetVersion(self, api, options):
+        peers = dict ( [ (hrn,interface.get_url()) for (hrn,interface) in api.registries.iteritems() 
                        if hrn != api.hrn])
         xrn=Xrn(api.hrn)
         return version_core({'interface':'registry',
@@ -283,8 +283,7 @@ class RegistryManager:
             gid = auth_info.get_gid_object()
             record.set_gid(gid.save_to_string(save_parents=True))
 
-        # update testbed-specific data f needed
-        logger.info("Getting driver from manager=%s"%self)
+        # update testbed-specific data if needed
         pointer = self.driver.register (record, hrn, pub_key)
 
         record.set_pointer(pointer)

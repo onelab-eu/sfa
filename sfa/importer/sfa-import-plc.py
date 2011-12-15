@@ -18,10 +18,9 @@ import os
 import getopt
 import sys
 
-from sfa.util.xrn import get_leaf, get_authority
-from sfa.util.plxrn import hostname_to_hrn, slicename_to_hrn, email_to_hrn, hrn_to_pl_slicename
 from sfa.util.config import Config
-from sfa.util.xrn import Xrn
+from sfa.util.xrn import Xrn, get_leaf, get_authority
+from sfa.util.plxrn import hostname_to_hrn, slicename_to_hrn, email_to_hrn, hrn_to_pl_slicename
 
 from sfa.storage.table import SfaTable
 

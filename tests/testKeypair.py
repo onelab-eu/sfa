@@ -3,7 +3,6 @@ import sys
 sys.path.append('..')
 
 import unittest
-import xmlrpclib
 import base64
 from sfa.trust.certificate import Keypair
 

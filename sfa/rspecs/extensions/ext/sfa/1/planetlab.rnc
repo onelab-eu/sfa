@@ -1,0 +1,18 @@
+#
+# Extensions for PlanetLab Resources
+# Version 1
+#
+
+namespace planetlab = "http://www.planet-lab.org/resources/ext/planetlab/1"
+
+InitscriptSpec = element planetlab:initscript {
+    attribute name { text }
+}
+
+AttributeSpec = element planetlab:attribute {
+    attribute name { text }, 
+    attribute value { text }
+}
+
+start = InitscriptSpec | AttributeSpec
+

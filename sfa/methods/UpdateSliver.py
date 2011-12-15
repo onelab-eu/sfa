@@ -27,7 +27,7 @@ class UpdateSliver(CreateSliver):
 
 
 
-    def call(self, slice_xrn, creds, rspec, users, options={}):
+    def call(self, slice_xrn, creds, rspec, users, options):
 
         return CreateSliver.call(self, slice_xrn, creds, rspec, users, options)
     

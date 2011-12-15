@@ -30,10 +30,15 @@ sfa/util/version.py: sfa/util/version.py.in
 
 xmlbuilder-install:
 	cd xmlbuilder-0.9 && python setup.py install --root=$(DESTDIR) && cd -
- 
+	rm -rf $(DESTDIR)/usr/lib*/python*/site-packages/*egg-info
+
+# postinstall steps - various cleanups and tweaks for a nicer rpm
 python-install:
 	python setup.py install --root=$(DESTDIR)	
 	chmod 444 $(DESTDIR)/etc/sfa/default_config.xml
+	rm -rf $(DESTDIR)/usr/lib*/python*/site-packages/*egg-info
+	rm -rf $(DESTDIR)/usr/lib*/python*/site-packages/sfa/storage/sfa.sql
+	(cd $(DESTDIR)/usr/bin ; ln -s sfi.py sfi; ln -s sfascan.py sfascan)
 
 python-clean: version-clean
 	python setup.py clean
@@ -89,9 +94,13 @@ sfa/methods/__init__.py:
 force:
 
 ##########
+# a lot of stuff in the working dir is just noise
+scan:
+	@find . -type f | egrep -v '^\./\.|/\.git/|/\.svn/|TAGS|AA-|~$$|egg-info|\.(py[co]|doc|html|pdf|png|svg|out|bak|dg)$$' 
 tags:	
-	find . -type f | egrep -v '/\.git/|/\.svn/|TAGS|AA-|~$$|\.(py[co]|doc|html|pdf|png|svg|out|bak|xml|dg)$$' | xargs etags
-.PHONY: tags
+	$(MAKE) scan | xargs etags
+
+.PHONY: scan tags
 
 signatures:
 	(cd sfa/methods; grep 'def.*call' *.py > SIGNATURES)
@@ -123,13 +132,11 @@ RSYNC_EXCLUDES		:= --exclude .svn --exclude .git --exclude '*~' --exclude TAGS $
 RSYNC_COND_DRY_RUN	:= $(if $(findstring n,$(MAKEFLAGS)),--dry-run,)
 RSYNC			:= rsync -a -v $(RSYNC_COND_DRY_RUN) --no-owner $(RSYNC_EXCLUDES)
 
-CLIENTS = sfi.py getNodes.py getRecord.py setRecord.py \
-sfiAddAttribute.py sfiAddSliver.py sfiDeleteAttribute.py sfiDeleteSliver.py sfiListNodes.py \
-sfiListSlivers.py sfadump.py
+CLIENTS = $(shell ls sfa/clientbin/*.py)
 
 BINS =	./config/sfa-config-tty ./config/gen-sfa-cm-config.py \
 	./sfa/importer/sfa-import-plc.py ./sfa/importer/sfa-nuke-plc.py ./sfa/server/sfa-start.py \
-	$(foreach client,$(CLIENTS),./sfa/client/$(client))
+	$(CLIENTS)
 
 sync:
 ifeq (,$(SSHURL))
@@ -143,6 +150,7 @@ else
 	+$(RSYNC)  $(BINS) $(SSHURL)/usr/bin/
 	+$(RSYNC) ./init.d/sfa  $(SSHURL)/etc/init.d/
 	+$(RSYNC) ./config/default_config.xml $(SSHURL)/etc/sfa/
+	+$(RSYNC) ./sfa/storage/sfa.sql $(SSHURL)/usr/share/sfa/
 	$(SSHCOMMAND) exec service sfa restart
 endif
 
@@ -151,5 +159,19 @@ fastsync:
 	+$(RSYNC) ./sfa/ $(SSHURL)/usr/lib\*/python2.\*/site-packages/sfa/
 	$(SSHCOMMAND) exec service sfa restart
 
-.PHONY: sync
+clientsync:
+	+$(RSYNC)  $(BINS) $(SSHURL)/usr/bin/
+
+.PHONY: sync fastsync clientsync
+
 ##########
+CLIENTLIBFILES= \
+sfa/examples/miniclient.py \
+sfa/__init__.py \
+sfa/client/{sfaserverproxy,sfaclientlib,__init__}.py \
+sfa/trust/{certificate,__init__}.py \
+sfa/util/{sfalogging,faults,genicode,enumeration,__init__}.py 
+
+clientlibsync: 
+	@[ -d "$(CLIENTLIBTARGET)" ] || { echo "You need to set the make variable CLIENTLIBTARGET"; exit 1; }
+	rsync -av --relative $(CLIENTLIBFILES) $(CLIENTLIBTARGET)

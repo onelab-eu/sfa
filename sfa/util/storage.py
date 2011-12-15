@@ -1,5 +1,6 @@
 import os
 from sfa.util.xml import XML
+
 class SimpleStorage(dict):
     """
     Handles storing and loading python dictionaries. The storage file created

@@ -19,9 +19,10 @@ class RSpec:
         self.elements = {}
         if rspec:
             self.parse_xml(rspec)
-        else:
+        elif version:
             self.create(version)
-
+        else:
+            raise InvalidRSpec("No RSpec or version sepcified. Must specify a valid rspec string or a valid version") 
     def create(self, version=None):
         """
         Create root element

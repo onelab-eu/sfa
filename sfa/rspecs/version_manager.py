@@ -35,7 +35,7 @@ class VersionManager:
                         ### sounds like we should be glad with the first match, not the last one
                         break
         if not retval:
-            raise UnvalidRSpecVersion("%s %s is not suported here"% (type, version_num, content_type))
+            raise UnsupportedRSpecVersion("[%s %s %s] is not suported here"% (type, version_num, content_type))
         return retval
 
     def get_version(self, version=None):

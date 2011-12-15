@@ -37,10 +37,16 @@ class PlShell:
         hostname=urlparse(url).hostname
         is_local=False
         if hostname == 'localhost': is_local=True
-        # otherwise compare IP addresses
-        url_ip=socket.gethostbyname(hostname)
-        local_ip=socket.gethostbyname(socket.gethostname())
-        if url_ip==local_ip: is_local=True
+        # otherwise compare IP addresses; 
+        # this might fail for any number of reasons, so let's harden that
+        try:
+            # xxx todo this seems to result in a DNS request for each incoming request to the AM
+            # should be cached or improved
+            url_ip=socket.gethostbyname(hostname)
+            local_ip=socket.gethostbyname(socket.gethostname())
+            if url_ip==local_ip: is_local=True
+        except:
+            pass
 
         if is_local:
             try:
@@ -65,7 +71,7 @@ class PlShell:
                             'Username':   config.SFA_PLC_USER,
                             'AuthString': config.SFA_PLC_PASSWORD,
                             }
-            self.proxy = xmlrpclib.Server(url, verbose = 0, allow_none = True)
+            self.proxy = xmlrpclib.Server(url, verbose = False, allow_none = True)
 
     def __getattr__(self, name):
         def func(*args, **kwds):

@@ -8,7 +8,7 @@ import pickle
 from datetime import datetime
 
 # maximum lifetime of cached data (in seconds) 
-MAX_CACHE_TTL = 60 * 60
+DEFAULT_CACHE_TTL = 60 * 60
 
 class CacheData:
 
@@ -17,7 +17,7 @@ class CacheData:
     expires = None
     lock = None
 
-    def __init__(self, data, ttl = MAX_CACHE_TTL):
+    def __init__(self, data, ttl = DEFAULT_CACHE_TTL):
         self.lock = threading.RLock()
         self.data = data
         self.renew(ttl)
@@ -31,11 +31,11 @@ class CacheData:
     def get_expires_date(self):
         return str(datetime.fromtimestamp(self.expires))
 
-    def renew(self, ttl = MAX_CACHE_TTL):
+    def renew(self, ttl = DEFAULT_CACHE_TTL):
         self.created = time.time()
         self.expires = self.created + ttl   
        
-    def set_data(self, data, renew=True, ttl = MAX_CACHE_TTL):
+    def set_data(self, data, renew=True, ttl = DEFAULT_CACHE_TTL):
         with self.lock: 
             self.data = data
             if renew:
@@ -73,7 +73,7 @@ class Cache:
         if filename:
             self.load_from_file(filename)
    
-    def add(self, key, value, ttl = MAX_CACHE_TTL):
+    def add(self, key, value, ttl = DEFAULT_CACHE_TTL):
         with self.lock:
             if self.cache.has_key(key):
                 self.cache[key].set_data(value, ttl=ttl)

@@ -1,12 +1,10 @@
-from sfa.util.faults import SfaInvalidArgument
+from sfa.util.faults import SfaInvalidArgument, InvalidRSpec
 from sfa.util.xrn import urn_to_hrn
 from sfa.util.method import Method
 from sfa.util.sfatablesRuntime import run_sfatables
 import sys
 from sfa.trust.credential import Credential
-
 from sfa.storage.parameter import Parameter, Mixed
-
 from sfa.rspecs.rspec import RSpec
 
 class CreateSliver(Method):
@@ -32,7 +30,7 @@ class CreateSliver(Method):
         ]
     returns = Parameter(str, "Allocated RSpec")
 
-    def call(self, slice_xrn, creds, rspec, users, options={}):
+    def call(self, slice_xrn, creds, rspec, users, options):
         hrn, type = urn_to_hrn(slice_xrn)
 
         self.api.logger.info("interface: %s\ttarget-hrn: %s\tmethod-name: %s"%(self.api.interface, hrn, self.name))
@@ -53,10 +51,8 @@ class CreateSliver(Method):
             chain_name = 'FORWARD-INCOMING'
         self.api.logger.debug("CreateSliver: sfatables on chain %s"%chain_name)
         rspec = run_sfatables(chain_name, hrn, origin_hrn, rspec)
-        slivers = RSpec(rspec).version.get_nodes_with_slivers()        
-        print >>sys.stderr, " \r\n \r\n Createsliver.py call users : ", users
-        if slivers:
-            result = self.api.manager.CreateSliver(self.api, slice_xrn, creds, rspec, users, options)
-        else:
-            result = rspec     
+        slivers = RSpec(rspec).version.get_nodes_with_slivers()
+        if not slivers:
+            raise InvalidRSpec("Missing <sliver_type> or <sliver> element. Request rspec must explicitly allocate slivers")    
+        result = self.api.manager.CreateSliver(self.api, slice_xrn, creds, rspec, users, options)
         return result

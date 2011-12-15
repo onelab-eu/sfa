@@ -5,7 +5,13 @@
 import sys
 class Driver:
     
-    def __init__ (self): pass
+    def __init__ (self, config): 
+        # this is the hrn attached to the running server
+        self.hrn = config.SFA_INTERFACE_HRN
+
+    ########################################
+    ########## registry oriented
+    ########################################
 
     # redefine this if you want to check again records 
     # when running GetCredential
@@ -18,6 +24,10 @@ class Driver:
     #     after looking up the sfa db, we wish to be able to display
     #     testbed-specific info as well
     # this at minima should fill in the 'researcher' field for slice records
+    # as this information is then used to compute rights
+    # roadmap: there is an intention to redesign the SFA database so as to clear up 
+    # this constraint, based on the principle that SFA should not rely on the
+    # testbed database to perform such a core operation (i.e. getting rights right)
     def augment_records_with_testbed_info (self, sfa_records):
         print >>sys.stderr, "  \r\n \r\n DRIVER.PY augment_records_with_testbed_info sfa_records ",sfa_records
         return sfa_records
@@ -26,7 +36,6 @@ class Driver:
     # expected retcod 'pointer'
     # 'pointer' is typically an int db id, that makes sense in the testbed environment
     # -1 if this feature is not relevant 
-    # here type will be 'authority'
     def register (self, sfa_record, hrn, pub_key) : 
         return -1
 
@@ -51,3 +60,58 @@ class Driver:
     # should anything be passed back to the caller in this case ?
     def update (self, old_sfa_record, new_sfa_record, hrn, new_key): 
         return True
+
+    ########################################
+    ########## aggregate oriented
+    ########################################
+    
+    # a name for identifying the kind of testbed
+    def testbed_name (self): return "undefined"
+
+    # a dictionary that gets appended to the generic answer to GetVersion
+    # 'geni_request_rspec_versions' and 'geni_ad_rspec_versions' are mandatory
+    def aggregate_version (self): return {}
+
+    # the answer to ListSlices, a list of slice urns
+    def list_slices (self, creds, options):
+        return []
+
+    # answer to ListResources
+    # first 2 args are None in case of resource discovery
+    # expected : rspec (xml string)
+    def list_resources (self, slice_urn, slice_hrn, creds, options):
+        return "dummy Driver.list_resources needs to be redefined"
+
+    # the answer to SliverStatus on a given slice
+    def sliver_status (self, slice_urn, slice_hrn): return {}
+
+    # the answer to CreateSliver on a given slice
+    # expected to return a valid rspec 
+    # identical to ListResources after the slice was modified
+    def create_sliver (self, slice_urn, slice_hrn, creds, rspec_string, users, options):
+        return "dummy Driver.create_sliver needs to be redefined"
+
+    # the answer to DeleteSliver on a given slice
+    def delete_sliver (self, slice_urn, slice_hrn, creds, options):
+        return "dummy Driver.delete_sliver needs to be redefined"
+
+    # the answer to RenewSliver
+    # expected to return a boolean to indicate success
+    def renew_sliver (self, slice_urn, slice_hrn, creds, expiration_time, options):
+        return False
+
+    # the answer to start_slice/stop_slice
+    # 1 means success, otherwise raise exception
+    def start_slice (self, slice_urn, slice_xrn, creds):
+        return 1
+    def stop_slice (self, slice_urn, slice_xrn, creds):
+        return 1
+    # somehow this one does not have creds - not implemented in PL anyways
+    def reset_slice (self, slice_urn, slice_xrn, creds):
+        return 1
+
+    # the answer to GetTicket
+    # expected is a ticket, i.e. a certificate, as a string
+    def get_ticket (self, slice_urn, slice_xrn, creds, rspec, options):
+        return "dummy Driver.get_ticket needs to be redefined"
+

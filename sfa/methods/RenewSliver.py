@@ -26,7 +26,7 @@ class RenewSliver(Method):
         ]
     returns = Parameter(bool, "Success or Failure")
 
-    def call(self, slice_xrn, creds, expiration_time, options={}):
+    def call(self, slice_xrn, creds, expiration_time, options):
 
         (hrn, type) = urn_to_hrn(slice_xrn)
 

@@ -1,5 +1,4 @@
 import unittest
-import xmlrpclib
 from sfa.trust.gid import *
 from sfa.util.config import *
 from sfa.storage.record import *

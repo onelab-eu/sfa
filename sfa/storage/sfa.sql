@@ -36,20 +36,33 @@ CREATE AGGREGATE array_accum (
     initcond = '{}'
 );
 
+-- Valid record types
+CREATE TABLE record_types (
+       record_type text PRIMARY KEY
+) WITH OIDS;
+INSERT INTO record_types (record_type) VALUES ('authority');
+INSERT INTO record_types (record_type) VALUES ('authority+sa');
+INSERT INTO record_types (record_type) VALUES ('authority+am');
+INSERT INTO record_types (record_type) VALUES ('authority+sm');
+INSERT INTO record_types (record_type) VALUES ('user');
+INSERT INTO record_types (record_type) VALUES ('slice');
+INSERT INTO record_types (record_type) VALUES ('node');
+
+
 -- main table 
-CREATE TABLE sfa ( 
+CREATE TABLE records ( 
     record_id serial PRIMARY KEY , 
     hrn text NOT NULL, 
     authority text NOT NULL, 
     peer_authority text, 
     gid text, 
-    type text NOT NULL, 
+    type text REFERENCES record_types, 
     pointer integer, 
     date_created timestamp without time zone NOT NULL DEFAULT CURRENT_TIMESTAMP, 
     last_updated timestamp without time zone NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
-CREATE INDEX sfa_hrn_ids on sfa (hrn);
-CREATE INDEX sfa_type_ids on sfa (type);
-CREATE INDEX sfa_authority_ids on sfa (authority);
-CREATE INDEX sfa_peer_authority_ids on sfa (peer_authority);
-CREATE INDEX sfa_pointer_ids on sfa (pointer);
+CREATE INDEX sfa_hrn_ids on records (hrn);
+CREATE INDEX sfa_type_ids on records (type);
+CREATE INDEX sfa_authority_ids on records (authority);
+CREATE INDEX sfa_peer_authority_ids on records (peer_authority);
+CREATE INDEX sfa_pointer_ids on records (pointer);

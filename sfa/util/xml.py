@@ -195,7 +195,7 @@ class XML:
             self.namespaces['default'] = 'default' 
 
         self.root = XmlElement(root, self.namespaces)
-        # set schema 
+        # set schema
         for key in self.root.attrib.keys():
             if key.endswith('schemaLocation'):
                 # schema location should be at the end of the list
@@ -208,7 +208,7 @@ class XML:
         if element is None: 
             if self.root is None:
                 self.parse_xml('<%s/>' % root_tag_name)
-            element = self.root
+            element = self.root.element
 
         if 'text' in d:
             text = d.pop('text')
@@ -224,9 +224,9 @@ class XML:
                         self.parse_dict(val, key, child_element)
                     elif isinstance(val, basestring):
                         child_element = etree.SubElement(element, key).text = val
-                        
+
             elif isinstance(value, int):
-                d[key] = unicode(d[key])  
+                d[key] = unicode(d[key])
             elif value is None:
                 d.pop(key)
 

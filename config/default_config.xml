@@ -33,12 +33,6 @@ Thierry Parmentelat
           <description>The human readable name for this interface.</description>
         </variable>
 
-        <variable id="aggregate_api_version" type="int">
-          <name>Aggregate Manager API Version</name>
-          <value>1</value>
-          <description>The Aggregate API version</description>
-        </variable>
-
         <variable id="credential_schema" type="string">
           <name>Credential Schema</name>
           <value>/etc/sfa/credential.xsd</value>
@@ -134,6 +128,14 @@ Thierry Parmentelat
 	  <value>12347</value>
 	  <description>The port where the slice manager is to be found.</description>
 	</variable>
+
+	<variable id="caching" type="boolean">
+	  <name>Cache advertisement rspec</name>
+	  <value>false</value>
+	  <description>Enable caching of the global advertisement, as
+	  returned by ListResources without a slice argument. </description>
+	  </variable>
+
       </variablelist>
     </category>
 
@@ -151,12 +153,6 @@ Thierry Parmentelat
 	  aggregate manager.</description>
 	</variable>
 
-    <variable id="rspec_schema" type="string">
-      <name>RSpec Schema</name>
-      <value>/etc/sfa/pl.rng</value>
-      <description>The path to the default schema</description>
-    </variable>
-
 	<variable id="host" type="hostname">
 	  <name>Hostname</name>
 	  <value>localhost</value>
@@ -169,6 +165,14 @@ Thierry Parmentelat
 	  <value>12346</value>
 	  <description>The port where the aggregate is to be found.</description>
 	</variable>
+
+	<variable id="caching" type="boolean">
+	  <name>Cache advertisement rspec</name>
+	  <value>true</value>
+	  <description>Enable caching of the global advertisement, as
+	  returned by ListResources without a slice argument. </description>
+	  </variable>
+
       </variablelist>
 
     </category>
