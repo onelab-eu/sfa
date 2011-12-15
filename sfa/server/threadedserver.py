@@ -11,6 +11,7 @@ import socket
 import traceback
 import threading
 from Queue import Queue
+import xmlrpclib
 import SocketServer
 import BaseHTTPServer
 import SimpleXMLRPCServer
@@ -42,6 +43,7 @@ def verify_callback(conn, x509, err, depth, preverify):
     # and ignore them
 
     # XXX SMBAKER: I don't know what this error is, but it's being returned
+    # xxx thierry: this most likely means the cert has a validity range in the future
     # by newer pl nodes.
     if err == 9:
        #print "  X509_V_ERR_CERT_NOT_YET_VALID"
@@ -71,7 +73,7 @@ def verify_callback(conn, x509, err, depth, preverify):
        #print "  X509_V_ERR_CERT_UNTRUSTED"
        return 1
 
-    print "  error", err, "in verify_callback"
+    logger.debug("  error %s in verify_callback"%err)
 
     return 0
 

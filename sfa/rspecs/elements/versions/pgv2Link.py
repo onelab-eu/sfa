@@ -49,11 +49,11 @@ class PGv2Link:
             # get capacity, latency and packet_loss from first property  
             property_fields = ['capacity', 'latency', 'packet_loss']
             property_elems = link_elem.xpath('./default:property | ./property')
-            if len(propery_elems) > 0:
+            if len(property_elems) > 0:
                 prop = property_elems[0]
                 for attrib in ['capacity', 'latency', 'packet_loss']:
-                    if attrib in prop:
-                        link[attrib] = prop[attrib]
+                    if attrib in prop.attrib:
+                        link[attrib] = prop.attrib[attrib]
                              
             # get interfaces
             iface_elems = link_elem.xpath('./default:interface_ref | ./interface_ref')

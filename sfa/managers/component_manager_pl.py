@@ -5,7 +5,7 @@ from sfa.util.plxrn import PlXrn
 from sfa.trust.sfaticket import SfaTicket
 from sfa.util.version import version_core
 
-def GetVersion(api):
+def GetVersion(api, options):
     return version_core({'interface':'component',
                          'testbed':'myplc'})
 

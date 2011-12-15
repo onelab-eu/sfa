@@ -104,17 +104,20 @@ class SFAv1(BaseVersion):
         return attributes
 
 
-    def add_sliver_attribute(self, hostname, name, value, network=None):
-        nodes = self.get_nodes({'component_id': '*%s*' % hostname})
-        if not nodes:
+    def add_sliver_attribute(self, component_id, name, value, network=None):
+        nodes = self.get_nodes({'component_id': '*%s*' % component_id})
+        if nodes is not None and isinstance(nodes, list) and len(nodes) > 0:
             node = nodes[0]
             slivers = SFAv1Sliver.get_slivers(node)
             if slivers:
                 sliver = slivers[0]
-                SFAv1Sliver.add_attribute(sliver, name, value)
+                SFAv1Sliver.add_sliver_attribute(sliver, name, value)
+        else:
+            # should this be an assert / raise an exception?
+            logger.error("WARNING: failed to find component_id %s" % component_id)
 
-    def get_sliver_attributes(self, hostname, network=None):
-        nodes = self.get_nodes({'component_id': '*%s*' %hostname})
+    def get_sliver_attributes(self, component_id, network=None):
+        nodes = self.get_nodes({'component_id': '*%s*' % component_id})
         attribs = []
         if nodes is not None and isinstance(nodes, list) and len(nodes) > 0:
             node = nodes[0]
@@ -124,19 +127,24 @@ class SFAv1(BaseVersion):
                 attribs = SFAv1Sliver.get_sliver_attributes(sliver.element)
         return attribs
 
-    def remove_sliver_attribute(self, hostname, name, value, network=None):
-        attribs = self.get_sliver_attributes(hostname)
+    def remove_sliver_attribute(self, component_id, name, value, network=None):
+        attribs = self.get_sliver_attributes(component_id)
         for attrib in attribs:
             if attrib['name'] == name and attrib['value'] == value:
-                attrib.element.delete()
+                #attrib.element.delete()
+                parent = attrib.element.getparent()
+                parent.remove(attrib.element)
 
     def add_default_sliver_attribute(self, name, value, network=None):
         if network:
             defaults = self.xml.xpath("//network[@name='%s']/sliver_defaults" % network)
         else:
-            defaults = self.xml.xpath("//sliver_defaults" % network)
-        if not defaults :
-            network_tag = self.xml.xpath("//network[@name='%s']" % network)
+            defaults = self.xml.xpath("//sliver_defaults")
+        if not defaults:
+            if network:
+                network_tag = self.xml.xpath("//network[@name='%s']" % network)
+            else:
+                network_tag = self.xml.xpath("//network")    
             if isinstance(network_tag, list):
                 network_tag = network_tag[0]
             defaults = network_tag.add_element('sliver_defaults')
@@ -153,14 +161,12 @@ class SFAv1(BaseVersion):
         return SFAv1Sliver.get_sliver_attributes(defaults[0])
     
     def remove_default_sliver_attribute(self, name, value, network=None):
-        if network:
-            defaults = self.xml.xpath("//network[@name='%s']/sliver_defaults" % network)
-        else:
-            defaults = self.xml.xpath("//sliver_defaults" % network)
-        attribs = SFAv1Sliver.get_sliver_attributes(defaults)
+        attribs = self.get_default_sliver_attributes(network)
         for attrib in attribs:
             if attrib['name'] == name and attrib['value'] == value:
-                attrib.element.delete()    
+                #attrib.element.delete()
+                parent = attrib.element.getparent()
+                parent.remove(attrib.element)
 
     # Links
 

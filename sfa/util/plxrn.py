@@ -59,8 +59,10 @@ class PlXrn (Xrn):
     def pl_slicename (self):
         self._normalize()
         leaf = self.leaf
-        leaf = re.sub('[^a-zA-Z0-9_]', '', leaf)
-        return self.pl_login_base() + '_' + leaf
+        sliver_id_parts = leaf.split(':')
+        name = sliver_id_parts[0]
+        name = re.sub('[^a-zA-Z0-9_]', '', name)
+        return self.pl_login_base() + '_' + name
 
     #def hrn_to_pl_authname(hrn):
     def pl_authname (self):

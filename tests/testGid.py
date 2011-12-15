@@ -1,5 +1,4 @@
 import unittest
-import xmlrpclib
 from sfa.trust.certificate import Keypair
 from sfa.trust.gid import *
 

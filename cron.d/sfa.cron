@@ -1,8 +1,14 @@
+#
+# this example file should be installed in /etc/cron.d owned by root
+#
 SHELL=/bin/bash
 PATH=/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/bin
+# xxx replace this
 MAILTO=server-msgs@planet-lab.org
 HOME=/
 #
 # minute hour day-of-month month day-of-week user command
-0 * * * *  /usr/bin/sfa-import-plc.py > /dev/null 2>&1
-0 0 * * * /usr/bin/sfa-clean-peer-records.py > /dev/null 2>&1  
+# once or twice an hour makes sense
+0 * * * * root /usr/bin/sfa-import-plc.py         >> /var/log/sfa_import.log 2>&1
+# this is needed only if you run RefreshPeer
+#0 0 * * * root /usr/bin/sfa-clean-peer-records.py >> /var/log/sfa_import.log 2>&1

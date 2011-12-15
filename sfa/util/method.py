@@ -245,8 +245,7 @@ class Method:
 
         elif not isinstance(value, expected_type):
             raise SfaInvalidArgument("expected %s, got %s" % \
-                                     (xmlrpc_type(expected_type),
-                                      xmlrpc_type(type(value))),
+                                     (xmlrpc_type(expected_type), xmlrpc_type(type(value))),
                                      name)
 
         # If a minimum or maximum (length, value) has been specified

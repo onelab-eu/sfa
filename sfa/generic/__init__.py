@@ -35,7 +35,7 @@ class Generic:
         #mixed = flavour.capitalize()
         module_path="sfa.generic.%s"%flavour
         classname="%s"%flavour
-        logger.info("Generic.the_flavour with flavour=%s"%flavour)
+        logger.debug("Generic.the_flavour with flavour=%s"%flavour)
         try:
             module = __import__ (module_path, globals(), locals(), [classname])
             return getattr(module, classname)(flavour,config)
@@ -60,22 +60,25 @@ class Generic:
         if not 'interface' in kwargs:
             logger.critical("Generic.make_api: no interface found")
         api = self.api_class()(*args, **kwargs)
-        manager = self.make_manager(api.interface)
+        # xxx can probably drop support for managers implemented as modules 
+        # which makes it a bit awkward
+        manager_class_or_module = self.make_manager(api.interface)
         driver = self.make_driver (api.config, api.interface)
         ### arrange stuff together
         # add a manager wrapper
-        manager_wrap = ManagerWrapper(manager,api.interface)
+        manager_wrap = ManagerWrapper(manager_class_or_module,api.interface,api.config)
         api.manager=manager_wrap
         # insert driver in manager
-        logger.info("Setting manager.driver, manager=%s"%manager)
-        manager.driver=driver
+        logger.debug("Setting manager.driver, manager=%s"%manager_class_or_module)
+        # xxx this should go into the object and not the class !?!
+        manager_class_or_module.driver=driver
         # add it in api as well for convenience
         api.driver=driver
         return api
 
     def make_manager (self, interface):
         """
-        interface expected in ['registry', 'aggregate', 'slice', 'component']
+        interface expected in ['registry', 'aggregate', 'slicemgr', 'component']
         flavour is e.g. 'pl' or 'max' or whatever
         """
         flavour = self.flavour
@@ -83,9 +86,12 @@ class Generic:
         
         classname = "%s_manager_class"%interface
         try:
-            module = getattr(self,classname)()
-            logger.debug("%s : %s"%(message,module))
-            return module
+            module_or_class = getattr(self,classname)()
+            logger.debug("%s : %s"%(message,module_or_class))
+            # this gets passed to ManagerWrapper that will call the class constructor 
+            # if it's a class, or use the module as is if it's a module
+            # so bottom line is, don't try the constructor here
+            return module_or_class
         except:
             logger.log_exc_critical(message)
         

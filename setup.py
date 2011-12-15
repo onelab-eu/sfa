@@ -9,7 +9,8 @@ from glob import glob
 import shutil
 from distutils.core import setup
 
-bins = [ 
+scripts = glob("sfa/clientbin/*.py") + \
+    [ 
     'config/sfa-config-tty',
     'config/gen-sfa-cm-config.py',
     'sfa/importer/sfa-import-plc.py', 
@@ -18,23 +19,12 @@ bins = [
     'sfa/server/sfa-start.py', 
     'sfa/server/sfa-clean-peer-records.py', 
     'sfa/server/sfa_component_setup.py', 
-    'sfa/client/sfi.py', 
-    'sfa/client/getNodes.py',
-    'sfa/client/getRecord.py',
-    'sfa/client/setRecord.py',
-    'sfa/client/sfadump.py',
-    'sfa/client/sfiListNodes.py',
-    'sfa/client/sfiListSlivers.py',
-    'sfa/client/sfiAddSliver.py',
-    'sfa/client/sfiDeleteSliver.py',
-    'sfa/client/sfiAddAttribute.py',
-    'sfa/client/sfiDeleteAttribute.py',
     'sfatables/sfatables',
     'keyconvert/keyconvert.py',
     'flashpolicy/sfa_flashpolicy.py',
     ]
 
-package_dirs = [
+packages = [
     'sfa', 
     'sfa/trust',
     'sfa/storage',
@@ -55,10 +45,9 @@ package_dirs = [
     'sfatables/processors',
     ]
 
-
 initscripts = [ 'sfa', 'sfa-cm' ]
 
-data_files = [('/etc/sfa/', [ 'config/aggregates.xml',
+data_files = [ ('/etc/sfa/', [ 'config/aggregates.xml',
                               'config/registries.xml',
                               'config/default_config.xml',
                               'config/sfi_config',
@@ -71,10 +60,11 @@ data_files = [('/etc/sfa/', [ 'config/aggregates.xml',
                               'sfa/trust/protogeni-rspec-common.xsd',
                               'flashpolicy/sfa_flashpolicy_config.xml',
                             ]),
-              ('/etc/sfatables/matches/', glob('sfatables/matches/*.xml')),
-              ('/etc/sfatables/targets/', glob('sfatables/targets/*.xml')),
-              ('/etc/init.d/', [ "init.d/%s"%x for x in initscripts ]),
-              ('/usr/share/sfa/', [ 'sfa/storage/sfa.sql' ] ),
+               ('/etc/sfatables/matches/', glob('sfatables/matches/*.xml')),
+               ('/etc/sfatables/targets/', glob('sfatables/targets/*.xml')),
+               ('/etc/init.d/', [ "init.d/%s"%x for x in initscripts ]),
+               ('/usr/share/sfa/', [ 'sfa/storage/sfa.sql' ] ),
+               ('/usr/share/sfa/examples/', glob('sfa/examples/*' ) + [ 'cron.d/sfa.cron' ] ),
               ]
 
 # add sfatables processors as data_files
@@ -91,7 +81,7 @@ if sys.argv[1] in ['uninstall', 'remove', 'delete', 'clean']:
     site_packages_path = [ os.path.join(p,'sfa') for p in python_path if p.endswith('site-packages')]
     site_packages_path += [ os.path.join(p,'sfatables') for p in python_path if p.endswith('site-packages')]
     remove_dirs = ['/etc/sfa/', '/etc/sfatables'] + site_packages_path
-    remove_bins = [ '/usr/bin/' + os.path.basename(bin) for bin in bins ]
+    remove_bins = [ '/usr/bin/' + os.path.basename(bin) for bin in scripts ]
     remove_files = remove_bins + [ "/etc/init.d/%s"%x for x in initscripts ]
 
     # remove files   
@@ -111,9 +101,7 @@ if sys.argv[1] in ['uninstall', 'remove', 'delete', 'clean']:
 else:
     # avoid repeating what's in the specfile already
     setup(name='sfa',
-          packages = package_dirs, 
+          packages = packages, 
           data_files = data_files,
-          ext_modules = [],
-          py_modules = [],
-          scripts = bins)
+          scripts = scripts)
 

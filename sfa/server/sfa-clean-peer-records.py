@@ -14,7 +14,7 @@ from sfa.server.registry import Registries
 
 from sfa.storage.table import SfaTable
 
-import sfa.client.xmlrpcprotocol as xmlrpcprotocol 
+from sfa.client.sfaserverproxy import SfaServerProxy 
 
 from sfa.generic import Generic
 
@@ -35,7 +35,7 @@ def main():
     # and a valid credential
     authority = config.SFA_INTERFACE_HRN
     url = 'http://%s:%s/' %(config.SFA_REGISTRY_HOST, config.SFA_REGISTRY_PORT)
-    registry = xmlrpcprotocol.server_proxy(url, key_file, cert_file)
+    registry = SfaServerProxy(url, key_file, cert_file)
     sfa_api = Generic.the_flavour()
     credential = sfa_api.getCredential()
 

@@ -1,7 +1,7 @@
 import os
 import tempfile
 
-import sfa.client.xmlrpcprotocol as xmlrpcprotocol
+from sfa.client.sfaserverproxy import SfaServerProxy
 from sfa.plc.nodemanager import NodeManager
 
 from sfa.trust.credential import Credential
@@ -33,7 +33,7 @@ class PlComponentDriver:
         addr, port = self.config.SFA_REGISTRY_HOST, self.config.SFA_REGISTRY_PORT
         url = "http://%(addr)s:%(port)s" % locals()
         ### xxx this would require access to the api...
-        server = xmlrpcprotocol.server_proxy(url, self.key_file, self.cert_file)
+        server = SfaServerProxy(url, self.key_file, self.cert_file)
         return server
 
     def get_node_key(self):

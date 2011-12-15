@@ -4,7 +4,7 @@ import os
 import random
 import string
 import unittest
-import sfa.util.xmlrpcprotocol as xmlrpcprotocol
+
 from unittest import TestCase
 from optparse import OptionParser
 from sfa.util.xrn import get_authority
@@ -13,6 +13,7 @@ from sfa.trust.certificate import *
 from sfa.trust.credential import *
 from sfa.trust.sfaticket import SfaTicket
 from sfa.client import sfi
+from sfa.client.sfaserverproxy import SfaServerProxy, ServerException
 
 def random_string(size):
     return "".join(random.sample(string.letters, size))
@@ -43,10 +44,10 @@ class Client:
         self.cert.save_to_file(cert_file)        
         SFI_AGGREGATE = config.SFI_SM.replace('12347', '12346')
         SFI_CM = 'http://' + options.cm_host + ':12346'
-        self.registry = xmlrpcprotocol.server_proxy(config.SFI_REGISTRY, key_file, cert_file)
-        self.aggregate = xmlrpcprotocol.server_proxy(SFI_AGGREGATE, key_file, cert_file)
-        self.sm = xmlrpcprotocol.server_proxy(config.SFI_SM, key_file, cert_file)
-        self.cm = xmlrpcprotocol.server_proxy(SFI_CM, key_file, cert_file)
+        self.registry = SfaServerProxy(config.SFI_REGISTRY, key_file, cert_file)
+        self.aggregate = SfaServerProxy(SFI_AGGREGATE, key_file, cert_file)
+        self.sm = SfaServerProxy(config.SFI_SM, key_file, cert_file)
+        self.cm = SfaServerProxy(SFI_CM, key_file, cert_file)
         self.hrn = config.SFI_USER
         # XX defaulting to user, but this should be configurable so we can
         # test from components persepctive
@@ -170,7 +171,7 @@ class RegistryTest(BasicTestCase):
         server_exception = False 
         try:
             callable(self.credential)
-        except xmlrpcprotocol.ServerException:
+        except ServerException:
             server_exception = True
         finally:
             if self.type in ['user'] and not server_exception:

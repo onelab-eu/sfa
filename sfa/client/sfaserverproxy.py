@@ -3,7 +3,11 @@
 import xmlrpclib
 from httplib import HTTPS, HTTPSConnection
 
-from sfa.util.sfalogging import logger
+try:
+    from sfa.util.sfalogging import logger
+except:
+    import logging
+    logger=logging.getLogger('sfaserverproxy')
 
 ##
 # ServerException, ExceptionUnmarshaller
@@ -47,20 +51,18 @@ class XMLRPCTransport(xmlrpclib.Transport):
         # host may be a string, or a (host, x509-dict) tuple
         host, extra_headers, x509 = self.get_host_info(host)
         if need_HTTPSConnection:
-            #conn = HTTPSConnection(host, None, key_file=self.key_file, cert_file=self.cert_file, timeout=self.timeout) #**(x509 or {}))
-            conn = HTTPSConnection(host, None, key_file=self.key_file, cert_file=self.cert_file) #**(x509 or {}))
+            conn = HTTPSConnection(host, None, key_file=self.key_file, cert_file=self.cert_file)
         else:
-            #conn = HTTPS(host, None, key_file=self.key_file, cert_file=self.cert_file, timeout=self.timeout) #**(x509 or {}))
-            conn = HTTPS(host, None, key_file=self.key_file, cert_file=self.cert_file) #**(x509 or {}))
-
-        if hasattr(conn, 'set_timeout'):
-            conn.set_timeout(self.timeout)
+            conn = HTTPS(host, None, key_file=self.key_file, cert_file=self.cert_file)
 
         # Some logic to deal with timeouts. It appears that some (or all) versions
         # of python don't set the timeout after the socket is created. We'll do it
         # ourselves by forcing the connection to connect, finding the socket, and
         # calling settimeout() on it. (tested with python 2.6)
         if self.timeout:
+            if hasattr(conn, 'set_timeout'):
+                conn.set_timeout(self.timeout)
+
             if hasattr(conn, "_conn"):
                 # HTTPS is a wrapper around HTTPSConnection
                 real_conn = conn._conn
@@ -80,6 +82,7 @@ class XMLRPCTransport(xmlrpclib.Transport):
 class XMLRPCServerProxy(xmlrpclib.ServerProxy):
     def __init__(self, url, transport, allow_none=True, verbose=False):
         # remember url for GetVersion
+        # xxx not sure this is still needed as SfaServerProxy has this too
         self.url=url
         xmlrpclib.ServerProxy.__init__(self, url, transport, allow_none=allow_none, verbose=verbose)
 
@@ -87,7 +90,25 @@ class XMLRPCServerProxy(xmlrpclib.ServerProxy):
         logger.debug ("xml-rpc %s method:%s"%(self.url,attr))
         return xmlrpclib.ServerProxy.__getattr__(self, attr)
 
-def server_proxy(url, key_file, cert_file, timeout=None, verbose=False):
-    transport = XMLRPCTransport(key_file, cert_file, timeout)
-    return XMLRPCServerProxy(url, transport, allow_none=True, verbose=verbose)
+########## the object on which we can send methods that get sent over xmlrpc
+class SfaServerProxy:
+
+    def __init__ (self, url, keyfile, certfile, verbose=False, timeout=None):
+        self.url=url
+        self.keyfile=keyfile
+        self.certfile=certfile
+        self.verbose=verbose
+        self.timeout=timeout
+        # an instance of xmlrpclib.ServerProxy
+        transport = XMLRPCTransport(keyfile, certfile, timeout)
+        self.serverproxy = XMLRPCServerProxy(url, transport, allow_none=True, verbose=verbose)
+
+    # this is python magic to return the code to run when 
+    # SfaServerProxy receives a method call
+    # so essentially we send the same method with identical arguments
+    # to the server_proxy object
+    def __getattr__(self, name):
+        def func(*args, **kwds):
+            return getattr(self.serverproxy, name)(*args, **kwds)
+        return func
 
