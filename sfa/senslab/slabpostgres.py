@@ -199,6 +199,7 @@ class SlabDB:
     
         """
         #Creates the values string for the update SQL command
+        vclause = valueclause
         if len(column_names) is not len(values):
             return
         else:
@@ -206,12 +207,14 @@ class SlabDB:
             valuesdict = dict(zip(column_names,values))
             for k in valuesdict.keys():
                 valuesdict[k] = str(valuesdict[k])
-                v = ' \''+ str(k) + '\''+ '='+' \''+ valuesdict[k]+'\''
+                #v = ' \''+ str(k) + '\''+ '='+' \''+ valuesdict[k]+'\''
+                v = str(k) + '=' + valuesdict[k]
                 valueslist.append(v)
-                
+        if isinstance(vclause,str):
+            vclause = '\''+ vclause + '\''
         statement = "UPDATE %s SET %s WHERE %s = %s" % \
-                    (table, ", ".join(valueslist), whereclause, valueclause)
-
+                    (table, ", ".join(valueslist), whereclause, vclause)
+        print>>sys.stderr,"\r\n \r\n SLABPOSTGRES.PY update statement %s valuesdict %s valueslist %s" %(statement,valuesdict,valueslist)
         mark = self.cursor()
         mark.execute(statement) 
         self.connection.commit()

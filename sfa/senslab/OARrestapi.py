@@ -21,6 +21,9 @@ OARrequests_uri_list = ['/oarapi/version.json','/oarapi/timezone.json', '/oarapi
 OARrequests_get_uri_dict = { 'GET_version': '/oarapi/version.json',
 			'GET_timezone':'/oarapi/timezone.json' ,
 			'GET_jobs': '/oarapi/jobs.json',
+                        'GET_jobs<id>': '/oarapi/jobs/id.json',
+                        'GET_jobs<id>/resources': '/oarapi/jobs/id/resources.json',
+                        'GET_resources/<id>': '/oarapi/resources/.json',
 			'GET_jobs_table': '/oarapi/jobs/table.json',
 			'GET_jobs_details': '/oarapi/jobs/details.json',
 			'GET_resources_full': '/oarapi/resources/full.json',
@@ -44,8 +47,12 @@ class OARrestapi:
         self.oarserver['uri'] = None
         self.oarserver['postformat'] = 'json'	
             
-    def GETRequestToOARRestAPI(self, request ): 
+    def GETRequestToOARRestAPI(self, request, strval=None  ): 
         self.oarserver['uri'] = OARrequests_get_uri_dict[request]
+        if  strval:
+          self.oarserver['uri'] = self.oarserver['uri'].replace("id",strval)
+          print>>sys.stderr, "\r\n \r\n   GETRequestToOARRestAPI replace :  self.oarserver['uri'] %s",  self.oarserver['uri']
+        
         try :
             conn = httplib.HTTPConnection(self.oarserver['ip'],self.oarserver['port'])
             conn.request("GET",self.oarserver['uri'] )

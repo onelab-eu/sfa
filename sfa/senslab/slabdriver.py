@@ -51,6 +51,7 @@ class SlabDriver ():
 	self.ldap = LDAPapi()
         self.users = SenslabImportUsers()
         self.time_format = "%Y-%m-%d %H:%M:%S"
+        self.db = SlabDB()
         #self.logger=sfa_logger()
       
 	
@@ -95,9 +96,9 @@ class SlabDriver ():
         return return_site_list
     
     def GetSlices(self,slice_filter = None, return_fields=None):
-        db = SlabDB()
+        
         return_slice_list =[]
-        sliceslist = db.find('slice',columns = ['slice_hrn', 'record_id_slice','record_id_user'])
+        sliceslist = self.db.find('slice',columns = ['slice_hrn', 'record_id_slice','record_id_user'])
         print >>sys.stderr, " \r\n \r\n SLABDRIVER.PY  GetSlices  slices %s" %(sliceslist)
         #slicesdict = sliceslist[0]
         if not (slice_filter or return_fields):
@@ -270,7 +271,9 @@ class SlabDriver ():
 
         print>>sys.stderr, "\r\n \r\n AddSliceToNodes reqdict   %s \r\n site_list   %s"  %(reqdict,site_list)   
         OAR = OARrestapi()
-        OAR.POSTRequestToOARRestAPI('POST_job',reqdict,slice_user)
+        answer = OAR.POSTRequestToOARRestAPI('POST_job',reqdict,slice_user)
+        print>>sys.stderr, "\r\n \r\n AddSliceToNodes jobid   %s "  %(answer)
+        self.db.update('slice',['oar_job_id'], [answer['id']], 'slice_hrn', slice_name)
         return 
     
 
@@ -485,9 +488,9 @@ class SlabDriver ():
         
        
         if records['type'] == 'slice':
-            db = SlabDB()
+
             sfatable = SfaTable()
-            recslice = db.find('slice',str(records['hrn']))
+            recslice = self.db.find('slice',str(records['hrn']))
             if isinstance(recslice,list) and len(recslice) == 1:
                 recslice = recslice[0]
             recuser = sfatable.find(  recslice['record_id_user'], ['hrn'])
