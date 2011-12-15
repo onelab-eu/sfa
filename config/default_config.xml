@@ -39,10 +39,10 @@ Thierry Parmentelat
           <description>The path to the default credential schema</description>
         </variable>
 
-        <variable id="api_debug" type="boolean">
+        <variable id="api_loglevel" type="int">
           <name>Debug</name>
-          <value>false</value>
-          <description>Flag to turn debug on.</description>
+          <value>0</value>
+          <description>Logging level; 0=minimum, 1=info, 2=debug</description>
         </variable>
     
         <variable id="max_slice_renew" type="int">

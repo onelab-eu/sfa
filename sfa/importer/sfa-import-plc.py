@@ -71,7 +71,7 @@ def main():
     keys_filename = config.config_path + os.sep + 'person_keys.py' 
     sfaImporter = sfaImport()
     logger=sfaImporter.logger
-    if config.SFA_API_DEBUG: logger.setLevelDebug()
+    logger.setLevelFromOptVerbose(config.SFA_API_LOGLEVEL)
     shell = sfaImporter.shell
     
     # initialize registry db table
