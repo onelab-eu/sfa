@@ -27,13 +27,13 @@ class PlAggregate:
  
     def get_sites(self, filter={}):
         sites = {}
-        for site in self.driver.GetSites(filter):
+        for site in self.driver.shell.GetSites(filter):
             sites[site['site_id']] = site
         return sites
 
     def get_interfaces(self, filter={}):
         interfaces = {}
-        for interface in self.driver.GetInterfaces(filter):
+        for interface in self.driver.shell.GetInterfaces(filter):
             iface = Interface()
             if interface['bwlimit']:
                 interface['bwlimit'] = str(int(interface['bwlimit'])/1000)
@@ -85,14 +85,14 @@ class PlAggregate:
 
     def get_node_tags(self, filter={}):
         node_tags = {}
-        for node_tag in self.driver.GetNodeTags(filter):
+        for node_tag in self.driver.shell.GetNodeTags(filter):
             node_tags[node_tag['node_tag_id']] = node_tag
         return node_tags
 
     def get_pl_initscripts(self, filter={}):
         pl_initscripts = {}
         filter.update({'enabled': True})
-        for initscript in self.driver.GetInitScripts(filter):
+        for initscript in self.driver.shell.GetInitScripts(filter):
             pl_initscripts[initscript['initscript_id']] = initscript
         return pl_initscripts
 
@@ -108,7 +108,7 @@ class PlAggregate:
         slice_urn = hrn_to_urn(slice_xrn, 'slice')
         slice_hrn, _ = urn_to_hrn(slice_xrn)
         slice_name = hrn_to_pl_slicename(slice_hrn)
-        slices = self.driver.GetSlices(slice_name)
+        slices = self.driver.shell.GetSlices(slice_name)
         if not slices:
             return (slice, slivers)
         slice = slices[0]
@@ -122,7 +122,7 @@ class PlAggregate:
             slivers[node_id]= sliver
 
         # sort sliver attributes by node id    
-        tags = self.driver.GetSliceTags({'slice_tag_id': slice['slice_tag_ids']})
+        tags = self.driver.shell.GetSliceTags({'slice_tag_id': slice['slice_tag_ids']})
         for tag in tags:
             # most likely a default/global sliver attribute (node_id == None)
             if tag['node_id'] not in slivers:
@@ -146,7 +146,7 @@ class PlAggregate:
             filter['boot_state'] = 'boot'     
         
         filter.update({'peer_id': None})
-        nodes = self.driver.GetNodes(filter)
+        nodes = self.driver.shell.GetNodes(filter)
        
         site_ids = []
         interface_ids = []

@@ -390,10 +390,10 @@ class RegistryManager:
         # verify that the callers's ip address exist in the db and is an interface
         # for a node in the db
         (ip, port) = api.remote_addr
-        interfaces = self.driver.GetInterfaces({'ip': ip}, ['node_id'])
+        interfaces = self.driver.shell.GetInterfaces({'ip': ip}, ['node_id'])
         if not interfaces:
             raise NonExistingRecord("no such ip %(ip)s" % locals())
-        nodes = self.driver.GetNodes([interfaces[0]['node_id']], ['node_id', 'hostname'])
+        nodes = self.driver.shell.GetNodes([interfaces[0]['node_id']], ['node_id', 'hostname'])
         if not nodes:
             raise NonExistingRecord("no such node using ip %(ip)s" % locals())
         node = nodes[0]
