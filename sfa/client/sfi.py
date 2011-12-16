@@ -815,42 +815,28 @@ or with an slice hrn, shows currently provisioned resources
             creds.append(self.my_credential_string)
         if options.delegate:
             creds.append(self.delegate_cred(cred, get_authority(self.authority)))
-        
-        # V2 API
-        if self.server_supports_options_arg(server):
-            # with v2 everything goes in options inclusing the subject slice
-            api_options = {}
-            if args:
-                hrn = args[0]
-                api_options['geni_slice_urn'] = hrn_to_urn(hrn, 'slice')
-            if options.info:
-                api_options['info'] = options.info
-            if options.rspec_version:
-                version_manager = VersionManager()
-                server_version = self.get_cached_server_version(server)
-                if 'sfa' in server_version:
-                    # just request the version the client wants
-                    api_options['geni_rspec_version'] = version_manager.get_version(options.rspec_version).to_dict()
-                else:
-                    # this must be a protogeni aggregate. We should request a v2 ad rspec
-                    # regardless of what the client user requested
-                    api_options['geni_rspec_version'] = version_manager.get_version('ProtoGENI 2').to_dict() 
+       
+        # no need to check if server accepts the options argument since the options has
+        # been a required argument since v1 API   
+        api_options = {}
+        # always send call_id to v2 servers
+        api_options ['call_id'] = unique_call_id()
+        if args:
+            hrn = args[0]
+            api_options['geni_slice_urn'] = hrn_to_urn(hrn, 'slice')
+        if options.info:
+            api_options['info'] = options.info
+        if options.rspec_version:
+            version_manager = VersionManager()
+            server_version = self.get_cached_server_version(server)
+            if 'sfa' in server_version:
+                # just request the version the client wants
+                api_options['geni_rspec_version'] = version_manager.get_version(options.rspec_version).to_dict()
             else:
                 api_options['geni_rspec_version'] = {'type': 'geni', 'version': '3.0'}    
-            # always send call_id to v2 servers
-            api_options ['call_id'] = unique_call_id()
-            # the V2 form
-            result = server.ListResources (creds, api_options)
-        # V1
         else:
-            # with an argument
-            if args:
-                hrn = args[0]
-                # xxx looks like we can pass a hrn and not a urn here ??
-                # last arg. is a raw call_id when supported
-                result = server.ListResources (creds, hrn, *self.cis(server))
-            else:
-                result = server.ListResources (creds, *self.cis(server))
+            api_options['geni_rspec_version'] = {'type': 'geni', 'version': '3.0'}    
+        result = server.ListResources (creds, api_options)
         value = ReturnValue.get_value(result)
         if options.file is None:
             display_rspec(value, options.format)
