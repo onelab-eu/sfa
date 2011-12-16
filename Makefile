@@ -145,7 +145,7 @@ ifeq (,$(SSHURL))
 	@echo "  or   make sync PLCHOST=testbox1.inria.fr GUEST=vplc03.inria.fr"
 	@exit 1
 else
-	+$(RSYNC) ./sfa/ $(SSHURL)/usr/lib\*/python2.\*/site-packages/sfa/
+	+$(RSYNC) --relative ./sfa/ $(SSHURL)/usr/lib\*/python2.\*/site-packages/
 	+$(RSYNC) ./tests/ $(SSHURL)/root/tests-sfa
 	+$(RSYNC)  $(BINS) $(SSHURL)/usr/bin/
 	+$(RSYNC) ./init.d/sfa  $(SSHURL)/etc/init.d/
@@ -156,11 +156,14 @@ endif
 
 # 99% of the time this is enough
 fastsync:
-	+$(RSYNC) ./sfa/ $(SSHURL)/usr/lib\*/python2.\*/site-packages/sfa/
+	+$(RSYNC) --relative ./sfa/ $(SSHURL)/usr/lib\*/python2.\*/site-packages/
 	$(SSHCOMMAND) exec service sfa restart
 
 clientsync:
 	+$(RSYNC)  $(BINS) $(SSHURL)/usr/bin/
+
+ricasync:
+	+$(RSYNC) --relative ./sfa/fd ./sfa/generic/fd.py $(SSHURL)/usr/lib\*/python2.\*/site-packages/
 
 .PHONY: sync fastsync clientsync
 
