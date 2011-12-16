@@ -153,7 +153,83 @@ class SlabDriver(Driver):
             #self.cache.add(version_string, rspec)
     
         return rspec
+        
+        
+    def list_slices (self, creds, options):
+        # look in cache first
+        #if self.cache:
+            #slices = self.cache.get('slices')
+            #if slices:
+                #logger.debug("PlDriver.list_slices returns from cache")
+                #return slices
     
+        # get data from db 
+        slices = self.GetSlices({'peer_id': None}, ['name'])
+        slice_hrns = [slicename_to_hrn(self.hrn, slice['name']) for slice in slices]
+        slice_urns = [hrn_to_urn(slice_hrn, 'slice') for slice_hrn in slice_hrns]
+    
+        # cache the result
+        #if self.cache:
+            #logger.debug ("SlabDriver.list_slices stores value in cache")
+            #self.cache.add('slices', slice_urns) 
+    
+        return slice_urns
+    
+    
+    def register (self, sfa_record, hrn, pub_key):
+        type = sfa_record['type']
+        pl_record = self.sfa_fields_to_pl_fields(type, hrn, sfa_record)
+    
+        if type == 'authority':
+            sites = self.shell.GetSites([pl_record['login_base']])
+            if not sites:
+                pointer = self.shell.AddSite(pl_record)
+            else:
+                pointer = sites[0]['site_id']
+    
+        elif type == 'slice':
+            acceptable_fields=['url', 'instantiation', 'name', 'description']
+            for key in pl_record.keys():
+                if key not in acceptable_fields:
+                    pl_record.pop(key)
+            slices = self.shell.GetSlices([pl_record['name']])
+            if not slices:
+                    pointer = self.shell.AddSlice(pl_record)
+            else:
+                    pointer = slices[0]['slice_id']
+    
+        elif type == 'user':
+            persons = self.shell.GetPersons([sfa_record['email']])
+            if not persons:
+                pointer = self.shell.AddPerson(dict(sfa_record))
+            else:
+                pointer = persons[0]['person_id']
+    
+            if 'enabled' in sfa_record and sfa_record['enabled']:
+                self.shell.UpdatePerson(pointer, {'enabled': sfa_record['enabled']})
+            # add this person to the site only if she is being added for the first
+            # time by sfa and doesont already exist in plc
+            if not persons or not persons[0]['site_ids']:
+                login_base = get_leaf(sfa_record['authority'])
+                self.shell.AddPersonToSite(pointer, login_base)
+    
+            # What roles should this user have?
+            self.shell.AddRoleToPerson('user', pointer)
+            # Add the user's key
+            if pub_key:
+                self.shell.AddPersonKey(pointer, {'key_type' : 'ssh', 'key' : pub_key})
+    
+        elif type == 'node':
+            login_base = hrn_to_pl_login_base(sfa_record['authority'])
+            nodes = self.shell.GetNodes([pl_record['hostname']])
+            if not nodes:
+                pointer = self.shell.AddNode(login_base, pl_record)
+            else:
+                pointer = nodes[0]['node_id']
+    
+        return pointer
+            
+            
     def GetPersons(self, person_filter=None, return_fields=None):
         
         person_list = self.ldap.ldapFind({'authority': self.root_auth })
@@ -252,38 +328,41 @@ class SlabDriver(Driver):
         #    pl_record[field] = record[field]
  
         if type == "slice":
+            #instantion used in get_slivers ? 
             if not "instantiation" in pl_record:
-                pl_record["instantiation"] = "plc-instantiated"
-            pl_record["name"] = hrn_to_pl_slicename(hrn)
+                pl_record["instantiation"] = "senslab-instantiated"
+            pl_record["hrn"] = hrn_to_pl_slicename(hrn)
 	    if "url" in record:
                pl_record["url"] = record["url"]
 	    if "description" in record:
 	        pl_record["description"] = record["description"]
 	    if "expires" in record:
 	        pl_record["expires"] = int(record["expires"])
+                
+        #nodes added by OAR only and then imported to SFA
+        #elif type == "node":
+            #if not "hostname" in pl_record:
+                #if not "hostname" in record:
+                    #raise MissingSfaInfo("hostname")
+                #pl_record["hostname"] = record["hostname"]
+            #if not "model" in pl_record:
+                #pl_record["model"] = "geni"
+                
+        #One authority only 
+        #elif type == "authority":
+            #pl_record["login_base"] = hrn_to_pl_login_base(hrn)
 
-        elif type == "node":
-            if not "hostname" in pl_record:
-                if not "hostname" in record:
-                    raise MissingSfaInfo("hostname")
-                pl_record["hostname"] = record["hostname"]
-            if not "model" in pl_record:
-                pl_record["model"] = "geni"
+            #if not "name" in pl_record:
+                #pl_record["name"] = hrn
 
-        elif type == "authority":
-            pl_record["login_base"] = hrn_to_pl_login_base(hrn)
+            #if not "abbreviated_name" in pl_record:
+                #pl_record["abbreviated_name"] = hrn
 
-            if not "name" in pl_record:
-                pl_record["name"] = hrn
+            #if not "enabled" in pl_record:
+                #pl_record["enabled"] = True
 
-            if not "abbreviated_name" in pl_record:
-                pl_record["abbreviated_name"] = hrn
-
-            if not "enabled" in pl_record:
-                pl_record["enabled"] = True
-
-            if not "is_public" in pl_record:
-                pl_record["is_public"] = True
+            #if not "is_public" in pl_record:
+                #pl_record["is_public"] = True
 
         return pl_record
 
@@ -480,55 +559,55 @@ class SlabDriver(Driver):
         #self.fill_record_sfa_info(records)
 	#print >>sys.stderr, "\r\n \t\t after fill_record_sfa_info"
 	
-    def update_membership_list(self, oldRecord, record, listName, addFunc, delFunc):
-        # get a list of the HRNs tht are members of the old and new records
-        if oldRecord:
-            oldList = oldRecord.get(listName, [])
-        else:
-            oldList = []     
-        newList = record.get(listName, [])
+    #def update_membership_list(self, oldRecord, record, listName, addFunc, delFunc):
+        ## get a list of the HRNs tht are members of the old and new records
+        #if oldRecord:
+            #oldList = oldRecord.get(listName, [])
+        #else:
+            #oldList = []     
+        #newList = record.get(listName, [])
 
-        # if the lists are the same, then we don't have to update anything
-        if (oldList == newList):
-            return
+        ## if the lists are the same, then we don't have to update anything
+        #if (oldList == newList):
+            #return
 
-        # build a list of the new person ids, by looking up each person to get
-        # their pointer
-        newIdList = []
-        table = SfaTable()
-        records = table.find({'type': 'user', 'hrn': newList})
-        for rec in records:
-            newIdList.append(rec['pointer'])
+        ## build a list of the new person ids, by looking up each person to get
+        ## their pointer
+        #newIdList = []
+        #table = SfaTable()
+        #records = table.find({'type': 'user', 'hrn': newList})
+        #for rec in records:
+            #newIdList.append(rec['pointer'])
 
-        # build a list of the old person ids from the person_ids field 
-        if oldRecord:
-            oldIdList = oldRecord.get("person_ids", [])
-            containerId = oldRecord.get_pointer()
-        else:
-            # if oldRecord==None, then we are doing a Register, instead of an
-            # update.
-            oldIdList = []
-            containerId = record.get_pointer()
+        ## build a list of the old person ids from the person_ids field 
+        #if oldRecord:
+            #oldIdList = oldRecord.get("person_ids", [])
+            #containerId = oldRecord.get_pointer()
+        #else:
+            ## if oldRecord==None, then we are doing a Register, instead of an
+            ## update.
+            #oldIdList = []
+            #containerId = record.get_pointer()
 
-    # add people who are in the new list, but not the oldList
-        for personId in newIdList:
-            if not (personId in oldIdList):
-                addFunc(self.plauth, personId, containerId)
+    ## add people who are in the new list, but not the oldList
+        #for personId in newIdList:
+            #if not (personId in oldIdList):
+                #addFunc(self.plauth, personId, containerId)
 
-        # remove people who are in the old list, but not the new list
-        for personId in oldIdList:
-            if not (personId in newIdList):
-                delFunc(self.plauth, personId, containerId)
+        ## remove people who are in the old list, but not the new list
+        #for personId in oldIdList:
+            #if not (personId in newIdList):
+                #delFunc(self.plauth, personId, containerId)
 
-    def update_membership(self, oldRecord, record):
-        print >>sys.stderr, " \r\n \r\n ***SLABDRIVER.PY update_membership record ", record
-        if record.type == "slice":
-            self.update_membership_list(oldRecord, record, 'researcher',
-                                        self.users.AddPersonToSlice,
-                                        self.users.DeletePersonFromSlice)
-        elif record.type == "authority":
-            # xxx TODO
-            pass
+    #def update_membership(self, oldRecord, record):
+        #print >>sys.stderr, " \r\n \r\n ***SLABDRIVER.PY update_membership record ", record
+        #if record.type == "slice":
+            #self.update_membership_list(oldRecord, record, 'researcher',
+                                        #self.users.AddPersonToSlice,
+                                        #self.users.DeletePersonFromSlice)
+        #elif record.type == "authority":
+            ## xxx TODO
+            #pass
 
 ### thierry
 # I don't think you plan on running a component manager at this point
