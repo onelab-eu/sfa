@@ -1,6 +1,6 @@
 %define name sfa
 %define version 2.0
-%define taglevel 5
+%define taglevel 6
 
 %define release %{taglevel}%{?pldistro:.%{pldistro}}%{?date:.%{date}}
 %global python_sitearch	%( python -c "from distutils.sysconfig import get_python_lib; print get_python_lib(1)" )
@@ -224,6 +224,11 @@ fi
 [ "$1" -ge "1" ] && service sfa-cm restart || :
 
 %changelog
+* Fri Dec 16 2011 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-2.0-6
+- bugfix: sfi was not sending call_id with ListResources to v2 servers
+- SFA_API_DEBUG replaced with SFA_API_LOGLEVEL
+- PlDriver / PlShell : PLCAPI methods now explicitly go to the shell
+
 * Wed Dec 14 2011 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-2.0-5
 - client: sfi -a / -p deprecated (use -s instead)
 - client: sfi cleaned up
