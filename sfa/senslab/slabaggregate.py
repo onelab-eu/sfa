@@ -33,7 +33,7 @@ from sfa.util.sfatime import epochparse
 def hostname_to_hrn(root_auth,login_base,hostname):
     return PlXrn(auth=root_auth,hostname=login_base+'_'+hostname).get_hrn()
 
-class OARrspec:
+class SlabAggregate:
 
     
     sites = {}
@@ -51,7 +51,7 @@ class OARrspec:
 	self.OARImporter = OARapi()	
         self.driver = SlabDriver(Config())
 	self.api = api 
-	print >>sys.stderr,"\r\n \r\n \t\t_____________INIT OARRSPEC__ api : %s" %(api)
+	print >>sys.stderr,"\r\n \r\n \t\t_____________INIT Slabaggregate api : %s" %(api)
 
 
         
@@ -145,7 +145,7 @@ class OARrspec:
         
 #from plc/aggregate.py 
     def get_rspec(self, slice_xrn=None, version = None, options={}):
-	print>>sys.stderr, " \r\n OARrspec \t\t get_rspec **************\r\n" 
+	print>>sys.stderr, " \r\n SlabAggregate \t\t get_rspec **************\r\n" 
       
 	
         rspec = None

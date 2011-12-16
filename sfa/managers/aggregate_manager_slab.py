@@ -16,7 +16,7 @@ from sfa.rspecs.version_manager import VersionManager
 from sfa.rspecs.rspec import RSpec
 
 from sfa.server.sfaapi import SfaApi
-from sfa.senslab.OARrspec import OARrspec
+from sfa.senslab.slabaggregate import SlabAggregate
 import sfa.plc.peers as peers
 #from sfa.plc.aggregate import Aggregate
 from sfa.senslab.slices import SlabSlices
@@ -180,7 +180,7 @@ class AggregateManager:
         """
         call_id = options.get('call_id')
         if Callids().already_handled(call_id): return ""
-        aggregate = OARrspec(api)
+        aggregate = SlabAggregate(api)
         #aggregate = Aggregate(api)
         slices = SlabSlices(api)
         (hrn, _) = urn_to_hrn(slice_xrn)
@@ -339,7 +339,7 @@ class AggregateManager:
     
         #panos: passing user-defined options
         #print "manager options = ",options
-        aggregate = OARrspec(api)
+        aggregate = SlabAggregate(api)
         #aggregate = Aggregate(api)
         rspec =  aggregate.get_rspec(slice_xrn=xrn, version=rspec_version, options=options)
     
