@@ -127,13 +127,13 @@ class SenslabImportUsers:
 				#print>>sys.stderr," \r\n End GetKeys with filter ", return_key_list			
 		#return return_key_list
 	
-	def GetSlices( self,slice_filter=None, return_fields=None):
-		return_slice_list= []
-		print>>sys.stderr, "\r\n\r\n\t =======================GetSlices " 
-		if not (slice_filter or return_fields):
-			return self.slices_list
-		return_slice_list= parse_filter(self.slices_list, slice_filter,'slice', return_fields)	
-		return return_slice_list
+	#def GetSlices( self,slice_filter=None, return_fields=None):
+		#return_slice_list= []
+		#print>>sys.stderr, "\r\n\r\n\t =======================GetSlices " 
+		#if not (slice_filter or return_fields):
+			#return self.slices_list
+		#return_slice_list= parse_filter(self.slices_list, slice_filter,'slice', return_fields)	
+		#return return_slice_list
 	
 	
 	def AddSlice(self, slice_fields): 

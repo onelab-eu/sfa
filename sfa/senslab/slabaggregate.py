@@ -54,7 +54,45 @@ class SlabAggregate:
 	print >>sys.stderr,"\r\n \r\n \t\t_____________INIT Slabaggregate api : %s" %(api)
 
 
+    def get_slice_and_slivers(self, slice_xrn):
+        """
+        Returns a dict of slivers keyed on the sliver's node_id
+        """
+        slivers = {}
+        slice = None
+        if not slice_xrn:
+            return (slice, slivers)
+        slice_urn = hrn_to_urn(slice_xrn, 'slice')
+        slice_hrn, _ = urn_to_hrn(slice_xrn)
+        slice_name = slice_hrn
+        slices = self.driver.GetSlices(slice_name)
+        if not slices:
+            return (slice, slivers)
+        slice = slices[0]
+
+        # sort slivers by node id    
+        for node_id in slice['node_ids']:
+            sliver = Sliver({'sliver_id': urn_to_sliver_id(slice_urn, slice['slice_id'], node_id),
+                             'name': slice['hrn'],
+                             'type': 'slab-vm', 
+                             'tags': []})
+            slivers[node_id]= sliver
+
+        # sort sliver attributes by node id    
+        #tags = self.driver.GetSliceTags({'slice_tag_id': slice['slice_tag_ids']})
+        #for tag in tags:
+            ## most likely a default/global sliver attribute (node_id == None)
+            #if tag['node_id'] not in slivers:
+                #sliver = Sliver({'sliver_id': urn_to_sliver_id(slice_urn, slice['slice_id'], ""),
+                                 #'name': 'slab-vm',
+                                 #'tags': []})
+                #slivers[tag['node_id']] = sliver
+            #slivers[tag['node_id']]['tags'].append(tag)
         
+        return (slice, slivers)
+            
+            
+  
     def get_nodes(self):
         filtre = {}
         #tags_filter = {}
@@ -143,6 +181,8 @@ class SlabAggregate:
             rspec_nodes.append(rspec_node)
         return (rspec_nodes)
         
+        
+
 #from plc/aggregate.py 
     def get_rspec(self, slice_xrn=None, version = None, options={}):
 	print>>sys.stderr, " \r\n SlabAggregate \t\t get_rspec **************\r\n" 
@@ -157,13 +197,21 @@ class SlabAggregate:
             rspec_version = version_manager._get_version(version.type, version.version, 'ad')
         else:
             rspec_version = version_manager._get_version(version.type, version.version, 'manifest')
-      
+        #slice, slivers = self.get_slice_and_slivers(slice_xrn)
         rspec = RSpec(version=rspec_version, user_options=options)
-        
-        nodes = self.get_nodes()
+        #if slice and 'expires' in slice:
+           #rspec.xml.set('expires',  epochparse(slice['expires']))
+         # add sliver defaults
+        #nodes, links = self.get_nodes_and_links(slice, slivers)
+        nodes = self.get_nodes() 
         rspec.version.add_nodes(nodes)
-      
-	print >>sys.stderr, 'after add_nodes '
-      
+
+        #rspec.version.add_links(links)
+        #default_sliver = slivers.get(None, [])
+        #if default_sliver:
+            #default_sliver_attribs = default_sliver.get('tags', [])
+            #for attrib in default_sliver_attribs:
+                #logger.info(attrib)
+                #rspec.version.add_default_sliver_attribute(attrib['tagname'], attrib['value'])   
 
         return rspec.toxml()          

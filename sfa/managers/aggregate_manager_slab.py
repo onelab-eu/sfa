@@ -18,7 +18,7 @@ from sfa.rspecs.rspec import RSpec
 from sfa.server.sfaapi import SfaApi
 from sfa.senslab.slabaggregate import SlabAggregate
 import sfa.plc.peers as peers
-#from sfa.plc.aggregate import Aggregate
+
 from sfa.senslab.slices import SlabSlices
 
 class AggregateManager:
@@ -297,10 +297,10 @@ class AggregateManager:
         call_id = options.get('call_id')
         if Callids().already_handled(call_id): return []
         # look in cache first
-        if self.caching and api.cache:
-            slices = api.cache.get('slices')
-            if slices:
-                return slices
+        #if self.caching and api.cache:
+            #slices = api.cache.get('slices')
+            #if slices:
+                #return slices
     
         # get data from db 
         slices = api.driver.GetSlices({'peer_id': None}, ['name'])
@@ -308,8 +308,8 @@ class AggregateManager:
         slice_urns = [hrn_to_urn(slice_hrn, 'slice') for slice_hrn in slice_hrns]
     
         # cache the result
-        if self.caching and api.cache:
-            api.cache.add('slices', slice_urns) 
+        #if self.caching and api.cache:
+            #api.cache.add('slices', slice_urns) 
     
         return slice_urns
         
@@ -331,11 +331,11 @@ class AggregateManager:
             version_string = version_string + "_"+options.get('info', 'default')
     
         # look in cache first
-        if self.caching and api.cache and not xrn and cached:
-            rspec = api.cache.get(version_string)
-            if rspec:
-                api.logger.info("aggregate.ListResources: returning cached value for hrn %s"%hrn)
-                return rspec 
+        #if self.cache and api.cache and not xrn and cached:
+            #rspec = api.cache.get(version_string)
+            #if rspec:
+                #api.logger.info("aggregate.ListResources: returning cached value for hrn %s"%hrn)
+                #return rspec 
     
         #panos: passing user-defined options
         #print "manager options = ",options
@@ -344,8 +344,8 @@ class AggregateManager:
         rspec =  aggregate.get_rspec(slice_xrn=xrn, version=rspec_version, options=options)
     
         # cache the result
-        if self.caching and api.cache and not xrn:
-            api.cache.add(version_string, rspec)
+        #if self.caching and api.cache and not xrn:
+            #api.cache.add(version_string, rspec)
     
         return rspec
     

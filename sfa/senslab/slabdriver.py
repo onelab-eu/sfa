@@ -5,7 +5,7 @@ from sfa.util.sfalogging import logger
 from sfa.util.table import SfaTable
 from sfa.util.defaultdict import defaultdict
 
-
+from sfa.managers.driver import Driver
 from sfa.rspecs.version_manager import VersionManager
 
 from sfa.util.xrn import hrn_to_urn
@@ -36,10 +36,10 @@ def list_to_dict(recs, key):
 # this inheritance scheme is so that the driver object can receive
 # GetNodes or GetSites sorts of calls directly
 # and thus minimize the differences in the managers with the pl version
-class SlabDriver ():
+class SlabDriver(Driver):
 
     def __init__(self, config):
-       
+        Driver.__init__ (self, config)
         self.config=config
         self.hrn = config.SFA_INTERFACE_HRN
     
@@ -56,7 +56,10 @@ class SlabDriver ():
         self.time_format = "%Y-%m-%d %H:%M:%S"
         self.db = SlabDB()
         #self.logger=sfa_logger()
-      
+        self.cache=None
+        
+
+            
     def create_sliver (self, slice_urn, slice_hrn, creds, rspec_string, users, options):
 
         aggregate = SlabAggregate(self)
@@ -92,7 +95,65 @@ class SlabDriver ():
         #slices.handle_peer(site, slice, persons, peer)
         
         return aggregate.get_rspec(slice_xrn=slice_urn, version=rspec.version)
+        
+        
+    def delete_sliver (self, slice_urn, slice_hrn, creds, options):
+        
+        slices = self.GetSlices({'slice_hrn': slice_hrn})
+        if not slices:
+            return 1
+        slice = slices[0]
+    
+        # determine if this is a peer slice
+        # xxx I wonder if this would not need to use PlSlices.get_peer instead 
+        # in which case plc.peers could be deprecated as this here
+        # is the only/last call to this last method in plc.peers
+        peer = peers.get_peer(self, slice_hrn)
+        try:
+            if peer:
+                self.UnBindObjectFromPeer('slice', slice['slice_id'], peer)
+            self.DeleteSliceFromNodes(slice_hrn, slice['node_ids'])
+        finally:
+            if peer:
+                self.BindObjectToPeer('slice', slice['slice_id'], peer, slice['peer_slice_id'])
+        return 1
             
+            
+            
+            
+    # first 2 args are None in case of resource discovery
+    def list_resources (self, slice_urn, slice_hrn, creds, options):
+        #cached_requested = options.get('cached', True) 
+    
+        version_manager = VersionManager()
+        # get the rspec's return format from options
+        rspec_version = version_manager.get_version(options.get('geni_rspec_version'))
+        version_string = "rspec_%s" % (rspec_version)
+    
+        #panos adding the info option to the caching key (can be improved)
+        if options.get('info'):
+            version_string = version_string + "_"+options.get('info', 'default')
+    
+        # look in cache first
+        #if cached_requested and self.cache and not slice_hrn:
+            #rspec = self.cache.get(version_string)
+            #if rspec:
+                #logger.debug("SlabDriver.ListResources: returning cached advertisement")
+                #return rspec 
+    
+        #panos: passing user-defined options
+        #print "manager options = ",options
+        aggregate = SlabAggregate(self)
+        rspec =  aggregate.get_rspec(slice_xrn=slice_urn, version=rspec_version, 
+                                     options=options)
+    
+        # cache the result
+        #if self.cache and not slice_hrn:
+            #logger.debug("Slab.ListResources: stores advertisement in cache")
+            #self.cache.add(version_string, rspec)
+    
+        return rspec
+    
     def GetPersons(self, person_filter=None, return_fields=None):
         
         person_list = self.ldap.ldapFind({'authority': self.root_auth })
@@ -331,10 +392,10 @@ class SlabDriver ():
         reqdict['script_path'] = "/bin/sleep "
 
         print>>sys.stderr, "\r\n \r\n AddSliceToNodes reqdict   %s \r\n site_list   %s"  %(reqdict,site_list)   
-        OAR = OARrestapi()
-        answer = OAR.POSTRequestToOARRestAPI('POST_job',reqdict,slice_user)
-        print>>sys.stderr, "\r\n \r\n AddSliceToNodes jobid   %s "  %(answer)
-        self.db.update('slice',['oar_job_id'], [answer['id']], 'slice_hrn', slice_name)
+        #OAR = OARrestapi()
+        #answer = OAR.POSTRequestToOARRestAPI('POST_job',reqdict,slice_user)
+        #print>>sys.stderr, "\r\n \r\n AddSliceToNodes jobid   %s "  %(answer)
+        #self.db.update('slice',['oar_job_id'], [answer['id']], 'slice_hrn', slice_name)
         return 
     
 
