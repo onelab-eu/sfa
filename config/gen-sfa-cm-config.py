@@ -14,7 +14,7 @@ all_vars = ['SFA_CONFIG_DIR', 'SFA_DATA_DIR', 'SFA_INTERFACE_HRN',
             'SFA_AGGREGATE_HOST', 'SFA_AGGREGATE_PORT', 
             'SFA_SM_HOST', 'SFA_SM_PORT',
             'SFA_CM_ENABLED', 'SFA_CM_HOST', 'SFA_CM_PORT', 'SFA_CM_TYPE', 'SFA_CM_SLICE_PREFIX',
-            'SFA_API_DEBUG']
+            'SFA_API_LOGLEVEL']
 
 defaults = {
     'SFA_CM_ENABLED': '1',
@@ -22,7 +22,7 @@ defaults = {
     'SFA_CM_PORT': '12346',
     'SFA_CM_SLICE_PREFIX': plc_config.PLC_SLICE_PREFIX,
     'SFA_CM_TYPE': 'pl',
-    'SFA_API_DEBUG': '0'
+    'SFA_API_LOGLEVEL': '0'
     }
 
 host_defaults = {

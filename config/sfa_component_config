@@ -5,9 +5,9 @@
 # Human readable name for this interface
 SFA_INTERFACE_HRN="plc"   
 
-# API Debug
-# Are we logging
-SFA_API_DEBUG=1
+# loglevel
+# How deep are we logging (0|1|2)
+SFA_API_LOGLEVEL=1
 
 ## ============================================================
 # Registry Configuration

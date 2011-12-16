@@ -837,7 +837,8 @@ or with an slice hrn, shows currently provisioned resources
                     api_options['geni_rspec_version'] = version_manager.get_version('ProtoGENI 2').to_dict() 
             else:
                 api_options['geni_rspec_version'] = {'type': 'geni', 'version': '3.0'}    
-                api_options ['call_id'] = unique_call_id()
+            # always send call_id to v2 servers
+            api_options ['call_id'] = unique_call_id()
             # the V2 form
             result = server.ListResources (creds, api_options)
         # V1

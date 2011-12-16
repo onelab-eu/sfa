@@ -172,14 +172,13 @@ def main():
          help="run component server", default=False)
     parser.add_option("-t", "--trusted-certs", dest="trusted_certs", action="store_true",
          help="refresh trusted certs", default=False)
-    parser.add_option("-v", "--verbose", action="count", dest="verbose", default=0,
-         help="verbose mode - cumulative")
     parser.add_option("-d", "--daemon", dest="daemon", action="store_true",
          help="Run as daemon.", default=False)
     (options, args) = parser.parse_args()
     
     config = Config()
-    if config.SFA_API_DEBUG: pass
+    logger.setLevelFromOptVerbose(config.SFA_API_LOGLEVEL)
+    
 
     # ge the server's key and cert
     hierarchy = Hierarchy()
