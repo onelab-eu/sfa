@@ -48,8 +48,8 @@ class SlabDriver(Driver):
         
 	print >>sys.stderr, "\r\n_____________ SFA SENSLAB DRIVER \r\n" 
         # thierry - just to not break the rest of this code
-	#self.oar = OARapi()
-	#self.users = SenslabImportUsers()
+
+
 	self.oar = OARapi()
 	self.ldap = LDAPapi()
         self.users = SenslabImportUsers()
@@ -287,86 +287,7 @@ class SlabDriver(Driver):
 
         return pl_record
 
-    def fill_record_pl_info(self, records):
-        """
-        Fill in the planetlab specific fields of a SFA record. This
-        involves calling the appropriate PLC method to retrieve the 
-        database record for the object.
-        
-        PLC data is filled into the pl_info field of the record.
-    
-        @param record: record to fill in field (in/out param)     
-        """
-        # get ids by type
-	#print>>sys.stderr, "\r\n \r\rn \t\t >>>>>>>>>>fill_record_pl_info  records %s : "%(records)
-        node_ids, site_ids, slice_ids = [], [], [] 
-        person_ids, key_ids = [], []
-        type_map = {'node': node_ids, 'authority': site_ids,
-                    'slice': slice_ids, 'user': person_ids}
-                  
-        for record in records:
-            for type in type_map:
-		#print>>sys.stderr, "\r\n \t\t \t fill_record_pl_info : type %s. record['pointer'] %s "%(type,record['pointer'])   
-                if type == record['type']:
-                    type_map[type].append(record['pointer'])
-	#print>>sys.stderr, "\r\n \t\t \t fill_record_pl_info : records %s... \r\n \t\t \t fill_record_pl_info : type_map   %s"%(records,type_map)
-        # get pl records
-        nodes, sites, slices, persons, keys = {}, {}, {}, {}, {}
-        if node_ids:
-            node_list = self.GetNodes( node_ids)
-	    #print>>sys.stderr, " \r\n \t\t\t BEFORE LIST_TO_DICT_NODES node_ids : %s" %(node_ids)
-            nodes = list_to_dict(node_list, 'node_id')
-        if site_ids:
-            site_list = self.oar.GetSites( site_ids)
-            sites = list_to_dict(site_list, 'site_id')
-	    #print>>sys.stderr, " \r\n \t\t\t  site_ids %s sites  : %s" %(site_ids,sites)	    
-        if slice_ids:
-            slice_list = self.users.GetSlices( slice_ids)
-            slices = list_to_dict(slice_list, 'slice_id')
-        if person_ids:
-            #print>>sys.stderr, " \r\n \t\t \t fill_record_pl_info BEFORE GetPersons  person_ids: %s" %(person_ids)
-            person_list = self.GetPersons( person_ids)
-            persons = list_to_dict(person_list, 'person_id')
-	    #print>>sys.stderr, "\r\n  fill_record_pl_info persons %s \r\n \t\t person_ids %s " %(persons, person_ids) 
-            for person in persons:
-                key_ids.extend(persons[person]['key_ids'])
-		#print>>sys.stderr, "\r\n key_ids %s " %(key_ids)
-
-        pl_records = {'node': nodes, 'authority': sites,
-                      'slice': slices, 'user': persons}
-
-        if key_ids:
-            key_list = self.users.GetKeys( key_ids)
-            keys = list_to_dict(key_list, 'key_id')
-           # print>>sys.stderr, "\r\n  fill_record_pl_info persons %s \r\n \t\t keys %s " %(keys) 
-        # fill record info
-        for record in records:
-            # records with pointer==-1 do not have plc info.
-            # for example, the top level authority records which are
-            # authorities, but not PL "sites"
-            if record['pointer'] == -1:
-                continue
-           
-            for type in pl_records:
-                if record['type'] == type:
-                    if record['pointer'] in pl_records[type]:
-                        record.update(pl_records[type][record['pointer']])
-                        break
-            # fill in key info 
-            if record['type'] == 'user':
-		 if 'key_ids' not in record:
-                    	#print>>sys.stderr, " NO_KEY_IDS fill_record_pl_info key_ids record: %s" %(record)
-			logger.info("user record has no 'key_ids' - need to import  ?")
-                 else:
-			pubkeys = [keys[key_id]['key'] for key_id in record['key_ids'] if key_id in keys] 
-			record['keys'] = pubkeys
-			
-  	#print>>sys.stderr, "\r\n \r\rn \t\t <<<<<<<<<<<<<<<<<< fill_record_pl_info  records %s : "%(records)
-        # fill in record hrns
-        records = self.fill_record_hrns(records)   
-
-        return records
-                 
+  
                  
                  
     def AddSliceToNodes(self,  slice_name, added_nodes, slice_user=None):
@@ -404,84 +325,7 @@ class SlabDriver(Driver):
     def DeleteSliceFromNodes(self, slice_name, deleted_nodes):
         return   
     
-    def fill_record_hrns(self, records):
-        """
-        convert pl ids to hrns
-        """
-	#print>>sys.stderr, "\r\n \r\rn \t\t \t >>>>>>>>>>>>>>>>>>>>>> fill_record_hrns records %s : "%(records)  
-        # get ids
-        slice_ids, person_ids, site_ids, node_ids = [], [], [], []
-        for record in records:
-            #print>>sys.stderr, "\r\n \r\rn \t\t \t record %s : "%(record)
-            if 'site_id' in record:
-                site_ids.append(record['site_id'])
-            if 'site_ids' in records:
-                site_ids.extend(record['site_ids'])
-            if 'person_ids' in record:
-                person_ids.extend(record['person_ids'])
-            if 'slice_ids' in record:
-                slice_ids.extend(record['slice_ids'])
-            if 'node_ids' in record:
-                node_ids.extend(record['node_ids'])
-
-        # get pl records
-        slices, persons, sites, nodes = {}, {}, {}, {}
-        if site_ids:
-            site_list = self.oar.GetSites( site_ids, ['site_id', 'login_base'])
-            sites = list_to_dict(site_list, 'site_id')
-	    #print>>sys.stderr, " \r\n \r\n \t\t ____ site_list %s \r\n \t\t____ sites %s " % (site_list,sites)
-        if person_ids:
-            person_list = self.GetPersons( person_ids, ['person_id', 'email'])
-	    #print>>sys.stderr, " \r\n \r\n   \t\t____ person_lists %s " %(person_list) 
-            persons = list_to_dict(person_list, 'person_id')
-        if slice_ids:
-            slice_list = self.users.GetSlices( slice_ids, ['slice_id', 'name'])
-            slices = list_to_dict(slice_list, 'slice_id')       
-        if node_ids:
-            node_list = self.GetNodes( node_ids, ['node_id', 'hostname'])
-            nodes = list_to_dict(node_list, 'node_id')
-       
-        # convert ids to hrns
-        for record in records:
-             
-            # get all relevant data
-            type = record['type']
-            pointer = record['pointer']
-            auth_hrn = self.hrn
-            login_base = ''
-            if pointer == -1:
-                continue
-
-            #print>>sys.stderr, " \r\n \r\n \t\t fill_record_hrns : sites %s \r\n \t\t record %s " %(sites, record)
-            if 'site_id' in record:
-                site = sites[record['site_id']]
-		#print>>sys.stderr, " \r\n \r\n \t\t \t fill_record_hrns : sites %s \r\n \t\t\t site sites[record['site_id']] %s " %(sites,site)	
-                login_base = site['login_base']
-                record['site'] = ".".join([auth_hrn, login_base])
-            if 'person_ids' in record:
-                emails = [persons[person_id]['email'] for person_id in record['person_ids'] \
-                          if person_id in  persons]
-                usernames = [email.split('@')[0] for email in emails]
-                person_hrns = [".".join([auth_hrn, login_base, username]) for username in usernames]
-		#print>>sys.stderr, " \r\n \r\n \t\t ____ person_hrns : %s " %(person_hrns)
-                record['persons'] = person_hrns 
-            if 'slice_ids' in record:
-                slicenames = [slices[slice_id]['name'] for slice_id in record['slice_ids'] \
-                              if slice_id in slices]
-                slice_hrns = [slicename_to_hrn(auth_hrn, slicename) for slicename in slicenames]
-                record['slices'] = slice_hrns
-            if 'node_ids' in record:
-                hostnames = [nodes[node_id]['hostname'] for node_id in record['node_ids'] \
-                             if node_id in nodes]
-                node_hrns = [hostname_to_hrn(auth_hrn, login_base, hostname) for hostname in hostnames]
-                record['nodes'] = node_hrns
-            if 'site_ids' in record:
-                login_bases = [sites[site_id]['login_base'] for site_id in record['site_ids'] \
-                               if site_id in sites]
-                site_hrns = [".".join([auth_hrn, lbase]) for lbase in login_bases]
-                record['sites'] = site_hrns
-	#print>>sys.stderr, "\r\n \r\rn \t\t \t <<<<<<<<<<<<<<<<<<<<<<<<  fill_record_hrns records %s : "%(records)  
-        return records   
+ 
 
     def fill_record_sfa_info(self, records):
 

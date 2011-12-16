@@ -326,30 +326,7 @@ class OARapi:
 
 	#GetNodes moved to slabdriver.py
             
-    def GetSites(self, site_filter= None, return_fields=None):
-        print>>sys.stderr, " \r\n GetSites+++++++++++++++++" 
-        self.parser.SendRequest("GET_resources_full")	
-        site_dict = self.parser.GetSitesFromOARParse()
-        return_site_list = []
-        site = site_dict.values()[0]
-        Users = SenslabImportUsers()
-                
-        #print>>sys.stderr, " \r\n  GetSites sites_dict %s site_filter %s  \r\n \r\n  \r\n \r\n------site %s" %(site_dict,site_filter,site ) 
-        admins_dict ={'person_ids': Users.GetPIs(site['site_id'])}
-        site.update(admins_dict)	
-        
-        slice_list = Users.GetSlices()
-        for sl in slice_list:
-                #print>>sys.stderr, " \r\n  GetSites sl %s" %(sl)
-                if sl['site_id'] == site['site_id']:
-                        site['slice_ids'].append(sl['slice_id'])
-        
-        if not (site_filter or return_fields):
-                return_site_list = site_dict.values()
-                return return_site_list
-        
-        return_site_list = parse_filter(site_dict.values(),site_filter ,'site', return_fields)
-        return return_site_list
+
     
                     
     def GetJobs(self):
