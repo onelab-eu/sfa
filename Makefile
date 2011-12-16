@@ -163,7 +163,7 @@ clientsync:
 	+$(RSYNC)  $(BINS) $(SSHURL)/usr/bin/
 
 ricasync:
-	+$(RSYNC) --relative ./sfa/fd ./sfa/generic/fd.py $(SSHURL)/usr/lib\*/python2.\*/site-packages/
+	+$(RSYNC) --relative ./sfa/fd ./sfa/generic/fd.py ./sfa/rspecs/versions/federica.py $(SSHURL)/usr/lib\*/python2.\*/site-packages/
 
 .PHONY: sync fastsync clientsync
 
