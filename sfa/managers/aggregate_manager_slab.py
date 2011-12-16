@@ -19,35 +19,49 @@ from sfa.server.sfaapi import SfaApi
 from sfa.senslab.OARrspec import OARrspec
 import sfa.plc.peers as peers
 #from sfa.plc.aggregate import Aggregate
-from sfa.senslab.slices import Slices
+from sfa.senslab.slices import SlabSlices
 
 class AggregateManager:
+    def __init__ (self, config): pass
+    # essentially a union of the core version, the generic version (this code) and
+    # whatever the driver needs to expose
+    
+    
+    def GetVersion(self, api, options):
 
-    def __init__ (self):
-        # xxx Thierry : caching at the aggregate level sounds wrong...
-        #self.caching=True
-        self.caching=False
-    
-    def GetVersion(self, api, options={}):
-    
-        version_manager = VersionManager()
-        ad_rspec_versions = []
-        request_rspec_versions = []
-        for rspec_version in version_manager.versions:
-            if rspec_version.content_type in ['*', 'ad']:
-                ad_rspec_versions.append(rspec_version.to_dict())
-            if rspec_version.content_type in ['*', 'request']:
-                request_rspec_versions.append(rspec_version.to_dict()) 
         xrn=Xrn(api.hrn)
-        version_more = {'interface':'aggregate',
-                        'sfa': 2,
-                        'geni_api': api.config.SFA_AGGREGATE_API_VERSION,
-                        'testbed':'myplc',
-                        'hrn':xrn.get_hrn(),
-                        'geni_request_rspec_versions': request_rspec_versions,
-                        'geni_ad_rspec_versions': ad_rspec_versions,
-                        }
-        return version_core(version_more)
+        version = version_core()
+        version_generic = {'interface':'aggregate',
+                            'sfa': 2,
+                            'geni_api': 2,
+                            'hrn':xrn.get_hrn(),
+                            'urn':xrn.get_urn(),
+                            }
+        version.update(version_generic)
+        testbed_version = self.driver.aggregate_version()
+        version.update(testbed_version)
+        return version
+     
+    #def GetVersion(self, api, options={}):
+    
+        #version_manager = VersionManager()
+        #ad_rspec_versions = []
+        #request_rspec_versions = []
+        #for rspec_version in version_manager.versions:
+            #if rspec_version.content_type in ['*', 'ad']:
+                #ad_rspec_versions.append(rspec_version.to_dict())
+            #if rspec_version.content_type in ['*', 'request']:
+                #request_rspec_versions.append(rspec_version.to_dict()) 
+        #xrn=Xrn(api.hrn)
+        #version_more = {'interface':'aggregate',
+                        #'sfa': 2,
+                        #'geni_api': api.config.SFA_AGGREGATE_API_VERSION,
+                        #'testbed':'myplc',
+                        #'hrn':xrn.get_hrn(),
+                        #'geni_request_rspec_versions': request_rspec_versions,
+                        #'geni_ad_rspec_versions': ad_rspec_versions,
+                        #}
+        #return version_core(version_more)
     
     def _get_registry_objects(self, slice_xrn, creds, users):
         """
@@ -168,7 +182,7 @@ class AggregateManager:
         if Callids().already_handled(call_id): return ""
         aggregate = OARrspec(api)
         #aggregate = Aggregate(api)
-        slices = Slices(api)
+        slices = SlabSlices(api)
         (hrn, _) = urn_to_hrn(slice_xrn)
         peer = slices.get_peer(hrn)
         sfa_peer = slices.get_sfa_peer(hrn)
@@ -339,7 +353,7 @@ class AggregateManager:
     def GetTicket(self, api, xrn, creds, rspec, users, options={}):
     
         (slice_hrn, _) = urn_to_hrn(xrn)
-        slices = Slices(api)
+        slices = SlabSlices(api)
         peer = slices.get_peer(slice_hrn)
         sfa_peer = slices.get_sfa_peer(slice_hrn)
     

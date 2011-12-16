@@ -10,7 +10,7 @@ from sfa.util.xrn import Xrn
 
 MAXINT =  2L**31-1
 
-class Slices:
+class SlabSlices:
 
     rspec_to_slice_tag = {'max_rate':'net_max_rate'}
 

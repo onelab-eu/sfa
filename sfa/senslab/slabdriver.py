@@ -5,6 +5,9 @@ from sfa.util.sfalogging import logger
 from sfa.util.table import SfaTable
 from sfa.util.defaultdict import defaultdict
 
+
+from sfa.rspecs.version_manager import VersionManager
+
 from sfa.util.xrn import hrn_to_urn
 from sfa.util.plxrn import slicename_to_hrn, hostname_to_hrn, hrn_to_pl_slicename, hrn_to_pl_login_base
 
@@ -54,7 +57,42 @@ class SlabDriver ():
         self.db = SlabDB()
         #self.logger=sfa_logger()
       
-	
+    def create_sliver (self, slice_urn, slice_hrn, creds, rspec_string, users, options):
+
+        aggregate = SlabAggregate(self)
+        slices = SlabSlices(self)
+        peer = slices.get_peer(slice_hrn)
+        sfa_peer = slices.get_sfa_peer(slice_hrn)
+        slice_record=None    
+        if users:
+            slice_record = users[0].get('slice_record', {})
+    
+        # parse rspec
+        rspec = RSpec(rspec_string)
+        requested_attributes = rspec.version.get_slice_attributes()
+        
+        # ensure site record exists
+        site = slices.verify_site(slice_hrn, slice_record, peer, sfa_peer, options=options)
+        # ensure slice record exists
+        slice = slices.verify_slice(slice_hrn, slice_record, peer, sfa_peer, options=options)
+        # ensure person records exists
+        persons = slices.verify_persons(slice_hrn, slice, users, peer, sfa_peer, options=options)
+        # ensure slice attributes exists
+        #slices.verify_slice_attributes(slice, requested_attributes, options=options)
+        
+        # add/remove slice from nodes
+        requested_slivers = [node.get('component_name') for node in rspec.version.get_nodes_with_slivers()]
+        nodes = slices.verify_slice_nodes(slice, requested_slivers, peer) 
+    
+        # add/remove links links 
+        #slices.verify_slice_links(slice, rspec.version.get_link_requests(), nodes)
+    
+        # handle MyPLC peer association.
+        # only used by plc and ple.
+        #slices.handle_peer(site, slice, persons, peer)
+        
+        return aggregate.get_rspec(slice_xrn=slice_urn, version=rspec.version)
+            
     def GetPersons(self, person_filter=None, return_fields=None):
         
         person_list = self.ldap.ldapFind({'authority': self.root_auth })
@@ -108,7 +146,30 @@ class SlabDriver ():
         return_slice_list  = parse_filter(sliceslist, slice_filter,'slice', return_fields)
         print >>sys.stderr, " \r\n \r\n SLABDRIVER.PY  GetSlices  return_slice_list %s" %(return_slice_list)
         return return_slice_list
-       
+    
+    def testbed_name (self): return "senslab2" 
+         
+    # 'geni_request_rspec_versions' and 'geni_ad_rspec_versions' are mandatory
+    def aggregate_version (self):
+        version_manager = VersionManager()
+        ad_rspec_versions = []
+        request_rspec_versions = []
+        for rspec_version in version_manager.versions:
+            if rspec_version.content_type in ['*', 'ad']:
+                ad_rspec_versions.append(rspec_version.to_dict())
+            if rspec_version.content_type in ['*', 'request']:
+                request_rspec_versions.append(rspec_version.to_dict()) 
+        return {
+            'testbed':self.testbed_name(),
+            'geni_request_rspec_versions': request_rspec_versions,
+            'geni_ad_rspec_versions': ad_rspec_versions,
+            }
+          
+          
+          
+          
+          
+          
     ##
     # Convert SFA fields to PLC fields for use when registering up updating
     # registry record in the PLC database
@@ -475,7 +536,10 @@ class SlabDriver ():
 		
             #print>>sys.stderr, "\r\n \r\rn \t\t \t <<<<<<<<<<<<<<<<<<<<<<<<  fill_record_sfa_info sfa_info %s  \r\n record %s : "%(sfa_info,record)  
             record.update(sfa_info)
-
+            
+    def augment_records_with_testbed_info (self, sfa_records):
+        return self.fill_record_info (sfa_records)
+    
     def fill_record_info(self, records):
         """
         Given a SFA record, fill in the senslab specific and SFA specific
