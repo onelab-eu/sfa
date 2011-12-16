@@ -839,6 +839,8 @@ or with an slice hrn, shows currently provisioned resources
                 api_options['geni_rspec_version'] = {'type': 'geni', 'version': '3.0'}    
             # always send call_id to v2 servers
             api_options ['call_id'] = unique_call_id()
+            # ask for cached value if available
+            api_options ['cached'] = True
             # the V2 form
             result = server.ListResources (creds, api_options)
         # V1
