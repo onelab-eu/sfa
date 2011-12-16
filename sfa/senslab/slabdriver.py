@@ -175,61 +175,115 @@ class SlabDriver(Driver):
     
         return slice_urns
     
-    
+    #No site or node register supported
     def register (self, sfa_record, hrn, pub_key):
         type = sfa_record['type']
         pl_record = self.sfa_fields_to_pl_fields(type, hrn, sfa_record)
     
-        if type == 'authority':
-            sites = self.shell.GetSites([pl_record['login_base']])
-            if not sites:
-                pointer = self.shell.AddSite(pl_record)
-            else:
-                pointer = sites[0]['site_id']
+        #if type == 'authority':
+            #sites = self.shell.GetSites([pl_record['login_base']])
+            #if not sites:
+                #pointer = self.shell.AddSite(pl_record)
+            #else:
+                #pointer = sites[0]['site_id']
     
-        elif type == 'slice':
+        if type == 'slice':
             acceptable_fields=['url', 'instantiation', 'name', 'description']
             for key in pl_record.keys():
                 if key not in acceptable_fields:
                     pl_record.pop(key)
-            slices = self.shell.GetSlices([pl_record['name']])
+            slices = self.GetSlices([pl_record['hrn']])
             if not slices:
-                    pointer = self.shell.AddSlice(pl_record)
+                    pointer = self.AddSlice(pl_record)
             else:
                     pointer = slices[0]['slice_id']
     
         elif type == 'user':
-            persons = self.shell.GetPersons([sfa_record['email']])
+            persons = self.GetPersons([sfa_record['hrn']])
             if not persons:
-                pointer = self.shell.AddPerson(dict(sfa_record))
+                pointer = self.AddPerson(dict(sfa_record))
+                #add in LDAP 
             else:
                 pointer = persons[0]['person_id']
-    
-            if 'enabled' in sfa_record and sfa_record['enabled']:
-                self.shell.UpdatePerson(pointer, {'enabled': sfa_record['enabled']})
+                
+            #Does this make sense to senslab ?
+            #if 'enabled' in sfa_record and sfa_record['enabled']:
+                #self.UpdatePerson(pointer, {'enabled': sfa_record['enabled']})
+                
             # add this person to the site only if she is being added for the first
             # time by sfa and doesont already exist in plc
             if not persons or not persons[0]['site_ids']:
                 login_base = get_leaf(sfa_record['authority'])
-                self.shell.AddPersonToSite(pointer, login_base)
+                self.AddPersonToSite(pointer, login_base)
     
             # What roles should this user have?
-            self.shell.AddRoleToPerson('user', pointer)
+            self.AddRoleToPerson('user', pointer)
             # Add the user's key
             if pub_key:
-                self.shell.AddPersonKey(pointer, {'key_type' : 'ssh', 'key' : pub_key})
-    
-        elif type == 'node':
-            login_base = hrn_to_pl_login_base(sfa_record['authority'])
-            nodes = self.shell.GetNodes([pl_record['hostname']])
-            if not nodes:
-                pointer = self.shell.AddNode(login_base, pl_record)
-            else:
-                pointer = nodes[0]['node_id']
+                self.AddPersonKey(pointer, {'key_type' : 'ssh', 'key' : pub_key})
+                
+        #No node adding outside OAR
+        #elif type == 'node':
+            #login_base = hrn_to_pl_login_base(sfa_record['authority'])
+            #nodes = self.GetNodes([pl_record['hostname']])
+            #if not nodes:
+                #pointer = self.AddNode(login_base, pl_record)
+            #else:
+                #pointer = nodes[0]['node_id']
     
         return pointer
             
-            
+    #No site or node record update allowed       
+    def update (self, old_sfa_record, new_sfa_record, hrn, new_key):
+        pointer = old_sfa_record['pointer']
+        type = old_sfa_record['type']
+
+        # new_key implemented for users only
+        if new_key and type not in [ 'user' ]:
+            raise UnknownSfaType(type)
+        
+        #if (type == "authority"):
+            #self.shell.UpdateSite(pointer, new_sfa_record)
+    
+        if type == "slice":
+            pl_record=self.sfa_fields_to_pl_fields(type, hrn, new_sfa_record)
+            if 'name' in pl_record:
+                pl_record.pop('name')
+                self.UpdateSlice(pointer, pl_record)
+    
+        elif type == "user":
+            update_fields = {}
+            all_fields = new_sfa_record
+            for key in all_fields.keys():
+                if key in ['first_name', 'last_name', 'title', 'email',
+                           'password', 'phone', 'url', 'bio', 'accepted_aup',
+                           'enabled']:
+                    update_fields[key] = all_fields[key]
+            self.UpdatePerson(pointer, update_fields)
+    
+            if new_key:
+                # must check this key against the previous one if it exists
+                persons = self.GetPersons([pointer], ['key_ids'])
+                person = persons[0]
+                keys = person['key_ids']
+                keys = self.GetKeys(person['key_ids'])
+                
+                # Delete all stale keys
+                key_exists = False
+                for key in keys:
+                    if new_key != key['key']:
+                        self.DeleteKey(key['key_id'])
+                    else:
+                        key_exists = True
+                if not key_exists:
+                    self.AddPersonKey(pointer, {'key_type': 'ssh', 'key': new_key})
+    
+        #elif type == "node":
+            #self.UpdateNode(pointer, new_sfa_record)
+
+        return True
+        
+    
     def GetPersons(self, person_filter=None, return_fields=None):
         
         person_list = self.ldap.ldapFind({'authority': self.root_auth })
