@@ -255,8 +255,6 @@ class Sfi:
         # user specifies remote aggregate/sm/component                          
         if command in ("resources", "slices", "create", "delete", "start", "stop", 
                        "restart", "shutdown",  "get_ticket", "renew", "status"):
-            parser.add_option("-c", "--component", dest="component", default=None,
-                             help="component hrn")
             parser.add_option("-d", "--delegate", dest="delegate", default=None, 
                              action="store_true",
                              help="Include a credential delegated to the user's root"+\
@@ -268,10 +266,15 @@ class Sfi:
                             help="type filter ([all]|user|slice|authority|node|aggregate)",
                             choices=("all", "user", "slice", "authority", "node", "aggregate"),
                             default="all")
-        # display formats
         if command in ("resources"):
+            # rspec version
             parser.add_option("-r", "--rspec-version", dest="rspec_version", default="SFA 1",
                               help="schema type and version of resulting RSpec")
+            # disable/enable cached rspecs
+            parser.add_option("-c", "--current", dest="current", default=False,
+                              action="store_true",  
+                              help="Request the current rspec bypassing the cache. Cached rspecs are returned by default")
+            # display formats
             parser.add_option("-f", "--format", dest="format", type="choice",
                              help="display format ([xml]|dns|ip)", default="xml",
                              choices=("xml", "dns", "ip"))
@@ -828,6 +831,11 @@ or with an slice hrn, shows currently provisioned resources
             api_options['geni_slice_urn'] = hrn_to_urn(hrn, 'slice')
         if options.info:
             api_options['info'] = options.info
+        if options.current:
+            if options.current == True:
+                api_options['cached'] = False
+            else:
+                api_options['cached'] = True
         if options.rspec_version:
             version_manager = VersionManager()
             server_version = self.get_cached_server_version(server)
