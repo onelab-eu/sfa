@@ -93,6 +93,7 @@ class SFAv1(BaseVersion):
         attributes = []
         nodes_with_slivers = self.get_nodes_with_slivers()
         for default_attribute in self.get_default_sliver_attributes(network):
+            attribute = default_attribute.copy()
             attribute['node_id'] = None
             attributes.append(attribute)
         for node in nodes_with_slivers:
@@ -193,6 +194,9 @@ class SFAv1(BaseVersion):
         """
         Merge contents for specified rspec with current rspec
         """
+
+        if not in_rspec:
+            return
 
         from sfa.rspecs.rspec import RSpec
         if isinstance(in_rspec, RSpec):
