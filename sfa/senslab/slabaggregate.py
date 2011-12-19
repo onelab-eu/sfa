@@ -9,7 +9,7 @@ import json
 
 from sfa.rspecs.version_manager import VersionManager
 from sfa.senslab.OARrestapi import *
-from sfa.senslab.slabdriver import SlabDriver
+#from sfa.senslab.slabdriver import SlabDriver
 from sfa.util.config import Config
 from sfa.util.xrn import hrn_to_urn, urn_to_hrn, urn_to_sliver_id
 from sfa.util.plxrn import PlXrn, hostname_to_urn, hrn_to_pl_slicename
@@ -47,11 +47,11 @@ class SlabAggregate:
 
     user_options = {}
     
-    def __init__(self ,api):
+    def __init__(self ,driver):
 	self.OARImporter = OARapi()	
-        self.driver = SlabDriver(Config())
-	self.api = api 
-	print >>sys.stderr,"\r\n \r\n \t\t_____________INIT Slabaggregate api : %s" %(api)
+        self.driver = driver
+	#self.api = api 
+	print >>sys.stderr,"\r\n \r\n \t\t_____________INIT Slabaggregate api : %s" %(driver)
 
 
     def get_slice_and_slivers(self, slice_xrn):

@@ -14,16 +14,19 @@ class SlabSlices:
 
     rspec_to_slice_tag = {'max_rate':'net_max_rate'}
 
-    def __init__(self, api, ttl = .5, origin_hrn=None):
-        self.api = api
-        #filepath = path + os.sep + filename
-        self.policy = Policy(self.api)    
-        self.origin_hrn = origin_hrn
-        self.registry = api.registries[api.hrn]
-        self.credential = api.getCredential()
-        self.nodes = []
-        self.persons = []
+    #def __init__(self, api, ttl = .5, origin_hrn=None):
+        #self.api = api
+        ##filepath = path + os.sep + filename
+        #self.policy = Policy(self.api)    
+        #self.origin_hrn = origin_hrn
+        #self.registry = api.registries[api.hrn]
+        #self.credential = api.getCredential()
+        #self.nodes = []
+        #self.persons = []
 
+
+    def __init__(self, driver):
+        self.driver = driver
     #def get_slivers(self, xrn, node=None):
         #hrn, type = urn_to_hrn(xrn)
          
@@ -159,7 +162,7 @@ class SlabSlices:
         slice_authority = get_authority(hrn)
         site_authority = get_authority(slice_authority)
 
-        if site_authority != self.api.hrn:
+        if site_authority != self.driver.hrn:
             sfa_peer = site_authority
 
         return sfa_peer
@@ -168,7 +171,7 @@ class SlabSlices:
         current_slivers = []
         deleted_nodes = []
         if slice['node_ids']:
-            nodes = self.api.driver.GetNodes(slice['node_ids'], ['hostname'])
+            nodes = self.driver.GetNodes(slice['node_ids'], ['hostname'])
             current_slivers = [node['hostname'] for node in nodes]
     
             # remove nodes not in rspec
@@ -179,21 +182,21 @@ class SlabSlices:
         print>>sys.stderr , "\r\n \r\n \t slices.py  verify_slice_nodes added_nodes %s slice %s" %( added_nodes,slice)
         try:
             if peer:
-                self.api.driver.UnBindObjectFromPeer('slice', slice['slice_id'], peer['shortname'])
+                self.driver.UnBindObjectFromPeer('slice', slice['slice_id'], peer['shortname'])
             #PI is a list, get the only username in this list
             #so that the OAR/LDAP knows the user: remove the authority from the name
             tmp=  slice['PI'][0].split(".")
             username = tmp[(len(tmp)-1)]
-            self.api.driver.AddSliceToNodes(slice['name'], added_nodes, username)
+            self.driver.AddSliceToNodes(slice['name'], added_nodes, username)
             if deleted_nodes:
-                self.api.driver.DeleteSliceFromNodes(slice['name'], deleted_nodes)
+                self.driver.DeleteSliceFromNodes(slice['name'], deleted_nodes)
 
         except: 
-            self.api.logger.log_exc('Failed to add/remove slice from nodes')
+            self.logger.log_exc('Failed to add/remove slice from nodes')
 
     def free_egre_key(self):
         used = set()
-        for tag in self.api.driver.GetSliceTags({'tagname': 'egre_key'}):
+        for tag in self.driver.GetSliceTags({'tagname': 'egre_key'}):
                 used.add(int(tag['value']))
 
         for i in range(1, 256):
@@ -218,45 +221,47 @@ class SlabSlices:
             # bind site
             try:
                 if site:
-                    self.api.driver.BindObjectToPeer('site', site['site_id'], peer['shortname'], slice['site_id'])
+                    self.driver.BindObjectToPeer('site', site['site_id'], peer['shortname'], slice['site_id'])
             except Exception,e:
-                self.api.driver.DeleteSite(site['site_id'])
+                self.driver.DeleteSite(site['site_id'])
                 raise e
             
             # bind slice
             try:
                 if slice:
-                    self.api.driver.BindObjectToPeer('slice', slice['slice_id'], peer['shortname'], slice['slice_id'])
+                    self.driver.BindObjectToPeer('slice', slice['slice_id'], peer['shortname'], slice['slice_id'])
             except Exception,e:
-                self.api.driver.DeleteSlice(slice['slice_id'])
+                self.driver.DeleteSlice(slice['slice_id'])
                 raise e 
 
             # bind persons
             for person in persons:
                 try:
-                    self.api.driver.BindObjectToPeer('person', 
+                    self.driver.BindObjectToPeer('person', 
                                                      person['person_id'], peer['shortname'], person['peer_person_id'])
 
                     for (key, remote_key_id) in zip(person['keys'], person['key_ids']):
                         try:
-                            self.api.driver.BindObjectToPeer( 'key', key['key_id'], peer['shortname'], remote_key_id)
+                            self.driver.BindObjectToPeer( 'key', key['key_id'], peer['shortname'], remote_key_id)
                         except:
-                            self.api.driver.DeleteKey(key['key_id'])
-                            self.api.logger("failed to bind key: %s to peer: %s " % (key['key_id'], peer['shortname']))
+                            self.driver.DeleteKey(key['key_id'])
+                            self.logger("failed to bind key: %s to peer: %s " % (key['key_id'], peer['shortname']))
                 except Exception,e:
-                    self.api.driver.DeletePerson(person['person_id'])
+                    self.driver.DeletePerson(person['person_id'])
                     raise e       
 
         return slice
 
-    def verify_site(self, slice_xrn, slice_record={}, peer=None, sfa_peer=None):
+    def verify_site(self, slice_xrn, slice_record={}, peer=None, sfa_peer=None, options={}):
         (slice_hrn, type) = urn_to_hrn(slice_xrn)
         site_hrn = get_authority(slice_hrn)
         # login base can't be longer than 20 characters
-        slicename = hrn_to_pl_slicename(slice_hrn)
-        authority_name = slicename.split('_')[0]
+        #slicename = hrn_to_pl_slicename(slice_hrn)
+        authority_name = slice_hrn.split('.')[0]
         login_base = authority_name[:20]
-        sites = self.api.driver.GetSites(login_base)
+        print >>sys.stderr, " \r\n \r\n \t\t SLABSLICES.PY verify_site authority_name %s  login_base %s slice_hrn %s" %(authority_name,login_base,slice_hrn)
+        
+        sites = self.driver.GetSites(login_base)
         if not sites:
             # create new site record
             site = {'name': 'geni.%s' % authority_name,
@@ -268,30 +273,30 @@ class SlabSlices:
                     'peer_site_id': None}
             if peer:
                 site['peer_site_id'] = slice_record.get('site_id', None)
-            site['site_id'] = self.api.driver.AddSite(site)
+            site['site_id'] = self.driver.AddSite(site)
             # exempt federated sites from monitor policies
-            self.api.driver.AddSiteTag(site['site_id'], 'exempt_site_until', "20200101")
+            self.driver.AddSiteTag(site['site_id'], 'exempt_site_until', "20200101")
             
-            # is this still necessary?
-            # add record to the local registry 
-            if sfa_peer and slice_record:
-                peer_dict = {'type': 'authority', 'hrn': site_hrn, \
-                             'peer_authority': sfa_peer, 'pointer': site['site_id']}
-                self.registry.register_peer_object(self.credential, peer_dict)
+            ## is this still necessary?
+            ## add record to the local registry 
+            #if sfa_peer and slice_record:
+                #peer_dict = {'type': 'authority', 'hrn': site_hrn, \
+                             #'peer_authority': sfa_peer, 'pointer': site['site_id']}
+                #self.registry.register_peer_object(self.credential, peer_dict)
         else:
             site =  sites[0]
             if peer:
                 # unbind from peer so we can modify if necessary. Will bind back later
-                self.api.driver.UnBindObjectFromPeer('site', site['site_id'], peer['shortname']) 
+                self.driver.UnBindObjectFromPeer('site', site['site_id'], peer['shortname']) 
         
         return site        
 
-    def verify_slice(self, slice_hrn, slice_record, peer, sfa_peer):
+    def verify_slice(self, slice_hrn, slice_record, peer, sfa_peer, options={} ):
         #slicename = hrn_to_pl_slicename(slice_hrn)
-        parts = hrn_to_pl_slicename(slice_hrn).split("_")
-        login_base = parts[0]
+        #parts = hrn_to_pl_slicename(slice_hrn).split("_")
+        login_base = slice_hrn.split(".")[0]
         slicename = slice_hrn
-        slices = self.api.driver.GetSlices([slicename]) 
+        slices = self.driver.GetSlices([slicename]) 
         print>>sys.stderr, " \r\n \r\rn Slices.py verify_slice slicename %s slices %s slice_record %s"%(slicename ,slices, slice_record)
         if not slices:
             slice = {'name': slicename,
@@ -299,33 +304,33 @@ class SlabSlices:
                      #'description': slice_record.get('description', slice_hrn)
                      }
             # add the slice                          
-            slice['slice_id'] = self.api.driver.AddSlice(slice)
+            slice['slice_id'] = self.driver.AddSlice(slice)
             slice['node_ids'] = []
             slice['person_ids'] = []
             if peer:
                 slice['peer_slice_id'] = slice_record.get('slice_id', None) 
             # mark this slice as an sfa peer record
-            if sfa_peer:
-                peer_dict = {'type': 'slice', 'hrn': slice_hrn, 
-                             'peer_authority': sfa_peer, 'pointer': slice['slice_id']}
-                self.registry.register_peer_object(self.credential, peer_dict)
+            #if sfa_peer:
+                #peer_dict = {'type': 'slice', 'hrn': slice_hrn, 
+                             #'peer_authority': sfa_peer, 'pointer': slice['slice_id']}
+                #self.registry.register_peer_object(self.credential, peer_dict)
         else:
             slice = slices[0]
             slice.update(slice_record)
-            del slice['last_updated']
-            del slice['date_created']
+            #del slice['last_updated']
+            #del slice['date_created']
             if peer:
                 slice['peer_slice_id'] = slice_record.get('slice_id', None)
                 # unbind from peer so we can modify if necessary. Will bind back later
-                self.api.driver.UnBindObjectFromPeer('slice', slice['slice_id'], peer['shortname'])
+                self.driver.UnBindObjectFromPeer('slice', slice['slice_id'], peer['shortname'])
 	        #Update existing record (e.g. expires field) it with the latest info.
-            #if slice_record and slice['expires'] != slice_record['expires']:
-                #self.api.driver.UpdateSlice( slice['slice_id'], {'expires' : slice_record['expires']})
+            ##if slice_record and slice['expires'] != slice_record['expires']:
+                ##self.driver.UpdateSlice( slice['slice_id'], {'expires' : slice_record['expires']})
        
         return slice
 
     #def get_existing_persons(self, users):
-    def verify_persons(self, slice_hrn, slice_record, users, append=True):
+    def verify_persons(self, slice_hrn, slice_record, users,  peer, sfa_peer, options={}):
         users_by_id = {}
         users_by_hrn = {}
         users_dict = {}
@@ -348,20 +353,20 @@ class SlabSlices:
         if users_by_hrn:
             # get existing users by email 
            
-            existing_users = self.api.driver.GetPersons({'hrn': users_by_hrn.keys()}, 
+            existing_users = self.driver.GetPersons({'hrn': users_by_hrn.keys()}, 
                                                         ['hrn'])
-            #print>>sys.stderr, " \r\n \r\n \t slices.py HEEEEEEEEY===========verify_person  existing_users %s users_dict %s  " %(existing_users, users_dict) 
+            #print>>sys.stderr, " \r\n \r\n \t slices.py HEEEEEEEEY===========verify_person  existing_users %s users_dict %s user_by_id %s " %(existing_users, users_dict,users_by_id) 
             #existing_user_ids = [(users_dict[user['hrn']]['hrn'],users_dict[user['hrn']]['person_id'] ) for user in existing_users]
             for user in existing_users :
                 for  k in users_dict[user['hrn']] :
                     existing_user_ids.append (users_dict[user['hrn']][k])
 
-            #print>>sys.stderr, " \r\n \r\n slices.py verify_person   existing_user_ids %s " %(existing_user_ids)
+            print>>sys.stderr, " \r\n \r\n slices.py verify_person   existing_user_ids %s " %(existing_user_ids)
         #if users_by_id:
             #existing_user_ids.extend([user for user in users_by_id])
         #if users_by_site:
             ## get a list of user sites (based on requeste user urns
-            #site_list = self.api.driver.GetSites(users_by_site.keys(), \
+            #site_list = self.driver.GetSites(users_by_site.keys(), \
                 #['site_id', 'login_base', 'person_ids'])
             #sites = {}
             #site_user_ids = []
@@ -371,7 +376,7 @@ class SlabSlices:
                 #sites[site['site_id']] = site
                 #site_user_ids.extend(site['person_ids'])
 
-            #existing_site_persons_list = self.api.driver.GetPersons(site_user_ids,  
+            #existing_site_persons_list = self.driver.GetPersons(site_user_ids,  
                                                                     #['person_id', 'key_ids', 'email', 'site_ids'])
 
             ## all requested users are either existing users or new (added) users      
@@ -400,9 +405,10 @@ class SlabSlices:
         requested_user_ids = users_dict.keys()
         # existing slice users
         existing_slice_users_filter = {'hrn': slice_record.get('PI', [])}
-        #print>>sys.stderr, " \r\n \r\n slices.py verify_person requested_user_ids %s existing_slice_users_filter %s slice_record %s" %(requested_user_ids,existing_slice_users_filter,slice_record)
+        print>>sys.stderr, " \r\n \r\n slices.py verify_person requested_user_ids %s existing_slice_users_filter %s slice_record %s" %(requested_user_ids,existing_slice_users_filter,slice_record)
         
-        existing_slice_users = self.api.driver.GetPersons(existing_slice_users_filter,['hrn'])
+        existing_slice_users = self.driver.GetPersons(existing_slice_users_filter,['hrn'])
+        print>>sys.stderr, " \r\n \r\n slices.py verify_person   existing_slice_users %s " %(existing_slice_users)
         existing_slice_user_ids = []
         for user in existing_slice_users :
             for  k in users_dict[user['hrn']] :
@@ -418,10 +424,11 @@ class SlabSlices:
         updated_user_ids = set(existing_slice_user_ids).intersection(requested_user_ids)
         #print>>sys.stderr, " \r\n \r\n slices.py verify_persons  added_user_ids %s added_slice_user_ids %s " %(added_user_ids,added_slice_user_ids)
         #print>>sys.stderr, " \r\n \r\n slices.py verify_persons  removed_user_ids %s updated_user_ids %s " %(removed_user_ids,updated_user_ids)
-        # Remove stale users (only if we are not appending).
+        # Remove stale users (only if we are not appending) 
+        append = options.get('append', True)
         if append == False:
             for removed_user_id in removed_user_ids:
-                self.api.driver.DeletePersonFromSlice(removed_user_id, slice_record['name'])
+                self.driver.DeletePersonFromSlice(removed_user_id, slice_record['name'])
         # update_existing users
         updated_users_list = [user for user in existing_slice_users if user['hrn'] in \
           updated_user_ids]
@@ -442,20 +449,20 @@ class SlabSlices:
                 
             } 
             #print>>sys.stderr, " \r\n \r\n slices.py verify_persons   added_user_ids %s " %(added_user_ids)
-            person['person_id'] = self.api.driver.AddPerson(person)
+            person['person_id'] = self.driver.AddPerson(person)
             if peer:
                 person['peer_person_id'] = added_user['person_id']
             added_persons.append(person)
            
             # enable the account 
-            self.api.driver.UpdatePerson(person['person_id'], {'enabled': True})
+            self.driver.UpdatePerson(person['person_id'], {'enabled': True})
             
             # add person to site
-            #self.api.driver.AddPersonToSite(added_user_id, login_base)
+            #self.driver.AddPersonToSite(added_user_id, login_base)
 
             #for key_string in added_user.get('keys', []):
                 #key = {'key':key_string, 'key_type':'ssh'}
-                #key['key_id'] = self.api.driver.AddPersonKey(person['person_id'], key)
+                #key['key_id'] = self.driver.AddPersonKey(person['person_id'], key)
                 #person['keys'].append(key)
 
             # add the registry record
@@ -466,7 +473,7 @@ class SlabSlices:
     
         for added_slice_user_id in added_slice_user_ids.union(added_user_ids):
             # add person to the slice 
-            self.api.driver.AddPersonToSlice(added_slice_user_id, slice_record['name'])
+            self.driver.AddPersonToSlice(added_slice_user_id, slice_record['name'])
             # if this is a peer record then it should already be bound to a peer.
             # no need to return worry about it getting bound later 
 
@@ -478,7 +485,7 @@ class SlabSlices:
         key_ids = []
         for person in persons:
             key_ids.extend(person['key_ids'])
-        keylist = self.api.driver.GetKeys(key_ids, ['key_id', 'key'])
+        keylist = self.driver.GetKeys(key_ids, ['key_id', 'key'])
         keydict = {}
         for key in keylist:
             keydict[key['key']] = key['key_id']     
@@ -500,16 +507,16 @@ class SlabSlices:
                     try:
                         if peer:
                             person = persondict[user['email']]
-                            self.api.driver.UnBindObjectFromPeer('person', person['person_id'], peer['shortname'])
-                        key['key_id'] = self.api.driver.AddPersonKey(user['email'], key)
+                            self.driver.UnBindObjectFromPeer('person', person['person_id'], peer['shortname'])
+                        key['key_id'] = self.driver.AddPersonKey(user['email'], key)
                         if peer:
                             key_index = user_keys.index(key['key'])
                             remote_key_id = user['key_ids'][key_index]
-                            self.api.driver.BindObjectToPeer('key', key['key_id'], peer['shortname'], remote_key_id)
+                            self.driver.BindObjectToPeer('key', key['key_id'], peer['shortname'], remote_key_id)
                             
                     finally:
                         if peer:
-                            self.api.driver.BindObjectToPeer('person', person['person_id'], peer['shortname'], user['person_id'])
+                            self.driver.BindObjectToPeer('person', person['person_id'], peer['shortname'], user['person_id'])
         
         # remove old keys (only if we are not appending)
         if append == False: 
@@ -518,8 +525,8 @@ class SlabSlices:
                 if keydict[existing_key_id] in removed_keys:
                     try:
                         if peer:
-                            self.api.driver.UnBindObjectFromPeer('key', existing_key_id, peer['shortname'])
-                        self.api.driver.DeleteKey(existing_key_id)
+                            self.driver.UnBindObjectFromPeer('key', existing_key_id, peer['shortname'])
+                        self.driver.DeleteKey(existing_key_id)
                     except:
                         pass   
 
@@ -528,14 +535,14 @@ class SlabSlices:
         filter = {'category': '*slice*'}
         if not admin:
             filter['|roles'] = ['user']
-        slice_attributes = self.api.driver.GetTagTypes(filter)
+        slice_attributes = self.driver.GetTagTypes(filter)
         valid_slice_attribute_names = [attribute['tagname'] for attribute in slice_attributes]
 
         # get sliver attributes
         added_slice_attributes = []
         removed_slice_attributes = []
         ignored_slice_attribute_names = []
-        existing_slice_attributes = self.api.driver.GetSliceTags({'slice_id': slice['slice_id']})
+        existing_slice_attributes = self.driver.GetSliceTags({'slice_id': slice['slice_id']})
 
         # get attributes that should be removed
         for slice_tag in existing_slice_attributes:
@@ -573,95 +580,95 @@ class SlabSlices:
         # remove stale attributes
         for attribute in removed_slice_attributes:
             try:
-                self.api.driver.DeleteSliceTag(attribute['slice_tag_id'])
+                self.driver.DeleteSliceTag(attribute['slice_tag_id'])
             except Exception, e:
-                self.api.logger.warn('Failed to remove sliver attribute. name: %s, value: %s, node_id: %s\nCause:%s'\
+                self.logger.warn('Failed to remove sliver attribute. name: %s, value: %s, node_id: %s\nCause:%s'\
                                 % (name, value,  node_id, str(e)))
 
         # add requested_attributes
         for attribute in added_slice_attributes:
             try:
-                self.api.driver.AddSliceTag(slice['name'], attribute['name'], attribute['value'], attribute.get('node_id', None))
+                self.driver.AddSliceTag(slice['name'], attribute['name'], attribute['value'], attribute.get('node_id', None))
             except Exception, e:
-                self.api.logger.warn('Failed to add sliver attribute. name: %s, value: %s, node_id: %s\nCause:%s'\
+                self.logger.warn('Failed to add sliver attribute. name: %s, value: %s, node_id: %s\nCause:%s'\
                                 % (name, value,  node_id, str(e)))
 
-    def create_slice_aggregate(self, xrn, rspec):
-        hrn, type = urn_to_hrn(xrn)
-        # Determine if this is a peer slice
-        peer = self.get_peer(hrn)
-        sfa_peer = self.get_sfa_peer(hrn)
+    #def create_slice_aggregate(self, xrn, rspec):
+        #hrn, type = urn_to_hrn(xrn)
+        ## Determine if this is a peer slice
+        #peer = self.get_peer(hrn)
+        #sfa_peer = self.get_sfa_peer(hrn)
 
-        spec = RSpec(rspec)
-        # Get the slice record from sfa
-        slicename = hrn_to_pl_slicename(hrn) 
-        slice = {}
-        slice_record = None
-        registry = self.api.registries[self.api.hrn]
-        credential = self.api.getCredential()
+        #spec = RSpec(rspec)
+        ## Get the slice record from sfa
+        #slicename = hrn_to_pl_slicename(hrn) 
+        #slice = {}
+        #slice_record = None
+        #registry = self.api.registries[self.api.hrn]
+        #credential = self.api.getCredential()
 
-        site_id, remote_site_id = self.verify_site(registry, credential, hrn, peer, sfa_peer)
-        slice = self.verify_slice(registry, credential, hrn, site_id, remote_site_id, peer, sfa_peer)
+        #site_id, remote_site_id = self.verify_site(registry, credential, hrn, peer, sfa_peer)
+        #slice = self.verify_slice(registry, credential, hrn, site_id, remote_site_id, peer, sfa_peer)
 
-        # find out where this slice is currently running
-        nodelist = self.api.driver.GetNodes(slice['node_ids'], ['hostname'])
-        hostnames = [node['hostname'] for node in nodelist]
+        ## find out where this slice is currently running
+        #nodelist = self.driver.GetNodes(slice['node_ids'], ['hostname'])
+        #hostnames = [node['hostname'] for node in nodelist]
 
-        # get netspec details
-        nodespecs = spec.getDictsByTagName('NodeSpec')
+        ## get netspec details
+        #nodespecs = spec.getDictsByTagName('NodeSpec')
 
-        # dict in which to store slice attributes to set for the nodes
-        nodes = {}
-        for nodespec in nodespecs:
-            if isinstance(nodespec['name'], list):
-                for nodename in nodespec['name']:
-                    nodes[nodename] = {}
-                    for k in nodespec.keys():
-                        rspec_attribute_value = nodespec[k]
-                        if (self.rspec_to_slice_tag.has_key(k)):
-                            slice_tag_name = self.rspec_to_slice_tag[k]
-                            nodes[nodename][slice_tag_name] = rspec_attribute_value
-            elif isinstance(nodespec['name'], StringTypes):
-                nodename = nodespec['name']
-                nodes[nodename] = {}
-                for k in nodespec.keys():
-                    rspec_attribute_value = nodespec[k]
-                    if (self.rspec_to_slice_tag.has_key(k)):
-                        slice_tag_name = self.rspec_to_slice_tag[k]
-                        nodes[nodename][slice_tag_name] = rspec_attribute_value
+        ## dict in which to store slice attributes to set for the nodes
+        #nodes = {}
+        #for nodespec in nodespecs:
+            #if isinstance(nodespec['name'], list):
+                #for nodename in nodespec['name']:
+                    #nodes[nodename] = {}
+                    #for k in nodespec.keys():
+                        #rspec_attribute_value = nodespec[k]
+                        #if (self.rspec_to_slice_tag.has_key(k)):
+                            #slice_tag_name = self.rspec_to_slice_tag[k]
+                            #nodes[nodename][slice_tag_name] = rspec_attribute_value
+            #elif isinstance(nodespec['name'], StringTypes):
+                #nodename = nodespec['name']
+                #nodes[nodename] = {}
+                #for k in nodespec.keys():
+                    #rspec_attribute_value = nodespec[k]
+                    #if (self.rspec_to_slice_tag.has_key(k)):
+                        #slice_tag_name = self.rspec_to_slice_tag[k]
+                        #nodes[nodename][slice_tag_name] = rspec_attribute_value
 
-                for k in nodespec.keys():
-                    rspec_attribute_value = nodespec[k]
-                    if (self.rspec_to_slice_tag.has_key(k)):
-                        slice_tag_name = self.rspec_to_slice_tag[k]
-                        nodes[nodename][slice_tag_name] = rspec_attribute_value
+                #for k in nodespec.keys():
+                    #rspec_attribute_value = nodespec[k]
+                    #if (self.rspec_to_slice_tag.has_key(k)):
+                        #slice_tag_name = self.rspec_to_slice_tag[k]
+                        #nodes[nodename][slice_tag_name] = rspec_attribute_value
 
-        node_names = nodes.keys()
-        # remove nodes not in rspec
-        deleted_nodes = list(set(hostnames).difference(node_names))
-        # add nodes from rspec
-        added_nodes = list(set(node_names).difference(hostnames))
+        #node_names = nodes.keys()
+        ## remove nodes not in rspec
+        #deleted_nodes = list(set(hostnames).difference(node_names))
+        ## add nodes from rspec
+        #added_nodes = list(set(node_names).difference(hostnames))
 
-        try:
-            if peer:
-                self.api.driver.UnBindObjectFromPeer('slice', slice['slice_id'], peer)
+        #try:
+            #if peer:
+                #self.driver.UnBindObjectFromPeer('slice', slice['slice_id'], peer)
 
-            self.api.driver.AddSliceToNodes(slicename, added_nodes) 
+            #self.driver.AddSliceToNodes(slicename, added_nodes) 
 
-            # Add recognized slice tags
-            for node_name in node_names:
-                node = nodes[node_name]
-                for slice_tag in node.keys():
-                    value = node[slice_tag]
-                    if (isinstance(value, list)):
-                        value = value[0]
+            ## Add recognized slice tags
+            #for node_name in node_names:
+                #node = nodes[node_name]
+                #for slice_tag in node.keys():
+                    #value = node[slice_tag]
+                    #if (isinstance(value, list)):
+                        #value = value[0]
 
-                    self.api.driver.AddSliceTag(slicename, slice_tag, value, node_name)
+                    #self.driver.AddSliceTag(slicename, slice_tag, value, node_name)
 
-            self.api.driver.DeleteSliceFromNodes(slicename, deleted_nodes)
-        finally:
-            if peer:
-                self.api.driver.BindObjectToPeer('slice', slice['slice_id'], peer, slice['peer_slice_id'])
+            #self.driver.DeleteSliceFromNodes(slicename, deleted_nodes)
+        #finally:
+            #if peer:
+                #self.driver.BindObjectToPeer('slice', slice['slice_id'], peer, slice['peer_slice_id'])
 
-        return 1
+        #return 1
 

@@ -5,7 +5,7 @@ import sfa.senslab.slabdriver
 import sfa.managers.registry_manager_slab
 import sfa.managers.slice_manager
 import sfa.managers.aggregate_manager_slab
-
+import sfa.managers.aggregate_manager
 class slab (Generic):
     
     # use the standard api class
@@ -18,7 +18,7 @@ class slab (Generic):
     def slicemgr_manager_class (self) : 
         return sfa.managers.slice_manager.SliceManager
     def aggregate_manager_class (self) :
-        return sfa.managers.aggregate_manager_slab.AggregateManager
+        return sfa.managers.aggregate_manager.AggregateManager
 
     # driver class for server-side services, talk to the whole testbed
     def driver_class (self):

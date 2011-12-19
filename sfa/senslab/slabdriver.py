@@ -7,6 +7,7 @@ from sfa.util.defaultdict import defaultdict
 
 from sfa.managers.driver import Driver
 from sfa.rspecs.version_manager import VersionManager
+from sfa.rspecs.rspec import RSpec
 
 from sfa.util.xrn import hrn_to_urn
 from sfa.util.plxrn import slicename_to_hrn, hostname_to_hrn, hrn_to_pl_slicename, hrn_to_pl_login_base
@@ -21,6 +22,8 @@ from sfa.senslab.LDAPapi import LDAPapi
 from sfa.senslab.SenslabImportUsers import SenslabImportUsers
 from sfa.senslab.parsing import parse_filter
 from sfa.senslab.slabpostgres import SlabDB
+from sfa.senslab.slabaggregate import SlabAggregate
+from sfa.senslab.slabslices import SlabSlices
 
 def list_to_dict(recs, key):
     """
@@ -61,8 +64,8 @@ class SlabDriver(Driver):
 
             
     def create_sliver (self, slice_urn, slice_hrn, creds, rspec_string, users, options):
-
         aggregate = SlabAggregate(self)
+        #aggregate = SlabAggregate(self)
         slices = SlabSlices(self)
         peer = slices.get_peer(slice_hrn)
         sfa_peer = slices.get_sfa_peer(slice_hrn)
@@ -283,7 +286,31 @@ class SlabDriver(Driver):
 
         return True
         
-    
+
+    def remove (self, sfa_record):
+        type=sfa_record['type']
+        hrn=sfa_record['hrn']
+        record_id= sfa_record['record_id']
+        if type == 'user':
+            username = hrn.split(".")[len(hrn.split(".")) -1]
+            #get user in ldap
+            persons = self.GetPersons(username)
+            # only delete this person if he has site ids. if he doesnt, it probably means
+            # he was just removed from a site, not actually deleted
+            if persons and persons[0]['site_ids']:
+                self.DeletePerson(username)
+        elif type == 'slice':
+            if self.GetSlices(hrn):
+                self.DeleteSlice(hrn)
+
+        #elif type == 'authority':
+            #if self.GetSites(pointer):
+                #self.DeleteSite(pointer)
+
+        return True
+            
+            
+            
     def GetPersons(self, person_filter=None, return_fields=None):
         
         person_list = self.ldap.ldapFind({'authority': self.root_auth })
