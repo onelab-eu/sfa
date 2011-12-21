@@ -6,7 +6,7 @@ from sfa.util.faults import MissingSfaInfo, UnknownSfaType, \
 
 from sfa.util.sfalogging import logger
 from sfa.util.defaultdict import defaultdict
-from sfa.util.sfatime import utcparse
+from sfa.util.sfatime import utcparse, epochparse
 from sfa.util.xrn import hrn_to_urn, get_leaf, urn_to_sliver_id
 from sfa.util.cache import Cache
 
@@ -626,7 +626,7 @@ class PlDriver (Driver):
             top_level_status = 'ready'
         result['geni_urn'] = slice_urn
         result['pl_login'] = slice['name']
-        result['pl_expires'] = datetime.datetime.fromtimestamp(slice['expires']).ctime()
+        result['pl_expires'] = epochparse(slice['expires'])
         
         resources = []
         for node in nodes:
@@ -635,7 +635,7 @@ class PlDriver (Driver):
             res['pl_boot_state'] = node['boot_state']
             res['pl_last_contact'] = node['last_contact']
             if node['last_contact'] is not None:
-                res['pl_last_contact'] = datetime.datetime.fromtimestamp(node['last_contact']).ctime()
+                res['pl_last_contact'] = epochparse(node['last_contact'])
             sliver_id = urn_to_sliver_id(slice_urn, slice['slice_id'], node['node_id']) 
             res['geni_urn'] = sliver_id
             if node['boot_state'] == 'boot':
