@@ -339,99 +339,64 @@ class SlabSlices:
             if 'person_id' in user and 'hrn' in user:
                 users_by_id[user['person_id']] = user
                 users_dict[user['person_id']] = {'person_id':user['person_id'], 'hrn':user['hrn']}
-           
-                #hrn, type = urn_to_hrn(user['urn'])
-                #username = get_leaf(hrn) 
-                #login_base = get_leaf(get_authority(user['urn']))
-                #user['username'] = username 
-                #users_by_site[login_base].append(user)
+
                 users_by_hrn[user['hrn']] = user
                 users_dict[user['hrn']] = {'person_id':user['person_id'], 'hrn':user['hrn']}
-       
-        existing_user_ids = []
-        existing_users= []
-        if users_by_hrn:
-            # get existing users by email 
-           
-            existing_users = self.driver.GetPersons({'hrn': users_by_hrn.keys()}, 
-                                                        ['hrn'])
-            #print>>sys.stderr, " \r\n \r\n \t slices.py HEEEEEEEEY===========verify_person  existing_users %s users_dict %s user_by_id %s " %(existing_users, users_dict,users_by_id) 
-            #existing_user_ids = [(users_dict[user['hrn']]['hrn'],users_dict[user['hrn']]['person_id'] ) for user in existing_users]
-            for user in existing_users :
-                for  k in users_dict[user['hrn']] :
-                    existing_user_ids.append (users_dict[user['hrn']][k])
-
-            print>>sys.stderr, " \r\n \r\n slices.py verify_person   existing_user_ids %s " %(existing_user_ids)
-        #if users_by_id:
-            #existing_user_ids.extend([user for user in users_by_id])
-        #if users_by_site:
-            ## get a list of user sites (based on requeste user urns
-            #site_list = self.driver.GetSites(users_by_site.keys(), \
-                #['site_id', 'login_base', 'person_ids'])
-            #sites = {}
-            #site_user_ids = []
-            
-            ## get all existing users at these sites
-            #for site in site_list:
-                #sites[site['site_id']] = site
-                #site_user_ids.extend(site['person_ids'])
-
-            #existing_site_persons_list = self.driver.GetPersons(site_user_ids,  
-                                                                    #['person_id', 'key_ids', 'email', 'site_ids'])
-
-            ## all requested users are either existing users or new (added) users      
-            #for login_base in users_by_site:
-                #requested_site_users = users_by_site[login_base]
-                #for requested_user in requested_site_users:
-                    #user_found = False
-                    #for existing_user in existing_site_persons_list:
-                        #for site_id in existing_user['site_ids']:
-                            #site = sites[site_id]
-                            #if login_base == site['login_base'] and \
-                               #existing_user['email'].startswith(requested_user['username']):
-                                #existing_user_ids.append(existing_user['email'])
-                                #users_dict[existing_user['email']] = requested_user
-                                #user_found = True
-                                #break
-                        #if user_found:
-                            #break
-      
-                    #if user_found == False:
-                        #fake_email = requested_user['username'] + '@geni.net'
-                        #users_dict[fake_email] = requested_user
                 
+        print>>sys.stderr, " \r\n \r\n \t slabslices.py verify_person  users_dict %s \r\n user_by_hrn %s \r\n \tusers_by_id %s " %( users_dict,users_by_hrn, users_by_id) 
+        
+        existing_user_ids = []
+        existing_user_hrns = []
+        existing_users= []
+        #Check if user is in LDAP using its hrn.
+        #Assuming Senslab is centralised :  one LDAP for all sites, user_id unknown from LDAP
+        # LDAP does not provide users id, therfore we rely on hrns
+        if users_by_hrn:
+            existing_users = self.driver.GetPersons({'hrn': users_by_hrn.keys()}, 
+                                                        ['hrn','pkey'])
+            if existing_users:
+                for user in existing_users :
+                    #for  k in users_dict[user['hrn']] :
+                    existing_user_hrns.append (users_dict[user['hrn']]['hrn'])
+                    existing_user_ids.append (users_dict[user['hrn']]['person_id'])
+                    print>>sys.stderr, " \r\n \r\n \t slabslices.py verify_person  existing_user_ids.append (users_dict[user['hrn']][k]) %s \r\n existing_users %s " %(  existing_user_ids,existing_users) 
+         
 
         # requested slice users        
-        requested_user_ids = users_dict.keys()
+        requested_user_ids = users_by_id.keys() 
+        requested_user_hrns = users_by_hrn.keys()
+        print>>sys.stderr, " \r\n \r\n \t slabslices.py verify_person  requested_user_ids  %s user_by_hrn %s " %( requested_user_ids,users_by_hrn) 
         # existing slice users
         existing_slice_users_filter = {'hrn': slice_record.get('PI', [])}
-        print>>sys.stderr, " \r\n \r\n slices.py verify_person requested_user_ids %s existing_slice_users_filter %s slice_record %s" %(requested_user_ids,existing_slice_users_filter,slice_record)
+        #print>>sys.stderr, " \r\n \r\n slices.py verify_person requested_user_ids %s existing_slice_users_filter %s slice_record %s" %(requested_user_ids,existing_slice_users_filter,slice_record)
         
-        existing_slice_users = self.driver.GetPersons(existing_slice_users_filter,['hrn'])
+        existing_slice_users = self.driver.GetPersons(existing_slice_users_filter,['hrn','pkey'])
         print>>sys.stderr, " \r\n \r\n slices.py verify_person   existing_slice_users %s " %(existing_slice_users)
-        existing_slice_user_ids = []
-        for user in existing_slice_users :
-            for  k in users_dict[user['hrn']] :
-                    existing_slice_user_ids.append (users_dict[user['hrn']][k])
-                    #existing_slice_user_ids = [user['hrn'] for user in existing_slice_users]
-                    
-        #print>>sys.stderr, " \r\n \r\n slices.py verify_person requested_user_ids %s  existing_slice_user_ids%s " %(requested_user_ids,existing_slice_user_ids)
+
+        existing_slice_user_hrns = [user['hrn'] for user in existing_slice_users]
+
+        print>>sys.stderr, " \r\n \r\n slices.py verify_person requested_user_ids %s  existing_slice_user_hrns %s " %(requested_user_ids,existing_slice_user_hrns)
         # users to be added, removed or updated
-        added_user_ids = set(requested_user_ids).difference(set(existing_user_ids))
-        added_slice_user_ids = set(requested_user_ids).difference(existing_slice_user_ids)
-        removed_user_ids = set(existing_slice_user_ids).difference(requested_user_ids)
-        #print>>sys.stderr, " \r\n \r\n slices.py verify_persons  existing_slice_user_ids %s  requested_user_ids %s " %(existing_slice_user_ids,requested_user_ids)
-        updated_user_ids = set(existing_slice_user_ids).intersection(requested_user_ids)
+
+        added_user_hrns = set(requested_user_hrns).difference(set(existing_user_hrns))
+
+        added_slice_user_hrns = set(requested_user_hrns).difference(existing_slice_user_hrns)
+        
+        removed_user_hrns = set(existing_slice_user_hrns).difference(requested_user_hrns)
+        
+
+        updated_user_hrns = set(existing_slice_user_hrns).intersection(requested_user_hrns)
         #print>>sys.stderr, " \r\n \r\n slices.py verify_persons  added_user_ids %s added_slice_user_ids %s " %(added_user_ids,added_slice_user_ids)
-        #print>>sys.stderr, " \r\n \r\n slices.py verify_persons  removed_user_ids %s updated_user_ids %s " %(removed_user_ids,updated_user_ids)
+        print>>sys.stderr, " \r\n \r\n slices.py verify_persons  removed_user_hrns %s updated_user_hrns %s " %(removed_user_hrns,updated_user_hrns)
         # Remove stale users (only if we are not appending) 
         append = options.get('append', True)
         if append == False:
-            for removed_user_id in removed_user_ids:
-                self.driver.DeletePersonFromSlice(removed_user_id, slice_record['name'])
+            for removed_user_hrn in removed_user_hrns:
+                self.driver.DeletePersonFromSlice(removed_user_hrn, slice_record['name'])
         # update_existing users
         updated_users_list = [user for user in existing_slice_users if user['hrn'] in \
-          updated_user_ids]
+          updated_user_hrns]
+        print>>sys.stderr, " \r\n \r\n slices.py verify_persons  removed_user_hrns %s updated_users_list %s " %(removed_user_hrns,updated_users_list) 
         #self.verify_keys(existing_slice_users, updated_users_list, peer, append)
 
         added_persons = []
@@ -480,7 +445,7 @@ class SlabSlices:
         return added_persons
             
 
-    def verify_keys(self, persons, users, peer, append=True):
+    def verify_keys(self, persons, users, peer, options={}):
         # existing keys 
         key_ids = []
         for person in persons:
