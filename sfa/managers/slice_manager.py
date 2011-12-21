@@ -48,15 +48,17 @@ class SliceManager:
             if rspec_version.content_type in ['*', 'request']:
                 request_rspec_versions.append(rspec_version.to_dict())
         xrn=Xrn(api.hrn, 'authority+sa')
-        version_more = {'interface':'slicemgr',
-                        'sfa': 2,
-                        'geni_api': 2,
-                        'hrn' : xrn.get_hrn(),
-                        'urn' : xrn.get_urn(),
-                        'peers': peers,
-                        'geni_request_rspec_versions': request_rspec_versions,
-                        'geni_ad_rspec_versions': ad_rspec_versions,
-                    }
+        version_more = {
+            'interface':'slicemgr',
+            'sfa': 2,
+            'geni_api': 2,
+            'geni_api_versions': {'2': '%s:%s' % (api.config.SFA_SM_HOST, api.config.SFA_SM_PORT)},
+            'hrn' : xrn.get_hrn(),
+            'urn' : xrn.get_urn(),
+            'peers': peers,
+            'geni_request_rspec_versions': request_rspec_versions,
+            'geni_ad_rspec_versions': ad_rspec_versions,
+            }
         sm_version=version_core(version_more)
         # local aggregate if present needs to have localhost resolved
         if api.hrn in api.aggregates:
