@@ -37,9 +37,9 @@ class PGv2Node:
                     node_elem.add_instance('interface', interface, ['component_id', 'client_id', 'ipv4'])
             # set available element
             if node.get('boot_state') and node.get('boot_state').lower() == 'boot':
-                available_elem = node_elem.add_element('available', now='True')
+                available_elem = node_elem.add_element('available', now='true')
             else:
-                available_elem = node_elem.add_element('available', now='False')
+                available_elem = node_elem.add_element('available', now='false')
             # add services
             PGv2Services.add_services(node_elem, node.get('services', [])) 
             # add slivers
