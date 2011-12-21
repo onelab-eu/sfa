@@ -554,6 +554,8 @@ class Sfi:
                 self.sliceapi_proxy=SfaServerProxy(cm_url, self.private_key, self.my_gid)
             else:
                 # otherwise use what was provided as --sliceapi, or SFI_SM in the config
+                if not self.sm_url.startswith('http://') or self.sm_url.startswith('https://'):
+                    self.sm_url = 'http://' + self.sm_url
                 self.logger.info("Contacting Slice Manager at: %s"%self.sm_url)
                 self.sliceapi_proxy = SfaServerProxy(self.sm_url, self.private_key, self.my_gid, 
                                                      timeout=self.options.timeout, verbose=self.options.debug)  
