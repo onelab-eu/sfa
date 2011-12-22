@@ -123,7 +123,11 @@ class PGv2(BaseVersion):
             sliver = {'name': requested_sliver_type,
                      'pl_tags': attributes}
 
-            # remove existing sliver_type tags
+            # remove available element
+            for available_elem in node_elem.xpath('./default:available'):
+                node_elem.remove(available_elem)
+ 
+            # remove existing sliver_type elements
             for sliver_type in node_elem.get('slivers', []):
                 node_elem.element.remove(sliver_type.element)
 
