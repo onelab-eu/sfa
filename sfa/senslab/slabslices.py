@@ -401,13 +401,13 @@ class SlabSlices:
 
         added_persons = []
         # add new users
-        for added_user_id in added_user_ids:
-            added_user = users_dict[added_user_id]
+        for added_user_hrn in added_user_hrns:
+            added_user = users_dict[added_user_hrn]
             #hrn, type = urn_to_hrn(added_user['urn'])  
             person = {
                 #'first_name': added_user.get('first_name', hrn),
                 #'last_name': added_user.get('last_name', hrn),
-                'person_id': added_user_id,
+                'person_id': added_user['person_id'],
                 #'peer_person_id': None,
                 #'keys': [],
                 #'key_ids': added_user.get('key_ids', []),
@@ -435,10 +435,11 @@ class SlabSlices:
                 #peer_dict = {'type': 'user', 'hrn': hrn, 'peer_authority': sfa_peer, \
                     #'pointer': person['person_id']}
                 #self.registry.register_peer_object(self.credential, peer_dict)
-    
-        for added_slice_user_id in added_slice_user_ids.union(added_user_ids):
+        for added_slice_user_hrn in added_slice_user_hrns.union(added_user_hrns):           
+            self.driver.AddPersonToSlice(added_slice_user_hrn, slice_record['name'])
+        #for added_slice_user_id in added_slice_user_ids.union(added_user_ids):
             # add person to the slice 
-            self.driver.AddPersonToSlice(added_slice_user_id, slice_record['name'])
+            #self.driver.AddPersonToSlice(added_slice_user_id, slice_record['name'])
             # if this is a peer record then it should already be bound to a peer.
             # no need to return worry about it getting bound later 
 
