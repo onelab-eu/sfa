@@ -19,7 +19,7 @@ from sfa.server.sfaapi import SfaApi
 from sfa.senslab.slabaggregate import SlabAggregate
 import sfa.plc.peers as peers
 
-from sfa.senslab.slices import SlabSlices
+from sfa.senslab.slabslices import SlabSlices
 
 class AggregateManager:
     def __init__ (self, config): pass

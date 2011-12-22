@@ -4,7 +4,7 @@ import sfa.server.sfaapi
 import sfa.senslab.slabdriver
 import sfa.managers.registry_manager_slab
 import sfa.managers.slice_manager
-import sfa.managers.aggregate_manager_slab
+#import sfa.managers.aggregate_manager_slab
 import sfa.managers.aggregate_manager
 class slab (Generic):
     

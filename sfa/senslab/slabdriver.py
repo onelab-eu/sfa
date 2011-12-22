@@ -2,7 +2,7 @@ import sys
 
 from sfa.util.faults import MissingSfaInfo
 from sfa.util.sfalogging import logger
-from sfa.util.table import SfaTable
+from sfa.storage.table import SfaTable
 from sfa.util.defaultdict import defaultdict
 
 from sfa.managers.driver import Driver

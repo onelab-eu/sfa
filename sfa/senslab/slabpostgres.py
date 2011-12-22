@@ -4,7 +4,7 @@ psycopg2.extensions.register_type(psycopg2.extensions.UNICODE)
 # UNICODEARRAY not exported yet
 psycopg2.extensions.register_type(psycopg2._psycopg.UNICODEARRAY)
 from sfa.util.config import Config
-from sfa.util.table import SfaTable
+from sfa.storage.table import SfaTable
 from sfa.util.sfalogging import logger
 # allow to run sfa2wsdl if this is missing (for mac)
 import sys
@@ -13,7 +13,7 @@ except: print >> sys.stderr, "WARNING, could not import pgdb"
 
 #Dict holding the columns names of the table as keys
 #and their type, used for creation of the table
-slice_table = {'record_id_user':'integer PRIMARY KEY references sfa ON DELETE CASCADE ON UPDATE CASCADE','oar_job_id':'integer DEFAULT -1',  'record_id_slice':'integer', 'slice_hrn':'text NOT NULL'}
+slice_table = {'record_id_user':'integer PRIMARY KEY references X ON DELETE CASCADE ON UPDATE CASCADE','oar_job_id':'integer DEFAULT -1',  'record_id_slice':'integer', 'slice_hrn':'text NOT NULL'}
 
 #Dict with all the specific senslab tables
 tablenames_dict = {'slice': slice_table}
@@ -22,7 +22,13 @@ class SlabDB:
     def __init__(self):
         self.config = Config()
         self.connection = None
-
+        self.init_create_query()
+        
+    def init_create_query(self):
+        sfatable = SfaTable()
+        slice_table['record_id_user'] =  slice_table['record_id_user'].replace("X",sfatable.tablename)
+        print sys.stderr, " \r\n \r\n slice_table %s ",slice_table 
+        
     def cursor(self):
         if self.connection is None:
             # (Re)initialize database connection

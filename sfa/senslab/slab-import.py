@@ -9,8 +9,8 @@ from sfa.senslab.slabpostgres import SlabDB
 from sfa.util.config import Config
 from sfa.util.plxrn import PlXrn
 from sfa.util.xrn import hrn_to_urn, get_authority,Xrn,get_leaf
-from sfa.util.table import SfaTable
-from sfa.util.record import SfaRecord
+from sfa.storage.table import SfaTable
+from sfa.storage.record import SfaRecord
 from sfa.trust.hierarchy import Hierarchy
 from sfa.trust.certificate import Keypair,convert_public_key
 from sfa.trust.gid import create_uuid
@@ -22,8 +22,7 @@ TrustedR = TrustedRoots(Config.get_trustedroots_dir(config))
 AuthHierarchy = Hierarchy()
 table = SfaTable()
 db = SlabDB()
-if not table.exists():
-    table.create()
+
     
     
 def create_sm_client_record():
@@ -77,10 +76,13 @@ def create_top_level_auth_records(hrn):
         parent_hrn = hrn
     if not parent_hrn == hrn:
         create_top_level_auth_records(parent_hrn)
-
+        
+    # enxure key and cert exists:
+    AuthHierarchy.create_top_level_auth(hrn) 
+      
     # create the authority if it doesnt already exist 
-    if not AuthHierarchy.auth_exists(urn):
-        AuthHierarchy.create_auth(urn)
+    #if not AuthHierarchy.auth_exists(urn):
+        #AuthHierarchy.create_auth(urn)
     
     # create the db record if it doesnt already exist    
     auth_info = AuthHierarchy.get_auth_info(hrn)

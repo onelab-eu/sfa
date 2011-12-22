@@ -5,8 +5,8 @@ import sys
 from sfa.util.faults import RecordNotFound, AccountNotEnabled, PermissionError, MissingAuthority, \
     UnknownSfaType, ExistingRecord
 from sfa.util.prefixTree import prefixTree
-from sfa.util.record import SfaRecord
-from sfa.util.table import SfaTable
+from sfa.storage.record import SfaRecord
+from sfa.storage.table import SfaTable
 from sfa.util.xrn import Xrn, get_leaf, get_authority, hrn_to_urn, urn_to_hrn
 from sfa.util.version import version_core
 

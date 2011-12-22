@@ -25,7 +25,7 @@ from sfa.rspecs.elements.node import Node
 #from sfa.rspecs.elements.interface import Interface
 #from sfa.rspecs.elements.services import Services
 #from sfa.rspecs.elements.pltag import PLTag
-from sfa.util.topology import Topology
+
 from sfa.rspecs.version_manager import VersionManager
 #from sfa.plc.vlink import get_tc_rate
 from sfa.util.sfatime import epochparse
