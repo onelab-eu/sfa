@@ -124,9 +124,13 @@ class PGv2(BaseVersion):
                      'pl_tags': attributes}
 
             # remove available element
-            for available_elem in node_elem.xpath('./default:available'):
+            for available_elem in node_elem.xpath('./default:available | ./available'):
                 node_elem.remove(available_elem)
- 
+            
+            # remove interface elements
+            for interface_elem in node_elem.xpath('./default:interface | ./interface'):
+                node_elem.remove(interface_elem)
+        
             # remove existing sliver_type elements
             for sliver_type in node_elem.get('slivers', []):
                 node_elem.element.remove(sliver_type.element)
