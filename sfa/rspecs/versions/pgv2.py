@@ -120,7 +120,7 @@ class PGv2(BaseVersion):
             
             if not requested_sliver_type:
                 continue
-            sliver = {'name': requested_sliver_type,
+            sliver = {'type': requested_sliver_type,
                      'pl_tags': attributes}
 
             # remove available element
