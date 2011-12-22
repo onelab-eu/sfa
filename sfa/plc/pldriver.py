@@ -6,7 +6,7 @@ from sfa.util.faults import MissingSfaInfo, UnknownSfaType, \
 
 from sfa.util.sfalogging import logger
 from sfa.util.defaultdict import defaultdict
-from sfa.util.sfatime import utcparse, epochparse
+from sfa.util.sfatime import utcparse, datetime_to_string, datetime_to_epoch
 from sfa.util.xrn import hrn_to_urn, get_leaf, urn_to_sliver_id
 from sfa.util.cache import Cache
 
@@ -224,8 +224,10 @@ class PlDriver (Driver):
                pl_record["url"] = sfa_record["url"]
 	    if "description" in sfa_record:
 	        pl_record["description"] = sfa_record["description"]
-	    if "expires" in sfa_record:
-	        pl_record["expires"] = int(sfa_record["expires"])
+        if "expires" in sfa_record:
+            date = utcparse(sfa_record['expires'])
+            expires = datetime_to_epoch(date)
+            pl_record["expires"] = expires
 
         elif type == "node":
             if not "hostname" in pl_record:
@@ -402,7 +404,9 @@ class PlDriver (Driver):
                 record['sites'] = site_hrns
 
             if 'expires' in record:
-                record['expires'] = utcparse(record['expires']) 
+                date = utcparse(record['expires'])
+                datestring = datetime_to_string(date)
+                record['expires'] = datestring 
             
         return records   
 
@@ -629,7 +633,7 @@ class PlDriver (Driver):
             top_level_status = 'ready'
         result['geni_urn'] = slice_urn
         result['pl_login'] = slice['name']
-        result['pl_expires'] = epochparse(slice['expires'])
+        result['pl_expires'] = datetime_to_string(utcparse(slice['expires']))
         
         resources = []
         for node in nodes:
@@ -638,7 +642,8 @@ class PlDriver (Driver):
             res['pl_boot_state'] = node['boot_state']
             res['pl_last_contact'] = node['last_contact']
             if node['last_contact'] is not None:
-                res['pl_last_contact'] = epochparse(node['last_contact'])
+                
+                res['pl_last_contact'] = datetime_to_string(utcparse(node['last_contact']))
             sliver_id = urn_to_sliver_id(slice_urn, slice['slice_id'], node['node_id']) 
             res['geni_urn'] = sliver_id
             if node['boot_state'] == 'boot':
@@ -719,7 +724,7 @@ class PlDriver (Driver):
             raise RecordNotFound(slice_hrn)
         slice = slices[0]
         requested_time = utcparse(expiration_time)
-        record = {'expires': int(time.mktime(requested_time.timetuple()))}
+        record = {'expires': int(datetime_to_epoch(requested_time.timetuple()))}
         try:
             self.shell.UpdateSlice(slice['slice_id'], record)
             return True

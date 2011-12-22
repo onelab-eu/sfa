@@ -1,6 +1,6 @@
 #!/usr/bin/python
 from sfa.util.xrn import Xrn, hrn_to_urn, urn_to_hrn, urn_to_sliver_id
-from sfa.util.sfatime import epochparse
+from sfa.util.sfatime import utcparse, datetime_to_string
 from sfa.util.sfalogging import logger
 
 from sfa.rspecs.rspec import RSpec
@@ -240,7 +240,7 @@ class PlAggregate:
         slice, slivers = self.get_slice_and_slivers(slice_xrn)
         rspec = RSpec(version=rspec_version, user_options=options)
         if slice and 'expires' in slice:
-            rspec.xml.set('expires',  epochparse(slice['expires']))
+            rspec.xml.set('expires',  datetime_to_string(utcparse(slice['expires'])))
 
         nodes, links = self.get_nodes_and_links(slice, slivers)
         rspec.version.add_nodes(nodes)

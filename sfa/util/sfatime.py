@@ -5,6 +5,8 @@ import time
 
 from sfa.util.sfalogging import logger
 
+DATEFORMAT = "%Y-%d-%mT%H:%M:%SZ"
+
 def utcparse(input):
     """ Translate a string into a time using dateutil.parser.parse but make sure it's in UTC time and strip
 the timezone, so that it's compatible with normal datetime.datetime objects.
@@ -25,5 +27,14 @@ For safety this can also handle inputs that are either timestamps, or datetimes
     else:
         logger.error("Unexpected type in utcparse [%s]"%type(input))
 
-def epochparse(input):
-    return time.strftime("%Y-%d-%mT%H:%M:%SZ", time.localtime(input)) 
+def datetime_to_string(input):
+    return datetime.datetime.strftime(input, DATEFORMAT)
+
+def datetime_to_utc(input):
+    return time.gmtime(datetime_to_epoch(input))    
+
+def datetime_to_epoch(input):
+    return time.mktime(input.timetuple())
+
+
+
