@@ -408,6 +408,7 @@ class PlSlices:
                                 if login_base == site['login_base'] and \
                                    existing_user['email'].startswith(requested_user['username']+'@'):
                                     existing_user_ids.append(existing_user['email'])
+                                    requested_user['email'] = existing_user['email']
                                     users_dict[existing_user['email']] = requested_user
                                     user_found = True
                                     break
@@ -416,6 +417,7 @@ class PlSlices:
       
                     if user_found == False:
                         fake_email = requested_user['username'] + '@geni.net'
+                        requested_user['email'] = fake_email
                         users_dict[fake_email] = requested_user
                 
         # requested slice users        
@@ -439,7 +441,7 @@ class PlSlices:
             for removed_user_id in removed_user_ids:
                 self.driver.shell.DeletePersonFromSlice(removed_user_id, slice_record['name'])
         # update_existing users
-        updated_users_list = [user for user in existing_slice_users if user['email'] in \
+        updated_users_list = [user for user in users_dict.values() if user['email'] in \
           updated_user_ids]
         self.verify_keys(existing_slice_users, updated_users_list, peer, options)
 
