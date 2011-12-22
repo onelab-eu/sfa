@@ -400,6 +400,9 @@ class PlDriver (Driver):
                                if site_id in sites]
                 site_hrns = [".".join([auth_hrn, lbase]) for lbase in login_bases]
                 record['sites'] = site_hrns
+
+            if 'expires' in record:
+                record['expires'] = utcparse(record['expires']) 
             
         return records   
 
