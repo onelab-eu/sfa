@@ -194,7 +194,7 @@ class PlAggregate:
             # assumes that sites, interfaces and tags have already been prepared.
             site = sites_dict[node['site_id']]
             if site['longitude'] and site['latitude']:  
-                location = Location({'longitude': site['longitude'], 'latitude': site['latitude']})
+                location = Location({'longitude': site['longitude'], 'latitude': site['latitude'], 'country': 'unknown'})
                 rspec_node['location'] = location
             rspec_node['interfaces'] = []
             if_count=0
