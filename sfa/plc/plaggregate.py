@@ -187,8 +187,8 @@ class PlAggregate:
             if not slice:     
                 rspec_node['boot_state'] = node['boot_state']
             rspec_node['exclusive'] = 'false'
-            rspec_node['hardware_types']= [HardwareType({'name': 'plab-pc'}),
-                                           HardwareType({'name': 'pc'})]
+            rspec_node['hardware_types'] = [HardwareType({'name': 'plab-pc'}),
+                                            HardwareType({'name': 'pc'})]
             # only doing this because protogeni rspec needs
             # to advertise available initscripts 
             rspec_node['pl_initscripts'] = pl_initscripts.values()

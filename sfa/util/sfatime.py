@@ -26,4 +26,4 @@ For safety this can also handle inputs that are either timestamps, or datetimes
         logger.error("Unexpected type in utcparse [%s]"%type(input))
 
 def epochparse(input):
-    return time.strftime("%Y-%d-%m-T%H:%M:%SZ", time.localtime(input)) 
+    return time.strftime("%Y-%d-%mT%H:%M:%SZ", time.localtime(input)) 
