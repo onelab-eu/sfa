@@ -724,7 +724,7 @@ class PlDriver (Driver):
             raise RecordNotFound(slice_hrn)
         slice = slices[0]
         requested_time = utcparse(expiration_time)
-        record = {'expires': int(datetime_to_epoch(requested_time.timetuple()))}
+        record = {'expires': int(datetime_to_epoch(requested_time))}
         try:
             self.shell.UpdateSlice(slice['slice_id'], record)
             return True
