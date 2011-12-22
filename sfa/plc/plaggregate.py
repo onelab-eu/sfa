@@ -183,7 +183,9 @@ class PlAggregate:
             rspec_node['component_name'] = node['hostname']
             rspec_node['component_manager_id'] = Xrn(self.driver.hrn, 'authority+cm').get_urn()
             rspec_node['authority_id'] = hrn_to_urn(PlXrn.site_hrn(self.driver.hrn, site['login_base']), 'authority+sa')
-            rspec_node['boot_state'] = node['boot_state']
+            # do not include boot state (<available> element) in the manifest rspec
+            if not slice:     
+                rspec_node['boot_state'] = node['boot_state']
             rspec_node['exclusive'] = 'false'
             rspec_node['hardware_types']= [HardwareType({'name': 'plab-pc'}),
                                            HardwareType({'name': 'pc'})]
