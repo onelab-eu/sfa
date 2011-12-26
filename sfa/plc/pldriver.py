@@ -625,6 +625,10 @@ class PlDriver (Driver):
         # report about the local nodes only
         nodes = self.shell.GetNodes({'node_id':slice['node_ids'],'peer_id':None},
                               ['node_id', 'hostname', 'site_id', 'boot_state', 'last_contact'])
+
+        if len(nodes) == 0:
+            raise SliverDoesNotExist("You have not allocated any slivers here") 
+
         site_ids = [node['site_id'] for node in nodes]
     
         result = {}
