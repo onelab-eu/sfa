@@ -1,13 +1,12 @@
 from types import StringTypes
 from collections import defaultdict
 
+from sfa.util.sfatime import utcparse, datetime_to_epoch
 from sfa.util.sfalogging import logger
 from sfa.util.xrn import Xrn, get_leaf, get_authority, urn_to_hrn
 #from sfa.util.policy import Policy
 from sfa.util.xrn import Xrn
-
 from sfa.rspecs.rspec import RSpec
-
 from sfa.plc.vlink import VLink
 from sfa.util.plxrn import hrn_to_pl_slicename
 
@@ -343,8 +342,9 @@ class PlSlices:
                 # unbind from peer so we can modify if necessary. Will bind back later
                 self.driver.shell.UnBindObjectFromPeer('slice', slice['slice_id'], peer['shortname'])
 	        #Update existing record (e.g. expires field) it with the latest info.
-            if slice_record and slice['expires'] != slice_record['expires']:
-                self.driver.shell.UpdateSlice( slice['slice_id'], {'expires' : slice_record['expires']})
+            requested_expires = int(datetime_to_epoch(utcparse(slice_record['expires'])))
+            if requested_expires and slice['expires'] != requested_expires:
+                self.driver.shell.UpdateSlice( slice['slice_id'], {'expires' : requested_expires})
        
         return slice
 
