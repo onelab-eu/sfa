@@ -22,7 +22,7 @@ For safety this can also handle inputs that are either timestamps, or datetimes
         if t.utcoffset() is not None:
             t = t.utcoffset() + t.replace(tzinfo=None)
         return t
-    elif isinstance (input, (int,float)):
+    elif isinstance (input, (int,float,long)):
         return datetime.datetime.fromtimestamp(input)
     else:
         logger.error("Unexpected type in utcparse [%s]"%type(input))
