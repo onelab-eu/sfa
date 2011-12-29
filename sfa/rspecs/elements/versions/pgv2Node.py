@@ -34,12 +34,13 @@ class PGv2Node:
             # set interfaces
             if node.get('interfaces'):
                 for interface in  node.get('interfaces', []):
-                    node_elem.add_instance('interface', interface, ['component_id', 'client_id', 'ipv4'])
+                    node_elem.add_instance('interface', interface, ['component_id', 'client_id'])
             # set available element
-            if node.get('boot_state') and node.get('boot_state').lower() == 'boot':
-                available_elem = node_elem.add_element('available', now='True')
-            else:
-                available_elem = node_elem.add_element('available', now='False')
+            if node.get('boot_state'):
+                if node.get('boot_state').lower() == 'boot':
+                    available_elem = node_elem.add_element('available', now='true')
+                else:
+                    available_elem = node_elem.add_element('available', now='false')
             # add services
             PGv2Services.add_services(node_elem, node.get('services', [])) 
             # add slivers

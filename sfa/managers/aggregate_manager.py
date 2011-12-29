@@ -12,12 +12,14 @@ class AggregateManager:
     
         xrn=Xrn(api.hrn)
         version = version_core()
-        version_generic = {'interface':'aggregate',
-                           'sfa': 2,
-                           'geni_api': 2,
-                           'hrn':xrn.get_hrn(),
-                           'urn':xrn.get_urn(),
-                           }
+        version_generic = {
+            'interface':'aggregate',
+            'sfa': 2,
+            'geni_api': 2,
+            'geni_api_versions': {'2': 'http://%s:%s' % (api.config.SFA_SM_HOST, api.config.SFA_SM_PORT)}, 
+            'hrn':xrn.get_hrn(),
+            'urn':xrn.get_urn(),
+            }
         version.update(version_generic)
         testbed_version = self.driver.aggregate_version()
         version.update(testbed_version)

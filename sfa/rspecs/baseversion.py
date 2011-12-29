@@ -21,7 +21,7 @@ class BaseVersion:
             'version': self.version,
             'schema': self.schema,
             'namespace': self.namespace,
-            'extensions': self.extensions
+            'extensions': self.extensions.values()
         }
 
     def __str__(self):

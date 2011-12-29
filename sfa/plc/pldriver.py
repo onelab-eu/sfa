@@ -6,7 +6,7 @@ from sfa.util.faults import MissingSfaInfo, UnknownSfaType, \
 
 from sfa.util.sfalogging import logger
 from sfa.util.defaultdict import defaultdict
-from sfa.util.sfatime import utcparse
+from sfa.util.sfatime import utcparse, datetime_to_string, datetime_to_epoch
 from sfa.util.xrn import hrn_to_urn, get_leaf, urn_to_sliver_id
 from sfa.util.cache import Cache
 
@@ -224,8 +224,10 @@ class PlDriver (Driver):
                pl_record["url"] = sfa_record["url"]
 	    if "description" in sfa_record:
 	        pl_record["description"] = sfa_record["description"]
-	    if "expires" in sfa_record:
-	        pl_record["expires"] = int(sfa_record["expires"])
+        if "expires" in sfa_record:
+            date = utcparse(sfa_record['expires'])
+            expires = datetime_to_epoch(date)
+            pl_record["expires"] = expires
 
         elif type == "node":
             if not "hostname" in pl_record:
@@ -400,6 +402,11 @@ class PlDriver (Driver):
                                if site_id in sites]
                 site_hrns = [".".join([auth_hrn, lbase]) for lbase in login_bases]
                 record['sites'] = site_hrns
+
+            if 'expires' in record:
+                date = utcparse(record['expires'])
+                datestring = datetime_to_string(date)
+                record['expires'] = datestring 
             
         return records   
 
@@ -618,6 +625,10 @@ class PlDriver (Driver):
         # report about the local nodes only
         nodes = self.shell.GetNodes({'node_id':slice['node_ids'],'peer_id':None},
                               ['node_id', 'hostname', 'site_id', 'boot_state', 'last_contact'])
+
+        if len(nodes) == 0:
+            raise SliverDoesNotExist("You have not allocated any slivers here") 
+
         site_ids = [node['site_id'] for node in nodes]
     
         result = {}
@@ -626,7 +637,7 @@ class PlDriver (Driver):
             top_level_status = 'ready'
         result['geni_urn'] = slice_urn
         result['pl_login'] = slice['name']
-        result['pl_expires'] = datetime.datetime.fromtimestamp(slice['expires']).ctime()
+        result['pl_expires'] = datetime_to_string(utcparse(slice['expires']))
         
         resources = []
         for node in nodes:
@@ -635,7 +646,8 @@ class PlDriver (Driver):
             res['pl_boot_state'] = node['boot_state']
             res['pl_last_contact'] = node['last_contact']
             if node['last_contact'] is not None:
-                res['pl_last_contact'] = datetime.datetime.fromtimestamp(node['last_contact']).ctime()
+                
+                res['pl_last_contact'] = datetime_to_string(utcparse(node['last_contact']))
             sliver_id = urn_to_sliver_id(slice_urn, slice['slice_id'], node['node_id']) 
             res['geni_urn'] = sliver_id
             if node['boot_state'] == 'boot':
@@ -716,7 +728,7 @@ class PlDriver (Driver):
             raise RecordNotFound(slice_hrn)
         slice = slices[0]
         requested_time = utcparse(expiration_time)
-        record = {'expires': int(time.mktime(requested_time.timetuple()))}
+        record = {'expires': int(datetime_to_epoch(requested_time))}
         try:
             self.shell.UpdateSlice(slice['slice_id'], record)
             return True

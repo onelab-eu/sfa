@@ -13,7 +13,7 @@ class VersionManager:
         versions_path = path + os.sep + 'versions'
         versions_module_path = 'sfa.rspecs.versions'
         valid_module = lambda x: os.path.isfile(os.sep.join([versions_path, x])) \
-                        and not x.endswith('.pyc') and x not in ['__init__.py']
+                        and x.endswith('.py') and x !=  '__init__.py'
         files = [f for f in os.listdir(versions_path) if valid_module(f)]
         for filename in files:
             basename = filename.split('.')[0]

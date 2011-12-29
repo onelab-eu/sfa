@@ -1,6 +1,6 @@
 #!/usr/bin/python
 from sfa.util.xrn import Xrn, hrn_to_urn, urn_to_hrn, urn_to_sliver_id
-from sfa.util.sfatime import epochparse
+from sfa.util.sfatime import utcparse, datetime_to_string
 from sfa.util.sfalogging import logger
 
 from sfa.rspecs.rspec import RSpec
@@ -183,10 +183,12 @@ class PlAggregate:
             rspec_node['component_name'] = node['hostname']
             rspec_node['component_manager_id'] = Xrn(self.driver.hrn, 'authority+cm').get_urn()
             rspec_node['authority_id'] = hrn_to_urn(PlXrn.site_hrn(self.driver.hrn, site['login_base']), 'authority+sa')
-            rspec_node['boot_state'] = node['boot_state']
-            rspec_node['exclusive'] = 'False'
-            rspec_node['hardware_types']= [HardwareType({'name': 'plab-pc'}),
-                                           HardwareType({'name': 'pc'})]
+            # do not include boot state (<available> element) in the manifest rspec
+            if not slice:     
+                rspec_node['boot_state'] = node['boot_state']
+            rspec_node['exclusive'] = 'false'
+            rspec_node['hardware_types'] = [HardwareType({'name': 'plab-pc'}),
+                                            HardwareType({'name': 'pc'})]
             # only doing this because protogeni rspec needs
             # to advertise available initscripts 
             rspec_node['pl_initscripts'] = pl_initscripts.values()
@@ -194,7 +196,7 @@ class PlAggregate:
             # assumes that sites, interfaces and tags have already been prepared.
             site = sites_dict[node['site_id']]
             if site['longitude'] and site['latitude']:  
-                location = Location({'longitude': site['longitude'], 'latitude': site['latitude']})
+                location = Location({'longitude': site['longitude'], 'latitude': site['latitude'], 'country': 'unknown'})
                 rspec_node['location'] = location
             rspec_node['interfaces'] = []
             if_count=0
@@ -238,7 +240,7 @@ class PlAggregate:
         slice, slivers = self.get_slice_and_slivers(slice_xrn)
         rspec = RSpec(version=rspec_version, user_options=options)
         if slice and 'expires' in slice:
-            rspec.xml.set('expires',  epochparse(slice['expires']))
+            rspec.xml.set('expires',  datetime_to_string(utcparse(slice['expires'])))
 
         nodes, links = self.get_nodes_and_links(slice, slivers)
         rspec.version.add_nodes(nodes)
