@@ -27,7 +27,7 @@ class PGv2(BaseVersion):
             if 'component_manager_id' in node.attrib:
                 network_urn = node.get('component_manager_id')
                 if network_urn.startswith("urn:"):
-                    network_hrn = Xrn(network_urn).get_hrn()[0]
+                    network_hrn = Xrn(network_urn).get_hrn()
                 else:
                     # some component_manager_ids are hrns instead of urns??
                     network_hrn = network_urn
