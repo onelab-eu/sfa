@@ -12,12 +12,11 @@ from sfa.util.sfalogging import _SfaLogger
 from sfa.util.xrn import get_authority, hrn_to_urn
 from sfa.util.plxrn import email_to_hrn
 from sfa.util.config import Config
-
 from sfa.trust.certificate import convert_public_key, Keypair
 from sfa.trust.trustedroots import TrustedRoots
 from sfa.trust.hierarchy import Hierarchy
 from sfa.trust.gid import create_uuid
-
+from sfa.storage.table import SfaTable
 from sfa.storage.record import SfaRecord
 from sfa.storage.table import SfaTable
 
@@ -51,14 +50,33 @@ class sfaImport:
     def __init__(self):
        self.logger = _SfaLogger(logfile='/var/log/sfa_import.log', loggername='importlog')
        self.AuthHierarchy = Hierarchy()
+       self.table = SfaTable()     
        self.config = Config()
        self.TrustedRoots = TrustedRoots(Config.get_trustedroots_dir(self.config))
        self.root_auth = self.config.SFA_REGISTRY_ROOT_AUTH
-        
        # should use a driver instead...
        from sfa.plc.plshell import PlShell
        # how to connect to planetlab 
        self.shell = PlShell (self.config)
+
+    def create_top_level_records(self):
+        """
+        Create top level and interface records
+        """
+        # create root authority
+        self.create_top_level_auth_records(interface_hrn)
+
+        # create s user record for the slice manager
+        self.create_sm_client_record()
+
+        # create interface records
+        self.logger.info("Import: creating interface records")
+        self.create_interface_records()
+
+        # add local root authority's cert  to trusted list
+        self.logger.info("Import: adding " + interface_hrn + " to trusted list")
+        authority = sfaImporter.AuthHierarchy.get_auth_info(interface_hrn)
+        self.TrustedRoots.add_gid(authority.get_gid_object())
 
     def create_top_level_auth_records(self, hrn):
         """
@@ -123,8 +141,6 @@ class sfaImport:
                 record['authority'] = get_authority(interface_hrn)
                 table.insert(record) 
                                 
-
-    
     def import_person(self, parent_hrn, person):
         """
         Register a user record 

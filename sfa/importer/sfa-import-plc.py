@@ -70,28 +70,11 @@ def main():
     interface_hrn = config.SFA_INTERFACE_HRN
     keys_filename = config.config_path + os.sep + 'person_keys.py' 
     sfaImporter = sfaImport()
+    sfaImporter.create_top_level_records()
     logger=sfaImporter.logger
     logger.setLevelFromOptVerbose(config.SFA_API_LOGLEVEL)
     shell = sfaImporter.shell
     
-    # initialize registry db table
-    table = SfaTable()
-
-    # create root authority 
-    sfaImporter.create_top_level_auth_records(interface_hrn)
-
-    # create s user record for the slice manager
-    sfaImporter.create_sm_client_record()
-
-    # create interface records
-    logger.info("Import: creating interface records")
-    sfaImporter.create_interface_records()
-
-    # add local root authority's cert  to trusted list
-    logger.info("Import: adding " + interface_hrn + " to trusted list")
-    authority = sfaImporter.AuthHierarchy.get_auth_info(interface_hrn)
-    sfaImporter.TrustedRoots.add_gid(authority.get_gid_object())
-
     # special case for vini
     if ".vini" in interface_hrn and interface_hrn.endswith('vini'):
         # create a fake internet2 site first
@@ -104,6 +87,7 @@ def main():
     existing_hrns = []
     key_ids = []
     person_keys = {} 
+    table = SfaTable()
     results = table.find()
     for result in results:
         existing_records[(result['hrn'], result['type'])] = result
