@@ -64,6 +64,7 @@ class sfaImport:
         Create top level and interface records
         """
         # create root authority
+        interface_hrn = self.config.SFA_INTERFACE_HRN
         self.create_top_level_auth_records(interface_hrn)
 
         # create s user record for the slice manager
