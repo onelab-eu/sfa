@@ -5,13 +5,12 @@
 ##
 
 from types import StringTypes
-
 from sfa.trust.gid import GID
-
 from sfa.storage.parameter import Parameter
 from sfa.util.xrn import get_authority
 from sfa.storage.row import Row
 from sfa.util.xml import XML 
+from sfa.util.sfalogging import logger
 
 class SfaRecord(Row):
     """ 
@@ -62,13 +61,14 @@ class SfaRecord(Row):
     # @param pointer is a pointer to a PLC record
     # @param dict if !=None, then fill in this record from the dictionary
 
-    def __init__(self, hrn=None, gid=None, type=None, pointer=None, peer_authority=None, dict=None, string=None):
+    def __init__(self, hrn=None, gid=None, type=None, pointer=None, authority=None, peer_authority=None, dict=None, string=None):
         self.dirty = True
         self.hrn = None
         self.gid = None
         self.type = None
         self.pointer = None
         self.set_peer_auth(peer_authority)
+        self.set_authority(authority)
         if hrn:
             self.set_name(hrn)
         if gid:
@@ -111,6 +111,17 @@ class SfaRecord(Row):
         self.hrn = hrn
         self['hrn'] = hrn
         self.dirty = True
+
+    def set_authority(self, authority):
+        """
+        Set the authority
+        """
+        if not authority:
+            authority = ""
+        self.authority = authority
+        self['authority'] = authority
+        self.dirty = True    
+        
 
     ##
     # Set the GID of the record
@@ -353,9 +364,58 @@ class SfaRecord(Row):
                 else:    
                     print "     %s: %s" % (key, self[key])
     
+    def summary_string(self):
+        return "Record(record_id=%s, hrn=%s, type=%s, auth=%s, pointer=%s)" % \
+                (self.get('record_id'), self.get('hrn'), self.get('type'), self.get('auth'), \
+                 self.get('pointer'))
+
     def getdict(self):
         return dict(self)
-    
+   
+    def sync(self, verbose=False):
+        """ 
+        Sync this record with the database.
+        """ 
+        from sfa.storage.table import SfaTable
+        table = SfaTable()
+        filter = {}
+        if self.get('record_id'):
+            filter['record_id'] = self.get('record_id')
+        if self.get('hrn') and self.get('type'):
+            filter['hrn'] = self.get('hrn') 
+            filter['type'] = self.get('type')
+            if self.get('pointer'):
+                filter['pointer'] = self.get('pointer')
+        existing_records = table.find(filter)
+        if not existing_records:
+            table.insert(self)
+            if verbose:
+                logger.info("Inserted record: %s" %self.summary_string()) 
+        else:
+            existing_record = existing_records[0]
+            self['record_id'] = existing_record['record_id']
+            table.upate(self) 
+            if verbose:
+                logger.info("Updated record: %s" % self.summary_string()) 
+
+    def delete(self, verbose=False):
+        """
+        Remove record from the database.
+        """
+        from sfa.storage.table import SfaTable
+        table = SfaTable()
+        if self.get('record_id'):
+            filter['record_id'] = self.get('record_id')
+        if self.get('hrn') and self.get('type'):
+            filter['hrn'] = self.get('hrn')
+            filter['type'] = self.get('type')
+            if self.get('pointer'):
+                filter['pointer'] = self.get('pointer')
+        existing_records = table.find(filter)
+        for record in existing_records:
+            table.remove(record)
+            if verbose:
+                logger.info("Removed record: %s" % self.summary_string())    
 
 class UserRecord(SfaRecord):
 
