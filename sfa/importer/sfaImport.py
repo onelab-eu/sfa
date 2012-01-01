@@ -76,7 +76,7 @@ class sfaImport:
 
         # add local root authority's cert  to trusted list
         self.logger.info("Import: adding " + interface_hrn + " to trusted list")
-        authority = sfaImporter.AuthHierarchy.get_auth_info(interface_hrn)
+        authority = self.AuthHierarchy.get_auth_info(interface_hrn)
         self.TrustedRoots.add_gid(authority.get_gid_object())
 
     def create_top_level_auth_records(self, hrn):

@@ -5,7 +5,7 @@ import time
 
 from sfa.util.sfalogging import logger
 
-DATEFORMAT = "%Y-%d-%mT%H:%M:%SZ"
+DATEFORMAT = "%Y-%m-%dT%H:%M:%SZ"
 
 def utcparse(input):
     """ Translate a string into a time using dateutil.parser.parse but make sure it's in UTC time and strip
