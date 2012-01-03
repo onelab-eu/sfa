@@ -68,12 +68,18 @@ class PGRSpecConverter:
                     node_element.set(attrib, attribs[attrib])
             urn = pg_node["component_id"]
             if urn:
-                urn = urn[0]
+                if type(urn)==list:
+                    # legacy code, not sure if urn is ever a list...
+                    urn = urn[0]
                 hostname = Xrn.urn_split(urn)[-1]
                 hostname_element = node_element.add_element('hostname')
                 hostname_element.set_text(hostname)
                 if hostname in nodes_with_slivers:
-                    node_element.add_element('sliver')  
+                    node_element.add_element('sliver')
+
+            for hardware_type in pg_node["hardware_types"]:
+                if "name" in hardware_type:
+                    node_element.add_element("hardware_type", name=hardware_type["name"])
                      
             # just copy over remaining child elements  
             #for child in pg_node_element.getchildren():
