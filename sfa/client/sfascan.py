@@ -135,7 +135,7 @@ class Interface:
         logger.debug("searching in version cache %s"%self.url())
         cached_version = VersionCache().get(self.url())
         if cached_version is not None:
-            logger.info("Retrieved version info from cache")
+            logger.info("Retrieved version info from cache %s"%self.url())
             return cached_version
         ### otherwise let's do the hard work
         # dummy to meet Sfi's expectations for its 'options' field
