@@ -165,7 +165,8 @@ def unique_call_id(): return uuid.uuid4().urn
 
 class Sfi:
     
-    required_options=['verbose',  'debug',  'registry',  'sm',  'auth',  'user']
+    # dirty hack to make this class usable from the outside
+    required_options=['verbose',  'debug',  'registry',  'sm',  'auth',  'user', 'user_private_key']
 
     @staticmethod
     def default_sfi_dir ():

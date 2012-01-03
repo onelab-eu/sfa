@@ -147,8 +147,9 @@ class Interface:
         try:
             client=Sfi(options)
             client.read_config()
-            key_file = client.get_key_file()
-            cert_file = client.get_cert_file(key_file)
+            client.bootstrap()
+            key_file = client.private_key
+            cert_file = client.my_gid
             logger.debug("using key %s & cert %s"%(key_file,cert_file))
             url=self.url()
             logger.info('issuing GetVersion at %s'%url)
