@@ -79,8 +79,8 @@ class PGv2Node:
                 node['authority_id'] = Xrn(node_elem.attrib['component_id']).get_authority_urn()
             
             # get hardware types
-            hardware_type_elems = node_elem.xpath('./default:hardwate_type | ./hardware_type')
-            node['hardware_types'] = [hw_type.get_instnace(HardwareType) for hw_type in hardware_type_elems]
+            hardware_type_elems = node_elem.xpath('./default:hardware_type | ./hardware_type')
+            node['hardware_types'] = [hw_type.get_instance(HardwareType) for hw_type in hardware_type_elems]
             
             # get location
             location_elems = node_elem.xpath('./default:location | ./location')
