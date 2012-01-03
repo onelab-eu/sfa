@@ -394,7 +394,7 @@ class SfaRecord(Row):
         else:
             existing_record = existing_records[0]
             self['record_id'] = existing_record['record_id']
-            table.upate(self) 
+            table.update(self) 
             if verbose:
                 logger.info("Updated record: %s" % self.summary_string()) 
 
