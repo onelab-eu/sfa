@@ -54,10 +54,6 @@ class sfaImport:
        self.config = Config()
        self.TrustedRoots = TrustedRoots(Config.get_trustedroots_dir(self.config))
        self.root_auth = self.config.SFA_REGISTRY_ROOT_AUTH
-       # should use a driver instead...
-       from sfa.plc.plshell import PlShell
-       # how to connect to planetlab 
-       self.shell = PlShell (self.config)
 
     def create_top_level_records(self):
         """

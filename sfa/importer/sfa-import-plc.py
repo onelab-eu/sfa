@@ -27,6 +27,7 @@ from sfa.trust.gid import create_uuid
 from sfa.trust.certificate import convert_public_key, Keypair
 from sfa.importer.sfaImport import sfaImport, _cleanup_string
 from sfa.util.sfalogging import logger
+from sfa.plc.plshell import PlShell    
 
 def process_options():
 
@@ -75,7 +76,7 @@ def main():
     sfaImporter.create_top_level_records()
     logger=sfaImporter.logger
     logger.setLevelFromOptVerbose(config.SFA_API_LOGLEVEL)
-    shell = sfaImporter.shell
+    shell = PlShell (config)
     
     # special case for vini
     if ".vini" in interface_hrn and interface_hrn.endswith('vini'):
