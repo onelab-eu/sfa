@@ -26,7 +26,6 @@ from sfa.storage.record import SfaRecord
 from sfa.trust.gid import create_uuid    
 from sfa.trust.certificate import convert_public_key, Keypair
 from sfa.importer.sfaImport import sfaImport, _cleanup_string
-from sfa.util.sfalogging import logger
 from sfa.plc.plshell import PlShell    
 
 def process_options():
@@ -78,13 +77,6 @@ def main():
     logger.setLevelFromOptVerbose(config.SFA_API_LOGLEVEL)
     shell = PlShell (config)
     
-    # special case for vini
-    if ".vini" in interface_hrn and interface_hrn.endswith('vini'):
-        # create a fake internet2 site first
-        i2site = {'name': 'Internet2', 'abbreviated_name': 'I2',
-                    'login_base': 'internet2', 'site_id': -1}
-        sfaImporter.import_site(interface_hrn, i2site)
-   
     # create dict of all existing sfa records
     existing_records = {}
     existing_hrns = []
@@ -135,6 +127,26 @@ def main():
     slices_dict = {}
     for slice in slices:
         slices_dict[slice['slice_id']] = slice
+
+    # special case for vini
+    if ".vini" in interface_hrn and interface_hrn.endswith('vini'):
+        # create a fake internet2 site first
+        i2site = {'name': 'Internet2', 'abbreviated_name': 'I2',
+                    'login_base': 'internet2', 'site_id': -1}
+        site_hrn = _get_site_hrn(interface_hrn, i2site)
+        logger.info("Importing site: %s" % site_hrn)
+        # import if hrn is not in list of existing hrns or if the hrn exists
+        # but its not a site record
+        if site_hrn not in existing_hrns or \
+           (site_hrn, 'authority') not in existing_records:
+            logger.info("Import: site %s " % site_hrn)
+            urn = hrn_to_urn(site_hrn, 'authority')
+            if not sfaImporter.AuthHierarchy.auth_exists(urn):
+                sfaImporter.AuthHierarchy.create_auth(urn)
+            auth_info = sfaImporter.AuthHierarchy.get_auth_info(urn)
+            auth_record = SfaRecord(hrn=site_hrn, gid=auth_info.get_gid_object(), type="authority", pointer=site['site_id'])
+            auth_record.sync(verbose=True)
+
     # start importing 
     for site in sites:
         site_hrn = _get_site_hrn(interface_hrn, site)
@@ -150,7 +162,8 @@ def main():
                 sfaImporter.AuthHierarchy.create_auth(urn)
             auth_info = sfaImporter.AuthHierarchy.get_auth_info(urn)
             auth_record = SfaRecord(hrn=site_hrn, gid=auth_info.get_gid_object(), type="authority", pointer=site['site_id'])
-            auth_record.sync(verbose=True) 
+            logger.info("Import: importing site: %s" % auth_record.summary_string())  
+            auth_record.sync() 
              
         # import node records
         for node_id in site['node_ids']:
@@ -168,7 +181,8 @@ def main():
                 urn = hrn_to_urn(hrn, 'node')
                 node_gid = sfaImporter.AuthHierarchy.create_gid(urn, create_uuid(), pkey)
                 node_record = SfaRecord(hrn=hrn, gid=node_gid, type="node", pointer=node['node_id'], authority=get_authority(hrn))    
-                node_record.sync(verbose=True)
+                logger.info("Import: importing node: %s" % node_record.summary_string())  
+                node_record.sync()
 
         # import slices
         for slice_id in site['slice_ids']:
@@ -185,7 +199,8 @@ def main():
                 slice_gid = sfaImporter.AuthHierarchy.create_gid(urn, create_uuid(), pkey)
                 slice_record = SfaRecord(hrn=hrn, gid=slice_gid, type="slice", pointer=slice['slice_id'],
                                          authority=get_authority(hrn))
-                slice_record.sync(verbose=True)
+                logger.info("Import: importing slice: %s" % slice_record.summary_string())  
+                slice_record.sync()
 
         # import persons
         for person_id in site['person_ids']:
@@ -226,7 +241,8 @@ def main():
                 person_gid = sfaImporter.AuthHierarchy.create_gid(urn, create_uuid(), pkey)
                 person_record = SfaRecord(hrn=hrn, gid=person_gid, type="user", \
                                           pointer=person['person_id'], authority=get_authority(hrn))
-                person_record.sync(verbose=True)
+                logger.info("Import: importing person: %s" % person_record.summary_string())  
+                person_record.sync()
     
     # remove stale records    
     system_records = [interface_hrn, root_auth, interface_hrn + '.slicemanager']
@@ -294,6 +310,7 @@ def main():
             record_object = existing_records[(record_hrn, type)]
             record = SfaRecord(dict=record_object)
             record.delete()
+            logger.info("Import: deleting record: %s" % record.summary_string())  
                                    
     # save pub keys
     logger.info('Import: saving current pub keys')

@@ -372,7 +372,7 @@ class SfaRecord(Row):
     def getdict(self):
         return dict(self)
    
-    def sync(self, verbose=False):
+    def sync(self):
         """ 
         Sync this record with the database.
         """ 
@@ -389,16 +389,12 @@ class SfaRecord(Row):
         existing_records = table.find(filter)
         if not existing_records:
             table.insert(self)
-            if verbose:
-                logger.info("Inserted record: %s" %self.summary_string()) 
         else:
             existing_record = existing_records[0]
             self['record_id'] = existing_record['record_id']
             table.update(self) 
-            if verbose:
-                logger.info("Updated record: %s" % self.summary_string()) 
 
-    def delete(self, verbose=False):
+    def delete(self):
         """
         Remove record from the database.
         """
@@ -414,8 +410,6 @@ class SfaRecord(Row):
         existing_records = table.find(filter)
         for record in existing_records:
             table.remove(record)
-            if verbose:
-                logger.info("Removed record: %s" % self.summary_string())    
 
 class UserRecord(SfaRecord):
 
