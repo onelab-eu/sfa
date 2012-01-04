@@ -156,14 +156,21 @@ def main():
         # but its not a site record
         if site_hrn not in existing_hrns or \
            (site_hrn, 'authority') not in existing_records:
-            logger.info("Import: site %s " % site_hrn)
-            urn = hrn_to_urn(site_hrn, 'authority')
-            if not sfaImporter.AuthHierarchy.auth_exists(urn):
-                sfaImporter.AuthHierarchy.create_auth(urn)
-            auth_info = sfaImporter.AuthHierarchy.get_auth_info(urn)
-            auth_record = SfaRecord(hrn=site_hrn, gid=auth_info.get_gid_object(), type="authority", pointer=site['site_id'])
-            logger.info("Import: importing site: %s" % auth_record.summary_string())  
-            auth_record.sync() 
+            try:
+                logger.info("Import: site %s " % site_hrn)
+                urn = hrn_to_urn(site_hrn, 'authority')
+                if not sfaImporter.AuthHierarchy.auth_exists(urn):
+                    sfaImporter.AuthHierarchy.create_auth(urn)
+                auth_info = sfaImporter.AuthHierarchy.get_auth_info(urn)
+                auth_record = SfaRecord(hrn=site_hrn, gid=auth_info.get_gid_object(), \
+                                        type="authority", pointer=site['site_id'])
+                logger.info("Import: importing site: %s" % auth_record.summary_string())  
+                auth_record.sync()
+            except:
+                # if the site import fails then there is no point in trying to import the
+                # site's child records (node, slices, persons), so skip them.
+                logger.log_exc("Import: failed to import site. Skipping child records") 
+                continue 
              
         # import node records
         for node_id in site['node_ids']:
@@ -177,12 +184,16 @@ def main():
                 hrn = hrn[:64]
             if hrn not in existing_hrns or \
                (hrn, 'node') not in existing_records:
-                pkey = Keypair(create=True)
-                urn = hrn_to_urn(hrn, 'node')
-                node_gid = sfaImporter.AuthHierarchy.create_gid(urn, create_uuid(), pkey)
-                node_record = SfaRecord(hrn=hrn, gid=node_gid, type="node", pointer=node['node_id'], authority=get_authority(hrn))    
-                logger.info("Import: importing node: %s" % node_record.summary_string())  
-                node_record.sync()
+                try:
+                    pkey = Keypair(create=True)
+                    urn = hrn_to_urn(hrn, 'node')
+                    node_gid = sfaImporter.AuthHierarchy.create_gid(urn, create_uuid(), pkey)
+                    node_record = SfaRecord(hrn=hrn, gid=node_gid, type="node", pointer=node['node_id'], authority=get_authority(hrn))    
+                    logger.info("Import: importing node: %s" % node_record.summary_string())  
+                    node_record.sync()
+                except:
+                    logger.log_exc("Import: failed to import node") 
+                    
 
         # import slices
         for slice_id in site['slice_ids']:
@@ -194,13 +205,16 @@ def main():
             #slicename = _cleanup_string(slicename)
             if hrn not in existing_hrns or \
                (hrn, 'slice') not in existing_records:
-                pkey = Keypair(create=True)
-                urn = hrn_to_urn(hrn, 'slice')
-                slice_gid = sfaImporter.AuthHierarchy.create_gid(urn, create_uuid(), pkey)
-                slice_record = SfaRecord(hrn=hrn, gid=slice_gid, type="slice", pointer=slice['slice_id'],
-                                         authority=get_authority(hrn))
-                logger.info("Import: importing slice: %s" % slice_record.summary_string())  
-                slice_record.sync()
+                try:
+                    pkey = Keypair(create=True)
+                    urn = hrn_to_urn(hrn, 'slice')
+                    slice_gid = sfaImporter.AuthHierarchy.create_gid(urn, create_uuid(), pkey)
+                    slice_record = SfaRecord(hrn=hrn, gid=slice_gid, type="slice", pointer=slice['slice_id'],
+                                             authority=get_authority(hrn))
+                    logger.info("Import: importing slice: %s" % slice_record.summary_string())  
+                    slice_record.sync()
+                except:
+                    logger.log_exc("Import: failed to  import slice")
 
         # import persons
         for person_id in site['person_ids']:
@@ -226,23 +240,26 @@ def main():
 
             if hrn not in existing_hrns or \
                (hrn, 'user') not in existing_records or update_record:
-                if 'key_ids' in person and person['key_ids']:
-                    key = new_keys[0]
-                    try:
-                        pkey = convert_public_key(key)
-                    except:
-                        logger.warn('unable to convert public key for %s' % hrn)
-                        pkey = Keypair(create=True)
-                else:
-                    # the user has no keys. Creating a random keypair for the user's gid
-                    logger.warn("Import: person %s does not have a PL public key"%hrn)
-                    pkey = Keypair(create=True) 
-                urn = hrn_to_urn(hrn, 'user')
-                person_gid = sfaImporter.AuthHierarchy.create_gid(urn, create_uuid(), pkey)
-                person_record = SfaRecord(hrn=hrn, gid=person_gid, type="user", \
-                                          pointer=person['person_id'], authority=get_authority(hrn))
-                logger.info("Import: importing person: %s" % person_record.summary_string())  
-                person_record.sync()
+                try:
+                    if 'key_ids' in person and person['key_ids']:
+                        key = new_keys[0]
+                        try:
+                            pkey = convert_public_key(key)
+                        except:
+                            logger.warn('unable to convert public key for %s' % hrn)
+                            pkey = Keypair(create=True)
+                    else:
+                        # the user has no keys. Creating a random keypair for the user's gid
+                        logger.warn("Import: person %s does not have a PL public key"%hrn)
+                        pkey = Keypair(create=True) 
+                    urn = hrn_to_urn(hrn, 'user')
+                    person_gid = sfaImporter.AuthHierarchy.create_gid(urn, create_uuid(), pkey)
+                    person_record = SfaRecord(hrn=hrn, gid=person_gid, type="user", \
+                                              pointer=person['person_id'], authority=get_authority(hrn))
+                    logger.info("Import: importing person: %s" % person_record.summary_string())  
+                    person_record.sync()
+                except:
+                    logger.log_exc("Import: failed to import person.") 
     
     # remove stale records    
     system_records = [interface_hrn, root_auth, interface_hrn + '.slicemanager']
@@ -307,11 +324,13 @@ def main():
             continue 
         
         if not found:
-            record_object = existing_records[(record_hrn, type)]
-            record = SfaRecord(dict=record_object)
-            record.delete()
-            logger.info("Import: deleting record: %s" % record.summary_string())  
-                                   
+            try:
+                record_object = existing_records[(record_hrn, type)]
+                record = SfaRecord(dict=record_object)
+                logger.info("Import: deleting record: %s" % record.summary_string())
+                record.delete()
+            except:
+                logger.log_exc("Import: failded to delete record")                    
     # save pub keys
     logger.info('Import: saving current pub keys')
     save_keys(keys_filename, person_keys)                
