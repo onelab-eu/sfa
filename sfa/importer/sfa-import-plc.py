@@ -144,7 +144,9 @@ def main():
             if not sfaImporter.AuthHierarchy.auth_exists(urn):
                 sfaImporter.AuthHierarchy.create_auth(urn)
             auth_info = sfaImporter.AuthHierarchy.get_auth_info(urn)
-            auth_record = SfaRecord(hrn=site_hrn, gid=auth_info.get_gid_object(), type="authority", pointer=site['site_id'])
+            auth_record = SfaRecord(hrn=site_hrn, gid=auth_info.get_gid_object(), \
+                                    type="authority", pointer=site['site_id'], 
+                                    authority=get_authority(site_hrn))
             auth_record.sync(verbose=True)
 
     # start importing 
@@ -163,7 +165,8 @@ def main():
                     sfaImporter.AuthHierarchy.create_auth(urn)
                 auth_info = sfaImporter.AuthHierarchy.get_auth_info(urn)
                 auth_record = SfaRecord(hrn=site_hrn, gid=auth_info.get_gid_object(), \
-                                        type="authority", pointer=site['site_id'])
+                                        type="authority", pointer=site['site_id'], 
+                                        authority=get_authority(site_hrn))
                 logger.info("Import: importing site: %s" % auth_record.summary_string())  
                 auth_record.sync()
             except:
