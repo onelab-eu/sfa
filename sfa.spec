@@ -1,6 +1,6 @@
 %define name sfa
 %define version 2.0
-%define taglevel 7
+%define taglevel 8
 
 %define release %{taglevel}%{?pldistro:.%{pldistro}}%{?date:.%{date}}
 %global python_sitearch	%( python -c "from distutils.sysconfig import get_python_lib; print get_python_lib(1)" )
@@ -224,6 +224,11 @@ fi
 [ "$1" -ge "1" ] && service sfa-cm restart || :
 
 %changelog
+* Wed Jan 4 2012 Tony Mack <tmack@cs.princeton.edu> - sfa-2.0-8
+- bugfix: Fixed a bug in the sfa-import-plc.py script that caused the script to 
+  exit when it encountered a user with an invalid public key.
+- server: imporved logging in sfa-import-plc.py
+ 
 * Tue Jan 3 2012 Tony Mack <tmack@cs.princeton.edu> - sfa-2.0-7
 - bugfix: Fixed appending public keys in CreateSliver
 - bugfix: Fixed various bugs in the PGv2/GENIv3 request, advertisement and manifest rspecs.
