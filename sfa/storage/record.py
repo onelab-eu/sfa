@@ -365,8 +365,8 @@ class SfaRecord(Row):
                     print "     %s: %s" % (key, self[key])
     
     def summary_string(self):
-        return "Record(record_id=%s, hrn=%s, type=%s, auth=%s, pointer=%s)" % \
-                (self.get('record_id'), self.get('hrn'), self.get('type'), self.get('auth'), \
+        return "Record(record_id=%s, hrn=%s, type=%s, authority=%s, pointer=%s)" % \
+                (self.get('record_id'), self.get('hrn'), self.get('type'), self.get('authority'), \
                  self.get('pointer'))
 
     def getdict(self):
