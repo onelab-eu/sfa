@@ -91,7 +91,8 @@ class sfaImport:
         # create the db record if it doesnt already exist    
         auth_info = self.AuthHierarchy.get_auth_info(hrn)
         auth_record = SfaRecord(hrn=hrn, gid=auth_info.get_gid_object(), type="authority", pointer=-1, authority=get_authority(hrn))
-        auth_record.sync(verbose=True)
+        self.logger.info("Import: importing %s " % auth_record.summary_string())
+        auth_record.sync()
 
     def create_sm_client_record(self):
         """
@@ -106,7 +107,8 @@ class sfaImport:
         auth_info = self.AuthHierarchy.get_auth_info(hrn)
         record = SfaRecord(hrn=hrn, gid=auth_info.get_gid_object(), \
                            type="user", pointer=-1, authority=get_authority(hrn))
-        record.sync(verbose=True)
+        self.logger.info("Import: importing %s " % record.summary_string())
+        record.sync()
 
     def create_interface_records(self):
         """
@@ -124,7 +126,8 @@ class sfaImport:
             gid = self.AuthHierarchy.create_gid(urn, create_uuid(), pkey)
             interface_record = SfaRecord(hrn=hrn, type=interface, pointer=-1,
                                          gid = gid, authority=get_authority(hrn))
-            interface_record.sync(verbose=True)
+            self.logger.info("Import: importing %s " % interface_record.summary_string())
+            interface_record.sync()
              
     def delete_record(self, hrn, type):
         # delete the record
