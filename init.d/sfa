@@ -59,6 +59,50 @@ function postgresql_check () {
     return 1
 }
 
+# use a single date of this script invocation for the dump_*_db functions.
+DATE=$(date +"%Y-%m-%d-%H-%M-%S")
+
+# Dumps the database - optional argument to specify filename suffix
+function dump_sfa_db()
+{
+    if [ -n "$1" ] ; then suffix="-$1" ; else suffix="" ; fi
+    dumpfile=/var/lib/pgsql/backups/$(date +"${SFA_DB_NAME}.${DATE}${suffix}.sql")
+    pg_dump -U $SFA_DB_USER $SFA_DB_NAME > $dumpfile
+    check
+}
+
+# Updates the database by applying all migration scripts in
+# /usr/share/sfa/migrations/N-up-*, where N is greater than the
+# current subversion. At least one of the migration scripts with the
+# same N must update sfa_db_version.subversion.
+function migrate_db()
+{
+    subversion=$(psql -U $SFA_DB_USER --quiet --tuples-only --no-align -c \
+	         "SELECT subversion FROM sfa_db_version LIMIT 1" \
+	         $SFA_DB_NAME 2>/dev/null || echo 0)
+    shopt -s nullglob
+    for file in /usr/share/sfa/migrations/[0-9]*-up-* ; do
+	script=$(basename $file)
+	index=${script%-up*}
+	extension=${script##*.}
+	if [ $index -gt $subversion ] ; then
+	    if [ "$extension" = "sql" ] ; then
+	        dialog " - $script (dbdumped)"
+	        dump_sfa_db "before-$script"
+		psql -U $SFA_DB_USER -f $file $SFA_DB_NAME
+	    elif [ -x $file ] ; then
+	        dialog " - $script (dbdumped)"
+	        dump_sfa_db "before-$script"
+		$file
+	    else
+	        dialog "\nWarning: migration $file not executable"
+	    fi
+	    check
+	fi
+    done
+}
+
+
 
 # Regenerate configuration files - almost verbatim from plc.init
 function reload () {
@@ -126,7 +170,7 @@ function db_start () {
 	( egrep -v '^(PGDATA=|PGLOG=|PGPORT=)' $postgresql_sysconfig 
 	    echo "PGDATA=$PGDATA"
 	    echo "PGLOG=/var/log/pgsql"
-	    echo "PGPORT=$PLC_DB_PORT"
+	    echo "PGPORT=$SFA_DB_PORT"
 	) >> $tmp ; mv -f $tmp $postgresql_sysconfig
 
 	######## /var/lib/pgsql/data 

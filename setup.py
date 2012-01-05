@@ -64,6 +64,7 @@ data_files = [ ('/etc/sfa/', [ 'config/aggregates.xml',
                ('/etc/sfatables/targets/', glob('sfatables/targets/*.xml')),
                ('/etc/init.d/', [ "init.d/%s"%x for x in initscripts ]),
                ('/usr/share/sfa/', [ 'sfa/storage/sfa.sql' ] ),
+               ('/usr/share/sfa/migrations', [ 'sfa/storage/migrations/*' ] ),
                ('/usr/share/sfa/examples/', glob('sfa/examples/*' ) + [ 'cron.d/sfa.cron' ] ),
               ]
 

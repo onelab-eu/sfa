@@ -14,12 +14,7 @@ CREATE TABLE sfa_db_version (
     subversion integer NOT NULL DEFAULT 0
 ) WITH OIDS;
 
--- the migration scripts do not use the major 'version' number
--- so 5.0 sets subversion at 100
--- in case your database misses the site and persons tags feature, 
--- you might wish to first upgrade to 4.3-rc16 before moving to some 5.0
--- or run the up script here
--- http://svn.planet-lab.org/svn/PLCAPI/branches/4.3/migrations/
+-- for upgrades/migrations
 
 INSERT INTO sfa_db_version (version, subversion) VALUES (1, 1);
 
