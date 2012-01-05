@@ -21,9 +21,9 @@ OARrequests_uri_list = ['/oarapi/version.json','/oarapi/timezone.json', '/oarapi
 OARrequests_get_uri_dict = { 'GET_version': '/oarapi/version.json',
 			'GET_timezone':'/oarapi/timezone.json' ,
 			'GET_jobs': '/oarapi/jobs.json',
-                        'GET_jobs<id>': '/oarapi/jobs/id.json',
-                        'GET_jobs<id>/resources': '/oarapi/jobs/id/resources.json',
-                        'GET_resources/<id>': '/oarapi/resources/.json',
+                        'GET_jobs_id': '/oarapi/jobs/id.json',
+                        'GET_jobs_id_resources': '/oarapi/jobs/id/resources.json',
+                        'GET_resources_id': '/oarapi/resources/.json',
 			'GET_jobs_table': '/oarapi/jobs/table.json',
 			'GET_jobs_details': '/oarapi/jobs/details.json',
 			'GET_resources_full': '/oarapi/resources/full.json',
@@ -48,20 +48,30 @@ class OARrestapi:
         self.oarserver['postformat'] = 'json'	
             
     def GETRequestToOARRestAPI(self, request, strval=None  ): 
-        self.oarserver['uri'] = OARrequests_get_uri_dict[request]
-        if  strval:
-          self.oarserver['uri'] = self.oarserver['uri'].replace("id",strval)
+        self.oarserver['uri'] = OARrequests_get_uri_dict[request] 
+        data = json.dumps({})
+        if strval:
+          self.oarserver['uri'] = self.oarserver['uri'].replace("id",str(strval))
           print>>sys.stderr, "\r\n \r\n   GETRequestToOARRestAPI replace :  self.oarserver['uri'] %s",  self.oarserver['uri']
         
-        try :
+        try :  
+            headers = {'X-REMOTE_IDENT':'savakian',\
+            'content-length':'0'}
+            #conn = httplib.HTTPConnection(self.oarserver['ip'],self.oarserver['port'])
+            #conn.putheader(headers)
+            #conn.endheaders()
+            #conn.putrequest("GET",self.oarserver['uri'] ) 
             conn = httplib.HTTPConnection(self.oarserver['ip'],self.oarserver['port'])
-            conn.request("GET",self.oarserver['uri'] )
+           
+            conn.request("GET",self.oarserver['uri'],data , headers )
             resp = ( conn.getresponse()).read()
             conn.close()
         except:
             raise ServerError("GET_OAR_SRVR : Could not reach OARserver")
         try:
             js = json.loads(resp)
+            if strval:
+                print>>sys.stderr, " \r\n \r\n \t GETRequestToOARRestAPI strval %s js %s" %(strval,js)
             return js
         
         except ValueError:
@@ -191,6 +201,9 @@ class OARGETParser:
                 
     def ParseJobsDetails (self): 
         print "ParseJobsDetails"
+        
+    def ParseJobsIdResources(self):
+        print>>sys.stderr, "ParseJobsIdResources"
             
     def ParseResources(self) :
         print>>sys.stderr, " \r\n  \t\t\t ParseResources__________________________ " 
@@ -283,6 +296,8 @@ class OARGETParser:
         'GET_version': {'uri':'/oarapi/version.json', 'parse_func': ParseVersion},
         'GET_timezone':{'uri':'/oarapi/timezone.json' ,'parse_func': ParseTimezone },
         'GET_jobs': {'uri':'/oarapi/jobs.json','parse_func': ParseJobs},
+        'GET_jobs_id': {'uri':'/oarapi/jobs/id/resources.json','parse_func': ParseJobsIdResources},
+        'GET_jobs_id_resources': {'uri':'/oarapi/jobs/id/resources.json','parse_func': ParseJobsIdResources},
         'GET_jobs_table': {'uri':'/oarapi/jobs/table.json','parse_func': ParseJobsTable},
         'GET_jobs_details': {'uri':'/oarapi/jobs/details.json','parse_func': ParseJobsDetails},
         'GET_resources_full': {'uri':'/oarapi/resources/full.json','parse_func': ParseResourcesFull},
@@ -311,9 +326,9 @@ class OARGETParser:
         self.site_dict = {}
         self.SendRequest("GET_version")
 
-    def SendRequest(self,request):
+    def SendRequest(self,request, strval = None ):
         if request in OARrequests_get_uri_dict:
-            self.raw_json = self.server.GETRequestToOARRestAPI(request)
+            self.raw_json = self.server.GETRequestToOARRestAPI(request,strval)
             self.OARrequests_uri_dict[request]['parse_func'](self)
         else:
             print>>sys.stderr, "\r\n OARGetParse __init__ : ERROR_REQUEST "	,request
