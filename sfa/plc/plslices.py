@@ -594,7 +594,7 @@ class PlSlices:
                 self.driver.shell.DeleteSliceTag(attribute['slice_tag_id'])
             except Exception, e:
                 logger.warn('Failed to remove sliver attribute. name: %s, value: %s, node_id: %s\nCause:%s'\
-                                % (name, value,  node_id, str(e)))
+                                % (slice['name'], attribute['value'],  attribute.get('node_id'), str(e)))
 
         # add requested_attributes
         for attribute in added_slice_attributes:
@@ -602,5 +602,5 @@ class PlSlices:
                 self.driver.shell.AddSliceTag(slice['name'], attribute['name'], attribute['value'], attribute.get('node_id', None))
             except Exception, e:
                 logger.warn('Failed to add sliver attribute. name: %s, value: %s, node_id: %s\nCause:%s'\
-                                % (name, value,  node_id, str(e)))
+                                % (slice['name'], attribute['value'],  attribute.get('node_id'), str(e)))
 
