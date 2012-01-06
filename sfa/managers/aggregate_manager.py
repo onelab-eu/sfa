@@ -16,7 +16,7 @@ class AggregateManager:
             'interface':'aggregate',
             'sfa': 2,
             'geni_api': 2,
-            'geni_api_versions': {'2': 'http://%s:%s' % (api.config.SFA_SM_HOST, api.config.SFA_SM_PORT)}, 
+            'geni_api_versions': {'2': 'http://%s:%s' % (api.config.SFA_AGGREGATE_HOST, api.config.SFA_AGGREGATE_PORT)}, 
             'hrn':xrn.get_hrn(),
             'urn':xrn.get_urn(),
             }
