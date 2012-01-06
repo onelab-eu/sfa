@@ -214,7 +214,6 @@ class SfaApi (XmlrpcApi):
 
     def get_geni_code(self, result):
         code = {
-            'geni_api': 2,             
             'geni_code': GENICODE.SUCCESS, 
             'am_type': 'sfa',
             'am_code': None,
@@ -239,6 +238,7 @@ class SfaApi (XmlrpcApi):
 
     def prepare_response_v2_am(self, result):
         response = {
+            'geni_api': 2,             
             'code': self.get_geni_code(result),
             'value': self.get_geni_value(result),
             'output': self.get_geni_output(result),
