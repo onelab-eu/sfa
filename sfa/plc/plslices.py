@@ -342,9 +342,10 @@ class PlSlices:
                 # unbind from peer so we can modify if necessary. Will bind back later
                 self.driver.shell.UnBindObjectFromPeer('slice', slice['slice_id'], peer['shortname'])
 	        #Update existing record (e.g. expires field) it with the latest info.
-            requested_expires = int(datetime_to_epoch(utcparse(slice_record['expires'])))
-            if requested_expires and slice['expires'] != requested_expires:
-                self.driver.shell.UpdateSlice( slice['slice_id'], {'expires' : requested_expires})
+            if slice_record.get('expires'):
+                requested_expires = int(datetime_to_epoch(utcparse(slice_record['expires'])))
+                if requested_expires and slice['expires'] != requested_expires:
+                    self.driver.shell.UpdateSlice( slice['slice_id'], {'expires' : requested_expires})
        
         return slice
 
