@@ -32,14 +32,13 @@ class SfaRecord(Row):
     of different types.
     """
 
-    table_name = 'sfa'
-    
-    primary_key = 'record_id'
+#    table_name = 'sfa'
+#    primary_key = 'record_id'
 
     ### the wsdl generator assumes this is named 'fields'
     internal_fields = {
-        'record_id': Parameter(int, 'An id that uniquely identifies this record', ro=True),
-        'pointer': Parameter(int, 'An id that uniquely identifies this record in an external database ')
+        'record_id': Parameter(int, "An id that uniquely identifies this record", ro=True),
+        'pointer': Parameter(int, "An id that uniquely identifies this record in an external database")
     }
 
     fields = {
@@ -48,8 +47,8 @@ class SfaRecord(Row):
         'hrn': Parameter(str, "Human readable name of object"),
         'gid': Parameter(str, "GID of the object"),
         'type': Parameter(str, "Record type"),
-        'last_updated': Parameter(int, 'Date and time of last update', ro=True),
-        'date_created': Parameter(int, 'Date and time this record was created', ro=True),
+        'last_updated': Parameter(int, "Date and time of last update", ro=True),
+        'date_created': Parameter(int, "Date and time this record was created", ro=True),
     }
     all_fields = dict(fields.items() + internal_fields.items())
     ##
@@ -61,7 +60,8 @@ class SfaRecord(Row):
     # @param pointer is a pointer to a PLC record
     # @param dict if !=None, then fill in this record from the dictionary
 
-    def __init__(self, hrn=None, gid=None, type=None, pointer=None, authority=None, peer_authority=None, dict=None, string=None):
+    def __init__(self, hrn=None, gid=None, type=None, pointer=None, authority=None, 
+                 peer_authority=None, dict=None, string=None):
         self.dirty = True
         self.hrn = None
         self.gid = None
@@ -313,9 +313,9 @@ class SfaRecord(Row):
         """
         recorddict = self.as_dict()
         filteredDict = dict([(key, val) for (key, val) in recorddict.iteritems() if key in self.fields.keys()])
-        record = XML('<record/>')
-        record.parse_dict(filteredDict)
-        str = record.toxml()
+        xml_record = XML('<record/>')
+        xml_record.parse_dict(filteredDict)
+        str = xml_record.toxml()
         return str
 
     ##
@@ -329,8 +329,8 @@ class SfaRecord(Row):
         """
         #dict = xmlrpclib.loads(str)[0][0]
 
-        record = XML(str)
-        self.load_from_dict(record.todict())
+        xml_record = XML(str)
+        self.load_from_dict(xml_record.todict())
 
     ##
     # Dump the record to stdout
@@ -438,7 +438,6 @@ class SliceRecord(SfaRecord):
 class NodeRecord(SfaRecord):
     fields = {
         'hostname': Parameter(str, 'This nodes dns name'),
-        'node_type': Parameter(str, 'Type of node this is'),
         'node_type': Parameter(str, 'Type of node this is'),
         'latitude': Parameter(str, 'latitude'),
         'longitude': Parameter(str, 'longitude'),
