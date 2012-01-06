@@ -13,7 +13,14 @@ the timezone, so that it's compatible with normal datetime.datetime objects.
 
 For safety this can also handle inputs that are either timestamps, or datetimes
 """
-    
+    # perpare the input for the checks below by
+    # casting strings ('1327098335') to ints
+    if isinstance(input, StringTypes):
+        try:
+            input = int(input)
+        except ValueError:
+            pass
+          
     if isinstance (input, datetime.datetime):
         logger.warn ("argument to utcparse already a datetime - doing nothing")
         return input
