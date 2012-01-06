@@ -290,6 +290,8 @@ function start() {
 
     db_start
 
+    migrate_db
+
     # install peer certs
     action $"SFA installing peer certs" daemon /usr/bin/sfa-start.py -t -d $OPTIONS 
 
