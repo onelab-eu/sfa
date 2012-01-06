@@ -3,6 +3,11 @@
 # a minimal library for writing "lightweight" SFA clients
 #
 
+# xxx todo
+# this library should probably check for the expiration date of the various
+# certificates and automatically retrieve fresh ones when expired
+
+import sys
 import os,os.path
 
 import sfa.util.sfalogging
@@ -276,9 +281,12 @@ class SfaClientBootstrap:
                     return filename
                 except IOError:
                     raise 
-                except:
-                    self.logger.log_exc("Could not produce/retrieve %s"%filename)
-                    raise Exception, "Could not produce/retrieve %s"%filename
+                except :
+                    error = sys.exc_info()[:2]
+                    message="Could not produce/retrieve %s (%s -- %s)"%\
+                        (filename,error[0],error[1])
+                    self.logger.log_exc(message)
+                    raise Exception, message
             return wrapped
         return wrap
 

@@ -138,13 +138,15 @@ BINS =	./config/sfa-config-tty ./config/gen-sfa-cm-config.py \
 	./sfa/importer/sfa-import-plc.py ./sfa/importer/sfa-nuke-plc.py ./sfa/server/sfa-start.py \
 	$(CLIENTS)
 
-sync:
+synccheck: 
 ifeq (,$(SSHURL))
-	@echo "sync: You must define, either PLC, or PLCHOST & GUEST, on the command line"
+	@echo "*sync: You must define, either PLC, or PLCHOST & GUEST, on the command line"
 	@echo "  e.g. make sync PLC=private.one-lab.org"
 	@echo "  or   make sync PLCHOST=testbox1.inria.fr GUEST=vplc03.inria.fr"
 	@exit 1
-else
+endif
+
+sync: synccheck
 	+$(RSYNC) --relative ./sfa/ $(SSHURL)/usr/lib\*/python2.\*/site-packages/
 	+$(RSYNC) ./tests/ $(SSHURL)/root/tests-sfa
 	+$(RSYNC)  $(BINS) $(SSHURL)/usr/bin/
@@ -152,20 +154,20 @@ else
 	+$(RSYNC) ./config/default_config.xml $(SSHURL)/etc/sfa/
 	+$(RSYNC) ./sfa/storage/sfa.sql $(SSHURL)/usr/share/sfa/
 	$(SSHCOMMAND) exec service sfa restart
-endif
 
 # 99% of the time this is enough
-fastsync:
+fastsync: synccheck
 	+$(RSYNC) --relative ./sfa/ $(SSHURL)/usr/lib\*/python2.\*/site-packages/
 	$(SSHCOMMAND) exec service sfa restart
 
-clientsync:
+clientsync: synccheck
 	+$(RSYNC)  $(BINS) $(SSHURL)/usr/bin/
 
-ricasync:
+ricasync: synccheck
 	+$(RSYNC) --relative ./sfa/fd ./sfa/generic/fd.py ./sfa/rspecs/versions/federica.py $(SSHURL)/usr/lib\*/python2.\*/site-packages/
+	$(SSHCOMMAND) exec service sfa restart
 
-.PHONY: sync fastsync clientsync
+.PHONY: synccheck sync fastsync clientsync ricasync
 
 ##########
 CLIENTLIBFILES= \

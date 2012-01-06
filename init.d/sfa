@@ -126,7 +126,7 @@ function db_start () {
 	( egrep -v '^(PGDATA=|PGLOG=|PGPORT=)' $postgresql_sysconfig 
 	    echo "PGDATA=$PGDATA"
 	    echo "PGLOG=/var/log/pgsql"
-	    echo "PGPORT=$PLC_DB_PORT"
+	    echo "PGPORT=$SFA_DB_PORT"
 	) >> $tmp ; mv -f $tmp $postgresql_sysconfig
 
 	######## /var/lib/pgsql/data 
