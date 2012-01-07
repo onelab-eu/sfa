@@ -5,7 +5,7 @@ from sfa.util.sfatime import utcparse, datetime_to_epoch
 from sfa.util.sfalogging import logger
 from sfa.util.xrn import Xrn, get_leaf, get_authority, urn_to_hrn
 #from sfa.util.policy import Policy
-from sfa.util.xrn import Xrn
+from sfa.util.plxrn import PlXrn
 from sfa.rspecs.rspec import RSpec
 from sfa.plc.vlink import VLink
 from sfa.util.plxrn import hrn_to_pl_slicename
@@ -357,7 +357,7 @@ class PlSlices:
         for user in users:
             hrn, type = urn_to_hrn(user['urn'])
             username = get_leaf(hrn)
-            login_base = get_leaf(get_authority(user['urn']))
+            login_base = PlXrn(xrn=user['urn']).pl_login_base()
             user['username'] = username
             user['site'] = login_base
 
