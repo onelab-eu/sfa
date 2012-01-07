@@ -127,7 +127,8 @@ class PlAggregate:
             # most likely a default/global sliver attribute (node_id == None)
             if tag['node_id'] not in slivers:
                 sliver = Sliver({'sliver_id': urn_to_sliver_id(slice_urn, slice['slice_id'], ""),
-                                 'name': 'plab-vserver',
+                                 'name': slice['name'],
+                                 'type': 'plab-vserver',
                                  'tags': []})
                 slivers[tag['node_id']] = sliver
             slivers[tag['node_id']]['tags'].append(tag)
@@ -221,7 +222,7 @@ class PlAggregate:
                 rspec_node['slivers'] = [sliver]
                 
                 # slivers always provide the ssh service
-                login = Login({'authentication': 'ssh-keys', 'hostname': node['hostname'], 'port':'22'})
+                login = Login({'authentication': 'ssh-keys', 'hostname': node['hostname'], 'port':'22', 'username': sliver['name']})
                 service = Services({'login': login})
                 rspec_node['services'] = [service]
             rspec_nodes.append(rspec_node)
