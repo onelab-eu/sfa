@@ -15,7 +15,7 @@ class PGv2SliverType:
                 sliver_elem.set('name', sliver['type'])
             if sliver.get('client_id'):
                 sliver_elem.set('client_id', sliver['client_id'])  
-            PGv2SliverType.add_sliver_attributes(sliver_elem, sliver.get('pl_tags', []))
+            PGv2SliverType.add_sliver_attributes(sliver_elem, sliver.get('tags', []))
     
     @staticmethod
     def add_sliver_attributes(xml, attributes):
