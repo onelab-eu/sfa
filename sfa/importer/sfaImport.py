@@ -18,7 +18,6 @@ from sfa.trust.hierarchy import Hierarchy
 from sfa.trust.gid import create_uuid
 from sfa.storage.table import SfaTable
 from sfa.storage.record import SfaRecord
-from sfa.storage.table import SfaTable
 
 
 def _un_unicode(str):
@@ -50,7 +49,7 @@ class sfaImport:
     def __init__(self):
        self.logger = _SfaLogger(logfile='/var/log/sfa_import.log', loggername='importlog')
        self.AuthHierarchy = Hierarchy()
-       self.table = SfaTable()     
+#       self.table = SfaTable()     
        self.config = Config()
        self.TrustedRoots = TrustedRoots(Config.get_trustedroots_dir(self.config))
        self.root_auth = self.config.SFA_REGISTRY_ROOT_AUTH
