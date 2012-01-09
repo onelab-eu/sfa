@@ -15,8 +15,6 @@ from sfa.server.xmlrpcapi import XmlrpcApi
 
 from sfa.client.return_value import ReturnValue
 
-# thgen xxx fixme this is wrong all right, but temporary, will use generic
-from sfa.storage.table import SfaTable
 
 ####################
 class SfaApi (XmlrpcApi): 
@@ -163,7 +161,8 @@ class SfaApi (XmlrpcApi):
             auth_hrn = hrn
         auth_info = self.auth.get_auth_info(auth_hrn)
         # xxx thgen fixme - use SfaTable hardwired for now 
-        #table = self.SfaTable()
+        # thgen xxx fixme this is wrong all right, but temporary, will use generic
+        from sfa.storage.table import SfaTable
         table = SfaTable()
         records = table.findObjects({'hrn': hrn, 'type': 'authority+sa'})
         if not records:
