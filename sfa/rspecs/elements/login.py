@@ -4,5 +4,6 @@ class Login(Element):
     fields = [
         'authentication',
         'hostname',
-        'port'
+        'port',
+        'username'
     ]

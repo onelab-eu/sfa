@@ -198,8 +198,9 @@ class XML:
         # set schema
         for key in self.root.attrib.keys():
             if key.endswith('schemaLocation'):
-                # schema location should be at the end of the list
-                schema_parts  = self.root.attrib[key].split(' ')
+                # schemaLocation should be at the end of the list.
+                # Use list comprehension to filter out empty strings 
+                schema_parts  = [x for x in self.root.attrib[key].split(' ') if x]
                 self.schema = schema_parts[1]    
                 namespace, schema  = schema_parts[0], schema_parts[1]
                 break
