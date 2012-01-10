@@ -91,9 +91,9 @@ class SfaApi (XmlrpcApi):
         return server
                
         
-    def getCredential(self):
+    def getCredential(self, minimumExpiration=0):
         """
-        Return a valid credential for this interface. 
+        Return a valid credential for this interface.
         """
         type = 'authority'
         path = self.config.SFA_DATA_DIR
@@ -104,7 +104,7 @@ class SfaApi (XmlrpcApi):
             cred = Credential(filename = cred_filename)
             # make sure cred isnt expired
             if not cred.get_expiration or \
-               datetime.datetime.utcnow() < cred.get_expiration():    
+               datetime.datetime.utcnow() + datetime.timedelta(seconds=minimumExpiration) < cred.get_expiration():
                 return cred.save_to_string(save_parents=True)
 
         # get a new credential
