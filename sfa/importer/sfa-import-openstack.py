@@ -27,11 +27,7 @@ from sfa.trust.certificate import convert_public_key, Keypair
 from sfa.trust.gid import create_uuid
 from sfa.importer.sfaImport import sfaImport, _cleanup_string
 from sfa.util.sfalogging import logger
-try:
-    from nova.auth.manager import AuthManager, db, context
-except ImportError:
-    AuthManager = None
-    
+from sfa.openstack.openstack_shell import OpenstackShell    
 
 def process_options():
 
@@ -68,11 +64,7 @@ def main():
         sys.exit(0)
     root_auth = config.SFA_REGISTRY_ROOT_AUTH
     interface_hrn = config.SFA_INTERFACE_HRN
-    if  AuthManager:
-        auth_manager = AuthManager()
-    else:    
-        logger.info("Unable to import nova.auth.manager. Doesn't look like openstack-copute is installed. Exiting...")
-        sys.exit(0)    
+    shell = OpenstackShell(config)
     sfaImporter.create_top_level_records()
     
     # create dict of all existing sfa records
@@ -87,7 +79,7 @@ def main():
             
         
     # Get all users
-    persons = auth_manager.get_users()
+    persons = shell.user_get_all()
     persons_dict = {}
     keys_filename = config.config_path + os.sep + 'person_keys.py' 
     old_person_keys = load_keys(keys_filename)    
@@ -95,7 +87,7 @@ def main():
     for person in persons:
         hrn = config.SFA_INTERFACE_HRN + "." + person.id
         old_keys = old_person_keys.get(person.id, [])
-        keys = db.key_pair_get_all_by_user(context.get_admin_context(), person.id)
+        keys = shell.key_pair_get_all_by_user(person.id)
         person_keys[person.id] = [key.public_key for key in keys]
         update_record = False
         if old_keys != keys:
@@ -119,7 +111,7 @@ def main():
                 person_record.sync()
 
     # Get all projects
-    projects = db.project_get_all(context.get_admin_context())
+    projects = shell.project_get_all()
     projects_dict = {}
     for project in projects:
         hrn = config.SFA_INTERFACE_HRN + '.' + project.id
@@ -131,7 +123,7 @@ def main():
             project_record = SfaRecord(hrn=hrn, gid=project_gid, type="slice",
                                        authority=get_authority(hrn))
             projects_dict[project_record['hrn']] = project_record
-            project_record.sync(verbose=True) 
+            project_record.sync() 
     
     # remove stale records    
     system_records = [interface_hrn, root_auth, interface_hrn + '.slicemanager']
