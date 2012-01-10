@@ -86,35 +86,38 @@ def main():
     person_keys = {} 
     for person in persons:
         hrn = config.SFA_INTERFACE_HRN + "." + person.id
+        persons_dict[hrn] = person
         old_keys = old_person_keys.get(person.id, [])
-        keys = shell.key_pair_get_all_by_user(person.id)
-        person_keys[person.id] = [key.public_key for key in keys]
+        keys = [k.public_key for k in shell.key_pair_get_all_by_user(person.id)]
+        person_keys[person.id] = keys
         update_record = False
         if old_keys != keys:
             update_record = True
         if hrn not in existing_hrns or \
                (hrn, 'user') not in existing_records or update_record:    
             urn = hrn_to_urn(hrn, 'user')
+            
             if keys:
                 try:
-                    pkey = convert_public_key(key)
+                    pkey = convert_public_key(keys[0])
                 except:
-                    logger.warn('unable to convert public key for %s' % hrn)
+                    logger.log_exc('unable to convert public key for %s' % hrn)
                     pkey = Keypair(create=True)
             else:
                 logger.warn("Import: person %s does not have a PL public key"%hrn)
                 pkey = Keypair(create=True) 
-                person_gid = sfaImporter.AuthHierarchy.create_gid(urn, create_uuid(), pkey)
-                person_record = SfaRecord(hrn=hrn, gid=person_gid, type="user", \
-                                              authority=get_authority(hrn))
-                persons_dict[person_record['hrn']] = person_record
-                person_record.sync()
+            person_gid = sfaImporter.AuthHierarchy.create_gid(urn, create_uuid(), pkey)
+            person_record = SfaRecord(hrn=hrn, gid=person_gid, type="user", \
+                                          authority=get_authority(hrn))
+            logger.info("Import: importing %s " % person_record.summary_string())
+            person_record.sync()
 
     # Get all projects
     projects = shell.project_get_all()
     projects_dict = {}
     for project in projects:
         hrn = config.SFA_INTERFACE_HRN + '.' + project.id
+        projects_dict[hrn] = project
         if hrn not in existing_hrns or \
         (hrn, 'slice') not in existing_records:
             pkey = Keypair(create=True)
@@ -123,6 +126,7 @@ def main():
             project_record = SfaRecord(hrn=hrn, gid=project_gid, type="slice",
                                        authority=get_authority(hrn))
             projects_dict[project_record['hrn']] = project_record
+            logger.info("Import: importing %s " % project_record.summary_string())
             project_record.sync() 
     
     # remove stale records    
@@ -146,6 +150,7 @@ def main():
         
         record_object = existing_records[(record_hrn, type)]
         record = SfaRecord(dict=record_object)
+        logger.info("Import: removing %s " % record.summary_string())
         record.delete()
                                    
     # save pub keys
