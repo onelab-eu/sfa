@@ -116,6 +116,7 @@ class SliceManager:
                     forward_options['rspec_version'] = version_manager.get_version('SFA 1').to_dict()
                 else:
                     forward_options['rspec_version'] = version_manager.get_version('ProtoGENI 2').to_dict()
+                    forward_options['geni_rspec_version'] = {'type': 'geni', 'version': '3.0'}
                 rspec = server.ListResources(credential, forward_options)
                 return {"aggregate": aggregate, "rspec": rspec, "elapsed": time.time()-tStart, "status": "success"}
             except Exception, e:
