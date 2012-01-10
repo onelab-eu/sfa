@@ -5,6 +5,10 @@ from sfa.util.sfalogging import logger
 from sfa.storage.table import SfaTable
 from sfa.util.defaultdict import defaultdict
 
+from sfa.trust.certificate import *
+from sfa.trust.credential import *
+from sfa.trust.gid import GID
+
 from sfa.managers.driver import Driver
 from sfa.rspecs.version_manager import VersionManager
 from sfa.rspecs.rspec import RSpec
@@ -69,7 +73,24 @@ class SlabDriver(Driver):
         slices = SlabSlices(self)
         peer = slices.get_peer(slice_hrn)
         sfa_peer = slices.get_sfa_peer(slice_hrn)
-        slice_record=None    
+        slice_record=None 
+        #print>>sys.stderr, " \r\n \r\n   create_sliver  creds %s \r\n \r\n users %s " %(creds,users)
+       
+        if not isinstance(creds, list):
+            creds = [creds]
+
+        #for cred in creds:
+            #cred_obj=Credential(string=cred)
+            #print >>sys.stderr," \r\n \r\n   create_sliver cred  %s  " %(cred)
+            #GIDcall = cred_obj.get_gid_caller()
+            #GIDobj = cred_obj.get_gid_object() 
+            #print >>sys.stderr," \r\n \r\n   create_sliver GIDobj pubkey %s hrn %s " %(GIDobj.get_pubkey().get_pubkey_string(), GIDobj.get_hrn())
+            #print >>sys.stderr," \r\n \r\n   create_sliver GIDcall pubkey %s  hrn %s" %(GIDcall.get_pubkey().get_pubkey_string(),GIDobj.get_hrn())
+
+        
+        #tmpcert = GID(string = users[0]['gid'])
+        #print >>sys.stderr," \r\n \r\n   create_sliver  tmpcer pubkey %s hrn %s " %(tmpcert.get_pubkey().get_pubkey_string(), tmpcert.get_hrn())
+           
         if users:
             slice_record = users[0].get('slice_record', {})
     
@@ -325,7 +346,24 @@ class SlabDriver(Driver):
         if return_person_list:
             print>>sys.stderr, " \r\n GetPersons person_filter %s return_fields %s return_person_list %s " %(person_filter,return_fields,return_person_list)
             return return_person_list
+        
+        
+    def GetJobs(self,job_id= None, resources=True,return_fields=None):
+	if job_id and resources is False:
+            self.oar.parser.SendRequest("GET_jobs_id", job_id)
+        if job_id and resources:	
+            self.oar.parser.SendRequest("GET_jobs_id_resources", job_id)
+
+        #node_dict = self.oar.parser.GetNodesFromOARParse()
+        #return_node_list = []
     
+        #if not (node_filter or return_fields):
+                #return_node_list = node_dict.values()
+                #return return_node_list
+    
+        #return_node_list= parse_filter(node_dict.values(),node_filter ,'node', return_fields)
+        #return return_node_list
+     
     def GetNodes(self,node_filter= None, return_fields=None):
 		
         self.oar.parser.SendRequest("GET_resources_full")
@@ -354,14 +392,22 @@ class SlabDriver(Driver):
     def GetSlices(self,slice_filter = None, return_fields=None):
         
         return_slice_list =[]
-        sliceslist = self.db.find('slice',columns = ['slice_hrn', 'record_id_slice','record_id_user'])
-        print >>sys.stderr, " \r\n \r\n SLABDRIVER.PY  GetSlices  slices %s" %(sliceslist)
+        sliceslist = self.db.find('slice',columns = ['oar_job_id', 'slice_hrn', 'record_id_slice','record_id_user'])
+        print >>sys.stderr, " \r\n \r\n SLABDRIVER.PY  GetSlices  slices %s slice_filter %s " %(sliceslist,slice_filter)
         #slicesdict = sliceslist[0]
-        if not (slice_filter or return_fields):
-                return_slice_list = sliceslist
-                return  return_slice_list
+       
+                    
+        if not (slice_filter or return_fields) and sliceslist:
+            for sl in sliceslist:
+                if sl['oar_job_id'] is not '-1':
+                    self.GetJobs( sl['oar_job_id'],resources=False)
+            return_slice_list = sliceslist
+            return  return_slice_list
         
         return_slice_list  = parse_filter(sliceslist, slice_filter,'slice', return_fields)
+        for sl in return_slice_list:
+                if sl['oar_job_id'] is not '-1':
+                    self.GetJobs( sl['oar_job_id'],resources=False)
         print >>sys.stderr, " \r\n \r\n SLABDRIVER.PY  GetSlices  return_slice_list %s" %(return_slice_list)
         return return_slice_list
     
@@ -473,10 +519,10 @@ class SlabDriver(Driver):
         reqdict['script_path'] = "/bin/sleep "
 
         print>>sys.stderr, "\r\n \r\n AddSliceToNodes reqdict   %s \r\n site_list   %s"  %(reqdict,site_list)   
-        #OAR = OARrestapi()
-        #answer = OAR.POSTRequestToOARRestAPI('POST_job',reqdict,slice_user)
-        #print>>sys.stderr, "\r\n \r\n AddSliceToNodes jobid   %s "  %(answer)
-        #self.db.update('slice',['oar_job_id'], [answer['id']], 'slice_hrn', slice_name)
+        OAR = OARrestapi()
+        answer = OAR.POSTRequestToOARRestAPI('POST_job',reqdict,slice_user)
+        print>>sys.stderr, "\r\n \r\n AddSliceToNodes jobid   %s "  %(answer)
+        self.db.update('slice',['oar_job_id'], [answer['id']], 'slice_hrn', slice_name)
         return 
     
 

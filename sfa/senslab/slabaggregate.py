@@ -65,35 +65,35 @@ class SlabAggregate:
         slice_urn = hrn_to_urn(slice_xrn, 'slice')
         slice_hrn, _ = urn_to_hrn(slice_xrn)
         slice_name = slice_hrn
-        slices = self.driver.GetSlices(slice_name)
+        slices = self.driver.GetSlices([slice_name])
         if not slices:
             return (slice, slivers)
         slice = slices[0]
 
-        # sort slivers by node id    
-        for node_id in slice['node_ids']:
-            sliver = Sliver({'sliver_id': urn_to_sliver_id(slice_urn, slice['slice_id'], node_id),
-                             'name': slice['hrn'],
-                             'type': 'slab-vm', 
-                             'tags': []})
-            slivers[node_id]= sliver
+        ## sort slivers by node id    
+        #for node_id in slice['node_ids']:
+            #sliver = Sliver({'sliver_id': urn_to_sliver_id(slice_urn, slice['slice_id'], node_id),
+                             #'name': slice['hrn'],
+                             #'type': 'slab-vm', 
+                             #'tags': []})
+            #slivers[node_id]= sliver
 
-        # sort sliver attributes by node id    
-        #tags = self.driver.GetSliceTags({'slice_tag_id': slice['slice_tag_ids']})
-        #for tag in tags:
-            ## most likely a default/global sliver attribute (node_id == None)
-            #if tag['node_id'] not in slivers:
-                #sliver = Sliver({'sliver_id': urn_to_sliver_id(slice_urn, slice['slice_id'], ""),
-                                 #'name': 'slab-vm',
-                                 #'tags': []})
-                #slivers[tag['node_id']] = sliver
-            #slivers[tag['node_id']]['tags'].append(tag)
+        ## sort sliver attributes by node id    
+        ##tags = self.driver.GetSliceTags({'slice_tag_id': slice['slice_tag_ids']})
+        ##for tag in tags:
+            ### most likely a default/global sliver attribute (node_id == None)
+            ##if tag['node_id'] not in slivers:
+                ##sliver = Sliver({'sliver_id': urn_to_sliver_id(slice_urn, slice['slice_id'], ""),
+                                 ##'name': 'slab-vm',
+                                 ##'tags': []})
+                ##slivers[tag['node_id']] = sliver
+            ##slivers[tag['node_id']]['tags'].append(tag)
         
         return (slice, slivers)
             
             
   
-    def get_nodes(self):
+    def get_nodes(self,slice=None,slivers=[], options={}):
         filtre = {}
         #tags_filter = {}
         #if slice and 'node_ids' in slice and slice['node_ids']:
@@ -197,7 +197,7 @@ class SlabAggregate:
             rspec_version = version_manager._get_version(version.type, version.version, 'ad')
         else:
             rspec_version = version_manager._get_version(version.type, version.version, 'manifest')
-        #slice, slivers = self.get_slice_and_slivers(slice_xrn)
+        slice, slivers = self.get_slice_and_slivers(slice_xrn)
         rspec = RSpec(version=rspec_version, user_options=options)
         #if slice and 'expires' in slice:
            #rspec.xml.set('expires',  epochparse(slice['expires']))
