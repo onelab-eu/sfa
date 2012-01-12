@@ -32,6 +32,8 @@ class RegistryManager:
                        if hrn != api.hrn])
         xrn=Xrn(api.hrn)
         return version_core({'interface':'registry',
+                             'sfa': 2,
+                             'geni_api': 2,
                              'hrn':xrn.get_hrn(),
                              'urn':xrn.get_urn(),
                              'peers':peers})
