@@ -99,7 +99,7 @@ class SlabDriver(Driver):
         requested_attributes = rspec.version.get_slice_attributes()
         
         # ensure site record exists
-        site = slices.verify_site(slice_hrn, slice_record, peer, sfa_peer, options=options)
+        #site = slices.verify_site(slice_hrn, slice_record, peer, sfa_peer, options=options)
         # ensure slice record exists
         slice = slices.verify_slice(slice_hrn, slice_record, peer, sfa_peer, options=options)
         # ensure person records exists
@@ -111,8 +111,7 @@ class SlabDriver(Driver):
         requested_slivers = [node.get('component_name') for node in rspec.version.get_nodes_with_slivers()]
         nodes = slices.verify_slice_nodes(slice, requested_slivers, peer) 
     
-        # add/remove links links 
-        #slices.verify_slice_links(slice, rspec.version.get_link_requests(), nodes)
+      
     
         # handle MyPLC peer association.
         # only used by plc and ple.
@@ -348,7 +347,7 @@ class SlabDriver(Driver):
             return return_person_list
         
         
-    def GetJobs(self,job_id= None, resources=True,return_fields=None):
+    def GetJobs(self,job_id= None, resources=True,return_fields=None, details = None):
 	if job_id and resources is False:
             self.oar.parser.SendRequest("GET_jobs_id", job_id)
         if job_id and resources:	
@@ -377,17 +376,17 @@ class SlabDriver(Driver):
         return_node_list= parse_filter(node_dict.values(),node_filter ,'node', return_fields)
         return return_node_list
     
-    def GetSites(self, auth, site_filter = None, return_fields=None):
-        self.oar.parser.SendRequest("GET_resources_full")
-        site_dict = self.oar.parser.GetSitesFromOARParse()
-        return_site_list = []
-        site = site_dict.values()[0]
-        if not (site_filter or return_fields):
-                return_site_list = site_dict.values()
-                return return_site_list
+    #def GetSites(self, auth, site_filter = None, return_fields=None):
+        #self.oar.parser.SendRequest("GET_resources_full")
+        #site_dict = self.oar.parser.GetSitesFromOARParse()
+        #return_site_list = []
+        #site = site_dict.values()[0]
+        #if not (site_filter or return_fields):
+                #return_site_list = site_dict.values()
+                #return return_site_list
         
-        return_site_list = parse_filter(site_dict.values(),site_filter ,'site', return_fields)
-        return return_site_list
+        #return_site_list = parse_filter(site_dict.values(),site_filter ,'site', return_fields)
+        #return return_site_list
     
     def GetSlices(self,slice_filter = None, return_fields=None):
         
@@ -408,7 +407,7 @@ class SlabDriver(Driver):
         for sl in return_slice_list:
                 if sl['oar_job_id'] is not '-1':
                     self.GetJobs( sl['oar_job_id'],resources=False)
-        print >>sys.stderr, " \r\n \r\n SLABDRIVER.PY  GetSlices  return_slice_list %s" %(return_slice_list)
+        #print >>sys.stderr, " \r\n \r\n SLABDRIVER.PY  GetSlices  return_slice_list %s" %(return_slice_list)
         return return_slice_list
     
     def testbed_name (self): return "senslab2" 
@@ -516,8 +515,8 @@ class SlabDriver(Driver):
         reqdict['property'] =  reqdict['property'][0: len( reqdict['property'])-2] +")"
         reqdict['resource'] ="network_address="+ str(len(nodeid_list))
         reqdict['resource']+= ",walltime=" + str(00) + ":" + str(05) + ":" + str(00)
-        reqdict['script_path'] = "/bin/sleep "
-
+        reqdict['script_path'] = "/bin/sleep 320"
+        #reqdict['type'] = "deploy"
         print>>sys.stderr, "\r\n \r\n AddSliceToNodes reqdict   %s \r\n site_list   %s"  %(reqdict,site_list)   
         OAR = OARrestapi()
         answer = OAR.POSTRequestToOARRestAPI('POST_job',reqdict,slice_user)

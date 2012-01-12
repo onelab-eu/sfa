@@ -181,8 +181,8 @@ class SlabSlices:
         added_nodes = list(set(requested_slivers).difference(current_slivers))        
         print>>sys.stderr , "\r\n \r\n \t slices.py  verify_slice_nodes added_nodes %s slice %s" %( added_nodes,slice)
         try:
-            if peer:
-                self.driver.UnBindObjectFromPeer('slice', slice['slice_id'], peer['shortname'])
+            #if peer:
+                #self.driver.UnBindObjectFromPeer('slice', slice['slice_id'], peer['shortname'])
             #PI is a list, get the only username in this list
             #so that the OAR/LDAP knows the user: remove the authority from the name
             tmp=  slice['PI'][0].split(".")
@@ -208,10 +208,7 @@ class SlabSlices:
 
         return str(key)
 
-    def verify_slice_links(self, slice, links, aggregate):
-
-            return
-
+  
        
                         
         
@@ -252,44 +249,44 @@ class SlabSlices:
 
         return slice
 
-    def verify_site(self, slice_xrn, slice_record={}, peer=None, sfa_peer=None, options={}):
-        (slice_hrn, type) = urn_to_hrn(slice_xrn)
-        site_hrn = get_authority(slice_hrn)
-        # login base can't be longer than 20 characters
-        #slicename = hrn_to_pl_slicename(slice_hrn)
-        authority_name = slice_hrn.split('.')[0]
-        login_base = authority_name[:20]
-        print >>sys.stderr, " \r\n \r\n \t\t SLABSLICES.PY verify_site authority_name %s  login_base %s slice_hrn %s" %(authority_name,login_base,slice_hrn)
+    #def verify_site(self, slice_xrn, slice_record={}, peer=None, sfa_peer=None, options={}):
+        #(slice_hrn, type) = urn_to_hrn(slice_xrn)
+        #site_hrn = get_authority(slice_hrn)
+        ## login base can't be longer than 20 characters
+        ##slicename = hrn_to_pl_slicename(slice_hrn)
+        #authority_name = slice_hrn.split('.')[0]
+        #login_base = authority_name[:20]
+        #print >>sys.stderr, " \r\n \r\n \t\t SLABSLICES.PY verify_site authority_name %s  login_base %s slice_hrn %s" %(authority_name,login_base,slice_hrn)
         
-        sites = self.driver.GetSites(login_base)
-        if not sites:
-            # create new site record
-            site = {'name': 'geni.%s' % authority_name,
-                    'abbreviated_name': authority_name,
-                    'login_base': login_base,
-                    'max_slices': 100,
-                    'max_slivers': 1000,
-                    'enabled': True,
-                    'peer_site_id': None}
-            if peer:
-                site['peer_site_id'] = slice_record.get('site_id', None)
-            site['site_id'] = self.driver.AddSite(site)
-            # exempt federated sites from monitor policies
-            self.driver.AddSiteTag(site['site_id'], 'exempt_site_until', "20200101")
+        #sites = self.driver.GetSites(login_base)
+        #if not sites:
+            ## create new site record
+            #site = {'name': 'geni.%s' % authority_name,
+                    #'abbreviated_name': authority_name,
+                    #'login_base': login_base,
+                    #'max_slices': 100,
+                    #'max_slivers': 1000,
+                    #'enabled': True,
+                    #'peer_site_id': None}
+            #if peer:
+                #site['peer_site_id'] = slice_record.get('site_id', None)
+            #site['site_id'] = self.driver.AddSite(site)
+            ## exempt federated sites from monitor policies
+            #self.driver.AddSiteTag(site['site_id'], 'exempt_site_until', "20200101")
             
-            ## is this still necessary?
-            ## add record to the local registry 
-            #if sfa_peer and slice_record:
-                #peer_dict = {'type': 'authority', 'hrn': site_hrn, \
-                             #'peer_authority': sfa_peer, 'pointer': site['site_id']}
-                #self.registry.register_peer_object(self.credential, peer_dict)
-        else:
-            site =  sites[0]
-            if peer:
-                # unbind from peer so we can modify if necessary. Will bind back later
-                self.driver.UnBindObjectFromPeer('site', site['site_id'], peer['shortname']) 
+            ### is this still necessary?
+            ### add record to the local registry 
+            ##if sfa_peer and slice_record:
+                ##peer_dict = {'type': 'authority', 'hrn': site_hrn, \
+                             ##'peer_authority': sfa_peer, 'pointer': site['site_id']}
+                ##self.registry.register_peer_object(self.credential, peer_dict)
+        #else:
+            #site =  sites[0]
+            #if peer:
+                ## unbind from peer so we can modify if necessary. Will bind back later
+                #self.driver.UnBindObjectFromPeer('site', site['site_id'], peer['shortname']) 
         
-        return site        
+        #return site        
 
     def verify_slice(self, slice_hrn, slice_record, peer, sfa_peer, options={} ):
         #slicename = hrn_to_pl_slicename(slice_hrn)
@@ -307,8 +304,8 @@ class SlabSlices:
             slice['slice_id'] = self.driver.AddSlice(slice)
             slice['node_ids'] = []
             slice['person_ids'] = []
-            if peer:
-                slice['peer_slice_id'] = slice_record.get('slice_id', None) 
+            #if peer:
+                #slice['peer_slice_id'] = slice_record.get('slice_id', None) 
             # mark this slice as an sfa peer record
             #if sfa_peer:
                 #peer_dict = {'type': 'slice', 'hrn': slice_hrn, 
@@ -319,10 +316,10 @@ class SlabSlices:
             slice.update(slice_record)
             #del slice['last_updated']
             #del slice['date_created']
-            if peer:
-                slice['peer_slice_id'] = slice_record.get('slice_id', None)
-                # unbind from peer so we can modify if necessary. Will bind back later
-                self.driver.UnBindObjectFromPeer('slice', slice['slice_id'], peer['shortname'])
+            #if peer:
+                #slice['peer_slice_id'] = slice_record.get('slice_id', None)
+                ## unbind from peer so we can modify if necessary. Will bind back later
+                #self.driver.UnBindObjectFromPeer('slice', slice['slice_id'], peer['shortname'])
 	        #Update existing record (e.g. expires field) it with the latest info.
             ##if slice_record and slice['expires'] != slice_record['expires']:
                 ##self.driver.UpdateSlice( slice['slice_id'], {'expires' : slice_record['expires']})
@@ -343,7 +340,7 @@ class SlabSlices:
                 users_by_hrn[user['hrn']] = user
                 users_dict[user['hrn']] = {'person_id':user['person_id'], 'hrn':user['hrn']}
                 
-        print>>sys.stderr, " \r\n \r\n \t slabslices.py verify_person  users_dict %s \r\n user_by_hrn %s \r\n \tusers_by_id %s " %( users_dict,users_by_hrn, users_by_id) 
+        #print>>sys.stderr, " \r\n \r\n \t slabslices.py verify_person  users_dict %s \r\n user_by_hrn %s \r\n \tusers_by_id %s " %( users_dict,users_by_hrn, users_by_id) 
         
         existing_user_ids = []
         existing_user_hrns = []
@@ -359,23 +356,23 @@ class SlabSlices:
                     #for  k in users_dict[user['hrn']] :
                     existing_user_hrns.append (users_dict[user['hrn']]['hrn'])
                     existing_user_ids.append (users_dict[user['hrn']]['person_id'])
-                    print>>sys.stderr, " \r\n \r\n \t slabslices.py verify_person  existing_user_ids.append (users_dict[user['hrn']][k]) %s \r\n existing_users %s " %(  existing_user_ids,existing_users) 
+                    #print>>sys.stderr, " \r\n \r\n \t slabslices.py verify_person  existing_user_ids.append (users_dict[user['hrn']][k]) %s \r\n existing_users %s " %(  existing_user_ids,existing_users) 
          
 
         # requested slice users        
         requested_user_ids = users_by_id.keys() 
         requested_user_hrns = users_by_hrn.keys()
-        print>>sys.stderr, " \r\n \r\n \t slabslices.py verify_person  requested_user_ids  %s user_by_hrn %s " %( requested_user_ids,users_by_hrn) 
+        #print>>sys.stderr, " \r\n \r\n \t slabslices.py verify_person  requested_user_ids  %s user_by_hrn %s " %( requested_user_ids,users_by_hrn) 
         # existing slice users
         existing_slice_users_filter = {'hrn': slice_record.get('PI', [])}
         #print>>sys.stderr, " \r\n \r\n slices.py verify_person requested_user_ids %s existing_slice_users_filter %s slice_record %s" %(requested_user_ids,existing_slice_users_filter,slice_record)
         
         existing_slice_users = self.driver.GetPersons(existing_slice_users_filter,['hrn','pkey'])
-        print>>sys.stderr, " \r\n \r\n slices.py verify_person   existing_slice_users %s " %(existing_slice_users)
+        #print>>sys.stderr, " \r\n \r\n slices.py verify_person   existing_slice_users %s " %(existing_slice_users)
 
         existing_slice_user_hrns = [user['hrn'] for user in existing_slice_users]
 
-        print>>sys.stderr, " \r\n \r\n slices.py verify_person requested_user_ids %s  existing_slice_user_hrns %s " %(requested_user_ids,existing_slice_user_hrns)
+        #print>>sys.stderr, " \r\n \r\n slices.py verify_person requested_user_ids %s  existing_slice_user_hrns %s " %(requested_user_ids,existing_slice_user_hrns)
         # users to be added, removed or updated
 
         added_user_hrns = set(requested_user_hrns).difference(set(existing_user_hrns))
@@ -387,7 +384,7 @@ class SlabSlices:
 
         updated_user_hrns = set(existing_slice_user_hrns).intersection(requested_user_hrns)
         #print>>sys.stderr, " \r\n \r\n slices.py verify_persons  added_user_ids %s added_slice_user_ids %s " %(added_user_ids,added_slice_user_ids)
-        print>>sys.stderr, " \r\n \r\n slices.py verify_persons  removed_user_hrns %s updated_user_hrns %s " %(removed_user_hrns,updated_user_hrns)
+        #print>>sys.stderr, " \r\n \r\n slices.py verify_persons  removed_user_hrns %s updated_user_hrns %s " %(removed_user_hrns,updated_user_hrns)
         # Remove stale users (only if we are not appending) 
         append = options.get('append', True)
         if append == False:
@@ -496,68 +493,68 @@ class SlabSlices:
                     except:
                         pass   
 
-    def verify_slice_attributes(self, slice, requested_slice_attributes, append=False, admin=False):
-        # get list of attributes users ar able to manage
-        filter = {'category': '*slice*'}
-        if not admin:
-            filter['|roles'] = ['user']
-        slice_attributes = self.driver.GetTagTypes(filter)
-        valid_slice_attribute_names = [attribute['tagname'] for attribute in slice_attributes]
+    #def verify_slice_attributes(self, slice, requested_slice_attributes, append=False, admin=False):
+        ## get list of attributes users ar able to manage
+        #filter = {'category': '*slice*'}
+        #if not admin:
+            #filter['|roles'] = ['user']
+        #slice_attributes = self.driver.GetTagTypes(filter)
+        #valid_slice_attribute_names = [attribute['tagname'] for attribute in slice_attributes]
 
-        # get sliver attributes
-        added_slice_attributes = []
-        removed_slice_attributes = []
-        ignored_slice_attribute_names = []
-        existing_slice_attributes = self.driver.GetSliceTags({'slice_id': slice['slice_id']})
+        ## get sliver attributes
+        #added_slice_attributes = []
+        #removed_slice_attributes = []
+        #ignored_slice_attribute_names = []
+        #existing_slice_attributes = self.driver.GetSliceTags({'slice_id': slice['slice_id']})
 
-        # get attributes that should be removed
-        for slice_tag in existing_slice_attributes:
-            if slice_tag['tagname'] in ignored_slice_attribute_names:
-                # If a slice already has a admin only role it was probably given to them by an
-                # admin, so we should ignore it.
-                ignored_slice_attribute_names.append(slice_tag['tagname'])
-            else:
-                # If an existing slice attribute was not found in the request it should
-                # be removed
-                attribute_found=False
-                for requested_attribute in requested_slice_attributes:
-                    if requested_attribute['name'] == slice_tag['tagname'] and \
-                       requested_attribute['value'] == slice_tag['value']:
-                        attribute_found=True
-                        break
+        ## get attributes that should be removed
+        #for slice_tag in existing_slice_attributes:
+            #if slice_tag['tagname'] in ignored_slice_attribute_names:
+                ## If a slice already has a admin only role it was probably given to them by an
+                ## admin, so we should ignore it.
+                #ignored_slice_attribute_names.append(slice_tag['tagname'])
+            #else:
+                ## If an existing slice attribute was not found in the request it should
+                ## be removed
+                #attribute_found=False
+                #for requested_attribute in requested_slice_attributes:
+                    #if requested_attribute['name'] == slice_tag['tagname'] and \
+                       #requested_attribute['value'] == slice_tag['value']:
+                        #attribute_found=True
+                        #break
 
-            if not attribute_found and not append:
-                removed_slice_attributes.append(slice_tag)
+            #if not attribute_found and not append:
+                #removed_slice_attributes.append(slice_tag)
         
-        # get attributes that should be added:
-        for requested_attribute in requested_slice_attributes:
-            # if the requested attribute wasn't found  we should add it
-            if requested_attribute['name'] in valid_slice_attribute_names:
-                attribute_found = False
-                for existing_attribute in existing_slice_attributes:
-                    if requested_attribute['name'] == existing_attribute['tagname'] and \
-                       requested_attribute['value'] == existing_attribute['value']:
-                        attribute_found=True
-                        break
-                if not attribute_found:
-                    added_slice_attributes.append(requested_attribute)
+        ## get attributes that should be added:
+        #for requested_attribute in requested_slice_attributes:
+            ## if the requested attribute wasn't found  we should add it
+            #if requested_attribute['name'] in valid_slice_attribute_names:
+                #attribute_found = False
+                #for existing_attribute in existing_slice_attributes:
+                    #if requested_attribute['name'] == existing_attribute['tagname'] and \
+                       #requested_attribute['value'] == existing_attribute['value']:
+                        #attribute_found=True
+                        #break
+                #if not attribute_found:
+                    #added_slice_attributes.append(requested_attribute)
 
 
-        # remove stale attributes
-        for attribute in removed_slice_attributes:
-            try:
-                self.driver.DeleteSliceTag(attribute['slice_tag_id'])
-            except Exception, e:
-                self.logger.warn('Failed to remove sliver attribute. name: %s, value: %s, node_id: %s\nCause:%s'\
-                                % (name, value,  node_id, str(e)))
+        ## remove stale attributes
+        #for attribute in removed_slice_attributes:
+            #try:
+                #self.driver.DeleteSliceTag(attribute['slice_tag_id'])
+            #except Exception, e:
+                #self.logger.warn('Failed to remove sliver attribute. name: %s, value: %s, node_id: %s\nCause:%s'\
+                                #% (name, value,  node_id, str(e)))
 
-        # add requested_attributes
-        for attribute in added_slice_attributes:
-            try:
-                self.driver.AddSliceTag(slice['name'], attribute['name'], attribute['value'], attribute.get('node_id', None))
-            except Exception, e:
-                self.logger.warn('Failed to add sliver attribute. name: %s, value: %s, node_id: %s\nCause:%s'\
-                                % (name, value,  node_id, str(e)))
+        ## add requested_attributes
+        #for attribute in added_slice_attributes:
+            #try:
+                #self.driver.AddSliceTag(slice['name'], attribute['name'], attribute['value'], attribute.get('node_id', None))
+            #except Exception, e:
+                #self.logger.warn('Failed to add sliver attribute. name: %s, value: %s, node_id: %s\nCause:%s'\
+                                #% (name, value,  node_id, str(e)))
 
     #def create_slice_aggregate(self, xrn, rspec):
         #hrn, type = urn_to_hrn(xrn)

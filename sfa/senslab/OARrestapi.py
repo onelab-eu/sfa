@@ -28,6 +28,7 @@ OARrequests_get_uri_dict = { 'GET_version': '/oarapi/version.json',
 			'GET_jobs_details': '/oarapi/jobs/details.json',
 			'GET_resources_full': '/oarapi/resources/full.json',
 			'GET_resources':'/oarapi/resources.json',
+                        
 }
 
 OARrequest_post_uri_dict = { 'POST_job': '/oarapi/jobs.json'}
@@ -286,8 +287,8 @@ class OARGETParser:
         #print>>sys.stderr, " \r\n =========GetNodesFromOARParse: node_dictlist %s "%(self.node_dictlist)
         return self.node_dictlist
 
-    def GetSitesFromOARParse(self):
-        return self.site_dict
+    #def GetSitesFromOARParse(self):
+        #return self.site_dict
     
     def GetJobsFromOARParse(self):
         return self.jobs_list	
