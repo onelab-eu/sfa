@@ -12,6 +12,7 @@ except:
 
 from optparse import OptionParser
 
+from sfa.client.return_value import ReturnValue
 from sfa.client.sfi import Sfi
 from sfa.util.sfalogging import logger, DEBUG
 from sfa.client.sfaserverproxy import SfaServerProxy
@@ -36,6 +37,7 @@ def url_hostname_port (url):
 ### assuming everything is sequential, as simple as it gets
 ### { url -> (timestamp,version)}
 class VersionCache:
+    # default expiration period is 1h
     def __init__ (self, filename=None, expires=60*60):
         # default is to store cache in the same dir as argv[0]
         if filename is None:
@@ -102,22 +104,42 @@ class VersionCache:
             return None
 
 ###
+# non-existing hostnames happen...
+# for better perfs we cache the result of gethostbyname too
 class Interface:
 
-    def __init__ (self,url,verbose=False):
+    def __init__ (self,url,mentioned_in=None,verbose=False):
         self._url=url
         self.verbose=verbose
+        cache=VersionCache()
+        key="interface:%s"%url
         try:
             (self._url,self.hostname,self.port)=url_hostname_port(url)
-            self.ip=socket.gethostbyname(self.hostname)
-            self.probed=False
+            # look for ip in the cache
+            tuple=cache.get(key)
+            if tuple:
+                (self.hostname, self.ip, self.port) = tuple
+            else:
+                self.ip=socket.gethostbyname(self.hostname)
         except:
+            msg="can't resolve hostname %s\n\tfound in url %s"%(self.hostname,self._url)
+            if mentioned_in:
+                msg += "\n\t(mentioned at %s)"%mentioned_in
+            logger.warning (msg)
             self.hostname="unknown"
             self.ip='0.0.0.0'
             self.port="???"
+
+        cache.set(key, (self.hostname, self.ip, self.port,) )
+        cache.save()
+        self.probed=False
+
+        # mark unknown interfaces as probed to avoid unnecessary attempts
+        if self.hostname=='unknown':
             # don't really try it
             self.probed=True
             self._version={}
+
 
     def url(self):
         return self._url
@@ -156,7 +178,7 @@ class Interface:
             # setting timeout here seems to get the call to fail - even though the response time is fast
             #server=SfaServerProxy(url, key_file, cert_file, verbose=self.verbose, timeout=options.timeout)
             server=SfaServerProxy(url, key_file, cert_file, verbose=self.verbose)
-            self._version=server.GetVersion()
+            self._version=ReturnValue.get_value(server.GetVersion())
         except:
             logger.log_exc("failed to get version")
             self._version={}
@@ -210,8 +232,10 @@ class Interface:
         try: shape=Interface.shapes[version['interface']]
         except: shape=Interface.shapes['default']
         layout['shape']=shape
-        ### fill color to outline wrongly configured bodies
-        if 'geni_api' not in version and 'sfa' not in version:
+        ### fill color to outline wrongly configured or unreachable bodies
+        # as of sfa-2.0 registry doesn't have 'sfa' not 'geni_api', but have peers
+        # slicemgr and aggregate have 'geni_api' and 'sfa'
+        if 'geni_api' not in version and 'peers' not in version:
             layout['style']='filled'
             layout['fillcolor']='gray'
         return layout
@@ -260,12 +284,10 @@ class Scanner:
                             logger.debug(k)
                             for (k1,v1) in v.iteritems():
                                 logger.debug("\r\t\t%s:%s"%(k1,v1))
-                # 'geni_api' is expected if the call succeeded at all
-                # 'peers' is needed as well as AMs typically don't have peers
-                if 'geni_api' in version and 'peers' in version: 
-                    # proceed with neighbours
+                # proceed with neighbours
+                if 'peers' in version: 
                     for (next_name,next_url) in version['peers'].iteritems():
-                        next_interface=Interface(next_url)
+                        next_interface=Interface(next_url,mentioned_in=interface.url())
                         # locate or create node in graph
                         try:
                             # if found, we're good with this one
@@ -332,7 +354,7 @@ class SfaScan:
         if not options.outfiles:
             options.outfiles=SfaScan.default_outfiles
         scanner=Scanner(left_to_right=options.left_to_right, verbose=bool_verbose)
-        entries = [ Interface(entry) for entry in args ]
+        entries = [ Interface(entry,mentioned_in="command line") for entry in args ]
         try:
             g=scanner.graph(entries)
             logger.info("creating layout")
