@@ -400,6 +400,7 @@ class SfaRecord(Row):
         """
         from sfa.storage.table import SfaTable
         table = SfaTable()
+        filter = {}
         if self.get('record_id'):
             filter['record_id'] = self.get('record_id')
         if self.get('hrn') and self.get('type'):
@@ -407,9 +408,10 @@ class SfaRecord(Row):
             filter['type'] = self.get('type')
             if self.get('pointer'):
                 filter['pointer'] = self.get('pointer')
-        existing_records = table.find(filter)
-        for record in existing_records:
-            table.remove(record)
+        if filter:
+            existing_records = table.find(filter)
+            for record in existing_records:
+                table.remove(record)
 
 class UserRecord(SfaRecord):
 

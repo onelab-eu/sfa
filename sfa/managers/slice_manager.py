@@ -116,6 +116,7 @@ class SliceManager:
                     forward_options['rspec_version'] = version_manager.get_version('SFA 1').to_dict()
                 else:
                     forward_options['rspec_version'] = version_manager.get_version('ProtoGENI 2').to_dict()
+                    forward_options['geni_rspec_version'] = {'type': 'geni', 'version': '3.0'}
                 rspec = server.ListResources(credential, forward_options)
                 return {"aggregate": aggregate, "rspec": rspec, "elapsed": time.time()-tStart, "status": "success"}
             except Exception, e:
@@ -260,18 +261,26 @@ class SliceManager:
         call_id = options.get('call_id')
         if Callids().already_handled(call_id): return True
 
-        def _RenewSliver(server, xrn, creds, expiration_time, options):
-            return server.RenewSliver(xrn, creds, expiration_time, options)
-    
-        (hrn, type) = urn_to_hrn(xrn)
+        def _RenewSliver(aggregate, server, xrn, creds, expiration_time, options):
+            try:
+                result=server.RenewSliver(xrn, creds, expiration_time, options)
+                if type(result)!=dict:
+                    result = {"code": {"geni_code": 0}, value: result}
+                result["aggregate"] = aggregate
+                return result
+            except:
+                logger.log_exc('Something wrong in _RenewSliver with URL %s'%server.url)
+                return {"aggregate": aggregate, "exc_info": traceback.format_exc(), "code": {"geni_code": -1}, "value": False, "output": ""}
+
+        (hrn, urn_type) = urn_to_hrn(xrn)
         # get the callers hrn
         valid_cred = api.auth.checkCredentials(creds, 'renewsliver', hrn)[0]
         caller_hrn = Credential(string=valid_cred).get_gid_caller().get_hrn()
-    
+
         # attempt to use delegated credential first
         cred = api.getDelegatedCredential(creds)
         if not cred:
-            cred = api.getCredential()
+            cred = api.getCredential(minimumExpiration=31*86400)
         threads = ThreadManager()
         for aggregate in api.aggregates:
             # prevent infinite loop. Dont send request back to caller
@@ -280,13 +289,24 @@ class SliceManager:
                 continue
             interface = api.aggregates[aggregate]
             server = api.server_proxy(interface, cred)
-            threads.run(_RenewSliver, server, xrn, [cred], expiration_time, options)
-        # 'and' the results
-        results = [ReturnValue.get_value(result) for result in threads.get_results()]
-        return reduce (lambda x,y: x and y, results , True)
-    
+            threads.run(_RenewSliver, aggregate, server, xrn, [cred], expiration_time, options)
+
+        results = threads.get_results()
+
+        geni_code = 0
+        geni_output = ",".join([x.get("output","") for x in results])
+        geni_value = reduce (lambda x,y: x and y, [result.get("value",False) for result in results], True)
+        for agg_result in results:
+            agg_geni_code = agg_result["code"].get("geni_code",0)
+            if agg_geni_code:
+                geni_code = agg_geni_code
+
+        results = {"aggregates": results, "code": {"geni_code": geni_code}, "value": geni_value, "output": geni_output}
+
+        return results
+
     def DeleteSliver(self, api, xrn, creds, options):
-        call_id = options.get('call_id') 
+        call_id = options.get('call_id')
         if Callids().already_handled(call_id): return ""
 
         def _DeleteSliver(server, xrn, creds, options):
@@ -296,7 +316,7 @@ class SliceManager:
         # get the callers hrn
         valid_cred = api.auth.checkCredentials(creds, 'deletesliver', hrn)[0]
         caller_hrn = Credential(string=valid_cred).get_gid_caller().get_hrn()
-    
+
         # attempt to use delegated credential first
         cred = api.getDelegatedCredential(creds)
         if not cred:

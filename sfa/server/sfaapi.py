@@ -15,8 +15,6 @@ from sfa.server.xmlrpcapi import XmlrpcApi
 
 from sfa.client.return_value import ReturnValue
 
-# thgen xxx fixme this is wrong all right, but temporary, will use generic
-from sfa.storage.table import SfaTable
 
 ####################
 class SfaApi (XmlrpcApi): 
@@ -93,9 +91,9 @@ class SfaApi (XmlrpcApi):
         return server
                
         
-    def getCredential(self):
+    def getCredential(self, minimumExpiration=0):
         """
-        Return a valid credential for this interface. 
+        Return a valid credential for this interface.
         """
         type = 'authority'
         path = self.config.SFA_DATA_DIR
@@ -106,7 +104,7 @@ class SfaApi (XmlrpcApi):
             cred = Credential(filename = cred_filename)
             # make sure cred isnt expired
             if not cred.get_expiration or \
-               datetime.datetime.utcnow() < cred.get_expiration():    
+               datetime.datetime.utcnow() + datetime.timedelta(seconds=minimumExpiration) < cred.get_expiration():
                 return cred.save_to_string(save_parents=True)
 
         # get a new credential
@@ -163,7 +161,8 @@ class SfaApi (XmlrpcApi):
             auth_hrn = hrn
         auth_info = self.auth.get_auth_info(auth_hrn)
         # xxx thgen fixme - use SfaTable hardwired for now 
-        #table = self.SfaTable()
+        # thgen xxx fixme this is wrong all right, but temporary, will use generic
+        from sfa.storage.table import SfaTable
         table = SfaTable()
         records = table.findObjects({'hrn': hrn, 'type': 'authority+sa'})
         if not records:
