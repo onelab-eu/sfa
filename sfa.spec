@@ -24,7 +24,10 @@ URL: %{SCMURL}
 Summary: the SFA python libraries
 Group: Applications/System
 BuildRequires: make
+
+Requires: myplc-config
 Requires: python >= 2.5
+Requires: pyOpenSSL >= 0.7
 Requires: m2crypto
 Requires: xmlsec1-openssl-devel
 Requires: libxslt-python
@@ -40,8 +43,7 @@ Requires: python-dateutil
 Requires: postgresql >= 8.2, postgresql-server >= 8.2
 Requires: postgresql-python
 Requires: python-psycopg2
-Requires: pyOpenSSL >= 0.7
-Requires: myplc-config
+# the eucalyptus aggregate uses this module
 Requires: python-xmlbuilder
  
 # python 2.5 has uuid module added, for python 2.4 we still need it.
