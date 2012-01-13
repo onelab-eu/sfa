@@ -7,9 +7,10 @@ from types import StringTypes
 
 from sfa.util.config import Config
 
+from sfa.storage.alchemy import DB
+#from sfa.storage.PostgreSQL import PostgreSQL
 from sfa.storage.parameter import Parameter
 from sfa.storage.filter import Filter
-from sfa.storage.PostgreSQL import PostgreSQL
 from sfa.storage.record import SfaRecord, AuthorityRecord, NodeRecord, SliceRecord, UserRecord
 
 class SfaTable(list):
@@ -18,7 +19,6 @@ class SfaTable(list):
 
     def __init__(self, record_filter = None):
 
-        # pgsql doesn't like table names with "." in them, to replace it with "$"
         self.tablename = SfaTable.SFA_TABLE_PREFIX
         self.config = Config()
         self.db = PostgreSQL(self.config)
