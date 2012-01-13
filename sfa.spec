@@ -43,6 +43,8 @@ Requires: python-dateutil
 Requires: postgresql >= 8.2, postgresql-server >= 8.2
 Requires: postgresql-python
 Requires: python-psycopg2
+# f8=0.4 - f12=0.5 f14=0.6 f16=0.7
+Requires: python-sqlalchemy
 # the eucalyptus aggregate uses this module
 Requires: python-xmlbuilder
  
