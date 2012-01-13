@@ -105,10 +105,11 @@ def install_peer_certs(server_key_file, server_cert_file):
       
             trusted_gids = interface.get_trusted_certs()
             print>>sys.stderr, " \r\n \r\n \t=============================================== install_peer_certs  TRUSTED_GIDS %s   " %(trusted_gids)
-            if trusted_gids and not isinstance(trusted_gids,list):
+            if trusted_gids:
+                 #and not isinstance(trusted_gids,list):
                 # the gid we want should be the first one in the list,
                 # but lets make sure
-                trusted_gids = [trusted_gids]
+                #trusted_gids = [trusted_gids]
                 print>>sys.stderr, " \r\n \r\n \t=============================================== install_peer_certs  TRUSTED_GIDS %s   " %(trusted_gids)
                 for trusted_gid in trusted_gids: 
                     print>>sys.stderr, " \r\n \r\n \t=============================================== install_peer_certs  trusted_gids%s   " %(trusted_gid)
@@ -117,12 +118,13 @@ def install_peer_certs(server_key_file, server_cert_file):
                     message += "unable to install trusted gid for %s" % \
                                (new_hrn) 
                     print>>sys.stderr, " \r\n \r\n \t=============================================== install_peer_certs   message %s   " %(message)
-                    gid = GID(string=trusted_gid['value'][0])
+                    gid = GID(string=trusted_gid[0])
+                    #gid = GID(string=trusted_gid['value'][0])
                     print>>sys.stderr, " \r\n \r\n \t=============================================== install_peer_certs   gid %s   " %(gid)
                     peer_gids.append(gid)
                     if gid.get_hrn() == new_hrn:
                         gid_filename = os.path.join(trusted_certs_dir, '%s.gid' % new_hrn)
-                        #gid.save_to_file(gid_filename, save_parents=True)
+                        gid.save_to_file(gid_filename, save_parents=True)
                         message = "installed trusted cert for %s" % new_hrn
                     # log the message
                     api.logger.info(message)
@@ -168,7 +170,7 @@ def update_cert_records(gids):
             }
             record = SfaRecord(dict=record)
             print>>sys.stderr, " \r\n \r\rn record %s "%(record)
-            #table.insert(record)
+            table.insert(record)
         
 def main():
     # Generate command line parser
