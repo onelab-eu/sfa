@@ -72,6 +72,7 @@ def install_peer_certs(server_key_file, server_cert_file):
     # There should be a gid file in /etc/sfa/trusted_roots for every
     # peer registry found in in the registries.xml config file. If there
     # are any missing gids, request a new one from the peer registry.
+    print>>sys.stderr, " \r\n \r\n \t=============================================== install_peer_certs server_key_file  %s  server_cert_file %s"%(server_key_file,server_cert_file)
     api = SfaApi(key_file = server_key_file, cert_file = server_cert_file)
     registries = Registries()
     aggregates = Aggregates()
@@ -84,9 +85,9 @@ def install_peer_certs(server_key_file, server_cert_file):
     peer_gids = []
     if not new_hrns:
         return 
-
+    print>>sys.stderr," \r\n \r\n \t=============================================== install_peer_certs interfaces %s  api.config.SFA_INTERFACE_HRN %s  new_hrns %s" %( interfaces,api.config.SFA_INTERFACE_HRN,new_hrns)
     trusted_certs_dir = api.config.get_trustedroots_dir()
-    for new_hrn in new_hrns:
+    for new_hrn in new_hrns: 
         if not new_hrn: continue
         # the gid for this interface should already be installed
         if new_hrn == api.config.SFA_INTERFACE_HRN: continue
@@ -95,25 +96,33 @@ def install_peer_certs(server_key_file, server_cert_file):
             url = interfaces[new_hrn].get_url()
             interface = interfaces[new_hrn].server_proxy(server_key_file, server_cert_file, timeout=30)
             # skip non sfa aggregates
+            print>>sys.stderr, " \r\n \r\n \t=============================================== install_peer_certs IIIinterface  %s url %s" %(interface,url)
             server_version = api.get_cached_server_version(interface)
+            print>>sys.stderr, " \r\n \r\n \t=============================================== install_peer_certs server_version  %s \r\n \r\rn \t\t =============================================== server_version['sfa'] %s, " %(server_version, server_version['sfa'])
             if 'sfa' not in server_version:
                 logger.info("get_trusted_certs: skipping non sfa aggregate: %s" % new_hrn)
                 continue
       
             trusted_gids = interface.get_trusted_certs()
-            if trusted_gids:
+            print>>sys.stderr, " \r\n \r\n \t=============================================== install_peer_certs  TRUSTED_GIDS %s   " %(trusted_gids)
+            if trusted_gids and not isinstance(trusted_gids,list):
                 # the gid we want should be the first one in the list,
                 # but lets make sure
-                for trusted_gid in trusted_gids:
+                trusted_gids = [trusted_gids]
+                print>>sys.stderr, " \r\n \r\n \t=============================================== install_peer_certs  TRUSTED_GIDS %s   " %(trusted_gids)
+                for trusted_gid in trusted_gids: 
+                    print>>sys.stderr, " \r\n \r\n \t=============================================== install_peer_certs  trusted_gids%s   " %(trusted_gid)
                     # default message
                     message = "interface: %s\t" % (api.interface)
                     message += "unable to install trusted gid for %s" % \
-                               (new_hrn)
-                    gid = GID(string=trusted_gids[0])
+                               (new_hrn) 
+                    print>>sys.stderr, " \r\n \r\n \t=============================================== install_peer_certs   message %s   " %(message)
+                    gid = GID(string=trusted_gid['value'][0])
+                    print>>sys.stderr, " \r\n \r\n \t=============================================== install_peer_certs   gid %s   " %(gid)
                     peer_gids.append(gid)
                     if gid.get_hrn() == new_hrn:
                         gid_filename = os.path.join(trusted_certs_dir, '%s.gid' % new_hrn)
-                        gid.save_to_file(gid_filename, save_parents=True)
+                        #gid.save_to_file(gid_filename, save_parents=True)
                         message = "installed trusted cert for %s" % new_hrn
                     # log the message
                     api.logger.info(message)
@@ -149,6 +158,7 @@ def update_cert_records(gids):
     # TODO: store urn in the db so we do this in 1 query 
     for gid in gids:
         hrn, type = gid.get_hrn(), gid.get_type()
+        print>>sys.stderr, " \r\n \r\n  update_cert_records  hrn,%s type %s"%(hrn, type)       
         record = table.find({'hrn': hrn, 'type': type, 'pointer': -1})
         if not record:
             record = {
@@ -157,7 +167,8 @@ def update_cert_records(gids):
                 'gid': gid.save_to_string(save_parents=True),
             }
             record = SfaRecord(dict=record)
-            table.insert(record)
+            print>>sys.stderr, " \r\n \r\rn record %s "%(record)
+            #table.insert(record)
         
 def main():
     # Generate command line parser
@@ -184,8 +195,8 @@ def main():
     hierarchy = Hierarchy()
     auth_info = hierarchy.get_interface_auth_info()
     server_key_file = auth_info.get_privkey_filename()
-    server_cert_file = auth_info.get_gid_filename()
-
+    server_cert_file = auth_info.get_gid_filename() 
+    print>>sys.stderr, " \r\n \t\t\t\t\t SFA-START MAIN auth_info %s server_key_file %s server_cert_file %s "%(auth_info, server_key_file,server_cert_file)
     # ensure interface cert is present in trusted roots dir
     trusted_roots = TrustedRoots(config.get_trustedroots_dir())
     trusted_roots.add_gid(GID(filename=server_cert_file))
