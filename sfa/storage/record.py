@@ -5,13 +5,12 @@
 ##
 
 from types import StringTypes
-
 from sfa.trust.gid import GID
-
 from sfa.storage.parameter import Parameter
 from sfa.util.xrn import get_authority
 from sfa.storage.row import Row
 from sfa.util.xml import XML 
+from sfa.util.sfalogging import logger
 
 class SfaRecord(Row):
     """ 
@@ -33,14 +32,13 @@ class SfaRecord(Row):
     of different types.
     """
 
-    table_name = 'sfa'
-    
-    primary_key = 'record_id'
+#    table_name = 'sfa'
+#    primary_key = 'record_id'
 
     ### the wsdl generator assumes this is named 'fields'
     internal_fields = {
-        'record_id': Parameter(int, 'An id that uniquely identifies this record', ro=True),
-        'pointer': Parameter(int, 'An id that uniquely identifies this record in an external database ')
+        'record_id': Parameter(int, "An id that uniquely identifies this record", ro=True),
+        'pointer': Parameter(int, "An id that uniquely identifies this record in an external database")
     }
 
     fields = {
@@ -49,8 +47,8 @@ class SfaRecord(Row):
         'hrn': Parameter(str, "Human readable name of object"),
         'gid': Parameter(str, "GID of the object"),
         'type': Parameter(str, "Record type"),
-        'last_updated': Parameter(int, 'Date and time of last update', ro=True),
-        'date_created': Parameter(int, 'Date and time this record was created', ro=True),
+        'last_updated': Parameter(int, "Date and time of last update", ro=True),
+        'date_created': Parameter(int, "Date and time this record was created", ro=True),
     }
     all_fields = dict(fields.items() + internal_fields.items())
     ##
@@ -62,13 +60,15 @@ class SfaRecord(Row):
     # @param pointer is a pointer to a PLC record
     # @param dict if !=None, then fill in this record from the dictionary
 
-    def __init__(self, hrn=None, gid=None, type=None, pointer=None, peer_authority=None, dict=None, string=None):
+    def __init__(self, hrn=None, gid=None, type=None, pointer=None, authority=None, 
+                 peer_authority=None, dict=None, string=None):
         self.dirty = True
         self.hrn = None
         self.gid = None
         self.type = None
         self.pointer = None
         self.set_peer_auth(peer_authority)
+        self.set_authority(authority)
         if hrn:
             self.set_name(hrn)
         if gid:
@@ -111,6 +111,17 @@ class SfaRecord(Row):
         self.hrn = hrn
         self['hrn'] = hrn
         self.dirty = True
+
+    def set_authority(self, authority):
+        """
+        Set the authority
+        """
+        if not authority:
+            authority = ""
+        self.authority = authority
+        self['authority'] = authority
+        self.dirty = True    
+        
 
     ##
     # Set the GID of the record
@@ -302,9 +313,9 @@ class SfaRecord(Row):
         """
         recorddict = self.as_dict()
         filteredDict = dict([(key, val) for (key, val) in recorddict.iteritems() if key in self.fields.keys()])
-        record = XML('<record/>')
-        record.parse_dict(filteredDict)
-        str = record.toxml()
+        xml_record = XML('<record/>')
+        xml_record.parse_dict(filteredDict)
+        str = xml_record.toxml()
         return str
 
     ##
@@ -318,8 +329,8 @@ class SfaRecord(Row):
         """
         #dict = xmlrpclib.loads(str)[0][0]
 
-        record = XML(str)
-        self.load_from_dict(record.todict())
+        xml_record = XML(str)
+        self.load_from_dict(xml_record.todict())
 
     ##
     # Dump the record to stdout
@@ -353,9 +364,54 @@ class SfaRecord(Row):
                 else:    
                     print "     %s: %s" % (key, self[key])
     
+    def summary_string(self):
+        return "Record(record_id=%s, hrn=%s, type=%s, authority=%s, pointer=%s)" % \
+                (self.get('record_id'), self.get('hrn'), self.get('type'), self.get('authority'), \
+                 self.get('pointer'))
+
     def getdict(self):
         return dict(self)
-    
+   
+    def sync(self):
+        """ 
+        Sync this record with the database.
+        """ 
+        from sfa.storage.table import SfaTable
+        table = SfaTable()
+        filter = {}
+        if self.get('record_id'):
+            filter['record_id'] = self.get('record_id')
+        if self.get('hrn') and self.get('type'):
+            filter['hrn'] = self.get('hrn') 
+            filter['type'] = self.get('type')
+            if self.get('pointer'):
+                filter['pointer'] = self.get('pointer')
+        existing_records = table.find(filter)
+        if not existing_records:
+            table.insert(self)
+        else:
+            existing_record = existing_records[0]
+            self['record_id'] = existing_record['record_id']
+            table.update(self) 
+
+    def delete(self):
+        """
+        Remove record from the database.
+        """
+        from sfa.storage.table import SfaTable
+        table = SfaTable()
+        filter = {}
+        if self.get('record_id'):
+            filter['record_id'] = self.get('record_id')
+        if self.get('hrn') and self.get('type'):
+            filter['hrn'] = self.get('hrn')
+            filter['type'] = self.get('type')
+            if self.get('pointer'):
+                filter['pointer'] = self.get('pointer')
+        if filter:
+            existing_records = table.find(filter)
+            for record in existing_records:
+                table.remove(record)
 
 class UserRecord(SfaRecord):
 
@@ -384,7 +440,6 @@ class SliceRecord(SfaRecord):
 class NodeRecord(SfaRecord):
     fields = {
         'hostname': Parameter(str, 'This nodes dns name'),
-        'node_type': Parameter(str, 'Type of node this is'),
         'node_type': Parameter(str, 'Type of node this is'),
         'latitude': Parameter(str, 'latitude'),
         'longitude': Parameter(str, 'longitude'),

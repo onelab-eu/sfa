@@ -27,7 +27,7 @@ class PGv2(BaseVersion):
             if 'component_manager_id' in node.attrib:
                 network_urn = node.get('component_manager_id')
                 if network_urn.startswith("urn:"):
-                    network_hrn = Xrn(network_urn).get_hrn()[0]
+                    network_hrn = Xrn(network_urn).get_hrn()
                 else:
                     # some component_manager_ids are hrns instead of urns??
                     network_hrn = network_urn
@@ -120,10 +120,18 @@ class PGv2(BaseVersion):
             
             if not requested_sliver_type:
                 continue
-            sliver = {'name': requested_sliver_type,
+            sliver = {'type': requested_sliver_type,
                      'pl_tags': attributes}
 
-            # remove existing sliver_type tags
+            # remove available element
+            for available_elem in node_elem.xpath('./default:available | ./available'):
+                node_elem.remove(available_elem)
+            
+            # remove interface elements
+            for interface_elem in node_elem.xpath('./default:interface | ./interface'):
+                node_elem.remove(interface_elem)
+        
+            # remove existing sliver_type elements
             for sliver_type in node_elem.get('slivers', []):
                 node_elem.element.remove(sliver_type.element)
 

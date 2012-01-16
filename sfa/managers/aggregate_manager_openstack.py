@@ -1,8 +1,9 @@
 from sfa.util.version import version_core
 from sfa.util.xrn import Xrn
 from sfa.util.callids import Callids
+from sfa.managers import aggregate_manager 
 
-class AggregateManager:
+class AggregateManager(aggregate_manager.AggregateManager):
 
     def __init__ (self, config): pass
     

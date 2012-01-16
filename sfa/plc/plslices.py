@@ -1,13 +1,12 @@
 from types import StringTypes
 from collections import defaultdict
 
+from sfa.util.sfatime import utcparse, datetime_to_epoch
 from sfa.util.sfalogging import logger
 from sfa.util.xrn import Xrn, get_leaf, get_authority, urn_to_hrn
 #from sfa.util.policy import Policy
-from sfa.util.xrn import Xrn
-
+from sfa.util.plxrn import PlXrn
 from sfa.rspecs.rspec import RSpec
-
 from sfa.plc.vlink import VLink
 from sfa.util.plxrn import hrn_to_pl_slicename
 
@@ -343,8 +342,10 @@ class PlSlices:
                 # unbind from peer so we can modify if necessary. Will bind back later
                 self.driver.shell.UnBindObjectFromPeer('slice', slice['slice_id'], peer['shortname'])
 	        #Update existing record (e.g. expires field) it with the latest info.
-            if slice_record and slice['expires'] != slice_record['expires']:
-                self.driver.shell.UpdateSlice( slice['slice_id'], {'expires' : slice_record['expires']})
+            if slice_record.get('expires'):
+                requested_expires = int(datetime_to_epoch(utcparse(slice_record['expires'])))
+                if requested_expires and slice['expires'] != requested_expires:
+                    self.driver.shell.UpdateSlice( slice['slice_id'], {'expires' : requested_expires})
        
         return slice
 
@@ -356,7 +357,7 @@ class PlSlices:
         for user in users:
             hrn, type = urn_to_hrn(user['urn'])
             username = get_leaf(hrn)
-            login_base = get_leaf(get_authority(user['urn']))
+            login_base = PlXrn(xrn=user['urn']).pl_login_base()
             user['username'] = username
             user['site'] = login_base
 
@@ -408,6 +409,7 @@ class PlSlices:
                                 if login_base == site['login_base'] and \
                                    existing_user['email'].startswith(requested_user['username']+'@'):
                                     existing_user_ids.append(existing_user['email'])
+                                    requested_user['email'] = existing_user['email']
                                     users_dict[existing_user['email']] = requested_user
                                     user_found = True
                                     break
@@ -416,6 +418,7 @@ class PlSlices:
       
                     if user_found == False:
                         fake_email = requested_user['username'] + '@geni.net'
+                        requested_user['email'] = fake_email
                         users_dict[fake_email] = requested_user
                 
         # requested slice users        
@@ -439,7 +442,7 @@ class PlSlices:
             for removed_user_id in removed_user_ids:
                 self.driver.shell.DeletePersonFromSlice(removed_user_id, slice_record['name'])
         # update_existing users
-        updated_users_list = [user for user in existing_slice_users if user['email'] in \
+        updated_users_list = [user for user in users_dict.values() if user['email'] in \
           updated_user_ids]
         self.verify_keys(existing_slice_users, updated_users_list, peer, options)
 
@@ -592,7 +595,7 @@ class PlSlices:
                 self.driver.shell.DeleteSliceTag(attribute['slice_tag_id'])
             except Exception, e:
                 logger.warn('Failed to remove sliver attribute. name: %s, value: %s, node_id: %s\nCause:%s'\
-                                % (name, value,  node_id, str(e)))
+                                % (slice['name'], attribute['value'],  attribute.get('node_id'), str(e)))
 
         # add requested_attributes
         for attribute in added_slice_attributes:
@@ -600,5 +603,5 @@ class PlSlices:
                 self.driver.shell.AddSliceTag(slice['name'], attribute['name'], attribute['value'], attribute.get('node_id', None))
             except Exception, e:
                 logger.warn('Failed to add sliver attribute. name: %s, value: %s, node_id: %s\nCause:%s'\
-                                % (name, value,  node_id, str(e)))
+                                % (slice['name'], attribute['value'],  attribute.get('node_id'), str(e)))
 

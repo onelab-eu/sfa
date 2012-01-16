@@ -55,3 +55,4 @@ class Row(dict):
             raise SfaInvalidArgument, "'%s' not in the future" % human
 
         return human
+

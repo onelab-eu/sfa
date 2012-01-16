@@ -13,16 +13,15 @@ from sfa.util.xrn import Xrn, get_authority, hrn_to_urn, urn_to_hrn
 from sfa.util.plxrn import hrn_to_pl_login_base
 from sfa.util.version import version_core
 from sfa.util.sfalogging import logger
-
 from sfa.trust.gid import GID 
 from sfa.trust.credential import Credential
 from sfa.trust.certificate import Certificate, Keypair, convert_public_key
 from sfa.trust.gid import create_uuid
-
 from sfa.storage.record import SfaRecord
 from sfa.storage.table import SfaTable
+from sfa.managers import registry_manager
 
-class RegistryManager:
+class RegistryManager(registry_manager.RegistryManager):
 
     def __init__ (self, config): pass
 
@@ -32,8 +31,6 @@ class RegistryManager:
                        if hrn != api.hrn])
         xrn=Xrn(api.hrn)
         return version_core({'interface':'registry',
-                             'sfa': 2,
-                             'geni_api': 2,
                              'hrn':xrn.get_hrn(),
                              'urn':xrn.get_urn(),
                              'peers':peers})

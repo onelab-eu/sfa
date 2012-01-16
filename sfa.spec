@@ -1,6 +1,6 @@
 %define name sfa
 %define version 2.0
-%define taglevel 6
+%define taglevel 9
 
 %define release %{taglevel}%{?pldistro:.%{pldistro}}%{?date:.%{date}}
 %global python_sitearch	%( python -c "from distutils.sysconfig import get_python_lib; print get_python_lib(1)" )
@@ -224,6 +224,31 @@ fi
 [ "$1" -ge "1" ] && service sfa-cm restart || :
 
 %changelog
+* Sat Jan 7 2012 Tony Mack <tmack@cs.princeton.edu> - sfa-2.0-9
+- bugfix: 'geni_api' should be in the top level struct, not the code struct
+- bugfix: Display the correct host and port in 'geni_api_versions' field of the GetVersion
+          output returned by the Aggregate Manager.
+- bugfix: sfa.util.sfatime now handles numeric string inputs correctly.
+- bugfix: sfa.util.sfatime.datetime_to_epoch() returns integers instead of doubles.
+- bugfix: Fixed bug that prevented the rspec parser from identifying an rspec's schema when
+          there is extra whitespace in the schemaLocation field.
+- bugfix: Fixed bug that caused PlanetLab initscripts from showing up in the PGv2 and GENIv3 
+          advertisement rspecs.
+- bugfix: <login> RSpec element should contain the 'username' attribute.
+- bugfix: Use sfa.util.plxrn.PlXrn to parse the login_base (authority) out of a urn.      
+ 
+* Wed Jan 4 2012 Tony Mack <tmack@cs.princeton.edu> - sfa-2.0-8
+- bugfix: Fixed a bug in the sfa-import-plc.py script that caused the script to 
+  exit when it encountered a user with an invalid public key.
+- server: imporved logging in sfa-import-plc.py
+ 
+* Tue Jan 3 2012 Tony Mack <tmack@cs.princeton.edu> - sfa-2.0-7
+- bugfix: Fixed appending public keys in CreateSliver
+- bugfix: Fixed various bugs in the PGv2/GENIv3 request, advertisement and manifest rspecs.
+- client: -c --current option allows users to request the current/uncached rspec.
+- server: Added 'geni_api_versions' field to GetVersion() output.
+- server: Moved PLC specific code from sfa.importer.sfaImport to sfa.importer.sfa-import-plc.
+   
 * Fri Dec 16 2011 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-2.0-6
 - bugfix: sfi was not sending call_id with ListResources to v2 servers
 - SFA_API_DEBUG replaced with SFA_API_LOGLEVEL
