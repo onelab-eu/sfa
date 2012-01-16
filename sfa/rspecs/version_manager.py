@@ -13,7 +13,7 @@ class VersionManager:
         versions_path = path + os.sep + 'versions'
         versions_module_path = 'sfa.rspecs.versions'
         valid_module = lambda x: os.path.isfile(os.sep.join([versions_path, x])) \
-                        and not x.endswith('.pyc') and x not in ['__init__.py']
+                        and x.endswith('.py') and x !=  '__init__.py'
         files = [f for f in os.listdir(versions_path) if valid_module(f)]
         for filename in files:
             basename = filename.split('.')[0]
@@ -69,11 +69,23 @@ class VersionManager:
             raise InvalidRSpec("Unkwnown RSpec schema: %s" % schema)
         return retval
 
+def show_by_string(string):
+    try:
+        print v.get_version(string)
+    except Exception,e:
+        print e
+def show_by_schema(string):
+    try:
+        print v.get_version_by_schema(string)
+    except Exception,e:
+        print e
+
 if __name__ == '__main__':
     v = VersionManager()
     print v.versions
-    print v.get_version('sfa 1') 
-    print v.get_version('protogeni 2') 
-    print v.get_version('protogeni 2 advertisement') 
-    print v.get_version_by_schema('http://www.protogeni.net/resources/rspec/2/ad.xsd') 
+    show_by_string('sfa 1') 
+    show_by_string('protogeni 2') 
+    show_by_string('protogeni 2 advertisement') 
+    show_by_schema('http://www.protogeni.net/resources/rspec/2/ad.xsd') 
+    show_by_schema('http://sorch.netmode.ntua.gr/ws/RSpec/ad.xsd')
 

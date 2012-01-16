@@ -165,7 +165,8 @@ def unique_call_id(): return uuid.uuid4().urn
 
 class Sfi:
     
-    required_options=['verbose',  'debug',  'registry',  'sm',  'auth',  'user']
+    # dirty hack to make this class usable from the outside
+    required_options=['verbose',  'debug',  'registry',  'sm',  'auth',  'user', 'user_private_key']
 
     @staticmethod
     def default_sfi_dir ():
@@ -255,8 +256,6 @@ class Sfi:
         # user specifies remote aggregate/sm/component                          
         if command in ("resources", "slices", "create", "delete", "start", "stop", 
                        "restart", "shutdown",  "get_ticket", "renew", "status"):
-            parser.add_option("-c", "--component", dest="component", default=None,
-                             help="component hrn")
             parser.add_option("-d", "--delegate", dest="delegate", default=None, 
                              action="store_true",
                              help="Include a credential delegated to the user's root"+\
@@ -268,10 +267,15 @@ class Sfi:
                             help="type filter ([all]|user|slice|authority|node|aggregate)",
                             choices=("all", "user", "slice", "authority", "node", "aggregate"),
                             default="all")
-        # display formats
         if command in ("resources"):
+            # rspec version
             parser.add_option("-r", "--rspec-version", dest="rspec_version", default="SFA 1",
                               help="schema type and version of resulting RSpec")
+            # disable/enable cached rspecs
+            parser.add_option("-c", "--current", dest="current", default=False,
+                              action="store_true",  
+                              help="Request the current rspec bypassing the cache. Cached rspecs are returned by default")
+            # display formats
             parser.add_option("-f", "--format", dest="format", type="choice",
                              help="display format ([xml]|dns|ip)", default="xml",
                              choices=("xml", "dns", "ip"))
@@ -551,6 +555,8 @@ class Sfi:
                 self.sliceapi_proxy=SfaServerProxy(cm_url, self.private_key, self.my_gid)
             else:
                 # otherwise use what was provided as --sliceapi, or SFI_SM in the config
+                if not self.sm_url.startswith('http://') or self.sm_url.startswith('https://'):
+                    self.sm_url = 'http://' + self.sm_url
                 self.logger.info("Contacting Slice Manager at: %s"%self.sm_url)
                 self.sliceapi_proxy = SfaServerProxy(self.sm_url, self.private_key, self.my_gid, 
                                                      timeout=self.options.timeout, verbose=self.options.debug)  
@@ -815,42 +821,35 @@ or with an slice hrn, shows currently provisioned resources
             creds.append(self.my_credential_string)
         if options.delegate:
             creds.append(self.delegate_cred(cred, get_authority(self.authority)))
-        
-        # V2 API
-        if self.server_supports_options_arg(server):
-            # with v2 everything goes in options inclusing the subject slice
-            api_options = {}
-            if args:
-                hrn = args[0]
-                api_options['geni_slice_urn'] = hrn_to_urn(hrn, 'slice')
-            if options.info:
-                api_options['info'] = options.info
-            if options.rspec_version:
-                version_manager = VersionManager()
-                server_version = self.get_cached_server_version(server)
-                if 'sfa' in server_version:
-                    # just request the version the client wants
-                    api_options['geni_rspec_version'] = version_manager.get_version(options.rspec_version).to_dict()
-                else:
-                    # this must be a protogeni aggregate. We should request a v2 ad rspec
-                    # regardless of what the client user requested
-                    api_options['geni_rspec_version'] = version_manager.get_version('ProtoGENI 2').to_dict() 
+       
+        # no need to check if server accepts the options argument since the options has
+        # been a required argument since v1 API   
+        api_options = {}
+        # always send call_id to v2 servers
+        api_options ['call_id'] = unique_call_id()
+        # ask for cached value if available
+        api_options ['cached'] = True
+        if args:
+            hrn = args[0]
+            api_options['geni_slice_urn'] = hrn_to_urn(hrn, 'slice')
+        if options.info:
+            api_options['info'] = options.info
+        if options.current:
+            if options.current == True:
+                api_options['cached'] = False
+            else:
+                api_options['cached'] = True
+        if options.rspec_version:
+            version_manager = VersionManager()
+            server_version = self.get_cached_server_version(server)
+            if 'sfa' in server_version:
+                # just request the version the client wants
+                api_options['geni_rspec_version'] = version_manager.get_version(options.rspec_version).to_dict()
             else:
                 api_options['geni_rspec_version'] = {'type': 'geni', 'version': '3.0'}    
-            # always send call_id to v2 servers
-            api_options ['call_id'] = unique_call_id()
-            # the V2 form
-            result = server.ListResources (creds, api_options)
-        # V1
         else:
-            # with an argument
-            if args:
-                hrn = args[0]
-                # xxx looks like we can pass a hrn and not a urn here ??
-                # last arg. is a raw call_id when supported
-                result = server.ListResources (creds, hrn, *self.cis(server))
-            else:
-                result = server.ListResources (creds, *self.cis(server))
+            api_options['geni_rspec_version'] = {'type': 'geni', 'version': '3.0'}    
+        result = server.ListResources (creds, api_options)
         value = ReturnValue.get_value(result)
         if options.file is None:
             display_rspec(value, options.format)

@@ -126,7 +126,7 @@ function db_start () {
 	( egrep -v '^(PGDATA=|PGLOG=|PGPORT=)' $postgresql_sysconfig 
 	    echo "PGDATA=$PGDATA"
 	    echo "PGLOG=/var/log/pgsql"
-	    echo "PGPORT=$PLC_DB_PORT"
+	    echo "PGPORT=$SFA_DB_PORT"
 	) >> $tmp ; mv -f $tmp $postgresql_sysconfig
 
 	######## /var/lib/pgsql/data 
@@ -167,6 +167,10 @@ function db_start () {
 	    echo "host $SFA_DB_NAME $SFA_DB_USER 127.0.0.1/32 password"
 	    [ -n "$registry_ip" ] && echo "host $SFA_DB_NAME $SFA_DB_USER ${registry_ip}/32 password"
 	) >>$pghba_conf
+
+    if [ "$SFA_GENERIC_FLAVOUR" == "openstack" ] ; then
+        [ -n "$registry_ip" ] && echo "host nova nova ${registry_ip}/32 password" >> $pghba_conf
+    fi   
 	
 	# Fix ownership (sed -i changes it)
 	chown postgres:postgres $postgresql_conf $pghba_conf

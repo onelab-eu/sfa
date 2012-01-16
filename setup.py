@@ -26,6 +26,7 @@ scripts = glob("sfa/clientbin/*.py") + \
 
 packages = [
     'sfa', 
+    'sfa/openstack',
     'sfa/trust',
     'sfa/storage',
     'sfa/util', 
