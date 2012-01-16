@@ -187,8 +187,8 @@ class SlabDriver(Driver):
                 #return slices
     
         # get data from db 
-        slices = self.GetSlices({'peer_id': None}, ['name'])
-        slice_hrns = [slicename_to_hrn(self.hrn, slice['name']) for slice in slices]
+        slices = self.GetSlices()
+        slice_hrns = [slicename_to_hrn(self.hrn, slice['slice_hrn']) for slice in slices]
         slice_urns = [hrn_to_urn(slice_hrn, 'slice') for slice_hrn in slice_hrns]
     
         # cache the result
@@ -332,13 +332,9 @@ class SlabDriver(Driver):
     def GetPeers (self,auth = None, peer_filter=None, return_fields=None):
         table = SfaTable()
         return_records = [] 
-        print>>sys.stderr,  " \r\n 1GetPeers "
         records_list =  table.findObjects({'type':'authority+sa'})   
-        print>>sys.stderr,  " \r\n 2GetPeers  peer_filter %s return_fields %s  records_list %s "%(peer_filter,return_fields,records_list)
         if not peer_filter and not return_fields:
-            print>>sys.stderr,  " \r\n GetPeers  pHEYYYYY "
             return records_list
-        
         return_records = parse_filter(records_list,peer_filter, 'peers', return_fields) 
  
         return return_records
@@ -412,14 +408,15 @@ class SlabDriver(Driver):
                     
         if not (slice_filter or return_fields) and sliceslist:
             for sl in sliceslist:
-                if sl['oar_job_id'] is not '-1':
+                if sl['oar_job_id'] is not -1: 
+                    print >>sys.stderr, " \r\n \r\n SLABDRIVER.PY  GetSlices  sl  %s" %(sl)
                     self.GetJobs( sl['oar_job_id'],resources=False)
             return_slice_list = sliceslist
             return  return_slice_list
         
         return_slice_list  = parse_filter(sliceslist, slice_filter,'slice', return_fields)
         for sl in return_slice_list:
-                if sl['oar_job_id'] is not '-1':
+                if sl['oar_job_id'] is not -1:
                     self.GetJobs( sl['oar_job_id'],resources=False)
         #print >>sys.stderr, " \r\n \r\n SLABDRIVER.PY  GetSlices  return_slice_list %s" %(return_slice_list)
         return return_slice_list

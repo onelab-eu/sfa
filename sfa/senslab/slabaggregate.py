@@ -28,7 +28,7 @@ from sfa.rspecs.elements.node import Node
 
 from sfa.rspecs.version_manager import VersionManager
 #from sfa.plc.vlink import get_tc_rate
-from sfa.util.sfatime import epochparse
+from sfa.util.sfatime import datetime_to_epoch
 
 def hostname_to_hrn(root_auth,login_base,hostname):
     return PlXrn(auth=root_auth,hostname=login_base+'_'+hostname).get_hrn()
@@ -200,7 +200,7 @@ class SlabAggregate:
         slice, slivers = self.get_slice_and_slivers(slice_xrn)
         rspec = RSpec(version=rspec_version, user_options=options)
         #if slice and 'expires' in slice:
-           #rspec.xml.set('expires',  epochparse(slice['expires']))
+           #rspec.xml.set('expires',  datetime_to_epoch(slice['expires']))
          # add sliver defaults
         #nodes, links = self.get_nodes_and_links(slice, slivers)
         nodes = self.get_nodes() 
