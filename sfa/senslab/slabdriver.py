@@ -329,7 +329,21 @@ class SlabDriver(Driver):
 
         return True
             
-            
+    def GetPeers (self,auth = None, peer_filter=None, return_fields=None):
+        table = SfaTable()
+        return_records = [] 
+        print>>sys.stderr,  " \r\n 1GetPeers "
+        records_list =  table.findObjects({'type':'authority+sa'})   
+        print>>sys.stderr,  " \r\n 2GetPeers  peer_filter %s return_fields %s  records_list %s "%(peer_filter,return_fields,records_list)
+        if not peer_filter and not return_fields:
+            print>>sys.stderr,  " \r\n GetPeers  pHEYYYYY "
+            return records_list
+        
+        return_records = parse_filter(records_list,peer_filter, 'peers', return_fields) 
+ 
+        return return_records
+        
+     
             
     def GetPersons(self, person_filter=None, return_fields=None):
         

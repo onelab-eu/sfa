@@ -33,7 +33,8 @@ def parse_filter(list_to_filter, param_filter, type_of_list, return_fields=None)
 	 'keys':{'int':'key_id'},\
 	 'site':{'str':'login_base','int':'site_id'},\
 	  'node':{'str':'hostname','int':'node_id'},\
-	  'slice':{'str':'slice_hrn','int':'record_id_slice'}}
+	  'slice':{'str':'slice_hrn','int':'record_id_slice'},\
+          'peers':{'str':'hrn'}}
         	
 	print>>sys.stderr, " \r\n ___ parse_filter param_filter %s type %s  return fields %s " %(param_filter,type_of_list, return_fields)  
 	if  param_filter is None and return_fields is None:
@@ -87,11 +88,7 @@ def parse_filter(list_to_filter, param_filter, type_of_list, return_fields=None)
                         #rif the item matches the filter, returns it
                         founditem = []
                         check =  [ True for  k in param_filter.keys() if 'id' in k ]
-                        if check :
-                            dflt= defaultdict(str,param_filter)
-                            
-                        else:
-                            dflt= defaultdict(str,param_filter)
+                        dflt= defaultdict(str,param_filter)
                               
                         
                         

@@ -144,14 +144,15 @@ class SlabSlices:
 
         # get this site's authority (sfa root authority or sub authority)
         site_authority = get_authority(slice_authority).lower()
-        print>>sys.stderr, " \r\n \r\n \t slices.py get_peer slice_authority  %s site_authority %s" %(slice_authority,site_authority) 
+       
         # check if we are already peered with this site_authority, if so
-        #peers = self.api.driver.GetPeers({}, ['peer_id', 'peername', 'shortname', 'hrn_root'])
-        #for peer_record in peers:
-            #names = [name.lower() for name in peer_record.values() if isinstance(name, StringTypes)]
-            #if site_authority in names:
-                #peer = peer_record
-
+        peers = self.driver.GetPeers({'hrn':site_authority})
+        print>>sys.stderr, " \r\n \r\n \t slices.py get_peer slice_authority  %s site_authority %s" %(slice_authority,site_authority) 
+        for peer_record in peers:
+            names = [name.lower() for name in peer_record.values() if isinstance(name, StringTypes)] 
+            if site_authority in names:
+                peer = peer_record
+        print>>sys.stderr, " \r\n \r\n \t slices.py get_peer peer  %s " %(peer) 
         return peer
 
     def get_sfa_peer(self, xrn):
