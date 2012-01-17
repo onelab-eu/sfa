@@ -37,7 +37,6 @@ python-install:
 	python setup.py install --root=$(DESTDIR)	
 	chmod 444 $(DESTDIR)/etc/sfa/default_config.xml
 	rm -rf $(DESTDIR)/usr/lib*/python*/site-packages/*egg-info
-	rm -rf $(DESTDIR)/usr/lib*/python*/site-packages/sfa/storage/sfa.sql
 	(cd $(DESTDIR)/usr/bin ; ln -s sfi.py sfi; ln -s sfascan.py sfascan)
 
 python-clean: version-clean
@@ -152,7 +151,6 @@ sync: synccheck
 	+$(RSYNC)  $(BINS) $(SSHURL)/usr/bin/
 	+$(RSYNC) ./init.d/sfa  $(SSHURL)/etc/init.d/
 	+$(RSYNC) ./config/default_config.xml $(SSHURL)/etc/sfa/
-	+$(RSYNC) ./sfa/storage/sfa.sql $(SSHURL)/usr/share/sfa/
 	$(SSHCOMMAND) exec service sfa restart
 
 # 99% of the time this is enough

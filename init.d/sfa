@@ -217,9 +217,6 @@ function db_start () {
     if ! psql -U $SFA_DB_USER -c "" $SFA_DB_NAME >/dev/null 2>&1 ; then
 	createdb -U postgres --template=template0 --encoding=UNICODE --owner=$SFA_DB_USER $SFA_DB_NAME
 	check
-        # install db schema
-        psql -U $SFA_DB_USER -f /usr/share/sfa/sfa.sql $SFA_DB_NAME
-	check
     fi
     check
 
