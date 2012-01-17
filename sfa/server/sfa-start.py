@@ -130,34 +130,35 @@ def update_cert_records(gids):
     Removes old records from the db.
     """
     # import SfaTable here so this module can be loaded by PlcComponentApi
-    from sfa.storage.table import SfaTable
-    from sfa.storage.record import SfaRecord
+    from sfa.storage.alchemy import dbsession
+    from sfa.storage.persistentobjs import RegRecord
     if not gids:
         return
-    table = SfaTable()
     # get records that actually exist in the db
     gid_urns = [gid.get_urn() for gid in gids]
     hrns_expected = [gid.get_hrn() for gid in gids]
-    records_found = table.find({'hrn': hrns_expected, 'pointer': -1}) 
+    records_found = dbsession.query(RegRecord).\
+        filter_by(pointer=-1)filter(RegRecord.hrn.in_(hrns_expected)).all()
 
     # remove old records
     for record in records_found:
-        if record['hrn'] not in hrns_expected and \
-            record['hrn'] != self.api.config.SFA_INTERFACE_HRN:
-            table.remove(record)
+        if record.hrn not in hrns_expected and \
+            record.hrn != self.api.config.SFA_INTERFACE_HRN:
+            del record
 
     # TODO: store urn in the db so we do this in 1 query 
     for gid in gids:
         hrn, type = gid.get_hrn(), gid.get_type()
-        record = table.find({'hrn': hrn, 'type': type, 'pointer': -1})
+        record = dbsession.query(RegRecord).filter_by(hrn=hrn, type=type,pointer=-1).first()
         if not record:
-            record = {
-                'hrn': hrn, 'type': type, 'pointer': -1,
-                'authority': get_authority(hrn),
-                'gid': gid.save_to_string(save_parents=True),
-            }
-            record = SfaRecord(dict=record)
-            table.insert(record)
+            record = RegRecord (type=type)
+            record.set_from_dict (
+                { 'hrn': hrn, 
+                  'authority': get_authority(hrn),
+                  'gid': gid.save_to_string(save_parents=True),
+                  })
+            dbsession.add(record)
+    dbsession.commit()
         
 def main():
     # Generate command line parser

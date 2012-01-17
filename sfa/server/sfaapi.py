@@ -160,15 +160,12 @@ class SfaApi (XmlrpcApi):
         if not auth_hrn or hrn == self.config.SFA_INTERFACE_HRN:
             auth_hrn = hrn
         auth_info = self.auth.get_auth_info(auth_hrn)
-        # xxx thgen fixme - use SfaTable hardwired for now 
-        # thgen xxx fixme this is wrong all right, but temporary, will use generic
-        from sfa.storage.table import SfaTable
-        table = SfaTable()
-        records = table.findObjects({'hrn': hrn, 'type': 'authority+sa'})
-        if not records:
-            raise RecordNotFound
-        record = records[0]
-        type = record['type']
+        from sfa.storage.alchemy import dbsession
+        from sfa.storage.persistentobjs import RegRecord
+        record = dbsession.query(RegRecord).filter_by(type='authority+sa', hrn=hrn).first()
+        if not record:
+            raise RecordNotFound(hrn)
+        type = record.type
         object_gid = record.get_gid_object()
         new_cred = Credential(subject = object_gid.get_subject())
         new_cred.set_gid_caller(object_gid)

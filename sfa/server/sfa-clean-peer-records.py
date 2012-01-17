@@ -12,7 +12,8 @@ from sfa.trust.certificate import Keypair
 from sfa.trust.hierarchy import Hierarchy
 from sfa.server.registry import Registries
 
-from sfa.storage.table import SfaTable
+from sfa.storage.alchemy import dbsession
+from sfa.storage.persistentobjs import RegRecord
 
 from sfa.client.sfaserverproxy import SfaServerProxy 
 
@@ -45,15 +46,14 @@ def main():
     tree.load(registries.keys())
     
     # get local peer records
-    table = SfaTable()
-    peer_records = table.find({'~peer_authority': None})
+    peer_records=dbsession.query(RegRecord).filter (RegRecord.peer_authority != None).all()
     found_records = []
     hrn_dict = {}
     for record in peer_records:
-        registry_hrn = tree.best_match(record['hrn'])
+        registry_hrn = tree.best_match(record.hrn)
         if registry_hrn not in hrn_dict:
             hrn_dict[registry_hrn] = []
-        hrn_dict[registry_hrn].append(record['hrn'])
+        hrn_dict[registry_hrn].append(record.hrn)
 
     # attempt to resolve the record at the authoritative interface 
     for registry_hrn in hrn_dict:
@@ -75,8 +75,8 @@ def main():
 
     # remove what wasnt found 
     for peer_record in peer_records:
-        if peer_record['hrn'] not in found_records:
-            registries[sfa_api.hrn].Remove(peer_record['hrn'], credential, peer_record['type'])
+        if peer_record.hrn not in found_records:
+            registries[sfa_api.hrn].Remove(peer_record.hrn, credential, peer_record.type)
                 
 if __name__ == '__main__':
     main()

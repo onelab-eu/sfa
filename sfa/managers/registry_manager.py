@@ -392,7 +392,7 @@ class RegistryManager:
     
         return 1
 
-    # This is a PLC-specific thing...
+    # This is a PLC-specific thing, won't work with other platforms
     def get_key_from_incoming_ip (self, api):
         # verify that the callers's ip address exist in the db and is an interface
         # for a node in the db
@@ -406,23 +406,20 @@ class RegistryManager:
         node = nodes[0]
        
         # look up the sfa record
-        table = SfaTable()
-        records = table.findObjects({'type': 'node', 'pointer': node['node_id']})
-        if not records:
-            raise RecordNotFound("pointer:" + str(node['node_id']))  
-        record = records[0]
+        record=dbsession.query(RegRecord).filter_by(type='node',pointer=node['node_id']).first()
+        if not record:
+            raise RecordNotFound("node with pointer %s"%node['node_id'])
         
         # generate a new keypair and gid
         uuid = create_uuid()
         pkey = Keypair(create=True)
-        urn = hrn_to_urn(record['hrn'], record['type'])
+        urn = hrn_to_urn(record.hrn, record.type)
         gid_object = api.auth.hierarchy.create_gid(urn, uuid, pkey)
         gid = gid_object.save_to_string(save_parents=True)
-        record['gid'] = gid
-        record.set_gid(gid)
+        record.gid = gid
 
         # update the record
-        table.update(record)
+        dbsession.commit()
   
         # attempt the scp the key
         # and gid onto the node
