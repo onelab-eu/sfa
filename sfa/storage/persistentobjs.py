@@ -1,4 +1,5 @@
 from types import StringTypes
+from datetime import datetime
 
 from sqlalchemy import create_engine
 from sqlalchemy import Column, Integer, String, DateTime
@@ -69,6 +70,15 @@ class RegRecord (Base,AlchemyObj):
     def get_gid_object (self):
         if not self.gid: return None
         else: return GID(string=self.gid)
+
+    def just_created (self):
+        now=datetime.now()
+        self.date_created=now
+        self.last_updated=now
+
+    def just_updated (self):
+        now=datetime.now()
+        self.last_updated=now
 
 ##############################
 class User (Base):

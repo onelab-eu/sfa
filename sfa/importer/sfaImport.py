@@ -89,6 +89,7 @@ class sfaImport:
         auth_info = self.AuthHierarchy.get_auth_info(hrn)
         auth_record = RegRecord("authority", hrn=hrn, gid=auth_info.get_gid_object(), 
                                 authority=get_authority(hrn))
+        auth_record.just_created()
         self.logger.info("Import: importing auth %s " % auth_record)
         dbsession.add (auth_record)
         dbsession.commit()
@@ -106,6 +107,7 @@ class sfaImport:
         auth_info = self.AuthHierarchy.get_auth_info(hrn)
         user_record = RegRecord("user", hrn=hrn, gid=auth_info.get_gid_object(), \
                                    authority=get_authority(hrn))
+        user_record.just_created()
         self.logger.info("Import: importing user %s " % user_record)
         dbsession.add (user_record)
         dbsession.commit()
@@ -125,6 +127,7 @@ class sfaImport:
             gid = self.AuthHierarchy.create_gid(urn, create_uuid(), pkey)
             interface_record = RegRecord(interface, hrn=hrn, gid = gid, 
                                          authority=get_authority(hrn))
+            interface_record.just_created()
             self.logger.info("Import: importing %s " % interface_record)
             dbsession.add (interface_record)
             dbsession.commit()

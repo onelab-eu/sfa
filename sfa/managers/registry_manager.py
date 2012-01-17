@@ -1,5 +1,4 @@
 import types
-from datetime import datetime
 # for get_key_from_incoming_ip
 import tempfile
 import os
@@ -205,7 +204,7 @@ class RegistryManager:
             if not api.auth.hierarchy.auth_exists(hrn):
                 raise MissingAuthority(hrn)
             records = dbsession.query(RegRecord).filter_by(authority=hrn)
-            record_dicts=[ record.__dict__ for record in records ]
+            record_dicts=[ record.todict() for record in records ]
     
         return record_dicts
     
@@ -264,9 +263,7 @@ class RegistryManager:
         assert ('type' in record_dict)
         record = RegRecord("undefined")
         record.set_from_dict(record_dict)
-        now=datetime.now()
-        record.date_created=now
-        record.last_updated=now
+        record.just_created()
         record.authority = get_authority(record.hrn)
         auth_info = api.auth.get_auth_info(record.authority)
         pub_key = None
@@ -317,8 +314,7 @@ class RegistryManager:
         record = dbsession.query(RegRecord).filter_by(type=type,hrn=hrn).first()
         if not record:
             raise RecordNotFound(hrn)
-        now=datetime.now()
-        record.last_updated=now
+        record.just_updated()
     
         # validate the type
         # xxx might be simpler to just try to commit as this is a constraint in the db
@@ -359,22 +355,19 @@ class RegistryManager:
     
     # expecting an Xrn instance
     def Remove(self, api, xrn, origin_hrn=None):
-    
-        table = SfaTable()
-        filter = {'hrn': xrn.get_hrn()}
         hrn=xrn.get_hrn()
         type=xrn.get_type()
+        request=dbsession.query(RegRecord).filter_by(hrn=hrn)
         if type and type not in ['all', '*']:
-            filter['type'] = type
+            request=request.filter_by(type=type)
     
-        records = table.find(filter)
-        if not records: raise RecordNotFound(hrn)
-        record = records[0]
-        type = record['type']
-        
-        if type not in ['slice', 'user', 'node', 'authority'] :
-            raise UnknownSfaType(type)
+        record = request.first()
+        if not record:
+            msg="Could not find hrn %s"%hrn
+            if type: msg += " type=%s"%type
+            raise RecordNotFound(msg)
 
+        type = record.type
         credential = api.getCredential()
         registries = api.registries
     
@@ -390,11 +383,12 @@ class RegistryManager:
 
         # call testbed callback first
         # IIUC this is done on the local testbed TOO because of the refreshpeer link
-        if not self.driver.remove(record):
+        if not self.driver.remove(record.__dict__):
             logger.warning("driver.remove failed")
 
         # delete from sfa db
-        table.remove(record)
+        del record
+        dbsession.commit()
     
         return 1
 
