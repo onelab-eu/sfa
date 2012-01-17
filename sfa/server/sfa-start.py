@@ -118,7 +118,7 @@ def install_peer_certs(server_key_file, server_cert_file):
                     message += "unable to install trusted gid for %s" % \
                                (new_hrn) 
                     print>>sys.stderr, " \r\n \r\n \t=============================================== install_peer_certs   message %s   " %(message)
-                    gid = GID(string=trusted_gid[0])
+                    gid = GID(string=trusted_gids[0])
                     #gid = GID(string=trusted_gid['value'][0])
                     print>>sys.stderr, " \r\n \r\n \t=============================================== install_peer_certs   gid %s   " %(gid)
                     peer_gids.append(gid)
