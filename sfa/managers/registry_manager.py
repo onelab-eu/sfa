@@ -1,5 +1,5 @@
 import types
-import time 
+from datetime import datetime
 # for get_key_from_incoming_ip
 import tempfile
 import os
@@ -264,6 +264,9 @@ class RegistryManager:
         assert ('type' in record_dict)
         record = RegRecord("undefined")
         record.set_from_dict(record_dict)
+        now=datetime.now()
+        record.date_created=now
+        record.last_updated=now
         record.authority = get_authority(record.hrn)
         auth_info = api.auth.get_auth_info(record.authority)
         pub_key = None
@@ -296,6 +299,7 @@ class RegistryManager:
 
         record.pointer=pointer
         dbsession.add(record)
+        dbsession.commit()
     
         # update membership for researchers, pis, owners, operators
         self.update_relations (record, record)
@@ -303,36 +307,38 @@ class RegistryManager:
         return record.get_gid_object().save_to_string(save_parents=True)
     
     def Update(self, api, record_dict):
-        new_record = SfaRecord(dict = record_dict)
-        type = new_record['type']
-        hrn = new_record['hrn']
-        urn = hrn_to_urn(hrn,type)
-        table = SfaTable()
+        assert ('type' in record_dict)
+        new_record=RegRecord(type="unknown")
+        new_record.set_from_dict(record_dict)
+        type = new_record.type
+        hrn = new_record.hrn
+        
         # make sure the record exists
-        records = table.findObjects({'type': type, 'hrn': hrn})
-        if not records:
+        record = dbsession.query(RegRecord).filter_by(type=type,hrn=hrn).first()
+        if not record:
             raise RecordNotFound(hrn)
-        record = records[0]
-        record['last_updated'] = time.gmtime()
+        now=datetime.now()
+        record.last_updated=now
     
         # validate the type
+        # xxx might be simpler to just try to commit as this is a constraint in the db
         if type not in ['authority', 'slice', 'node', 'user']:
             raise UnknownSfaType(type) 
 
         # Use the pointer from the existing record, not the one that the user
         # gave us. This prevents the user from inserting a forged pointer
-        pointer = record['pointer']
+        pointer = record.pointer
     
         # is the a change in keys ?
         new_key=None
         if type=='user':
-            if 'keys' in new_record and new_record['keys']:
-                new_key=new_record['keys']
+            if getattr(new_key,'keys',None):
+                new_key=new_record.keys
                 if isinstance (new_key,types.ListType):
                     new_key=new_key[0]
 
         # update the PLC information that was specified with the record
-        if not self.driver.update (record, new_record, hrn, new_key):
+        if not self.driver.update (record.__dict__, new_record.__dict__, hrn, new_key):
             logger.warning("driver.update failed")
     
         # take new_key into account
@@ -340,11 +346,11 @@ class RegistryManager:
             # update the openssl key and gid
             pkey = convert_public_key(new_key)
             uuid = create_uuid()
+            urn = hrn_to_urn(hrn,type)
             gid_object = api.auth.hierarchy.create_gid(urn, uuid, pkey)
             gid = gid_object.save_to_string(save_parents=True)
-            record['gid'] = gid
-            record = SfaRecord(dict=record)
-            table.update(record)
+            record.gid = gid
+            dsession.commit()
         
         # update membership for researchers, pis, owners, operators
         self.update_relations (record, new_record)

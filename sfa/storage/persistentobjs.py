@@ -1,7 +1,7 @@
 from types import StringTypes
 
 from sqlalchemy import create_engine
-from sqlalchemy import Column, Integer, String
+from sqlalchemy import Column, Integer, String, DateTime
 from sqlalchemy import Table, Column, MetaData, join, ForeignKey
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy.orm import column_property
@@ -45,8 +45,8 @@ class RegRecord (Base,AlchemyObj):
                        Column ('authority',String),
                        Column ('peer_authority',String),
                        Column ('pointer',Integer,default=-1),
-                       Column ('date_created',String),
-                       Column ('last_updated',String),
+                       Column ('date_created',DateTime),
+                       Column ('last_updated',DateTime),
                        )
     def __init__ (self, type, hrn=None, gid=None, authority=None, peer_authority=None, pointer=-1):
         self.type=type

@@ -1,3 +1,5 @@
+from types import StringTypes
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
@@ -125,6 +127,10 @@ class AlchemyObj:
         return dict ( [ (k,d[k]) for k in keys ] )
     def set_from_dict (self, d):
         for (k,v) in d.iteritems():
+            # experimental
+            if isinstance(v, StringTypes):
+                if v.lower() in ['true']: v=True
+                if v.lower() in ['false']: v=False
             setattr(self,k,v)
 
 ####################
