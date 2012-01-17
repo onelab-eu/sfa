@@ -11,7 +11,8 @@ from sfa.util.xrn import hrn_to_urn, get_leaf, urn_to_sliver_id
 from sfa.util.cache import Cache
 
 # one would think the driver should not need to mess with the SFA db, but..
-from sfa.storage.table import SfaTable
+from sfa.storage.alchemy import dbsession
+from sfa.storage.persistentobjs import RegRecord
 
 # used to be used in get_ticket
 #from sfa.trust.sfaticket import SfaTicket
@@ -206,7 +207,7 @@ class PlDriver (Driver):
 
 
     ##
-    # Convert SFA fields to PLC fields for use when registering up updating
+    # Convert SFA fields to PLC fields for use when registering or updating
     # registry record in the PLC database
     #
 
@@ -446,16 +447,15 @@ class PlDriver (Driver):
         # we'll replace pl ids (person_ids) with hrns from the sfa records
         # we obtain
         
-        # get the sfa records
-        table = SfaTable()
+        # get the registry records
         person_list, persons = [], {}
-        person_list = table.find({'type': 'user', 'pointer': person_ids})
+        person_list = dbsession.query (RegRecord).filter(RegRecord.pointer.in_(person_ids))
         # create a hrns keyed on the sfa record's pointer.
         # Its possible for multiple records to have the same pointer so
         # the dict's value will be a list of hrns.
         persons = defaultdict(list)
         for person in person_list:
-            persons[person['pointer']].append(person)
+            persons[person.pointer].append(person)
 
         # get the pl records
         pl_person_list, pl_persons = [], {}
@@ -475,7 +475,7 @@ class PlDriver (Driver):
                 record['PI'] = []
                 record['researcher'] = []
                 for person_id in record.get('person_ids', []):
-                    hrns = [person['hrn'] for person in persons[person_id]]
+                    hrns = [person.hrn for person in persons[person_id]]
                     record['researcher'].extend(hrns)                
 
                 # pis at the slice's site
@@ -483,7 +483,7 @@ class PlDriver (Driver):
                     pl_pis = site_pis[record['site_id']]
                     pi_ids = [pi['person_id'] for pi in pl_pis]
                     for person_id in pi_ids:
-                        hrns = [person['hrn'] for person in persons[person_id]]
+                        hrns = [person.hrn for person in persons[person_id]]
                         record['PI'].extend(hrns)
                         record['geni_creator'] = record['PI'] 
                 
@@ -497,7 +497,7 @@ class PlDriver (Driver):
                         if pointer not in persons or pointer not in pl_persons:
                             # this means there is not sfa or pl record for this user
                             continue   
-                        hrns = [person['hrn'] for person in persons[pointer]] 
+                        hrns = [person.hrn for person in persons[pointer]] 
                         roles = pl_persons[pointer]['roles']   
                         if 'pi' in roles:
                             record['PI'].extend(hrns)

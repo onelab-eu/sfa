@@ -21,13 +21,18 @@ import sys
 from sfa.util.config import Config
 from sfa.util.xrn import Xrn, get_leaf, get_authority, hrn_to_urn
 from sfa.util.plxrn import hostname_to_hrn, slicename_to_hrn, email_to_hrn, hrn_to_pl_slicename
-from sfa.storage.table import SfaTable
-from sfa.storage.record import SfaRecord
+from sfa.util.sfalogging import logger
+
 from sfa.trust.certificate import convert_public_key, Keypair
 from sfa.trust.gid import create_uuid
-from sfa.importer.sfaImport import sfaImport, _cleanup_string
-from sfa.util.sfalogging import logger
+
 from sfa.openstack.openstack_shell import OpenstackShell    
+
+from sfa.storage.alchemy import dbsession
+from sfa.storage.persistentobjs import RegRecord
+
+from sfa.importer.sfaImport import sfaImport, _cleanup_string
+
 
 def process_options():
 
@@ -71,11 +76,9 @@ def main():
     existing_records = {}
     existing_hrns = []
     key_ids = []
-    table = SfaTable()
-    results = table.find()
-    for result in results:
-        existing_records[(result['hrn'], result['type'])] = result
-        existing_hrns.append(result['hrn']) 
+    for record in dbsession.query(RegRecord):
+        existing_records[ (record.hrn, record.type,) ] = record
+        existing_hrns.append(record.hrn) 
             
         
     # Get all users
@@ -107,10 +110,11 @@ def main():
                 logger.warn("Import: person %s does not have a PL public key"%hrn)
                 pkey = Keypair(create=True) 
             person_gid = sfaImporter.AuthHierarchy.create_gid(urn, create_uuid(), pkey)
-            person_record = SfaRecord(hrn=hrn, gid=person_gid, type="user", \
-                                          authority=get_authority(hrn))
-            logger.info("Import: importing %s " % person_record.summary_string())
-            person_record.sync()
+            person_record = RegRecord("user", hrn=hrn, gid=person_gid, 
+                                      authority=get_authority(hrn))
+            logger.info("Import: importing %s " % person_record)
+            dbsession.add(person_record)
+            dbsession.commit()
 
     # Get all projects
     projects = shell.project_get_all()
@@ -123,11 +127,12 @@ def main():
             pkey = Keypair(create=True)
             urn = hrn_to_urn(hrn, 'slice')
             project_gid = sfaImporter.AuthHierarchy.create_gid(urn, create_uuid(), pkey)
-            project_record = SfaRecord(hrn=hrn, gid=project_gid, type="slice",
+            project_record = RegRecord("slice", hrn=hrn, gid=project_gid,
                                        authority=get_authority(hrn))
-            projects_dict[project_record['hrn']] = project_record
-            logger.info("Import: importing %s " % project_record.summary_string())
-            project_record.sync() 
+            projects_dict[project_record.hrn] = project_record
+            logger.info("Import: importing %s " % project_record)
+            dbsession.add(project_record)
+            dbsession.commit()
     
     # remove stale records    
     system_records = [interface_hrn, root_auth, interface_hrn + '.slicemanager']
@@ -136,7 +141,7 @@ def main():
             continue
         
         record = existing_records[(record_hrn, type)]
-        if record['peer_authority']:
+        if record.peer_authority:
             continue
 
         if type == 'user':
@@ -148,10 +153,10 @@ def main():
         else:
             continue 
         
-        record_object = existing_records[(record_hrn, type)]
-        record = SfaRecord(dict=record_object)
+        record_object = existing_records[ (record_hrn, type) ]
         logger.info("Import: removing %s " % record.summary_string())
-        record.delete()
+        del record_object
+        dbsession.commit()
                                    
     # save pub keys
     logger.info('Import: saving current pub keys')

@@ -16,9 +16,8 @@ from sfa.trust.certificate import convert_public_key, Keypair
 from sfa.trust.trustedroots import TrustedRoots
 from sfa.trust.hierarchy import Hierarchy
 from sfa.trust.gid import create_uuid
-from sfa.storage.table import SfaTable
-from sfa.storage.record import SfaRecord
-
+from sfa.storage.persistentobjs import RegRecord
+from sfa.storage.alchemy import dbsession
 
 def _un_unicode(str):
    if isinstance(str, unicode):
@@ -49,7 +48,6 @@ class sfaImport:
     def __init__(self):
        self.logger = _SfaLogger(logfile='/var/log/sfa_import.log', loggername='importlog')
        self.AuthHierarchy = Hierarchy()
-#       self.table = SfaTable()     
        self.config = Config()
        self.TrustedRoots = TrustedRoots(Config.get_trustedroots_dir(self.config))
        self.root_auth = self.config.SFA_REGISTRY_ROOT_AUTH
@@ -85,13 +83,15 @@ class sfaImport:
         if not parent_hrn == hrn:
             self.create_top_level_auth_records(parent_hrn)
 
-        # enxure key and cert exists:
+        # ensure key and cert exists:
         self.AuthHierarchy.create_top_level_auth(hrn)    
         # create the db record if it doesnt already exist    
         auth_info = self.AuthHierarchy.get_auth_info(hrn)
-        auth_record = SfaRecord(hrn=hrn, gid=auth_info.get_gid_object(), type="authority", pointer=-1, authority=get_authority(hrn))
-        self.logger.info("Import: importing %s " % auth_record.summary_string())
-        auth_record.sync()
+        auth_record = RegRecord("authority", hrn=hrn, gid=auth_info.get_gid_object(), 
+                                authority=get_authority(hrn))
+        self.logger.info("Import: importing auth %s " % auth_record)
+        dbsession.add (auth_record)
+        dbsession.commit()
 
     def create_sm_client_record(self):
         """
@@ -104,10 +104,11 @@ class sfaImport:
             self.AuthHierarchy.create_auth(urn)
 
         auth_info = self.AuthHierarchy.get_auth_info(hrn)
-        record = SfaRecord(hrn=hrn, gid=auth_info.get_gid_object(), \
-                           type="user", pointer=-1, authority=get_authority(hrn))
-        self.logger.info("Import: importing %s " % record.summary_string())
-        record.sync()
+        user_record = RegRecord("user", hrn=hrn, gid=auth_info.get_gid_object(), \
+                                   authority=get_authority(hrn))
+        self.logger.info("Import: importing user %s " % user_record)
+        dbsession.add (user_record)
+        dbsession.commit()
 
     def create_interface_records(self):
         """
@@ -117,21 +118,19 @@ class sfaImport:
         # arent enabled
         hrn = self.config.SFA_INTERFACE_HRN
         interfaces = ['authority+sa', 'authority+am', 'authority+sm']
-        table = SfaTable()
         auth_info = self.AuthHierarchy.get_auth_info(hrn)
         pkey = auth_info.get_pkey_object()
         for interface in interfaces:
             urn = hrn_to_urn(hrn, interface)
             gid = self.AuthHierarchy.create_gid(urn, create_uuid(), pkey)
-            interface_record = SfaRecord(hrn=hrn, type=interface, pointer=-1,
-                                         gid = gid, authority=get_authority(hrn))
-            self.logger.info("Import: importing %s " % interface_record.summary_string())
-            interface_record.sync()
+            interface_record = RegRecord(interface, hrn=hrn, gid = gid, 
+                                         authority=get_authority(hrn))
+            self.logger.info("Import: importing %s " % interface_record)
+            dbsession.add (interface_record)
+            dbsession.commit()
              
     def delete_record(self, hrn, type):
         # delete the record
-        table = SfaTable()
-        record_list = table.find({'type': type, 'hrn': hrn})
-        for record in record_list:
-            self.logger.info("Import: removing record %s %s" % (type, hrn))
-            table.remove(record)        
+        for rec in dbsession.query(RegRecord).filter_by(type=type,hrn=hrn):
+           del rec
+        dbsession.commit()

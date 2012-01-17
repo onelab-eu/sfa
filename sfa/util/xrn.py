@@ -130,6 +130,13 @@ class Xrn:
 #        if not type:
 #            debug_logger.debug("type-less Xrn's are not safe")
 
+    def __repr__ (self):
+        result="<XRN u=%s h=%s"%(self.urn,self.hrn)
+        if hasattr(self,'leaf'): result += " leaf=%s"%self.leaf
+        if hasattr(self,'authority'): result += " auth=%s"%self.authority
+        result += ">"
+        return result
+
     def get_urn(self): return self.urn
     def get_hrn(self): return self.hrn
     def get_type(self): return self.type
@@ -147,7 +154,7 @@ class Xrn:
         self._normalize()
         return self.leaf
 
-    def get_authority_hrn(self): 
+    def get_authority_hrn(self):
         self._normalize()
         return '.'.join( self.authority )
     

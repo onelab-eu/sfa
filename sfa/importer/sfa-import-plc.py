@@ -21,12 +21,16 @@ import sys
 from sfa.util.config import Config
 from sfa.util.xrn import Xrn, get_leaf, get_authority, hrn_to_urn
 from sfa.util.plxrn import hostname_to_hrn, slicename_to_hrn, email_to_hrn, hrn_to_pl_slicename
-from sfa.storage.table import SfaTable
-from sfa.storage.record import SfaRecord
+
 from sfa.trust.gid import create_uuid    
 from sfa.trust.certificate import convert_public_key, Keypair
-from sfa.importer.sfaImport import sfaImport, _cleanup_string
+
 from sfa.plc.plshell import PlShell    
+
+from sfa.storage.alchemy import dbsession
+from sfa.storage.persistentobjs import RegRecord
+
+from sfa.importer.sfaImport import sfaImport, _cleanup_string
 
 def process_options():
 
@@ -62,6 +66,8 @@ def _get_site_hrn(interface_hrn, site):
             hrn = ".".join([interface_hrn, "internet2", site['login_base']])
     return hrn
 
+# xxx could use a call to persistentobjs.init_tables somewhere
+# however now import s expected to be done after service creation..
 def main():
 
     process_options()
@@ -82,11 +88,9 @@ def main():
     existing_hrns = []
     key_ids = []
     person_keys = {} 
-    table = SfaTable()
-    results = table.find()
-    for result in results:
-        existing_records[(result['hrn'], result['type'])] = result
-        existing_hrns.append(result['hrn']) 
+    for record in dbsession.query(RegRecord):
+        existing_records[ (record.hrn, record.type,) ] = record
+        existing_hrns.append(record.hrn) 
             
     # Get all plc sites
     sites = shell.GetSites({'peer_id': None})
@@ -144,10 +148,12 @@ def main():
             if not sfaImporter.AuthHierarchy.auth_exists(urn):
                 sfaImporter.AuthHierarchy.create_auth(urn)
             auth_info = sfaImporter.AuthHierarchy.get_auth_info(urn)
-            auth_record = SfaRecord(hrn=site_hrn, gid=auth_info.get_gid_object(), \
-                                    type="authority", pointer=site['site_id'], 
+            auth_record = RegRecord("authority", hrn=site_hrn, gid=auth_info.get_gid_object(),
+                                    pointer=site['site_id'], 
                                     authority=get_authority(site_hrn))
-            auth_record.sync(verbose=True)
+            logger.info("Import: Importing auth %s"%auth_record)
+            dbsession.add(auth_record)
+            dbsession.commit()
 
     # start importing 
     for site in sites:
@@ -159,16 +165,16 @@ def main():
         if site_hrn not in existing_hrns or \
            (site_hrn, 'authority') not in existing_records:
             try:
-                logger.info("Import: site %s " % site_hrn)
                 urn = hrn_to_urn(site_hrn, 'authority')
                 if not sfaImporter.AuthHierarchy.auth_exists(urn):
                     sfaImporter.AuthHierarchy.create_auth(urn)
                 auth_info = sfaImporter.AuthHierarchy.get_auth_info(urn)
-                auth_record = SfaRecord(hrn=site_hrn, gid=auth_info.get_gid_object(), \
-                                        type="authority", pointer=site['site_id'], 
+                auth_record = RegRecord("authority", hrn=site_hrn, gid=auth_info.get_gid_object(),
+                                        pointer=site['site_id'], 
                                         authority=get_authority(site_hrn))
-                logger.info("Import: importing site: %s" % auth_record.summary_string())  
-                auth_record.sync()
+                logger.info("Import: importing site: %s" % auth_record)  
+                dbsession.add(auth_record)
+                dbsession.commit()
             except:
                 # if the site import fails then there is no point in trying to import the
                 # site's child records (node, slices, persons), so skip them.
@@ -191,9 +197,12 @@ def main():
                     pkey = Keypair(create=True)
                     urn = hrn_to_urn(hrn, 'node')
                     node_gid = sfaImporter.AuthHierarchy.create_gid(urn, create_uuid(), pkey)
-                    node_record = SfaRecord(hrn=hrn, gid=node_gid, type="node", pointer=node['node_id'], authority=get_authority(hrn))    
-                    logger.info("Import: importing node: %s" % node_record.summary_string())  
-                    node_record.sync()
+                    node_record = RegRecord("node", hrn=hrn, gid=node_gid,
+                                            pointer=node['node_id'], 
+                                            authority=get_authority(hrn))    
+                    logger.info("Import: importing node: %s" % node_record)  
+                    dbsession.add(node_record)
+                    dbsession.commit()
                 except:
                     logger.log_exc("Import: failed to import node") 
                     
@@ -212,10 +221,12 @@ def main():
                     pkey = Keypair(create=True)
                     urn = hrn_to_urn(hrn, 'slice')
                     slice_gid = sfaImporter.AuthHierarchy.create_gid(urn, create_uuid(), pkey)
-                    slice_record = SfaRecord(hrn=hrn, gid=slice_gid, type="slice", pointer=slice['slice_id'],
+                    slice_record = RegRecord("slice", hrn=hrn, gid=slice_gid, 
+                                             pointer=slice['slice_id'],
                                              authority=get_authority(hrn))
-                    logger.info("Import: importing slice: %s" % slice_record.summary_string())  
-                    slice_record.sync()
+                    logger.info("Import: importing slice: %s" % slice_record)  
+                    dbsession.add(slice_record)
+                    dbsession.commit()
                 except:
                     logger.log_exc("Import: failed to  import slice")
 
@@ -228,8 +239,8 @@ def main():
             if len(hrn) > 64:
                 hrn = hrn[:64]
 
-            # if user's primary key has chnaged then we need to update the 
-            # users gid by forcing a update here
+            # if user's primary key has changed then we need to update the 
+            # users gid by forcing an update here
             old_keys = []
             new_keys = []
             if person_id in old_person_keys:
@@ -257,10 +268,12 @@ def main():
                         pkey = Keypair(create=True) 
                     urn = hrn_to_urn(hrn, 'user')
                     person_gid = sfaImporter.AuthHierarchy.create_gid(urn, create_uuid(), pkey)
-                    person_record = SfaRecord(hrn=hrn, gid=person_gid, type="user", \
-                                              pointer=person['person_id'], authority=get_authority(hrn))
-                    logger.info("Import: importing person: %s" % person_record.summary_string())  
-                    person_record.sync()
+                    person_record = RegRecord("user", hrn=hrn, gid=person_gid,
+                                              pointer=person['person_id'], 
+                                              authority=get_authority(hrn))
+                    logger.info("Import: importing person: %s" % person_record)
+                    dbsession.add (person_record)
+                    dbsession.commit()
                 except:
                     logger.log_exc("Import: failed to import person.") 
     
@@ -271,7 +284,7 @@ def main():
             continue
         
         record = existing_records[(record_hrn, type)]
-        if record['peer_authority']:
+        if record.peer_authority:
             continue
 
         # dont delete vini's internet2 placeholdder record
@@ -285,7 +298,7 @@ def main():
         if type == 'authority':    
             for site in sites:
                 site_hrn = interface_hrn + "." + site['login_base']
-                if site_hrn == record_hrn and site['site_id'] == record['pointer']:
+                if site_hrn == record_hrn and site['site_id'] == record.pointer:
                     found = True
                     break
 
@@ -299,7 +312,7 @@ def main():
                     alt_username = person['email'].split("@")[0].replace(".", "_").replace("+", "_")
                     if username in [tmp_username, alt_username] and \
                        site['site_id'] in person['site_ids'] and \
-                       person['person_id'] == record['pointer']:
+                       person['person_id'] == record.pointer:
                         found = True
                         break
         
@@ -307,7 +320,7 @@ def main():
             slicename = hrn_to_pl_slicename(record_hrn)
             for slice in slices:
                 if slicename == slice['name'] and \
-                   slice['slice_id'] == record['pointer']:
+                   slice['slice_id'] == record.pointer:
                     found = True
                     break    
  
@@ -320,7 +333,7 @@ def main():
                     tmp_nodename = node['hostname']
                     if tmp_nodename == nodename and \
                        node['site_id'] == site['site_id'] and \
-                       node['node_id'] == record['pointer']:
+                       node['node_id'] == record.pointer:
                         found = True
                         break  
         else:
@@ -329,9 +342,9 @@ def main():
         if not found:
             try:
                 record_object = existing_records[(record_hrn, type)]
-                record = SfaRecord(dict=record_object)
-                logger.info("Import: deleting record: %s" % record.summary_string())
-                record.delete()
+                logger.info("Import: deleting record: %s" % record)
+                del record_object
+                dbsession.commit()
             except:
                 logger.log_exc("Import: failded to delete record")                    
     # save pub keys

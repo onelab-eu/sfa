@@ -20,6 +20,9 @@ class Registry(SfaServer):
     
     def __init__(self, ip, port, key_file, cert_file):
         SfaServer.__init__(self, ip, port, key_file, cert_file,'registry')
+        # initialize db schema
+        from sfa.storage.persistentobjs import init_tables
+        init_tables()
 
 #
 # Registries is a dictionary of registry connections keyed on the registry hrn
