@@ -129,7 +129,7 @@ def update_cert_records(gids):
     Make sure there is a record in the registry for the specified gids. 
     Removes old records from the db.
     """
-    # import SfaTable here so this module can be loaded by PlcComponentApi
+    # import db stuff here here so this module can be loaded by PlcComponentApi
     from sfa.storage.alchemy import dbsession
     from sfa.storage.persistentobjs import RegRecord
     if not gids:
