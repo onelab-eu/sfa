@@ -527,7 +527,7 @@ class SlabDriver(Driver):
         reqdict['resource'] ="network_address="+ str(len(nodeid_list))
         reqdict['resource']+= ",walltime=" + str(00) + ":" + str(05) + ":" + str(00)
         reqdict['script_path'] = "/bin/sleep 320"
-        #reqdict['type'] = "deploy"
+        reqdict['type'] = "deploy"
         print>>sys.stderr, "\r\n \r\n AddSliceToNodes reqdict   %s \r\n site_list   %s"  %(reqdict,site_list)   
         OAR = OARrestapi()
         answer = OAR.POSTRequestToOARRestAPI('POST_job',reqdict,slice_user)
@@ -666,31 +666,34 @@ class SlabDriver(Driver):
         Given a SFA record, fill in the senslab specific and SFA specific
         fields in the record. 
         """
-	print >>sys.stderr, "\r\n \t\t BEFORE fill_record_pl_info %s" %(records)	
+	print >>sys.stderr, "\r\n \t\t BEFORE fill_record_info %s" %(records)	
         if isinstance(records, list):
-            records = records[0]
+            records = [records]
 	#print >>sys.stderr, "\r\n \t\t BEFORE fill_record_pl_info %s" %(records)	
         
-       
-        if records['type'] == 'slice':
-
-            sfatable = SfaTable()
-            recslice = self.db.find('slice',str(records['hrn']))
-            if isinstance(recslice,list) and len(recslice) == 1:
-                recslice = recslice[0]
-            recuser = sfatable.find(  recslice['record_id_user'], ['hrn'])
-            
-            print >>sys.stderr, "\r\n \t\t  SLABDRIVER.PY fill_record_info %s" %(recuser)
-            records['type']
-            if isinstance(recuser,list) and len(recuser) == 1:
-                recuser = recuser[0]	          
-            records.update({'PI':[recuser['hrn']],
-            'researcher': [recuser['hrn']],
-            'name':records['hrn'], 'oar_job_id':recslice['oar_job_id'],
-            
-            'node_ids': [],
-            'person_ids':[recslice['record_id_user']]})
-
+        try:
+            if records['type'] == 'slice':
+    
+                sfatable = SfaTable()
+                recslice = self.db.find('slice',str(records['hrn']))
+                if isinstance(recslice,list) and len(recslice) == 1:
+                    recslice = recslice[0]
+                recuser = sfatable.find(  recslice['record_id_user'], ['hrn'])
+                
+                print >>sys.stderr, "\r\n \t\t  SLABDRIVER.PY fill_record_info %s" %(recuser)
+                records['type']
+                if isinstance(recuser,list) and len(recuser) == 1:
+                    recuser = recuser[0]	          
+                records.update({'PI':[recuser['hrn']],
+                'researcher': [recuser['hrn']],
+                'name':records['hrn'], 'oar_job_id':recslice['oar_job_id'],
+                
+                'node_ids': [],
+                'person_ids':[recslice['record_id_user']]})
+        except TypeError:
+            print >>sys.stderr, "\r\n \t\t SLABDRIVER fill_record_info  EXCEPTION RECORDS : %s" %(records)	
+            return
+        
         #self.fill_record_pl_info(records)
 	##print >>sys.stderr, "\r\n \t\t after fill_record_pl_info %s" %(records)	
         #self.fill_record_sfa_info(records)
