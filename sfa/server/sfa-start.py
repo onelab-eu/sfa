@@ -138,7 +138,7 @@ def update_cert_records(gids):
     gid_urns = [gid.get_urn() for gid in gids]
     hrns_expected = [gid.get_hrn() for gid in gids]
     records_found = dbsession.query(RegRecord).\
-        filter_by(pointer=-1)filter(RegRecord.hrn.in_(hrns_expected)).all()
+        filter_by(pointer=-1).filter(RegRecord.hrn.in_(hrns_expected)).all()
 
     # remove old records
     for record in records_found:

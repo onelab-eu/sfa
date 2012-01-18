@@ -1,14 +1,14 @@
 import unittest
 from sfa.trust.gid import *
 from sfa.util.config import *
-from sfa.storage.record import *
+from sfa.storage.persistentobjs import RegRecord
 
-class TestRecord(unittest.TestCase):
+class TestStorage(unittest.TestCase):
     def setUp(self):
         pass
 
     def testCreate(self):
-        r = SfaRecord()
+        r = RegRecord('user')
 
 if __name__ == "__main__":
     unittest.main()
