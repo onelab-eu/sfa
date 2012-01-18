@@ -67,8 +67,7 @@ class GetSelfCredential(Method):
         if not records:
             raise RecordNotFound(hrn)
 
-        record_obj = RegRecord ('unknown')
-        record_obj.set_from_dict (records[0])
+        record_obj = RegRecord (dict=records[0])
         # xxx-local the local-only version would read 
         #record_obj = dbsession.query(RegRecord).filter_by(hrn=hrn).first()
         #if not record_obj: raise RecordNotFound(hrn)

@@ -9,6 +9,7 @@ from sqlalchemy.orm import object_mapper
 from sqlalchemy.ext.declarative import declarative_base
 
 from sfa.util.sfalogging import logger
+from sfa.util.xml import XML 
 
 from sfa.trust.gid import GID
 
@@ -41,7 +42,7 @@ Base=declarative_base()
 # so the latter obj.todict() seems more reliable but more hacky as is relies on the form of fields, so this can probably be improved
 #
 # (*) finally for converting a dictionary into an sqlalchemy object, we provide
-# obj.set_from_dict(dict)
+# obj.load_from_dict(dict)
 
 class AlchemyObj:
     def __iter__(self): 
@@ -54,13 +55,35 @@ class AlchemyObj:
         d=self.__dict__
         keys=[k for k in d.keys() if not k.startswith('_')]
         return dict ( [ (k,d[k]) for k in keys ] )
-    def set_from_dict (self, d):
+    def load_from_dict (self, d):
         for (k,v) in d.iteritems():
             # experimental
             if isinstance(v, StringTypes):
                 if v.lower() in ['true']: v=True
                 if v.lower() in ['false']: v=False
             setattr(self,k,v)
+        assert self.type in BUILTIN_TYPES
+    
+    # in addition we provide convenience for converting to and from xml records
+    # for this purpose only, we need the subclasses to define 'fields' as either 
+    # a list or a dictionary
+    def xml_fields (self):
+        fields=self.fields
+        if isinstance(fields,dict): fields=fields.keys()
+        return fields
+    def load_from_xml (self, xml):
+        xml_record = XML(xml)
+        xml_dict = xml_record.todict()
+        for k in self.xml_fields():
+            if k in xml_dict:
+                setattr(self,k,xml_dict[k])
+
+    def save_as_xml (self):
+        # xxx unset fields don't get exposed, is that right ?
+        input_dict = dict( [ (key, getattr(self.key), ) for key in self.xml_fields() if getattr(self,key,None) ] )
+        xml_record=XML("<record />")
+        xml_record.parse_dict (input_dict)
+        return xml_record.toxml()
 
 ##############################
 class Type (Base):
@@ -96,7 +119,9 @@ class RegRecord (Base,AlchemyObj):
                        Column ('date_created',DateTime),
                        Column ('last_updated',DateTime),
                        )
-    def __init__ (self, type, hrn=None, gid=None, authority=None, peer_authority=None, pointer=-1):
+    fields = [ 'type', 'hrn', 'gid', 'authority', 'peer_authority' ]
+    def __init__ (self, type='unknown', hrn=None, gid=None, authority=None, peer_authority=None, 
+                  pointer=-1, dict=None):
         self.type=type
         if hrn: self.hrn=hrn
         if gid: 
@@ -104,7 +129,9 @@ class RegRecord (Base,AlchemyObj):
             else: self.gid=gid.save_to_string(save_parents=True)
         if authority: self.authority=authority
         if peer_authority: self.peer_authority=peer_authority
-        self.pointer=pointer
+        if not hasattr(self,'pointer'): self.pointer=pointer
+        if dict:
+            self.load_from_dict (dict)
 
     def __repr__(self):
         result="[Record(record_id=%s, hrn=%s, type=%s, authority=%s, pointer=%s" % \
@@ -114,6 +141,7 @@ class RegRecord (Base,AlchemyObj):
         result += "]"
         return result
 
+    # xxx - there might be smarter ways to handle get/set'ing gid using validation hooks 
     def get_gid_object (self):
         if not self.gid: return None
         else: return GID(string=self.gid)
@@ -152,14 +180,20 @@ class UserRecord (Base):
         self.email=email
     def __repr__ (self): return "<UserRecord %s %s>"%(self.email,self.gid)
 
-##############################    
+##############################
 def init_tables(dbsession):
     logger.info("Initializing db schema and builtin types")
-    engine=dbsession.get_bind()
+    # the doc states we could retrieve the engine this way
+    # engine=dbsession.get_bind()
+    # however I'm getting this
+    # TypeError: get_bind() takes at least 2 arguments (1 given)
+    # so let's import alchemy - but not from toplevel 
+    from sfa.storage.alchemy import engine
     Base.metadata.create_all(engine)
     insert_builtin_types(dbsession)
 
 def drop_tables(dbsession):
     logger.info("Dropping tables")
-    engine=dbsession.get_bind()
+    # same as for init_tables
+    from sfa.storage.alchemy import engine
     Base.metadata.drop_all(engine)

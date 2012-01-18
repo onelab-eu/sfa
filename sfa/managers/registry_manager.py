@@ -261,8 +261,7 @@ class RegistryManager:
             raise ExistingRecord(hrn)
            
         assert ('type' in record_dict)
-        record = RegRecord("undefined")
-        record.set_from_dict(record_dict)
+        record = RegRecord(dict=record_dict)
         record.just_created()
         record.authority = get_authority(record.hrn)
         auth_info = api.auth.get_auth_info(record.authority)
@@ -305,8 +304,7 @@ class RegistryManager:
     
     def Update(self, api, record_dict):
         assert ('type' in record_dict)
-        new_record=RegRecord(type="unknown")
-        new_record.set_from_dict(record_dict)
+        new_record=RegRecord(dict=record_dict)
         type = new_record.type
         hrn = new_record.hrn
         

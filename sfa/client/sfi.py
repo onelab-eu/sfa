@@ -28,7 +28,8 @@ from sfa.util.config import Config
 from sfa.util.version import version_core
 from sfa.util.cache import Cache
 
-from sfa.storage.record import SfaRecord, UserRecord, SliceRecord, NodeRecord, AuthorityRecord
+#from sfa.storage.record import SfaRecord, UserRecord, SliceRecord, NodeRecord, AuthorityRecord
+from sfa.storage.persistentobjs import RegRecord
 
 from sfa.rspecs.rspec import RSpec
 from sfa.rspecs.rspec_converter import RSpecConverter
@@ -119,15 +120,15 @@ def save_records_to_file(filename, recordList, format="xml"):
         f = open(filename, "w")
         f.write("<recordlist>\n")
         for record in recordList:
-            record = SfaRecord(dict=record)
-            f.write('<record hrn="' + record.get_name() + '" type="' + record.get_type() + '" />\n')
+            record_obj=RegRecord (dict=record)
+            f.write('<record hrn="' + record.hrn + '" type="' + record.type + '" />\n')
         f.write("</recordlist>\n")
         f.close()
     elif format == "hrnlist":
         f = open(filename, "w")
         for record in recordList:
-            record = SfaRecord(dict=record)
-            f.write(record.get_name() + "\n")
+            record_obj=RegRecord (dict=record)
+            f.write(record.hrn + "\n")
         f.close()
     else:
         # this should never happen
@@ -135,15 +136,19 @@ def save_records_to_file(filename, recordList, format="xml"):
 
 def save_record_to_file(filename, record):
     if record['type'] in ['user']:
-        record = UserRecord(dict=record)
+        # UserRecord
+        record = RegRecord(dict=record)
     elif record['type'] in ['slice']:
-        record = SliceRecord(dict=record)
+        # SliceRecord
+        record = RegRecord(dict=record)
     elif record['type'] in ['node']:
-        record = NodeRecord(dict=record)
+        # NodeRecord
+        record = RegRecord(dict=record)
     elif record['type'] in ['authority', 'ma', 'sa']:
-        record = AuthorityRecord(dict=record)
+        # AuthorityRecord
+        record = RegRecord(dict=record)
     else:
-        record = SfaRecord(dict=record)
+        record = RegRecord(dict=record)
     str = record.save_to_string()
     f=codecs.open(filename, encoding='utf-8',mode="w")
     f.write(str)
@@ -156,7 +161,8 @@ def load_record_from_file(filename):
     f=codecs.open(filename, encoding="utf-8", mode="r")
     str = f.read()
     f.close()
-    record = SfaRecord(string=str)
+    record = RegRecord()
+    record.load_from_xml(str)
     return record
 
 
@@ -714,19 +720,24 @@ or version information about sfi itself
             self.logger.error("No record of type %s"% options.type)
         for record in records:
             if record['type'] in ['user']:
-                record = UserRecord(dict=record)
+                # UserRecord
+                record = RegRecord(dict=record)
             elif record['type'] in ['slice']:
-                record = SliceRecord(dict=record)
+                # SliceRecord
+                record = RegRecord(dict=record)
             elif record['type'] in ['node']:
-                record = NodeRecord(dict=record)
+                # NodeRecord
+                record = RegRecord(dict=record)
             elif record['type'].startswith('authority'):
-                record = AuthorityRecord(dict=record)
+                # AuthorityRecord
+                record = RegRecord(dict=record)
             else:
-                record = SfaRecord(dict=record)
+                record = RegRecord(dict=record)
+
             if (options.format == "text"): 
                 record.dump()  
             else:
-                print record.save_to_string() 
+                print record.save_as_xml() 
         if options.file:
             save_records_to_file(options.file, records, options.fileformat)
         return
@@ -739,7 +750,7 @@ or version information about sfi itself
             sys.exit(1)
         record_filepath = args[0]
         rec_file = self.get_record_file(record_filepath)
-        record = load_record_from_file(rec_file).as_dict()
+        record = load_record_from_file(rec_file).todict()
         return self.registry().Register(record, auth_cred)
     
     def update(self, options, args):

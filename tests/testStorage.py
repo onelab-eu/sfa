@@ -8,7 +8,7 @@ class TestStorage(unittest.TestCase):
         pass
 
     def testCreate(self):
-        r = RegRecord('user')
+        r = RegRecord(type='authority',hrn='foo.bar')
 
 if __name__ == "__main__":
     unittest.main()

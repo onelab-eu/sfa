@@ -151,12 +151,11 @@ def update_cert_records(gids):
         hrn, type = gid.get_hrn(), gid.get_type()
         record = dbsession.query(RegRecord).filter_by(hrn=hrn, type=type,pointer=-1).first()
         if not record:
-            record = RegRecord (type=type)
-            record.set_from_dict (
-                { 'hrn': hrn, 
-                  'authority': get_authority(hrn),
-                  'gid': gid.save_to_string(save_parents=True),
-                  })
+            record = RegRecord (dict= {'type':type,
+                                       'hrn': hrn, 
+                                       'authority': get_authority(hrn),
+                                       'gid': gid.save_to_string(save_parents=True),
+                                       })
             dbsession.add(record)
     dbsession.commit()
         
