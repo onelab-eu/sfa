@@ -13,6 +13,7 @@ from optparse import OptionParser
 
 from sfa.util.sfalogging import logger
 
+from sfa.storage.alchemy import dbsession
 from sfa.storage.persistentobjs import init_tables,drop_tables
 
 def main():
@@ -29,13 +30,13 @@ def main():
       parser.print_help()
       sys.exit(1)
    logger.info("Purging SFA records from database")
-   drop_tables()
+   drop_tables(dbsession)
    # for convenience we re-create the schema here, so there's no need for an explicit
    # service sfa restart
    # however in some (upgrade) scenarios this might be wrong
    if options.reinit:
       logger.info("re-creating empty schema")
-      init_tables()
+      init_tables(dbsession)
 
    if options.clean_certs:
       # remove the server certificate and all gids found in /var/lib/sfa/authorities
