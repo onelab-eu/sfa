@@ -26,9 +26,9 @@ def main():
     # Get the path to the sfa server key/cert files from 
     # the sfa hierarchy object
     sfa_hierarchy = Hierarchy()
-    sfa_key_path = sfa_hierarchy.basedir
-    key_file = os.path.join(sfa_key_path, "server.key")
-    cert_file = os.path.join(sfa_key_path, "server.cert")
+    auth_info = sfa_hierarchy.get_interface_auth_info()
+    key_file = auth_info.get_privkey_filename()
+    cert_file = auth_info.get_gid_filename()
     key = Keypair(filename=key_file) 
 
     # get a connection to our local sfa registry
