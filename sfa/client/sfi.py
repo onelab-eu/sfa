@@ -332,6 +332,8 @@ class Sfi:
                          help="root registry", metavar="URL", default=None)
         parser.add_option("-s", "--sliceapi", dest="sm", default=None, metavar="URL",
                          help="slice API - in general a SM URL, but can be used to talk to an aggregate")
+        parser.add_option("-R", "--raw", dest="raw", action="store_true", default=False,
+                          help="Display raw, unparsed server response")   
         parser.add_option("-d", "--dir", dest="sfi_dir",
                          help="config & working directory - default is %default",
                          metavar="PATH", default=Sfi.default_sfi_dir())
@@ -802,7 +804,10 @@ or version information about sfi itself
 	api_options['call_id']=unique_call_id()
         result = server.ListSlices(creds, *self.ois(server,api_options))
         value = ReturnValue.get_value(result)
-        display_list(value)
+        if self.options.raw:
+            print result
+        else:
+            display_list(value)
         return
     
     # show rspec for named slice
@@ -852,7 +857,10 @@ or with an slice hrn, shows currently provisioned resources
         result = server.ListResources (creds, api_options)
         value = ReturnValue.get_value(result)
         if options.file is None:
-            display_rspec(value, options.format)
+            if self.options.raw:
+                print result
+            else:
+                display_rspec(value, options.format)
         else:
             save_rspec_to_file(value, options.file)
         return
@@ -919,7 +927,10 @@ or with an slice hrn, shows currently provisioned resources
         result = server.CreateSliver(slice_urn, creds, rspec, users, *self.ois(server, api_options))
         value = ReturnValue.get_value(result)
         if options.file is None:
-            print value
+            if self.options.raw:
+                print result
+            else:
+                print value
         else:
             save_rspec_to_file (value, options.file)
         return value
@@ -945,8 +956,12 @@ or with an slice hrn, shows currently provisioned resources
         api_options = {}
         api_options ['call_id'] = unique_call_id()
         result = server.DeleteSliver(slice_urn, creds, *self.ois(server, api_options ) )
-        # xxx no ReturnValue ??
-        return result
+        value = ReturnValue.get_value(result)
+        if self.options.raw:
+            print result
+        else:
+            print value
+        return value 
   
     def status(self, options, args):
         """
@@ -967,10 +982,13 @@ or with an slice hrn, shows currently provisioned resources
 
         # options and call_id when supported
         api_options = {}
-	api_options['call_id']=unique_call_id()
+        api_options['call_id']=unique_call_id()
         result = server.SliverStatus(slice_urn, creds, *self.ois(server,api_options))
         value = ReturnValue.get_value(result)
-        print value
+        if self.options.raw:
+            print result
+        else:
+            print value
         if options.file:
             save_variable_to_file(value, options.file, options.fileformat)
 
@@ -991,7 +1009,13 @@ or with an slice hrn, shows currently provisioned resources
             delegated_cred = self.delegate_cred(slice_cred, get_authority(self.authority))
             creds.append(delegated_cred)
         # xxx Thierry - does this not need an api_options as well ?
-        return server.Start(slice_urn, creds)
+        result = server.Start(slice_urn, creds)
+        value = ReturnValue.get_value(result)
+        if self.options.raw:
+            print result
+        else:
+            print value
+        return value
     
     def stop(self, options, args):
         """
@@ -1007,7 +1031,13 @@ or with an slice hrn, shows currently provisioned resources
         if options.delegate:
             delegated_cred = self.delegate_cred(slice_cred, get_authority(self.authority))
             creds.append(delegated_cred)
-        return server.Stop(slice_urn, creds)
+        result =  server.Stop(slice_urn, creds)
+        value = ReturnValue.get_value(result)
+        if self.options.raw:
+            print result
+        else:
+            print value
+        return value
     
     # reset named slice
     def reset(self, options, args):
@@ -1024,7 +1054,13 @@ or with an slice hrn, shows currently provisioned resources
         if options.delegate:
             delegated_cred = self.delegate_cred(slice_cred, get_authority(self.authority))
             creds.append(delegated_cred)
-        return server.reset_slice(creds, slice_urn)
+        result = server.reset_slice(creds, slice_urn)
+        value = ReturnValue.get_value(result)
+        if self.options.raw:
+            print result
+        else:
+            print value
+        return value
 
     def renew(self, options, args):
         """
@@ -1047,6 +1083,10 @@ or with an slice hrn, shows currently provisioned resources
 	api_options['call_id']=unique_call_id()
         result =  server.RenewSliver(slice_urn, creds, time, *self.ois(server,api_options))
         value = ReturnValue.get_value(result)
+        if self.options.raw:
+            print result
+        else:
+            print value
         return value
 
 
@@ -1064,7 +1104,13 @@ or with an slice hrn, shows currently provisioned resources
         if options.delegate:
             delegated_cred = self.delegate_cred(slice_cred, get_authority(self.authority))
             creds.append(delegated_cred)
-        return server.Shutdown(slice_urn, creds)         
+        result = server.Shutdown(slice_urn, creds)
+        value = ReturnValue.get_value(result)
+        if self.options.raw:
+            print result
+        else:
+            print value
+        return value         
     
 
     def get_ticket(self, options, args):
