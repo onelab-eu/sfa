@@ -40,7 +40,7 @@ class CreateSliver(Method):
 
         # make sure users info is specified
         if not users:
-            msg = "'users' musst be specified and cannot be null. You may need to update your client." 
+            msg = "'users' must be specified and cannot be null. You may need to update your client." 
             raise SfaInvalidArgument(name='users', extra=msg)  
 
         # flter rspec through sfatables
