@@ -67,7 +67,9 @@ class sfaImport:
         # create interface records
         self.logger.info("Import: creating interface records")
 # xxx authority+ turning off the creation of authority+*
-#        self.create_interface_records()
+# in fact his is required - used in SfaApi.__getCredentialRaw
+# that tries to locate 'authority+sa'
+        self.create_interface_records()
 
         # add local root authority's cert  to trusted list
         self.logger.info("Import: adding " + interface_hrn + " to trusted list")
