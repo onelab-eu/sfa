@@ -385,7 +385,7 @@ class RegistryManager:
             logger.warning("driver.remove failed")
 
         # delete from sfa db
-        del record
+        dbsession.delete(record)
         dbsession.commit()
     
         return 1

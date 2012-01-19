@@ -155,7 +155,7 @@ def main():
         
         record_object = existing_records[ (record_hrn, type) ]
         logger.info("Import: removing %s " % record.summary_string())
-        del record_object
+        dbsession.delete(record_object)
         dbsession.commit()
                                    
     # save pub keys

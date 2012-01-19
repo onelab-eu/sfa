@@ -144,7 +144,7 @@ def update_cert_records(gids):
     for record in records_found:
         if record.hrn not in hrns_expected and \
             record.hrn != self.api.config.SFA_INTERFACE_HRN:
-            del record
+            dbsession.delete(record)
 
     # TODO: store urn in the db so we do this in 1 query 
     for gid in gids:

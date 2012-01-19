@@ -73,7 +73,7 @@ class Alchemy:
         self.commit()
 
     def remove (self, record):
-        del record
+        self.delete(record)
         self.commit()
 
 ####################

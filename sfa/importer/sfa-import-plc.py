@@ -343,7 +343,7 @@ def main():
             try:
                 record_object = existing_records[(record_hrn, type)]
                 logger.info("Import: deleting record: %s" % record)
-                del record_object
+                dbsession.delete(record_object)
                 dbsession.commit()
             except:
                 logger.log_exc("Import: failded to delete record")                    
