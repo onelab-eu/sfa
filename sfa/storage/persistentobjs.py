@@ -6,6 +6,7 @@ from sqlalchemy import Table, Column, MetaData, join, ForeignKey
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy.orm import column_property
 from sqlalchemy.orm import object_mapper
+from sqlalchemy.orm import validates
 from sqlalchemy.ext.declarative import declarative_base
 
 from sfa.util.sfalogging import logger
@@ -58,9 +59,8 @@ class AlchemyObj:
     def load_from_dict (self, d):
         for (k,v) in d.iteritems():
             # experimental
-            if isinstance(v, StringTypes):
-                if v.lower() in ['true']: v=True
-                if v.lower() in ['false']: v=False
+            if isinstance(v, StringTypes) and v.lower() in ['true']: v=True
+            if isinstance(v, StringTypes) and v.lower() in ['false']: v=False
             setattr(self,k,v)
         assert self.type in BUILTIN_TYPES
     
@@ -74,21 +74,43 @@ class AlchemyObj:
     def load_from_xml (self, xml):
         xml_record = XML(xml)
         xml_dict = xml_record.todict()
-        for k in self.xml_fields():
-            if k in xml_dict:
-                setattr(self,k,xml_dict[k])
+        logger.info("load from xml, keys=%s"%xml_dict.keys())
+#        for k in self.xml_fields():
+        for (k,v) in xml_dict.iteritems():
+            setattr(self,k,v)
 
     def save_as_xml (self):
-        # xxx unset fields don't get exposed, is that right ?
+        # xxx not sure about the scope here
         input_dict = dict( [ (key, getattr(self.key), ) for key in self.xml_fields() if getattr(self,key,None) ] )
         xml_record=XML("<record />")
         xml_record.parse_dict (input_dict)
         return xml_record.toxml()
 
+    def dump(self, dump_parents=False):
+        for key in self.fields:
+            if key == 'gid' and self.gid:
+                gid = GID(string=self.gid)
+                print "    %s:" % key
+                gid.dump(8, dump_parents)
+            elif getattr(self,key,None):    
+                print "    %s: %s" % (key, getattr(self,key))
+    
+#    # only intended for debugging 
+#    def inspect (self, logger, message=""):
+#        logger.info("%s -- Inspecting AlchemyObj -- attrs"%message)
+#        for k in dir(self):
+#            if not k.startswith('_'):
+#                logger.info ("  %s: %s"%(k,getattr(self,k)))
+#        logger.info("%s -- Inspecting AlchemyObj -- __dict__"%message)
+#        d=self.__dict__
+#        for (k,v) in d.iteritems():
+#            logger.info("[%s]=%s"%(k,v))
+
+
 ##############################
 class Type (Base):
     __table__ = Table ('types', Base.metadata,
-                       Column ('type',String, primary_key=True)
+                       Column ('type',String, primary_key=True),
                        )
     def __init__ (self, type): self.type=type
     def __repr__ (self): return "<Type %s>"%self.type
@@ -121,7 +143,7 @@ class RegRecord (Base,AlchemyObj):
                        )
     fields = [ 'type', 'hrn', 'gid', 'authority', 'peer_authority' ]
     def __init__ (self, type='unknown', hrn=None, gid=None, authority=None, peer_authority=None, 
-                  pointer=-1, dict=None):
+                  pointer=None, dict=None):
         self.type=type
         if hrn: self.hrn=hrn
         if gid: 
@@ -129,7 +151,7 @@ class RegRecord (Base,AlchemyObj):
             else: self.gid=gid.save_to_string(save_parents=True)
         if authority: self.authority=authority
         if peer_authority: self.peer_authority=peer_authority
-        if not hasattr(self,'pointer'): self.pointer=pointer
+        if pointer: self.pointer=pointer
         if dict:
             self.load_from_dict (dict)
 
@@ -156,30 +178,42 @@ class RegRecord (Base,AlchemyObj):
         self.last_updated=now
 
 ##############################
+
 class User (Base):
     __table__ = Table ('users', Base.metadata,
-                       Column ('user_id', Integer, primary_key=True),
-                       Column ('record_id',Integer, ForeignKey('records.record_id')),
+                       Column ('record_id', Integer, ForeignKey ("records.record_id"), primary_key=True),
                        Column ('email', String),
                        )
     def __init__ (self, email):
         self.email=email
-    def __repr__ (self): return "<User(%d) %s, record_id=%d>"%(self.user_id,self.email,self.record_id,)
+    def __repr__ (self): return "[User(%d) email=%s>"%(self.record_id,self.email,)
+    
+    @validates('email') 
+    def validate_email(self, key, address):
+        assert '@' in address
+        return address
                            
-record_table = RegRecord.__table__
-user_table = User.__table__
-record_user_join = join (record_table, user_table)
+class Key (Base):
+    __table__ = Table ('keys', Base.metadata,
+                       Column ('key_id', Integer, primary_key=True),
+                       Column ('key',String),
+                       )
 
-class UserRecord (Base):
-    __table__ = record_user_join
-    record_id = column_property (record_table.c.record_id, user_table.c.record_id)
-    user_id = user_table.c.user_id
-    def __init__ (self, gid, email):
-        self.type='user'
-        self.gid=gid
-        self.email=email
-    def __repr__ (self): return "<UserRecord %s %s>"%(self.email,self.gid)
-
+##############################
+#record_table = RegRecord.__table__
+#user_table = User.__table__
+#record_user_join = join (record_table, user_table)
+#
+#class UserRecord (Base):
+#    __table__ = record_user_join
+#    record_id = column_property (record_table.c.record_id, user_table.c.record_id)
+#    user_id = user_table.c.user_id
+#    def __init__ (self, gid, email):
+#        self.type='user'
+#        self.gid=gid
+#        self.email=email
+#    def __repr__ (self): return "<UserRecord %s %s>"%(self.email,self.gid)
+#
 ##############################
 def init_tables(dbsession):
     logger.info("Initializing db schema and builtin types")

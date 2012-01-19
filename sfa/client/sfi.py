@@ -760,14 +760,14 @@ or version information about sfi itself
             sys.exit(1)
         rec_file = self.get_record_file(args[0])
         record = load_record_from_file(rec_file)
-        if record['type'] == "user":
-            if record.get_name() == self.user:
+        if record.type == "user":
+            if record.hrn == self.user:
                 cred = self.my_credential_string
             else:
                 cred = self.my_authority_credential_string()
-        elif record['type'] in ["slice"]:
+        elif record.type in ["slice"]:
             try:
-                cred = self.slice_credential_string(record.get_name())
+                cred = self.slice_credential_string(record.hrn)
             except ServerException, e:
                # XXX smbaker -- once we have better error return codes, update this
                # to do something better than a string compare
@@ -775,14 +775,14 @@ or version information about sfi itself
                    cred = self.my_authority_credential_string()
                else:
                    raise
-        elif record.get_type() in ["authority"]:
+        elif record.type in ["authority"]:
             cred = self.my_authority_credential_string()
-        elif record.get_type() == 'node':
+        elif record.type == 'node':
             cred = self.my_authority_credential_string()
         else:
-            raise "unknown record type" + record.get_type()
-        record = record.as_dict()
-        return self.registry().Update(record, cred)
+            raise "unknown record type" + record.type
+        record_dict = record.todict()
+        return self.registry().Update(record_dict, cred)
   
     def remove(self, options, args):
         "remove registry record by name (Remove)"

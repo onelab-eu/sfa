@@ -152,7 +152,7 @@ class RegistryManager:
         if full:
             # in full mode we get as much info as we can, which involves contacting the 
             # testbed for getting implementation details about the record
-            for record in local_dicts: logger.info("resolve augment %s"%record)
+            for record in local_dicts: logger.debug("resolve augment %s"%record)
             self.driver.augment_records_with_testbed_info(local_dicts)
 #            # also we fill the 'url' field for known authorities
 #            # used to be in the driver code, sounds like a poorman thing though

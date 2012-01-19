@@ -469,6 +469,7 @@ class PlDriver (Driver):
             #    continue 
             sfa_info = {}
             type = record['type']
+            logger.info("fill_record_sfa_info - incoming record typed %s"%type)
             if (type == "slice"):
                 # all slice users are researchers
                 record['geni_urn'] = hrn_to_urn(record['hrn'], 'slice')
@@ -489,6 +490,7 @@ class PlDriver (Driver):
                 
             elif (type.startswith("authority")):
                 record['url'] = None
+                logger.info("fill_record_sfa_info - authority xherex")
                 if record['pointer'] != -1:
                     record['PI'] = []
                     record['operator'] = []
@@ -511,6 +513,7 @@ class PlDriver (Driver):
                 # xxx TODO: URI, LatLong, IP, DNS
     
             elif (type == "user"):
+                logger.info('setting user.email')
                 sfa_info['email'] = record.get("email", "")
                 sfa_info['geni_urn'] = hrn_to_urn(record['hrn'], 'user')
                 sfa_info['geni_certificate'] = record['gid'] 
