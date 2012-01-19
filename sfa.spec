@@ -45,6 +45,7 @@ Requires: postgresql-python
 Requires: python-psycopg2
 # f8=0.4 - f12=0.5 f14=0.6 f16=0.7
 Requires: python-sqlalchemy
+Requires: python-migrate
 # the eucalyptus aggregate uses this module
 Requires: python-xmlbuilder
  
