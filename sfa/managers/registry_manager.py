@@ -18,7 +18,7 @@ from sfa.trust.credential import Credential
 from sfa.trust.certificate import Certificate, Keypair, convert_public_key
 from sfa.trust.gid import create_uuid
 
-from sfa.storage.persistentobjs import RegRecord
+from sfa.storage.persistentobjs import make_record,RegRecord
 from sfa.storage.alchemy import dbsession
 
 class RegistryManager:
@@ -52,7 +52,7 @@ class RegistryManager:
         # get record info
         record=dbsession.query(RegRecord).filter_by(type=type,hrn=hrn).first()
         if not record:
-            raise RecordNotFound(hrn)
+            raise RecordNotFound("hrn=%s, type=%s"%(hrn,type))
     
         # verify_cancreate_credential requires that the member lists
         # (researchers, pis, etc) be filled in
@@ -142,11 +142,13 @@ class RegistryManager:
     
         # try resolving the remaining unfound records at the local registry
         local_hrns = list ( set(hrns).difference([record['hrn'] for record in records]) )
+        logger.info("Resolve: local_hrns=%s"%local_hrns)
         # 
         local_records = dbsession.query(RegRecord).filter(RegRecord.hrn.in_(local_hrns))
         if intype:
             local_records = local_records.filter_by(type=intype)
         local_records=local_records.all()
+        logger.info("Resolve: local_records=%s (intype=%s)"%(local_records,intype))
         local_dicts = [ record.__dict__ for record in local_records ]
         
         if full:
@@ -261,7 +263,8 @@ class RegistryManager:
             raise ExistingRecord(hrn)
            
         assert ('type' in record_dict)
-        record = RegRecord(dict=record_dict)
+        # returns the right type of RegRecord according to type in record
+        record = make_record(record_dict)
         record.just_created()
         record.authority = get_authority(record.hrn)
         auth_info = api.auth.get_auth_info(record.authority)
@@ -311,7 +314,7 @@ class RegistryManager:
         # make sure the record exists
         record = dbsession.query(RegRecord).filter_by(type=type,hrn=hrn).first()
         if not record:
-            raise RecordNotFound(hrn)
+            raise RecordNotFound("hrn=%s, type=%s"%(hrn,type))
         record.just_updated()
     
         # validate the type

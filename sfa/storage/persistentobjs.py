@@ -62,7 +62,6 @@ class AlchemyObj:
             if isinstance(v, StringTypes) and v.lower() in ['true']: v=True
             if isinstance(v, StringTypes) and v.lower() in ['false']: v=False
             setattr(self,k,v)
-        assert self.type in BUILTIN_TYPES
     
     # in addition we provide convenience for converting to and from xml records
     # for this purpose only, we need the subclasses to define 'fields' as either 
@@ -75,7 +74,6 @@ class AlchemyObj:
         xml_record = XML(xml)
         xml_dict = xml_record.todict()
         logger.info("load from xml, keys=%s"%xml_dict.keys())
-#        for k in self.xml_fields():
         for (k,v) in xml_dict.iteritems():
             setattr(self,k,v)
 
@@ -108,60 +106,51 @@ class AlchemyObj:
 
 
 ##############################
-class Type (Base):
-    __table__ = Table ('types', Base.metadata,
-                       Column ('type',String, primary_key=True),
-                       )
-    def __init__ (self, type): self.type=type
-    def __repr__ (self): return "<Type %s>"%self.type
-    
-#BUILTIN_TYPES = [ 'authority', 'slice', 'node', 'user' ]
-# xxx for compat but sounds useless
-BUILTIN_TYPES = [ 'authority', 'slice', 'node', 'user',
-                  'authority+sa', 'authority+am', 'authority+sm' ]
+# various kinds of records are implemented as an inheritance hierarchy
+# RegRecord is the base class for all actual variants
 
-def insert_builtin_types(dbsession):
-    for type in BUILTIN_TYPES :
-        count = dbsession.query (Type).filter_by (type=type).count()
-        if count==0:
-            dbsession.add (Type (type))
-    dbsession.commit()
-
-##############################
 class RegRecord (Base,AlchemyObj):
     # xxx tmp would be 'records'
-    __table__ = Table ('records', Base.metadata,
-                       Column ('record_id', Integer, primary_key=True),
-                       Column ('type', String, ForeignKey ("types.type")),
-                       Column ('hrn',String),
-                       Column ('gid',String),
-                       Column ('authority',String),
-                       Column ('peer_authority',String),
-                       Column ('pointer',Integer,default=-1),
-                       Column ('date_created',DateTime),
-                       Column ('last_updated',DateTime),
-                       )
+    __tablename__       = 'records'
+    record_id           = Column (Integer, primary_key=True)
+    type                = Column (String)
+    hrn                 = Column (String)
+    gid                 = Column (String)
+    authority           = Column (String)
+    peer_authority      = Column (String)
+    pointer             = Column (Integer, default=-1)
+    date_created        = Column (DateTime)
+    last_updated        = Column (DateTime)
+    # use the 'type' column to decide which subclass the object is of
+    __mapper_args__     = { 'polymorphic_on' : type }
+
     fields = [ 'type', 'hrn', 'gid', 'authority', 'peer_authority' ]
     def __init__ (self, type='unknown', hrn=None, gid=None, authority=None, peer_authority=None, 
                   pointer=None, dict=None):
-        self.type=type
-        if hrn: self.hrn=hrn
+# managed by alchemy's polymorphic stuff
+#        self.type=type
+        if hrn:                                 self.hrn=hrn
         if gid: 
-            if isinstance(gid, StringTypes): self.gid=gid
-            else: self.gid=gid.save_to_string(save_parents=True)
-        if authority: self.authority=authority
-        if peer_authority: self.peer_authority=peer_authority
-        if pointer: self.pointer=pointer
-        if dict:
-            self.load_from_dict (dict)
+            if isinstance(gid, StringTypes):    self.gid=gid
+            else:                               self.gid=gid.save_to_string(save_parents=True)
+        if authority:                           self.authority=authority
+        if peer_authority:                      self.peer_authority=peer_authority
+        if pointer:                             self.pointer=pointer
+        if dict:                                self.load_from_dict (dict)
 
     def __repr__(self):
-        result="[Record(record_id=%s, hrn=%s, type=%s, authority=%s, pointer=%s" % \
-                (self.record_id, self.hrn, self.type, self.authority, self.pointer)
-        if self.gid: result+=" %s..."%self.gid[:10]
-        else: result+=" no-gid"
+        result="[Record id=%s, type=%s, hrn=%s, authority=%s, pointer=%s" % \
+                (self.record_id, self.type, self.hrn, self.authority, self.pointer)
+        # skip the uniform '--- BEGIN CERTIFICATE --' stuff
+        if self.gid: result+=" gid=%s..."%self.gid[28:36]
+        else: result+=" nogid"
         result += "]"
         return result
+
+    @validates ('gid')
+    def validate_gid (self, key, gid):
+        if isinstance(gid, StringTypes):    return gid
+        else:                               return gid.save_to_string(save_parents=True)
 
     # xxx - there might be smarter ways to handle get/set'ing gid using validation hooks 
     def get_gid_object (self):
@@ -178,42 +167,68 @@ class RegRecord (Base,AlchemyObj):
         self.last_updated=now
 
 ##############################
-
-class User (Base):
-    __table__ = Table ('users', Base.metadata,
-                       Column ('record_id', Integer, ForeignKey ("records.record_id"), primary_key=True),
-                       Column ('email', String),
-                       )
-    def __init__ (self, email):
-        self.email=email
-    def __repr__ (self): return "[User(%d) email=%s>"%(self.record_id,self.email,)
+class RegUser (RegRecord):
+    __tablename__       = 'users'
+    # these objects will have type='user' in the records table
+    __mapper_args__     = { 'polymorphic_identity' : 'user' }
+    record_id           = Column (Integer, ForeignKey ("records.record_id"), primary_key=True)
+    email               = Column ('email', String)
+    
+    # append stuff at the end of the record __repr__
+    def __repr__ (self): 
+        result = RegRecord.__repr__(self).replace("Record","User")
+        result.replace ("]"," email=%s"%self.email)
+        return result
     
     @validates('email') 
     def validate_email(self, key, address):
         assert '@' in address
         return address
-                           
-class Key (Base):
-    __table__ = Table ('keys', Base.metadata,
-                       Column ('key_id', Integer, primary_key=True),
-                       Column ('key',String),
-                       )
 
-##############################
-#record_table = RegRecord.__table__
-#user_table = User.__table__
-#record_user_join = join (record_table, user_table)
-#
-#class UserRecord (Base):
-#    __table__ = record_user_join
-#    record_id = column_property (record_table.c.record_id, user_table.c.record_id)
-#    user_id = user_table.c.user_id
-#    def __init__ (self, gid, email):
-#        self.type='user'
-#        self.gid=gid
-#        self.email=email
-#    def __repr__ (self): return "<UserRecord %s %s>"%(self.email,self.gid)
-#
+class RegAuthority (RegRecord):
+    __tablename__       = 'authorities'
+    __mapper_args__     = { 'polymorphic_identity' : 'authority' }
+    record_id           = Column (Integer, ForeignKey ("records.record_id"), primary_key=True)
+    
+    # no proper data yet, just hack the typename
+    def __repr__ (self):
+        return RegRecord.__repr__(self).replace("Record","Authority")
+
+class RegSlice (RegRecord):
+    __tablename__       = 'slices'
+    __mapper_args__     = { 'polymorphic_identity' : 'slice' }
+    record_id           = Column (Integer, ForeignKey ("records.record_id"), primary_key=True)
+    
+    def __repr__ (self):
+        return RegRecord.__repr__(self).replace("Record","Slice")
+
+class RegNode (RegRecord):
+    __tablename__       = 'nodes'
+    __mapper_args__     = { 'polymorphic_identity' : 'node' }
+    record_id           = Column (Integer, ForeignKey ("records.record_id"), primary_key=True)
+    
+    def __repr__ (self):
+        return RegRecord.__repr__(self).replace("Record","Node")
+
+# because we use 'type' as the discriminator here, the only way to have type set to
+# e.g. authority+sa is to define a separate class
+# this currently is not used at all though, just to check if all this stuff really is useful
+# if so it would make more sense to store that in the authorities table instead
+class RegTmpAuthSa (RegRecord):
+    __tablename__       = 'authorities_sa'
+    __mapper_args__     = { 'polymorphic_identity' : 'authority+sa' }
+    record_id           = Column (Integer, ForeignKey ("records.record_id"), primary_key=True)
+
+class RegTmpAuthAm (RegRecord):
+    __tablename__       = 'authorities_am'
+    __mapper_args__     = { 'polymorphic_identity' : 'authority+am' }
+    record_id           = Column (Integer, ForeignKey ("records.record_id"), primary_key=True)
+
+class RegTmpAuthSm (RegRecord):
+    __tablename__       = 'authorities_sm'
+    __mapper_args__     = { 'polymorphic_identity' : 'authority+sm' }
+    record_id           = Column (Integer, ForeignKey ("records.record_id"), primary_key=True)
+
 ##############################
 def init_tables(dbsession):
     logger.info("Initializing db schema and builtin types")
@@ -224,10 +239,31 @@ def init_tables(dbsession):
     # so let's import alchemy - but not from toplevel 
     from sfa.storage.alchemy import engine
     Base.metadata.create_all(engine)
-    insert_builtin_types(dbsession)
 
 def drop_tables(dbsession):
     logger.info("Dropping tables")
     # same as for init_tables
     from sfa.storage.alchemy import engine
     Base.metadata.drop_all(engine)
+
+# convert an incoming record - typically from xmlrpc - into an object
+def make_record (record_dict):
+    assert ('type' in record_dict)
+    type=record_dict['type']
+    if type=='authority':
+        result=RegAuthority (dict=record_dict)
+    elif type=='user':
+        result=RegUser (dict=record_dict)
+    elif type=='slice':
+        result=RegSlice (dict=record_dict)
+    elif type=='node':
+        result=RegNode (dict=record_dict)
+    else:
+        result=RegRecord (dict=record_dict)
+    logger.info ("converting dict into Reg* with type=%s"%type)
+    logger.info ("returning=%s"%result)
+    # xxx todo
+    # register non-db attributes in an extensions field
+    return result
+        
+        

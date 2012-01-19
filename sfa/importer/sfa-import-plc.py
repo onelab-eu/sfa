@@ -28,7 +28,7 @@ from sfa.trust.certificate import convert_public_key, Keypair
 from sfa.plc.plshell import PlShell    
 
 from sfa.storage.alchemy import dbsession
-from sfa.storage.persistentobjs import RegRecord
+from sfa.storage.persistentobjs import RegRecord, RegAuthority, RegUser, RegSlice, RegNode
 
 from sfa.importer.sfaImport import sfaImport, _cleanup_string
 
@@ -138,27 +138,26 @@ def main():
         i2site = {'name': 'Internet2', 'abbreviated_name': 'I2',
                     'login_base': 'internet2', 'site_id': -1}
         site_hrn = _get_site_hrn(interface_hrn, i2site)
-        logger.info("Importing site: %s" % site_hrn)
         # import if hrn is not in list of existing hrns or if the hrn exists
         # but its not a site record
         if site_hrn not in existing_hrns or \
            (site_hrn, 'authority') not in existing_records:
-            logger.info("Import: site %s " % site_hrn)
             urn = hrn_to_urn(site_hrn, 'authority')
             if not sfaImporter.AuthHierarchy.auth_exists(urn):
                 sfaImporter.AuthHierarchy.create_auth(urn)
             auth_info = sfaImporter.AuthHierarchy.get_auth_info(urn)
-            auth_record = RegRecord("authority", hrn=site_hrn, gid=auth_info.get_gid_object(),
-                                    pointer=site['site_id'], 
-                                    authority=get_authority(site_hrn))
-            logger.info("Import: Importing auth %s"%auth_record)
+            auth_record = RegAuthority()
+            auth_record.hrn=site_hrn
+            auth_record.gid=auth_info.get_gid_object()
+            auth_record.pointer=site['site_id']
+            auth_record.authority=get_authority(site_hrn)
             dbsession.add(auth_record)
             dbsession.commit()
+            logger.info("Import: Imported authority (vini site) %s"%auth_record)
 
     # start importing 
     for site in sites:
         site_hrn = _get_site_hrn(interface_hrn, site)
-        logger.info("Importing site: %s" % site_hrn)
 
         # import if hrn is not in list of existing hrns or if the hrn exists
         # but its not a site record
@@ -169,12 +168,14 @@ def main():
                 if not sfaImporter.AuthHierarchy.auth_exists(urn):
                     sfaImporter.AuthHierarchy.create_auth(urn)
                 auth_info = sfaImporter.AuthHierarchy.get_auth_info(urn)
-                auth_record = RegRecord("authority", hrn=site_hrn, gid=auth_info.get_gid_object(),
-                                        pointer=site['site_id'], 
-                                        authority=get_authority(site_hrn))
-                logger.info("Import: importing site: %s" % auth_record)  
+                auth_record = RegAuthority()
+                auth_record.hrn=site_hrn
+                auth_record.gid=auth_info.get_gid_object()
+                auth_record.pointer=site['site_id']
+                auth_record.authority=get_authority(site_hrn)
                 dbsession.add(auth_record)
                 dbsession.commit()
+                logger.info("Import: imported authority (site) : %s" % auth_record)  
             except:
                 # if the site import fails then there is no point in trying to import the
                 # site's child records (node, slices, persons), so skip them.
@@ -197,12 +198,14 @@ def main():
                     pkey = Keypair(create=True)
                     urn = hrn_to_urn(hrn, 'node')
                     node_gid = sfaImporter.AuthHierarchy.create_gid(urn, create_uuid(), pkey)
-                    node_record = RegRecord("node", hrn=hrn, gid=node_gid,
-                                            pointer=node['node_id'], 
-                                            authority=get_authority(hrn))    
-                    logger.info("Import: importing node: %s" % node_record)  
+                    node_record = RegNode ()
+                    node_record.hrn=hrn
+                    node_record.gid=node_gid
+                    node_record.pointer =node['node_id']
+                    node_record.authority=get_authority(hrn)
                     dbsession.add(node_record)
                     dbsession.commit()
+                    logger.info("Import: imported node: %s" % node_record)  
                 except:
                     logger.log_exc("Import: failed to import node") 
                     
@@ -221,12 +224,14 @@ def main():
                     pkey = Keypair(create=True)
                     urn = hrn_to_urn(hrn, 'slice')
                     slice_gid = sfaImporter.AuthHierarchy.create_gid(urn, create_uuid(), pkey)
-                    slice_record = RegRecord("slice", hrn=hrn, gid=slice_gid, 
-                                             pointer=slice['slice_id'],
-                                             authority=get_authority(hrn))
-                    logger.info("Import: importing slice: %s" % slice_record)  
+                    slice_record = RegSlice ()
+                    slice_record.hrn=hrn
+                    slice_record.gid=slice_gid
+                    slice_record.pointer=slice['slice_id']
+                    slice_record.authority=get_authority(hrn)
                     dbsession.add(slice_record)
                     dbsession.commit()
+                    logger.info("Import: imported slice: %s" % slice_record)  
                 except:
                     logger.log_exc("Import: failed to  import slice")
 
@@ -268,12 +273,14 @@ def main():
                         pkey = Keypair(create=True) 
                     urn = hrn_to_urn(hrn, 'user')
                     person_gid = sfaImporter.AuthHierarchy.create_gid(urn, create_uuid(), pkey)
-                    person_record = RegRecord("user", hrn=hrn, gid=person_gid,
-                                              pointer=person['person_id'], 
-                                              authority=get_authority(hrn))
-                    logger.info("Import: importing person: %s" % person_record)
+                    person_record = RegUser ()
+                    person_record.hrn=hrn
+                    person_record.gid=person_gid
+                    person_record.pointer=person['person_id']
+                    person_record.authority=get_authority(hrn)
                     dbsession.add (person_record)
                     dbsession.commit()
+                    logger.info("Import: imported person: %s" % person_record)
                 except:
                     logger.log_exc("Import: failed to import person.") 
     
