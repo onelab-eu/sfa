@@ -145,23 +145,26 @@ ifeq (,$(SSHURL))
 	@exit 1
 endif
 
-sync: synccheck
+
+synclib: synccheck
 	+$(RSYNC) --relative ./sfa/ $(SSHURL)/usr/lib\*/python2.\*/site-packages/
+synctest: synccheck
 	+$(RSYNC) ./tests/ $(SSHURL)/root/tests-sfa
+syncbin: synccheck
 	+$(RSYNC)  $(BINS) $(SSHURL)/usr/bin/
+syncinit: synccheck
 	+$(RSYNC) ./init.d/sfa  $(SSHURL)/etc/init.d/
+syncconfig:
 	+$(RSYNC) ./config/default_config.xml $(SSHURL)/etc/sfa/
+syncrestart: synccheck
 	$(SSHCOMMAND) exec service sfa restart
 
+# full-fledged
+sync: synclib synctest syncbin syncinit syncconfig syncrestart
 # 99% of the time this is enough
-fastsync: synccheck
-	+$(RSYNC) --relative ./sfa/ $(SSHURL)/usr/lib\*/python2.\*/site-packages/
-	$(SSHCOMMAND) exec service sfa restart
+fastsync: synclib syncrestart
 
-clientsync: synccheck
-	+$(RSYNC)  $(BINS) $(SSHURL)/usr/bin/
-
-ricasync: synccheck
+syncrica: synccheck
 	+$(RSYNC) --relative ./sfa/fd ./sfa/generic/fd.py ./sfa/rspecs/versions/federica.py $(SSHURL)/usr/lib\*/python2.\*/site-packages/
 	$(SSHCOMMAND) exec service sfa restart
 
