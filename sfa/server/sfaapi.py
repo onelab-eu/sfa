@@ -1,7 +1,7 @@
 import os, os.path
 import datetime
 
-from sfa.util.faults import SfaFault, SfaAPIError
+from sfa.util.faults import SfaFault, SfaAPIError, RecordNotFound
 from sfa.util.genicode import GENICODE
 from sfa.util.config import Config
 from sfa.util.cache import Cache
