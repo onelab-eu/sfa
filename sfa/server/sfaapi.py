@@ -5,8 +5,8 @@ from sfa.util.faults import SfaFault, SfaAPIError, RecordNotFound
 from sfa.util.genicode import GENICODE
 from sfa.util.config import Config
 from sfa.util.cache import Cache
-from sfa.trust.auth import Auth
 
+from sfa.trust.auth import Auth
 from sfa.trust.certificate import Keypair, Certificate
 from sfa.trust.credential import Credential
 from sfa.trust.rights import determine_rights
