@@ -17,7 +17,7 @@ from sfa.trust.trustedroots import TrustedRoots
 from sfa.trust.hierarchy import Hierarchy
 from sfa.trust.gid import create_uuid
 from sfa.storage.persistentobjs import RegRecord, RegAuthority, RegUser
-from sfa.storage.persistentobjs import RegTmpAuthSa, RegTmpAuthAm, RegTmpAuthSm
+from sfa.storage.persistentobjs import RegAuthoritySa, RegAuthorityAm, RegAuthoritySm
 from sfa.storage.alchemy import dbsession
 
 def _un_unicode(str):
@@ -120,34 +120,31 @@ class sfaImport:
         dbsession.commit()
         self.logger.info("Import: importing user (slicemanager) %s " % user_record)
 
-# xxx authority+ - this is currently turned off 
     def create_interface_records(self):
         """
         Create a record for each SFA interface
         """
         # just create certs for all sfa interfaces even if they
-        # arent enabled
+        # aren't enabled
         hrn = self.config.SFA_INTERFACE_HRN
-        reg_classes_info = [ (RegTmpAuthSa, 'authority+sa'),
-                          (RegTmpAuthAm, 'authority+am'),
-                          (RegTmpAuthSm, 'authority+sm'), ]
-        # interfaces = ['authority+sa', 'authority+am', 'authority+sm']
+        reg_classes_info = [ (RegAuthoritySa, 'authority+sa'),
+                          (RegAuthorityAm, 'authority+am'),
+                          (RegAuthoritySm, 'authority+sm'), ]
         auth_info = self.AuthHierarchy.get_auth_info(hrn)
         pkey = auth_info.get_pkey_object()
-        for (reg_class, interface) in reg_classes_info:
-            urn = hrn_to_urn(hrn, interface)
+        for (reg_class, type) in reg_classes_info:
+            urn = hrn_to_urn(hrn, type)
             gid = self.AuthHierarchy.create_gid(urn, create_uuid(), pkey)
             # xxx this should probably use a RegAuthority, or a to-be-defined RegPeer object
             # but for now we have to preserve the authority+<> stuff
             interface_record = reg_class()
-            #interface_record = RegAuthority()
             interface_record.hrn=hrn
             interface_record.gid= gid
             interface_record.authority=get_authority(hrn)
             interface_record.just_created()
             dbsession.add (interface_record)
             dbsession.commit()
-            self.logger.info("Import: imported authority (%s) %s " % (interface,interface_record))
+            self.logger.info("Import: imported authority (%s) %s " % (type,interface_record))
              
     def delete_record(self, hrn, type):
         # delete the record

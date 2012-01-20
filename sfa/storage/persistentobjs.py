@@ -214,17 +214,17 @@ class RegNode (RegRecord):
 # e.g. authority+sa is to define a separate class
 # this currently is not used at all though, just to check if all this stuff really is useful
 # if so it would make more sense to store that in the authorities table instead
-class RegTmpAuthSa (RegRecord):
+class RegAuthoritySa (RegRecord):
     __tablename__       = 'authorities_sa'
     __mapper_args__     = { 'polymorphic_identity' : 'authority+sa' }
     record_id           = Column (Integer, ForeignKey ("records.record_id"), primary_key=True)
 
-class RegTmpAuthAm (RegRecord):
+class RegAuthorityAm (RegRecord):
     __tablename__       = 'authorities_am'
     __mapper_args__     = { 'polymorphic_identity' : 'authority+am' }
     record_id           = Column (Integer, ForeignKey ("records.record_id"), primary_key=True)
 
-class RegTmpAuthSm (RegRecord):
+class RegAuthoritySm (RegRecord):
     __tablename__       = 'authorities_sm'
     __mapper_args__     = { 'polymorphic_identity' : 'authority+sm' }
     record_id           = Column (Integer, ForeignKey ("records.record_id"), primary_key=True)
