@@ -67,7 +67,7 @@ class sfaImport:
         # create interface records
         self.logger.info("Import: creating interface records")
 # xxx authority+ turning off the creation of authority+*
-# in fact his is required - used in SfaApi.__getCredentialRaw
+# in fact his is required - used in SfaApi._getCredentialRaw
 # that tries to locate 'authority+sa'
         self.create_interface_records()
 

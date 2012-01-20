@@ -109,9 +109,9 @@ class SfaApi (XmlrpcApi):
 
         # get a new credential
         if self.interface in ['registry']:
-            cred =  self.__getCredentialRaw()
+            cred =  self._getCredentialRaw()
         else:
-            cred =  self.__getCredential()
+            cred =  self._getCredential()
         cred.save_to_file(cred_filename, save_parents=True)
 
         return cred.save_to_string(save_parents=True)
@@ -134,7 +134,7 @@ class SfaApi (XmlrpcApi):
                 break
         return delegated_cred
  
-    def __getCredential(self):
+    def _getCredential(self):
         """ 
         Get our credential from a remote registry 
         """
@@ -148,7 +148,7 @@ class SfaApi (XmlrpcApi):
         cred = registry.GetCredential(self_cred, self.hrn, 'authority')
         return Credential(string=cred)
 
-    def __getCredentialRaw(self):
+    def _getCredentialRaw(self):
         """
         Get our current credential directly from the local registry.
         """
