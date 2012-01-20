@@ -264,7 +264,7 @@ class RegistryManager:
            
         assert ('type' in record_dict)
         # returns the right type of RegRecord according to type in record
-        record = make_record(record_dict)
+        record = make_record(dict=record_dict)
         record.just_created()
         record.authority = get_authority(record.hrn)
         auth_info = api.auth.get_auth_info(record.authority)

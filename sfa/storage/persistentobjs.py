@@ -70,12 +70,6 @@ class AlchemyObj:
         fields=self.fields
         if isinstance(fields,dict): fields=fields.keys()
         return fields
-    def load_from_xml (self, xml):
-        xml_record = XML(xml)
-        xml_dict = xml_record.todict()
-        logger.info("load from xml, keys=%s"%xml_dict.keys())
-        for (k,v) in xml_dict.iteritems():
-            setattr(self,k,v)
 
     def save_as_xml (self):
         # xxx not sure about the scope here
@@ -113,6 +107,8 @@ class RegRecord (Base,AlchemyObj):
     # xxx tmp would be 'records'
     __tablename__       = 'records'
     record_id           = Column (Integer, primary_key=True)
+    # this is the discriminator that tells which class to use
+#    classtype           = Column (String)
     type                = Column (String)
     hrn                 = Column (String)
     gid                 = Column (String)
@@ -149,7 +145,8 @@ class RegRecord (Base,AlchemyObj):
 
     @validates ('gid')
     def validate_gid (self, key, gid):
-        if isinstance(gid, StringTypes):    return gid
+        if gid is None:                     return
+        elif isinstance(gid, StringTypes):  return gid
         else:                               return gid.save_to_string(save_parents=True)
 
     # xxx - there might be smarter ways to handle get/set'ing gid using validation hooks 
@@ -246,10 +243,17 @@ def drop_tables(dbsession):
     from sfa.storage.alchemy import engine
     Base.metadata.drop_all(engine)
 
+##############################
+# create a record of the right type from either a dict or an xml string
+def make_record (dict={}, xml=""):
+    if dict:    return make_record_dict (dict)
+    elif xml:   return make_record_xml (xml)
+    else:       raise Exception("make_record has no input")
+
 # convert an incoming record - typically from xmlrpc - into an object
-def make_record (record_dict):
+def make_record_dict (record_dict):
     assert ('type' in record_dict)
-    type=record_dict['type']
+    type=record_dict['type'].split('+')[0]
     if type=='authority':
         result=RegAuthority (dict=record_dict)
     elif type=='user':
@@ -266,4 +270,10 @@ def make_record (record_dict):
     # register non-db attributes in an extensions field
     return result
         
+def make_record_xml (xml):
+    xml_record = XML(xml)
+    xml_dict = xml_record.todict()
+    logger.info("load from xml, keys=%s"%xml_dict.keys())
+    return make_record_dict (xml_dict)
+
         

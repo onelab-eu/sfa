@@ -28,8 +28,8 @@ from sfa.util.config import Config
 from sfa.util.version import version_core
 from sfa.util.cache import Cache
 
-#from sfa.storage.record import SfaRecord, UserRecord, SliceRecord, NodeRecord, AuthorityRecord
-from sfa.storage.persistentobjs import RegRecord
+from sfa.storage.persistentobjs import RegRecord, RegAuthority, RegUser, RegSlice, RegNode
+from sfa.storage.persistentobjs import make_record
 
 from sfa.rspecs.rspec import RSpec
 from sfa.rspecs.rspec_converter import RSpecConverter
@@ -107,48 +107,35 @@ def save_rspec_to_file(rspec, filename):
     f.close()
     return
 
-def save_records_to_file(filename, recordList, format="xml"):
+def save_records_to_file(filename, record_dicts, format="xml"):
     if format == "xml":
         index = 0
-        for record in recordList:
+        for record_dict in record_dicts:
             if index > 0:
-                save_record_to_file(filename + "." + str(index), record)
+                save_record_to_file(filename + "." + str(index), record_dict)
             else:
-                save_record_to_file(filename, record)
+                save_record_to_file(filename, record_dict)
             index = index + 1
     elif format == "xmllist":
         f = open(filename, "w")
         f.write("<recordlist>\n")
-        for record in recordList:
-            record_obj=RegRecord (dict=record)
-            f.write('<record hrn="' + record.hrn + '" type="' + record.type + '" />\n')
+        for record_dict in record_dicts:
+            record_obj=make_record (dict=record_dict)
+            f.write('<record hrn="' + record_obj.hrn + '" type="' + record_obj.type + '" />\n')
         f.write("</recordlist>\n")
         f.close()
     elif format == "hrnlist":
         f = open(filename, "w")
-        for record in recordList:
-            record_obj=RegRecord (dict=record)
-            f.write(record.hrn + "\n")
+        for record_dict in record_dicts:
+            record_obj=make_record (dict=record_dict)
+            f.write(record_obj.hrn + "\n")
         f.close()
     else:
         # this should never happen
         print "unknown output format", format
 
-def save_record_to_file(filename, record):
-    if record['type'] in ['user']:
-        # UserRecord
-        record = RegRecord(dict=record)
-    elif record['type'] in ['slice']:
-        # SliceRecord
-        record = RegRecord(dict=record)
-    elif record['type'] in ['node']:
-        # NodeRecord
-        record = RegRecord(dict=record)
-    elif record['type'] in ['authority', 'ma', 'sa']:
-        # AuthorityRecord
-        record = RegRecord(dict=record)
-    else:
-        record = RegRecord(dict=record)
+def save_record_to_file(filename, record_dict):
+    rec_record = make_record (dict=record_dict)
     str = record.save_to_string()
     f=codecs.open(filename, encoding='utf-8',mode="w")
     f.write(str)
@@ -159,11 +146,9 @@ def save_record_to_file(filename, record):
 # load methods
 def load_record_from_file(filename):
     f=codecs.open(filename, encoding="utf-8", mode="r")
-    str = f.read()
+    xml_string = f.read()
     f.close()
-    record = RegRecord()
-    record.load_from_xml(str)
-    return record
+    return make_record (xml=xml_string)
 
 
 import uuid
@@ -714,32 +699,16 @@ or version information about sfi itself
             self.print_help()
             sys.exit(1)
         hrn = args[0]
-        records = self.registry().Resolve(hrn, self.my_credential_string)
-        records = filter_records(options.type, records)
-        if not records:
+        record_dicts = self.registry().Resolve(hrn, self.my_credential_string)
+        record_dicts = filter_records(options.type, record_dicts)
+        if not record_dicts:
             self.logger.error("No record of type %s"% options.type)
+        records = [ make_record (dict=record_dict) for record_dict in record_dicts ]
         for record in records:
-            if record['type'] in ['user']:
-                # UserRecord
-                record = RegRecord(dict=record)
-            elif record['type'] in ['slice']:
-                # SliceRecord
-                record = RegRecord(dict=record)
-            elif record['type'] in ['node']:
-                # NodeRecord
-                record = RegRecord(dict=record)
-            elif record['type'].startswith('authority'):
-                # AuthorityRecord
-                record = RegRecord(dict=record)
-            else:
-                record = RegRecord(dict=record)
-
-            if (options.format == "text"): 
-                record.dump()  
-            else:
-                print record.save_as_xml() 
+            if (options.format == "text"):      record.dump()  
+            else:                               print record.save_as_xml() 
         if options.file:
-            save_records_to_file(options.file, records, options.fileformat)
+            save_records_to_file(options.file, record_dicts, options.fileformat)
         return
     
     def add(self, options, args):
