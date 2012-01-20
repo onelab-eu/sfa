@@ -102,13 +102,16 @@ class AlchemyObj:
 ##############################
 # various kinds of records are implemented as an inheritance hierarchy
 # RegRecord is the base class for all actual variants
+# a first draft was using 'type' as the discriminator for the inheritance
+# but we had to define another more internal column (classtype) so we 
+# accomodate variants in types like authority+am and the like
 
 class RegRecord (Base,AlchemyObj):
     # xxx tmp would be 'records'
     __tablename__       = 'records'
     record_id           = Column (Integer, primary_key=True)
     # this is the discriminator that tells which class to use
-#    classtype           = Column (String)
+    classtype           = Column (String)
     type                = Column (String)
     hrn                 = Column (String)
     gid                 = Column (String)
@@ -118,13 +121,12 @@ class RegRecord (Base,AlchemyObj):
     date_created        = Column (DateTime)
     last_updated        = Column (DateTime)
     # use the 'type' column to decide which subclass the object is of
-    __mapper_args__     = { 'polymorphic_on' : type }
+    __mapper_args__     = { 'polymorphic_on' : classtype }
 
     fields = [ 'type', 'hrn', 'gid', 'authority', 'peer_authority' ]
-    def __init__ (self, type='unknown', hrn=None, gid=None, authority=None, peer_authority=None, 
+    def __init__ (self, type=None, hrn=None, gid=None, authority=None, peer_authority=None, 
                   pointer=None, dict=None):
-# managed by alchemy's polymorphic stuff
-#        self.type=type
+        if type:                                self.type=type
         if hrn:                                 self.hrn=hrn
         if gid: 
             if isinstance(gid, StringTypes):    self.gid=gid
@@ -207,25 +209,6 @@ class RegNode (RegRecord):
     def __repr__ (self):
         return RegRecord.__repr__(self).replace("Record","Node")
 
-# because we use 'type' as the discriminator here, the only way to have type set to
-# e.g. authority+sa is to define a separate class
-# this currently is not used at all though, just to check if all this stuff really is useful
-# if so it would make more sense to store that in the authorities table instead
-class RegAuthoritySa (RegRecord):
-    __tablename__       = 'authorities_sa'
-    __mapper_args__     = { 'polymorphic_identity' : 'authority+sa' }
-    record_id           = Column (Integer, ForeignKey ("records.record_id"), primary_key=True)
-
-class RegAuthorityAm (RegRecord):
-    __tablename__       = 'authorities_am'
-    __mapper_args__     = { 'polymorphic_identity' : 'authority+am' }
-    record_id           = Column (Integer, ForeignKey ("records.record_id"), primary_key=True)
-
-class RegAuthoritySm (RegRecord):
-    __tablename__       = 'authorities_sm'
-    __mapper_args__     = { 'polymorphic_identity' : 'authority+sm' }
-    record_id           = Column (Integer, ForeignKey ("records.record_id"), primary_key=True)
-
 ##############################
 def init_tables(dbsession):
     logger.info("Initializing db schema and builtin types")
@@ -275,5 +258,3 @@ def make_record_xml (xml):
     xml_dict = xml_record.todict()
     logger.info("load from xml, keys=%s"%xml_dict.keys())
     return make_record_dict (xml_dict)
-
-        

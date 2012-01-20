@@ -147,6 +147,7 @@ def main():
                 sfaImporter.AuthHierarchy.create_auth(urn)
             auth_info = sfaImporter.AuthHierarchy.get_auth_info(urn)
             auth_record = RegAuthority()
+            auth_record.type='authority'
             auth_record.hrn=site_hrn
             auth_record.gid=auth_info.get_gid_object()
             auth_record.pointer=site['site_id']
@@ -169,6 +170,7 @@ def main():
                     sfaImporter.AuthHierarchy.create_auth(urn)
                 auth_info = sfaImporter.AuthHierarchy.get_auth_info(urn)
                 auth_record = RegAuthority()
+                auth_record.type='authority'
                 auth_record.hrn=site_hrn
                 auth_record.gid=auth_info.get_gid_object()
                 auth_record.pointer=site['site_id']
@@ -199,6 +201,7 @@ def main():
                     urn = hrn_to_urn(hrn, 'node')
                     node_gid = sfaImporter.AuthHierarchy.create_gid(urn, create_uuid(), pkey)
                     node_record = RegNode ()
+                    node_record.type='node'
                     node_record.hrn=hrn
                     node_record.gid=node_gid
                     node_record.pointer =node['node_id']
@@ -225,6 +228,7 @@ def main():
                     urn = hrn_to_urn(hrn, 'slice')
                     slice_gid = sfaImporter.AuthHierarchy.create_gid(urn, create_uuid(), pkey)
                     slice_record = RegSlice ()
+                    slice_record.type='slice'
                     slice_record.hrn=hrn
                     slice_record.gid=slice_gid
                     slice_record.pointer=slice['slice_id']
@@ -274,6 +278,7 @@ def main():
                     urn = hrn_to_urn(hrn, 'user')
                     person_gid = sfaImporter.AuthHierarchy.create_gid(urn, create_uuid(), pkey)
                     person_record = RegUser ()
+                    person_record.type='user'
                     person_record.hrn=hrn
                     person_record.gid=person_gid
                     person_record.pointer=person['person_id']
