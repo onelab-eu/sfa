@@ -101,7 +101,7 @@ class SFAv1(BaseVersion):
             sliver_attributes = self.get_sliver_attributes(nodename, network)
             for sliver_attribute in sliver_attributes:
                 sliver_attribute['node_id'] = nodename
-                attributes.append(attribute)
+                attributes.append(sliver_attribute)
         return attributes
 
 
