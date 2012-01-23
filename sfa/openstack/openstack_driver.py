@@ -3,19 +3,24 @@ import datetime
 #
 from sfa.util.faults import MissingSfaInfo, UnknownSfaType, \
     RecordNotFound, SfaNotImplemented, SliverDoesNotExist
+
 from sfa.util.sfalogging import logger
 from sfa.util.defaultdict import defaultdict
 from sfa.util.sfatime import utcparse, datetime_to_string, datetime_to_epoch
 from sfa.util.xrn import Xrn, hrn_to_urn, get_leaf, urn_to_sliver_id
 from sfa.util.cache import Cache
+
 # one would think the driver should not need to mess with the SFA db, but..
-from sfa.storage.table import SfaTable
+
 # used to be used in get_ticket
 #from sfa.trust.sfaticket import SfaTicket
+
 from sfa.rspecs.version_manager import VersionManager
 from sfa.rspecs.rspec import RSpec
+
 # the driver interface, mostly provides default behaviours
 from sfa.managers.driver import Driver
+
 from sfa.openstack.openstack_shell import OpenstackShell
 import sfa.plc.peers as peers
 from sfa.plc.plaggregate import PlAggregate
