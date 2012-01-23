@@ -148,27 +148,29 @@ endif
 
 synclib: synccheck
 	+$(RSYNC) --relative ./sfa/ $(SSHURL)/usr/lib\*/python2.\*/site-packages/
-synctest: synccheck
-	+$(RSYNC) ./tests/ $(SSHURL)/root/tests-sfa
 syncbin: synccheck
 	+$(RSYNC)  $(BINS) $(SSHURL)/usr/bin/
 syncinit: synccheck
 	+$(RSYNC) ./init.d/sfa  $(SSHURL)/etc/init.d/
 syncconfig:
 	+$(RSYNC) ./config/default_config.xml $(SSHURL)/etc/sfa/
+synctest: synccheck
+	+$(RSYNC) ./tests/ $(SSHURL)/root/tests-sfa
 syncrestart: synccheck
 	$(SSHCOMMAND) exec service sfa restart
 
 # full-fledged
-sync: synclib synctest syncbin syncinit syncconfig syncrestart
+sync: synclib syncbin syncinit syncconfig syncrestart
 # 99% of the time this is enough
-fastsync: synclib syncrestart
+syncfast: synclib syncrestart
+
+.PHONY: synccheck synclib syncbin syncconfig synctest syncrestart sync syncfast
 
 syncrica: synccheck
 	+$(RSYNC) --relative ./sfa/fd ./sfa/generic/fd.py ./sfa/rspecs/versions/federica.py $(SSHURL)/usr/lib\*/python2.\*/site-packages/
 	$(SSHCOMMAND) exec service sfa restart
 
-.PHONY: synccheck sync fastsync clientsync ricasync
+.PHONY: syncrica
 
 ##########
 CLIENTLIBFILES= \
