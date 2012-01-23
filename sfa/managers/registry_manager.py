@@ -98,13 +98,13 @@ class RegistryManager:
         return new_cred.save_to_string(save_parents=True)
     
     
-    def Resolve(self, api, xrns, intype=None, full=True):
+    def Resolve(self, api, xrns, type=None, full=True):
     
         if not isinstance(xrns, types.ListType):
             xrns = [xrns]
             # try to infer type if not set and we get a single input
-            if not intype:
-                intype = Xrn(xrns).get_type()
+            if not type:
+                type = Xrn(xrns).get_type()
         hrns = [urn_to_hrn(xrn)[0] for xrn in xrns] 
 
         # load all known registry names into a prefix tree and attempt to find
@@ -136,28 +136,29 @@ class RegistryManager:
                 credential = api.getCredential()
                 interface = api.registries[registry_hrn]
                 server_proxy = api.server_proxy(interface, credential)
-                peer_records = server_proxy.Resolve(xrns, credential,intype)
+                peer_records = server_proxy.Resolve(xrns, credential,type)
                 # pass foreign records as-is
+                # previous code used to read
+                # records.extend([SfaRecord(dict=record).as_dict() for record in peer_records])
+                # not sure why the records coming through xmlrpc had to be processed at all
                 records.extend(peer_records)
     
         # try resolving the remaining unfound records at the local registry
         local_hrns = list ( set(hrns).difference([record['hrn'] for record in records]) )
-        logger.info("Resolve: local_hrns=%s"%local_hrns)
         # 
         local_records = dbsession.query(RegRecord).filter(RegRecord.hrn.in_(local_hrns))
-        if intype:
-            local_records = local_records.filter_by(type=intype)
+        if type:
+            local_records = local_records.filter_by(type=type)
         local_records=local_records.all()
-        logger.info("Resolve: local_records=%s (intype=%s)"%(local_records,intype))
+        logger.info("Resolve: local_records=%s (type=%s)"%(local_records,type))
         local_dicts = [ record.__dict__ for record in local_records ]
         
         if full:
             # in full mode we get as much info as we can, which involves contacting the 
             # testbed for getting implementation details about the record
-            for record in local_dicts: logger.debug("resolve augment %s"%record)
             self.driver.augment_records_with_testbed_info(local_dicts)
-#            # also we fill the 'url' field for known authorities
-#            # used to be in the driver code, sounds like a poorman thing though
+            # also we fill the 'url' field for known authorities
+            # used to be in the driver code, sounds like a poorman thing though
             def solve_neighbour_url (record):
                 if not record.type.startswith('authority'): return 
                 hrn=record.hrn
@@ -170,7 +171,7 @@ class RegistryManager:
         # convert local record objects to dicts for xmlrpc
         # xxx somehow here calling dict(record) issues a weird error
         # however record.todict() seems to work fine
-#        records.extend( [ dict(record) for record in local_records ] )
+        # records.extend( [ dict(record) for record in local_records ] )
         records.extend( [ record.todict() for record in local_records ] )    
         if not records:
             raise RecordNotFound(str(hrns))
@@ -198,6 +199,7 @@ class RegistryManager:
             interface = api.registries[registry_hrn]
             server_proxy = api.server_proxy(interface, credential)
             record_list = server_proxy.List(xrn, credential)
+            # same as above, no need to process what comes from through xmlrpc
             # pass foreign records as-is
             record_dicts = record_list
         
@@ -318,7 +320,6 @@ class RegistryManager:
         record.just_updated()
     
         # validate the type
-        # xxx might be simpler to just try to commit as this is a constraint in the db
         if type not in ['authority', 'slice', 'node', 'user']:
             raise UnknownSfaType(type) 
 
@@ -369,6 +370,9 @@ class RegistryManager:
             raise RecordNotFound(msg)
 
         type = record.type
+        if type not in ['slice', 'user', 'node', 'authority'] :
+            raise UnknownSfaType(type)
+
         credential = api.getCredential()
         registries = api.registries
     

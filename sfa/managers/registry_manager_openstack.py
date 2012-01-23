@@ -1,5 +1,4 @@
 import types
-import time 
 # for get_key_from_incoming_ip
 import tempfile
 import os
@@ -13,15 +12,18 @@ from sfa.util.xrn import Xrn, get_authority, hrn_to_urn, urn_to_hrn
 from sfa.util.plxrn import hrn_to_pl_login_base
 from sfa.util.version import version_core
 from sfa.util.sfalogging import logger
+
 from sfa.trust.gid import GID 
 from sfa.trust.credential import Credential
 from sfa.trust.certificate import Certificate, Keypair, convert_public_key
 from sfa.trust.gid import create_uuid
-from sfa.storage.record import SfaRecord
-from sfa.storage.table import SfaTable
-from sfa.managers import registry_manager
 
-class RegistryManager(registry_manager.RegistryManager):
+from sfa.storage.persistentobjs import make_record,RegRecord
+from sfa.storage.alchemy import dbsession
+
+from sfa.managers.registry_manager import RegistryManager
+
+class RegistryManager(RegistryManager):
 
     def __init__ (self, config): pass
 
@@ -31,6 +33,8 @@ class RegistryManager(registry_manager.RegistryManager):
                        if hrn != api.hrn])
         xrn=Xrn(api.hrn)
         return version_core({'interface':'registry',
+                             'sfa': 2,
+                             'geni_api': 2,
                              'hrn':xrn.get_hrn(),
                              'urn':xrn.get_urn(),
                              'peers':peers})
@@ -46,19 +50,19 @@ class RegistryManager(registry_manager.RegistryManager):
         auth_hrn = api.auth.get_authority(hrn)
         if not auth_hrn or hrn == api.config.SFA_INTERFACE_HRN:
             auth_hrn = hrn
-        # get record info
         auth_info = api.auth.get_auth_info(auth_hrn)
-        table = SfaTable()
-        records = table.findObjects({'type': type, 'hrn': hrn})
-        if not records:
-            raise RecordNotFound(hrn)
-        record = records[0]
+        # get record info
+        record=dbsession.query(RegRecord).filter_by(type=type,hrn=hrn).first()
+        if not record:
+            raise RecordNotFound("hrn=%s, type=%s"%(hrn,type))
     
         # verify_cancreate_credential requires that the member lists
         # (researchers, pis, etc) be filled in
-        self.driver.augment_records_with_testbed_info (record)
-        if not self.driver.is_enabled (record):
-              raise AccountNotEnabled(": PlanetLab account %s is not enabled. Please contact your site PI" %(record['email']))
+        logger.debug("get credential before augment dict, keys=%s"%record.__dict__.keys())
+        self.driver.augment_records_with_testbed_info (record.__dict__)
+        logger.debug("get credential after augment dict, keys=%s"%record.__dict__.keys())
+        if not self.driver.is_enabled (record.__dict__):
+              raise AccountNotEnabled(": PlanetLab account %s is not enabled. Please contact your site PI" %(record.email))
     
         # get the callers gid
         # if this is a self cred the record's gid is the caller's gid
@@ -70,12 +74,12 @@ class RegistryManager(registry_manager.RegistryManager):
             caller_hrn = caller_gid.get_hrn()
         
         object_hrn = record.get_gid_object().get_hrn()
-        rights = api.auth.determine_user_rights(caller_hrn, record)
+        rights = api.auth.determine_user_rights(caller_hrn, record.__dict__)
         # make sure caller has rights to this object
         if rights.is_empty():
-            raise PermissionError(caller_hrn + " has no rights to " + record['name'])
+            raise PermissionError(caller_hrn + " has no rights to " + record.hrn)
     
-        object_gid = GID(string=record['gid'])
+        object_gid = GID(string=record.gid)
         new_cred = Credential(subject = object_gid.get_subject())
         new_cred.set_gid_caller(caller_gid)
         new_cred.set_gid_object(object_gid)
@@ -83,8 +87,8 @@ class RegistryManager(registry_manager.RegistryManager):
         #new_cred.set_pubkey(object_gid.get_pubkey())
         new_cred.set_privileges(rights)
         new_cred.get_privileges().delegate_all_privileges(True)
-        if 'expires' in record:
-            date = utcparse(record['expires'])
+        if hasattr(record,'expires'):
+            date = utcparse(record.expires)
             expires = datetime_to_epoch(date)
             new_cred.set_expiration(int(expires))
         auth_kind = "authority,ma,sa"
@@ -104,10 +108,11 @@ class RegistryManager(registry_manager.RegistryManager):
             if not type:
                 type = Xrn(xrns).get_type()
         hrns = [urn_to_hrn(xrn)[0] for xrn in xrns] 
+
         # load all known registry names into a prefix tree and attempt to find
         # the longest matching prefix
-        # create a dict where key is a registry hrn and its value is a
-        # hrns at that registry (determined by the known prefix tree).  
+        # create a dict where key is a registry hrn and its value is a list
+        # of hrns at that registry (determined by the known prefix tree).  
         xrn_dict = {}
         registries = api.registries
         tree = prefixTree()
@@ -133,47 +138,52 @@ class RegistryManager(registry_manager.RegistryManager):
                 credential = api.getCredential()
                 interface = api.registries[registry_hrn]
                 server_proxy = api.server_proxy(interface, credential)
-                peer_records = server_proxy.Resolve(xrns, credential)
-                records.extend([SfaRecord(dict=record).as_dict() for record in peer_records])
+                peer_records = server_proxy.Resolve(xrns, credential,type)
+                # pass foreign records as-is
+                # previous code used to read
+                # records.extend([SfaRecord(dict=record).as_dict() for record in peer_records])
+                # not sure why the records coming through xmlrpc had to be processed at all
+                records.extend(peer_records)
     
         # try resolving the remaining unfound records at the local registry
         local_hrns = list ( set(hrns).difference([record['hrn'] for record in records]) )
         # 
-        table = SfaTable()
-        local_records = table.findObjects({'hrn': local_hrns})
+        local_records = dbsession.query(RegRecord).filter(RegRecord.hrn.in_(local_hrns))
+        if type:
+            local_records = local_records.filter_by(type=type)
+        local_records=local_records.all()
+        logger.info("Resolve: local_records=%s (type=%s)"%(local_records,type))
+        local_dicts = [ record.__dict__ for record in local_records ]
         
         if full:
             # in full mode we get as much info as we can, which involves contacting the 
             # testbed for getting implementation details about the record
-            self.driver.augment_records_with_testbed_info(local_records)
+            self.driver.augment_records_with_testbed_info(local_dicts)
             # also we fill the 'url' field for known authorities
             # used to be in the driver code, sounds like a poorman thing though
             def solve_neighbour_url (record):
-                if not record['type'].startswith('authority'): return 
-                hrn=record['hrn']
+                if not record.type.startswith('authority'): return 
+                hrn=record.hrn
                 for neighbour_dict in [ api.aggregates, api.registries ]:
                     if hrn in neighbour_dict:
-                        record['url']=neighbour_dict[hrn].get_url()
+                        record.url=neighbour_dict[hrn].get_url()
                         return 
-            [ solve_neighbour_url (record) for record in local_records ]
-                    
+            for record in local_records: solve_neighbour_url (record)
         
-        
-        # convert local record objects to dicts
-        records.extend([dict(record) for record in local_records])
-        if type:
-            records = filter(lambda rec: rec['type'] in [type], records)
-    
+        # convert local record objects to dicts for xmlrpc
+        # xxx somehow here calling dict(record) issues a weird error
+        # however record.todict() seems to work fine
+        # records.extend( [ dict(record) for record in local_records ] )
+        records.extend( [ record.todict() for record in local_records ] )    
         if not records:
             raise RecordNotFound(str(hrns))
     
         return records
     
-    def List(self, api, xrn, origin_hrn=None):
+    def List (self, api, xrn, origin_hrn=None):
         hrn, type = urn_to_hrn(xrn)
         # load all know registry names into a prefix tree and attempt to find
         # the longest matching prefix
-        records = []
         registries = api.registries
         registry_hrns = registries.keys()
         tree = prefixTree()
@@ -185,23 +195,24 @@ class RegistryManager(registry_manager.RegistryManager):
             raise MissingAuthority(xrn)
         # if the best match (longest matching hrn) is not the local registry,
         # forward the request
-        records = []    
+        record_dicts = []    
         if registry_hrn != api.hrn:
             credential = api.getCredential()
             interface = api.registries[registry_hrn]
             server_proxy = api.server_proxy(interface, credential)
             record_list = server_proxy.List(xrn, credential)
-            records = [SfaRecord(dict=record).as_dict() for record in record_list]
+            # same as above, no need to process what comes from through xmlrpc
+            # pass foreign records as-is
+            record_dicts = record_list
         
         # if we still have not found the record yet, try the local registry
-        if not records:
+        if not record_dicts:
             if not api.auth.hierarchy.auth_exists(hrn):
                 raise MissingAuthority(hrn)
+            records = dbsession.query(RegRecord).filter_by(authority=hrn)
+            record_dicts=[ record.todict() for record in records ]
     
-            table = SfaTable()
-            records = table.find({'authority': hrn})
-    
-        return records
+        return record_dicts
     
     
     def CreateGid(self, api, xrn, cert):
@@ -224,57 +235,58 @@ class RegistryManager(registry_manager.RegistryManager):
     # subject_record describes the subject of the relationships
     # ref_record contains the target values for the various relationships we need to manage
     # (to begin with, this is just the slice x person relationship)
-    def update_relations (self, subject_record, ref_record):
-        type=subject_record['type']
+    def update_relations (self, subject_obj, ref_obj):
+        type=subject_obj.type
         if type=='slice':
-            self.update_relation(subject_record, 'researcher', ref_record.get('researcher'), 'user')
+            self.update_relation(subject_obj, 'researcher', ref_obj.researcher, 'user')
         
     # field_key is the name of one field in the record, typically 'researcher' for a 'slice' record
     # hrns is the list of hrns that should be linked to the subject from now on
     # target_type would be e.g. 'user' in the 'slice' x 'researcher' example
-    def update_relation (self, sfa_record, field_key, hrns, target_type):
+    def update_relation (self, record_obj, field_key, hrns, target_type):
         # locate the linked objects in our db
-        subject_type=sfa_record['type']
-        subject_id=sfa_record['pointer']
-        table = SfaTable()
-        link_sfa_records = table.find ({'type':target_type, 'hrn': hrns})
-        link_ids = [ rec.get('pointer') for rec in link_sfa_records ]
+        subject_type=record_obj.type
+        subject_id=record_obj.pointer
+        # get the 'pointer' field of all matching records
+        link_id_tuples = dbsession.query(RegRecord.pointer).filter_by(type=target_type).filter(RegRecord.hrn.in_(hrns)).all()
+        # sqlalchemy returns named tuples for columns
+        link_ids = [ tuple.pointer for tuple in link_id_tuples ]
         self.driver.update_relation (subject_type, target_type, subject_id, link_ids)
-        
 
-    def Register(self, api, record):
+    def Register(self, api, record_dict):
     
-        hrn, type = record['hrn'], record['type']
+        hrn, type = record_dict['hrn'], record_dict['type']
         urn = hrn_to_urn(hrn,type)
         # validate the type
         if type not in ['authority', 'slice', 'node', 'user']:
             raise UnknownSfaType(type) 
         
-        # check if record already exists
-        table = SfaTable()
-        existing_records = table.find({'type': type, 'hrn': hrn})
+        # check if record_dict already exists
+        existing_records = dbsession.query(RegRecord).filter_by(type=type,hrn=hrn).all()
         if existing_records:
             raise ExistingRecord(hrn)
            
-        record = SfaRecord(dict = record)
-        record['authority'] = get_authority(record['hrn'])
-        auth_info = api.auth.get_auth_info(record['authority'])
+        assert ('type' in record_dict)
+        # returns the right type of RegRecord according to type in record
+        record = make_record(dict=record_dict)
+        record.just_created()
+        record.authority = get_authority(record.hrn)
+        auth_info = api.auth.get_auth_info(record.authority)
         pub_key = None
         # make sure record has a gid
-        if 'gid' not in record:
+        if not record.gid:
             uuid = create_uuid()
             pkey = Keypair(create=True)
-            if 'keys' in record and record['keys']:
-                pub_key=record['keys']
+            if getattr(record,'keys',None):
+                pub_key=record.keys
                 # use only first key in record
-                if isinstance(record['keys'], types.ListType):
-                    pub_key = record['keys'][0]
+                if isinstance(record.keys, types.ListType):
+                    pub_key = record.keys[0]
                 pkey = convert_public_key(pub_key)
     
             gid_object = api.auth.hierarchy.create_gid(urn, uuid, pkey)
             gid = gid_object.save_to_string(save_parents=True)
-            record['gid'] = gid
-            record.set_gid(gid)
+            record.gid = gid
     
         if type in ["authority"]:
             # update the tree
@@ -283,14 +295,14 @@ class RegistryManager(registry_manager.RegistryManager):
     
             # get the GID from the newly created authority
             gid = auth_info.get_gid_object()
-            record.set_gid(gid.save_to_string(save_parents=True))
+            record.gid=gid.save_to_string(save_parents=True)
 
         # update testbed-specific data if needed
-        pointer = self.driver.register (record, hrn, pub_key)
+        pointer = self.driver.register (record.__dict__, hrn, pub_key)
 
-        record.set_pointer(pointer)
-        record_id = table.insert(record)
-        record['record_id'] = record_id
+        record.pointer=pointer
+        dbsession.add(record)
+        dbsession.commit()
     
         # update membership for researchers, pis, owners, operators
         self.update_relations (record, record)
@@ -298,17 +310,16 @@ class RegistryManager(registry_manager.RegistryManager):
         return record.get_gid_object().save_to_string(save_parents=True)
     
     def Update(self, api, record_dict):
-        new_record = SfaRecord(dict = record_dict)
-        type = new_record['type']
-        hrn = new_record['hrn']
-        urn = hrn_to_urn(hrn,type)
-        table = SfaTable()
+        assert ('type' in record_dict)
+        new_record=RegRecord(dict=record_dict)
+        type = new_record.type
+        hrn = new_record.hrn
+        
         # make sure the record exists
-        records = table.findObjects({'type': type, 'hrn': hrn})
-        if not records:
-            raise RecordNotFound(hrn)
-        record = records[0]
-        record['last_updated'] = time.gmtime()
+        record = dbsession.query(RegRecord).filter_by(type=type,hrn=hrn).first()
+        if not record:
+            raise RecordNotFound("hrn=%s, type=%s"%(hrn,type))
+        record.just_updated()
     
         # validate the type
         if type not in ['authority', 'slice', 'node', 'user']:
@@ -316,18 +327,18 @@ class RegistryManager(registry_manager.RegistryManager):
 
         # Use the pointer from the existing record, not the one that the user
         # gave us. This prevents the user from inserting a forged pointer
-        pointer = record['pointer']
+        pointer = record.pointer
     
         # is the a change in keys ?
         new_key=None
         if type=='user':
-            if 'keys' in new_record and new_record['keys']:
-                new_key=new_record['keys']
+            if getattr(new_key,'keys',None):
+                new_key=new_record.keys
                 if isinstance (new_key,types.ListType):
                     new_key=new_key[0]
 
         # update the PLC information that was specified with the record
-        if not self.driver.update (record, new_record, hrn, new_key):
+        if not self.driver.update (record.__dict__, new_record.__dict__, hrn, new_key):
             logger.warning("driver.update failed")
     
         # take new_key into account
@@ -335,11 +346,11 @@ class RegistryManager(registry_manager.RegistryManager):
             # update the openssl key and gid
             pkey = convert_public_key(new_key)
             uuid = create_uuid()
+            urn = hrn_to_urn(hrn,type)
             gid_object = api.auth.hierarchy.create_gid(urn, uuid, pkey)
             gid = gid_object.save_to_string(save_parents=True)
-            record['gid'] = gid
-            record = SfaRecord(dict=record)
-            table.update(record)
+            record.gid = gid
+            dsession.commit()
         
         # update membership for researchers, pis, owners, operators
         self.update_relations (record, new_record)
@@ -348,19 +359,19 @@ class RegistryManager(registry_manager.RegistryManager):
     
     # expecting an Xrn instance
     def Remove(self, api, xrn, origin_hrn=None):
-    
-        table = SfaTable()
-        filter = {'hrn': xrn.get_hrn()}
         hrn=xrn.get_hrn()
         type=xrn.get_type()
+        request=dbsession.query(RegRecord).filter_by(hrn=hrn)
         if type and type not in ['all', '*']:
-            filter['type'] = type
+            request=request.filter_by(type=type)
     
-        records = table.find(filter)
-        if not records: raise RecordNotFound(hrn)
-        record = records[0]
-        type = record['type']
-        
+        record = request.first()
+        if not record:
+            msg="Could not find hrn %s"%hrn
+            if type: msg += " type=%s"%type
+            raise RecordNotFound(msg)
+
+        type = record.type
         if type not in ['slice', 'user', 'node', 'authority'] :
             raise UnknownSfaType(type)
 
@@ -379,15 +390,16 @@ class RegistryManager(registry_manager.RegistryManager):
 
         # call testbed callback first
         # IIUC this is done on the local testbed TOO because of the refreshpeer link
-        if not self.driver.remove(record):
+        if not self.driver.remove(record.__dict__):
             logger.warning("driver.remove failed")
 
         # delete from sfa db
-        table.remove(record)
+        dbsession.delete(record)
+        dbsession.commit()
     
         return 1
 
-    # This is a PLC-specific thing...
+    # This is a PLC-specific thing, won't work with other platforms
     def get_key_from_incoming_ip (self, api):
         # verify that the callers's ip address exist in the db and is an interface
         # for a node in the db
@@ -401,23 +413,20 @@ class RegistryManager(registry_manager.RegistryManager):
         node = nodes[0]
        
         # look up the sfa record
-        table = SfaTable()
-        records = table.findObjects({'type': 'node', 'pointer': node['node_id']})
-        if not records:
-            raise RecordNotFound("pointer:" + str(node['node_id']))  
-        record = records[0]
+        record=dbsession.query(RegRecord).filter_by(type='node',pointer=node['node_id']).first()
+        if not record:
+            raise RecordNotFound("node with pointer %s"%node['node_id'])
         
         # generate a new keypair and gid
         uuid = create_uuid()
         pkey = Keypair(create=True)
-        urn = hrn_to_urn(record['hrn'], record['type'])
+        urn = hrn_to_urn(record.hrn, record.type)
         gid_object = api.auth.hierarchy.create_gid(urn, uuid, pkey)
         gid = gid_object.save_to_string(save_parents=True)
-        record['gid'] = gid
-        record.set_gid(gid)
+        record.gid = gid
 
         # update the record
-        table.update(record)
+        dbsession.commit()
   
         # attempt the scp the key
         # and gid onto the node
