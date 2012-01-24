@@ -313,18 +313,7 @@ class OARGETParser:
                                                         ('date_created', None), ('peer_id', None),]
                 self.site_dict[node['site_login_base']] = dict(self.site_dict[node['site_login_base']])
                         
-        #print>>sys.stderr, "\r\n \r\n =============\t\t ParseSites site dict %s \r\n"%(self.site_dict)
-            
-            
-    def GetNodesFromOARParse(self):
-        #print>>sys.stderr, " \r\n =========GetNodesFromOARParse: node_dictlist %s "%(self.node_dictlist)
-        return self.node_dictlist
 
-    #def GetSitesFromOARParse(self):
-        #return self.site_dict
-    
-    def GetJobsFromOARParse(self):
-        return self.jobs_list	
 
     OARrequests_uri_dict = { 
         'GET_version': {'uri':'/oarapi/version.json', 'parse_func': ParseVersion},

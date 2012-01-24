@@ -231,13 +231,15 @@ class SlabDB:
 
     def update_senslab_slice(self, slice_rec):
         sfatable = SfaTable()
-        userhrn = slice_rec['hrn'].strip('_slice')
+        hrn = str(slice_rec['hrn']) 
+        userhrn = hrn.rstrip('_slice')
         userrecord = sfatable.find({'hrn': userhrn, 'type':'user'})
+        print>>sys.stderr, " \r\n \r\n \t SLABPOSTGRES.PY  update_senslab_slice : userrecord  %s slice_rec %s userhrn %s" %( userrecord, slice_rec, userhrn)
         if (isinstance (userrecord, list)):
                 userrecord = userrecord[0]
-        columns = [ 'record_user_id', 'oar_job_id']
-        values = [slice_rec['record_user_id'],slice_rec['oar_job_id']]
-        self.update('slice',columns, values,'record_slice_id', slice_rec['record_slice_id'])
+        columns = [ 'record_id_user', 'oar_job_id']
+        values = [slice_rec['record_id_user'],slice_rec['oar_job_id']]
+        self.update('slice',columns, values,'record_id_slice', slice_rec['record_id_slice'])
         return 
         
        

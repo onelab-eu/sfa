@@ -361,36 +361,33 @@ class SlabDriver(Driver):
 
 
     def GetJobs(self,job_id= None, resources=True,return_fields=None, details = None):
-        job_resources=['reserved_resources', 'assigned_resources','job_id', 'job_uri', 'assigned_nodes',\
-        'api_timestamp']
-        assigned_res = ['resource_id', 'resource_uri']
-        assigned_n = ['node', 'node_uri']
+        #job_resources=['reserved_resources', 'assigned_resources','job_id', 'job_uri', 'assigned_nodes',\
+        #'api_timestamp']
+        #assigned_res = ['resource_id', 'resource_uri']
+        #assigned_n = ['node', 'node_uri']
       
                 
 	if job_id and resources is False:
             job_info = self.oar.parser.SendRequest("GET_jobs_id", job_id)
             print>>sys.stderr, "\r\n \r\n \t\t GetJobs resources is False job_info %s" %(job_info)
-           
+
         if job_id and resources :	
             job_info = self.oar.parser.SendRequest("GET_jobs_id_resources", job_id)
             print>>sys.stderr, "\r\n \r\n \t\t GetJobs job_info %s" %(job_info)
-        return job_info
-        #node_dict = self.oar.parser.GetNodesFromOARParse()
-        #return_node_list = []
-    
-        #if not (node_filter or return_fields):
-                #return_node_list = node_dict.values()
-                #return return_node_list
-    
-        #return_node_list= parse_filter(node_dict.values(),node_filter ,'node', return_fields)
-        #return return_node_list
+            
+        if job_info['state'] == 'Terminated':
+            print>>sys.stderr, "\r\n \r\n \t\t GetJobs TERMINELEBOUSIN "
+            return None
+        else:
+            return job_info
+     
+       
      
     def GetNodes(self,node_filter= None, return_fields=None):
 		
         node_dict =self.oar.parser.SendRequest("GET_resources_full")
-        #node_dict = self.oar.parser.GetNodesFromOARParse()
+
         return_node_list = []
-        print>>sys.stderr, "\r\n \r\n \t\t GetNodes node_dict %s" %(node_dict)
         if not (node_filter or return_fields):
                 return_node_list = node_dict.values()
                 return return_node_list
@@ -421,14 +418,24 @@ class SlabDriver(Driver):
         if not (slice_filter or return_fields) and sliceslist:
             for sl in sliceslist:
                 if sl['oar_job_id'] is not -1: 
-                    print >>sys.stderr, " \r\n \r\n SLABDRIVER.PY  GetSlices  sl  %s" %(sl)
                     rslt = self.GetJobs( sl['oar_job_id'],resources=False)
                     print >>sys.stderr, " \r\n \r\n SLABRIVER.PY  GetSlices  rslt   %s" %(rslt)
-                    sl.update(rslt)
+                    if rslt :
+                        sl.update(rslt)
+                    #If GetJobs is empty, this means the job is now in the 'Terminated' state
+                    #Update the slice record
+                    else:
+                        sl['oar_job_id'] = '-1'
+                       
+                        sl.update({'hrn':str(sl['slice_hrn'])})
+                        print >>sys.stderr, " \r\n \r\n SLABDRIVER.PY  GetSlices  TERMINATEDDFDDDDD  %s" %(sl)
+                        self.db.update_senslab_slice(sl)                        
             return_slice_list = sliceslist
             return  return_slice_list
         
         return_slice_list  = parse_filter(sliceslist, slice_filter,'slice', return_fields)
+        
+        
         for sl in return_slice_list:
                 if sl['oar_job_id'] is not -1: 
                     print >>sys.stderr, " \r\n \r\n SLABDRIVER.PY  GetSlices  sl  %s" %(sl)
