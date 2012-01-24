@@ -2,7 +2,7 @@
 import sys
 import datetime
 import time
-from sfa.senslab.OARrestapi import OARapi
+#from sfa.senslab.OARrestapi import OARapi
 from sfa.senslab.LDAPapi import LDAPapi
 from sfa.senslab.slabdriver import SlabDriver
 from sfa.senslab.slabpostgres import SlabDB

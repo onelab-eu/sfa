@@ -46,7 +46,8 @@ class OARrestapi:
         self.oarserver['ip'] = OARIP
         self.oarserver['port'] = 80
         self.oarserver['uri'] = None
-        self.oarserver['postformat'] = 'json'	
+        self.oarserver['postformat'] = 'json'
+        self.parser = OARGETParser(self)	
             
     def GETRequestToOARRestAPI(self, request, strval=None  ): 
         self.oarserver['uri'] = OARrequests_get_uri_dict[request] 
@@ -223,8 +224,19 @@ class OARGETParser:
                 self.raw_json = self.raw_json['items']
         self.ParseNodes()
         self.ParseSites()
+        return self.node_dictlist
 
-            
+    resources_fulljson_dict= {
+        'resource_id' : AddNodeId,
+        'network_address' : AddNodeNetworkAddr,
+        'site': AddNodeSite, 
+        'radio': AddNodeRadio,
+        'mobile': AddMobility,
+        'posx': AddPosX,
+        'posy': AddPosY,
+        'state':AddBootState,
+        }
+      
             
     #Parse nodes properties from OAR
     #Put them into a dictionary with key = node id and value is a dictionary 
@@ -234,13 +246,14 @@ class OARGETParser:
         #print >>sys.stderr, " \r\n \r\n \t\t OARrestapi.py ParseNodes self.raw_json %s" %(self.raw_json)
         for dictline in self.raw_json:
             #print >>sys.stderr, " \r\n \r\n \t\t OARrestapi.py ParseNodes dictline %s hey" %(dictline)
-            for k in dictline.keys():
+            for k in dictline:
                 if k in self.resources_fulljson_dict:
                     # dictionary is empty and/or a new node has to be inserted 
                     if node_id is None :
                         node_id = self.resources_fulljson_dict[k](self,self.node_dictlist, dictline[k])	
                     else:
                         ret = self.resources_fulljson_dict[k](self,self.node_dictlist[node_id], dictline[k])
+                    
                         #If last property has been inserted in the property tuple list, reset node_id 
                         if ret == 0:
                             #Turn the property tuple list (=dict value) into a dictionary
@@ -304,16 +317,6 @@ class OARGETParser:
         'GET_resources_full': {'uri':'/oarapi/resources/full.json','parse_func': ParseResourcesFull},
         'GET_resources':{'uri':'/oarapi/resources.json' ,'parse_func': ParseResources},
         }
-    resources_fulljson_dict= {
-        'resource_id' : AddNodeId,
-        'network_address' : AddNodeNetworkAddr,
-        'site': AddNodeSite, 
-        'radio': AddNodeRadio,
-        'mobile': AddMobility,
-        'posx': AddPosX,
-        'posy': AddPosY,
-        'state':AddBootState,
-        }
 
     
     def __init__(self, srv ):
@@ -324,29 +327,31 @@ class OARGETParser:
         self.jobs_details_json_dict = self.jobs_json_dict		
         self.server = srv
         self.node_dictlist = {}
+
         self.site_dict = {}
         self.SendRequest("GET_version")
 
     def SendRequest(self,request, strval = None ):
         if request in OARrequests_get_uri_dict:
-            self.raw_json = self.server.GETRequestToOARRestAPI(request,strval)
-            self.OARrequests_uri_dict[request]['parse_func'](self)
+            self.raw_json = self.server.GETRequestToOARRestAPI(request,strval) 
+            #print>>sys.stderr, "\r\n OARGetParse __init__ : request %s result %s "%(request,self.raw_json)
+            return self.OARrequests_uri_dict[request]['parse_func'](self)
         else:
             print>>sys.stderr, "\r\n OARGetParse __init__ : ERROR_REQUEST "	,request
             
-class OARapi:
+#class OARapi:
 
-    def __init__(self):
-            self.server = OARrestapi()
-            self.parser = OARGETParser(self.server)
+    #def __init__(self):
+            #self.server = OARrestapi()
+            #self.parser = OARGETParser(self.server)
 
-	#GetNodes moved to slabdriver.py
+
             
 
     
                     
-    def GetJobs(self):
-        print>>sys.stderr, " \r\n GetJobs" 
-        self.parser.SendRequest("GET_jobs")	
-        return self.parser.GetJobsFromOARParse()
+    #def GetJobs(self):
+        #print>>sys.stderr, " \r\n GetJobs" 
+        #self.parser.SendRequest("GET_jobs")	
+        #return self.parser.GetJobsFromOARParse()
     

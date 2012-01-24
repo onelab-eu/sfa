@@ -19,7 +19,7 @@ from sfa.rspecs.elements.location import Location
 from sfa.rspecs.elements.hardware_type import HardwareType
 from sfa.rspecs.elements.node import Node
 #from sfa.rspecs.elements.link import Link
-#from sfa.rspecs.elements.sliver import Sliver
+from sfa.rspecs.elements.sliver import Sliver
 #from sfa.rspecs.elements.login import Login
 #from sfa.rspecs.elements.location import Location
 #from sfa.rspecs.elements.interface import Interface
@@ -48,7 +48,7 @@ class SlabAggregate:
     user_options = {}
     
     def __init__(self ,driver):
-	self.OARImporter = OARapi()	
+	#self.OARImporter = OARapi()	
         self.driver = driver
 	#self.api = api 
 	print >>sys.stderr,"\r\n \r\n \t\t_____________INIT Slabaggregate api : %s" %(driver)
@@ -65,19 +65,25 @@ class SlabAggregate:
         slice_urn = hrn_to_urn(slice_xrn, 'slice')
         slice_hrn, _ = urn_to_hrn(slice_xrn)
         slice_name = slice_hrn
-        slices = self.driver.GetSlices([slice_name])
+        print >>sys.stderr,"\r\n \r\n \t\t_____________ Slabaggregate api get_slice_and_slivers "
+        slices = self.driver.GetSlices({'slice_hrn':str(slice_name)})
+        print >>sys.stderr,"\r\n \r\n \t\t_____________ Slabaggregate api get_slice_and_slivers  slices %s " %(slices)
         if not slices:
             return (slice, slivers)
         slice = slices[0]
 
-        ## sort slivers by node id    
-        #for node_id in slice['node_ids']:
-            #sliver = Sliver({'sliver_id': urn_to_sliver_id(slice_urn, slice['slice_id'], node_id),
-                             #'name': slice['hrn'],
-                             #'type': 'slab-vm', 
-                             #'tags': []})
-            #slivers[node_id]= sliver
-
+        # sort slivers by node id 
+        try:
+               
+            for node_id in slice['assigned_network_address']:
+                node_id = self.driver.root_auth + '.' + node_id
+                sliver = Sliver({'sliver_id': urn_to_sliver_id(slice_urn, slice['record_id_slice'], node_id),
+                                'name': slice['slice_hrn'],
+                                'type': 'slab-vm', 
+                                'tags': []})
+                slivers[node_id]= sliver
+        except KeyError:
+                print>>sys.stderr, " \r\n \t\t get_slice_and_slivers KeyError "
         ## sort sliver attributes by node id    
         ##tags = self.driver.GetSliceTags({'slice_tag_id': slice['slice_tag_ids']})
         ##for tag in tags:
@@ -185,13 +191,11 @@ class SlabAggregate:
 
 #from plc/aggregate.py 
     def get_rspec(self, slice_xrn=None, version = None, options={}):
-	print>>sys.stderr, " \r\n SlabAggregate \t\t get_rspec **************\r\n" 
-      
-	
+
         rspec = None
 	version_manager = VersionManager()
 	version = version_manager.get_version(version)
-     
+        print>>sys.stderr, " \r\n SlabAggregate \t\t get_rspec ************** version %s version_manager %s \r\n" %(version,version_manager)
 	
 	if not slice_xrn:
             rspec_version = version_manager._get_version(version.type, version.version, 'ad')
@@ -207,11 +211,13 @@ class SlabAggregate:
         rspec.version.add_nodes(nodes)
 
         #rspec.version.add_links(links)
-        #default_sliver = slivers.get(None, [])
-        #if default_sliver:
-            #default_sliver_attribs = default_sliver.get('tags', [])
-            #for attrib in default_sliver_attribs:
-                #logger.info(attrib)
-                #rspec.version.add_default_sliver_attribute(attrib['tagname'], attrib['value'])   
+        default_sliver = slivers.get(None, [])
+        if default_sliver:
+            default_sliver_attribs = default_sliver.get('tags', [])
+            print>>sys.stderr, " \r\n SlabAggregate \t\t get_rspec ************** default_sliver_attribs %s \r\n" %(default_sliver_attribs)
+            for attrib in default_sliver_attribs:
+                print>>sys.stderr, " \r\n SlabAggregate \t\t get_rspec ************** attrib %s \r\n" %(attrib)
+                logger.info(attrib)
+                rspec.version.add_default_sliver_attribute(attrib['tagname'], attrib['value'])   
 
         return rspec.toxml()          

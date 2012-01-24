@@ -241,7 +241,8 @@ class SlabDB:
         return 
         
        
-    def find(self, tablename,record_filter = None, columns=None):
+    def find(self, tablename,record_filter = None, columns=None):  
+        print>>sys.stderr, " \r\n \r\n \t SLABPOSTGRES.PY find :  record_filter %s %s columns %s %s" %( record_filter , type(record_filter),columns , type(columns))
         if not columns:
             columns = "*"
         else:
@@ -265,8 +266,9 @@ class SlabDB:
        
         if isinstance(record_filter, dict):
             for k in record_filter.keys():
-                sql += "AND "+' \''+ str(k) + '\''+ '='+' \''+ str(record_filter[k])+'\''
-            
+                #sql += "AND "+' \''+ str(k) + '\''+ '='+' \''+ str(record_filter[k])+'\''
+                #sql += "AND "+ str(k) + '=' + str(record_filter[k])
+                sql += "AND "+ str(k) +'='+' \''+ str(record_filter[k])+'\''
         elif isinstance(record_filter, str):
             sql += "AND slice_hrn ="+ ' \''+record_filter+'\''
 

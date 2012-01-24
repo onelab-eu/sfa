@@ -21,7 +21,7 @@ from sfa.util.plxrn import slicename_to_hrn, hostname_to_hrn, hrn_to_pl_slicenam
 # SlabDriver should be really only about talking to the senslab testbed
 
 ## thierry : please avoid wildcard imports :)
-from sfa.senslab.OARrestapi import OARapi, OARrestapi
+from sfa.senslab.OARrestapi import  OARrestapi
 from sfa.senslab.LDAPapi import LDAPapi
 from sfa.senslab.SenslabImportUsers import SenslabImportUsers
 from sfa.senslab.parsing import parse_filter
@@ -57,7 +57,8 @@ class SlabDriver(Driver):
         # thierry - just to not break the rest of this code
 
 
-	self.oar = OARapi()
+	#self.oar = OARapi()
+        self.oar = OARrestapi()
 	self.ldap = LDAPapi()
         self.users = SenslabImportUsers()
         self.time_format = "%Y-%m-%d %H:%M:%S"
@@ -187,6 +188,7 @@ class SlabDriver(Driver):
                 #return slices
     
         # get data from db 
+        print>>sys.stderr, " \r\n \t\t SLABDRIVER.PY list_slices"
         slices = self.GetSlices()
         slice_hrns = [slicename_to_hrn(self.hrn, slice['slice_hrn']) for slice in slices]
         slice_urns = [hrn_to_urn(slice_hrn, 'slice') for slice_hrn in slice_hrns]
@@ -214,7 +216,8 @@ class SlabDriver(Driver):
             acceptable_fields=['url', 'instantiation', 'name', 'description']
             for key in pl_record.keys():
                 if key not in acceptable_fields:
-                    pl_record.pop(key)
+                    pl_record.pop(key) 
+            print>>sys.stderr, " \r\n \t\t SLABDRIVER.PY register"
             slices = self.GetSlices([pl_record['hrn']])
             if not slices:
                     pointer = self.AddSlice(pl_record)
@@ -355,14 +358,23 @@ class SlabDriver(Driver):
         if return_person_list:
             print>>sys.stderr, " \r\n GetPersons person_filter %s return_fields %s return_person_list %s " %(person_filter,return_fields,return_person_list)
             return return_person_list
-        
-        
-    def GetJobs(self,job_id= None, resources=True,return_fields=None, details = None):
-	if job_id and resources is False:
-            self.oar.parser.SendRequest("GET_jobs_id", job_id)
-        if job_id and resources:	
-            self.oar.parser.SendRequest("GET_jobs_id_resources", job_id)
 
+
+    def GetJobs(self,job_id= None, resources=True,return_fields=None, details = None):
+        job_resources=['reserved_resources', 'assigned_resources','job_id', 'job_uri', 'assigned_nodes',\
+        'api_timestamp']
+        assigned_res = ['resource_id', 'resource_uri']
+        assigned_n = ['node', 'node_uri']
+      
+                
+	if job_id and resources is False:
+            job_info = self.oar.parser.SendRequest("GET_jobs_id", job_id)
+            print>>sys.stderr, "\r\n \r\n \t\t GetJobs resources is False job_info %s" %(job_info)
+           
+        if job_id and resources :	
+            job_info = self.oar.parser.SendRequest("GET_jobs_id_resources", job_id)
+            print>>sys.stderr, "\r\n \r\n \t\t GetJobs job_info %s" %(job_info)
+        return job_info
         #node_dict = self.oar.parser.GetNodesFromOARParse()
         #return_node_list = []
     
@@ -375,10 +387,10 @@ class SlabDriver(Driver):
      
     def GetNodes(self,node_filter= None, return_fields=None):
 		
-        self.oar.parser.SendRequest("GET_resources_full")
-        node_dict = self.oar.parser.GetNodesFromOARParse()
+        node_dict =self.oar.parser.SendRequest("GET_resources_full")
+        #node_dict = self.oar.parser.GetNodesFromOARParse()
         return_node_list = []
-
+        print>>sys.stderr, "\r\n \r\n \t\t GetNodes node_dict %s" %(node_dict)
         if not (node_filter or return_fields):
                 return_node_list = node_dict.values()
                 return return_node_list
@@ -401,7 +413,7 @@ class SlabDriver(Driver):
     def GetSlices(self,slice_filter = None, return_fields=None):
         
         return_slice_list =[]
-        sliceslist = self.db.find('slice',columns = ['oar_job_id', 'slice_hrn', 'record_id_slice','record_id_user'])
+        sliceslist = self.db.find('slice',columns = ['oar_job_id', 'slice_hrn', 'record_id_slice','record_id_user'], record_filter=slice_filter)
         print >>sys.stderr, " \r\n \r\n SLABDRIVER.PY  GetSlices  slices %s slice_filter %s " %(sliceslist,slice_filter)
         #slicesdict = sliceslist[0]
        
@@ -410,14 +422,20 @@ class SlabDriver(Driver):
             for sl in sliceslist:
                 if sl['oar_job_id'] is not -1: 
                     print >>sys.stderr, " \r\n \r\n SLABDRIVER.PY  GetSlices  sl  %s" %(sl)
-                    self.GetJobs( sl['oar_job_id'],resources=False)
+                    rslt = self.GetJobs( sl['oar_job_id'],resources=False)
+                    print >>sys.stderr, " \r\n \r\n SLABRIVER.PY  GetSlices  rslt   %s" %(rslt)
+                    sl.update(rslt)
             return_slice_list = sliceslist
             return  return_slice_list
         
         return_slice_list  = parse_filter(sliceslist, slice_filter,'slice', return_fields)
         for sl in return_slice_list:
-                if sl['oar_job_id'] is not -1:
-                    self.GetJobs( sl['oar_job_id'],resources=False)
+                if sl['oar_job_id'] is not -1: 
+                    print >>sys.stderr, " \r\n \r\n SLABDRIVER.PY  GetSlices  sl  %s" %(sl)
+                    rslt =self.GetJobs( sl['oar_job_id'],resources=False)
+                    print >>sys.stderr, " \r\n \r\n SLABRIVER.PY  GetSlices  rslt   %s" %(rslt)
+                    sl.update(rslt)
+                   
         #print >>sys.stderr, " \r\n \r\n SLABDRIVER.PY  GetSlices  return_slice_list %s" %(return_slice_list)
         return return_slice_list
     
@@ -527,7 +545,7 @@ class SlabDriver(Driver):
         reqdict['resource'] ="network_address="+ str(len(nodeid_list))
         reqdict['resource']+= ",walltime=" + str(00) + ":" + str(05) + ":" + str(00)
         reqdict['script_path'] = "/bin/sleep 320"
-        reqdict['type'] = "deploy"
+        #reqdict['type'] = "deploy"
         print>>sys.stderr, "\r\n \r\n AddSliceToNodes reqdict   %s \r\n site_list   %s"  %(reqdict,site_list)   
         OAR = OARrestapi()
         answer = OAR.POSTRequestToOARRestAPI('POST_job',reqdict,slice_user)
@@ -667,29 +685,41 @@ class SlabDriver(Driver):
         fields in the record. 
         """
 	print >>sys.stderr, "\r\n \t\t BEFORE fill_record_info %s" %(records)	
-        if isinstance(records, list):
+        if not isinstance(records, list):
             records = [records]
 	#print >>sys.stderr, "\r\n \t\t BEFORE fill_record_pl_info %s" %(records)	
-        
+        parkour = records 
         try:
-            if records['type'] == 'slice':
-    
-                sfatable = SfaTable()
-                recslice = self.db.find('slice',str(records['hrn']))
-                if isinstance(recslice,list) and len(recslice) == 1:
-                    recslice = recslice[0]
-                recuser = sfatable.find(  recslice['record_id_user'], ['hrn'])
-                
-                print >>sys.stderr, "\r\n \t\t  SLABDRIVER.PY fill_record_info %s" %(recuser)
-                records['type']
-                if isinstance(recuser,list) and len(recuser) == 1:
-                    recuser = recuser[0]	          
-                records.update({'PI':[recuser['hrn']],
-                'researcher': [recuser['hrn']],
-                'name':records['hrn'], 'oar_job_id':recslice['oar_job_id'],
-                
-                'node_ids': [],
-                'person_ids':[recslice['record_id_user']]})
+            for record in parkour:
+                    
+                if str(record['type']) == 'slice':
+                    print >>sys.stderr, "\r\n \t\t  SLABDRIVER.PY fill_record_info record %s" %(record)
+                    sfatable = SfaTable()
+                    recslice = self.db.find('slice',str(record['hrn']))
+                    if isinstance(recslice,list) and len(recslice) == 1:
+                        recslice = recslice[0]
+                    recuser = sfatable.find(  recslice['record_id_user'], ['hrn'])
+                    
+                    print >>sys.stderr, "\r\n \t\t  SLABDRIVER.PY fill_record_info %s" %(recuser)
+                    
+                    if isinstance(recuser,list) and len(recuser) == 1:
+                        recuser = recuser[0]	          
+                    record.update({'PI':[recuser['hrn']],
+                    'researcher': [recuser['hrn']],
+                    'name':record['hrn'], 
+                    'oar_job_id':recslice['oar_job_id'],
+                    'node_ids': [],
+                    'person_ids':[recslice['record_id_user']]})
+                    
+                elif str(record['type']) == 'user':  
+                    recslice = self.db.find('slice', record_filter={'record_id_user':record['record_id']})
+                    for rec in recslice:
+                        rec.update({'type':'slice'})
+                        rec.update({'hrn':rec['slice_hrn'], 'record_id':rec['record_id_slice']})
+                        records.append(rec)
+                    print >>sys.stderr, "\r\n \t\t  SLABDRIVER.PY fill_record_info ADDING SLIC EINFO recslice %s" %(recslice) 
+                    
+        
         except TypeError:
             print >>sys.stderr, "\r\n \t\t SLABDRIVER fill_record_info  EXCEPTION RECORDS : %s" %(records)	
             return
