@@ -204,6 +204,26 @@ class OARGETParser:
     def ParseJobsDetails (self): 
         print "ParseJobsDetails"
         
+
+    def ParseJobsIds(self):
+        
+        job_resources =[ 'assigned_resources','Job_Id', 'scheduledStart','state','job_user', 'startTime','walltime','message']
+        job_resources_full = ['Job_Id', 'scheduledStart', 'resubmit_job_id', 'owner', 'submissionTime', 'message', 'id', 'jobType', 'queue', 'launchingDirectory', 'exit_code', 'state', 'array_index', 'events', 'assigned_network_address', 'cpuset_name', 'initial_request', 'job_user', 'assigned_resources', 'array_id', 'job_id', 'resources_uri', 'dependencies', 'api_timestamp', 'startTime', 'reservation', 'properties', 'types', 'walltime', 'name', 'uri', 'wanted_resources', 'project', 'command']
+   
+        job_info = self.raw_json
+     
+        values=[]
+        try:
+            for k in job_resources:
+                values.append(job_info[k])
+            return dict(zip(job_resources,values))
+            
+        except KeyError:
+                print>>sys.stderr, " \r\n \t ParseJobsIds Key Error"
+            
+        
+        
+        
     def ParseJobsIdResources(self):
         print>>sys.stderr, "ParseJobsIdResources"
             
@@ -310,7 +330,7 @@ class OARGETParser:
         'GET_version': {'uri':'/oarapi/version.json', 'parse_func': ParseVersion},
         'GET_timezone':{'uri':'/oarapi/timezone.json' ,'parse_func': ParseTimezone },
         'GET_jobs': {'uri':'/oarapi/jobs.json','parse_func': ParseJobs},
-        'GET_jobs_id': {'uri':'/oarapi/jobs/id/resources.json','parse_func': ParseJobsIdResources},
+        'GET_jobs_id': {'uri':'/oarapi/jobs/id.json','parse_func': ParseJobsIds},
         'GET_jobs_id_resources': {'uri':'/oarapi/jobs/id/resources.json','parse_func': ParseJobsIdResources},
         'GET_jobs_table': {'uri':'/oarapi/jobs/table.json','parse_func': ParseJobsTable},
         'GET_jobs_details': {'uri':'/oarapi/jobs/details.json','parse_func': ParseJobsDetails},
@@ -339,19 +359,4 @@ class OARGETParser:
         else:
             print>>sys.stderr, "\r\n OARGetParse __init__ : ERROR_REQUEST "	,request
             
-#class OARapi:
 
-    #def __init__(self):
-            #self.server = OARrestapi()
-            #self.parser = OARGETParser(self.server)
-
-
-            
-
-    
-                    
-    #def GetJobs(self):
-        #print>>sys.stderr, " \r\n GetJobs" 
-        #self.parser.SendRequest("GET_jobs")	
-        #return self.parser.GetJobsFromOARParse()
-    
