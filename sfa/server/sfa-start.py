@@ -40,10 +40,10 @@ from sfa.trust.trustedroots import TrustedRoots
 from sfa.trust.certificate import Keypair, Certificate
 from sfa.trust.hierarchy import Hierarchy
 from sfa.trust.gid import GID
-
 from sfa.server.sfaapi import SfaApi
 from sfa.server.registry import Registries
 from sfa.server.aggregate import Aggregates
+from sfa.client.return_value import ReturnValue
 
 # after http://www.erlenstar.demon.co.uk/unix/faq_2.html
 def daemon():
@@ -100,7 +100,7 @@ def install_peer_certs(server_key_file, server_cert_file):
                 logger.info("get_trusted_certs: skipping non sfa aggregate: %s" % new_hrn)
                 continue
       
-            trusted_gids = interface.get_trusted_certs()
+            trusted_gids = ReturnValue.get_value(interface.get_trusted_certs())
             if trusted_gids:
                 # the gid we want should be the first one in the list,
                 # but lets make sure
@@ -109,7 +109,7 @@ def install_peer_certs(server_key_file, server_cert_file):
                     message = "interface: %s\t" % (api.interface)
                     message += "unable to install trusted gid for %s" % \
                                (new_hrn)
-                    gid = GID(string=trusted_gids[0])
+                    gid = GID(string=trusted_gid)
                     peer_gids.append(gid)
                     if gid.get_hrn() == new_hrn:
                         gid_filename = os.path.join(trusted_certs_dir, '%s.gid' % new_hrn)
