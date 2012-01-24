@@ -72,22 +72,20 @@ def main():
 
     process_options()
     config = Config()
+    sfaImporter = sfaImport()
+    logger=sfaImporter.logger
+    logger.setLevelFromOptVerbose(config.SFA_API_LOGLEVEL)
     if not config.SFA_REGISTRY_ENABLED:
         sys.exit(0)
     root_auth = config.SFA_REGISTRY_ROOT_AUTH
     interface_hrn = config.SFA_INTERFACE_HRN
-    keys_filename = config.config_path + os.sep + 'person_keys.py' 
-    sfaImporter = sfaImport()
-    sfaImporter.create_top_level_records()
-    logger=sfaImporter.logger
-    logger.setLevelFromOptVerbose(config.SFA_API_LOGLEVEL)
     shell = PlShell (config)
+    sfaImporter.create_top_level_records()
     
     # create dict of all existing sfa records
     existing_records = {}
     existing_hrns = []
     key_ids = []
-    person_keys = {} 
     for record in dbsession.query(RegRecord):
         existing_records[ (record.hrn, record.type,) ] = record
         existing_hrns.append(record.hrn) 
@@ -113,7 +111,9 @@ def main():
         keys_dict[key['key_id']] = key['key']
 
     # create a dict of person keys keyed on key_id 
+    keys_filename = config.config_path + os.sep + 'person_keys.py' 
     old_person_keys = load_keys(keys_filename)
+    person_keys = {} 
     for person in persons:
         pubkeys = []
         for key_id in person['key_ids']:
