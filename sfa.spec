@@ -1,6 +1,6 @@
 %define name sfa
 %define version 2.0
-%define taglevel 9
+%define taglevel 10
 
 %define release %{taglevel}%{?pldistro:.%{pldistro}}%{?date:.%{date}}
 %global python_sitearch	%( python -c "from distutils.sysconfig import get_python_lib; print get_python_lib(1)" )
@@ -224,6 +224,15 @@ fi
 [ "$1" -ge "1" ] && service sfa-cm restart || :
 
 %changelog
+* Wed Jan 25 2012 Tony Mack <tmack@cs.princeton.edu> - sfa-2.0-10
+- client: added -R --raw sfi cmdline option that displays raw server response.
+- client: request GENI RSpec by default. 
+- server: remove database dependencies from sfa.server.sfaapi.
+- server: increased default credential lifetime to 31 days.
+- bugfix: fixed bug in sfa.storage.record.SfaRecord.delete().
+- bugfix: fixed server key path in sfa.server.sfa-clean-peer-records.
+- bugfix: fixed bug in sfa.server.sfa-start.install_peer_certs(). 
+ 
 * Sat Jan 7 2012 Tony Mack <tmack@cs.princeton.edu> - sfa-2.0-9
 - bugfix: 'geni_api' should be in the top level struct, not the code struct
 - bugfix: Display the correct host and port in 'geni_api_versions' field of the GetVersion
