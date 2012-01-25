@@ -72,18 +72,20 @@ class SlabAggregate:
             return (slice, slivers)
         slice = slices[0]
 
-        # sort slivers by node id 
-        try:
-               
-            for node_id in slice['assigned_network_address']:
-                node_id = self.driver.root_auth + '.' + node_id
-                sliver = Sliver({'sliver_id': urn_to_sliver_id(slice_urn, slice['record_id_slice'], node_id),
-                                'name': slice['slice_hrn'],
-                                'type': 'slab-vm', 
-                                'tags': []})
-                slivers[node_id]= sliver
-        except KeyError:
-                print>>sys.stderr, " \r\n \t\t get_slice_and_slivers KeyError "
+        # sort slivers by node id , if there is a job
+        #and therfore, node allocated to this slice
+        if slice['oar_job_id'] is not -1:
+            try:
+                
+                for node_id in slice['assigned_network_address']:
+                    node_id = self.driver.root_auth + '.' + node_id
+                    sliver = Sliver({'sliver_id': urn_to_sliver_id(slice_urn, slice['record_id_slice'], node_id),
+                                    'name': slice['slice_hrn'],
+                                    'type': 'slab-vm', 
+                                    'tags': []})
+                    slivers[node_id]= sliver
+            except KeyError:
+                    print>>sys.stderr, " \r\n \t\t get_slice_and_slivers KeyError "
         ## sort sliver attributes by node id    
         ##tags = self.driver.GetSliceTags({'slice_tag_id': slice['slice_tag_ids']})
         ##for tag in tags:

@@ -207,7 +207,7 @@ class OARGETParser:
 
     def ParseJobsIds(self):
         
-        job_resources =[ 'assigned_resources','Job_Id', 'scheduledStart','state','job_user', 'startTime','walltime','message']
+        job_resources =['assigned_network_address', 'assigned_resources','Job_Id', 'scheduledStart','state','job_user', 'startTime','walltime','message']
         job_resources_full = ['Job_Id', 'scheduledStart', 'resubmit_job_id', 'owner', 'submissionTime', 'message', 'id', 'jobType', 'queue', 'launchingDirectory', 'exit_code', 'state', 'array_index', 'events', 'assigned_network_address', 'cpuset_name', 'initial_request', 'job_user', 'assigned_resources', 'array_id', 'job_id', 'resources_uri', 'dependencies', 'api_timestamp', 'startTime', 'reservation', 'properties', 'types', 'walltime', 'name', 'uri', 'wanted_resources', 'project', 'command']
    
         job_info = self.raw_json

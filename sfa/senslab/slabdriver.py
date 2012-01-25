@@ -369,11 +369,22 @@ class SlabDriver(Driver):
                 
 	if job_id and resources is False:
             job_info = self.oar.parser.SendRequest("GET_jobs_id", job_id)
-            print>>sys.stderr, "\r\n \r\n \t\t GetJobs resources is False job_info %s" %(job_info)
-
+            try :
+                for n in job_info['assigned_network_address']:
+                    n = str(self.root_auth) + str(n)
+                print>>sys.stderr, "\r\n \r\n \t\t GetJobs resources is False job_info %s" %(job_info)
+            except KeyError:
+                print>>sys.stderr, "\r\n \r\n \t\t GetJobs KEYERROR " 
+                
         if job_id and resources :	
-            job_info = self.oar.parser.SendRequest("GET_jobs_id_resources", job_id)
-            print>>sys.stderr, "\r\n \r\n \t\t GetJobs job_info %s" %(job_info)
+            job_info = self.oar.parser.SendRequest("GET_jobs_id_resources", job_id) 
+            try :
+                for n in job_info['reserverd_resources']:
+                    n = str(self.root_auth) + str(n)
+                print>>sys.stderr, "\r\n \r\n \t\t GetJobs job_info %s" %(job_info)
+            except KeyError:
+                print>>sys.stderr, "\r\n \r\n \t\t GetJobs KEYERROR " 
+            
             
         if job_info['state'] == 'Terminated':
             print>>sys.stderr, "\r\n \r\n \t\t GetJobs TERMINELEBOUSIN "
@@ -395,17 +406,7 @@ class SlabDriver(Driver):
         return_node_list= parse_filter(node_dict.values(),node_filter ,'node', return_fields)
         return return_node_list
     
-    #def GetSites(self, auth, site_filter = None, return_fields=None):
-        #self.oar.parser.SendRequest("GET_resources_full")
-        #site_dict = self.oar.parser.GetSitesFromOARParse()
-        #return_site_list = []
-        #site = site_dict.values()[0]
-        #if not (site_filter or return_fields):
-                #return_site_list = site_dict.values()
-                #return return_site_list
-        
-        #return_site_list = parse_filter(site_dict.values(),site_filter ,'site', return_fields)
-        #return return_site_list
+  
     
     def GetSlices(self,slice_filter = None, return_fields=None):
         
@@ -435,12 +436,8 @@ class SlabDriver(Driver):
            
             print >>sys.stderr, " \r\n \r\n \tSLABDRIVER.PY  GetSlices  return_slice_list  %s" %(return_slice_list)  
             return  return_slice_list
+
         
-     
-        
-        
-      
-        return return_slice_list
     
     def testbed_name (self): return "senslab2" 
          
