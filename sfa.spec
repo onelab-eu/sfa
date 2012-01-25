@@ -153,6 +153,7 @@ rm -rf $RPM_BUILD_ROOT
 %config /etc/sfa/default_config.xml
 %config (noreplace) /etc/sfa/aggregates.xml
 %config (noreplace) /etc/sfa/registries.xml
+/usr/share/sfa/migrations
 /usr/share/sfa/examples
 /var/www/html/wsdl/*.wsdl
 
