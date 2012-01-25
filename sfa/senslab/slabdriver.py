@@ -366,31 +366,36 @@ class SlabDriver(Driver):
         #assigned_res = ['resource_id', 'resource_uri']
         #assigned_n = ['node', 'node_uri']
       
-                
+     
 	if job_id and resources is False:
-            job_info = self.oar.parser.SendRequest("GET_jobs_id", job_id)
-            try :
-                for n in job_info['assigned_network_address']:
-                    n = str(self.root_auth) + str(n)
-                print>>sys.stderr, "\r\n \r\n \t\t GetJobs resources is False job_info %s" %(job_info)
-            except KeyError:
-                print>>sys.stderr, "\r\n \r\n \t\t GetJobs KEYERROR " 
-                
-        if job_id and resources :	
-            job_info = self.oar.parser.SendRequest("GET_jobs_id_resources", job_id) 
-            try :
-                for n in job_info['reserverd_resources']:
-                    n = str(self.root_auth) + str(n)
-                print>>sys.stderr, "\r\n \r\n \t\t GetJobs job_info %s" %(job_info)
-            except KeyError:
-                print>>sys.stderr, "\r\n \r\n \t\t GetJobs KEYERROR " 
+            req = "GET_jobs_id"
+            node_list = 'assigned_network_address'
+        if job_id and resources :
+            req = "GET_jobs_id_resources"
+            node_list = 'reserverd_resources'
             
-            
+        #Get job info from OAR    
+        job_info = self.oar.parser.SendRequest(req, job_id)
         if job_info['state'] == 'Terminated':
             print>>sys.stderr, "\r\n \r\n \t\t GetJobs TERMINELEBOUSIN "
             return None
-        else:
+         
+        try :
+            
+            for n in job_info[node_list]:
+                n = str(self.root_auth) + str(n)
+            print>>sys.stderr, "\r\n \r\n \t\t GetJobs resources  job_info %s" %(job_info)
             return job_info
+            
+        except KeyError:
+            print>>sys.stderr, "\r\n \r\n \t\t GetJobs KEYERROR " 
+            
+  
+            
+            
+       
+       
+            
      
        
      
