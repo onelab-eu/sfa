@@ -37,6 +37,7 @@ python-install:
 	python setup.py install --root=$(DESTDIR)	
 	chmod 444 $(DESTDIR)/etc/sfa/default_config.xml
 	rm -rf $(DESTDIR)/usr/lib*/python*/site-packages/*egg-info
+	rm -rf $(DESTDIR)/usr/lib*/python*/site-packages/sfa/storage/migrations
 	(cd $(DESTDIR)/usr/bin ; ln -s sfi.py sfi; ln -s sfascan.py sfascan)
 
 python-clean: version-clean
@@ -158,6 +159,10 @@ synctest: synccheck
 	+$(RSYNC) ./tests/ $(SSHURL)/root/tests-sfa
 syncrestart: synccheck
 	$(SSHCOMMAND) exec service sfa restart
+
+syncmig:
+	+$(RSYNC) ./sfa/storage/migrations $(SSHURL)/usr/share/sfa/
+
 
 # full-fledged
 sync: synclib syncbin syncinit syncconfig syncrestart
