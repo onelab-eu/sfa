@@ -409,60 +409,37 @@ class SlabDriver(Driver):
     
     def GetSlices(self,slice_filter = None, return_fields=None):
         
-        return_slice_list =[]
+
         sliceslist = self.db.find('slice',columns = ['oar_job_id', 'slice_hrn', 'record_id_slice','record_id_user'], record_filter=slice_filter)
         
         print >>sys.stderr, " \r\n \r\n \tSLABDRIVER.PY  GetSlices  slices %s slice_filter %s " %(sliceslist,slice_filter)
       
-       
+        return_slice_list  = parse_filter(sliceslist, slice_filter,'slice', return_fields)
                     
-        if not (slice_filter or return_fields) and sliceslist:
-            for sl in sliceslist:
+        if return_slice_list:
+            for sl in return_slice_list:
                 if sl['oar_job_id'] is not -1: 
                     rslt = self.GetJobs( sl['oar_job_id'],resources=False)
-                    print >>sys.stderr, " \r\n \r\n \tSLABRIVER.PY  GetSlices  rslt   %s" %(rslt)
                     
                     if rslt :
                         sl.update(rslt)
                         sl.update({'hrn':str(sl['slice_hrn'])}) 
-                        print >>sys.stderr, " \r\n \r\n \tSLABDRIVER.PY  GetSlices  slice SL  %s" %(sl)
                     #If GetJobs is empty, this means the job is now in the 'Terminated' state
                     #Update the slice record
                     else :
                         sl['oar_job_id'] = '-1'
-                       
                         sl.update({'hrn':str(sl['slice_hrn'])})
-                        print >>sys.stderr, " \r\n \r\n \tSLABDRIVER.PY  GetSlices  TERMINATEDDFDDDDD  %s" %(sl)
                         self.db.update_senslab_slice(sl)
                                  
                                  
-            return_slice_list = sliceslist
+           
             print >>sys.stderr, " \r\n \r\n \tSLABDRIVER.PY  GetSlices  return_slice_list  %s" %(return_slice_list)  
             return  return_slice_list
         
-        return_slice_list  = parse_filter(sliceslist, slice_filter,'slice', return_fields)
+     
         
         
-        for sl in return_slice_list:
-                if sl['oar_job_id'] is not -1: 
-                    print >>sys.stderr, " \r\n \r\n SLABDRIVER.PY  GetSlices  sl  %s" %(sl)
-                    rslt =self.GetJobs( sl['oar_job_id'],resources=False)
-                    print >>sys.stderr, " \r\n \r\n SLABRIVER.PY  GetSlices  rslt   %s" %(rslt)
-                    if rslt :
-                        sl.update(rslt)
-                        sl.update({'hrn':str(sl['slice_hrn'])}) 
-                        print >>sys.stderr, " \r\n \r\n \tSLABDRIVER.PY  GetSlices  slice SL  %s" %(sl)
-                    #If GetJobs is empty, this means the job is now in the 'Terminated' state
-                    #Update the slice record
-                    else :
-                        sl['oar_job_id'] = '-1'
-                       
-                        sl.update({'hrn':str(sl['slice_hrn'])})
-                        print >>sys.stderr, " \r\n \r\n \tSLABDRIVER.PY  GetSlices  TERMINATEDDFDDDDD  %s" %(sl)
-                        self.db.update_senslab_slice(sl)
-                       
-                   
-        #print >>sys.stderr, " \r\n \r\n SLABDRIVER.PY  GetSlices  return_slice_list %s" %(return_slice_list)
+      
         return return_slice_list
     
     def testbed_name (self): return "senslab2" 
