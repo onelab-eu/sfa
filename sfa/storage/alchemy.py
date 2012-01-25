@@ -59,23 +59,6 @@ class Alchemy:
         self._session.close()
         self._session=None
 
-    def commit (self):
-        self.session().commit()
-            
-    def insert (self, stuff, commit=False):
-        if isinstance (stuff,list):
-            self.session().add_all(stuff)
-        else:
-            self.session().add(obj)
-
-    # for compat with the previous PostgreSQL stuff
-    def update (self, record):
-        self.commit()
-
-    def remove (self, record):
-        self.delete(record)
-        self.commit()
-
 ####################
 from sfa.util.config import Config
 

@@ -210,6 +210,9 @@ class RegNode (RegRecord):
         return RegRecord.__repr__(self).replace("Record","Node")
 
 ##############################
+# although the db needs of course to be reachable,
+# the schema management functions are here and not in alchemy
+# because the actual details of the classes need to be known
 def init_tables(dbsession):
     logger.info("Initializing db schema and builtin types")
     # the doc states we could retrieve the engine this way
