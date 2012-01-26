@@ -107,7 +107,6 @@ class AlchemyObj:
 # accomodate variants in types like authority+am and the like
 
 class RegRecord (Base,AlchemyObj):
-    # xxx tmp would be 'records'
     __tablename__       = 'records'
     record_id           = Column (Integer, primary_key=True)
     # this is the discriminator that tells which class to use
