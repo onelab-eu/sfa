@@ -13,8 +13,8 @@ from optparse import OptionParser
 
 from sfa.util.sfalogging import logger
 
-from sfa.storage.alchemy import dbsession
-from sfa.storage.model import init_tables,drop_tables
+from sfa.storage.alchemy import engine
+from sfa.storage.dbschema import DBSchema
 
 def main():
    usage="%prog: trash the registry DB"
@@ -29,14 +29,15 @@ def main():
    if args:
       parser.print_help()
       sys.exit(1)
+   dbschema=DBSchema()
    logger.info("Purging SFA records from database")
-   drop_tables(dbsession)
+   dbschema.nuke()
    # for convenience we re-create the schema here, so there's no need for an explicit
    # service sfa restart
    # however in some (upgrade) scenarios this might be wrong
    if options.reinit:
       logger.info("re-creating empty schema")
-      init_tables(dbsession)
+      dbschema.init_or_upgrade(engine)
 
    if options.clean_certs:
       # remove the server certificate and all gids found in /var/lib/sfa/authorities

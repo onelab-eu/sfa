@@ -25,15 +25,16 @@ class Alchemy:
         # we indeed have /var/lib/pgsql/data/postgresql.conf where
         # this setting is unset, it might be an angle to tweak that if need be
         # try a unix socket first - omitting the hostname does the trick
-        unix_desc = "postgresql+psycopg2://%s:%s@:%s/%s"%\
+        unix_url = "postgresql+psycopg2://%s:%s@:%s/%s"%\
             (config.SFA_DB_USER,config.SFA_DB_PASSWORD,config.SFA_DB_PORT,dbname)
         # the TCP fallback method
-        tcp_desc = "postgresql+psycopg2://%s:%s@%s:%s/%s"%\
+        tcp_url = "postgresql+psycopg2://%s:%s@%s:%s/%s"%\
             (config.SFA_DB_USER,config.SFA_DB_PASSWORD,config.SFA_DB_HOST,config.SFA_DB_PORT,dbname)
-        for engine_desc in [ unix_desc, tcp_desc ] :
+        for url in [ unix_url, tcp_url ] :
             try:
-                self.engine = create_engine (engine_desc)
+                self.engine = create_engine (url)
                 self.check()
+                self.url=url
                 return
             except:
                 pass

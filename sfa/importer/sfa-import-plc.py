@@ -66,8 +66,8 @@ def _get_site_hrn(interface_hrn, site):
             hrn = ".".join([interface_hrn, "internet2", site['login_base']])
     return hrn
 
-# maybe could use a call to model.init_tables somewhere
-# however now import s expected to be done after service creation..
+# one would think this code could use a call to DBSchema 
+# however now import s expected to be done after service creation
 def main():
 
     process_options()

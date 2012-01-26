@@ -1,4 +1,4 @@
-#!/bin/bash
+!/bin/bash
 #
 # sfa   Wraps PLCAPI into the SFA compliant API
 #
@@ -65,41 +65,11 @@ DATE=$(date +"%Y-%m-%d-%H-%M-%S")
 # Dumps the database - optional argument to specify filename suffix
 function dump_sfa_db() {
     if [ -n "$1" ] ; then suffix="-$1" ; else suffix="" ; fi
-    dumpfile=/var/lib/pgsql/backups/$(date +"${SFA_DB_NAME}.${DATE}${suffix}.sql")
+    mkdir -p /usr/share/sfa/backups
+    dumpfile=/usr/share/sfa/backups/$(date +"${SFA_DB_NAME}.${DATE}${suffix}.sql")
     pg_dump -U $SFA_DB_USER $SFA_DB_NAME > $dumpfile
+    echo "Saved sfa database in $dumpfile"
     check
-}
-
-# Updates the database by applying migration scripts
-# using sqlalchemy-migrate for this 
-# migrate repo is /usr/share/sfa/migrations/
-# and version scripts are thus in /usr/share/sfa/migrations/versions/
-function db_migrate() {
-
-    # only if enabled
-    [ "$SFA_DB_ENABLED" == 1 ] || return
-
-    alchemy_url="postgresql+psycopg2://${SFA_DB_USER}:${SFA_DB_PASSWORD}@:${SFA_DB_PORT}/${SFA_DB_NAME}"
-    migrate_repo="/usr/share/sfa/migrations"
-    # check if under version control, and initialize it otherwise
-    if ! sqlalchemy-migrate db_version --url=$alchemy_url $migrate_repo >& /dev/null ; then
-	# at this point it would make sense to
-	# check that the 'users' table is in the db
-	# if not, backup/dump, and run a nuke/import
-	# and then only init the db version to 0
-	echo -n $"version init in db ${SFA_DB_NAME}" 
-	sqlalchemy-migrate version_control --url=$alchemy_url $migrate_repo 
-    fi
-    version_before=$(sqlalchemy-migrate db_version --url=$alchemy_url $migrate_repo)
-    check
-    sqlalchemy-migrate upgrade --url=$alchemy_url $migrate_repo 2> /dev/null
-    check
-    version_after=$(sqlalchemy-migrate db_version --url=$alchemy_url $migrate_repo)
-    if [ "$version_before" != "$version_after" -o "$ERRORS" != 0 ] ; then
-	MESSAGE=$"DB version: $version_before -> $version_after"
-	echo -n "$MESSAGE"
-	[ "$ERRORS" == 0 ] && success "$MESSAGE" || failure "$MESSAGE" ; echo
-    fi
 }
 
 # Regenerate configuration files - almost verbatim from plc.init
@@ -288,7 +258,7 @@ function start() {
     reload
 
     db_start
-    db_migrate
+    # migrations are now handled in the code by sfa.storage.dbschema
 
     # install peer certs
     action $"SFA installing peer certs" daemon /usr/bin/sfa-start.py -t -d $OPTIONS 
@@ -330,8 +300,11 @@ case "$1" in
 	status sfa-start.py
 	RETVAL=$?
 	;;
+    dbdump)
+	dump_sfa_db
+	;;
     *)
-	echo $"Usage: $0 {start|stop|reload|restart|condrestart|status}"
+	echo $"Usage: $0 {start|stop|reload|restart|condrestart|status|dbdump}"
 	exit 1
 	;;
 esac

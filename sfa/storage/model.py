@@ -212,20 +212,16 @@ class RegNode (RegRecord):
 # although the db needs of course to be reachable,
 # the schema management functions are here and not in alchemy
 # because the actual details of the classes need to be known
-def init_tables(dbsession):
-    logger.info("Initializing db schema and builtin types")
-    # the doc states we could retrieve the engine this way
-    # engine=dbsession.get_bind()
-    # however I'm getting this
-    # TypeError: get_bind() takes at least 2 arguments (1 given)
-    # so let's import alchemy - but not from toplevel 
-    from sfa.storage.alchemy import engine
+# migrations: this code has no notion of the previous versions
+# of the data model nor of migrations
+# sfa.storage.migrations.db_init uses this when starting from
+# a fresh db only
+def init_tables(engine):
+    logger.info("Initializing db schema from current/latest model")
     Base.metadata.create_all(engine)
 
-def drop_tables(dbsession):
-    logger.info("Dropping tables")
-    # same as for init_tables
-    from sfa.storage.alchemy import engine
+def drop_tables(engine):
+    logger.info("Dropping tables from current/latest model")
     Base.metadata.drop_all(engine)
 
 ##############################
