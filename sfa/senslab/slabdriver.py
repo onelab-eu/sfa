@@ -369,22 +369,38 @@ class SlabDriver(Driver):
      
 	if job_id and resources is False:
             req = "GET_jobs_id"
-            node_list = 'assigned_network_address'
+            node_list_k = 'assigned_network_address'
         if job_id and resources :
             req = "GET_jobs_id_resources"
-            node_list = 'reserverd_resources'
+            node_list_k = 'reserverd_resources'
             
         #Get job info from OAR    
         job_info = self.oar.parser.SendRequest(req, job_id)
         if job_info['state'] == 'Terminated':
             print>>sys.stderr, "\r\n \r\n \t\t GetJobs TERMINELEBOUSIN "
             return None
-         
+        
+        #Get a dict of nodes . Key :hostname of the node
+        node_list = self.GetNodes() 
+        node_hostname_list = []
+        for node in node_list:
+            node_hostname_list.append(node['hostname'])
+        node_dict = dict(zip(node_hostname_list,node_list))
+        
+        print>>sys.stderr, "\r\n \r\n \r\n \r\n \r\n  \t\t GetJobs GetNODES %s "  %(node_list)
         try :
             
-            for n in job_info[node_list]:
-                n = str(self.root_auth) + str(n)
-            print>>sys.stderr, "\r\n \r\n \t\t GetJobs resources  job_info %s" %(job_info)
+            #for n in job_info[node_list]:
+                #n = str(self.root_auth) + str(n)            
+
+            liste =job_info[node_list_k] 
+            print>>sys.stderr, "\r\n \r\n \t\t GetJobs resources  job_info liste%s" %(liste)
+            for k in range(len(liste)):
+               job_info[node_list_k][k] = node_dict[job_info[node_list_k][k]]['hostname']
+            
+            print>>sys.stderr, "\r\n \r\n \t\t YYYYYYYYYYYYGetJobs resources  job_info %s" %(job_info)  
+            job_info.update({'node_ids':job_info[node_list_k]})
+            del job_info[node_list_k]
             return job_info
             
         except KeyError:
@@ -392,11 +408,7 @@ class SlabDriver(Driver):
             
   
             
-            
-       
-       
-            
-     
+
        
      
     def GetNodes(self,node_filter= None, return_fields=None):

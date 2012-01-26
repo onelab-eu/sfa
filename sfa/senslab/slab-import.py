@@ -114,7 +114,7 @@ def import_node(hrn, node):
     node_record['date_created'] = int(time.mktime(extime.timetuple()))
     existing_records = table.find({'hrn': hrn, 'type': 'node', 'pointer': node['node_id']})
     if not existing_records:
-        print>>sys.stderr, " \r\n \t slab-import : node record %s inserted" %(node['node_id'])
+        print>>sys.stderr, " \r\n \t slab-import : node record[hrn]%s inserted" %(node['hrn'])
         table.insert(node_record)
     else:
         existing_record = existing_records[0]
@@ -232,7 +232,8 @@ def main():
     for node in nodes_dict:
         # Sandrine
         # A changer pour l utilisation du nouveau OAR de prod, le site etant contenu dans le hostname
-        hrn =  hostname_to_hrn( root_auth,node['site_login_base'], node['hostname'])
+        hrn = node['hrn']
+        #hrn =  hostname_to_hrn( root_auth,node['site_login_base'], node['hostname'])
         if hrn not in existing_hrns or \
         (hrn, 'node') not in existing_records:
             import_node(hrn, node)

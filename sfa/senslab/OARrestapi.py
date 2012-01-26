@@ -6,8 +6,9 @@ from sfa.senslab.parsing import *
 from sfa.senslab.SenslabImportUsers import *
 import urllib
 import urllib2
-
-
+from sfa.util.config import Config
+from sfa.util.plxrn import PlXrn
+from sfa.util.xrn import hrn_to_urn, get_authority,Xrn,get_leaf
 #OARIP='10.127.255.254'
 OARIP='192.168.0.109'
 
@@ -47,7 +48,8 @@ class OARrestapi:
         self.oarserver['port'] = 80
         self.oarserver['uri'] = None
         self.oarserver['postformat'] = 'json'
-        self.parser = OARGETParser(self)	
+        self.parser = OARGETParser(self)
+       
             
     def GETRequestToOARRestAPI(self, request, strval=None  ): 
         self.oarserver['uri'] = OARrequests_get_uri_dict[request] 
@@ -282,7 +284,9 @@ class OARGETParser:
                     
                 else:
                     pass
-
+                
+    def hostname_to_hrn(self, root_auth, login_base, hostname):
+        return PlXrn(auth=root_auth,hostname=login_base+'_'+hostname).get_hrn()
     #Retourne liste de dictionnaires contenant attributs des sites	
     def ParseSites(self):
         nodes_per_site = {}
@@ -290,6 +294,7 @@ class OARGETParser:
         # Create a list of nodes per  site_id
         for node_id in self.node_dictlist.keys():
             node  = self.node_dictlist[node_id]
+            
             if node['site_login_base'] not in nodes_per_site.keys():
                 nodes_per_site[node['site_login_base']] = []
                 nodes_per_site[node['site_login_base']].append(node['node_id'])
@@ -300,6 +305,11 @@ class OARGETParser:
         # and value is a dictionary of properties, including the list of the node_ids
         for node_id in self.node_dictlist.keys():
             node  = self.node_dictlist[node_id]
+            node.update({'hrn':self.hostname_to_hrn(self.interface_hrn, node['site_login_base'],node['hostname'])})
+            #node['hrn'] = self.hostname_to_hrn(self.interface_hrn, node['site_login_base'],node['hostname'])
+            self.node_dictlist.update({node_id:node})
+            if node_id is 1:
+                print>>sys.stderr, " \r\n \r\n \t \t\t\t OARESTAPI Parse Sites self.node_dictlist %s " %(self.node_dictlist)
             if node['site_login_base'] not in self.site_dict.keys():
                 self.site_dict[node['site_login_base']] = [('login_base', node['site_login_base']),\
                                                         ('node_ids',nodes_per_site[node['site_login_base']]),\
@@ -330,6 +340,8 @@ class OARGETParser:
     
     def __init__(self, srv ):
         self.version_json_dict= { 'api_version' : None , 'apilib_version' :None,  'api_timezone': None, 'api_timestamp': None, 'oar_version': None ,}
+        self.config = Config()
+        self.interface_hrn = self.config.SFA_INTERFACE_HRN	
         self.timezone_json_dict = { 'timezone': None, 'api_timestamp': None, }
         self.jobs_json_dict = { 'total' : None, 'links' : [] , 'offset':None , 'items' : [] , }
         self.jobs_table_json_dict = self.jobs_json_dict
