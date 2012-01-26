@@ -13,7 +13,7 @@ from sfa.trust.hierarchy import Hierarchy
 from sfa.server.registry import Registries
 
 from sfa.storage.alchemy import dbsession
-from sfa.storage.persistentobjs import RegRecord
+from sfa.storage.model import RegRecord
 
 from sfa.client.sfaserverproxy import SfaServerProxy 
 

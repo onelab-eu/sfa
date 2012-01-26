@@ -14,7 +14,7 @@ from optparse import OptionParser
 from sfa.util.sfalogging import logger
 
 from sfa.storage.alchemy import dbsession
-from sfa.storage.persistentobjs import init_tables,drop_tables
+from sfa.storage.model import init_tables,drop_tables
 
 def main():
    usage="%prog: trash the registry DB"

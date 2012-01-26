@@ -131,7 +131,7 @@ def update_cert_records(gids):
     """
     # import db stuff here here so this module can be loaded by PlcComponentApi
     from sfa.storage.alchemy import dbsession
-    from sfa.storage.persistentobjs import RegRecord
+    from sfa.storage.model import RegRecord
     if not gids:
         return
     # get records that actually exist in the db

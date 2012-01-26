@@ -28,8 +28,8 @@ from sfa.util.config import Config
 from sfa.util.version import version_core
 from sfa.util.cache import Cache
 
-from sfa.storage.persistentobjs import RegRecord, RegAuthority, RegUser, RegSlice, RegNode
-from sfa.storage.persistentobjs import make_record
+from sfa.storage.model import RegRecord, RegAuthority, RegUser, RegSlice, RegNode
+from sfa.storage.model import make_record
 
 from sfa.rspecs.rspec import RSpec
 from sfa.rspecs.rspec_converter import RSpecConverter

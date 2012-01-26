@@ -1,7 +1,7 @@
 import unittest
 from sfa.trust.gid import *
 from sfa.util.config import *
-from sfa.storage.persistentobjs import RegRecord
+from sfa.storage.model import RegRecord
 
 class TestStorage(unittest.TestCase):
     def setUp(self):

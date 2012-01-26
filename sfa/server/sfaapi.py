@@ -161,7 +161,7 @@ class SfaApi (XmlrpcApi):
             auth_hrn = hrn
         auth_info = self.auth.get_auth_info(auth_hrn)
         from sfa.storage.alchemy import dbsession
-        from sfa.storage.persistentobjs import RegRecord
+        from sfa.storage.model import RegRecord
         record = dbsession.query(RegRecord).filter_by(type='authority+sa', hrn=hrn).first()
         if not record:
             raise RecordNotFound(hrn)

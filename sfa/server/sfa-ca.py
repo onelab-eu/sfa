@@ -28,7 +28,7 @@ from sfa.trust.gid import GID, create_uuid
 from sfa.trust.hierarchy import Hierarchy
 
 from sfa.storage.alchemy import dbsession
-from sfa.storage.persistentobjs import RegRecord
+from sfa.storage.model import RegRecord
 
 def main():
     args = sys.argv

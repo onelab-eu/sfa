@@ -10,7 +10,7 @@ from sqlalchemy import ForeignKey
 from sfa.util.sfalogging import logger
 
 # this module is designed to be loaded when the configured db server is reachable
-# OTOH persistentobjs can be loaded from anywhere including the client-side
+# OTOH model can be loaded from anywhere including the client-side
 
 class Alchemy:
 

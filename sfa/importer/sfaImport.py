@@ -16,7 +16,7 @@ from sfa.trust.certificate import convert_public_key, Keypair
 from sfa.trust.trustedroots import TrustedRoots
 from sfa.trust.hierarchy import Hierarchy
 from sfa.trust.gid import create_uuid
-from sfa.storage.persistentobjs import RegRecord, RegAuthority, RegUser
+from sfa.storage.model import RegRecord, RegAuthority, RegUser
 from sfa.storage.alchemy import dbsession
 
 def _un_unicode(str):

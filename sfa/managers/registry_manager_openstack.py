@@ -18,7 +18,7 @@ from sfa.trust.credential import Credential
 from sfa.trust.certificate import Certificate, Keypair, convert_public_key
 from sfa.trust.gid import create_uuid
 
-from sfa.storage.persistentobjs import make_record,RegRecord
+from sfa.storage.model import make_record,RegRecord
 from sfa.storage.alchemy import dbsession
 
 from sfa.managers.registry_manager import RegistryManager

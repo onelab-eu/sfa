@@ -29,7 +29,7 @@ from sfa.trust.certificate import convert_public_key, Keypair
 from sfa.openstack.openstack_shell import OpenstackShell    
 
 from sfa.storage.alchemy import dbsession
-from sfa.storage.persistentobjs import RegRecord, RegAuthority, RegUser, RegSlice, RegNode
+from sfa.storage.model import RegRecord, RegAuthority, RegUser, RegSlice, RegNode
 
 from sfa.importer.sfaImport import sfaImport, _cleanup_string
 

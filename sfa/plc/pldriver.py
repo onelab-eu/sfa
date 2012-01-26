@@ -12,7 +12,7 @@ from sfa.util.cache import Cache
 
 # one would think the driver should not need to mess with the SFA db, but..
 from sfa.storage.alchemy import dbsession
-from sfa.storage.persistentobjs import RegRecord
+from sfa.storage.model import RegRecord
 
 # used to be used in get_ticket
 #from sfa.trust.sfaticket import SfaTicket

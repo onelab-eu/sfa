@@ -57,7 +57,7 @@ class GetSelfCredential(Method):
         ### authenticate the gid
         # import here so we can load this module at build-time for sfa2wsdl
         #from sfa.storage.alchemy import dbsession
-        from sfa.storage.persistentobjs import RegRecord
+        from sfa.storage.model import RegRecord
 
         # xxx-local - the current code runs Resolve, which would forward to 
         # another registry if needed

@@ -28,7 +28,7 @@ from sfa.trust.certificate import convert_public_key, Keypair
 from sfa.plc.plshell import PlShell    
 
 from sfa.storage.alchemy import dbsession
-from sfa.storage.persistentobjs import RegRecord, RegAuthority, RegUser, RegSlice, RegNode
+from sfa.storage.model import RegRecord, RegAuthority, RegUser, RegSlice, RegNode
 
 from sfa.importer.sfaImport import sfaImport, _cleanup_string
 
@@ -66,7 +66,7 @@ def _get_site_hrn(interface_hrn, site):
             hrn = ".".join([interface_hrn, "internet2", site['login_base']])
     return hrn
 
-# maybe could use a call to persistentobjs.init_tables somewhere
+# maybe could use a call to model.init_tables somewhere
 # however now import s expected to be done after service creation..
 def main():
 
