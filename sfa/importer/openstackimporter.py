@@ -1,1 +1,1 @@
-class OpenstackImporter
+class OpenstackImporter: pass
