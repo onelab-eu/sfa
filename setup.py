@@ -13,8 +13,8 @@ scripts = glob("sfa/clientbin/*.py") + \
     [ 
     'config/sfa-config-tty',
     'config/gen-sfa-cm-config.py',
-    'sfa/importer/sfa-import-plc.py', 
-    'sfa/importer/sfa-nuke-plc.py', 
+    'sfa/importer/sfa-import.py', 
+    'sfa/importer/sfa-nuke.py', 
     'sfa/server/sfa-ca.py', 
     'sfa/server/sfa-start.py', 
     'sfa/server/sfa-clean-peer-records.py', 

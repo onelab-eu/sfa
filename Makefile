@@ -135,7 +135,8 @@ RSYNC			:= rsync -a -v $(RSYNC_COND_DRY_RUN) --no-owner $(RSYNC_EXCLUDES)
 CLIENTS = $(shell ls sfa/clientbin/*.py)
 
 BINS =	./config/sfa-config-tty ./config/gen-sfa-cm-config.py \
-	./sfa/importer/sfa-import-plc.py ./sfa/importer/sfa-nuke-plc.py ./sfa/server/sfa-start.py \
+	./sfa/server/sfa-start.py \
+	./sfa/importer/sfa-import.py ./sfa/importer/sfa-nuke.py \
 	$(CLIENTS)
 
 synccheck: 

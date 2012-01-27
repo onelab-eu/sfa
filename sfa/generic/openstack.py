@@ -6,17 +6,19 @@ import sfa.managers.registry_manager_openstack
 import sfa.managers.slice_manager
 import sfa.managers.aggregate_manager_openstack
 
-class openstack (Generic):
-    
-    # use the standard api class
-    def api_class (self):
-        return sfa.server.sfaapi.SfaApi
+# use pl as a model so we only redefine what's different
+from sfa.generic.pl import pl
 
+class openstack (pl):
+    
+    # the importer class
+    def importer_class (self): 
+        import sfa.importer.openstackimporter
+        return sfa.importer.openstackimporter.OpenstackImporter
+        
     # the manager classes for the server-side services
     def registry_manager_class (self) : 
         return sfa.managers.registry_manager_openstack.RegistryManager
-    def slicemgr_manager_class (self) : 
-        return sfa.managers.slice_manager.SliceManager
     def aggregate_manager_class (self) :
         return sfa.managers.aggregate_manager_openstack.AggregateManager
 
@@ -24,12 +26,5 @@ class openstack (Generic):
     def driver_class (self):
         return sfa.openstack.openstack_driver.OpenstackDriver
 
-    # for the component mode, to be run on board planetlab nodes
-    # manager class
-    def component_manager_class (self):
-        return sfa.managers.component_manager_pl
-    # driver_class
-    def component_driver_class (self):
-        return sfa.plc.plcomponentdriver.PlComponentDriver
 
 

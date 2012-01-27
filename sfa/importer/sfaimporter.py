@@ -1,20 +1,15 @@
 #
-# The import tool assumes that the existing PLC hierarchy should all be part
-# of "planetlab.us" (see the root_auth and level1_auth variables below).
-#
 # Public keys are extracted from the users' SSH keys automatically and used to
 # create GIDs. This is relatively experimental as a custom tool had to be
 # written to perform conversion from SSH to OpenSSL format. It only supports
 # RSA keys at this time, not DSA keys.
 ##
 
-from sfa.util.sfalogging import _SfaLogger
 from sfa.util.xrn import get_authority, hrn_to_urn
 from sfa.util.plxrn import email_to_hrn
 from sfa.util.config import Config
 from sfa.trust.certificate import convert_public_key, Keypair
 from sfa.trust.trustedroots import TrustedRoots
-from sfa.trust.hierarchy import Hierarchy
 from sfa.trust.gid import create_uuid
 from sfa.storage.model import RegRecord, RegAuthority, RegUser
 from sfa.storage.alchemy import dbsession
@@ -43,14 +38,23 @@ def _cleanup_string(str):
     str = str.replace('"', "_")
     return str
 
-class sfaImport:
+class SfaImporter:
 
-    def __init__(self):
-       self.logger = _SfaLogger(logfile='/var/log/sfa_import.log', loggername='importlog')
-       self.AuthHierarchy = Hierarchy()
+    def __init__(self, auth_hierarchy, logger):
+       self.logger=logger
+       self.auth_hierarchy = auth_hierarchy
        self.config = Config()
        self.TrustedRoots = TrustedRoots(Config.get_trustedroots_dir(self.config))
        self.root_auth = self.config.SFA_REGISTRY_ROOT_AUTH
+
+    # record options into an OptionParser
+    def record_options (self, parser):
+       self.logger.info ("SfaImporter.record_options : to do")
+       pass
+
+    def run (self, options):
+       self.logger.info ("SfaImporter.run : no options used")
+       self.create_top_level_records()
 
     def create_top_level_records(self):
         """
@@ -72,7 +76,7 @@ class sfaImport:
 
         # add local root authority's cert  to trusted list
         self.logger.info("Import: adding " + interface_hrn + " to trusted list")
-        authority = self.AuthHierarchy.get_auth_info(interface_hrn)
+        authority = self.auth_hierarchy.get_auth_info(interface_hrn)
         self.TrustedRoots.add_gid(authority.get_gid_object())
 
     def create_top_level_auth_records(self, hrn):
@@ -87,9 +91,9 @@ class sfaImport:
             self.create_top_level_auth_records(parent_hrn)
 
         # ensure key and cert exists:
-        self.AuthHierarchy.create_top_level_auth(hrn)    
+        self.auth_hierarchy.create_top_level_auth(hrn)    
         # create the db record if it doesnt already exist    
-        auth_info = self.AuthHierarchy.get_auth_info(hrn)
+        auth_info = self.auth_hierarchy.get_auth_info(hrn)
         auth_record = RegAuthority()
         auth_record.type='authority'
         auth_record.hrn=hrn
@@ -106,11 +110,11 @@ class sfaImport:
         """
         hrn = self.config.SFA_INTERFACE_HRN + '.slicemanager'
         urn = hrn_to_urn(hrn, 'user')
-        if not self.AuthHierarchy.auth_exists(urn):
+        if not self.auth_hierarchy.auth_exists(urn):
             self.logger.info("Import: creating Slice Manager user")
-            self.AuthHierarchy.create_auth(urn)
+            self.auth_hierarchy.create_auth(urn)
 
-        auth_info = self.AuthHierarchy.get_auth_info(hrn)
+        auth_info = self.auth_hierarchy.get_auth_info(hrn)
         user_record = RegUser()
         user_record.type='user'
         user_record.hrn=hrn
@@ -128,11 +132,11 @@ class sfaImport:
         # just create certs for all sfa interfaces even if they
         # aren't enabled
         hrn = self.config.SFA_INTERFACE_HRN
-        auth_info = self.AuthHierarchy.get_auth_info(hrn)
+        auth_info = self.auth_hierarchy.get_auth_info(hrn)
         pkey = auth_info.get_pkey_object()
         for type in  [ 'authority+sa', 'authority+am', 'authority+sm', ]:
             urn = hrn_to_urn(hrn, type)
-            gid = self.AuthHierarchy.create_gid(urn, create_uuid(), pkey)
+            gid = self.auth_hierarchy.create_gid(urn, create_uuid(), pkey)
             # xxx this should probably use a RegAuthority, or a to-be-defined RegPeer object
             # but for now we have to preserve the authority+<> stuff
             interface_record = RegAuthority()

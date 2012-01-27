@@ -14,7 +14,7 @@
 # is up to date and accurate.
 #
 # 1) Import the existing planetlab database, creating the
-#    appropriate SFA records. This is done by running the "sfa-import-plc.py" tool.
+#    appropriate SFA records. This is done by running the "sfa-import.py" tool.
 #
 # 2) Create a "trusted_roots" directory and place the certificate of the root
 #    authority in that directory. Given the defaults in sfa-import-plc.py, this
