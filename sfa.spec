@@ -1,6 +1,6 @@
 %define name sfa
-%define version 2.0
-%define taglevel 9
+%define version 2.1
+%define taglevel 0
 
 %define release %{taglevel}%{?pldistro:.%{pldistro}}%{?date:.%{date}}
 %global python_sitearch	%( python -c "from distutils.sysconfig import get_python_lib; print get_python_lib(1)" )
@@ -202,18 +202,18 @@ rm -rf $RPM_BUILD_ROOT
 %files tests
 %{_datadir}/sfa/tests
 
-### sfa-plc installs the 'sfa' service
-%post plc
+### sfa installs the 'sfa' service
+%post 
 chkconfig --add sfa
 
-%preun plc
+%preun 
 if [ "$1" = 0 ] ; then
   /sbin/service sfa stop || :
   /sbin/chkconfig --del sfa || :
 fi
 
-%postun plc
-[ "$1" -ge "1" ] && service sfa restart
+%postun
+[ "$1" -ge "1" ] && { service sfa dbdump ; service sfa restart ; }
 
 ### sfa-cm installs the 'sfa-cm' service
 %post cm

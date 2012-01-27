@@ -4,12 +4,13 @@ import traceback
 from sqlalchemy import MetaData, Table
 from sqlalchemy.exc import NoSuchTableError
 
-from migrate.versioning.api import version, db_version, version_control, upgrade
+import migrate.versioning.api as migrate
 
 from sfa.util.sfalogging import logger
-from sfa.storage.model import init_tables
+import sfa.storage.model as model
 
-### this script will upgrade from a pre-2.1 db 
+########## this class takes care of database upgrades
+### upgrade from a pre-2.1 db 
 # * 1.0 and up to 1.1-4:  ('very old')    
 #       was piggybacking the planetlab5 database
 #       this is kind of out of our scope here, we don't have the credentials 
@@ -22,9 +23,14 @@ from sfa.storage.model import init_tables
 #       together with an 'sfa_db_version' table (version, subversion)
 # * from 2.1:
 #       we have an 'records' table, plus 'users' and the like
-#       and once migrate has kicked in there is a table named 
+#       and once migrate has kicked in there is a table named (see migrate.cfg)
 #       migrate_db_version (repository_id, repository_path, version)
-####
+### after 2.1 
+#       Starting with 2.1, we use sqlalchemy-migrate scripts in a standard way
+#       Note that the model defined in sfa.storage.model needs to be maintained 
+#       as the 'current/latest' version, and newly installed deployments will 
+#       then 'jump' to the latest version number without going through the migrations
+###
 # An initial attempt to run this as a 001_*.py migrate script 
 # did not quite work out (essentially we need to set the current version
 # number out of the migrations logic)
@@ -43,7 +49,7 @@ class DBSchema:
 
     def current_version (self):
         try:
-            return db_version (self.url, self.repository)
+            return migrate.db_version (self.url, self.repository)
         except:
             return None
 
@@ -91,20 +97,28 @@ class DBSchema:
             # for very old versions:
             self.handle_old_releases()
             # in any case, initialize db from current code and reflect in migrate
-            init_tables(self.engine)
-            code_version = version (self.repository)
-            version_control (self.url, self.repository, code_version)
+            model.init_tables(self.engine)
+            code_version = migrate.version (self.repository)
+            migrate.version_control (self.url, self.repository, code_version)
+            after="%s"%self.current_version()
+            logger.info("DBSchema : jumped to version %s"%(after))
         else:
             # use migrate in the usual way
             before="%s"%self.current_version()
-            upgrade (self.url, self.repository)
-        after="%s"%self.current_version()
-        if before != after:
-            logger.info("DBSchema : upgraded from %s to %s"%(before,after))
+            migrate.upgrade (self.url, self.repository)
+            after="%s"%self.current_version()
+            if before != after:
+                logger.info("DBSchema : upgraded version from %s to %s"%(before,after))
     
-    # this call will trash the db altogether
+    # this trashes the db altogether, from the current model in sfa.storage.model
+    # I hope this won't collide with ongoing migrations and all
+    # actually, now that sfa uses its own db, this is essentially equivalent to 
+    # dropping the db entirely, modulo a 'service sfa start'
     def nuke (self):
-        drop_tables(self.engine)
+        model.drop_tables(self.engine)
+        # so in this case it's like we haven't initialized the db at all
+        migrate.drop_version_control (self.url, self.repository)
+        
 
 if __name__ == '__main__':
     DBSchema().init_or_upgrade()

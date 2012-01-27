@@ -24,7 +24,7 @@ def main():
    parser.add_option("-c","--certs",dest='clean_certs',action='store_true',default=False,
                      help="Remove all cached certs/gids found in /var/lib/sfa/authorities area as well")
    parser.add_option("-0","--no-reinit",dest='reinit',action='store_false',default=True,
-                     help="Do not reinitialize the database schema")
+                     help="By default a new DB schema is installed after the cleanup; this option prevents that")
    (options,args)=parser.parse_args()
    if args:
       parser.print_help()
@@ -37,7 +37,7 @@ def main():
    # however in some (upgrade) scenarios this might be wrong
    if options.reinit:
       logger.info("re-creating empty schema")
-      dbschema.init_or_upgrade(engine)
+      dbschema.init_or_upgrade()
 
    if options.clean_certs:
       # remove the server certificate and all gids found in /var/lib/sfa/authorities
