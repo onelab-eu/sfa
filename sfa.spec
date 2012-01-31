@@ -1,6 +1,6 @@
 %define name sfa
 %define version 2.1
-%define taglevel 0
+%define taglevel 1
 
 %define release %{taglevel}%{?pldistro:.%{pldistro}}%{?date:.%{date}}
 %global python_sitearch	%( python -c "from distutils.sysconfig import get_python_lib; print get_python_lib(1)" )
@@ -229,6 +229,14 @@ fi
 [ "$1" -ge "1" ] && service sfa-cm restart || :
 
 %changelog
+* Fri Jan 27 2012 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-2.1-1
+- uses sqlalchemy and related migrate
+- thorough migration and upgrade scheme
+- sfa-import.py and sfa-nuke.py (no more -plc), uses FLAVOUR
+- trashed dbinfo stuff in auth hierarchy
+- data model still has little more than plain records
+- checkpoint tag, not yet intended for release
+
 * Wed Jan 25 2012 Tony Mack <tmack@cs.princeton.edu> - sfa-2.0-10
 - client: added -R --raw sfi cmdline option that displays raw server response.
 - client: request GENI RSpec by default. 
