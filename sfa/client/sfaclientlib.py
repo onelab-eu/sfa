@@ -238,7 +238,7 @@ class SfaClientBootstrap:
     def authority_credential_filename (self, hrn): 
         return self.credential_filename(hrn,'authority')
     def my_gid_filename (self):
-        return self.gid_filename ("user", self.hrn)
+        return self.gid_filename (self.hrn, "user")
     def gid_filename (self, hrn, type): 
         return self.fullpath ("%s.%s.gid"%(hrn,type))
     
