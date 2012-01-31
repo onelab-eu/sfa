@@ -176,6 +176,7 @@ class RegUser (RegRecord):
     def __repr__ (self): 
         result = RegRecord.__repr__(self).replace("Record","User")
         result.replace ("]"," email=%s"%self.email)
+        result += "]"
         return result
     
     @validates('email') 
