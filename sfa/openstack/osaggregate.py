@@ -86,4 +86,14 @@ class OSAggregate:
             rspec_node['slivers'] = slivers
             rspec_nodes.append(rspec_node) 
 
-        return rspec_node    
+        return rspec_node 
+
+
+    def verify_slice(self, slicename):
+        pass
+
+    def verify_users(self, slicename, users):
+        pass  
+
+    def verify_instances(self, slicename, rspec):
+        pass 
