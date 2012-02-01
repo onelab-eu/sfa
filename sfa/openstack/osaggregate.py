@@ -49,7 +49,7 @@ class OSAggregate:
 
     def get_slice_nodes(self, slice_xrn):
         name = OSXrn(xrn = slice_xrn).name
-        instances = self.driver.instance_get_all_by_project(name)
+        instances = self.driver.shell.instance_get_all_by_project(name)
         rspec_nodes = []
         for instance in instances:
             rspec_node = Node()
@@ -64,7 +64,7 @@ class OSAggregate:
 
     def get_aggregate_nodes(self):
                 
-        zones = self.driver.zone_get_all()
+        zones = self.driver.shell.zone_get_all()
         if not zones:
             zones = ['cloud']
         else:
@@ -80,7 +80,7 @@ class OSAggregate:
             rspec_node['exclusive'] = 'false'
             rspec_node['hardware_types'] = [HardwareType({'name': 'plos-pc'}),
                                                 HardwareType({'name': 'pc'})]
-            instances = self.driver.instance_type_get_all().values()
+            instances = self.driver.shell.instance_type_get_all().values()
             slivers = [self.instance_to_sliver(inst) for inst in instances]
             rspec_node['slivers'] = slivers
             rspec_nodes.append(rspec_node) 
