@@ -4,13 +4,15 @@ from sfa.util.config import Config
 
 class OSXrn(Xrn):
 
-    def __init__(self, name=None, type=None, *args, **kwds):
+    def __init__(self, name=None, type=None, **kwds):
+        
         config = Config()
         if name is not None:
             self.type = type
             self.hrn = config.SFA_INTERFACE_HRN + "." + name
             self.hrn_to_urn()
-
+        else:
+            Xrn.__init__(self, **kwds)   
          
         self.name = self.get_name() 
     
