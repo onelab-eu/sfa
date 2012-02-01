@@ -43,7 +43,7 @@ class OpenstackShell:
         if is_local and has_nova:
             logger.debug('openstack access - native')
             # load the config
-            flags.FLAGS(['foo', '/etc/nova/nova.conf', 'foo', 'foo'])
+            flags.FLAGS(['foo', '--flagfile=/etc/nova/nova.conf', 'foo', 'foo'])
             self.auth = context.get_admin_context()
             self.proxy = db
         else:
