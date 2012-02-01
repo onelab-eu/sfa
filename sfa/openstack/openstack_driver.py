@@ -9,9 +9,6 @@ from sfa.util.defaultdict import defaultdict
 from sfa.util.sfatime import utcparse, datetime_to_string, datetime_to_epoch
 from sfa.util.xrn import Xrn, hrn_to_urn, get_leaf, urn_to_sliver_id
 from sfa.util.cache import Cache
-
-# one would think the driver should not need to mess with the SFA db, but..
-
 # used to be used in get_ticket
 #from sfa.trust.sfaticket import SfaTicket
 
@@ -22,10 +19,9 @@ from sfa.rspecs.rspec import RSpec
 from sfa.managers.driver import Driver
 
 from sfa.openstack.openstack_shell import OpenstackShell
-import sfa.plc.peers as peers
-from sfa.plc.plaggregate import PlAggregate
+from sfa.openstack.osaggregate import OSAggregate
 from sfa.plc.plslices import PlSlices
-from sfa.util.plxrn import slicename_to_hrn, hostname_to_hrn, hrn_to_pl_slicename, hrn_to_pl_login_base
+from sfa.util.osxrn import OSXrn
 
 
 def list_to_dict(recs, key):
@@ -199,17 +195,16 @@ class OpenstackDriver (Driver):
         if self.cache:
             slices = self.cache.get('slices')
             if slices:
-                logger.debug("PlDriver.list_slices returns from cache")
+                logger.debug("OpenStackDriver.list_slices returns from cache")
                 return slices
     
-        # get data from db 
-        slices = self.shell.GetSlices({'peer_id': None}, ['name'])
-        slice_hrns = [slicename_to_hrn(self.hrn, slice['name']) for slice in slices]
-        slice_urns = [hrn_to_urn(slice_hrn, 'slice') for slice_hrn in slice_hrns]
+        # get data from db
+        slices = self.shell.project_get_all()
+        slice_urns = [OSXrn(name, 'slice').urn for name in slice] 
     
         # cache the result
         if self.cache:
-            logger.debug ("PlDriver.list_slices stores value in cache")
+            logger.debug ("OpenStackDriver.list_slices stores value in cache")
             self.cache.add('slices', slice_urns) 
     
         return slice_urns
@@ -231,18 +226,18 @@ class OpenstackDriver (Driver):
         if cached_requested and self.cache and not slice_hrn:
             rspec = self.cache.get(version_string)
             if rspec:
-                logger.debug("PlDriver.ListResources: returning cached advertisement")
+                logger.debug("OpenStackDriver.ListResources: returning cached advertisement")
                 return rspec 
     
         #panos: passing user-defined options
         #print "manager options = ",options
-        aggregate = PlAggregate(self)
+        aggregate = OSAggregate(self)
         rspec =  aggregate.get_rspec(slice_xrn=slice_urn, version=rspec_version, 
                                      options=options)
     
         # cache the result
         if self.cache and not slice_hrn:
-            logger.debug("PlDriver.ListResources: stores advertisement in cache")
+            logger.debug("OpenStackDriver.ListResources: stores advertisement in cache")
             self.cache.add(version_string, rspec)
     
         return rspec
@@ -335,66 +330,33 @@ class OpenstackDriver (Driver):
         return aggregate.get_rspec(slice_xrn=slice_urn, version=rspec.version)
 
     def delete_sliver (self, slice_urn, slice_hrn, creds, options):
-        slicename = hrn_to_pl_slicename(slice_hrn)
-        slices = self.shell.GetSlices({'name': slicename})
-        if not slices:
+        name = OSXrn(xrn=slice_urn).name
+        slice = self.shell.project_get(name)
+        if not slice:
             return 1
-        slice = slices[0]
-    
-        # determine if this is a peer slice
-        # xxx I wonder if this would not need to use PlSlices.get_peer instead 
-        # in which case plc.peers could be deprecated as this here
-        # is the only/last call to this last method in plc.peers
-        peer = peers.get_peer(self, slice_hrn)
-        try:
-            if peer:
-                self.shell.UnBindObjectFromPeer('slice', slice['slice_id'], peer)
-            self.shell.DeleteSliceFromNodes(slicename, slice['node_ids'])
-        finally:
-            if peer:
-                self.shell.BindObjectToPeer('slice', slice['slice_id'], peer, slice['peer_slice_id'])
+        
+        self.shell.DeleteSliceFromNodes(slicename, slice['node_ids'])
+        instances = self.shell.instance_get_all_by_project(name)
+        for instance in instances:
+            self.shell.instance_destroy(instance.instance_id)
         return 1
     
     def renew_sliver (self, slice_urn, slice_hrn, creds, expiration_time, options):
-        slicename = hrn_to_pl_slicename(slice_hrn)
-        slices = self.shell.GetSlices({'name': slicename}, ['slice_id'])
-        if not slices:
-            raise RecordNotFound(slice_hrn)
-        slice = slices[0]
-        requested_time = utcparse(expiration_time)
-        record = {'expires': int(datetime_to_epoch(requested_time))}
-        try:
-            self.shell.UpdateSlice(slice['slice_id'], record)
-            return True
-        except:
-            return False
+        return True
 
-    # remove the 'enabled' tag 
     def start_slice (self, slice_urn, slice_hrn, creds):
-        slicename = hrn_to_pl_slicename(slice_hrn)
-        slices = self.shell.GetSlices({'name': slicename}, ['slice_id'])
-        if not slices:
-            raise RecordNotFound(slice_hrn)
-        slice_id = slices[0]['slice_id']
-        slice_tags = self.shell.GetSliceTags({'slice_id': slice_id, 'tagname': 'enabled'}, ['slice_tag_id'])
-        # just remove the tag if it exists
-        if slice_tags:
-            self.shell.DeleteSliceTag(slice_tags[0]['slice_tag_id'])
         return 1
 
-    # set the 'enabled' tag to 0
     def stop_slice (self, slice_urn, slice_hrn, creds):
-        slicename = hrn_to_pl_slicename(slice_hrn)
-        slices = self.shell.GetSlices({'name': slicename}, ['slice_id'])
-        if not slices:
-            raise RecordNotFound(slice_hrn)
-        slice_id = slices[0]['slice_id']
-        slice_tags = self.shell.GetSliceTags({'slice_id': slice_id, 'tagname': 'enabled'})
-        if not slice_tags:
-            self.shell.AddSliceTag(slice_id, 'enabled', '0')
-        elif slice_tags[0]['value'] != "0":
-            tag_id = slice_tags[0]['slice_tag_id']
-            self.shell.UpdateSliceTag(tag_id, '0')
+        name = OSXrn(xrn=slice_urn).name
+        slice = self.shell.project_get(name)
+        if not slice:
+            return 1
+
+        self.shell.DeleteSliceFromNodes(slicename, slice['node_ids'])
+        instances = self.shell.instance_get_all_by_project(name)
+        for instance in instances:
+            self.shell.instance_stop(instance.instance_id)
         return 1
     
     def reset_slice (self, slice_urn, slice_hrn, creds):
@@ -403,7 +365,7 @@ class OpenstackDriver (Driver):
     # xxx this code is quite old and has not run for ages
     # it is obviously totally broken and needs a rewrite
     def get_ticket (self, slice_urn, slice_hrn, creds, rspec_string, options):
-        raise SfaNotImplemented,"PlDriver.get_ticket needs a rewrite"
+        raise SfaNotImplemented,"OpenStackDriver.get_ticket needs a rewrite"
 # please keep this code for future reference
 #        slices = PlSlices(self)
 #        peer = slices.get_peer(slice_hrn)
