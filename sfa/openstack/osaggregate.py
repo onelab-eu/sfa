@@ -15,8 +15,9 @@ class OSAggregate:
 
     def instance_to_sliver(self, instance, slice_xrn=None):
         sliver_id = None
+        name = None
         if slice_xrn:
-            xrn = OSXrn(slice_xrn, 'slice')
+            name = OSXrn(slice_xrn, 'slice').name
             sliver_id = xrn.sliver_id(instance.instance_id, "")
 
         # should include: 
@@ -29,8 +30,8 @@ class OSAggregate:
         elif hasattr(instance, 'display_name'):
             name = instance.display_name 
         sliver = Sliver({'slice_id': sliver_id,
-                         'name': xrn.name,
-                         'type': 'plos-' + instance.name,
+                         'name': name,
+                         'type': 'plos-' + instance['name'],
                          'tags': []})
         return sliver
 
@@ -60,7 +61,7 @@ class OSAggregate:
             sliver = self.instance_to_sliver(instance) 
             rspec_node['slivers'] = [sliver]
             rspec_nodes.append(rspec_node)
-        return slivers
+        return rspec_nodes
 
     def get_aggregate_nodes(self):
                 
