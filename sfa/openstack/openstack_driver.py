@@ -291,38 +291,20 @@ class OpenstackDriver (Driver):
 
     def create_sliver (self, slice_urn, slice_hrn, creds, rspec_string, users, options):
 
-        aggregate = PlAggregate(self)
-        slices = PlSlices(self)
-        peer = slices.get_peer(slice_hrn)
-        sfa_peer = slices.get_sfa_peer(slice_hrn)
-        slice_record=None    
-        if users:
-            slice_record = users[0].get('slice_record', {})
-    
+        aggregate = OSAggregate(self)
+        slicename = get_leaf(slice_hrn)
+        
         # parse rspec
         rspec = RSpec(rspec_string)
         requested_attributes = rspec.version.get_slice_attributes()
         
-        # ensure site record exists
-        site = slices.verify_site(slice_hrn, slice_record, peer, sfa_peer, options=options)
         # ensure slice record exists
-        slice = slices.verify_slice(slice_hrn, slice_record, peer, sfa_peer, options=options)
+        slice = aggregate.verify_slice(slicename, options=options)
         # ensure person records exists
-        persons = slices.verify_persons(slice_hrn, slice, users, peer, sfa_peer, options=options)
-        # ensure slice attributes exists
-        slices.verify_slice_attributes(slice, requested_attributes, options=options)
-        
+        persons = aggregate.verify_slice_users(slicename, users, options=options)
         # add/remove slice from nodes
-        requested_slivers = [node.get('component_name') for node in rspec.version.get_nodes_with_slivers()]
-        nodes = slices.verify_slice_nodes(slice, requested_slivers, peer) 
+        slices.verify_instances(slicename, rspec)    
    
-        # add/remove links links 
-        slices.verify_slice_links(slice, rspec.version.get_link_requests(), nodes)
-    
-        # handle MyPLC peer association.
-        # only used by plc and ple.
-        slices.handle_peer(site, slice, persons, peer)
-        
         return aggregate.get_rspec(slice_xrn=slice_urn, version=rspec.version)
 
     def delete_sliver (self, slice_urn, slice_hrn, creds, options):
