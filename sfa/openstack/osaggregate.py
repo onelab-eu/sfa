@@ -13,7 +13,7 @@ class OSAggregate:
     def __init__(self, driver):
         self.driver = driver
 
-    def instance_to_sliver(instance, slice_xrn=None):
+    def instance_to_sliver(self, instance, slice_xrn=None):
         sliver_id = None
         if slice_xrn:
             xrn = OSXrn(slice_xrn, 'slice')
