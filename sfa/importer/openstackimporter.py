@@ -81,7 +81,7 @@ class OpenstackImporter:
                         logger.log_exc('unable to convert public key for %s' % hrn)
                         pkey = Keypair(create=True)
                 else:
-                    logger.warn("Import: person %s does not have a PL public key"%hrn)
+                    logger.warn("OpenstackImporter: person %s does not have a PL public key"%hrn)
                     pkey = Keypair(create=True) 
                 person_gid = sfaImporter.AuthHierarchy.create_gid(urn, create_uuid(), pkey)
                 person_record = RegUser ()
@@ -91,7 +91,7 @@ class OpenstackImporter:
                 person_record.authority=get_authority(hrn)
                 dbsession.add(person_record)
                 dbsession.commit()
-                logger.info("Import: imported person %s" % person_record)
+                logger.info("OpenstackImporter: imported person %s" % person_record)
 
         # Get all projects
         projects = shell.project_get_all()
@@ -111,7 +111,7 @@ class OpenstackImporter:
                 project_record.authority=get_authority(hrn)
                 dbsession.add(project_record)
                 dbsession.commit()
-                logger.info("Import: imported slice: %s" % project_record)  
+                logger.info("OpenstackImporter: imported slice: %s" % project_record)  
     
         # remove stale records    
         system_records = [interface_hrn, root_auth, interface_hrn + '.slicemanager']
@@ -133,11 +133,11 @@ class OpenstackImporter:
                 continue 
         
             record_object = existing_records[ (record_hrn, type) ]
-            logger.info("Import: removing %s " % record)
+            logger.info("OpenstackImporter: removing %s " % record)
             dbsession.delete(record_object)
             dbsession.commit()
                                    
         # save pub keys
-        logger.info('Import: saving current pub keys')
+        logger.info('OpenstackImporter: saving current pub keys')
         save_keys(keys_filename, person_keys)                
         
