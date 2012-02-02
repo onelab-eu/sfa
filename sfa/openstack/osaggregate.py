@@ -89,11 +89,59 @@ class OSAggregate:
         return rspec_node 
 
 
-    def verify_slice(self, slicename):
-        pass
+    def verify_slice(self, slicename, users, options={}):
+        """
+        Create the slice if it doesn't alredy exist  
+        """
+        try:
+            slice = self.driver.shell.auth_manager.get_project(slicename)
+        except nova.exception.ProjectNotFound:
+            # convert urns to user names
+            usernames = [Xrn(user['urn']).get_leaf() for user in users]
+            # assume that the first user is the project manager
+            proj_manager = usernames[0] 
+            self.driver.shell.auth_manager.create_project(slicename, proj_manager)
 
-    def verify_users(self, slicename, users):
-        pass  
+    def verify_users(self, slicename, users, options={}):
+        """
+        Add requested users to the specified slice.  
+        """
+        
+        # There doesn't seem to be an effcient way to 
+        # look up all the users of a project, so lets not  
+        # attempt to remove stale users . For now lets just
+        # ensure that the specified users exist     
+        for user in users:
+            username = Xrn(user['urn']).get_leaf()
+            try:
+                self.driver.shell.auth_manager.get_user(username)
+            except nova.exception.UserNotFound:
+                self.driver.shell.auth_manager.create_user(username)
+            self.verify_user_keys(username, user['keys'], options)
 
+    def verify_user_keys(self, username, keys, options={}):
+        """
+        Add requested keys.
+        """
+        append = options.get('append', True)    
+        existing_keys = self.driver.shell.db.key_pair_get_all_by_user(username)
+        existing_pub_keys = [key.public_key for key in existing_keys]
+        removed_pub_keys = set(existing_pub_keys).difference(keys)
+        added_pub_keys = set(keys).difference(existing_pub_keys)
+
+        # add new keys
+        for public_key in added_pub_keys:
+            key = {}
+            key['user_id'] = username
+            key['name'] =  username
+            key['public'] = public_key
+            self.driver.shell.db.key_pair_create(key)
+
+        # remove old keys
+        if not append:
+            for key in existing_keys:
+                if key.public_key in removed_pub_keys:
+                    self.driver.shell.db.key_pair_destroy(username, key.name)
+            
     def verify_instances(self, slicename, rspec):
         pass 
