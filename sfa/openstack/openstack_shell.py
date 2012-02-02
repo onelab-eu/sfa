@@ -2,9 +2,15 @@ import sys
 import xmlrpclib
 import socket
 from urlparse import urlparse
-
 from sfa.util.sfalogging import logger
-
+try:
+    from nova import flags
+    from nova import context 
+    from nova import db
+    has_nova = True  
+except:
+    has_nova = False
+ 
 class OpenstackShell:
     """
     A simple xmlrpc shell to a myplc instance
@@ -21,7 +27,6 @@ class OpenstackShell:
         url = config.SFA_PLC_URL
         # try to figure if the url is local
         hostname=urlparse(url).hostname
-        is_local=False
         if hostname == 'localhost': is_local=True
         # otherwise compare IP addresses; 
         # this might fail for any number of reasons, so let's harden that
@@ -35,27 +40,12 @@ class OpenstackShell:
             pass
 
 
-        # Openstack provides a RESTful api but it is very limited, so we will
-        # ignore it for now and always use the native openstack (nova) library.
-        # This of course will not work if sfa is not installed on the same machine
-        # as the openstack-compute package.   
-        if is_local:
-            try:
-                from nova.auth.manager import AuthManager, db, context
-                direct_access=True
-            except:
-                direct_access=False
-        if is_local and direct_access:
-            
+        if is_local and has_nova:
             logger.debug('openstack access - native')
+            # load the config
+            flags.FLAGS(['foo', '--flagfile=/etc/nova/nova.conf', 'foo', 'foo'])
             self.auth = context.get_admin_context()
-            # AuthManager isnt' really useful for much yet but it's
-            # more convenient to use than the db reference which requires
-            # a context. Lets hold onto the AuthManager reference for now.
-            #self.proxy = AuthManager()
-            self.auth_manager = AuthManager()
             self.proxy = db
-
         else:
             self.auth = None
             self.proxy = None
