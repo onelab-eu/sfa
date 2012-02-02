@@ -165,13 +165,49 @@ class RegRecord (Base,AlchemyObj):
         self.last_updated=now
 
 ##############################
+class RegAuthority (RegRecord):
+    __tablename__       = 'authorities'
+    __mapper_args__     = { 'polymorphic_identity' : 'authority' }
+    record_id           = Column (Integer, ForeignKey ("records.record_id"), primary_key=True)
+    
+    # no proper data yet, just hack the typename
+    def __repr__ (self):
+        return RegRecord.__repr__(self).replace("Record","Authority")
+
+##############################
+class RegSlice (RegRecord):
+    __tablename__       = 'slices'
+    __mapper_args__     = { 'polymorphic_identity' : 'slice' }
+    record_id           = Column (Integer, ForeignKey ("records.record_id"), primary_key=True)
+    
+    def __repr__ (self):
+        return RegRecord.__repr__(self).replace("Record","Slice")
+
+##############################
+class RegNode (RegRecord):
+    __tablename__       = 'nodes'
+    __mapper_args__     = { 'polymorphic_identity' : 'node' }
+    record_id           = Column (Integer, ForeignKey ("records.record_id"), primary_key=True)
+    
+    def __repr__ (self):
+        return RegRecord.__repr__(self).replace("Record","Node")
+
+##############################
 class RegUser (RegRecord):
     __tablename__       = 'users'
     # these objects will have type='user' in the records table
     __mapper_args__     = { 'polymorphic_identity' : 'user' }
     record_id           = Column (Integer, ForeignKey ("records.record_id"), primary_key=True)
     email               = Column ('email', String)
+    keys                = relationship ('RegKey', backref='user')
     
+    def __init__ (self, **kwds):
+        # handle local settings
+        if 'email' in kwds: self.email=kwds.pop('email')
+        # fill in type if not previously set
+        if 'type' not in kwds: kwds['type']='user'
+        RegRecord.__init__(self, **kwds)
+
     # append stuff at the end of the record __repr__
     def __repr__ (self): 
         result = RegRecord.__repr__(self).replace("Record","User")
@@ -184,30 +220,27 @@ class RegUser (RegRecord):
         assert '@' in address
         return address
 
-class RegAuthority (RegRecord):
-    __tablename__       = 'authorities'
-    __mapper_args__     = { 'polymorphic_identity' : 'authority' }
-    record_id           = Column (Integer, ForeignKey ("records.record_id"), primary_key=True)
+####################
+# xxx tocheck : not sure about eager loading of this one
+# meaning, when querying the whole records, we expect there should
+# be a single query to fetch all the keys 
+class RegKey (Base):
+    __tablename__       = 'keys'
+    key_id              = Column (Integer, primary_key=True)
+    record_id             = Column (Integer, ForeignKey ("records.record_id"))
+    key                 = Column (String)
+    pointer             = Column (Integer, default = -1)
     
-    # no proper data yet, just hack the typename
-    def __repr__ (self):
-        return RegRecord.__repr__(self).replace("Record","Authority")
+    def __init__ (self, key, pointer=None):
+        self.key=key
+        if pointer: self.pointer=pointer
 
-class RegSlice (RegRecord):
-    __tablename__       = 'slices'
-    __mapper_args__     = { 'polymorphic_identity' : 'slice' }
-    record_id           = Column (Integer, ForeignKey ("records.record_id"), primary_key=True)
-    
     def __repr__ (self):
-        return RegRecord.__repr__(self).replace("Record","Slice")
-
-class RegNode (RegRecord):
-    __tablename__       = 'nodes'
-    __mapper_args__     = { 'polymorphic_identity' : 'node' }
-    record_id           = Column (Integer, ForeignKey ("records.record_id"), primary_key=True)
-    
-    def __repr__ (self):
-        return RegRecord.__repr__(self).replace("Record","Node")
+        result="[key key=%s..."%self.key[8:16]
+        try:    result += " user=%s"%self.user.record_id
+        except: result += " <orphan>"
+        result += "]"
+        return result
 
 ##############################
 # although the db needs of course to be reachable,
@@ -245,6 +278,7 @@ def make_record_dict (record_dict):
     elif type=='node':
         result=RegNode (dict=record_dict)
     else:
+        logger.debug("Untyped RegRecord instance")
         result=RegRecord (dict=record_dict)
     logger.info ("converting dict into Reg* with type=%s"%type)
     logger.info ("returning=%s"%result)
