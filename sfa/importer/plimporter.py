@@ -51,8 +51,6 @@ class PlImporter:
 
     def run (self, options):
         # we don't have any options for now
-        self.logger.info ("PlImporter.run : to do")
-
         config = Config ()
         interface_hrn = config.SFA_INTERFACE_HRN
         root_auth = config.SFA_REGISTRY_ROOT_AUTH
@@ -130,7 +128,7 @@ class PlImporter:
                 auth_record.authority=get_authority(site_hrn)
                 dbsession.add(auth_record)
                 dbsession.commit()
-                self.logger.info("Import: Imported authority (vini site) %s"%auth_record)
+                self.logger.info("PlImporter: Imported authority (vini site) %s"%auth_record)
 
         # start importing 
         for site in sites:
@@ -153,11 +151,11 @@ class PlImporter:
                     auth_record.authority=get_authority(site_hrn)
                     dbsession.add(auth_record)
                     dbsession.commit()
-                    self.logger.info("Import: imported authority (site) : %s" % auth_record)  
+                    self.logger.info("PlImporter: imported authority (site) : %s" % auth_record)  
                 except:
                     # if the site import fails then there is no point in trying to import the
                     # site's child records (node, slices, persons), so skip them.
-                    self.logger.log_exc("Import: failed to import site. Skipping child records") 
+                    self.logger.log_exc("PlImporter: failed to import site. Skipping child records") 
                     continue 
              
             # import node records
@@ -184,9 +182,9 @@ class PlImporter:
                         node_record.authority=get_authority(hrn)
                         dbsession.add(node_record)
                         dbsession.commit()
-                        self.logger.info("Import: imported node: %s" % node_record)  
+                        self.logger.info("PlImporter: imported node: %s" % node_record)  
                     except:
-                        self.logger.log_exc("Import: failed to import node") 
+                        self.logger.log_exc("PlImporter: failed to import node") 
                     
 
             # import slices
@@ -209,9 +207,9 @@ class PlImporter:
                         slice_record.authority=get_authority(hrn)
                         dbsession.add(slice_record)
                         dbsession.commit()
-                        self.logger.info("Import: imported slice: %s" % slice_record)  
+                        self.logger.info("PlImporter: imported slice: %s" % slice_record)  
                     except:
-                        self.logger.log_exc("Import: failed to  import slice")
+                        self.logger.log_exc("PlImporter: failed to  import slice")
 
             # import persons
             for person_id in site['person_ids']:
@@ -247,7 +245,7 @@ class PlImporter:
                                 pkey = Keypair(create=True)
                         else:
                             # the user has no keys. Creating a random keypair for the user's gid
-                            self.logger.warn("Import: person %s does not have a PL public key"%hrn)
+                            self.logger.warn("PlImporter: person %s does not have a PL public key"%hrn)
                             pkey = Keypair(create=True) 
                         urn = hrn_to_urn(hrn, 'user')
                         person_gid = self.auth_hierarchy.create_gid(urn, create_uuid(), pkey)
@@ -259,9 +257,9 @@ class PlImporter:
                         person_record.authority=get_authority(hrn)
                         dbsession.add (person_record)
                         dbsession.commit()
-                        self.logger.info("Import: imported person: %s" % person_record)
+                        self.logger.info("PlImporter: imported person: %s" % person_record)
                     except:
-                        self.logger.log_exc("Import: failed to import person.") 
+                        self.logger.log_exc("PlImporter: failed to import person.") 
     
         # remove stale records    
         system_records = [interface_hrn, root_auth, interface_hrn + '.slicemanager']
@@ -328,11 +326,11 @@ class PlImporter:
             if not found:
                 try:
                     record_object = existing_records[(record_hrn, type)]
-                    self.logger.info("Import: deleting record: %s" % record)
+                    self.logger.info("PlImporter: deleting record: %s" % record)
                     dbsession.delete(record_object)
                     dbsession.commit()
                 except:
-                    self.logger.log_exc("Import: failded to delete record")                    
+                    self.logger.log_exc("PlImporter: failded to delete record")                    
 
         # save pub keys
         self.logger.info('Import: saving current pub keys')

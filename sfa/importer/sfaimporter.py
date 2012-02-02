@@ -68,14 +68,14 @@ class SfaImporter:
         self.create_sm_client_record()
 
         # create interface records
-        self.logger.info("Import: creating interface records")
+        self.logger.info("SfaImporter: creating interface records")
 # xxx authority+ turning off the creation of authority+*
 # in fact his is required - used in SfaApi._getCredentialRaw
 # that tries to locate 'authority+sa'
         self.create_interface_records()
 
         # add local root authority's cert  to trusted list
-        self.logger.info("Import: adding " + interface_hrn + " to trusted list")
+        self.logger.info("SfaImporter: adding " + interface_hrn + " to trusted list")
         authority = self.auth_hierarchy.get_auth_info(interface_hrn)
         self.TrustedRoots.add_gid(authority.get_gid_object())
 
@@ -102,7 +102,7 @@ class SfaImporter:
         auth_record.just_created()
         dbsession.add (auth_record)
         dbsession.commit()
-        self.logger.info("Import: imported authority (parent) %s " % auth_record)
+        self.logger.info("SfaImporter: imported authority (parent) %s " % auth_record)
 
     def create_sm_client_record(self):
         """
@@ -111,7 +111,7 @@ class SfaImporter:
         hrn = self.config.SFA_INTERFACE_HRN + '.slicemanager'
         urn = hrn_to_urn(hrn, 'user')
         if not self.auth_hierarchy.auth_exists(urn):
-            self.logger.info("Import: creating Slice Manager user")
+            self.logger.info("SfaImporter: creating Slice Manager user")
             self.auth_hierarchy.create_auth(urn)
 
         auth_info = self.auth_hierarchy.get_auth_info(hrn)
@@ -123,7 +123,7 @@ class SfaImporter:
         user_record.just_created()
         dbsession.add (user_record)
         dbsession.commit()
-        self.logger.info("Import: importing user (slicemanager) %s " % user_record)
+        self.logger.info("SfaImporter: importing user (slicemanager) %s " % user_record)
 
     def create_interface_records(self):
         """
@@ -147,7 +147,7 @@ class SfaImporter:
             interface_record.just_created()
             dbsession.add (interface_record)
             dbsession.commit()
-            self.logger.info("Import: imported authority (%s) %s " % (type,interface_record))
+            self.logger.info("SfaImporter: imported authority (%s) %s " % (type,interface_record))
              
     def delete_record(self, hrn, type):
         # delete the record
