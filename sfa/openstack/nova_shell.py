@@ -42,7 +42,7 @@ class NovaShell:
 
 
         if is_local and has_nova:
-            logger.debug('openstack access - native')
+            logger.debug('nova access - native')
             # load the config
             flags.FLAGS(['foo', '--flagfile=/etc/nova/nova.conf', 'foo', 'foo'])
             self.auth = context.get_admin_context()
@@ -50,8 +50,8 @@ class NovaShell:
         else:
             self.auth = None
             self.proxy = None
-            logger.debug('openstack access - REST')
-            raise SfaNotImplemented('openstack access - Rest')
+            logger.debug('nova access - REST')
+            raise SfaNotImplemented('nova access - Rest')
 
     def __getattr__(self, name):
         def func(*args, **kwds):
