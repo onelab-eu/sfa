@@ -27,7 +27,7 @@ from sfa.trust.certificate import convert_public_key, Keypair
 from sfa.trust.gid import create_uuid
 from sfa.importer.sfaImport import sfaImport, _cleanup_string
 from sfa.util.sfalogging import logger
-from sfa.openstack.openstack_shell import OpenstackShell    
+from sfa.openstack.nova_shell import NovaShell    
 
 def process_options():
 
@@ -64,7 +64,7 @@ def main():
         sys.exit(0)
     root_auth = config.SFA_REGISTRY_ROOT_AUTH
     interface_hrn = config.SFA_INTERFACE_HRN
-    shell = OpenstackShell(config)
+    shell = NovaShell(config)
     sfaImporter.create_top_level_records()
     
     # create dict of all existing sfa records
@@ -79,7 +79,7 @@ def main():
             
         
     # Get all users
-    persons = shell.user_get_all()
+    persons = shell.auth_manager.get_users()
     persons_dict = {}
     keys_filename = config.config_path + os.sep + 'person_keys.py' 
     old_person_keys = load_keys(keys_filename)    
@@ -88,7 +88,7 @@ def main():
         hrn = config.SFA_INTERFACE_HRN + "." + person.id
         persons_dict[hrn] = person
         old_keys = old_person_keys.get(person.id, [])
-        keys = [k.public_key for k in shell.key_pair_get_all_by_user(person.id)]
+        keys = [k.public_key for k in shell.db.key_pair_get_all_by_user(person.id)]
         person_keys[person.id] = keys
         update_record = False
         if old_keys != keys:
@@ -113,7 +113,7 @@ def main():
             person_record.sync()
 
     # Get all projects
-    projects = shell.project_get_all()
+    projects = shell.get_projects()
     projects_dict = {}
     for project in projects:
         hrn = config.SFA_INTERFACE_HRN + '.' + project.id
