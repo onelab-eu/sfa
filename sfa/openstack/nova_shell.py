@@ -4,14 +4,15 @@ import socket
 from urlparse import urlparse
 from sfa.util.sfalogging import logger
 try:
-    from nova import flags
-    from nova import context 
-    from nova import db
-    has_nova = True  
+    from nova.auth.manager import AuthManager
+    from nova.compute.manager import ComputeManager
+    from nova.network.manager import NetworkManager
+    from nova.scheduler.manager import SchedulerManager
+    has_nova = True
 except:
     has_nova = False
  
-class OpenstackShell:
+class NovaShell:
     """
     A simple xmlrpc shell to a myplc instance
     This class can receive all Openstack calls to the underlying testbed

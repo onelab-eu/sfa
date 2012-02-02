@@ -14,7 +14,7 @@ from sfa.rspecs.version_manager import VersionManager
 from sfa.rspecs.rspec import RSpec
 # the driver interface, mostly provides default behaviours
 from sfa.managers.driver import Driver
-from sfa.openstack.openstack_shell import OpenstackShell
+from sfa.openstack.nova_shell import NovaShell
 from sfa.openstack.osaggregate import OSAggregate
 from sfa.plc.plslices import PlSlices
 from sfa.util.osxrn import OSXrn
@@ -39,7 +39,7 @@ class OpenstackDriver (Driver):
 
     def __init__ (self, config):
         Driver.__init__ (self, config)
-        self.shell = OpenstackShell (config)
+        self.shell = NovaShell (config)
         self.cache=None
         if config.SFA_AGGREGATE_CACHING:
             if OpenstackDriver.cache is None:
