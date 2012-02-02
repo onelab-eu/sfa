@@ -4,6 +4,9 @@ import socket
 from urlparse import urlparse
 from sfa.util.sfalogging import logger
 try:
+    from nova import db
+    from nova import flags
+    from nova import context
     from nova.auth.manager import AuthManager
     from nova.compute.manager import ComputeManager
     from nova.network.manager import NetworkManager
@@ -11,6 +14,16 @@ try:
     has_nova = True
 except:
     has_nova = False
+
+
+def wrap_context(wrapped, context): 
+    """
+    Supplies the wrapped object with the specified context 
+    when executing callables. 
+    """ 
+    def wrapper(*args, **kwds):
+        return wrapped(context, *args, **kwds)
+    return wrap_context   
  
 class NovaShell:
     """
@@ -44,9 +57,13 @@ class NovaShell:
         if is_local and has_nova:
             logger.debug('nova access - native')
             # load the config
+            self.auth_manager = AuthManager()
+            self.compute_manager = ComputeManager()
+            self.network_manager = NetworkManager()
+            self.scheduler_manager = SchedulerManager()
             flags.FLAGS(['foo', '--flagfile=/etc/nova/nova.conf', 'foo', 'foo'])
-            self.auth = context.get_admin_context()
-            self.proxy = db
+            self.context = context.get_admin_context()
+            self.db = wrap_context(db, self.context)
         else:
             self.auth = None
             self.proxy = None
