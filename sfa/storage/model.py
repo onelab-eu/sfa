@@ -201,7 +201,7 @@ class RegUser (RegRecord):
     email               = Column ('email', String)
     # can't use name 'keys' here because when loading from xml we're getting
     # a 'keys' tag, and assigning a list of strings in a reference column like this crashes
-    reg_keys                = relationship ('RegKey', backref='reg_user')
+    reg_keys            = relationship ('RegKey', backref='reg_user')
     
     def __init__ (self, **kwds):
         # handle local settings
@@ -221,6 +221,9 @@ class RegUser (RegRecord):
     def validate_email(self, key, address):
         assert '@' in address
         return address
+
+    def normalize_xml (self):
+        if hasattr(self,'keys'): self.reg_keys = [ RegKey (key) for key in self.keys ]
 
 ####################
 # xxx tocheck : not sure about eager loading of this one
@@ -293,3 +296,4 @@ def make_record_xml (xml):
     xml_dict = xml_record.todict()
     logger.info("load from xml, keys=%s"%xml_dict.keys())
     return make_record_dict (xml_dict)
+

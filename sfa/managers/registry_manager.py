@@ -18,7 +18,7 @@ from sfa.trust.credential import Credential
 from sfa.trust.certificate import Certificate, Keypair, convert_public_key
 from sfa.trust.gid import create_uuid
 
-from sfa.storage.model import make_record,RegRecord
+from sfa.storage.model import make_record, RegRecord, RegUser
 from sfa.storage.alchemy import dbsession
 
 class RegistryManager:
@@ -295,6 +295,10 @@ class RegistryManager:
             gid = auth_info.get_gid_object()
             record.gid=gid.save_to_string(save_parents=True)
 
+        # post-process / cleanup for relation ships
+        if isinstance (record, RegUser): 
+            record.normalize_xml()
+            
         # update testbed-specific data if needed
         pointer = self.driver.register (record.__dict__, hrn, pub_key)
 
