@@ -32,7 +32,7 @@ def list_to_dict(recs, key):
 # can be sent as-is; it takes care of authentication
 # from the global config
 # 
-class OpenstackDriver (Driver):
+class NovaDriver (Driver):
 
     # the cache instance is a class member so it survives across incoming requests
     cache = None
@@ -195,8 +195,8 @@ class OpenstackDriver (Driver):
                 return slices
     
         # get data from db
-        slices = self.shell.project_get_all()
-        slice_urns = [OSXrn(name, 'slice').urn for name in slice] 
+        projs = self.shell.auth_manager.get_projects()
+        slice_urns = [OSXrn(proj.name, 'slice').urn for proj in projs] 
     
         # cache the result
         if self.cache:
@@ -299,7 +299,7 @@ class OpenstackDriver (Driver):
         requested_attributes = rspec.version.get_slice_attributes()
         
         # ensure slice record exists
-        slice = aggregate.verify_slice(slicename, options=options)
+        slice = aggregate.verify_slice(slicename, users, options=options)
         # ensure person records exists
         persons = aggregate.verify_slice_users(slicename, users, options=options)
         # add/remove slice from nodes
@@ -314,9 +314,9 @@ class OpenstackDriver (Driver):
             return 1
         
         self.shell.DeleteSliceFromNodes(slicename, slice['node_ids'])
-        instances = self.shell.instance_get_all_by_project(name)
+        instances = self.shell.db.instance_get_all_by_project(name)
         for instance in instances:
-            self.shell.instance_destroy(instance.instance_id)
+            self.shell.db.instance_destroy(instance.instance_id)
         return 1
     
     def renew_sliver (self, slice_urn, slice_hrn, creds, expiration_time, options):
@@ -327,14 +327,10 @@ class OpenstackDriver (Driver):
 
     def stop_slice (self, slice_urn, slice_hrn, creds):
         name = OSXrn(xrn=slice_urn).name
-        slice = self.shell.project_get(name)
-        if not slice:
-            return 1
-
-        self.shell.DeleteSliceFromNodes(slicename, slice['node_ids'])
-        instances = self.shell.instance_get_all_by_project(name)
+        slice = self.shell.get_project(name)
+        instances = self.shell.db.instance_get_all_by_project(name)
         for instance in instances:
-            self.shell.instance_stop(instance.instance_id)
+            self.shell.db.instance_stop(instance.instance_id)
         return 1
     
     def reset_slice (self, slice_urn, slice_hrn, creds):
