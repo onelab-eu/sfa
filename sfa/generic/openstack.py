@@ -1,10 +1,10 @@
 from sfa.generic import Generic
 
 import sfa.server.sfaapi
-import sfa.openstack.openstack_driver
+import sfa.openstack.nova_driver
 import sfa.managers.registry_manager_openstack
+import sfa.managers.aggregate_manager
 import sfa.managers.slice_manager
-import sfa.managers.aggregate_manager_openstack
 
 class openstack (Generic):
     
@@ -18,11 +18,11 @@ class openstack (Generic):
     def slicemgr_manager_class (self) : 
         return sfa.managers.slice_manager.SliceManager
     def aggregate_manager_class (self) :
-        return sfa.managers.aggregate_manager_openstack.AggregateManager
+        return sfa.managers.aggregate_manager.AggregateManager
 
     # driver class for server-side services, talk to the whole testbed
     def driver_class (self):
-        return sfa.openstack.openstack_driver.OpenstackDriver
+        return sfa.openstack.nova_driver.NovaDriver
 
     # for the component mode, to be run on board planetlab nodes
     # manager class
