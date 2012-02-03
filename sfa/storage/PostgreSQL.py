@@ -23,6 +23,7 @@ except: print >> sys.stderr, "WARNING, could not import pgdb"
 
 from sfa.util.faults import SfaDBError
 from sfa.util.sfalogging import logger
+from sfa.storage.filter import Filter
 
 if not psycopg2:
     is8bit = re.compile("[\x80-\xff]").search
@@ -106,7 +107,7 @@ class PostgreSQL:
         if isinstance(value, (list, tuple, set)):
             return "ARRAY[%s]" % ", ".join(map, self.quote, value)
         else:
-            return pgdb._quote(value)
+            return Filter._quote(value)
 
     quote = classmethod(quote)
 
