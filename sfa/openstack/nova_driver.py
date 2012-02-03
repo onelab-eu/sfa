@@ -42,9 +42,9 @@ class NovaDriver (Driver):
         self.shell = NovaShell (config)
         self.cache=None
         if config.SFA_AGGREGATE_CACHING:
-            if OpenstackDriver.cache is None:
-                OpenstackDriver.cache = Cache()
-            self.cache = OpenstackDriver.cache
+            if NovaDriver.cache is None:
+                NovaDriver.cache = Cache()
+            self.cache = NovaDriver.cache
  
     ########################################
     ########## registry oriented
