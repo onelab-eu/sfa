@@ -209,7 +209,7 @@ class PlImporter:
                 plc_keys = []
                 sfa_keys = []
                 if previous_record:
-                    sfa_keys = previous_record.keys
+                    sfa_keys = previous_record.reg_keys
                 if person_id in keys_by_person_id:
                     plc_keys = keys_by_person_id[person_id]
                 update_record = False
@@ -240,14 +240,14 @@ class PlImporter:
                         person_gid = self.auth_hierarchy.create_gid(urn, create_uuid(), pkey)
                         if previous_record: 
                             previous_record.gid=person_gid
-                            if pubkey: previous_record.keys=[RegKey (pubkey['key'], pubkey['key_id'])]
+                            if pubkey: previous_record.reg_keys=[RegKey (pubkey['key'], pubkey['key_id'])]
                             self.logger.info("PlImporter: updated person: %s" % previous_record)
                         else:
                             new_record = RegUser (hrn=hrn, gid=person_gid, 
                                                   pointer=person['person_id'], 
                                                   authority=get_authority(hrn),
                                                   email=person['email'])
-                            if pubkey: new_record.keys=[RegKey (pubkey['key'], pubkey['key_id'])]
+                            if pubkey: new_record.reg_keys=[RegKey (pubkey['key'], pubkey['key_id'])]
                             dbsession.add (new_record)
                             dbsession.commit()
                             self.logger.info("PlImporter: imported person: %s" % new_record)

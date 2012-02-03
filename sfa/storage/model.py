@@ -199,7 +199,9 @@ class RegUser (RegRecord):
     __mapper_args__     = { 'polymorphic_identity' : 'user' }
     record_id           = Column (Integer, ForeignKey ("records.record_id"), primary_key=True)
     email               = Column ('email', String)
-    keys                = relationship ('RegKey', backref='user')
+    # can't use name 'keys' here because when loading from xml we're getting
+    # a 'keys' tag, and assigning a list of strings in a reference column like this crashes
+    reg_keys                = relationship ('RegKey', backref='reg_user')
     
     def __init__ (self, **kwds):
         # handle local settings
