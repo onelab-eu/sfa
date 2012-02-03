@@ -57,11 +57,12 @@ class NovaShell:
         if is_local and has_nova:
             logger.debug('nova access - native')
             # load the config
+            flags.FLAGS(['foo', '--flagfile=/etc/nova/nova.conf', 'foo', 'foo'])
+            # instantiate managers 
             self.auth_manager = AuthManager()
             self.compute_manager = ComputeManager()
             self.network_manager = NetworkManager()
             self.scheduler_manager = SchedulerManager()
-            flags.FLAGS(['foo', '--flagfile=/etc/nova/nova.conf', 'foo', 'foo'])
             self.context = context.get_admin_context()
             self.db = wrap_context(db, self.context)
         else:
