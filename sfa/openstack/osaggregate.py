@@ -1,3 +1,5 @@
+
+from sfa.util.faults import SfaAPIError
 from sfa.rspecs.rspec import RSpec
 from sfa.rspecs.elements.hardware_type import HardwareType
 from sfa.rspecs.elements.node import Node
@@ -14,24 +16,32 @@ class OSAggregate:
         self.driver = driver
 
     def instance_to_sliver(self, instance, slice_xrn=None):
-        sliver_id = None
-        name = None
-        if slice_xrn:
-            name = OSXrn(slice_xrn, 'slice').name
-            sliver_id = xrn.sliver_id(instance.instance_id, "")
-
-        # should include: 
+        # should include? 
         # * instance.image_ref
         # * instance.kernel_id
         # * instance.ramdisk_id 
+        import nova.db.sqlalchemy.models.Instance
         name=None
-        if hasattr(instance, 'name'):
-            name = instance.name
-        elif hasattr(instance, 'display_name'):
-            name = instance.display_name 
+        type=None
+        sliver_id = None
+        if isinstance(instance, dict):
+            # this is an isntance type dict
+            name = instance['name']
+            type = instance['name'] 
+        elif isinstnace(instance, nova.db.sqlalchemy.models.Instance):
+            # this is an object that describes a running instance
+            name = instance.display_name
+            type = instance.instance_type.name
+        else:
+            raise SfaAPIError("instnace must be an instance_type dict or" + \
+                               " a nova.db.sqlalchemy.models.Instance object")
+        if slice_xrn:
+            xrn = Xrn(slice_xrn, 'slice')
+            sliver_id = xrn.get_sliver_id(instance.project_id, instance.hostname, instance.id)     
+    
         sliver = Sliver({'slice_id': sliver_id,
                          'name': name,
-                         'type': 'plos-' + instance['name'],
+                         'type': 'plos-' + type,
                          'tags': []})
         return sliver
 
@@ -50,7 +60,7 @@ class OSAggregate:
 
     def get_slice_nodes(self, slice_xrn):
         name = OSXrn(xrn = slice_xrn).name
-        instances = self.driver.shell.instance_get_all_by_project(name)
+        instances = self.driver.shell.db.instance_get_all_by_project(name)
         rspec_nodes = []
         for instance in instances:
             rspec_node = Node()
@@ -65,7 +75,7 @@ class OSAggregate:
 
     def get_aggregate_nodes(self):
                 
-        zones = self.driver.shell.zone_get_all()
+        zones = self.driver.shell.db.zone_get_all()
         if not zones:
             zones = ['cloud']
         else:
@@ -93,6 +103,7 @@ class OSAggregate:
         """
         Create the slice if it doesn't alredy exist  
         """
+        import nova.exception.ProjectNotFound
         try:
             slice = self.driver.shell.auth_manager.get_project(slicename)
         except nova.exception.ProjectNotFound:
