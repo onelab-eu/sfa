@@ -1,8 +1,7 @@
-from types import StringTypes
 import types
+import datetime
  
 from sfa.util.faults import SfaInvalidArgument
-
 from sfa.storage.parameter import Parameter, Mixed, python_type
 
 class Filter(Parameter, dict):
@@ -91,9 +90,10 @@ class Filter(Parameter, dict):
         else:
             return self._quote(value)    
 
-    # pgdb._quote isn't supported in python 2.7/f16, so let's implement it here   
+    # pgdb._quote isn't supported in python 2.7/f16, so let's implement it here
+    @staticmethod   
     def _quote(x):
-        if isinstance(x, DateTimeType):
+        if isinstance(x, datetime):
                 x = str(x)
         elif isinstance(x, unicode):
                 x = x.encode( 'utf-8' )
@@ -109,7 +109,7 @@ class Filter(Parameter, dict):
         elif hasattr(x, '__pg_repr__'):
                 x = x.__pg_repr__()
         else:
-                raise InterfaceError, 'do not know how to handle type %s' % type(x)
+                raise TypeError, 'do not know how to handle type %s' % type(x)
 
         return x
 
