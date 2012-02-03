@@ -110,7 +110,15 @@ class PlDriver (Driver):
                 self.shell.AddPersonToSite(pointer, login_base)
     
             # What roles should this user have?
-            self.shell.AddRoleToPerson('user', pointer)
+            roles=[]
+            if 'roles' in sfa_record: 
+                # if specified in xml, but only low-level roles
+                roles = [ role for role in sfa_record['roles'] if role in ['user','tech'] ]
+            # at least user if no other cluse could be found
+            if not roles:
+                roles=['user']
+            for role in roles:
+                self.shell.AddRoleToPerson(role, pointer)
             # Add the user's key
             if pub_key:
                 self.shell.AddPersonKey(pointer, {'key_type' : 'ssh', 'key' : pub_key})
