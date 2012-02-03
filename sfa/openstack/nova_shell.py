@@ -16,14 +16,19 @@ except:
     has_nova = False
 
 
-def wrap_context(wrapped, context): 
+class NovaDB:
     """
-    Supplies the wrapped object with the specified context 
-    when executing callables. 
-    """ 
-    def wrapper(*args, **kwds):
-        return wrapped(context, *args, **kwds)
-    return wrap_context   
+    Wraps the nova.db library and injects the context when executing methods 
+    """     
+    def __init__(self, db, context):
+        self.db = db
+        self.context = context
+    
+    def __getattr__(self, name):
+        def func(*args, **kwds):
+            result=getattr(self.db, name)(self.context, *args, **kwds)
+            return result
+        return func
  
 class NovaShell:
     """
@@ -63,8 +68,7 @@ class NovaShell:
             self.compute_manager = ComputeManager()
             self.network_manager = NetworkManager()
             self.scheduler_manager = SchedulerManager()
-            self.context = context.get_admin_context()
-            self.db = wrap_context(db, self.context)
+            self.db = NovaDB(db, context.get_admin_context())
         else:
             self.auth = None
             self.proxy = None
