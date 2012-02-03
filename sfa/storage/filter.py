@@ -1,5 +1,5 @@
 from types import StringTypes
-import pgdb
+import types
  
 from sfa.util.faults import SfaInvalidArgument
 
@@ -89,7 +89,29 @@ class Filter(Parameter, dict):
         if isinstance(value, (list, tuple, set)):
             return "ARRAY[%s]" % ", ".join(map(self.quote, value))
         else:
-            return pgdb._quote(value)    
+            return self._quote(value)    
+
+    # pgdb._quote isn't supported in python 2.7/f16, so let's implement it here   
+    def _quote(x):
+        if isinstance(x, DateTimeType):
+                x = str(x)
+        elif isinstance(x, unicode):
+                x = x.encode( 'utf-8' )
+
+        if isinstance(x, types.StringType):
+                x = "'%s'" % str(x).replace("\\", "\\\\").replace("'", "''")
+        elif isinstance(x, (types.IntType, types.LongType, types.FloatType)):
+                pass
+        elif x is None:
+                x = 'NULL'
+        elif isinstance(x, (types.ListType, types.TupleType)):
+                x = '(%s)' % ','.join(map(lambda x: str(_quote(x)), x))
+        elif hasattr(x, '__pg_repr__'):
+                x = x.__pg_repr__()
+        else:
+                raise InterfaceError, 'do not know how to handle type %s' % type(x)
+
+        return x
 
     def sql(self, join_with = "AND"):
         """
@@ -146,7 +168,7 @@ class Filter(Parameter, dict):
                     if value is None:
                         operator = "IS"
                         value = "NULL"
-                    elif isinstance(value, StringTypes) and \
+                    elif isinstance(value, types.StringTypes) and \
                             (value.find("*") > -1 or value.find("%") > -1):
                         operator = "LIKE"
                         # insert *** in pattern instead of either * or %
