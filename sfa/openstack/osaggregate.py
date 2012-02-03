@@ -102,7 +102,7 @@ class OSAggregate:
             proj_manager = usernames[0] 
             self.driver.shell.auth_manager.create_project(slicename, proj_manager)
 
-    def verify_users(self, slicename, users, options={}):
+    def verify_slice_users(self, slicename, users, options={}):
         """
         Add requested users to the specified slice.  
         """
