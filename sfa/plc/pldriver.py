@@ -225,10 +225,10 @@ class PlDriver (Driver):
                pl_record["url"] = sfa_record["url"]
 	    if "description" in sfa_record:
 	        pl_record["description"] = sfa_record["description"]
-        if "expires" in sfa_record:
-            date = utcparse(sfa_record['expires'])
-            expires = datetime_to_epoch(date)
-            pl_record["expires"] = expires
+            if "expires" in sfa_record:
+                date = utcparse(sfa_record['expires'])
+                expires = datetime_to_epoch(date)
+                pl_record["expires"] = expires
 
         elif type == "node":
             if not "hostname" in pl_record:
