@@ -113,7 +113,7 @@ def main():
             person_record.sync()
 
     # Get all projects
-    projects = shell.get_projects()
+    projects = shell.auth_manager.get_projects()
     projects_dict = {}
     for project in projects:
         hrn = config.SFA_INTERFACE_HRN + '.' + project.id
