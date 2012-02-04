@@ -128,7 +128,7 @@ class NovaDriver (Driver):
             elif record['type'] == 'slice': 
                 os_record = self.shell.auth_manager.get_project(name)
                 record['description'] = os_record.description
-                record['PI'] = self.hrn + "." + os_record.project_manager.name
+                record['PI'] = [self.hrn + "." + os_record.project_manager.name]
                 record['geni_creator'] = record['PI'] 
                 record['researcher'] = [self.hrn + "." + user for \
                                          user in os_record.member_ids]
