@@ -20,7 +20,7 @@ class OSAggregate:
         # * instance.image_ref
         # * instance.kernel_id
         # * instance.ramdisk_id 
-        import nova.db.sqlalchemy.models.Instance
+        import nova.db.sqlalchemy.models
         name=None
         type=None
         sliver_id = None
@@ -45,7 +45,7 @@ class OSAggregate:
                          'tags': []})
         return sliver
 
-    def get_rspec(self, slice_xrn=None, vsersion=None, options={}):
+    def get_rspec(self, slice_xrn=None, version=None, options={}):
         version_manager = VersionManager()
         version = version_manager.get_version(version)
         if not slice_xrn:
@@ -54,7 +54,7 @@ class OSAggregate:
         else:
             rspec_version = version_manager._get_version(version.type, version.version, 'manifest')
             nodes = self.get_slice_nodes(slice_xrn)
-        
+        rspec = RSpec(version=rspec_version, user_options=options)
         rspec.version.add_nodes(nodes)
         return rspec.toxml()
 
@@ -91,12 +91,12 @@ class OSAggregate:
             rspec_node['exclusive'] = 'false'
             rspec_node['hardware_types'] = [HardwareType({'name': 'plos-pc'}),
                                                 HardwareType({'name': 'pc'})]
-            instances = self.driver.shell.instance_type_get_all().values()
+            instances = self.driver.shell.db.instance_type_get_all().values()
             slivers = [self.instance_to_sliver(inst) for inst in instances]
             rspec_node['slivers'] = slivers
             rspec_nodes.append(rspec_node) 
 
-        return rspec_node 
+        return rspec_nodes 
 
 
     def verify_slice(self, slicename, users, options={}):
