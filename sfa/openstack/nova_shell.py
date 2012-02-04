@@ -74,9 +74,3 @@ class NovaShell:
             self.proxy = None
             logger.debug('nova access - REST')
             raise SfaNotImplemented('nova access - Rest')
-
-    def __getattr__(self, name):
-        def func(*args, **kwds):
-            result=getattr(self.proxy, name)(self.auth, *args, **kwds)
-            return result
-        return func
