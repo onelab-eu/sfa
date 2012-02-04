@@ -87,13 +87,14 @@ class Filter(Parameter, dict):
         # quoting, except for array types.
         if isinstance(value, (list, tuple, set)):
             return "ARRAY[%s]" % ", ".join(map(self.quote, value))
+
         else:
             return Filter._quote(value)    
 
     # pgdb._quote isn't supported in python 2.7/f16, so let's implement it here
     @staticmethod   
     def _quote(x):
-        if isinstance(x, datetime):
+        if isinstance(x, datetime.datetime):
                 x = str(x)
         elif isinstance(x, unicode):
                 x = x.encode( 'utf-8' )
