@@ -122,7 +122,7 @@ class NovaDriver (Driver):
                 projects = self.shell.db.project_get_by_user(name)
                 record['slices'] = [self.hrn + "." + proj.name for \
                                     proj in projects]
-                record['roles'] = [role for role in os_record.roles]
+                record['roles'] = self.shell.db.user_get_roles(name)
                 keys = self.shell.db.key_pair_get_all_by_user(name)
                 record['keys'] = [key.public_key for key in keys]     
             elif record['type'] == 'slice': 
