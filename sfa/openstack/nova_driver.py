@@ -118,14 +118,14 @@ class NovaDriver (Driver):
             name = Xrn(record['hrn']).get_leaf()
             os_record = None
             if record['type'] == 'user':
-                os_record = self.shell.user_get(name)
+                os_record = self.shell.auth_manager.user_get(name)
                 record['slices'] = [self.hrn + "." + proj.name for \
                                     proj in os_record.projects]
                 record['roles'] = [role for role in os_record.roles]
                 keys = self.shell.key_pair_get_all_by_user(name)
                 record['keys'] = [key.public_key for key in keys]     
             elif record['type'] == 'slice': 
-                os_record = self.shell.project_get(name)
+                os_record = self.shell.auth_manager.project_get(name)
                 record['description'] = os_record.description
                 record['PI'] = self.hrn + "." + os_record.project_manager
                 record['geni_creator'] = record['PI'] 
