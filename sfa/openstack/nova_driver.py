@@ -130,8 +130,8 @@ class NovaDriver (Driver):
                 record['description'] = os_record.description
                 record['PI'] = self.hrn + "." + os_record.project_manager.name
                 record['geni_creator'] = record['PI'] 
-                record['researcher'] = [self.hrn + "." + user.name for \
-                                         user in os_record.members]
+                record['researcher'] = [self.hrn + "." + user for \
+                                         user in os_record.member_ids]
             else:
                 continue
             record['geni_urn'] = hrn_to_urn(record['hrn'], record['type'])
