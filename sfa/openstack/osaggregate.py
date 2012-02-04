@@ -28,7 +28,7 @@ class OSAggregate:
             # this is an isntance type dict
             name = instance['name']
             type = instance['name'] 
-        elif isinstnace(instance, nova.db.sqlalchemy.models.Instance):
+        elif isinstance(instance, nova.db.sqlalchemy.models.Instance):
             # this is an object that describes a running instance
             name = instance.display_name
             type = instance.instance_type.name
@@ -155,4 +155,12 @@ class OSAggregate:
                     self.driver.shell.db.key_pair_destroy(username, key.name)
             
     def verify_instances(self, slicename, rspec):
-        pass 
+        rsepc = RSpec(rspec)
+        nodes = rspec.version.get_nodes_with_slivers()
+        old_instances = self.driver.shell.db.instance_get_all_by_project(name)
+        for node in nodes:
+            for slivers in node.get('slivers', []):
+                pass
+                # get instance type
+                # get image
+                # start instance

@@ -45,6 +45,7 @@ class NovaShell:
     def __init__ ( self, config ) :
         url = config.SFA_PLC_URL
         # try to figure if the url is local
+        is_local=False    
         hostname=urlparse(url).hostname
         if hostname == 'localhost': is_local=True
         # otherwise compare IP addresses; 
