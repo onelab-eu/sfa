@@ -137,10 +137,10 @@ class NovaDriver (Driver):
             record['geni_urn'] = hrn_to_urn(record['hrn'], record['type'])
             record['geni_certificate'] = record['gid'] 
             record['name'] = os_record.name
-            if os_record.created_at is not None:    
-                record['date_created'] = datetime_to_string(utcparse(os_record.created_at))
-            if os_record.updated_at is not None:
-                record['last_updated'] = datetime_to_string(utcparse(os_record.updated_at))
+            #if os_record.created_at is not None:    
+            #    record['date_created'] = datetime_to_string(utcparse(os_record.created_at))
+            #if os_record.updated_at is not None:
+            #    record['last_updated'] = datetime_to_string(utcparse(os_record.updated_at))
  
         return records
 
