@@ -88,7 +88,7 @@ class Filter(Parameter, dict):
         if isinstance(value, (list, tuple, set)):
             return "ARRAY[%s]" % ", ".join(map(self.quote, value))
         else:
-            return self._quote(value)    
+            return Filter._quote(value)    
 
     # pgdb._quote isn't supported in python 2.7/f16, so let's implement it here
     @staticmethod   
