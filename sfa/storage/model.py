@@ -220,7 +220,8 @@ class RegUser (RegRecord):
     email               = Column ('email', String)
     # can't use name 'keys' here because when loading from xml we're getting
     # a 'keys' tag, and assigning a list of strings in a reference column like this crashes
-    reg_keys            = relationship ('RegKey', backref='reg_user')
+    reg_keys            = relationship ('RegKey', backref='reg_user',
+                                        cascade="all, delete, delete-orphan")
     
     # so we can use RegUser (email=.., hrn=..) and the like
     def __init__ (self, **kwds):
