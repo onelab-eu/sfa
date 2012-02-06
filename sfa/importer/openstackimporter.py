@@ -34,8 +34,8 @@ class OpenstackImporter:
         self.auth_hierarchy = auth_hierarchy
         self.logger=logger
 
-    def record_options (self, parser):
-        self.logger.debug ("PlImporter no options yet")
+    def add_options (self, parser):
+        self.logger.debug ("OpenstackImporter: no options yet")
         pass
 
     def run (self, options):

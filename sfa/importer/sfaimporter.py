@@ -48,8 +48,8 @@ class SfaImporter:
        self.root_auth = self.config.SFA_REGISTRY_ROOT_AUTH
 
     # record options into an OptionParser
-    def record_options (self, parser):
-       self.logger.info ("SfaImporter.record_options : to do")
+    def add_options (self, parser):
+       # no generic option
        pass
 
     def run (self, options):
@@ -94,11 +94,8 @@ class SfaImporter:
         self.auth_hierarchy.create_top_level_auth(hrn)    
         # create the db record if it doesnt already exist    
         auth_info = self.auth_hierarchy.get_auth_info(hrn)
-        auth_record = RegAuthority()
-        auth_record.type='authority'
-        auth_record.hrn=hrn
-        auth_record.gid=auth_info.get_gid_object()
-        auth_record.authority=get_authority(hrn)
+        auth_record = RegAuthority(hrn=hrn, gid=auth_info.get_gid_object(),
+                                   authority=get_authority(hrn))
         auth_record.just_created()
         dbsession.add (auth_record)
         dbsession.commit()
@@ -115,11 +112,8 @@ class SfaImporter:
             self.auth_hierarchy.create_auth(urn)
 
         auth_info = self.auth_hierarchy.get_auth_info(hrn)
-        user_record = RegUser()
-        user_record.type='user'
-        user_record.hrn=hrn
-        user_record.gid=auth_info.get_gid_object()
-        user_record.authority=get_authority(hrn)
+        user_record = RegUser(hrn=hrn, gid=auth_info.get_gid_object(),
+                              authority=get_authority(hrn))
         user_record.just_created()
         dbsession.add (user_record)
         dbsession.commit()
@@ -139,11 +133,8 @@ class SfaImporter:
             gid = self.auth_hierarchy.create_gid(urn, create_uuid(), pkey)
             # xxx this should probably use a RegAuthority, or a to-be-defined RegPeer object
             # but for now we have to preserve the authority+<> stuff
-            interface_record = RegAuthority()
-            interface_record.type=type
-            interface_record.hrn=hrn
-            interface_record.gid= gid
-            interface_record.authority=get_authority(hrn)
+            interface_record = RegAuthority(type=type, hrn=hrn, gid=gid,
+                                            authority=get_authority(hrn))
             interface_record.just_created()
             dbsession.add (interface_record)
             dbsession.commit()

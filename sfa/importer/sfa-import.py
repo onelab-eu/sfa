@@ -36,9 +36,9 @@ def main ():
         testbed_importer = importer_class (auth_hierarchy, logger)
 
     parser = OptionParser ()
-    sfa_importer.record_options (parser)
+    sfa_importer.add_options (parser)
     if testbed_importer:
-        testbed_importer.record_options (parser)
+        testbed_importer.add_options (parser)
 
     (options, args) = parser.parse_args ()
     # no args supported ?

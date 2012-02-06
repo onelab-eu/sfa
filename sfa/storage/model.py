@@ -111,6 +111,8 @@ class RegRecord (Base,AlchemyObj):
     record_id           = Column (Integer, primary_key=True)
     # this is the discriminator that tells which class to use
     classtype           = Column (String)
+    # in a first version type was the discriminator
+    # but that could not accomodate for 'authority+sa' and the like
     type                = Column (String)
     hrn                 = Column (String)
     gid                 = Column (String)
@@ -136,12 +138,12 @@ class RegRecord (Base,AlchemyObj):
         if dict:                                self.load_from_dict (dict)
 
     def __repr__(self):
-        result="[Record id=%s, type=%s, hrn=%s, authority=%s, pointer=%s" % \
+        result="<Record id=%s, type=%s, hrn=%s, authority=%s, pointer=%s" % \
                 (self.record_id, self.type, self.hrn, self.authority, self.pointer)
         # skip the uniform '--- BEGIN CERTIFICATE --' stuff
         if self.gid: result+=" gid=%s..."%self.gid[28:36]
         else: result+=" nogid"
-        result += "]"
+        result += ">"
         return result
 
     @validates ('gid')
@@ -165,34 +167,51 @@ class RegRecord (Base,AlchemyObj):
         self.last_updated=now
 
 ##############################
+# all subclasses define a convenience constructor with a default value for type, 
+# and when applicable a way to define local fields in a kwd=value argument
+####################
 class RegAuthority (RegRecord):
     __tablename__       = 'authorities'
     __mapper_args__     = { 'polymorphic_identity' : 'authority' }
     record_id           = Column (Integer, ForeignKey ("records.record_id"), primary_key=True)
     
+    def __init__ (self, **kwds):
+        # fill in type if not previously set
+        if 'type' not in kwds: kwds['type']='authority'
+        # base class constructor
+        RegRecord.__init__(self, **kwds)
+
     # no proper data yet, just hack the typename
     def __repr__ (self):
         return RegRecord.__repr__(self).replace("Record","Authority")
 
-##############################
+####################
 class RegSlice (RegRecord):
     __tablename__       = 'slices'
     __mapper_args__     = { 'polymorphic_identity' : 'slice' }
     record_id           = Column (Integer, ForeignKey ("records.record_id"), primary_key=True)
     
+    def __init__ (self, **kwds):
+        if 'type' not in kwds: kwds['type']='slice'
+        RegRecord.__init__(self, **kwds)
+
     def __repr__ (self):
         return RegRecord.__repr__(self).replace("Record","Slice")
 
-##############################
+####################
 class RegNode (RegRecord):
     __tablename__       = 'nodes'
     __mapper_args__     = { 'polymorphic_identity' : 'node' }
     record_id           = Column (Integer, ForeignKey ("records.record_id"), primary_key=True)
     
+    def __init__ (self, **kwds):
+        if 'type' not in kwds: kwds['type']='node'
+        RegRecord.__init__(self, **kwds)
+
     def __repr__ (self):
         return RegRecord.__repr__(self).replace("Record","Node")
 
-##############################
+####################
 class RegUser (RegRecord):
     __tablename__       = 'users'
     # these objects will have type='user' in the records table
@@ -203,25 +222,26 @@ class RegUser (RegRecord):
     # a 'keys' tag, and assigning a list of strings in a reference column like this crashes
     reg_keys            = relationship ('RegKey', backref='reg_user')
     
+    # so we can use RegUser (email=.., hrn=..) and the like
     def __init__ (self, **kwds):
         # handle local settings
         if 'email' in kwds: self.email=kwds.pop('email')
-        # fill in type if not previously set
         if 'type' not in kwds: kwds['type']='user'
         RegRecord.__init__(self, **kwds)
 
     # append stuff at the end of the record __repr__
     def __repr__ (self): 
         result = RegRecord.__repr__(self).replace("Record","User")
-        result.replace ("]"," email=%s"%self.email)
-        result += "]"
+        result.replace (">"," email=%s"%self.email)
+        result += ">"
         return result
-    
+
     @validates('email') 
     def validate_email(self, key, address):
         assert '@' in address
         return address
 
+    # xxx this might be temporary
     def normalize_xml (self):
         if hasattr(self,'keys'): self.reg_keys = [ RegKey (key) for key in self.keys ]
 
@@ -229,6 +249,7 @@ class RegUser (RegRecord):
 # xxx tocheck : not sure about eager loading of this one
 # meaning, when querying the whole records, we expect there should
 # be a single query to fetch all the keys 
+# or, is it enough that we issue a single query to retrieve all the keys 
 class RegKey (Base):
     __tablename__       = 'keys'
     key_id              = Column (Integer, primary_key=True)
@@ -241,14 +262,14 @@ class RegKey (Base):
         if pointer: self.pointer=pointer
 
     def __repr__ (self):
-        result="[key key=%s..."%self.key[8:16]
-        try:    result += " user=%s"%self.user.record_id
-        except: result += " <orphan>"
-        result += "]"
+        result="<key id=%s key=%s..."%(self.key_id,self.key[8:16],)
+        try:    result += " user=%s"%self.reg_user.record_id
+        except: result += " no-user"
+        result += ">"
         return result
 
 ##############################
-# although the db needs of course to be reachable,
+# although the db needs of course to be reachable for the following functions
 # the schema management functions are here and not in alchemy
 # because the actual details of the classes need to be known
 # migrations: this code has no notion of the previous versions
