@@ -323,7 +323,3 @@ class PlImporter:
                 except:
                     self.logger.log_exc("PlImporter: failded to delete record")                    
 
-#        # save pub keys
-#        self.logger.info('Import: saving current pub keys')
-#        save_keys(keys_filename, person_keys)                
-        
