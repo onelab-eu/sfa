@@ -11,8 +11,9 @@ from sfa.util.config import Config
 from sfa.trust.certificate import convert_public_key, Keypair
 from sfa.trust.trustedroots import TrustedRoots
 from sfa.trust.gid import create_uuid
-from sfa.storage.model import RegRecord, RegAuthority, RegUser
+
 from sfa.storage.alchemy import dbsession
+from sfa.storage.model import RegRecord, RegAuthority, RegUser
 
 def _un_unicode(str):
    if isinstance(str, unicode):
@@ -43,9 +44,14 @@ class SfaImporter:
     def __init__(self, auth_hierarchy, logger):
        self.logger=logger
        self.auth_hierarchy = auth_hierarchy
-       self.config = Config()
-       self.TrustedRoots = TrustedRoots(Config.get_trustedroots_dir(self.config))
-       self.root_auth = self.config.SFA_REGISTRY_ROOT_AUTH
+       config = Config()
+       self.TrustedRoots = TrustedRoots(Config.get_trustedroots_dir(config))
+       self.root_auth = config.SFA_REGISTRY_ROOT_AUTH
+       self.interface_hrn = config.SFA_INTERFACE_HRN
+
+    # check before creating a RegRecord entry as we run this over and over
+    def record_exists (self, type, hrn):
+       return dbsession.query(RegRecord).filter_by(hrn=hrn,type=type).count()!=0
 
     # record options into an OptionParser
     def add_options (self, parser):
@@ -61,22 +67,20 @@ class SfaImporter:
         Create top level and interface records
         """
         # create root authority
-        interface_hrn = self.config.SFA_INTERFACE_HRN
-        self.create_top_level_auth_records(interface_hrn)
+        self.create_top_level_auth_records(self.interface_hrn)
 
         # create s user record for the slice manager
         self.create_sm_client_record()
 
         # create interface records
-        self.logger.info("SfaImporter: creating interface records")
-# xxx authority+ turning off the creation of authority+*
-# in fact his is required - used in SfaApi._getCredentialRaw
-# that tries to locate 'authority+sa'
+        # xxx turning off the creation of authority+*
+        # in fact his is required - used in SfaApi._getCredentialRaw
+        # that tries to locate 'authority+sa'
         self.create_interface_records()
 
         # add local root authority's cert  to trusted list
-        self.logger.info("SfaImporter: adding " + interface_hrn + " to trusted list")
-        authority = self.auth_hierarchy.get_auth_info(interface_hrn)
+        self.logger.info("SfaImporter: adding " + self.interface_hrn + " to trusted list")
+        authority = self.auth_hierarchy.get_auth_info(self.interface_hrn)
         self.TrustedRoots.add_gid(authority.get_gid_object())
 
     def create_top_level_auth_records(self, hrn):
@@ -93,6 +97,7 @@ class SfaImporter:
         # ensure key and cert exists:
         self.auth_hierarchy.create_top_level_auth(hrn)    
         # create the db record if it doesnt already exist    
+        if self.record_exists ('authority',hrn): return
         auth_info = self.auth_hierarchy.get_auth_info(hrn)
         auth_record = RegAuthority(hrn=hrn, gid=auth_info.get_gid_object(),
                                    authority=get_authority(hrn))
@@ -105,12 +110,13 @@ class SfaImporter:
         """
         Create a user record for the Slicemanager service.
         """
-        hrn = self.config.SFA_INTERFACE_HRN + '.slicemanager'
+        hrn = self.interface_hrn + '.slicemanager'
         urn = hrn_to_urn(hrn, 'user')
         if not self.auth_hierarchy.auth_exists(urn):
             self.logger.info("SfaImporter: creating Slice Manager user")
             self.auth_hierarchy.create_auth(urn)
 
+        if self.record_exists ('user',hrn): return
         auth_info = self.auth_hierarchy.get_auth_info(hrn)
         user_record = RegUser(hrn=hrn, gid=auth_info.get_gid_object(),
                               authority=get_authority(hrn))
@@ -125,14 +131,14 @@ class SfaImporter:
         """
         # just create certs for all sfa interfaces even if they
         # aren't enabled
-        hrn = self.config.SFA_INTERFACE_HRN
-        auth_info = self.auth_hierarchy.get_auth_info(hrn)
+        auth_info = self.auth_hierarchy.get_auth_info(self.interface_hrn)
         pkey = auth_info.get_pkey_object()
+        hrn=self.interface_hrn
         for type in  [ 'authority+sa', 'authority+am', 'authority+sm', ]:
             urn = hrn_to_urn(hrn, type)
             gid = self.auth_hierarchy.create_gid(urn, create_uuid(), pkey)
-            # xxx this should probably use a RegAuthority, or a to-be-defined RegPeer object
-            # but for now we have to preserve the authority+<> stuff
+            # for now we have to preserve the authority+<> stuff
+            if self.record_exists (type,hrn): continue
             interface_record = RegAuthority(type=type, hrn=hrn, gid=gid,
                                             authority=get_authority(hrn))
             interface_record.just_created()
@@ -140,8 +146,3 @@ class SfaImporter:
             dbsession.commit()
             self.logger.info("SfaImporter: imported authority (%s) %s " % (type,interface_record))
              
-    def delete_record(self, hrn, type):
-        # delete the record
-        for rec in dbsession.query(RegRecord).filter_by(type=type,hrn=hrn):
-           dbsession.delete(rec)
-        dbsession.commit()
