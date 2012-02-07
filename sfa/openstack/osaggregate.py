@@ -81,6 +81,20 @@ class OSAggregate:
         else:
             zones = [zone.name for zone in zones]
 
+        # available sliver/instance/vm types
+        instances = self.driver.shell.db.instance_type_get_all().values()
+        # available images
+        images = self.driver.shell.glance_manager.detail()
+        disk_images = []
+        for image in images:
+            if image.container_format == 'ami': 
+                img = Image()
+                img['name'] = img.name
+                img['description'] = img.name
+                img['os'] = img.name
+                img['version'] = img.name
+                disk_images.append(img)    
+        
         rspec_nodes = []
         for zone in zones:
             rspec_node = Node()
@@ -91,7 +105,12 @@ class OSAggregate:
             rspec_node['exclusive'] = 'false'
             rspec_node['hardware_types'] = [HardwareType({'name': 'plos-pc'}),
                                                 HardwareType({'name': 'pc'})]
-            instances = self.driver.shell.db.instance_type_get_all().values()
+            slivers = []
+            for instance in instances:
+                for image in images:
+                    sliver = self.instance_to_sliver(instance)
+                    sliver['disk_images'] = disk_images
+                    
             slivers = [self.instance_to_sliver(inst) for inst in instances]
             rspec_node['slivers'] = slivers
             rspec_nodes.append(rspec_node) 
