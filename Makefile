@@ -173,7 +173,7 @@ syncfast: synclib syncrestart
 .PHONY: synccheck synclib syncbin syncconfig synctest syncrestart sync syncfast
 
 syncrica: synccheck
-	+$(RSYNC) --relative ./sfa/fd ./sfa/generic/fd.py ./sfa/rspecs/versions/federica.py $(SSHURL)/usr/lib\*/python2.\*/site-packages/
+	+$(RSYNC) --relative ./sfa/federica ./sfa/generic/fd.py ./sfa/rspecs/versions/federica.py $(SSHURL)/usr/lib\*/python2.\*/site-packages/
 	$(SSHCOMMAND) exec service sfa restart
 
 .PHONY: syncrica
