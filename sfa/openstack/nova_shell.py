@@ -71,7 +71,7 @@ class NovaShell:
             self.network_manager = NetworkManager()
             self.scheduler_manager = SchedulerManager()
             self.db = InjectContext(db, context.get_admin_context())
-            self.image_manager = InjectContext(GlanceImageSevice(), context.get_admin_context())
+            self.image_manager = InjectContext(GlanceImageService(), context.get_admin_context())
         else:
             self.auth = None
             self.proxy = None
