@@ -11,25 +11,26 @@ try:
     from nova.compute.manager import ComputeManager
     from nova.network.manager import NetworkManager
     from nova.scheduler.manager import SchedulerManager
+    from nova.image.glance import GlanceImageService
     has_nova = True
 except:
     has_nova = False
 
 
-class NovaDB:
+class InjectContext:
     """
-    Wraps the nova.db library and injects the context when executing methods 
+    Wraps the module and injects the context when executing methods 
     """     
-    def __init__(self, db, context):
-        self.db = db
+    def __init__(self, proxy, context):
+        self.proxy = proxy
         self.context = context
     
     def __getattr__(self, name):
         def func(*args, **kwds):
-            result=getattr(self.db, name)(self.context, *args, **kwds)
+            result=getattr(self.proxy, name)(self.context, *args, **kwds)
             return result
         return func
- 
+
 class NovaShell:
     """
     A simple xmlrpc shell to a myplc instance
@@ -69,7 +70,8 @@ class NovaShell:
             self.compute_manager = ComputeManager()
             self.network_manager = NetworkManager()
             self.scheduler_manager = SchedulerManager()
-            self.db = NovaDB(db, context.get_admin_context())
+            self.db = InjectContext(db, context.get_admin_context())
+            self.image_manager = InjectContext(GlanceImageSevice(), context.get_admin_context())
         else:
             self.auth = None
             self.proxy = None
