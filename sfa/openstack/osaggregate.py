@@ -84,7 +84,7 @@ class OSAggregate:
         # available sliver/instance/vm types
         instances = self.driver.shell.db.instance_type_get_all().values()
         # available images
-        images = self.driver.shell.glance_manager.detail()
+        images = self.driver.shell.image_manager.detail()
         disk_images = []
         for image in images:
             if image.container_format == 'ami': 
