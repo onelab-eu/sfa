@@ -5,6 +5,7 @@ from sfa.rspecs.elements.hardware_type import HardwareType
 from sfa.rspecs.elements.node import Node
 from sfa.rspecs.elements.sliver import Sliver
 from sfa.rspecs.elements.login import Login
+from sfa.rspecs.elements.disk_image import DiskImage
 from sfa.rspecs.elements.services import Services
 from sfa.util.xrn import Xrn
 from sfa.util.osxrn import OSXrn
@@ -87,12 +88,12 @@ class OSAggregate:
         images = self.driver.shell.image_manager.detail()
         disk_images = []
         for image in images:
-            if image.container_format == 'ami': 
-                img = Image()
-                img['name'] = img.name
-                img['description'] = img.name
-                img['os'] = img.name
-                img['version'] = img.name
+            if image['container_format'] == 'ami': 
+                img = DiskImage()
+                img['name'] = image['name']
+                img['description'] = image['name']
+                img['os'] = image['name']
+                img['version'] = image['name']
                 disk_images.append(img)    
         
         rspec_nodes = []
@@ -107,11 +108,10 @@ class OSAggregate:
                                                 HardwareType({'name': 'pc'})]
             slivers = []
             for instance in instances:
-                for image in images:
-                    sliver = self.instance_to_sliver(instance)
-                    sliver['disk_images'] = disk_images
-                    
-            slivers = [self.instance_to_sliver(inst) for inst in instances]
+                sliver = self.instance_to_sliver(instance)
+                sliver['disk_images'] = disk_images
+                slivers.append(sliver)
+        
             rspec_node['slivers'] = slivers
             rspec_nodes.append(rspec_node) 
 
