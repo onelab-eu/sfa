@@ -1,8 +1,8 @@
-# 
+#
 # sfi.py - basic SFA command-line client
 # the actual binary in sfa/clientbin essentially runs main()
 # this module is used in sfascan
-# 
+#
 
 import sys
 sys.path.append('.')
@@ -12,6 +12,7 @@ import socket
 import datetime
 import codecs
 import pickle
+import json
 from lxml import etree
 from StringIO import StringIO
 from optparse import OptionParser
@@ -87,16 +88,28 @@ def filter_records(type, records):
 
 
 # save methods
-def save_variable_to_file(var, filename, format="text"):
-    f = open(filename, "w")
+def save_raw_to_file(var, filename, format="text", banner=None):
+    if filename == "-":
+        # if filename is "-", send it to stdout
+        f = sys.stdout
+    else:
+        f = open(filename, "w")
+    if banner:
+        f.write(banner+"\n")
     if format == "text":
         f.write(str(var))
     elif format == "pickled":
         f.write(pickle.dumps(var))
+    elif format == "json":
+        if hasattr(json, "dumps"):
+            f.write(json.dumps(var))   # python 2.6
+        else:
+            f.write(json.write(var))   # python 2.5
     else:
         # this should never happen
         print "unknown output format", format
-
+    if banner:
+        f.write('\n'+banner+"\n")
 
 def save_rspec_to_file(rspec, filename):
     if not filename.endswith(".rspec"):
@@ -298,13 +311,6 @@ class Sfi:
                              help="output file format ([xml]|xmllist|hrnlist)", default="xml",
                              choices=("xml", "xmllist", "hrnlist"))
 
-        if command in ("status", "version"):
-           parser.add_option("-o", "--output", dest="file",
-                            help="output dictionary to file", metavar="FILE", default=None)
-           parser.add_option("-F", "--fileformat", dest="fileformat", type="choice",
-                             help="output file format ([text]|pickled)", default="text",
-                             choices=("text","pickled"))
-
         if command in ("delegate"):
            parser.add_option("-u", "--user",
                             action="store_true", dest="delegate_user", default=False,
@@ -332,8 +338,13 @@ class Sfi:
                          help="root registry", metavar="URL", default=None)
         parser.add_option("-s", "--sliceapi", dest="sm", default=None, metavar="URL",
                          help="slice API - in general a SM URL, but can be used to talk to an aggregate")
-        parser.add_option("-R", "--raw", dest="raw", action="store_true", default=False,
-                          help="Display raw, unparsed server response")   
+        parser.add_option("-R", "--raw", dest="raw", default=None,
+                          help="Save raw, unparsed server response to a file")
+        parser.add_option("", "--rawformat", dest="rawformat", type="choice",
+                          help="raw file format ([text]|pickled|json)", default="text",
+                          choices=("text","pickled","json"))
+        parser.add_option("", "--rawbanner", dest="rawbanner", default=None,
+                          help="text string to write before and after raw output")
         parser.add_option("-d", "--dir", dest="sfi_dir",
                          help="config & working directory - default is %default",
                          metavar="PATH", default=Sfi.default_sfi_dir())
@@ -653,17 +664,17 @@ class Sfi:
        else:
           self.logger.critical("No such registry record file %s"%record)
           sys.exit(1)
-    
+
 
     #==========================================================================
     # Following functions implement the commands
     #
     # Registry-related commands
     #==========================================================================
-  
+
     def version(self, options, args):
         """
-        display an SFA server version (GetVersion) 
+        display an SFA server version (GetVersion)
 or version information about sfi itself
         """
         if options.version_local:
@@ -675,10 +686,11 @@ or version information about sfi itself
                 server = self.sliceapi()
             result = server.GetVersion()
             version = ReturnValue.get_value(result)
-        pprinter = PrettyPrinter(indent=4)
-        pprinter.pprint(version)
-        if options.file:
-            save_variable_to_file(version, options.file, options.fileformat)
+        if self.options.raw:
+            save_raw_to_file(result, self.options.raw, self.options.rawformat, self.options.rawbanner)
+        else:
+            pprinter = PrettyPrinter(indent=4)
+            pprinter.pprint(version)
 
     def list(self, options, args):
         """
@@ -805,11 +817,11 @@ or version information about sfi itself
         result = server.ListSlices(creds, *self.ois(server,api_options))
         value = ReturnValue.get_value(result)
         if self.options.raw:
-            print result
+            save_raw_to_file(result, self.options.raw, self.options.rawformat, self.options.rawbanner)
         else:
             display_list(value)
         return
-    
+
     # show rspec for named slice
     def resources(self, options, args):
         """
@@ -826,9 +838,9 @@ or with an slice hrn, shows currently provisioned resources
             creds.append(self.my_credential_string)
         if options.delegate:
             creds.append(self.delegate_cred(cred, get_authority(self.authority)))
-       
+
         # no need to check if server accepts the options argument since the options has
-        # been a required argument since v1 API   
+        # been a required argument since v1 API
         api_options = {}
         # always send call_id to v2 servers
         api_options ['call_id'] = unique_call_id()
@@ -851,18 +863,18 @@ or with an slice hrn, shows currently provisioned resources
                 # just request the version the client wants
                 api_options['geni_rspec_version'] = version_manager.get_version(options.rspec_version).to_dict()
             else:
-                api_options['geni_rspec_version'] = {'type': 'geni', 'version': '3.0'}    
+                api_options['geni_rspec_version'] = {'type': 'geni', 'version': '3.0'}
         else:
-            api_options['geni_rspec_version'] = {'type': 'geni', 'version': '3.0'}    
+            api_options['geni_rspec_version'] = {'type': 'geni', 'version': '3.0'}
         result = server.ListResources (creds, api_options)
         value = ReturnValue.get_value(result)
-        if options.file is None:
-            if self.options.raw:
-                print result
-            else:
-                display_rspec(value, options.format)
-        else:
+        if self.options.raw:
+            save_raw_to_file(result, self.options.raw, self.options.rawformat, self.options.rawbanner)
+        if options.file is not None:
             save_rspec_to_file(value, options.file)
+        if (self.options.raw is None) and (options.file is None):
+            display_rspec(value, options.format)
+
         return
 
     def create(self, options, args):
@@ -888,8 +900,8 @@ or with an slice hrn, shows currently provisioned resources
             #    delegated_cred = self.delegate_cred(slice_cred, server_version['hrn'])
             #elif server_version.get('urn'):
             #    delegated_cred = self.delegate_cred(slice_cred, urn_to_hrn(server_version['urn']))
-                
-        # rspec 
+
+        # rspec
         rspec_file = self.get_rspec_file(args[1])
         rspec = open(rspec_file).read()
 
@@ -914,8 +926,8 @@ or with an slice hrn, shows currently provisioned resources
                 rspec = RSpecConverter.to_pg_rspec(rspec.toxml(), content_type='request')
             else:
                 users = sfa_users_arg(user_records, slice_record)
-        
-        # do not append users, keys, or slice tags. Anything 
+
+        # do not append users, keys, or slice tags. Anything
         # not contained in this request will be removed from the slice
 
         # CreateSliver has supported the options argument for a while now so it should
@@ -926,13 +938,13 @@ or with an slice hrn, shows currently provisioned resources
 
         result = server.CreateSliver(slice_urn, creds, rspec, users, *self.ois(server, api_options))
         value = ReturnValue.get_value(result)
-        if options.file is None:
-            if self.options.raw:
-                print result
-            else:
-                print value
-        else:
+        if self.options.raw:
+            save_raw_to_file(result, self.options.raw, self.options.rawformat, self.options.rawbanner)
+        if options.file is not None:
             save_rspec_to_file (value, options.file)
+        if (self.options.raw is None) and (options.file is None):
+            print value
+
         return value
 
     def delete(self, options, args):
@@ -958,7 +970,7 @@ or with an slice hrn, shows currently provisioned resources
         result = server.DeleteSliver(slice_urn, creds, *self.ois(server, api_options ) )
         value = ReturnValue.get_value(result)
         if self.options.raw:
-            print result
+            save_raw_to_file(result, self.options.raw, self.options.rawformat, self.options.rawbanner)
         else:
             print value
         return value 
@@ -986,11 +998,9 @@ or with an slice hrn, shows currently provisioned resources
         result = server.SliverStatus(slice_urn, creds, *self.ois(server,api_options))
         value = ReturnValue.get_value(result)
         if self.options.raw:
-            print result
+            save_raw_to_file(result, self.options.raw, self.options.rawformat, self.options.rawbanner)
         else:
             print value
-        if options.file:
-            save_variable_to_file(value, options.file, options.fileformat)
 
     def start(self, options, args):
         """
@@ -1012,7 +1022,7 @@ or with an slice hrn, shows currently provisioned resources
         result = server.Start(slice_urn, creds)
         value = ReturnValue.get_value(result)
         if self.options.raw:
-            print result
+            save_raw_to_file(result, self.options.raw, self.options.rawformat, self.options.rawbanner)
         else:
             print value
         return value
@@ -1034,7 +1044,7 @@ or with an slice hrn, shows currently provisioned resources
         result =  server.Stop(slice_urn, creds)
         value = ReturnValue.get_value(result)
         if self.options.raw:
-            print result
+            save_raw_to_file(result, self.options.raw, self.options.rawformat, self.options.rawbanner)
         else:
             print value
         return value
@@ -1057,7 +1067,7 @@ or with an slice hrn, shows currently provisioned resources
         result = server.reset_slice(creds, slice_urn)
         value = ReturnValue.get_value(result)
         if self.options.raw:
-            print result
+            save_raw_to_file(result, self.options.raw, self.options.rawformat, self.options.rawbanner)
         else:
             print value
         return value
@@ -1084,7 +1094,7 @@ or with an slice hrn, shows currently provisioned resources
         result =  server.RenewSliver(slice_urn, creds, time, *self.ois(server,api_options))
         value = ReturnValue.get_value(result)
         if self.options.raw:
-            print result
+            save_raw_to_file(result, self.options.raw, self.options.rawformat, self.options.rawbanner)
         else:
             print value
         return value
@@ -1107,7 +1117,7 @@ or with an slice hrn, shows currently provisioned resources
         result = server.Shutdown(slice_urn, creds)
         value = ReturnValue.get_value(result)
         if self.options.raw:
-            print result
+            save_raw_to_file(result, self.options.raw, self.options.rawformat, self.options.rawbanner)
         else:
             print value
         return value         
