@@ -45,7 +45,6 @@ class DBSchema:
         self.url=alchemy.url
         self.engine=alchemy.engine
         self.repository="/usr/share/sfa/migrations"
-        self.meta=MetaData (bind=self.engine)
 
     def current_version (self):
         try:
@@ -55,7 +54,8 @@ class DBSchema:
 
     def table_exists (self, tablename):
         try:
-            table=Table (tablename, self.meta, autoload=True)
+            metadata = MetaData (bind=self.engine)
+            table=Table (tablename, metadata, autoload=True)
             return True
         except NoSuchTableError:
             return False
@@ -71,8 +71,9 @@ class DBSchema:
         try:
             # try to find out which old version this can be
             if not self.table_exists ('records'):
-                # this likely means we've just created the db, so it's either a fresh install
-                # or we come from a 'very old' depl.
+                # this likely means 
+                # (.) we've just created the db, so it's either a fresh install, or
+                # (.) we come from a 'very old' depl.
                 # in either case, an import is required but there's nothing to clean up
                 print >> sys.stderr,"%s: make sure to run import"%(DBSchema.header,)
             elif self.table_exists ('sfa_db_version'):
@@ -109,6 +110,8 @@ class DBSchema:
             after="%s"%self.current_version()
             if before != after:
                 logger.info("DBSchema : upgraded version from %s to %s"%(before,after))
+            else:
+                logger.debug("DBSchema : no change needed in db schema (%s==%s)"%(before,after))
     
     # this trashes the db altogether, from the current model in sfa.storage.model
     # I hope this won't collide with ongoing migrations and all
