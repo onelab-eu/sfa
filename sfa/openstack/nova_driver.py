@@ -313,8 +313,6 @@ class NovaDriver (Driver):
         slice = self.shell.project_get(name)
         if not slice:
             return 1
-        
-        self.shell.DeleteSliceFromNodes(slicename, slice['node_ids'])
         instances = self.shell.db.instance_get_all_by_project(name)
         for instance in instances:
             self.shell.db.instance_destroy(instance.instance_id)
