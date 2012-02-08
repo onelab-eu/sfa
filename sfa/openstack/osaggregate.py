@@ -1,4 +1,4 @@
-
+from nova.exception import ImageNotFound
 from sfa.util.faults import SfaAPIError
 from sfa.rspecs.rspec import RSpec
 from sfa.rspecs.elements.hardware_type import HardwareType
@@ -10,6 +10,7 @@ from sfa.rspecs.elements.services import Services
 from sfa.util.xrn import Xrn
 from sfa.util.osxrn import OSXrn
 from sfa.rspecs.version_manager import VersionManager
+
 
 class OSAggregate:
 
@@ -46,6 +47,28 @@ class OSAggregate:
                          'tags': []})
         return sliver
 
+    def get_disk_images(self, image_id=None):
+        # get image records
+        if image_id:
+            try:
+                images = [self.driver.shell.image_manager.show(image_id)]
+            except ImageNotFound:
+                images = []
+        else:
+            images = self.driver.shell.image_manager.detail()
+            
+        disk_images = []
+        # create disk image objects 
+        for image in images:
+            if image['container_format'] == 'ami':
+                img = DiskImage()
+                img['name'] = image['name']
+                img['description'] = image['name']
+                img['os'] = image['name']
+                img['version'] = image['name']
+                disk_images.append(img)
+        return disk_images
+
     def get_rspec(self, slice_xrn=None, version=None, options={}):
         version_manager = VersionManager()
         version = version_manager.get_version(version)
@@ -69,7 +92,8 @@ class OSAggregate:
             rspec_node['component_id'] = xrn.urn
             rspec_node['component_name'] = xrn.name
             rspec_node['component_manager_id'] = Xrn(self.driver.hrn, 'authority+cm').get_urn()   
-            sliver = self.instance_to_sliver(instance) 
+            sliver = self.instance_to_sliver(instance)
+            sliver['disk_images'] = self.get_disk_images(instance.image_ref) 
             rspec_node['slivers'] = [sliver]
             rspec_nodes.append(rspec_node)
         return rspec_nodes
@@ -85,16 +109,7 @@ class OSAggregate:
         # available sliver/instance/vm types
         instances = self.driver.shell.db.instance_type_get_all().values()
         # available images
-        images = self.driver.shell.image_manager.detail()
-        disk_images = []
-        for image in images:
-            if image['container_format'] == 'ami': 
-                img = DiskImage()
-                img['name'] = image['name']
-                img['description'] = image['name']
-                img['os'] = image['name']
-                img['version'] = image['name']
-                disk_images.append(img)    
+        disk_images = self.get_disk_images()
         
         rspec_nodes = []
         for zone in zones:
