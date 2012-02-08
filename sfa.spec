@@ -1,6 +1,6 @@
 %define name sfa
 %define version 2.1
-%define taglevel 1
+%define taglevel 2
 
 %define release %{taglevel}%{?pldistro:.%{pldistro}}%{?date:.%{date}}
 %global python_sitearch	%( python -c "from distutils.sysconfig import get_python_lib; print get_python_lib(1)" )
@@ -229,6 +229,16 @@ fi
 [ "$1" -ge "1" ] && service sfa-cm restart || :
 
 %changelog
+* Wed Feb 08 2012 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-2.1-2
+- registry database has user's keys and mail (known as v0 for migrate)
+- pl importer properly maintains user's keys and mail
+- pl driver now to handle 'role' when adding person record (exp.)
+- first draft of federica driver with config section
+- SFA_GENERIC_FLAVOUR in usual variables for sfa-config-tty
+- plus, from master as of tag merged-in-sfa-2.1-2:
+- disk_image revisited
+- new nova_shell nova_driver & various tweaks for openstack
+
 * Fri Jan 27 2012 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-2.1-1
 - uses sqlalchemy and related migrate
 - thorough migration and upgrade scheme
