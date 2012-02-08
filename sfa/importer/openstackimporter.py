@@ -10,7 +10,7 @@ from sfa.trust.certificate import convert_public_key, Keypair
 from sfa.storage.alchemy import dbsession
 from sfa.storage.model import RegRecord, RegAuthority, RegUser, RegSlice, RegNode
 
-from sfa.openstack.openstack_shell import OpenstackShell    
+from sfa.openstack.nova_shell import NovaShell    
 
 def load_keys(filename):
     keys = {}
@@ -45,7 +45,7 @@ class OpenstackImporter:
         config = Config ()
         interface_hrn = config.SFA_INTERFACE_HRN
         root_auth = config.SFA_REGISTRY_ROOT_AUTH
-        shell = OpenstackShell (config)
+        shell = NovaShell (config)
 
         # create dict of all existing sfa records
         existing_records = {}

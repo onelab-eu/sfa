@@ -55,8 +55,9 @@ class SFAv1Node:
             if location:
                 node_elem.add_instance('location', location, Location.fields)
 
-            for interface in node.get('interfaces', []):
-                node_elem.add_instance('interface', interface, ['component_id', 'client_id', 'ipv4']) 
+            if isinstance(node.get('interfaces'), list):
+                for interface in node.get('interfaces', []):
+                    node_elem.add_instance('interface', interface, ['component_id', 'client_id', 'ipv4']) 
             
             #if 'bw_unallocated' in node and node['bw_unallocated']:
             #    bw_unallocated = etree.SubElement(node_elem, 'bw_unallocated', units='kbps').text = str(int(node['bw_unallocated'])/1000)

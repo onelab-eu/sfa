@@ -18,4 +18,4 @@ class Element(dict):
         elif hasattr(self.element, name):
             return getattr(self.element, name)
         else:
-            raise AttributeError, "class Element has not attribute %s" % name
+            raise AttributeError, "class Element has no attribute %s" % name

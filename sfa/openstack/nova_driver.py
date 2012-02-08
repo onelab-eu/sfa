@@ -17,8 +17,7 @@ from sfa.rspecs.rspec import RSpec
 
 # the driver interface, mostly provides default behaviours
 from sfa.managers.driver import Driver
-
-from sfa.openstack.openstack_shell import OpenstackShell
+from sfa.openstack.nova_shell import NovaShell
 from sfa.openstack.osaggregate import OSAggregate
 from sfa.plc.plslices import PlSlices
 from sfa.util.osxrn import OSXrn
@@ -36,19 +35,19 @@ def list_to_dict(recs, key):
 # can be sent as-is; it takes care of authentication
 # from the global config
 # 
-class OpenstackDriver (Driver):
+class NovaDriver (Driver):
 
     # the cache instance is a class member so it survives across incoming requests
     cache = None
 
     def __init__ (self, config):
         Driver.__init__ (self, config)
-        self.shell = OpenstackShell (config)
+        self.shell = NovaShell (config)
         self.cache=None
         if config.SFA_AGGREGATE_CACHING:
-            if OpenstackDriver.cache is None:
-                OpenstackDriver.cache = Cache()
-            self.cache = OpenstackDriver.cache
+            if NovaDriver.cache is None:
+                NovaDriver.cache = Cache()
+            self.cache = NovaDriver.cache
  
     ########################################
     ########## registry oriented
@@ -122,28 +121,29 @@ class OpenstackDriver (Driver):
             name = Xrn(record['hrn']).get_leaf()
             os_record = None
             if record['type'] == 'user':
-                os_record = self.shell.user_get(name)
+                os_record = self.shell.auth_manager.get_user(name)
+                projects = self.shell.db.project_get_by_user(name)
                 record['slices'] = [self.hrn + "." + proj.name for \
-                                    proj in os_record.projects]
-                record['roles'] = [role for role in os_record.roles]
-                keys = self.shell.key_pair_get_all_by_user(name)
+                                    proj in projects]
+                record['roles'] = self.shell.db.user_get_roles(name)
+                keys = self.shell.db.key_pair_get_all_by_user(name)
                 record['keys'] = [key.public_key for key in keys]     
             elif record['type'] == 'slice': 
-                os_record = self.shell.project_get(name)
+                os_record = self.shell.auth_manager.get_project(name)
                 record['description'] = os_record.description
-                record['PI'] = self.hrn + "." + os_record.project_manager
+                record['PI'] = [self.hrn + "." + os_record.project_manager.name]
                 record['geni_creator'] = record['PI'] 
-                record['researcher'] = [self.hrn + "." + user.name for \
-                                         user in os_record.members]
+                record['researcher'] = [self.hrn + "." + user for \
+                                         user in os_record.member_ids]
             else:
                 continue
             record['geni_urn'] = hrn_to_urn(record['hrn'], record['type'])
             record['geni_certificate'] = record['gid'] 
             record['name'] = os_record.name
-            if os_record.created_at is not None:    
-                record['date_created'] = datetime_to_string(utcparse(os_record.created_at))
-            if os_record.updated_at is not None:
-                record['last_updated'] = datetime_to_string(utcparse(os_record.updated_at))
+            #if os_record.created_at is not None:    
+            #    record['date_created'] = datetime_to_string(utcparse(os_record.created_at))
+            #if os_record.updated_at is not None:
+            #    record['last_updated'] = datetime_to_string(utcparse(os_record.updated_at))
  
         return records
 
@@ -199,8 +199,8 @@ class OpenstackDriver (Driver):
                 return slices
     
         # get data from db
-        slices = self.shell.project_get_all()
-        slice_urns = [OSXrn(name, 'slice').urn for name in slice] 
+        projs = self.shell.auth_manager.get_projects()
+        slice_urns = [OSXrn(proj.name, 'slice').urn for proj in projs] 
     
         # cache the result
         if self.cache:
@@ -295,38 +295,20 @@ class OpenstackDriver (Driver):
 
     def create_sliver (self, slice_urn, slice_hrn, creds, rspec_string, users, options):
 
-        aggregate = PlAggregate(self)
-        slices = PlSlices(self)
-        peer = slices.get_peer(slice_hrn)
-        sfa_peer = slices.get_sfa_peer(slice_hrn)
-        slice_record=None    
-        if users:
-            slice_record = users[0].get('slice_record', {})
-    
+        aggregate = OSAggregate(self)
+        slicename = get_leaf(slice_hrn)
+        
         # parse rspec
         rspec = RSpec(rspec_string)
         requested_attributes = rspec.version.get_slice_attributes()
         
-        # ensure site record exists
-        site = slices.verify_site(slice_hrn, slice_record, peer, sfa_peer, options=options)
         # ensure slice record exists
-        slice = slices.verify_slice(slice_hrn, slice_record, peer, sfa_peer, options=options)
+        slice = aggregate.verify_slice(slicename, users, options=options)
         # ensure person records exists
-        persons = slices.verify_persons(slice_hrn, slice, users, peer, sfa_peer, options=options)
-        # ensure slice attributes exists
-        slices.verify_slice_attributes(slice, requested_attributes, options=options)
-        
+        persons = aggregate.verify_slice_users(slicename, users, options=options)
         # add/remove slice from nodes
-        requested_slivers = [node.get('component_name') for node in rspec.version.get_nodes_with_slivers()]
-        nodes = slices.verify_slice_nodes(slice, requested_slivers, peer) 
+        slices.verify_instances(slicename, rspec)    
    
-        # add/remove links links 
-        slices.verify_slice_links(slice, rspec.version.get_link_requests(), nodes)
-    
-        # handle MyPLC peer association.
-        # only used by plc and ple.
-        slices.handle_peer(site, slice, persons, peer)
-        
         return aggregate.get_rspec(slice_xrn=slice_urn, version=rspec.version)
 
     def delete_sliver (self, slice_urn, slice_hrn, creds, options):
@@ -336,9 +318,9 @@ class OpenstackDriver (Driver):
             return 1
         
         self.shell.DeleteSliceFromNodes(slicename, slice['node_ids'])
-        instances = self.shell.instance_get_all_by_project(name)
+        instances = self.shell.db.instance_get_all_by_project(name)
         for instance in instances:
-            self.shell.instance_destroy(instance.instance_id)
+            self.shell.db.instance_destroy(instance.instance_id)
         return 1
     
     def renew_sliver (self, slice_urn, slice_hrn, creds, expiration_time, options):
@@ -349,14 +331,10 @@ class OpenstackDriver (Driver):
 
     def stop_slice (self, slice_urn, slice_hrn, creds):
         name = OSXrn(xrn=slice_urn).name
-        slice = self.shell.project_get(name)
-        if not slice:
-            return 1
-
-        self.shell.DeleteSliceFromNodes(slicename, slice['node_ids'])
-        instances = self.shell.instance_get_all_by_project(name)
+        slice = self.shell.get_project(name)
+        instances = self.shell.db.instance_get_all_by_project(name)
         for instance in instances:
-            self.shell.instance_stop(instance.instance_id)
+            self.shell.db.instance_stop(instance.instance_id)
         return 1
     
     def reset_slice (self, slice_urn, slice_hrn, creds):

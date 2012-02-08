@@ -4,14 +4,34 @@ import socket
 from urlparse import urlparse
 from sfa.util.sfalogging import logger
 try:
-    from nova import flags
-    from nova import context 
     from nova import db
-    has_nova = True  
+    from nova import flags
+    from nova import context
+    from nova.auth.manager import AuthManager
+    from nova.compute.manager import ComputeManager
+    from nova.network.manager import NetworkManager
+    from nova.scheduler.manager import SchedulerManager
+    from nova.image.glance import GlanceImageService
+    has_nova = True
 except:
     has_nova = False
- 
-class OpenstackShell:
+
+
+class InjectContext:
+    """
+    Wraps the module and injects the context when executing methods 
+    """     
+    def __init__(self, proxy, context):
+        self.proxy = proxy
+        self.context = context
+    
+    def __getattr__(self, name):
+        def func(*args, **kwds):
+            result=getattr(self.proxy, name)(self.context, *args, **kwds)
+            return result
+        return func
+
+class NovaShell:
     """
     A simple xmlrpc shell to a myplc instance
     This class can receive all Openstack calls to the underlying testbed
@@ -26,6 +46,7 @@ class OpenstackShell:
     def __init__ ( self, config ) :
         url = config.SFA_PLC_URL
         # try to figure if the url is local
+        is_local=False    
         hostname=urlparse(url).hostname
         if hostname == 'localhost': is_local=True
         # otherwise compare IP addresses; 
@@ -41,19 +62,18 @@ class OpenstackShell:
 
 
         if is_local and has_nova:
-            logger.debug('openstack access - native')
+            logger.debug('nova access - native')
             # load the config
             flags.FLAGS(['foo', '--flagfile=/etc/nova/nova.conf', 'foo', 'foo'])
-            self.auth = context.get_admin_context()
-            self.proxy = db
+            # instantiate managers 
+            self.auth_manager = AuthManager()
+            self.compute_manager = ComputeManager()
+            self.network_manager = NetworkManager()
+            self.scheduler_manager = SchedulerManager()
+            self.db = InjectContext(db, context.get_admin_context())
+            self.image_manager = InjectContext(GlanceImageService(), context.get_admin_context())
         else:
             self.auth = None
             self.proxy = None
-            logger.debug('openstack access - REST')
-            raise SfaNotImplemented('openstack access - Rest')
-
-    def __getattr__(self, name):
-        def func(*args, **kwds):
-            result=getattr(self.proxy, name)(self.auth, *args, **kwds)
-            return result
-        return func
+            logger.debug('nova access - REST')
+            raise SfaNotImplemented('nova access - Rest')
