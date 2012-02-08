@@ -145,13 +145,15 @@ class SlabAggregate:
         if slice and 'node_ids' in slice and slice['node_ids']:
             filter['hostname'] = slice['node_ids']
             tags_filter=filter.copy()
-        
+            nodes = self.driver.GetNodes(filter['hostname'])
+        else :
+            nodes = self.driver.GetNodes()
         #geni_available = options.get('geni_available')    
         #if geni_available:
             #filter['boot_state'] = 'boot'     
         print>>sys.stderr, "\r\n \r\n \t get_nodes_and_links filter %s \r\n \r\n \t slivers %s" %(filter, slivers)
         #filter.update({'peer_id': None})
-        nodes = self.driver.GetNodes(filter['hostname'])
+        #nodes = self.driver.GetNodes(filter['hostname'])
         print>>sys.stderr, "\r\n \r\n \t get_nodes_and_links nodes %s" %(nodes)
         
         #site_ids = []
