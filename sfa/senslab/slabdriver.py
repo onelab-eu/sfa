@@ -574,7 +574,7 @@ class SlabDriver(Driver):
         reqdict['resource'] ="network_address="+ str(len(nodeid_list))
         reqdict['resource']+= ",walltime=" + str(00) + ":" + str(05) + ":" + str(00)
         reqdict['script_path'] = "/bin/sleep 320"
-        #reqdict['type'] = "deploy"
+        reqdict['type'] = "deploy"
          
         # first step : start the OAR job
         print>>sys.stderr, "\r\n \r\n AddSliceToNodes reqdict   %s \r\n site_list   %s"  %(reqdict,site_list)   
@@ -589,7 +589,7 @@ class SlabDriver(Driver):
         # [1,56,23,14,45,75] with name /tmp/sfa<jobid>.json
         f=open('/tmp/sfa/'+str(jobid)+'.json','w')
         f.write('[')
-        f.write(str(added_nodes[0]))
+        f.write(str(added_nodes[0].strip('node')))
         for node in added_nodes[1:len(added_nodes)] :
             f.write(','+node.strip('node'))
         f.write(']')
