@@ -140,14 +140,27 @@ class SlabAggregate:
         return (rspec_nodes)
         
     def get_nodes_and_links(self, slice=None,slivers=[], options={}):
+        # NT: the semantic of this function is not clear to me :
+        # if slice is not defined, then all the nodes should be returned
+        # if slice is defined, we should return only the nodes that are part of this slice
+        # but what is the role of the slivers parameter ?
+        # So i assume that slice['node_ids'] will be the same as slivers for us
         filter = {}
         tags_filter = {}
-        if slice and 'node_ids' in slice and slice['node_ids']:
-            filter['hostname'] = slice['node_ids']
-            tags_filter=filter.copy()
-            nodes = self.driver.GetNodes(filter['hostname'])
+        
+        if slice :
+            if 'node_ids' in slice and slice['node_ids']:
+                #first case, a non empty slice was provided
+                filter['hostname'] = slice['node_ids']
+                tags_filter=filter.copy()
+                nodes = self.driver.GetNodes(filter['hostname'])
+            else :
+                #second case, a slice was provided, but is empty
+                nodes={}
         else :
+            #third case, no slice was provided
             nodes = self.driver.GetNodes()
+            
         #geni_available = options.get('geni_available')    
         #if geni_available:
             #filter['boot_state'] = 'boot'     
@@ -249,6 +262,7 @@ class SlabAggregate:
         else:
             rspec_version = version_manager._get_version(version.type, version.version, 'manifest')
         slice, slivers = self.get_slice_and_slivers(slice_xrn)
+        #at this point sliver my be {} if no senslab job is running for this user/slice.
         rspec = RSpec(version=rspec_version, user_options=options)
         #if slice and 'expires' in slice:
            #rspec.xml.set('expires',  datetime_to_epoch(slice['expires']))
