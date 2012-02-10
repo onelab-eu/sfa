@@ -1,5 +1,5 @@
 import sys
-
+import subprocess
 from sfa.util.faults import MissingSfaInfo
 from sfa.util.sfalogging import logger
 from sfa.storage.table import SfaTable
@@ -67,7 +67,16 @@ class SlabDriver(Driver):
         self.cache=None
         
 
-            
+    def sliver_status(self,slice_urn,slice_hrn):
+        # receive a status request for slice named urn/hrn urn:publicid:IDN+senslab+nturro_slice hrn senslab.nturro_slice
+        # shall return a structure as described in
+        # http://groups.geni.net/geni/wiki/GAPI_AM_API_V2#SliverStatus
+        # NT : not sure if we should implement this or not, but used by sface.
+        
+        print >>sys.stderr, "\r\n_____________ Sliver status urn %s hrn %s\r\n" %(slice_urn,slice_hrn)
+        
+        
+        
     def create_sliver (self, slice_urn, slice_hrn, creds, rspec_string, users, options):
         aggregate = SlabAggregate(self)
         #aggregate = SlabAggregate(self)
@@ -379,6 +388,9 @@ class SlabDriver(Driver):
         if job_info['state'] == 'Terminated':
             print>>sys.stderr, "\r\n \r\n \t\t GetJobs TERMINELEBOUSIN "
             return None
+        if job_info['state'] == 'Error':
+            print>>sys.stderr, "\r\n \r\n \t\t GetJobs ERROR "
+            return None
         
         #Get a dict of nodes . Key :hostname of the node
         node_list = self.GetNodes() 
@@ -426,19 +438,18 @@ class SlabDriver(Driver):
   
     
     def GetSlices(self,slice_filter = None, return_fields=None):
-        
 
         sliceslist = self.db.find('slice',columns = ['oar_job_id', 'slice_hrn', 'record_id_slice','record_id_user'], record_filter=slice_filter)
         
         print >>sys.stderr, " \r\n \r\n \tSLABDRIVER.PY  GetSlices  slices %s slice_filter %s " %(sliceslist,slice_filter)
       
         return_slice_list  = parse_filter(sliceslist, slice_filter,'slice', return_fields)
-                    
+
         if return_slice_list:
             for sl in return_slice_list:
                 if sl['oar_job_id'] is not -1: 
                     rslt = self.GetJobs( sl['oar_job_id'],resources=False)
-                    
+                    print >>sys.stderr, " \r\n \r\n \tSLABDRIVER.PY  GetSlices  GetJobs  %s" %(rslt)     
                     if rslt :
                         sl.update(rslt)
                         sl.update({'hrn':str(sl['slice_hrn'])}) 
@@ -448,9 +459,7 @@ class SlabDriver(Driver):
                         sl['oar_job_id'] = '-1'
                         sl.update({'hrn':str(sl['slice_hrn'])})
                         self.db.update_senslab_slice(sl)
-                                 
-                                 
-           
+            
             print >>sys.stderr, " \r\n \r\n \tSLABDRIVER.PY  GetSlices  return_slice_list  %s" %(return_slice_list)  
             return  return_slice_list
 
@@ -550,24 +559,50 @@ class SlabDriver(Driver):
         reqdict['property'] ="network_address in ("
         for node in added_nodes:
             #Get the ID of the node : remove the root auth and put the site in a separate list
-            tmp = node.strip(self.root_auth+".")
-            l = tmp.split("_")
-             
-            nodeid= (l[len(l)-1]) 
+            s=node.split(".")
+            # NT: it's not clear for me if the nodenames will have the senslab prefix
+            # so lets take the last part only, for now.
+            lastpart=s[-1]
+            #if s[0] == self.root_auth :
+            # Again here it's not clear if nodes will be prefixed with <site>_, lets split and tanke the last part for now.
+            s=lastpart.split("_")
+            nodeid=s[-1]
             reqdict['property'] += "'"+ nodeid +"', "
             nodeid_list.append(nodeid)
-            site_list.append( l[0] )
-            
+            #site_list.append( l[0] )
         reqdict['property'] =  reqdict['property'][0: len( reqdict['property'])-2] +")"
         reqdict['resource'] ="network_address="+ str(len(nodeid_list))
         reqdict['resource']+= ",walltime=" + str(00) + ":" + str(05) + ":" + str(00)
         reqdict['script_path'] = "/bin/sleep 320"
         #reqdict['type'] = "deploy"
+         
+        # first step : start the OAR job
         print>>sys.stderr, "\r\n \r\n AddSliceToNodes reqdict   %s \r\n site_list   %s"  %(reqdict,site_list)   
         OAR = OARrestapi()
         answer = OAR.POSTRequestToOARRestAPI('POST_job',reqdict,slice_user)
         print>>sys.stderr, "\r\n \r\n AddSliceToNodes jobid   %s "  %(answer)
         self.db.update('slice',['oar_job_id'], [answer['id']], 'slice_hrn', slice_name)
+        
+        jobid=answer['id']
+        # second step : configure the experiment
+        # we need to store the nodes in a yaml (well...) file like this :
+        # [1,56,23,14,45,75] with name /tmp/sfa<jobid>.json
+        f=open('/tmp/sfa/'+str(jobid)+'.json','w')
+        f.write('[')
+        f.write(str(added_nodes[0]))
+        for node in added_nodes[1:len(added_nodes)] :
+            f.write(','+node.strip('node'))
+        f.write(']')
+        f.close()
+        
+        # third step : call the senslab-experiment wrapper
+        #command= "java -jar target/sfa-1.0-jar-with-dependencies.jar "+str(jobid)+" "+slice_user
+        javacmdline="/usr/bin/java"
+        jarname="/opt/senslabexperimentwrapper/sfa-1.0-jar-with-dependencies.jar"
+        #ret=subprocess.check_output(["/usr/bin/java", "-jar", ", str(jobid), slice_user])
+        output = subprocess.Popen([javacmdline, "-jar", jarname, str(jobid), slice_user],stdout=subprocess.PIPE).communicate()[0]
+
+        print>>sys.stderr, "\r\n \r\n AddSliceToNodes wrapper returns   %s "  %(output)
         return 
     
 
