@@ -13,6 +13,8 @@ class FdShell:
                      'listSliceResources',
                      'createSlice',
                      'deleteSlice',
+                     'getRSpecVersion',
+                     'listSlices',
                     ]
 
     def __init__ ( self, config ) :

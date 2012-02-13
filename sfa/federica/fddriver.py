@@ -10,6 +10,17 @@ from sfa.federica.fdshell import FdShell
 # this could/should be obtained by issuing getRSpecVersion
 federica_version_string="RSpecV2"
 
+#### avail. methods on the federica side as of 2012/02/13
+# listAvailableResources(String credentials, String rspecVersion) 
+# listSliceResources(String credentials, String rspecVersion, String sliceUrn) 
+# createSlice(String credentials, String sliceUrn, String rspecVersion, String rspecString) 
+# deleteSlice(String credentials, String sliceUrn) 
+# listSlices() 
+# getRSpecVersion()
+##### all return
+# Result: {'code': 0, 'value': RSpec} if success
+# 	{'code': code_id, 'output': Error message} if error
+
 class FdDriver (PlDriver):
 
     def __init__ (self,config): 
@@ -31,7 +42,13 @@ class FdDriver (PlDriver):
             return from_xmlrpc
 
     def aggregate_version (self):
-        return { 'federica_version_string' : federica_version_string, }
+        result=[]
+        federica_version_string_api = self.shell.getRSpecVersion()
+        result ['federica_version_string_api']=federica_version_string_api
+        if federica_version_string_api != federica_version_string:
+            result['WARNING']="hard-wired rspec version %d differs from what the API currently exposes"%\
+                        federica_version_string
+        return result
 
     def testbed_name (self):
         return "federica"
@@ -57,7 +74,8 @@ class FdDriver (PlDriver):
                     logger.debug("FdDriver.ListResources: returning cached advertisement")
                     return self.response(rspec)
             # otherwise, need to get it
-            rspec = self.shell.listAvailableResources (federica_version_string)
+            rspec = self.shell.listAvailableResources (creds, federica_version_string)
+#            rspec = self.shell.listAvailableResources (federica_version_string)
             # cache it for future use
             if self.cache:
                 logger.debug("FdDriver.ListResources: stores advertisement in cache")
@@ -65,25 +83,13 @@ class FdDriver (PlDriver):
             return self.response(rspec)
         # about a given slice : don't cache
         else:
-# that's what the final version would look like
-            return self.response(self.shell.listSliceResources(federica_version_string, slice_urn))
-# # just to see how the ad shows up in sface
-# # caching it for convenience as it's the ad anyways
-#             if cached_requested and self.cache:
-#                 rspec = self.cache.get(federica_version_string)
-#                 if rspec:
-#                     logger.debug("FdDriver.ListResources: returning cached advertisement")
-#                     return rspec 
-#             
-#             return self.shell.listAvailableResources(federica_version_string)
+            return self.response(self.shell.listSliceResources(creds, federica_version_string, slice_urn))
 
-#String createSlice(String credentials, String sliceUrn, String rspecVersion, String rspecString):
     def create_sliver (self, slice_urn, slice_hrn, creds, rspec_string, users, options):
         # right now version_string is ignored on the federica side
         # we normally derive it from options
         return self.response(self.shell.createSlice(creds, slice_urn, federica_version_string, rspec_string))
 
-#String deleteSlice(String credentials, String sliceUrn):
     def delete_sliver (self, slice_urn, slice_hrn, creds, options):
         # right now version_string is ignored on the federica side
         # we normally derive it from options
