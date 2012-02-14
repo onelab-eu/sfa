@@ -277,6 +277,32 @@ Thierry Parmentelat
       </variablelist>
     </category>
 
+
+    <!-- ======================================== -->
+    <category id="sfa_nova">
+      <name>SFA Flash Policy</name>
+      <description>The settings that affect how SFA connects to 
+                   the Nova/EC2 API</description>
+      <variablelist>
+        <variable id="user" type="string">
+          <name>Sfa nova user</name>
+          <value>novaadmin</value>
+          <description>Account/context to use when performing 
+                       administrative nova operations</description>
+        </variable>
+        <variable id="api_url" type="string">
+          <name>Nova API url</name>
+          <value>127.0.0.1</value>
+          <description>The Nova/EC2 API url </description>
+        </variable>
+        <variable id="api_port" type="int">
+          <name>Nova API Port</name>
+          <value>8773</value>
+          <description>The Nova/EC2 API port.</description>
+        </variable>
+      </variablelist>
+    </category>
+
   </variables>
 
   <comps>

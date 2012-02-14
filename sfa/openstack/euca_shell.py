@@ -1,8 +1,13 @@
-import boto
-from boto.ec2.regioninfo import RegionInfo
-from boto.exception import EC2ResponseError
-from sfa.util.sfalogging import logger
+try:
+    import boto
+    from boto.ec2.regioninfo import RegionInfo
+    from boto.exception import EC2ResponseError
+    has_boto=True
+except:
+    has_boto=False    
 
+from sfa.util.sfalogging import logger
+from sfa.openstack.nova_shell import NovaShell
 
 class EucaShell:
     """
@@ -13,12 +18,16 @@ class EucaShell:
         self.config = Config
 
     def get_euca_connection(self):
-
-        access_key = self.config.SFA_EUCA_ACCESS_KEY
-        secret_key = self.config.SFA_EUCA_SECRET_KEY
-        url = self.config.SFA_EUCA_URL
+        if not has_boto:
+            logger.info('Unable to access EC2 API - boto library not found.')
+            return None
+        nova = NovaShell(self.config)
+        admin_user = nova.auth_manager.get_user(self.config.SFA_NOVA_USER)
+        access_key = admin_user.access
+        secret_key = admin_user.secret
+        url = self.config.SFA_NOVA_API_URL
         path = "/"
-        euca_port = self.config.SFA_EUCA_PORT        
+        euca_port = self.config.SFA_NOVA_API_PORT        
         use_ssl = False
 
         # Split the url into parts 
@@ -35,10 +44,6 @@ class EucaShell:
             parts = parts[1:]
             path = '/'.join(parts)
         
-        if not access_key or not secret_key or not url:
-            logger.error('Please set ALL of the required environment ' \
-                         'variables by sourcing the eucarc file.')
-            return None
         return boto.connect_ec2(aws_access_key_id=access_key,
                                 aws_secret_access_key=secret_key,
                                 is_secure=use_ssl,
