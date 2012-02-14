@@ -15,6 +15,7 @@ from sfa.rspecs.rspec import RSpec
 # the driver interface, mostly provides default behaviours
 from sfa.managers.driver import Driver
 from sfa.openstack.nova_shell import NovaShell
+from sfa.openstack.euca_shell import EucaShell
 from sfa.openstack.osaggregate import OSAggregate
 from sfa.plc.plslices import PlSlices
 from sfa.util.osxrn import OSXrn
@@ -40,6 +41,7 @@ class NovaDriver (Driver):
     def __init__ (self, config):
         Driver.__init__ (self, config)
         self.shell = NovaShell (config)
+        self.euca_shell = EucaShell(config)
         self.cache=None
         if config.SFA_AGGREGATE_CACHING:
             if NovaDriver.cache is None:
@@ -298,13 +300,19 @@ class NovaDriver (Driver):
         # parse rspec
         rspec = RSpec(rspec_string)
         requested_attributes = rspec.version.get_slice_attributes()
+        pubkeys = []
+        for user in users:
+            pubkeys.extend(user['keys']) 
+        # assume that there is a key whos nane matches the caller's username.
+        project_key = Xrn(users[0]['urn']).get_leaf()    
         
+         
         # ensure slice record exists
-        slice = aggregate.verify_slice(slicename, users, options=options)
+        aggregate.create_project(slicename, users, options=options)
         # ensure person records exists
-        persons = aggregate.verify_slice_users(slicename, users, options=options)
+        aggregate.create_project_users(slicename, users, options=options)
         # add/remove slice from nodes
-        slices.verify_instances(slicename, rspec)    
+        aggregate.run_instances(slicename, rspec, project_key, pubkeys)    
    
         return aggregate.get_rspec(slice_xrn=slice_urn, version=rspec.version)
 
