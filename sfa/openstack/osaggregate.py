@@ -22,41 +22,41 @@ def disk_image_to_rspec_object(image):
     return img
     
 
+def instance_to_sliver(instance, slice_xrn=None):
+    # should include?
+    # * instance.image_ref
+    # * instance.kernel_id
+    # * instance.ramdisk_id
+    import nova.db.sqlalchemy.models
+    name=None
+    type=None
+    sliver_id = None
+    if isinstance(instance, dict):
+        # this is an isntance type dict
+        name = instance['name']
+        type = instance['name']
+    elif isinstance(instance, nova.db.sqlalchemy.models.Instance):
+        # this is an object that describes a running instance
+        name = instance.display_name
+        type = instance.instance_type.name
+    else:
+        raise SfaAPIError("instnace must be an instance_type dict or" + \
+                           " a nova.db.sqlalchemy.models.Instance object")
+    if slice_xrn:
+        xrn = Xrn(slice_xrn, 'slice')
+        sliver_id = xrn.get_sliver_id(instance.project_id, instance.hostname, instance.id)
+
+    sliver = Sliver({'slice_id': sliver_id,
+                     'name': name,
+                     'type': 'plos-' + type,
+                     'tags': []})
+    return sliver
+            
+
 class OSAggregate:
 
     def __init__(self, driver):
         self.driver = driver
-
-    def instance_to_sliver(self, instance, slice_xrn=None):
-        # should include? 
-        # * instance.image_ref
-        # * instance.kernel_id
-        # * instance.ramdisk_id 
-        import nova.db.sqlalchemy.models
-        name=None
-        type=None
-        sliver_id = None
-        if isinstance(instance, dict):
-            # this is an isntance type dict
-            name = instance['name']
-            type = instance['name'] 
-        elif isinstance(instance, nova.db.sqlalchemy.models.Instance):
-            # this is an object that describes a running instance
-            name = instance.display_name
-            type = instance.instance_type.name
-        else:
-            raise SfaAPIError("instnace must be an instance_type dict or" + \
-                               " a nova.db.sqlalchemy.models.Instance object")
-        if slice_xrn:
-            xrn = Xrn(slice_xrn, 'slice')
-            sliver_id = xrn.get_sliver_id(instance.project_id, instance.hostname, instance.id)     
-    
-        sliver = Sliver({'slice_id': sliver_id,
-                         'name': name,
-                         'type': 'plos-' + type,
-                         'tags': []})
-        return sliver
-
 
     def get_machine_image_details(self, image):
         """
@@ -117,7 +117,7 @@ class OSAggregate:
             rspec_node['component_id'] = xrn.urn
             rspec_node['component_name'] = xrn.name
             rspec_node['component_manager_id'] = Xrn(self.driver.hrn, 'authority+cm').get_urn()   
-            sliver = self.instance_to_sliver(instance)
+            sliver = instance_to_sliver(instance)
             disk_image = self.get_disk_image(instance.image_ref)
             sliver['disk_images'] = [disk_image_to_rspec_object(disk_image)]
             rspec_node['slivers'] = [sliver]
@@ -150,7 +150,7 @@ class OSAggregate:
                                                 HardwareType({'name': 'pc'})]
             slivers = []
             for instance in instances:
-                sliver = self.instance_to_sliver(instance)
+                sliver = instance_to_sliver(instance)
                 sliver['disk_images'] = disk_image_objects
                 slivers.append(sliver)
         
