@@ -243,49 +243,37 @@ class NovaDriver (Driver):
     
     def sliver_status (self, slice_urn, slice_hrn):
         # find out where this slice is currently running
-        slicename = hrn_to_pl_slicename(slice_hrn)
-        
-        slices = self.shell.GetSlices([slicename], ['slice_id', 'node_ids','person_ids','name','expires'])
-        if len(slices) == 0:        
-            raise SliverDoesNotExist("%s (used %s as slicename internally)" % (slice_hrn, slicename))
-        slice = slices[0]
-        
-        # report about the local nodes only
-        nodes = self.shell.GetNodes({'node_id':slice['node_ids'],'peer_id':None},
-                              ['node_id', 'hostname', 'site_id', 'boot_state', 'last_contact'])
-
-        if len(nodes) == 0:
+        project_name = Xrn(slice_urn).get_leaf()
+        project = self.shell.auth_manager.get_project(project_name)
+        instances = self.shell.db.instance_get_all_by_project(project_name)
+        if len(instances) == 0:
             raise SliverDoesNotExist("You have not allocated any slivers here") 
-
-        site_ids = [node['site_id'] for node in nodes]
-    
+        
         result = {}
         top_level_status = 'unknown'
-        if nodes:
+        if instances:
             top_level_status = 'ready'
         result['geni_urn'] = slice_urn
-        result['pl_login'] = slice['name']
-        result['pl_expires'] = datetime_to_string(utcparse(slice['expires']))
+        result['plos_login'] = 'root' 
+        result['plos_expires'] = None
         
         resources = []
-        for node in nodes:
+        for instance in instances:
             res = {}
-            res['pl_hostname'] = node['hostname']
-            res['pl_boot_state'] = node['boot_state']
-            res['pl_last_contact'] = node['last_contact']
-            if node['last_contact'] is not None:
-                
-                res['pl_last_contact'] = datetime_to_string(utcparse(node['last_contact']))
-            sliver_id = urn_to_sliver_id(slice_urn, slice['slice_id'], node['node_id']) 
+            # instances are accessed by ip, not hostname. We need to report the ip
+            # somewhere so users know where to ssh to.     
+            res['plos_hostname'] = instance.hostname
+            res['plos_created_at'] = datetime_to_string(utcparse(instance.created_at))    
+            res['plos_boot_state'] = instance.vm_state
+            res['plos_sliver_type'] = instance.instance_type.name 
+            sliver_id =  Xrn(slice_urn).get_sliver_id(instance.project_id, \
+                                                      instance.hostname, instance.id)
             res['geni_urn'] = sliver_id
-            if node['boot_state'] == 'boot':
-                res['geni_status'] = 'ready'
+
+            if instance.vm_state == 'running':
+                res['boot_state'] = 'ready';
             else:
-                res['geni_status'] = 'failed'
-                top_level_status = 'failed' 
-                
-            res['geni_error'] = ''
-    
+                res['boot_state'] = 'unknown'  
             resources.append(res)
             
         result['geni_status'] = top_level_status
