@@ -17,7 +17,6 @@ scripts = glob("sfa/clientbin/*.py") + \
     'sfa/importer/sfa-nuke-plc.py', 
     'sfa/server/sfa-ca.py', 
     'sfa/server/sfa-start.py', 
-    'sfa/server/sfa-clean-peer-records.py', 
     'sfa/server/sfa_component_setup.py', 
     'sfatables/sfatables',
     'keyconvert/keyconvert.py',
