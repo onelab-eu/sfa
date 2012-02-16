@@ -8,6 +8,7 @@ except:
 
 from sfa.util.sfalogging import logger
 from sfa.openstack.nova_shell import NovaShell
+from sfa.util.config import Config
 
 class EucaShell:
     """
