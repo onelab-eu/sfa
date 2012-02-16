@@ -6,6 +6,7 @@ from optparse import OptionParser
 
 from sfa.util.xrn import Xrn
 from sfa.storage.record import SfaRecord 
+from sfa.client.sfi import save_records_to_file
 
 def args(*args, **kwargs):
     def _decorator(func):
@@ -43,11 +44,15 @@ class RegistryCommands(Commands):
     @args('-x', '--xrn', dest='xrn', metavar='<xrn>', help='object hrn/urn') 
     @args('-t', '--type', dest='type', metavar='<type>', help='object type', default=None) 
     @args('-o', '--outfile', dest='outfile', metavar='<outfile>', help='save record to file') 
-    def show(self, xrn, type=None, full=True):
-        records = self.api.manager.Resolve(self.api, xrn, type, full)
+    @args('-f', '--format', dest='format', metavar='<display>', type='choice', 
+          choices=('text', 'xml', 'summary'), help='display record in different formats') 
+    def show(self, xrn, type=None, format=None, outfile=None):
+        records = self.api.manager.Resolve(self.api, xrn, type, True)
         for record in records:
-            sfa_record = SfaRecord(record)
-            print sfa_record.dump() 
+            sfa_record = SfaRecord(dict=record)
+            sfa_record.dump(format) 
+        if outfile:
+            save_records_to_file(outfile, records)                
 
     def register(self, record):
         pass
