@@ -102,10 +102,10 @@ class RegistryManager:
     def Resolve(self, api, xrns, type=None, full=True):
     
         if not isinstance(xrns, types.ListType):
-            xrns = [xrns]
             # try to infer type if not set and we get a single input
             if not type:
                 type = Xrn(xrns).get_type()
+            xrns = [xrns]
         hrns = [urn_to_hrn(xrn)[0] for xrn in xrns] 
         # load all known registry names into a prefix tree and attempt to find
         # the longest matching prefix
