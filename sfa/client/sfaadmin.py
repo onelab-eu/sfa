@@ -5,6 +5,7 @@ from sfa.generic import Generic
 from optparse import OptionParser
 
 from sfa.util.xrn import Xrn
+from sfa.storage.record import SfaRecord 
 
 def args(*args, **kwargs):
     def _decorator(func):
@@ -38,8 +39,15 @@ class RegistryCommands(Commands):
             if not type or record['type'] == type:
                 print "%s (%s)" % (record['hrn'], record['type'])
 
+
+    @args('-x', '--xrn', dest='xrn', metavar='<xrn>', help='object hrn/urn') 
+    @args('-t', '--type', dest='type', metavar='<type>', help='object type', default=None) 
+    @args('-o', '--outfile', dest='outfile', metavar='<outfile>', help='save record to file') 
     def show(self, xrn, type=None, full=True):
-        records = self.api.manager.Resolve(self.api, xrn, type, full) 
+        records = self.api.manager.Resolve(self.api, xrn, type, full)
+        for record in records:
+            sfa_record = SfaRecord(record)
+            print sfa_record.dump() 
 
     def register(self, record):
         pass
