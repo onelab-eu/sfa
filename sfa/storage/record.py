@@ -11,6 +11,7 @@ from sfa.util.xrn import get_authority
 from sfa.storage.row import Row
 from sfa.util.xml import XML 
 from sfa.util.sfalogging import logger
+from sfa.util.sfatime import utcparse, datetime_to_string
 
 class SfaRecord(Row):
     """ 
@@ -337,33 +338,48 @@ class SfaRecord(Row):
     #
     # @param dump_parents if true, then the parents of the GID will be dumped
 
-    def dump(self, dump_parents=False):
+    def dump_text(self, dump_parents=False):
         """
         Walk tree and dump records.
         """
-        #print "RECORD", self.name
-        #print "        hrn:", self.name
-        #print "       type:", self.type
-        #print "        gid:"
-        #if (not self.gid):
-        #    print "        None"
-        #else:
-        #    self.get_gid_object().dump(8, dump_parents)
-        #print "    pointer:", self.pointer
+        # print core fields in this order 
+        print "".join(['=' for i in range(40)])
+        print "RECORD"
+        print "    hrn:", self.get('hrn')
+        print "    type:", self.get('type')
+        print "    authority:", self.get('authority')
+        date_created = utcparse(datetime_to_string(self.get('date_created')))    
+        print "    date created:", date_created
+        last_updated = utcparse(datetime_to_string(self.get('last_updated')))    
+        print "    last updated:", last_updated
+        print "    gid:"
+        print "\t\t", self.get_gid_object().dump_string(8, dump_parents)
        
-        order = SfaRecord.fields.keys() 
-        for key in self.keys():
-            if key not in order:
-                order.append(key)
-        for key in order:
-            if key in self and key in self.fields:
-                if key in 'gid' and self[key]:
-                    gid = GID(string=self[key])
-                    print "     %s:" % key
-                    gid.dump(8, dump_parents)
-                else:    
-                    print "     %s: %s" % (key, self[key])
-    
+        # print remaining fields
+        all_fields = set(UserRecord.fields.keys() + 
+                         AuthorityRecord.fields.keys() + 
+                         SliceRecord.fields.keys() + 
+                         NodeRecord.fields.keys())                   
+        for field in self:
+            # dont print core fields
+            if field in all_fields and field not in SfaRecord.fields:    
+                print "     %s: %s" % (field, self[field])
+
+    def dump(self, format=None, dump_parents=False):
+        if not format:
+            format = 'text'
+        else:
+            format = format.lower()
+
+        if format == 'text': 
+            self.dump_text(dump_parents)            
+        elif format == 'xml':
+            print self.save_to_string()    
+        elif format == 'summary':
+            print self.summary_string()
+        else:
+            raise Exception, "Invalid format %s" % format 
+              
     def summary_string(self):
         return "Record(record_id=%s, hrn=%s, type=%s, authority=%s, pointer=%s)" % \
                 (self.get('record_id'), self.get('hrn'), self.get('type'), self.get('authority'), \
