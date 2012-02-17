@@ -1,3 +1,21 @@
+#
+# PlanetLab importer
+# 
+# requirements
+# 
+# read the planetlab database and update the local registry database accordingly
+# (in other words, with this testbed, the SFA registry is *not* authoritative)
+# so we update the following collections
+# . authorities                 (from pl sites)
+# . node                        (from pl nodes)
+# . users+keys                  (from pl persons and attached keys)
+#                       known limitation : *one* of the ssh keys is chosen at random here
+#                       xxx todo/check xxx at the very least, when a key is known to the registry 
+#                       and is still current in plc
+#                       then we should definitely make sure to keep that one in sfa...
+# . slice+researchers           (from pl slices and attached users)
+# 
+
 import os
 
 from sfa.util.config import Config
@@ -33,6 +51,49 @@ class PlImporter:
         # we don't have any options for now
         pass
 
+    # hrn hash is initialized from current db
+    # remember just-created records as we go
+    # xxx might make sense to add a UNIQUE constraint in the db itself
+    def remember_record_by_hrn (self, record):
+        tuple = (record.type, record.hrn)
+        if tuple in self.records_by_type_hrn:
+            self.logger.warning ("PlImporter.remember_record_by_hrn: duplicate (%s,%s)"%tuple)
+            return
+        self.records_by_type_hrn [ tuple ] = record
+
+    # ditto for pointer hash
+    def remember_record_by_pointer (self, record):
+        if record.pointer == -1:
+            self.logger.warning ("PlImporter.remember_record_by_pointer: pointer is void")
+            return
+        tuple = (record.type, record.pointer)
+        if tuple in self.records_by_type_pointer:
+            self.logger.warning ("PlImporter.remember_record_by_pointer: duplicate (%s,%s)"%tuple)
+            return
+        self.records_by_type_pointer [ ( record.type, record.pointer,) ] = record
+
+    def remember_record (self, record):
+        self.remember_record_by_hrn (record)
+        self.remember_record_by_pointer (record)
+
+    def locate_by_type_hrn (self, type, hrn):
+        return self.records_by_type_hrn.get ( (type, hrn), None)
+
+    def locate_by_type_pointer (self, type, pointer):
+        return self.records_by_type_pointer.get ( (type, pointer), None)
+
+    # convenience : try to locate first based on type+pointer
+    # if so, the record was created already even if e.g. its hrn has changed meanwhile
+    # otherwise we try by type+hrn (is this truly useful ?)
+    def locate (self, type, hrn=None, pointer=-1):
+        if pointer!=-1:
+            attempt = self.locate_by_type_pointer (type, pointer)
+            if attempt : return attempt
+        if hrn is not None:
+            attempt = self.locate_by_type_hrn (type, hrn,)
+            if attempt : return attempt
+        return None
+
     # this makes the run method a bit abtruse - out of the way
     def create_special_vini_record (self, interface_hrn):
         # special case for vini
@@ -54,9 +115,7 @@ class PlImporter:
                 dbsession.add(auth_record)
                 dbsession.commit()
                 self.logger.info("PlImporter: Imported authority (vini site) %s"%auth_record)
-
-    def locate_by_type_hrn (self, type, hrn):
-        return self.records_by_type_hrn.get ( (type, hrn), None)
+                self.remember_record ( site_record )
 
     def run (self, options):
         config = Config ()
@@ -67,16 +126,14 @@ class PlImporter:
         ######## retrieve all existing SFA objects
         all_records = dbsession.query(RegRecord).all()
 
-        # create indexes / hashes by (type,hrn) 
-        self.records_by_type_hrn = dict ( [ ( (record.type, record.hrn) , record ) for record in all_records ] )
-# and by (type,pointer)
-# the idea was to try and retrieve an sfa record from the pointer data, 
-# in case the plc name (e.g. email address) has changed 
-# and the new hrn can't be located in the current sfa records
-# however it sounds like it's eventually safer to just create a new sfa record 
-# and let the old one get garbage-collected with stale records
-#        self.records_by_type_pointer = \
-#            dict ( [ ( (record.type, record.pointer) , record ) for record in all_records if record.pointer != -1 ] )
+        # create hash by (type,hrn) 
+        # we essentially use this to know if a given record is already known to SFA 
+        self.records_by_type_hrn = \
+            dict ( [ ( (record.type, record.hrn) , record ) for record in all_records ] )
+        # create hash by (type,pointer) 
+        self.records_by_type_pointer = \
+            dict ( [ ( (record.type, record.pointer) , record ) for record in all_records 
+                     if record.pointer != -1] )
 
         # initialize record.stale to True by default, then mark stale=False on the ones that are in use
         for record in all_records: record.stale=True
@@ -87,7 +144,7 @@ class PlImporter:
         sites = shell.GetSites({'peer_id': None, 'enabled' : True},
                                ['site_id','login_base','node_ids','slice_ids','person_ids',])
         # create a hash of sites by login_base
-        sites_by_login_base = dict ( [ ( site['login_base'], site ) for site in sites ] )
+#        sites_by_login_base = dict ( [ ( site['login_base'], site ) for site in sites ] )
         # Get all plc users
         persons = shell.GetPersons({'peer_id': None, 'enabled': True}, 
                                    ['person_id', 'email', 'key_ids', 'site_ids'])
@@ -113,7 +170,7 @@ class PlImporter:
         # create hash by node_id
         nodes_by_id = dict ( [ ( node['node_id'], node, ) for node in nodes ] )
         # Get all plc slices
-        slices = shell.GetSlices( {'peer_id': None}, ['slice_id', 'name'])
+        slices = shell.GetSlices( {'peer_id': None}, ['slice_id', 'name', 'person_ids'])
         # create hash by slice_id
         slices_by_id = dict ( [ (slice['slice_id'], slice ) for slice in slices ] )
 
@@ -123,10 +180,9 @@ class PlImporter:
         # start importing 
         for site in sites:
             site_hrn = _get_site_hrn(interface_hrn, site)
-    
             # import if hrn is not in list of existing hrns or if the hrn exists
             # but its not a site record
-            site_record=self.locate_by_type_hrn ('authority', site_hrn)
+            site_record=self.locate ('authority', site_hrn, site['site_id'])
             if not site_record:
                 try:
                     urn = hrn_to_urn(site_hrn, 'authority')
@@ -140,11 +196,15 @@ class PlImporter:
                     dbsession.add(site_record)
                     dbsession.commit()
                     self.logger.info("PlImporter: imported authority (site) : %s" % site_record) 
+                    self.remember_record (site_record)
                 except:
                     # if the site import fails then there is no point in trying to import the
                     # site's child records (node, slices, persons), so skip them.
                     self.logger.log_exc("PlImporter: failed to import site. Skipping child records") 
                     continue 
+            else:
+                # xxx update the record ...
+                pass
             site_record.stale=False
              
             # import node records
@@ -152,14 +212,14 @@ class PlImporter:
                 try:
                     node = nodes_by_id[node_id]
                 except:
-                    self.logger.warning ("PlImporter: cannot locate node_id %s - ignored"%node_id)
+                    self.logger.warning ("PlImporter: cannot find node_id %s - ignored"%node_id)
                     continue 
                 site_auth = get_authority(site_hrn)
                 site_name = site['login_base']
                 hrn =  hostname_to_hrn(site_auth, site_name, node['hostname'])
                 # xxx this sounds suspicious
                 if len(hrn) > 64: hrn = hrn[:64]
-                node_record = self.locate_by_type_hrn ( 'node', hrn )
+                node_record = self.locate ( 'node', hrn , node['node_id'] )
                 if not node_record:
                     try:
                         pkey = Keypair(create=True)
@@ -172,10 +232,90 @@ class PlImporter:
                         dbsession.add(node_record)
                         dbsession.commit()
                         self.logger.info("PlImporter: imported node: %s" % node_record)  
+                        self.remember_record (node_record)
                     except:
                         self.logger.log_exc("PlImporter: failed to import node") 
+                else:
+                    # xxx update the record ...
+                    pass
                 node_record.stale=False
 
+            # import persons
+            for person_id in site['person_ids']:
+                try:
+                    person = persons_by_id[person_id]
+                except:
+                    self.logger.warning ("PlImporter: cannot locate person_id %s - ignored"%person_id)
+                person_hrn = email_to_hrn(site_hrn, person['email'])
+                # xxx suspicious again
+                if len(person_hrn) > 64: person_hrn = person_hrn[:64]
+                person_urn = hrn_to_urn(person_hrn, 'user')
+
+                user_person = self.locate ( 'user', person_hrn, person['person_id'])
+
+                # return a tuple pubkey (a plc key object) and pkey (a Keypair object)
+                def init_person_key (person, plc_keys):
+                    pubkey=None
+                    if  person['key_ids']:
+                        # randomly pick first key in set
+                        pubkey = plc_keys[0]
+                        try:
+                            pkey = convert_public_key(pubkey['key'])
+                        except:
+                            self.logger.warn('PlImporter: unable to convert public key for %s' % person_hrn)
+                            pkey = Keypair(create=True)
+                    else:
+                        # the user has no keys. Creating a random keypair for the user's gid
+                        self.logger.warn("PlImporter: person %s does not have a PL public key"%person_hrn)
+                        pkey = Keypair(create=True)
+                    return (pubkey, pkey)
+
+                # new person
+                try:
+                    plc_keys = keys_by_person_id.get(person['person_id'],[])
+                    if not user_person:
+                        (pubkey,pkey) = init_person_key (person, plc_keys )
+                        person_gid = self.auth_hierarchy.create_gid(person_urn, create_uuid(), pkey)
+                        user_person = RegUser (hrn=person_hrn, gid=person_gid, 
+                                                 pointer=person['person_id'], 
+                                                 authority=get_authority(person_hrn),
+                                                 email=person['email'])
+                        if pubkey: 
+                            user_person.reg_keys=[RegKey (pubkey['key'], pubkey['key_id'])]
+                        else:
+                            self.logger.warning("No key found for user %s"%user_person)
+                        dbsession.add (user_person)
+                        dbsession.commit()
+                        self.logger.info("PlImporter: imported person: %s" % user_person)
+                        self.remember_record ( user_person )
+                    else:
+                        # update the record ?
+                        # if user's primary key has changed then we need to update the 
+                        # users gid by forcing an update here
+                        sfa_keys = user_person.reg_keys
+                        def key_in_list (key,sfa_keys):
+                            for reg_key in sfa_keys:
+                                if reg_key.key==key['key']: return True
+                            return False
+                        # is there a new key in myplc ?
+                        new_keys=False
+                        for key in plc_keys:
+                            if not key_in_list (key,sfa_keys):
+                                new_keys = True
+                        if new_keys:
+                            (pubkey,pkey) = init_person_key (person, plc_keys)
+                            person_gid = self.auth_hierarchy.create_gid(person_urn, create_uuid(), pkey)
+                            if not pubkey:
+                                user_person.reg_keys=[]
+                            else:
+                                user_person.reg_keys=[ RegKey (pubkey['key'], pubkey['key_id'])]
+                            self.logger.info("PlImporter: updated person: %s" % user_person)
+                    user_person.email = person['email']
+                    dbsession.commit()
+                    user_person.stale=False
+                except:
+                    self.logger.log_exc("PlImporter: failed to import person %d %s"%(person['person_id'],person['email']))
+    
             # import slices
             for slice_id in site['slice_ids']:
                 try:
@@ -183,7 +323,7 @@ class PlImporter:
                 except:
                     self.logger.warning ("PlImporter: cannot locate slice_id %s - ignored"%slice_id)
                 slice_hrn = slicename_to_hrn(interface_hrn, slice['name'])
-                slice_record = self.locate_by_type_hrn ('slice', slice_hrn)
+                slice_record = self.locate ('slice', slice_hrn, slice['slice_id'])
                 if not slice_record:
                     try:
                         pkey = Keypair(create=True)
@@ -196,78 +336,19 @@ class PlImporter:
                         dbsession.add(slice_record)
                         dbsession.commit()
                         self.logger.info("PlImporter: imported slice: %s" % slice_record)  
+                        self.remember_record ( slice_record )
                     except:
                         self.logger.log_exc("PlImporter: failed to import slice")
+                else:
+                    # xxx update the record ...
+                    self.logger.warning ("Slice update not yet implemented")
+                    pass
+                # record current users affiliated with the slice
+                slice_record.reg_researchers = \
+                    [ self.locate_by_type_pointer ('user',user_id) for user_id in slice['person_ids'] ]
+                dbsession.commit()
                 slice_record.stale=False
 
-            # import persons
-            for person_id in site['person_ids']:
-                try:
-                    person = persons_by_id[person_id]
-                except:
-                    self.logger.warning ("PlImporter: cannot locate person_id %s - ignored"%person_id)
-                person_hrn = email_to_hrn(site_hrn, person['email'])
-                # xxx suspicious again
-                if len(person_hrn) > 64: person_hrn = person_hrn[:64]
-
-                person_record = self.locate_by_type_hrn( 'user', person_hrn)
-# see above
-#                if not person_record:
-#                    person_record = self.records_by_type_pointer.get ( ('user', person_id,) )
-                # if user's primary key has changed then we need to update the 
-                # users gid by forcing an update here
-                plc_keys = []
-                sfa_keys = []
-                if person_record:
-                    sfa_keys = person_record.reg_keys
-                if person_id in keys_by_person_id:
-                    plc_keys = keys_by_person_id[person_id]
-                update_record = False
-                def key_in_list (key,sfa_keys):
-                    for reg_key in sfa_keys:
-                        if reg_key.key==key['key']: return True
-                    return False
-                for key in plc_keys:
-                    if not key_in_list (key,sfa_keys):
-                        update_record = True 
-    
-                if not person_record or update_record:
-                    try:
-                        pubkey=None
-                        if 'key_ids' in person and person['key_ids']:
-                            # randomly pick first key in set
-                            pubkey = plc_keys[0]
-                            try:
-                                pkey = convert_public_key(pubkey['key'])
-                            except:
-                                self.logger.warn('PlImporter: unable to convert public key for %s' % person_hrn)
-                                pkey = Keypair(create=True)
-                        else:
-                            # the user has no keys. Creating a random keypair for the user's gid
-                            self.logger.warn("PlImporter: person %s does not have a PL public key"%person_hrn)
-                            pkey = Keypair(create=True)
-                        urn = hrn_to_urn(person_hrn, 'user')
-                        person_gid = self.auth_hierarchy.create_gid(urn, create_uuid(), pkey)
-                        if person_record: 
-                            person_record.gid=person_gid
-                            if pubkey: person_record.reg_keys=[ RegKey (pubkey['key'], pubkey['key_id'])]
-                            self.logger.info("PlImporter: updated person: %s" % person_record)
-                        else:
-                            person_record = RegUser (hrn=person_hrn, gid=person_gid, 
-                                                  pointer=person['person_id'], 
-                                                  authority=get_authority(person_hrn),
-                                                  email=person['email'])
-                            if pubkey: 
-                                person_record.reg_keys=[RegKey (pubkey['key'], pubkey['key_id'])]
-                            else:
-                                self.logger.warning("No key found for user %s"%person_record)
-                            dbsession.add (person_record)
-                            dbsession.commit()
-                            self.logger.info("PlImporter: imported person: %s" % person_record)
-                    except:
-                        self.logger.log_exc("PlImporter: failed to import person %s"%person_id) 
-                person_record.stale=False
-    
         ### remove stale records
         # special records must be preserved
         system_hrns = [interface_hrn, root_auth, interface_hrn + '.slicemanager']

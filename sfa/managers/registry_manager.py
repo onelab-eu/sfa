@@ -18,7 +18,7 @@ from sfa.trust.credential import Credential
 from sfa.trust.certificate import Certificate, Keypair, convert_public_key
 from sfa.trust.gid import create_uuid
 
-from sfa.storage.model import make_record, RegRecord, RegUser
+from sfa.storage.model import make_record, RegRecord, RegAuthority, RegUser, RegSlice, RegKey
 from sfa.storage.alchemy import dbsession
 
 class RegistryManager:
@@ -286,7 +286,7 @@ class RegistryManager:
             gid = gid_object.save_to_string(save_parents=True)
             record.gid = gid
     
-        if type in ["authority"]:
+        if isinstance (record, RegAuthority):
             # update the tree
             if not api.auth.hierarchy.auth_exists(hrn):
                 api.auth.hierarchy.create_auth(hrn_to_urn(hrn,'authority'))
@@ -295,9 +295,24 @@ class RegistryManager:
             gid = auth_info.get_gid_object()
             record.gid=gid.save_to_string(save_parents=True)
 
-        # post-process / cleanup for relation ships
-        if isinstance (record, RegUser): 
-            record.normalize_xml()
+        elif isinstance (record, RegSlice):
+            # locate objects for relationships
+            if hasattr (record, 'researcher'):
+                # we get the list of researcher hrns as
+                researcher_hrns = record.researcher
+                # strip that in case we have <researcher> words </researcher>
+                researcher_hrns = [ x.strip() for x in researcher_hrns ]
+                logger.info ("incoming researchers %s"%researcher_hrns)
+                request = dbsession.query (RegUser).filter(RegUser.hrn.in_(researcher_hrns))
+                logger.info ("%d incoming hrns, %d matches found"%(len(researcher_hrns),request.count()))
+                researchers = dbsession.query (RegUser).filter(RegUser.hrn.in_(researcher_hrns)).all()
+                record.reg_researchers = researchers
+        
+        elif isinstance (record, RegUser):
+            # create RegKey objects for incoming keys
+            if hasattr(record,'keys'): 
+                logger.debug ("creating %d keys for user %s"%(len(record.keys),record.hrn))
+                record.reg_keys = [ RegKey (key) for key in record.keys ]
             
         # update testbed-specific data if needed
         pointer = self.driver.register (record.__dict__, hrn, pub_key)

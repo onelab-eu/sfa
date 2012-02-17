@@ -186,11 +186,26 @@ class RegAuthority (RegRecord):
         return RegRecord.__repr__(self).replace("Record","Authority")
 
 ####################
+# slice x user (researchers) association
+slice_researcher_table = \
+    Table ( 'slice_researcher', Base.metadata,
+            Column ('slice_id', Integer, ForeignKey ('records.record_id'), primary_key=True),
+            Column ('researcher_id', Integer, ForeignKey ('records.record_id'), primary_key=True),
+            )
+
+####################
 class RegSlice (RegRecord):
     __tablename__       = 'slices'
     __mapper_args__     = { 'polymorphic_identity' : 'slice' }
     record_id           = Column (Integer, ForeignKey ("records.record_id"), primary_key=True)
-    
+    #### extensions come here
+    reg_researchers     = relationship \
+        ('RegUser', 
+         secondary=slice_researcher_table,
+         primaryjoin=RegRecord.record_id==slice_researcher_table.c.slice_id,
+         secondaryjoin=RegRecord.record_id==slice_researcher_table.c.researcher_id,
+         backref="reg_slices_as_researcher")
+
     def __init__ (self, **kwds):
         if 'type' not in kwds: kwds['type']='slice'
         RegRecord.__init__(self, **kwds)
@@ -217,11 +232,13 @@ class RegUser (RegRecord):
     # these objects will have type='user' in the records table
     __mapper_args__     = { 'polymorphic_identity' : 'user' }
     record_id           = Column (Integer, ForeignKey ("records.record_id"), primary_key=True)
+    #### extensions come here
     email               = Column ('email', String)
     # can't use name 'keys' here because when loading from xml we're getting
     # a 'keys' tag, and assigning a list of strings in a reference column like this crashes
-    reg_keys            = relationship ('RegKey', backref='reg_user',
-                                        cascade="all, delete, delete-orphan")
+    reg_keys            = relationship \
+        ('RegKey', backref='reg_user',
+         cascade="all, delete, delete-orphan")
     
     # so we can use RegUser (email=.., hrn=..) and the like
     def __init__ (self, **kwds):
@@ -241,10 +258,6 @@ class RegUser (RegRecord):
     def validate_email(self, key, address):
         assert '@' in address
         return address
-
-    # xxx this might be temporary
-    def normalize_xml (self):
-        if hasattr(self,'keys'): self.reg_keys = [ RegKey (key) for key in self.keys ]
 
 ####################
 # xxx tocheck : not sure about eager loading of this one
