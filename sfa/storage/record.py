@@ -348,9 +348,9 @@ class SfaRecord(Row):
         print "    hrn:", self.get('hrn')
         print "    type:", self.get('type')
         print "    authority:", self.get('authority')
-        date_created = utcparse(datetime_to_string(self.get('date_created')))    
+        date_created = datetime_to_string(utcparse(self.get('date_created')))    
         print "    date created:", date_created
-        last_updated = utcparse(datetime_to_string(self.get('last_updated')))    
+        last_updated = datetime_to_string(utcparse(self.get('last_updated')))    
         print "    last updated:", last_updated
         print "    gid:"
         print "\t\t", self.get_gid_object().dump_string(8, dump_parents)
