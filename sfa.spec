@@ -168,7 +168,6 @@ rm -rf $RPM_BUILD_ROOT
 /etc/sfa/topology
 %{_bindir}/sfa-import.py*
 %{_bindir}/sfa-nuke.py*
-%{_bindir}/sfa-clean-peer-records.py*
 %{_bindir}/gen-sfa-cm-config.py*
 %{_bindir}/sfa-ca.py*
 

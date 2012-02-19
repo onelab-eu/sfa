@@ -33,8 +33,8 @@ class InjectContext:
 
 class NovaShell:
     """
-    A simple xmlrpc shell to a myplc instance
-    This class can receive all Openstack calls to the underlying testbed
+    A simple native shell to a nova backend. 
+    This class can receive all nova calls to the underlying testbed
     """
     
     # dont care about limiting calls yet 
