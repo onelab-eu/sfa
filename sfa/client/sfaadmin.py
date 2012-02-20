@@ -1,9 +1,10 @@
 #!/usr/bin/python
 import sys
 import copy
+from pprint import pformat 
 from sfa.generic import Generic
 from optparse import OptionParser
-
+from pprint import pprint
 from sfa.util.xrn import Xrn
 from sfa.storage.record import SfaRecord 
 from sfa.client.sfi import save_records_to_file
@@ -28,8 +29,9 @@ class RegistryCommands(Commands):
     def __init__(self, *args, **kwds):
         self.api= Generic.the_flavour().make_api(interface='registry')
  
-    def version(self): 
-        pass           
+    def version(self):
+        for key, value in self.api.manager.GetVersion(self.api, {}).items():
+            print "%s: %s" % (key, pformat(value)) 
 
     @args('-x', '--xrn', dest='xrn', metavar='<xrn>', help='object hrn/urn') 
     @args('-t', '--type', dest='type', metavar='<type>', help='object type', default=None) 
@@ -87,13 +89,16 @@ class AggregateCommands(Commands):
         self.api= Generic.the_flavour().make_api(interface='aggregate')
    
     def version(self):
-        pass
+        for key, value in self.api.manager.GetVersion(self.api, {}).items():
+            print "%s: %s" % (key, pformat(value))
 
     def slices(self):
-        pass        
+        print self.api.manager.ListSlices(self.api, [], {})
 
+    @args('-x', '--xrn', dest='xrn', metavar='<xrn>', help='object hrn/urn') 
     def status(self, xrn):
-        pass
+        urn = Xrn(xrn, 'slice').get_urn()
+        print self.api.manager.SliverStatus(self.api, urn, [], {})
  
     def resources(self, xrn):
         pass
@@ -178,6 +183,7 @@ def main():
         print command.__doc__
         parser.print_help()
         #raise
+        raise
     except Exception:
         print "Command failed, please check log for more info"
         raise
