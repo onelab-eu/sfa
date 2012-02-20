@@ -78,15 +78,50 @@ class AlchemyObj:
         xml_record.parse_dict (input_dict)
         return xml_record.toxml()
 
-    def dump(self, dump_parents=False):
-        for key in self.fields:
-            if key == 'gid' and self.gid:
-                gid = GID(string=self.gid)
-                print "    %s:" % key
-                gid.dump(8, dump_parents)
-            elif getattr(self,key,None):    
-                print "    %s: %s" % (key, getattr(self,key))
+    def dump(self, format=None, dump_parents=False):
+        if not format:
+            format = 'text'
+        else:
+            format = format.lower()
+        if format == 'text':
+            self.dump_text(dump_parents)
+        elif format == 'xml':
+            print self.save_to_string()
+        elif format == 'simple':
+            print self.dump_simple()
+        else:
+            raise Exception, "Invalid format %s" % format
+   
+    def dump_text(self, dump_parents=False):
+        # print core fields in this order
+        core_fields = ['hrn', 'type', 'authority', 'gid', 'date_created', 'last_updated']
+        print "".join(['=' for i in range(40)])
+        print "RECORD"
+        print "    hrn:", self.hrn
+        print "    type:", self.type
+        print "    authority:", self.authority
+        date_created = utcparse(datetime_to_string(self.date_created))    
+        print "    date created:", date_created
+        last_updated = utcparse(datetime_to_string(self.last_updated))    
+        print "    last updated:", last_updated
+        print "    gid:"
+        print "\t\t", self.get_gid_object().dump_string(8, dump_parents)  
+        
+        # print remaining fields
+        for attrib_name in dir(self):
+            # skip core fields
+            if attrib_name in core_fields:
+                continue
+            # skik callables 
+            attrib = getattr(self, attrib_name)
+            if callable(attrib):
+                continue
+            print "     %s: %s" % (attrib_name, attrib)
     
+    def dump_simple(self):
+        return "Record(record_id=%s, hrn=%s, type=%s, authority=%s, pointer=%s)" % \
+                (self.record_id, self.hrn, self.type, self.authority, self.pointer)
+      
 #    # only intended for debugging 
 #    def inspect (self, logger, message=""):
 #        logger.info("%s -- Inspecting AlchemyObj -- attrs"%message)
