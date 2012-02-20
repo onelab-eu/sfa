@@ -4,10 +4,12 @@ import copy
 from pprint import pformat 
 from sfa.generic import Generic
 from optparse import OptionParser
-from pprint import pprint
+from pprint import PrettyPrinter
 from sfa.util.xrn import Xrn
 from sfa.storage.record import SfaRecord 
 from sfa.client.sfi import save_records_to_file
+pprinter = PrettyPrinter(indent=4)
+
 
 def args(*args, **kwargs):
     def _decorator(func):
@@ -30,8 +32,8 @@ class RegistryCommands(Commands):
         self.api= Generic.the_flavour().make_api(interface='registry')
  
     def version(self):
-        for key, value in self.api.manager.GetVersion(self.api, {}).items():
-            print "%s: %s" % (key, pformat(value)) 
+        version = self.api.manager.GetVersion(self.api, {})
+        pprinter.pprint(version)
 
     @args('-x', '--xrn', dest='xrn', metavar='<xrn>', help='object hrn/urn') 
     @args('-t', '--type', dest='type', metavar='<type>', help='object type', default=None) 
@@ -68,6 +70,8 @@ class RegistryCommands(Commands):
     def credential(self, xrn):
         pass
 
+    def gid(self, xrn):
+        pass
 
 class CerficiateCommands(Commands):
     
@@ -77,9 +81,9 @@ class CerficiateCommands(Commands):
     def export(self, xrn):
         pass
 
-
     def display(self, xrn):
         pass
+
     def nuke(self):
         pass  
 
@@ -89,8 +93,8 @@ class AggregateCommands(Commands):
         self.api= Generic.the_flavour().make_api(interface='aggregate')
    
     def version(self):
-        for key, value in self.api.manager.GetVersion(self.api, {}).items():
-            print "%s: %s" % (key, pformat(value))
+        version = self.api.manager.GetVersion(self.api, {})
+        pprinter.pprint(version)
 
     def slices(self):
         print self.api.manager.ListSlices(self.api, [], {})
@@ -98,7 +102,8 @@ class AggregateCommands(Commands):
     @args('-x', '--xrn', dest='xrn', metavar='<xrn>', help='object hrn/urn') 
     def status(self, xrn):
         urn = Xrn(xrn, 'slice').get_urn()
-        print self.api.manager.SliverStatus(self.api, urn, [], {})
+        status = self.api.manager.SliverStatus(self.api, urn, [], {})
+        pprinter.pprint(status)
  
     def resources(self, xrn):
         pass
