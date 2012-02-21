@@ -10,6 +10,7 @@ from sqlalchemy.orm import validates
 from sqlalchemy.ext.declarative import declarative_base
 
 from sfa.util.sfalogging import logger
+from sfa.util.sfatime import utcparse, datetime_to_string
 from sfa.util.xml import XML 
 
 from sfa.trust.gid import GID
@@ -62,7 +63,11 @@ class AlchemyObj:
             if isinstance(v, StringTypes) and v.lower() in ['true']: v=True
             if isinstance(v, StringTypes) and v.lower() in ['false']: v=False
             setattr(self,k,v)
-    
+
+    def validate_datetime (self, key, incoming):
+        if isinstance (incoming, datetime):     return incoming
+        elif isinstance (incoming, (int,float)):return datetime.fromtimestamp (incoming)
+
     # in addition we provide convenience for converting to and from xml records
     # for this purpose only, we need the subclasses to define 'fields' as either 
     # a list or a dictionary
@@ -94,7 +99,7 @@ class AlchemyObj:
    
     def dump_text(self, dump_parents=False):
         # print core fields in this order
-        core_fields = ['hrn', 'type', 'authority', 'gid', 'date_created', 'last_updated']
+        core_fields = [ 'hrn', 'type', 'authority', 'date_created', 'last_updated', 'gid',  ]
         print "".join(['=' for i in range(40)])
         print "RECORD"
         print "    hrn:", self.hrn
@@ -186,6 +191,12 @@ class RegRecord (Base,AlchemyObj):
         if gid is None:                     return
         elif isinstance(gid, StringTypes):  return gid
         else:                               return gid.save_to_string(save_parents=True)
+
+    @validates ('date_created')
+    def validate_date_created (self, key, incoming): return self.validate_datetime (key, incoming)
+
+    @validates ('last_updated')
+    def validate_last_updated (self, key, incoming): return self.validate_datetime (key, incoming)
 
     # xxx - there might be smarter ways to handle get/set'ing gid using validation hooks 
     def get_gid_object (self):
