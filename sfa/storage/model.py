@@ -110,22 +110,21 @@ class AlchemyObj:
         last_updated = utcparse(datetime_to_string(self.last_updated))    
         print "    last updated:", last_updated
         print "    gid:"
-        print "\t\t", self.get_gid_object().dump_string(8, dump_parents)  
+        print self.get_gid_object().dump_string(8, dump_parents)  
         
         # print remaining fields
         for attrib_name in dir(self):
-            # skip core fields
-            if attrib_name in core_fields:
-                continue
-            # skik callables 
             attrib = getattr(self, attrib_name)
-            if callable(attrib):
-                continue
+            # skip internals
+            if attrib_name.startswith('_'):     continue
+            # skip core fields
+            if attrib_name in core_fields:      continue
+            # skip callables 
+            if callable (attrib):               continue
             print "     %s: %s" % (attrib_name, attrib)
     
     def dump_simple(self):
-        return "Record(record_id=%s, hrn=%s, type=%s, authority=%s, pointer=%s)" % \
-                (self.record_id, self.hrn, self.type, self.authority, self.pointer)
+        return "%s"%self
       
 #    # only intended for debugging 
 #    def inspect (self, logger, message=""):
