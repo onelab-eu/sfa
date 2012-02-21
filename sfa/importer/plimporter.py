@@ -251,7 +251,7 @@ class PlImporter:
                 if len(person_hrn) > 64: person_hrn = person_hrn[:64]
                 person_urn = hrn_to_urn(person_hrn, 'user')
 
-                user_person = self.locate ( 'user', person_hrn, person['person_id'])
+                user_record = self.locate ( 'user', person_hrn, person['person_id'])
 
                 # return a tuple pubkey (a plc key object) and pkey (a Keypair object)
                 def init_person_key (person, plc_keys):
@@ -273,26 +273,27 @@ class PlImporter:
                 # new person
                 try:
                     plc_keys = keys_by_person_id.get(person['person_id'],[])
-                    if not user_person:
+                    if not user_record:
                         (pubkey,pkey) = init_person_key (person, plc_keys )
                         person_gid = self.auth_hierarchy.create_gid(person_urn, create_uuid(), pkey)
-                        user_person = RegUser (hrn=person_hrn, gid=person_gid, 
+                        user_record = RegUser (hrn=person_hrn, gid=person_gid, 
                                                  pointer=person['person_id'], 
                                                  authority=get_authority(person_hrn),
                                                  email=person['email'])
                         if pubkey: 
-                            user_person.reg_keys=[RegKey (pubkey['key'], pubkey['key_id'])]
+                            user_record.reg_keys=[RegKey (pubkey['key'], pubkey['key_id'])]
                         else:
-                            self.logger.warning("No key found for user %s"%user_person)
-                        dbsession.add (user_person)
+                            self.logger.warning("No key found for user %s"%user_record)
+                        user_record.just_created()
+                        dbsession.add (user_record)
                         dbsession.commit()
-                        self.logger.info("PlImporter: imported person: %s" % user_person)
-                        self.remember_record ( user_person )
+                        self.logger.info("PlImporter: imported person: %s" % user_record)
+                        self.remember_record ( user_record )
                     else:
                         # update the record ?
                         # if user's primary key has changed then we need to update the 
                         # users gid by forcing an update here
-                        sfa_keys = user_person.reg_keys
+                        sfa_keys = user_record.reg_keys
                         def key_in_list (key,sfa_keys):
                             for reg_key in sfa_keys:
                                 if reg_key.key==key['key']: return True
@@ -306,13 +307,13 @@ class PlImporter:
                             (pubkey,pkey) = init_person_key (person, plc_keys)
                             person_gid = self.auth_hierarchy.create_gid(person_urn, create_uuid(), pkey)
                             if not pubkey:
-                                user_person.reg_keys=[]
+                                user_record.reg_keys=[]
                             else:
-                                user_person.reg_keys=[ RegKey (pubkey['key'], pubkey['key_id'])]
-                            self.logger.info("PlImporter: updated person: %s" % user_person)
-                    user_person.email = person['email']
+                                user_record.reg_keys=[ RegKey (pubkey['key'], pubkey['key_id'])]
+                            self.logger.info("PlImporter: updated person: %s" % user_record)
+                    user_record.email = person['email']
                     dbsession.commit()
-                    user_person.stale=False
+                    user_record.stale=False
                 except:
                     self.logger.log_exc("PlImporter: failed to import person %d %s"%(person['person_id'],person['email']))
     
