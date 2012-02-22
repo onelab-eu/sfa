@@ -1,5 +1,8 @@
 import sys
 import subprocess
+import datetime
+from time import gmtime, strftime 
+
 from sfa.util.faults import MissingSfaInfo
 from sfa.util.sfalogging import logger
 from sfa.storage.table import SfaTable
@@ -368,8 +371,13 @@ class SlabDriver(Driver):
             print>>sys.stderr, " \r\n GetPersons person_filter %s return_fields %s return_person_list %s " %(person_filter,return_fields,return_person_list)
             return return_person_list
 
+    def GetTimezone(self):
+        time = self.oar.parser.SendRequest("GET_timezone")
+        return time
+    
 
-    def GetJobs(self,job_id= None, resources=True,return_fields=None, details = None):
+            
+    def GetJobs(self,job_id= None, resources=True,return_fields=None):
         #job_resources=['reserved_resources', 'assigned_resources','job_id', 'job_uri', 'assigned_nodes',\
         #'api_timestamp']
         #assigned_res = ['resource_id', 'resource_uri']
@@ -379,18 +387,24 @@ class SlabDriver(Driver):
 	if job_id and resources is False:
             req = "GET_jobs_id"
             node_list_k = 'assigned_network_address'
+           
         if job_id and resources :
             req = "GET_jobs_id_resources"
-            node_list_k = 'reserverd_resources'
-            
+            node_list_k = 'reserved_resources' 
+
+      
+               
         #Get job info from OAR    
         job_info = self.oar.parser.SendRequest(req, job_id)
-        if job_info['state'] == 'Terminated':
-            print>>sys.stderr, "\r\n \r\n \t\t GetJobs TERMINELEBOUSIN "
-            return None
-        if job_info['state'] == 'Error':
-            print>>sys.stderr, "\r\n \r\n \t\t GetJobs ERROR "
-            return None
+        print>>sys.stderr, "\r\n \r\n \t\t GetJobs  %s " %(job_info)
+        
+        if 'state' in job_info :
+            if job_info['state'] == 'Terminated':
+                print>>sys.stderr, "\r\n \r\n \t\t GetJobs TERMINELEBOUSIN "
+                return None
+            if job_info['state'] == 'Error':
+                print>>sys.stderr, "\r\n \r\n \t\t GetJobs ERROR message %s " %(job_info)
+                return None
         
         #Get a dict of nodes . Key :hostname of the node
         node_list = self.GetNodes() 
@@ -573,8 +587,17 @@ class SlabDriver(Driver):
         reqdict['property'] =  reqdict['property'][0: len( reqdict['property'])-2] +")"
         reqdict['resource'] ="network_address="+ str(len(nodeid_list))
         reqdict['resource']+= ",walltime=" + str(00) + ":" + str(05) + ":" + str(00)
-        reqdict['script_path'] = "/bin/sleep 320"
-        reqdict['type'] = "deploy"
+        reqdict['script_path'] = "/bin/sleep 400"
+        reqdict['type'] = "deploy" 
+        timestamp = self.GetTimezone()
+
+        readable_time = strftime(self.time_format, gmtime(float(timestamp))) 
+        print >>sys.stderr," \r\n \r\n \t\t\t\t AVANT ParseTimezone readable_time %s timestanp %s " %(readable_time, timestamp )
+        timestamp =  timestamp+ 3780 #Add 3 min to server time
+        readable_time = strftime(self.time_format, gmtime(float(timestamp))) 
+
+        print >>sys.stderr,"  \r\n \r\n \t\t\t\tAPRES ParseTimezone readable_time %s timestanp %s  " %(readable_time , timestamp)
+        reqdict['reservation'] = readable_time
          
         # first step : start the OAR job
         print>>sys.stderr, "\r\n \r\n AddSliceToNodes reqdict   %s \r\n site_list   %s"  %(reqdict,site_list)   
@@ -584,6 +607,7 @@ class SlabDriver(Driver):
         self.db.update('slice',['oar_job_id'], [answer['id']], 'slice_hrn', slice_name)
         
         jobid=answer['id']
+        print>>sys.stderr, "\r\n \r\n AddSliceToNodes jobid    %s added_nodes  %s"  %(jobid,added_nodes)  
         # second step : configure the experiment
         # we need to store the nodes in a yaml (well...) file like this :
         # [1,56,23,14,45,75] with name /tmp/sfa<jobid>.json

@@ -7,6 +7,7 @@ from sfa.util.policy import Policy
 from sfa.rspecs.rspec import RSpec
 from sfa.plc.vlink import VLink
 from sfa.util.xrn import Xrn
+from sfa.util.sfalogging import logger
 
 MAXINT =  2L**31-1
 
@@ -189,11 +190,12 @@ class SlabSlices:
             tmp=  slice['PI'][0].split(".")
             username = tmp[(len(tmp)-1)]
             self.driver.AddSliceToNodes(slice['name'], added_nodes, username)
+            
             if deleted_nodes:
                 self.driver.DeleteSliceFromNodes(slice['name'], deleted_nodes)
 
         except: 
-            self.logger.log_exc('Failed to add/remove slice from nodes')
+            logger.log_exc('Failed to add/remove slice from nodes')
 
     def free_egre_key(self):
         used = set()
@@ -243,7 +245,7 @@ class SlabSlices:
                             self.driver.BindObjectToPeer( 'key', key['key_id'], peer['shortname'], remote_key_id)
                         except:
                             self.driver.DeleteKey(key['key_id'])
-                            self.logger("failed to bind key: %s to peer: %s " % (key['key_id'], peer['shortname']))
+                            logger("failed to bind key: %s to peer: %s " % (key['key_id'], peer['shortname']))
                 except Exception,e:
                     self.driver.DeletePerson(person['person_id'])
                     raise e       

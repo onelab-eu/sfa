@@ -2,6 +2,8 @@
 import sys
 import httplib
 import json
+import datetime
+from time import gmtime, strftime 
 from sfa.senslab.parsing import *
 from sfa.senslab.SenslabImportUsers import *
 import urllib
@@ -9,6 +11,7 @@ import urllib2
 from sfa.util.config import Config
 from sfa.util.plxrn import PlXrn
 from sfa.util.xrn import hrn_to_urn, get_authority,Xrn,get_leaf
+
 #OARIP='10.127.255.254'
 OARIP='192.168.0.109'
 
@@ -48,11 +51,17 @@ class OARrestapi:
         self.oarserver['port'] = 80
         self.oarserver['uri'] = None
         self.oarserver['postformat'] = 'json'
+        
+        self.jobstates = ["Terminated", "Running", "Error", "Waiting", "Launching","Hold"]
+             
         self.parser = OARGETParser(self)
        
             
     def GETRequestToOARRestAPI(self, request, strval=None  ): 
         self.oarserver['uri'] = OARrequests_get_uri_dict[request] 
+        #if request is "GET_jobs_details":
+            #data = json.dumps([])
+        #else:
         data = json.dumps({})
         if strval:
           self.oarserver['uri'] = self.oarserver['uri'].replace("id",str(strval))
@@ -74,6 +83,7 @@ class OARrestapi:
             raise ServerError("GET_OAR_SRVR : Could not reach OARserver")
         try:
             js = json.loads(resp)
+            
             if strval:
                 print>>sys.stderr, " \r\n \r\n \t GETRequestToOARRestAPI strval %s js %s" %(strval,js)
             return js
@@ -81,10 +91,11 @@ class OARrestapi:
         except ValueError:
             raise ServerError("Failed to parse Server Response:" + js)
 
+   
 		
-		
-    def POSTRequestToOARRestAPI(self, request, datadict, username):
+    def POSTRequestToOARRestAPI(self, request, datadict, username=None):
         #first check that all params for are OK 
+      
         print>>sys.stderr, " \r\n \r\n POSTRequestToOARRestAPI username",username
         try:
             self.oarserver['uri'] = OARrequest_post_uri_dict[request] 
@@ -194,7 +205,10 @@ class OARGETParser:
         
             
     def ParseTimezone(self) : 
-        print " ParseTimezone" 
+        api_timestamp=self.raw_json['api_timestamp']
+        #readable_time = strftime("%Y-%m-%d %H:%M:%S", gmtime(float(api_timestamp))) 
+
+        return api_timestamp
             
     def ParseJobs(self) :
         self.jobs_list = []
@@ -204,7 +218,8 @@ class OARGETParser:
         print "ParseJobsTable"
                 
     def ParseJobsDetails (self): 
-        print "ParseJobsDetails"
+       
+        print >>sys.stderr,"ParseJobsDetails %s " %(self.raw_json)
         
 
     def ParseJobsIds(self):
@@ -361,3 +376,4 @@ class OARGETParser:
             print>>sys.stderr, "\r\n OARGetParse __init__ : ERROR_REQUEST "	,request
             
 
+  
