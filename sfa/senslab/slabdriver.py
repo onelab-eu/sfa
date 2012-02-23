@@ -376,7 +376,16 @@ class SlabDriver(Driver):
         return time
     
 
-            
+    def DeleteJobs(self, job_id):
+        if not job_id:
+            return
+        reqdict = {}
+        reqdict['method'] = "delete"
+        reqdict['strval'] = str(job_id)
+        answer = self.oar.POSTRequestToOARRestAPI('DELETE_jobs_id',reqdict,'avakian')
+        print>>sys.stderr, "\r\n \r\n  jobid  DeleteJobs %s "  %(answer)
+        
+                
     def GetJobs(self,job_id= None, resources=True,return_fields=None):
         #job_resources=['reserved_resources', 'assigned_resources','job_id', 'job_uri', 'assigned_nodes',\
         #'api_timestamp']
@@ -586,14 +595,14 @@ class SlabDriver(Driver):
             #site_list.append( l[0] )
         reqdict['property'] =  reqdict['property'][0: len( reqdict['property'])-2] +")"
         reqdict['resource'] ="network_address="+ str(len(nodeid_list))
-        reqdict['resource']+= ",walltime=" + str(00) + ":" + str(05) + ":" + str(00)
-        reqdict['script_path'] = "/bin/sleep 400"
+        reqdict['resource']+= ",walltime=" + str(00) + ":" + str(10) + ":" + str(00)
+        reqdict['script_path'] = "/bin/sleep 600"
         reqdict['type'] = "deploy" 
         timestamp = self.GetTimezone()
 
         readable_time = strftime(self.time_format, gmtime(float(timestamp))) 
         print >>sys.stderr," \r\n \r\n \t\t\t\t AVANT ParseTimezone readable_time %s timestanp %s " %(readable_time, timestamp )
-        timestamp =  timestamp+ 3780 #Add 3 min to server time
+        timestamp =  timestamp+ 3645 #Add 3 min to server time
         readable_time = strftime(self.time_format, gmtime(float(timestamp))) 
 
         print >>sys.stderr,"  \r\n \r\n \t\t\t\tAPRES ParseTimezone readable_time %s timestanp %s  " %(readable_time , timestamp)
@@ -601,8 +610,8 @@ class SlabDriver(Driver):
          
         # first step : start the OAR job
         print>>sys.stderr, "\r\n \r\n AddSliceToNodes reqdict   %s \r\n site_list   %s"  %(reqdict,site_list)   
-        OAR = OARrestapi()
-        answer = OAR.POSTRequestToOARRestAPI('POST_job',reqdict,slice_user)
+        #OAR = OARrestapi()
+        answer = self.oar.POSTRequestToOARRestAPI('POST_job',reqdict,slice_user)
         print>>sys.stderr, "\r\n \r\n AddSliceToNodes jobid   %s "  %(answer)
         self.db.update('slice',['oar_job_id'], [answer['id']], 'slice_hrn', slice_name)
         
@@ -624,7 +633,7 @@ class SlabDriver(Driver):
         javacmdline="/usr/bin/java"
         jarname="/opt/senslabexperimentwrapper/sfa-1.0-jar-with-dependencies.jar"
         #ret=subprocess.check_output(["/usr/bin/java", "-jar", ", str(jobid), slice_user])
-        output = subprocess.Popen([javacmdline, "-jar", jarname, str(jobid), slice_user],stdout=subprocess.PIPE).communicate()[0]
+        output = subprocess.Popen([javacmdline, "-jar", jarname, str(jobid), "avakian"],stdout=subprocess.PIPE).communicate()[0]
 
         print>>sys.stderr, "\r\n \r\n AddSliceToNodes wrapper returns   %s "  %(output)
         return 

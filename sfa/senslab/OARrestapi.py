@@ -27,15 +27,18 @@ OARrequests_get_uri_dict = { 'GET_version': '/oarapi/version.json',
 			'GET_jobs': '/oarapi/jobs.json',
                         'GET_jobs_id': '/oarapi/jobs/id.json',
                         'GET_jobs_id_resources': '/oarapi/jobs/id/resources.json',
-                        'GET_resources_id': '/oarapi/resources/.json',
+                        'GET_resources_id': '/oarapi/resources/id.json',
 			'GET_jobs_table': '/oarapi/jobs/table.json',
 			'GET_jobs_details': '/oarapi/jobs/details.json',
 			'GET_resources_full': '/oarapi/resources/full.json',
 			'GET_resources':'/oarapi/resources.json',
                         
+                        
 }
 
-OARrequest_post_uri_dict = { 'POST_job': '/oarapi/jobs.json'}
+OARrequest_post_uri_dict = { 
+                            'POST_job':{'uri': '/oarapi/jobs.json'},
+                            'DELETE_jobs_id':{'uri':'/oarapi/jobs/id.json'},}
 
 POSTformat = {  #'yaml': {'content':"text/yaml", 'object':yaml}
 'json' : {'content':"application/json",'object':json}, 
@@ -59,16 +62,14 @@ class OARrestapi:
             
     def GETRequestToOARRestAPI(self, request, strval=None  ): 
         self.oarserver['uri'] = OARrequests_get_uri_dict[request] 
-        #if request is "GET_jobs_details":
-            #data = json.dumps([])
-        #else:
+
         data = json.dumps({})
         if strval:
           self.oarserver['uri'] = self.oarserver['uri'].replace("id",str(strval))
           print>>sys.stderr, "\r\n \r\n   GETRequestToOARRestAPI replace :  self.oarserver['uri'] %s",  self.oarserver['uri']
         
         try :  
-            headers = {'X-REMOTE_IDENT':'savakian',\
+            headers = {'X-REMOTE_IDENT':'avakian',\
             'content-length':'0'}
             #conn = httplib.HTTPConnection(self.oarserver['ip'],self.oarserver['port'])
             #conn.putheader(headers)
@@ -91,21 +92,32 @@ class OARrestapi:
         except ValueError:
             raise ServerError("Failed to parse Server Response:" + js)
 
-   
 		
     def POSTRequestToOARRestAPI(self, request, datadict, username=None):
         #first check that all params for are OK 
-      
+        
         print>>sys.stderr, " \r\n \r\n POSTRequestToOARRestAPI username",username
         try:
-            self.oarserver['uri'] = OARrequest_post_uri_dict[request] 
+            self.oarserver['uri'] = OARrequest_post_uri_dict[request]['uri']
+            print>>sys.stderr, " \r\n \r\n POSTRequestToOARRestAPI rq %s datadict %s  " % ( self.oarserver['uri'] ,datadict)
+
         except:
             print>>sys.stderr, " \r\n \r\n POSTRequestToOARRestAPI request not in OARrequest_post_uri_dict"
+            return
+        try:
+            print>>sys.stderr, " \r\n \r\n POSTRequestToOARRestAPI  %s " %( 'strval' in datadict)
+            if datadict and 'strval' in datadict:
+                self.oarserver['uri'] = self.oarserver['uri'].replace("id",str(datadict['strval']))
+                print>>sys.stderr, " \r\n \r\n POSTRequestToOARRestAPI REPLACE OK %s"%(self.oarserver['uri'])
+                del datadict['strval']
+                print>>sys.stderr, " \r\n \r\n \t POSTRequestToOARRestAPI datadict %s  rq %s" %(datadict, self.oarserver['uri'] )
+        except:
+            print>>sys.stderr, " \r\n \r\n POSTRequestToOARRestAPI ERRRRRORRRRRR "
             return
         #if format in POSTformat:
             #if format is 'json':
         data = json.dumps(datadict)
-        headers = {'X-REMOTE_IDENT':username,\
+        headers = {'X-REMOTE_IDENT':'avakian',\
                 'content-type':POSTformat['json']['content'],\
                 'content-length':str(len(data))}     
         try :
@@ -251,7 +263,8 @@ class OARGETParser:
         self.ParseNodes()
        
         
-            
+    def ParseDeleteJobs(self):
+        return  
             
     def ParseResourcesFull(self ) :
         print>>sys.stderr, " \r\n \t\t\t  ParseResourcesFull_____________________________ "
@@ -350,6 +363,7 @@ class OARGETParser:
         'GET_jobs_details': {'uri':'/oarapi/jobs/details.json','parse_func': ParseJobsDetails},
         'GET_resources_full': {'uri':'/oarapi/resources/full.json','parse_func': ParseResourcesFull},
         'GET_resources':{'uri':'/oarapi/resources.json' ,'parse_func': ParseResources},
+        'DELETE_jobs_id':{'uri':'/oarapi/jobs/id.json' ,'parse_func': ParseDeleteJobs}
         }
 
     
