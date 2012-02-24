@@ -276,6 +276,7 @@ class PlImporter:
                     if not user_record:
                         (pubkey,pkey) = init_person_key (person, plc_keys )
                         person_gid = self.auth_hierarchy.create_gid(person_urn, create_uuid(), pkey)
+                        person_gid.set_email(person['email'])
                         user_record = RegUser (hrn=person_hrn, gid=person_gid, 
                                                  pointer=person['person_id'], 
                                                  authority=get_authority(person_hrn),
