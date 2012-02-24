@@ -97,18 +97,31 @@ class AlchemyObj:
         else:
             raise Exception, "Invalid format %s" % format
    
+    # xxx fixme 
+    # turns out the date_created field is received by the client as a 'created' int
+    # (and 'last_updated' does not make it at all)
+    # let's be flexible
+    def date_repr (self,fields):
+        if not isinstance(fields,list): fields=[fields]
+        for field in fields:
+            value=getattr(self,field,None)
+            if isinstance (value,datetime): 
+                return datetime_to_string (value)
+            elif isinstance (value,(int,float)):
+                return datetime_to_string(utcparse(value))
+        # fallback
+        return "** undef_datetime **"
+
     def dump_text(self, dump_parents=False):
         # print core fields in this order
-        core_fields = [ 'hrn', 'type', 'authority', 'date_created', 'last_updated', 'gid',  ]
+        core_fields = [ 'hrn', 'type', 'authority', 'date_created', 'created', 'last_updated', 'gid',  ]
         print "".join(['=' for i in range(40)])
         print "RECORD"
         print "    hrn:", self.hrn
         print "    type:", self.type
         print "    authority:", self.authority
-        date_created = utcparse(datetime_to_string(self.date_created))    
-        print "    date created:", date_created
-        last_updated = utcparse(datetime_to_string(self.last_updated))    
-        print "    last updated:", last_updated
+        print "    date created:", self.date_repr( ['date_created','created'] )
+        print "    last updated:", self.date_repr('last_updated')
         print "    gid:"
         print self.get_gid_object().dump_string(8, dump_parents)  
         
