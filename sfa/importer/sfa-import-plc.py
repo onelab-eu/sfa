@@ -257,6 +257,7 @@ def main():
                         pkey = Keypair(create=True) 
                     urn = hrn_to_urn(hrn, 'user')
                     person_gid = sfaImporter.AuthHierarchy.create_gid(urn, create_uuid(), pkey)
+                    person_gid.set_email(person['email'])                      
                     person_record = SfaRecord(hrn=hrn, gid=person_gid, type="user", \
                                               pointer=person['person_id'], authority=get_authority(hrn))
                     logger.info("Import: importing person: %s" % person_record.summary_string())  
