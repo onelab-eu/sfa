@@ -1,12 +1,15 @@
 #!/usr/bin/python
 import sys
 import copy
+from pprint import pformat 
 from sfa.generic import Generic
 from optparse import OptionParser
-
+from pprint import PrettyPrinter
 from sfa.util.xrn import Xrn
 from sfa.storage.record import SfaRecord 
 from sfa.client.sfi import save_records_to_file
+pprinter = PrettyPrinter(indent=4)
+
 
 def args(*args, **kwargs):
     def _decorator(func):
@@ -28,8 +31,9 @@ class RegistryCommands(Commands):
     def __init__(self, *args, **kwds):
         self.api= Generic.the_flavour().make_api(interface='registry')
  
-    def version(self): 
-        pass           
+    def version(self):
+        version = self.api.manager.GetVersion(self.api, {})
+        pprinter.pprint(version)
 
     @args('-x', '--xrn', dest='xrn', metavar='<xrn>', help='object hrn/urn') 
     @args('-t', '--type', dest='type', metavar='<type>', help='object type', default=None) 
@@ -66,6 +70,8 @@ class RegistryCommands(Commands):
     def credential(self, xrn):
         pass
 
+    def gid(self, xrn):
+        pass
 
 class CerficiateCommands(Commands):
     
@@ -75,9 +81,9 @@ class CerficiateCommands(Commands):
     def export(self, xrn):
         pass
 
-
     def display(self, xrn):
         pass
+
     def nuke(self):
         pass  
 
@@ -87,13 +93,17 @@ class AggregateCommands(Commands):
         self.api= Generic.the_flavour().make_api(interface='aggregate')
    
     def version(self):
-        pass
+        version = self.api.manager.GetVersion(self.api, {})
+        pprinter.pprint(version)
 
     def slices(self):
-        pass        
+        print self.api.manager.ListSlices(self.api, [], {})
 
+    @args('-x', '--xrn', dest='xrn', metavar='<xrn>', help='object hrn/urn') 
     def status(self, xrn):
-        pass
+        urn = Xrn(xrn, 'slice').get_urn()
+        status = self.api.manager.SliverStatus(self.api, urn, [], {})
+        pprinter.pprint(status)
  
     def resources(self, xrn):
         pass
@@ -178,6 +188,7 @@ def main():
         print command.__doc__
         parser.print_help()
         #raise
+        raise
     except Exception:
         print "Command failed, please check log for more info"
         raise
