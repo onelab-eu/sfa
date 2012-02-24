@@ -18,11 +18,7 @@ class FdShell:
                     ]
 
     def __init__ ( self, config ) :
-        # xxx to be configurable
-        SFA_FEDERICA_URL = "http://%s:%s@%s:%s/"%\
-            (config.SFA_FEDERICA_USER,config.SFA_FEDERICA_PASSWORD,
-             config.SFA_FEDERICA_HOSTNAME,config.SFA_FEDERICA_PORT)
-        url=SFA_FEDERICA_URL
+        url=config.SFA_FEDERICA_URL
         # xxx not sure if java xmlrpc has support for None
         # self.proxy = xmlrpclib.Server(url, verbose = False, allow_none = True)
         # xxx turn on verbosity

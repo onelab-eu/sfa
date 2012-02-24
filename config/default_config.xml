@@ -282,30 +282,11 @@ Thierry Parmentelat
       <description>The settings that tell this SFA instance how to interact with the FEDERICA testbed.</description>
 
       <variablelist>
-	<variable id="user" type="string">
-	  <name>FEDERICA login name for an admin user; SFA will carry on operations under this account.</name>
-	  <value>root</value>
-	  <description></description>
+	<variable id="url" type="string">
+	  <name>XMLRPC URL</name>
+	  <value>https://root:password@federica.sfa.wrapper.com:8443/fedewrapper/xmlrpc/</value>
+	  <description>URL for the federica xmlrpc API; login and password need to be set like in http://login:password@hostname:port/the/path </description>
 	</variable>
-
-	<variable id="password" type="string">
-	  <name>Password</name>
-	  <value>rootpassword</value>
-	  <description>The PLC password for SFA_PLC_USER.</description>
-	</variable>
-
-	<variable id="hostname" type="string">
-	  <name>XMLRPC hostname</name>
-	  <value>federica.net</value>
-	  <description>Hostname for the federica xmlrpc interface.</description>
-	</variable>
-
-	<variable id="port" type="string">
-	  <name>XMLRPC port number</name>
-	  <value>10000</value>
-	  <description>Port number for the federica xmlrpc interface.</description>
-	</variable>
-
       </variablelist>
     </category>
 
