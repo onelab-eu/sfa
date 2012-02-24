@@ -42,8 +42,8 @@ class FdDriver (PlDriver):
             return from_xmlrpc
 
     def aggregate_version (self):
-        result=[]
-        federica_version_string_api = self.shell.getRSpecVersion()
+        result={}
+        federica_version_string_api = self.response(self.shell.getRSpecVersion())
         result ['federica_version_string_api']=federica_version_string_api
         if federica_version_string_api != federica_version_string:
             result['WARNING']="hard-wired rspec version %d differs from what the API currently exposes"%\
@@ -74,7 +74,9 @@ class FdDriver (PlDriver):
                     logger.debug("FdDriver.ListResources: returning cached advertisement")
                     return self.response(rspec)
             # otherwise, need to get it
-            rspec = self.shell.listAvailableResources (creds, federica_version_string)
+                # java code expects creds as a String
+#            rspec = self.shell.listAvailableResources (creds, federica_version_string)
+            rspec = self.shell.listAvailableResources ("", federica_version_string)
 #            rspec = self.shell.listAvailableResources (federica_version_string)
             # cache it for future use
             if self.cache:
@@ -83,18 +85,24 @@ class FdDriver (PlDriver):
             return self.response(rspec)
         # about a given slice : don't cache
         else:
-            return self.response(self.shell.listSliceResources(creds, federica_version_string, slice_urn))
+                # java code expects creds as a String
+#            return self.response(self.shell.listSliceResources(creds, federica_version_string, slice_urn))
+            return self.response(self.shell.listSliceResources("", federica_version_string, slice_urn))
 
     def create_sliver (self, slice_urn, slice_hrn, creds, rspec_string, users, options):
         # right now version_string is ignored on the federica side
         # we normally derive it from options
-        return self.response(self.shell.createSlice(creds, slice_urn, federica_version_string, rspec_string))
+                # java code expects creds as a String
+#        return self.response(self.shell.createSlice(creds, slice_urn, federica_version_string, rspec_string))
+        return self.response(self.shell.createSlice("", slice_urn, federica_version_string, rspec_string))
 
     def delete_sliver (self, slice_urn, slice_hrn, creds, options):
         # right now version_string is ignored on the federica side
         # we normally derive it from options
         # xxx not sure if that's currentl supported at all
-        return self.response(self.shell.deleteSlice(creds, slice_urn))
+                # java code expects creds as a String
+#        return self.response(self.shell.deleteSlice(creds, slice_urn))
+        return self.response(self.shell.deleteSlice("", slice_urn))
 
     # for the the following methods we use what is provided by the default driver class
     #def renew_sliver (self, slice_urn, slice_hrn, creds, expiration_time, options):

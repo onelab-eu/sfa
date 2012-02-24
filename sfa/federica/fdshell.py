@@ -24,17 +24,17 @@ class FdShell:
         # xxx turn on verbosity
         self.proxy = xmlrpclib.Server(url, verbose = True)
 
+    # xxx get credentials from the config ?
+    # right now basic auth data goes into the URL
+    # so do *not* add any credential at that point
     def __getattr__(self, name):
         def func(*args, **kwds):
             if name not in FdShell.direct_calls:
                 raise Exception, "Illegal method call %s for FEDERICA driver"%(name)
-            # xxx get credentials from the config ?
-            # right now basic auth data goes into the URL
-            # the API still provides for a first credential arg though
-            credential='xxx-unused-xxx'
             logger.info("Issuing %s args=%s kwds=%s to federica"%\
                             (name,args,kwds))
-            result=getattr(self.proxy, "AggregateManager.%s"%name)(credential, *args, **kwds)
+#            result=getattr(self.proxy, "AggregateManager.%s"%name)(credential, *args, **kwds)
+            result=getattr(self.proxy, "AggregateManager.%s"%name)(*args, **kwds)
             logger.debug('FdShell %s (%s) returned ... '%(name,name))
             return result
         return func
