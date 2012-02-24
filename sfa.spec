@@ -1,6 +1,6 @@
 %define name sfa
 %define version 2.1
-%define taglevel 2
+%define taglevel 3
 
 %define release %{taglevel}%{?pldistro:.%{pldistro}}%{?date:.%{date}}
 %global python_sitearch	%( python -c "from distutils.sysconfig import get_python_lib; print get_python_lib(1)" )
@@ -228,6 +228,14 @@ fi
 [ "$1" -ge "1" ] && service sfa-cm restart || :
 
 %changelog
+* Fri Feb 24 2012 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-2.1-3
+- slice x researcher rel. in database,
+- plimporter to maintain that, as well as user.email, and more robust
+- ongoing draft for sfaadmin tool
+- support for a federica driver
+- support for a nova/euca driver
+- no more sfa-clean-peer-records script
+
 * Wed Feb 08 2012 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-2.1-2
 - registry database has user's keys and mail (known as v0 for migrate)
 - pl importer properly maintains user's keys and mail
