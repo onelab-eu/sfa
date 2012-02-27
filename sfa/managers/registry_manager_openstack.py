@@ -25,7 +25,7 @@ from sfa.managers.registry_manager import RegistryManager
 
 class RegistryManager(RegistryManager):
 
-    def GetCredential(self, api, xrn, type, is_self=False):
+    def GetCredential(self, api, xrn, type, caller_xrn = None):
         # convert xrn to hrn     
         if type:
             hrn = urn_to_hrn(xrn)[0]
@@ -38,7 +38,9 @@ class RegistryManager(RegistryManager):
             auth_hrn = hrn
         auth_info = api.auth.get_auth_info(auth_hrn)
         # get record info
-        record=dbsession.query(RegRecord).filter_by(type=type,hrn=hrn).first()
+        record=dbsession.query(RegRecord).filter_by(hrn=hrn).first()
+        if type:
+            record = record.filter_by(type=type)
         if not record:
             raise RecordNotFound("hrn=%s, type=%s"%(hrn,type))
     
@@ -51,13 +53,19 @@ class RegistryManager(RegistryManager):
               raise AccountNotEnabled(": PlanetLab account %s is not enabled. Please contact your site PI" %(record.email))
     
         # get the callers gid
-        # if this is a self cred the record's gid is the caller's gid
-        if is_self:
+        # if caller_xrn is not specified assume the caller is the record
+        # object itself.  
+        if not caller_xrn:
             caller_hrn = hrn
             caller_gid = record.get_gid_object()
         else:
-            caller_gid = api.auth.client_cred.get_gid_caller() 
-            caller_hrn = caller_gid.get_hrn()
+            caller_hrn, caller_type = urn_to_hrn(caller_xrn)
+            caller_record = dbsession.query(RegRecord).filter_by(hrn=caller_hrn).first()
+            if caller_type:
+                caller_record = caller_record.filter_by(type=caller_type)
+            if not caller_record:
+                raise RecordNotFound("Unable to associated caller (hrn=%s, type=%s) with credential for (hrn: %s, type: %s)"%(caller_hrn, caller_type, hrn, type))
+            caller_gid = GID(string=caller_record.gid) 
         
         object_hrn = record.get_gid_object().get_hrn()
         rights = api.auth.determine_user_rights(caller_hrn, record.__dict__)
