@@ -102,11 +102,11 @@ class NovaDriver (Driver):
         type=sfa_record['type']
         name = Xrn(sfa_record['hrn']).get_leaf()     
         if type == 'user':
-            if self.shell.user_get(name):
-                self.shell.user_delete(name)
+            if self.shell.auth_manager.get_user(name):
+                self.shell.auth_manager.delete_user(name)
         elif type == 'slice':
-            if self.shell.project_get(name):
-                self.shell.project_delete(name)
+            if self.shell.auth_manager.get_project(name):
+                self.shell.auth_manager.delete_project(name)
         return True
 
 
