@@ -64,8 +64,11 @@ class RegistryCommands(Commands):
     def update(self, record):
         pass
         
-    def remove(self, xrn):            
-        pass
+    @args('-x', '--xrn', dest='xrn', metavar='<xrn>', help='object hrn/urn') 
+    @args('-t', '--type', dest='type', metavar='<type>', help='object type', default=None) 
+    def remove(self, xrn, type=None):
+        xrn = Xrn(xrn, type)
+        self.api.manager.Remove(self.api, xrn)            
 
     def credential(self, xrn):
         pass
