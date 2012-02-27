@@ -76,10 +76,8 @@ class RegistryCommands(Commands):
     def credential(self, xrn, type=None):
         cred = self.api.manager.GetCredential(self.api, xrn, type, self.api.hrn)
         print cred
-
-    def gid(self, xrn):
-        pass
-
+    
+    
 class CerficiateCommands(Commands):
     
     def import_records(self, xrn):
@@ -112,9 +110,16 @@ class AggregateCommands(Commands):
         status = self.api.manager.SliverStatus(self.api, urn, [], {})
         pprinter.pprint(status)
  
-    def resources(self, xrn):
-        pass
-
+    @args('-x', '--xrn', dest='xrn', metavar='<xrn>', help='object hrn/urn', default=None)
+    @args('-r', '--rspec-version', dest='rspec_version', metavar='<rspec_version>', 
+          default='GENI', help='version/format of the resulting rspec response')  
+    def resources(self, xrn=None, rspec_version='GENI'):
+        options = {'geni_rspec_version': rspec_version}
+        if xrn:
+            options['geni_slice_urn'] = xrn
+        resources = self.api.manager.ListResources(self.api, [], options)
+        pprinter.pprint(resources)
+        
     def create(self, xrn, rspec):
         pass
 
