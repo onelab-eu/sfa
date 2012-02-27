@@ -15,10 +15,10 @@ from sfa.rspecs.version_manager import VersionManager
 
 def disk_image_to_rspec_object(image):
     img = DiskImage()
-    img['name'] = image['name']
-    img['description'] = image['name']
-    img['os'] = image['name']
-    img['version'] = image['name']
+    img['name'] = image['ami']['name']
+    img['description'] = image['ami']['name']
+    img['os'] = image['ami']['name']
+    img['version'] = image['ami']['name']
     return img
     
 
@@ -65,9 +65,11 @@ class OSAggregate:
         """
         disk_image = {}
         if image['container_format'] == 'ami':
+            kernel_id = image['properties']['kernel_id']
+            ramdisk_id = image['properties']['ramdisk_id']
             disk_image['ami'] = image
-            disk_image['aki'] = self.driver.shell.image_manager.show(image['kernel_id'])
-            disk_image['ari'] = self.driver.shell.image_manager.show(image['ramdisk_id'])
+            disk_image['aki'] = self.driver.shell.image_manager.show(kernel_id)
+            disk_image['ari'] = self.driver.shell.image_manager.show(ramdisk_id)
         return disk_image
         
     def get_disk_image(self, id=None, name=None):
@@ -137,7 +139,7 @@ class OSAggregate:
         # available images
         disk_images = self.get_available_disk_images()
         disk_image_objects = [disk_image_to_rspec_object(image) \
-                               for image in disk_image]  
+                               for image in disk_images]  
         rspec_nodes = []
         for zone in zones:
             rspec_node = Node()
