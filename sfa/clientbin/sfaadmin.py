@@ -49,7 +49,7 @@ class RegistryCommands(Commands):
     @args('-t', '--type', dest='type', metavar='<type>', help='object type', default=None) 
     @args('-o', '--outfile', dest='outfile', metavar='<outfile>', help='save record to file') 
     @args('-f', '--format', dest='format', metavar='<display>', type='choice', 
-          choices=('text', 'xml', 'summary'), help='display record in different formats') 
+          choices=('text', 'xml', 'simple'), help='display record in different formats') 
     def show(self, xrn, type=None, format=None, outfile=None):
         records = self.api.manager.Resolve(self.api, xrn, type, True)
         for record in records:
@@ -70,8 +70,12 @@ class RegistryCommands(Commands):
         xrn = Xrn(xrn, type)
         self.api.manager.Remove(self.api, xrn)            
 
-    def credential(self, xrn):
-        pass
+
+    @args('-x', '--xrn', dest='xrn', metavar='<xrn>', help='object hrn/urn') 
+    @args('-t', '--type', dest='type', metavar='<type>', help='object type', default=None) 
+    def credential(self, xrn, type=None):
+        cred = self.api.manager.GetCredential(self.api, xrn, type, self.api.hrn)
+        print cred
 
     def gid(self, xrn):
         pass
