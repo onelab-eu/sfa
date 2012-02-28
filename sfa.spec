@@ -1,6 +1,6 @@
 %define name sfa
-%define version 2.0
-%define taglevel 9
+%define version 2.1
+%define taglevel 3
 
 %define release %{taglevel}%{?pldistro:.%{pldistro}}%{?date:.%{date}}
 %global python_sitearch	%( python -c "from distutils.sysconfig import get_python_lib; print get_python_lib(1)" )
@@ -24,7 +24,10 @@ URL: %{SCMURL}
 Summary: the SFA python libraries
 Group: Applications/System
 BuildRequires: make
+
+Requires: myplc-config
 Requires: python >= 2.5
+Requires: pyOpenSSL >= 0.7
 Requires: m2crypto
 Requires: xmlsec1-openssl-devel
 Requires: libxslt-python
@@ -40,8 +43,10 @@ Requires: python-dateutil
 Requires: postgresql >= 8.2, postgresql-server >= 8.2
 Requires: postgresql-python
 Requires: python-psycopg2
-Requires: pyOpenSSL >= 0.7
-Requires: myplc-config
+# f8=0.4 - f12=0.5 f14=0.6 f16=0.7
+Requires: python-sqlalchemy
+Requires: python-migrate
+# the eucalyptus aggregate uses this module
 Requires: python-xmlbuilder
  
 # python 2.5 has uuid module added, for python 2.4 we still need it.
@@ -148,7 +153,7 @@ rm -rf $RPM_BUILD_ROOT
 %config /etc/sfa/default_config.xml
 %config (noreplace) /etc/sfa/aggregates.xml
 %config (noreplace) /etc/sfa/registries.xml
-/usr/share/sfa/sfa.sql
+/usr/share/sfa/migrations
 /usr/share/sfa/examples
 /var/www/html/wsdl/*.wsdl
 
@@ -161,9 +166,8 @@ rm -rf $RPM_BUILD_ROOT
 /etc/sfa/xml.xsd
 /etc/sfa/protogeni-rspec-common.xsd
 /etc/sfa/topology
-%{_bindir}/sfa-import-plc.py*
-%{_bindir}/sfa-nuke-plc.py*
-%{_bindir}/sfa-clean-peer-records.py*
+%{_bindir}/sfa-import.py*
+%{_bindir}/sfa-nuke.py*
 %{_bindir}/gen-sfa-cm-config.py*
 %{_bindir}/sfa-ca.py*
 
@@ -197,18 +201,18 @@ rm -rf $RPM_BUILD_ROOT
 %files tests
 %{_datadir}/sfa/tests
 
-### sfa-plc installs the 'sfa' service
-%post plc
+### sfa installs the 'sfa' service
+%post 
 chkconfig --add sfa
 
-%preun plc
+%preun 
 if [ "$1" = 0 ] ; then
   /sbin/service sfa stop || :
   /sbin/chkconfig --del sfa || :
 fi
 
-%postun plc
-[ "$1" -ge "1" ] && service sfa restart
+%postun
+[ "$1" -ge "1" ] && { service sfa dbdump ; service sfa restart ; }
 
 ### sfa-cm installs the 'sfa-cm' service
 %post cm
@@ -224,6 +228,41 @@ fi
 [ "$1" -ge "1" ] && service sfa-cm restart || :
 
 %changelog
+* Fri Feb 24 2012 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-2.1-3
+- slice x researcher rel. in database,
+- plimporter to maintain that, as well as user.email, and more robust
+- ongoing draft for sfaadmin tool
+- support for a federica driver
+- support for a nova/euca driver
+- no more sfa-clean-peer-records script
+
+* Wed Feb 08 2012 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-2.1-2
+- registry database has user's keys and mail (known as v0 for migrate)
+- pl importer properly maintains user's keys and mail
+- pl driver now to handle 'role' when adding person record (exp.)
+- first draft of federica driver with config section
+- SFA_GENERIC_FLAVOUR in usual variables for sfa-config-tty
+- plus, from master as of tag merged-in-sfa-2.1-2:
+- disk_image revisited
+- new nova_shell nova_driver & various tweaks for openstack
+
+* Fri Jan 27 2012 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-2.1-1
+- uses sqlalchemy and related migrate
+- thorough migration and upgrade scheme
+- sfa-import.py and sfa-nuke.py (no more -plc), uses FLAVOUR
+- trashed dbinfo stuff in auth hierarchy
+- data model still has little more than plain records
+- checkpoint tag, not yet intended for release
+
+* Wed Jan 25 2012 Tony Mack <tmack@cs.princeton.edu> - sfa-2.0-10
+- client: added -R --raw sfi cmdline option that displays raw server response.
+- client: request GENI RSpec by default. 
+- server: remove database dependencies from sfa.server.sfaapi.
+- server: increased default credential lifetime to 31 days.
+- bugfix: fixed bug in sfa.storage.record.SfaRecord.delete().
+- bugfix: fixed server key path in sfa.server.sfa-clean-peer-records.
+- bugfix: fixed bug in sfa.server.sfa-start.install_peer_certs(). 
+ 
 * Sat Jan 7 2012 Tony Mack <tmack@cs.princeton.edu> - sfa-2.0-9
 - bugfix: 'geni_api' should be in the top level struct, not the code struct
 - bugfix: Display the correct host and port in 'geni_api_versions' field of the GetVersion

@@ -224,6 +224,32 @@ Thierry Parmentelat
     </category>
 
     <!-- ======================================== -->
+    <category id="sfa_flashpolicy">
+      <name>SFA Flash Policy</name>
+      <description>The settings that affect the flash policy server that will run
+      as part of this SFA instance.</description>
+
+      <variablelist>
+        <variable id="enabled" type="boolean">
+          <name>Enable Flash Policy Server</name>
+          <value>false</value>
+          <description>Allows this local SFA instance to run a
+          flash policy server.</description>
+        </variable>
+        <variable id="config_file" type="string">
+          <name>Flash policy config file</name>
+          <value>/etc/sfa/sfa_flashpolicy_config.xml</value>
+          <description>The path to where the flash policy config file can be reached.</description>
+        </variable>
+        <variable id="port" type="int">
+          <name>Flash policy port</name>
+          <value>843</value>
+          <description>The flash policy server port.</description>
+        </variable>
+      </variablelist>
+    </category>
+
+    <!-- ======================================== -->
     <category id="sfa_plc">
       <name></name>
       <description>The settings that tell this SFA instance how to interact with the underlying PLC. Refer to plc-config-tty on this installation for more information.</description>
@@ -250,29 +276,41 @@ Thierry Parmentelat
       </variablelist>
     </category>
 
-
     <!-- ======================================== -->
-    <category id="sfa_flashpolicy">
-      <name>SFA Flash Policy</name>
-      <description>The settings that affect the flash policy server that will run
-      as part of this SFA instance.</description>
+    <category id="sfa_federica">
+      <name></name>
+      <description>The settings that tell this SFA instance how to interact with the FEDERICA testbed.</description>
 
       <variablelist>
-        <variable id="enabled" type="boolean">
-          <name>Enable Flash Policy Server</name>
-          <value>false</value>
-          <description>Allows this local SFA instance to run a
-          flash policy server.</description>
+	<variable id="url" type="string">
+	  <name>XMLRPC URL</name>
+	  <value>https://root:password@federica.sfa.wrapper.com:8443/fedewrapper/xmlrpc/</value>
+	  <description>URL for the federica xmlrpc API; login and password need to be set like in http://login:password@hostname:port/the/path </description>
+	</variable>
+      </variablelist>
+    </category>
+
+    <!-- ======================================== -->
+    <category id="sfa_nova">
+      <name>SFA Flash Policy</name>
+      <description>The settings that affect how SFA connects to 
+                   the Nova/EC2 API</description>
+      <variablelist>
+        <variable id="user" type="string">
+          <name>Sfa nova user</name>
+          <value>novaadmin</value>
+          <description>Account/context to use when performing 
+                       administrative nova operations</description>
         </variable>
-        <variable id="config_file" type="string">
-          <name>Flash policy config file</name>
-          <value>/etc/sfa/sfa_flashpolicy_config.xml</value>
-          <description>The path to where the flash policy config file can be reached.</description>
+        <variable id="api_url" type="string">
+          <name>Nova API url</name>
+          <value>127.0.0.1</value>
+          <description>The Nova/EC2 API url </description>
         </variable>
-        <variable id="port" type="int">
-          <name>Flash policy port</name>
-          <value>843</value>
-          <description>The flash policy server port.</description>
+        <variable id="api_port" type="int">
+          <name>Nova API Port</name>
+          <value>8773</value>
+          <description>The Nova/EC2 API port.</description>
         </variable>
       </variablelist>
     </category>

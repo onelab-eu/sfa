@@ -3,13 +3,12 @@
 # 
 from sfa.generic.pl import pl
 
-import sfa.managers.aggregate_manager_max
-
 class max (pl):
 
 # the max flavour behaves like pl, except for 
 # the aggregate
     def aggregate_manager_class (self) :
+        import sfa.managers.aggregate_manager_max
         return sfa.managers.aggregate_manager_max.AggregateManagerMax
 
 # I believe the component stuff is not implemented

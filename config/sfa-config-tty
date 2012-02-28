@@ -13,15 +13,16 @@ def validator(validated_variables):
 #        raise plc_config.ConfigurationException(errStr)
 
 usual_variables = [
+    "SFA_GENERIC_FLAVOUR",
     "SFA_INTERFACE_HRN",
     "SFA_REGISTRY_ROOT_AUTH",
     "SFA_REGISTRY_HOST", 
     "SFA_AGGREGATE_HOST",
     "SFA_SM_HOST",
+    "SFA_DB_HOST",
     "SFA_PLC_URL",
     "SFA_PLC_USER",
     "SFA_PLC_PASSWORD",
-    "SFA_DB_HOST",
     ]
 
 configuration={ \

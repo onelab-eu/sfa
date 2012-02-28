@@ -73,6 +73,7 @@ def determine_rights(type, name):
         rl.add("bind")
         rl.add("control")
         rl.add("info")
+# wouldn't that be authority+cm instead ?
     elif type == "component":
         rl.add("operator")
     return rl

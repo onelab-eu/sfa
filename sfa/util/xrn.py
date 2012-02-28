@@ -33,7 +33,7 @@ def hrn_to_urn(hrn,type): return Xrn(hrn, type=type).urn
 def hrn_authfor_hrn(parenthrn, hrn): return Xrn.hrn_is_auth_for_hrn(parenthrn, hrn)
 
 def urn_to_sliver_id(urn, slice_id, node_id, index=0):
-    return ":".join(map(str, [urn, slice_id, node_id, index]))
+    return Xrn(urn).get_sliver_id(slice_id, node_id, index)
 
 class Xrn:
 
@@ -130,6 +130,13 @@ class Xrn:
 #        if not type:
 #            debug_logger.debug("type-less Xrn's are not safe")
 
+    def __repr__ (self):
+        result="<XRN u=%s h=%s"%(self.urn,self.hrn)
+        if hasattr(self,'leaf'): result += " leaf=%s"%self.leaf
+        if hasattr(self,'authority'): result += " auth=%s"%self.authority
+        result += ">"
+        return result
+
     def get_urn(self): return self.urn
     def get_hrn(self): return self.hrn
     def get_type(self): return self.type
@@ -147,14 +154,18 @@ class Xrn:
         self._normalize()
         return self.leaf
 
-    def get_authority_hrn(self): 
+    def get_authority_hrn(self):
         self._normalize()
         return '.'.join( self.authority )
     
     def get_authority_urn(self): 
         self._normalize()
         return ':'.join( [Xrn.unescape(x) for x in self.authority] )
-    
+   
+    def get_sliver_id(self, slice_id, node_id, index=0):
+        self._normalize()
+        return ":".join(map(str, [self.get_urn(), slice_id, node_id, index])) 
+ 
     def urn_to_hrn(self):
         """
         compute tuple (hrn, type) from urn

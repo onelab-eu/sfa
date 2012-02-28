@@ -136,6 +136,11 @@ class PlAggregate:
         return (slice, slivers)
 
     def get_nodes_and_links(self, slice=None,slivers=[], options={}):
+        # if we are dealing with a slice that has no node just return 
+        # and empty list    
+        if slice is not None and not slice['node_ids']:
+            return ([],[])
+
         filter = {}
         tags_filter = {}
         if slice and 'node_ids' in slice and slice['node_ids']:

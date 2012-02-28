@@ -6,7 +6,6 @@ from sfa.util.method import Method
 from sfa.trust.credential import Credential
 
 from sfa.storage.parameter import Parameter, Mixed
-from sfa.storage.record import SfaRecord
 
 class Resolve(Method):
     """
@@ -26,7 +25,8 @@ class Resolve(Method):
               Parameter(list, "List of credentials)"))  
         ]
 
-    returns = [SfaRecord]
+    # xxx used to be [SfaRecord]
+    returns = [Parameter(dict, "registry record")]
     
     def call(self, xrns, creds):
         type = None

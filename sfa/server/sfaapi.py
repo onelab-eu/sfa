@@ -1,12 +1,12 @@
 import os, os.path
 import datetime
 
-from sfa.util.faults import SfaFault, SfaAPIError
+from sfa.util.faults import SfaFault, SfaAPIError, RecordNotFound
 from sfa.util.genicode import GENICODE
 from sfa.util.config import Config
 from sfa.util.cache import Cache
-from sfa.trust.auth import Auth
 
+from sfa.trust.auth import Auth
 from sfa.trust.certificate import Keypair, Certificate
 from sfa.trust.credential import Credential
 from sfa.trust.rights import determine_rights
@@ -109,9 +109,9 @@ class SfaApi (XmlrpcApi):
 
         # get a new credential
         if self.interface in ['registry']:
-            cred =  self.__getCredentialRaw()
+            cred =  self._getCredentialRaw()
         else:
-            cred =  self.__getCredential()
+            cred =  self._getCredential()
         cred.save_to_file(cred_filename, save_parents=True)
 
         return cred.save_to_string(save_parents=True)
@@ -134,7 +134,7 @@ class SfaApi (XmlrpcApi):
                 break
         return delegated_cred
  
-    def __getCredential(self):
+    def _getCredential(self):
         """ 
         Get our credential from a remote registry 
         """
@@ -148,7 +148,7 @@ class SfaApi (XmlrpcApi):
         cred = registry.GetCredential(self_cred, self.hrn, 'authority')
         return Credential(string=cred)
 
-    def __getCredentialRaw(self):
+    def _getCredentialRaw(self):
         """
         Get our current credential directly from the local registry.
         """
@@ -160,15 +160,12 @@ class SfaApi (XmlrpcApi):
         if not auth_hrn or hrn == self.config.SFA_INTERFACE_HRN:
             auth_hrn = hrn
         auth_info = self.auth.get_auth_info(auth_hrn)
-        # xxx thgen fixme - use SfaTable hardwired for now 
-        # thgen xxx fixme this is wrong all right, but temporary, will use generic
-        from sfa.storage.table import SfaTable
-        table = SfaTable()
-        records = table.findObjects({'hrn': hrn, 'type': 'authority+sa'})
-        if not records:
-            raise RecordNotFound
-        record = records[0]
-        type = record['type']
+        from sfa.storage.alchemy import dbsession
+        from sfa.storage.model import RegRecord
+        record = dbsession.query(RegRecord).filter_by(type='authority+sa', hrn=hrn).first()
+        if not record:
+            raise RecordNotFound(hrn)
+        type = record.type
         object_gid = record.get_gid_object()
         new_cred = Credential(subject = object_gid.get_subject())
         new_cred.set_gid_caller(object_gid)

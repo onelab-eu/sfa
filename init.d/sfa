@@ -59,6 +59,18 @@ function postgresql_check () {
     return 1
 }
 
+# use a single date of this script invocation for the dump_*_db functions.
+DATE=$(date +"%Y-%m-%d-%H-%M-%S")
+
+# Dumps the database - optional argument to specify filename suffix
+function dump_sfa_db() {
+    if [ -n "$1" ] ; then suffix="-$1" ; else suffix="" ; fi
+    mkdir -p /usr/share/sfa/backups
+    dumpfile=/usr/share/sfa/backups/$(date +"${SFA_DB_NAME}.${DATE}${suffix}.sql")
+    pg_dump -U $SFA_DB_USER $SFA_DB_NAME > $dumpfile
+    echo "Saved sfa database in $dumpfile"
+    check
+}
 
 # Regenerate configuration files - almost verbatim from plc.init
 function reload () {
@@ -217,9 +229,6 @@ function db_start () {
     if ! psql -U $SFA_DB_USER -c "" $SFA_DB_NAME >/dev/null 2>&1 ; then
 	createdb -U postgres --template=template0 --encoding=UNICODE --owner=$SFA_DB_USER $SFA_DB_NAME
 	check
-        # install db schema
-        psql -U $SFA_DB_USER -f /usr/share/sfa/sfa.sql $SFA_DB_NAME
-	check
     fi
     check
 
@@ -249,6 +258,7 @@ function start() {
     reload
 
     db_start
+    # migrations are now handled in the code by sfa.storage.dbschema
 
     # install peer certs
     action $"SFA installing peer certs" daemon /usr/bin/sfa-start.py -t -d $OPTIONS 
@@ -290,8 +300,11 @@ case "$1" in
 	status sfa-start.py
 	RETVAL=$?
 	;;
+    dbdump)
+	dump_sfa_db
+	;;
     *)
-	echo $"Usage: $0 {start|stop|reload|restart|condrestart|status}"
+	echo $"Usage: $0 {start|stop|reload|restart|condrestart|status|dbdump}"
 	exit 1
 	;;
 esac

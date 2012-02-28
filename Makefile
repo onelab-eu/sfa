@@ -37,7 +37,7 @@ python-install:
 	python setup.py install --root=$(DESTDIR)	
 	chmod 444 $(DESTDIR)/etc/sfa/default_config.xml
 	rm -rf $(DESTDIR)/usr/lib*/python*/site-packages/*egg-info
-	rm -rf $(DESTDIR)/usr/lib*/python*/site-packages/sfa/storage/sfa.sql
+	rm -rf $(DESTDIR)/usr/lib*/python*/site-packages/sfa/storage/migrations
 	(cd $(DESTDIR)/usr/bin ; ln -s sfi.py sfi; ln -s sfascan.py sfascan)
 
 python-clean: version-clean
@@ -135,7 +135,8 @@ RSYNC			:= rsync -a -v $(RSYNC_COND_DRY_RUN) --no-owner $(RSYNC_EXCLUDES)
 CLIENTS = $(shell ls sfa/clientbin/*.py)
 
 BINS =	./config/sfa-config-tty ./config/gen-sfa-cm-config.py \
-	./sfa/importer/sfa-import-plc.py ./sfa/importer/sfa-nuke-plc.py ./sfa/server/sfa-start.py \
+	./sfa/server/sfa-start.py \
+	./sfa/importer/sfa-import.py ./sfa/importer/sfa-nuke.py \
 	$(CLIENTS)
 
 synccheck: 
@@ -146,28 +147,30 @@ ifeq (,$(SSHURL))
 	@exit 1
 endif
 
-sync: synccheck
-	+$(RSYNC) --relative ./sfa/ $(SSHURL)/usr/lib\*/python2.\*/site-packages/
-	+$(RSYNC) ./tests/ $(SSHURL)/root/tests-sfa
+
+synclib: synccheck
+	+$(RSYNC) --relative ./sfa/ --exclude migrations $(SSHURL)/usr/lib\*/python2.\*/site-packages/
+syncbin: synccheck
 	+$(RSYNC)  $(BINS) $(SSHURL)/usr/bin/
+syncinit: synccheck
 	+$(RSYNC) ./init.d/sfa  $(SSHURL)/etc/init.d/
+syncconfig:
 	+$(RSYNC) ./config/default_config.xml $(SSHURL)/etc/sfa/
-	+$(RSYNC) ./sfa/storage/sfa.sql $(SSHURL)/usr/share/sfa/
+synctest: synccheck
+	+$(RSYNC) ./tests/ $(SSHURL)/root/tests-sfa
+syncrestart: synccheck
 	$(SSHCOMMAND) exec service sfa restart
 
+syncmig:
+	+$(RSYNC) ./sfa/storage/migrations $(SSHURL)/usr/share/sfa/
+
+
+# full-fledged
+sync: synclib syncbin syncinit syncconfig syncrestart
 # 99% of the time this is enough
-fastsync: synccheck
-	+$(RSYNC) --relative ./sfa/ $(SSHURL)/usr/lib\*/python2.\*/site-packages/
-	$(SSHCOMMAND) exec service sfa restart
+syncfast: synclib syncrestart
 
-clientsync: synccheck
-	+$(RSYNC)  $(BINS) $(SSHURL)/usr/bin/
-
-ricasync: synccheck
-	+$(RSYNC) --relative ./sfa/fd ./sfa/generic/fd.py ./sfa/rspecs/versions/federica.py $(SSHURL)/usr/lib\*/python2.\*/site-packages/
-	$(SSHCOMMAND) exec service sfa restart
-
-.PHONY: synccheck sync fastsync clientsync ricasync
+.PHONY: synccheck synclib syncbin syncconfig synctest syncrestart sync syncfast
 
 ##########
 CLIENTLIBFILES= \

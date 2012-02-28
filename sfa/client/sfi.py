@@ -1,8 +1,8 @@
-# 
+#
 # sfi.py - basic SFA command-line client
 # the actual binary in sfa/clientbin essentially runs main()
 # this module is used in sfascan
-# 
+#
 
 import sys
 sys.path.append('.')
@@ -12,6 +12,7 @@ import socket
 import datetime
 import codecs
 import pickle
+import json
 from lxml import etree
 from StringIO import StringIO
 from optparse import OptionParser
@@ -28,7 +29,8 @@ from sfa.util.config import Config
 from sfa.util.version import version_core
 from sfa.util.cache import Cache
 
-from sfa.storage.record import SfaRecord, UserRecord, SliceRecord, NodeRecord, AuthorityRecord
+from sfa.storage.model import RegRecord, RegAuthority, RegUser, RegSlice, RegNode
+from sfa.storage.model import make_record
 
 from sfa.rspecs.rspec import RSpec
 from sfa.rspecs.rspec_converter import RSpecConverter
@@ -87,16 +89,28 @@ def filter_records(type, records):
 
 
 # save methods
-def save_variable_to_file(var, filename, format="text"):
-    f = open(filename, "w")
+def save_raw_to_file(var, filename, format="text", banner=None):
+    if filename == "-":
+        # if filename is "-", send it to stdout
+        f = sys.stdout
+    else:
+        f = open(filename, "w")
+    if banner:
+        f.write(banner+"\n")
     if format == "text":
         f.write(str(var))
     elif format == "pickled":
         f.write(pickle.dumps(var))
+    elif format == "json":
+        if hasattr(json, "dumps"):
+            f.write(json.dumps(var))   # python 2.6
+        else:
+            f.write(json.write(var))   # python 2.5
     else:
         # this should never happen
         print "unknown output format", format
-
+    if banner:
+        f.write('\n'+banner+"\n")
 
 def save_rspec_to_file(rspec, filename):
     if not filename.endswith(".rspec"):
@@ -106,44 +120,35 @@ def save_rspec_to_file(rspec, filename):
     f.close()
     return
 
-def save_records_to_file(filename, recordList, format="xml"):
+def save_records_to_file(filename, record_dicts, format="xml"):
     if format == "xml":
         index = 0
-        for record in recordList:
+        for record_dict in record_dicts:
             if index > 0:
-                save_record_to_file(filename + "." + str(index), record)
+                save_record_to_file(filename + "." + str(index), record_dict)
             else:
-                save_record_to_file(filename, record)
+                save_record_to_file(filename, record_dict)
             index = index + 1
     elif format == "xmllist":
         f = open(filename, "w")
         f.write("<recordlist>\n")
-        for record in recordList:
-            record = SfaRecord(dict=record)
-            f.write('<record hrn="' + record.get_name() + '" type="' + record.get_type() + '" />\n')
+        for record_dict in record_dicts:
+            record_obj=make_record (dict=record_dict)
+            f.write('<record hrn="' + record_obj.hrn + '" type="' + record_obj.type + '" />\n')
         f.write("</recordlist>\n")
         f.close()
     elif format == "hrnlist":
         f = open(filename, "w")
-        for record in recordList:
-            record = SfaRecord(dict=record)
-            f.write(record.get_name() + "\n")
+        for record_dict in record_dicts:
+            record_obj=make_record (dict=record_dict)
+            f.write(record_obj.hrn + "\n")
         f.close()
     else:
         # this should never happen
         print "unknown output format", format
 
-def save_record_to_file(filename, record):
-    if record['type'] in ['user']:
-        record = UserRecord(dict=record)
-    elif record['type'] in ['slice']:
-        record = SliceRecord(dict=record)
-    elif record['type'] in ['node']:
-        record = NodeRecord(dict=record)
-    elif record['type'] in ['authority', 'ma', 'sa']:
-        record = AuthorityRecord(dict=record)
-    else:
-        record = SfaRecord(dict=record)
+def save_record_to_file(filename, record_dict):
+    rec_record = make_record (dict=record_dict)
     str = record.save_to_string()
     f=codecs.open(filename, encoding='utf-8',mode="w")
     f.write(str)
@@ -154,10 +159,9 @@ def save_record_to_file(filename, record):
 # load methods
 def load_record_from_file(filename):
     f=codecs.open(filename, encoding="utf-8", mode="r")
-    str = f.read()
+    xml_string = f.read()
     f.close()
-    record = SfaRecord(string=str)
-    return record
+    return make_record (xml=xml_string)
 
 
 import uuid
@@ -298,13 +302,6 @@ class Sfi:
                              help="output file format ([xml]|xmllist|hrnlist)", default="xml",
                              choices=("xml", "xmllist", "hrnlist"))
 
-        if command in ("status", "version"):
-           parser.add_option("-o", "--output", dest="file",
-                            help="output dictionary to file", metavar="FILE", default=None)
-           parser.add_option("-F", "--fileformat", dest="fileformat", type="choice",
-                             help="output file format ([text]|pickled)", default="text",
-                             choices=("text","pickled"))
-
         if command in ("delegate"):
            parser.add_option("-u", "--user",
                             action="store_true", dest="delegate_user", default=False,
@@ -332,6 +329,13 @@ class Sfi:
                          help="root registry", metavar="URL", default=None)
         parser.add_option("-s", "--sliceapi", dest="sm", default=None, metavar="URL",
                          help="slice API - in general a SM URL, but can be used to talk to an aggregate")
+        parser.add_option("-R", "--raw", dest="raw", default=None,
+                          help="Save raw, unparsed server response to a file")
+        parser.add_option("", "--rawformat", dest="rawformat", type="choice",
+                          help="raw file format ([text]|pickled|json)", default="text",
+                          choices=("text","pickled","json"))
+        parser.add_option("", "--rawbanner", dest="rawbanner", default=None,
+                          help="text string to write before and after raw output")
         parser.add_option("-d", "--dir", dest="sfi_dir",
                          help="config & working directory - default is %default",
                          metavar="PATH", default=Sfi.default_sfi_dir())
@@ -651,17 +655,17 @@ class Sfi:
        else:
           self.logger.critical("No such registry record file %s"%record)
           sys.exit(1)
-    
+
 
     #==========================================================================
     # Following functions implement the commands
     #
     # Registry-related commands
     #==========================================================================
-  
+
     def version(self, options, args):
         """
-        display an SFA server version (GetVersion) 
+        display an SFA server version (GetVersion)
 or version information about sfi itself
         """
         if options.version_local:
@@ -673,10 +677,11 @@ or version information about sfi itself
                 server = self.sliceapi()
             result = server.GetVersion()
             version = ReturnValue.get_value(result)
-        pprinter = PrettyPrinter(indent=4)
-        pprinter.pprint(version)
-        if options.file:
-            save_variable_to_file(version, options.file, options.fileformat)
+        if self.options.raw:
+            save_raw_to_file(result, self.options.raw, self.options.rawformat, self.options.rawbanner)
+        else:
+            pprinter = PrettyPrinter(indent=4)
+            pprinter.pprint(version)
 
     def list(self, options, args):
         """
@@ -708,27 +713,16 @@ or version information about sfi itself
             self.print_help()
             sys.exit(1)
         hrn = args[0]
-        records = self.registry().Resolve(hrn, self.my_credential_string)
-        records = filter_records(options.type, records)
-        if not records:
+        record_dicts = self.registry().Resolve(hrn, self.my_credential_string)
+        record_dicts = filter_records(options.type, record_dicts)
+        if not record_dicts:
             self.logger.error("No record of type %s"% options.type)
+        records = [ make_record (dict=record_dict) for record_dict in record_dicts ]
         for record in records:
-            if record['type'] in ['user']:
-                record = UserRecord(dict=record)
-            elif record['type'] in ['slice']:
-                record = SliceRecord(dict=record)
-            elif record['type'] in ['node']:
-                record = NodeRecord(dict=record)
-            elif record['type'].startswith('authority'):
-                record = AuthorityRecord(dict=record)
-            else:
-                record = SfaRecord(dict=record)
-            if (options.format == "text"): 
-                record.dump()  
-            else:
-                print record.save_to_string() 
+            if (options.format == "text"):      record.dump()  
+            else:                               print record.save_as_xml() 
         if options.file:
-            save_records_to_file(options.file, records, options.fileformat)
+            save_records_to_file(options.file, record_dicts, options.fileformat)
         return
     
     def add(self, options, args):
@@ -739,7 +733,7 @@ or version information about sfi itself
             sys.exit(1)
         record_filepath = args[0]
         rec_file = self.get_record_file(record_filepath)
-        record = load_record_from_file(rec_file).as_dict()
+        record = load_record_from_file(rec_file).todict()
         return self.registry().Register(record, auth_cred)
     
     def update(self, options, args):
@@ -749,14 +743,14 @@ or version information about sfi itself
             sys.exit(1)
         rec_file = self.get_record_file(args[0])
         record = load_record_from_file(rec_file)
-        if record['type'] == "user":
-            if record.get_name() == self.user:
+        if record.type == "user":
+            if record.hrn == self.user:
                 cred = self.my_credential_string
             else:
                 cred = self.my_authority_credential_string()
-        elif record['type'] in ["slice"]:
+        elif record.type in ["slice"]:
             try:
-                cred = self.slice_credential_string(record.get_name())
+                cred = self.slice_credential_string(record.hrn)
             except ServerException, e:
                # XXX smbaker -- once we have better error return codes, update this
                # to do something better than a string compare
@@ -764,14 +758,14 @@ or version information about sfi itself
                    cred = self.my_authority_credential_string()
                else:
                    raise
-        elif record.get_type() in ["authority"]:
+        elif record.type in ["authority"]:
             cred = self.my_authority_credential_string()
-        elif record.get_type() == 'node':
+        elif record.type == 'node':
             cred = self.my_authority_credential_string()
         else:
-            raise "unknown record type" + record.get_type()
-        record = record.as_dict()
-        return self.registry().Update(record, cred)
+            raise "unknown record type" + record.type
+        record_dict = record.todict()
+        return self.registry().Update(record_dict, cred)
   
     def remove(self, options, args):
         "remove registry record by name (Remove)"
@@ -802,9 +796,12 @@ or version information about sfi itself
 	api_options['call_id']=unique_call_id()
         result = server.ListSlices(creds, *self.ois(server,api_options))
         value = ReturnValue.get_value(result)
-        display_list(value)
+        if self.options.raw:
+            save_raw_to_file(result, self.options.raw, self.options.rawformat, self.options.rawbanner)
+        else:
+            display_list(value)
         return
-    
+
     # show rspec for named slice
     def resources(self, options, args):
         """
@@ -821,9 +818,9 @@ or with an slice hrn, shows currently provisioned resources
             creds.append(self.my_credential_string)
         if options.delegate:
             creds.append(self.delegate_cred(cred, get_authority(self.authority)))
-       
+
         # no need to check if server accepts the options argument since the options has
-        # been a required argument since v1 API   
+        # been a required argument since v1 API
         api_options = {}
         # always send call_id to v2 servers
         api_options ['call_id'] = unique_call_id()
@@ -846,15 +843,18 @@ or with an slice hrn, shows currently provisioned resources
                 # just request the version the client wants
                 api_options['geni_rspec_version'] = version_manager.get_version(options.rspec_version).to_dict()
             else:
-                api_options['geni_rspec_version'] = {'type': 'geni', 'version': '3.0'}    
+                api_options['geni_rspec_version'] = {'type': 'geni', 'version': '3.0'}
         else:
-            api_options['geni_rspec_version'] = {'type': 'geni', 'version': '3.0'}    
+            api_options['geni_rspec_version'] = {'type': 'geni', 'version': '3.0'}
         result = server.ListResources (creds, api_options)
         value = ReturnValue.get_value(result)
-        if options.file is None:
-            display_rspec(value, options.format)
-        else:
+        if self.options.raw:
+            save_raw_to_file(result, self.options.raw, self.options.rawformat, self.options.rawbanner)
+        if options.file is not None:
             save_rspec_to_file(value, options.file)
+        if (self.options.raw is None) and (options.file is None):
+            display_rspec(value, options.format)
+
         return
 
     def create(self, options, args):
@@ -880,8 +880,8 @@ or with an slice hrn, shows currently provisioned resources
             #    delegated_cred = self.delegate_cred(slice_cred, server_version['hrn'])
             #elif server_version.get('urn'):
             #    delegated_cred = self.delegate_cred(slice_cred, urn_to_hrn(server_version['urn']))
-                
-        # rspec 
+
+        # rspec
         rspec_file = self.get_rspec_file(args[1])
         rspec = open(rspec_file).read()
 
@@ -906,8 +906,8 @@ or with an slice hrn, shows currently provisioned resources
                 rspec = RSpecConverter.to_pg_rspec(rspec.toxml(), content_type='request')
             else:
                 users = sfa_users_arg(user_records, slice_record)
-        
-        # do not append users, keys, or slice tags. Anything 
+
+        # do not append users, keys, or slice tags. Anything
         # not contained in this request will be removed from the slice
 
         # CreateSliver has supported the options argument for a while now so it should
@@ -918,10 +918,13 @@ or with an slice hrn, shows currently provisioned resources
 
         result = server.CreateSliver(slice_urn, creds, rspec, users, *self.ois(server, api_options))
         value = ReturnValue.get_value(result)
-        if options.file is None:
-            print value
-        else:
+        if self.options.raw:
+            save_raw_to_file(result, self.options.raw, self.options.rawformat, self.options.rawbanner)
+        if options.file is not None:
             save_rspec_to_file (value, options.file)
+        if (self.options.raw is None) and (options.file is None):
+            print value
+
         return value
 
     def delete(self, options, args):
@@ -945,8 +948,12 @@ or with an slice hrn, shows currently provisioned resources
         api_options = {}
         api_options ['call_id'] = unique_call_id()
         result = server.DeleteSliver(slice_urn, creds, *self.ois(server, api_options ) )
-        # xxx no ReturnValue ??
-        return result
+        value = ReturnValue.get_value(result)
+        if self.options.raw:
+            save_raw_to_file(result, self.options.raw, self.options.rawformat, self.options.rawbanner)
+        else:
+            print value
+        return value 
   
     def status(self, options, args):
         """
@@ -967,12 +974,13 @@ or with an slice hrn, shows currently provisioned resources
 
         # options and call_id when supported
         api_options = {}
-	api_options['call_id']=unique_call_id()
+        api_options['call_id']=unique_call_id()
         result = server.SliverStatus(slice_urn, creds, *self.ois(server,api_options))
         value = ReturnValue.get_value(result)
-        print value
-        if options.file:
-            save_variable_to_file(value, options.file, options.fileformat)
+        if self.options.raw:
+            save_raw_to_file(result, self.options.raw, self.options.rawformat, self.options.rawbanner)
+        else:
+            print value
 
     def start(self, options, args):
         """
@@ -991,7 +999,13 @@ or with an slice hrn, shows currently provisioned resources
             delegated_cred = self.delegate_cred(slice_cred, get_authority(self.authority))
             creds.append(delegated_cred)
         # xxx Thierry - does this not need an api_options as well ?
-        return server.Start(slice_urn, creds)
+        result = server.Start(slice_urn, creds)
+        value = ReturnValue.get_value(result)
+        if self.options.raw:
+            save_raw_to_file(result, self.options.raw, self.options.rawformat, self.options.rawbanner)
+        else:
+            print value
+        return value
     
     def stop(self, options, args):
         """
@@ -1007,7 +1021,13 @@ or with an slice hrn, shows currently provisioned resources
         if options.delegate:
             delegated_cred = self.delegate_cred(slice_cred, get_authority(self.authority))
             creds.append(delegated_cred)
-        return server.Stop(slice_urn, creds)
+        result =  server.Stop(slice_urn, creds)
+        value = ReturnValue.get_value(result)
+        if self.options.raw:
+            save_raw_to_file(result, self.options.raw, self.options.rawformat, self.options.rawbanner)
+        else:
+            print value
+        return value
     
     # reset named slice
     def reset(self, options, args):
@@ -1024,7 +1044,13 @@ or with an slice hrn, shows currently provisioned resources
         if options.delegate:
             delegated_cred = self.delegate_cred(slice_cred, get_authority(self.authority))
             creds.append(delegated_cred)
-        return server.reset_slice(creds, slice_urn)
+        result = server.reset_slice(creds, slice_urn)
+        value = ReturnValue.get_value(result)
+        if self.options.raw:
+            save_raw_to_file(result, self.options.raw, self.options.rawformat, self.options.rawbanner)
+        else:
+            print value
+        return value
 
     def renew(self, options, args):
         """
@@ -1047,6 +1073,10 @@ or with an slice hrn, shows currently provisioned resources
 	api_options['call_id']=unique_call_id()
         result =  server.RenewSliver(slice_urn, creds, time, *self.ois(server,api_options))
         value = ReturnValue.get_value(result)
+        if self.options.raw:
+            save_raw_to_file(result, self.options.raw, self.options.rawformat, self.options.rawbanner)
+        else:
+            print value
         return value
 
 
@@ -1064,7 +1094,13 @@ or with an slice hrn, shows currently provisioned resources
         if options.delegate:
             delegated_cred = self.delegate_cred(slice_cred, get_authority(self.authority))
             creds.append(delegated_cred)
-        return server.Shutdown(slice_urn, creds)         
+        result = server.Shutdown(slice_urn, creds)
+        value = ReturnValue.get_value(result)
+        if self.options.raw:
+            save_raw_to_file(result, self.options.raw, self.options.rawformat, self.options.rawbanner)
+        else:
+            print value
+        return value         
     
 
     def get_ticket(self, options, args):
