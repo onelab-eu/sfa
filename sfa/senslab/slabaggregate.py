@@ -167,7 +167,7 @@ class SlabAggregate:
         print>>sys.stderr, "\r\n \r\n \t get_nodes_and_links filter %s \r\n \r\n \t slivers %s" %(filter, slivers)
         #filter.update({'peer_id': None})
         #nodes = self.driver.GetNodes(filter['hostname'])
-        print>>sys.stderr, "\r\n \r\n \t get_nodes_and_links nodes %s" %(nodes)
+        #print>>sys.stderr, "\r\n \r\n \t get_nodes_and_links nodes %s" %(nodes)
         
         #site_ids = []
         #interface_ids = []
@@ -255,7 +255,7 @@ class SlabAggregate:
         rspec = None
 	version_manager = VersionManager()
 	version = version_manager.get_version(version)
-        print>>sys.stderr, " \r\n SlabAggregate \t\t get_rspec ************** version %s version_manager %s \r\n" %(version,version_manager)
+        print>>sys.stderr, " \r\n SlabAggregate \t\t get_rspec ************** version %s version_manager %s options %s \r\n" %(version,version_manager,options)
 	
 	if not slice_xrn:
             rspec_version = version_manager._get_version(version.type, version.version, 'ad')

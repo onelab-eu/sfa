@@ -117,7 +117,7 @@ class OARrestapi:
         #if format in POSTformat:
             #if format is 'json':
         data = json.dumps(datadict)
-        headers = {'X-REMOTE_IDENT':'avakian',\
+        headers = {'X-REMOTE_IDENT':username,\
                 'content-type':POSTformat['json']['content'],\
                 'content-length':str(len(data))}     
         try :
@@ -336,8 +336,8 @@ class OARGETParser:
             node.update({'hrn':self.hostname_to_hrn(self.interface_hrn, node['site_login_base'],node['hostname'])})
             #node['hrn'] = self.hostname_to_hrn(self.interface_hrn, node['site_login_base'],node['hostname'])
             self.node_dictlist.update({node_id:node})
-            if node_id is 1:
-                print>>sys.stderr, " \r\n \r\n \t \t\t\t OARESTAPI Parse Sites self.node_dictlist %s " %(self.node_dictlist)
+            #if node_id is 1:
+                #print>>sys.stderr, " \r\n \r\n \t \t\t\t OARESTAPI Parse Sites self.node_dictlist %s " %(self.node_dictlist)
             if node['site_login_base'] not in self.site_dict.keys():
                 self.site_dict[node['site_login_base']] = [('login_base', node['site_login_base']),\
                                                         ('node_ids',nodes_per_site[node['site_login_base']]),\

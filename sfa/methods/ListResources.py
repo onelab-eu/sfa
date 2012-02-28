@@ -36,16 +36,16 @@ class ListResources(Method):
         # get slice's hrn from options    
         xrn = options.get('geni_slice_urn', '')
         (hrn, _) = urn_to_hrn(xrn)
-
+        print >>sys.stderr, " \r\n \r\n \t Lsitresources.pyeuuuuuu call : hrn %s options %s" %( hrn,options ) 
         # Find the valid credentials
         valid_creds = self.api.auth.checkCredentials(creds, 'listnodes', hrn)
 
         # get hrn of the original caller 
         origin_hrn = options.get('origin_hrn', None)
-
+        print >>sys.stderr, " \r\n \r\n \t Lsitresources  :origin_hrn %s sansvqalid credss %s " %(origin_hrn, Credential(string=creds[0]).get_gid_caller().get_hrn()) 
         if not origin_hrn:
             origin_hrn = Credential(string=valid_creds[0]).get_gid_caller().get_hrn()
-        print >>sys.stderr, " \r\n \r\n \t Lsitresources.py call :self.api.interface %s  origin_hrn %s options %s \r\n \t creds %s " %(self.api.interface,origin_hrn,options, creds)          
+        print >>sys.stderr, " \r\n \r\n \t Lsitresources.py000 call : hrn %s self.api.interface %s  origin_hrn %s   \r\n \r\n \r\n " %(hrn ,self.api.interface,origin_hrn)          
         rspec = self.api.manager.ListResources(self.api, creds, options)
 
         # filter rspec through sfatables 
@@ -54,7 +54,7 @@ class ListResources(Method):
         elif self.api.interface in ['slicemgr']: 
             chain_name = 'FORWARD-OUTGOING'
         self.api.logger.debug("ListResources: sfatables on chain %s"%chain_name)  
-        print >>sys.stderr, " \r\n \r\n \t Listresources.py call : chain_name %s hrn %s origine_hrn %s " %(chain_name, hrn, origin_hrn)
+        print >>sys.stderr, " \r\n \r\n \t Listresources.py001 call : chain_name %s hrn %s origine_hrn %s " %(chain_name, hrn, origin_hrn)
         filtered_rspec = run_sfatables(chain_name, hrn, origin_hrn, rspec) 
  
         if options.has_key('geni_compressed') and options['geni_compressed'] == True:

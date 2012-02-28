@@ -3,7 +3,8 @@ import subprocess
 import datetime
 from time import gmtime, strftime 
 
-from sfa.util.faults import MissingSfaInfo
+from sfa.util.faults import MissingSfaInfo , SliverDoesNotExist
+#from sfa.util.sfatime import datetime_to_string
 from sfa.util.sfalogging import logger
 from sfa.storage.table import SfaTable
 from sfa.util.defaultdict import defaultdict
@@ -16,7 +17,7 @@ from sfa.managers.driver import Driver
 from sfa.rspecs.version_manager import VersionManager
 from sfa.rspecs.rspec import RSpec
 
-from sfa.util.xrn import hrn_to_urn
+from sfa.util.xrn import hrn_to_urn, urn_to_sliver_id
 from sfa.util.plxrn import slicename_to_hrn, hostname_to_hrn, hrn_to_pl_slicename, hrn_to_pl_login_base
 
 ## thierry: everything that is API-related (i.e. handling incoming requests) 
@@ -75,9 +76,54 @@ class SlabDriver(Driver):
         # shall return a structure as described in
         # http://groups.geni.net/geni/wiki/GAPI_AM_API_V2#SliverStatus
         # NT : not sure if we should implement this or not, but used by sface.
+        slices = self.GetSlices([slice_hrn])
+        if len(slices) is 0:
+            raise SliverDoesNotExist("%s  slice_hrn" % (slice_hrn))
+        sl = slices[0]
+        print >>sys.stderr, "\r\n \r\n_____________ Sliver status urn %s hrn %s slices %s \r\n " %(slice_urn,slice_hrn,slices)
+        if sl['oar_job_id'] is not -1:
+    
+                # report about the local nodes only
+            nodes = self.GetNodes({'hostname':sl['node_ids']},
+                            ['node_id', 'hostname','site_login_base','boot_state'])
+            if len(nodes) is 0:
+                raise SliverDoesNotExist("No slivers allocated ") 
+                    
+             
+            site_logins = [node['site_login_base'] for node in nodes]
+    
+            result = {}
+            top_level_status = 'unknown'
+            if nodes:
+                top_level_status = 'ready'
+            result['geni_urn'] = slice_urn
+            result['pl_login'] = sl['job_user']
+            
+            timestamp = float(sl['startTime']) + float(sl['walltime'])
+            result['slab_expires'] = strftime(self.time_format, gmtime(float(timestamp)))
+            
+            resources = []
+            for node in nodes:
+                res = {}
+                res['slab_hostname'] = node['hostname']
+                res['slab_boot_state'] = node['boot_state']
+                
+                sliver_id = urn_to_sliver_id(slice_urn, sl['record_id_slice'], node['node_id']) 
+                res['geni_urn'] = sliver_id
+                if node['boot_state'] == 'Alive':
+                    res['geni_status'] = 'ready'
+                else:
+                    res['geni_status'] = 'failed'
+                    top_level_status = 'failed' 
+                    
+                res['geni_error'] = ''
         
-        print >>sys.stderr, "\r\n_____________ Sliver status urn %s hrn %s\r\n" %(slice_urn,slice_hrn)
-        
+                resources.append(res)
+                
+            result['geni_status'] = top_level_status
+            result['geni_resources'] = resources 
+            print >>sys.stderr, "\r\n \r\n_____________ Sliver status resources %s res %s \r\n " %(resources,res)
+            return result        
         
         
     def create_sliver (self, slice_urn, slice_hrn, creds, rspec_string, users, options):
@@ -180,6 +226,10 @@ class SlabDriver(Driver):
         #panos: passing user-defined options
         #print "manager options = ",options
         aggregate = SlabAggregate(self)
+        origin_hrn = Credential(string=creds[0]).get_gid_caller().get_hrn()
+        print>>sys.stderr, " \r\n \r\n \t SLABDRIVER get_rspec origin_hrn %s" %(origin_hrn)
+        options.update({'origin_hrn':origin_hrn})
+        print>>sys.stderr, " \r\n \r\n \t SLABDRIVER get_rspec options %s" %(options)
         rspec =  aggregate.get_rspec(slice_xrn=slice_urn, version=rspec_version, 
                                      options=options)
     
@@ -368,7 +418,7 @@ class SlabDriver(Driver):
                     
         return_person_list = parse_filter(person_list,person_filter ,'persons', return_fields)
         if return_person_list:
-            print>>sys.stderr, " \r\n GetPersons person_filter %s return_fields %s return_person_list %s " %(person_filter,return_fields,return_person_list)
+            print>>sys.stderr, " \r\n GetPersons person_filter %s return_fields %s  " %(person_filter,return_fields)
             return return_person_list
 
     def GetTimezone(self):
@@ -376,13 +426,13 @@ class SlabDriver(Driver):
         return time
     
 
-    def DeleteJobs(self, job_id):
+    def DeleteJobs(self, job_id, username):
         if not job_id:
             return
         reqdict = {}
         reqdict['method'] = "delete"
         reqdict['strval'] = str(job_id)
-        answer = self.oar.POSTRequestToOARRestAPI('DELETE_jobs_id',reqdict,'avakian')
+        answer = self.oar.POSTRequestToOARRestAPI('DELETE_jobs_id',reqdict,username)
         print>>sys.stderr, "\r\n \r\n  jobid  DeleteJobs %s "  %(answer)
         
                 
@@ -422,7 +472,7 @@ class SlabDriver(Driver):
             node_hostname_list.append(node['hostname'])
         node_dict = dict(zip(node_hostname_list,node_list))
         
-        print>>sys.stderr, "\r\n \r\n \r\n \r\n \r\n  \t\t GetJobs GetNODES %s "  %(node_list)
+        #print>>sys.stderr, "\r\n \r\n \r\n \r\n \r\n  \t\t GetJobs GetNODES %s "  %(node_list)
         try :
             
             #for n in job_info[node_list]:
@@ -449,7 +499,7 @@ class SlabDriver(Driver):
     def GetNodes(self,node_filter= None, return_fields=None):
 		
         node_dict =self.oar.parser.SendRequest("GET_resources_full")
-
+        print>>sys.stderr, "\r\n \r\n \t\t  SLABDRIVER.PY GetNodes " 
         return_node_list = []
         if not (node_filter or return_fields):
                 return_node_list = node_dict.values()
@@ -574,7 +624,7 @@ class SlabDriver(Driver):
                  
                  
     def AddSliceToNodes(self,  slice_name, added_nodes, slice_user=None):
-        print>>sys.stderr, "\r\n \r\n AddSliceToNodes  slice_name %s added_nodes %s username %s" %(slice_name,added_nodes,slice_user )
+       
         site_list = []
         nodeid_list =[]
         resource = ""
@@ -595,14 +645,16 @@ class SlabDriver(Driver):
             #site_list.append( l[0] )
         reqdict['property'] =  reqdict['property'][0: len( reqdict['property'])-2] +")"
         reqdict['resource'] ="network_address="+ str(len(nodeid_list))
-        reqdict['resource']+= ",walltime=" + str(00) + ":" + str(10) + ":" + str(00)
-        reqdict['script_path'] = "/bin/sleep 600"
+        reqdict['resource']+= ",walltime=" + str(00) + ":" + str(12) + ":" + str(20) #+2 min 20
+        reqdict['script_path'] = "/bin/sleep 620" #+20 sec
         reqdict['type'] = "deploy" 
+        reqdict['directory']= ""
+        reqdict['name']= "TestSandrine"
         timestamp = self.GetTimezone()
-
+        print>>sys.stderr, "\r\n \r\n AddSliceToNodes  slice_name %s added_nodes %s username %s reqdict %s " %(slice_name,added_nodes,slice_user, reqdict)
         readable_time = strftime(self.time_format, gmtime(float(timestamp))) 
         print >>sys.stderr," \r\n \r\n \t\t\t\t AVANT ParseTimezone readable_time %s timestanp %s " %(readable_time, timestamp )
-        timestamp =  timestamp+ 3645 #Add 3 min to server time
+        timestamp =  timestamp+ 3620 #Add 3 min to server time
         readable_time = strftime(self.time_format, gmtime(float(timestamp))) 
 
         print >>sys.stderr,"  \r\n \r\n \t\t\t\tAPRES ParseTimezone readable_time %s timestanp %s  " %(readable_time , timestamp)
@@ -616,7 +668,7 @@ class SlabDriver(Driver):
         self.db.update('slice',['oar_job_id'], [answer['id']], 'slice_hrn', slice_name)
         
         jobid=answer['id']
-        print>>sys.stderr, "\r\n \r\n AddSliceToNodes jobid    %s added_nodes  %s"  %(jobid,added_nodes)  
+        print>>sys.stderr, "\r\n \r\n AddSliceToNodes jobid    %s added_nodes  %s slice_user %s"  %(jobid,added_nodes,slice_user)  
         # second step : configure the experiment
         # we need to store the nodes in a yaml (well...) file like this :
         # [1,56,23,14,45,75] with name /tmp/sfa<jobid>.json
@@ -633,7 +685,7 @@ class SlabDriver(Driver):
         javacmdline="/usr/bin/java"
         jarname="/opt/senslabexperimentwrapper/sfa-1.0-jar-with-dependencies.jar"
         #ret=subprocess.check_output(["/usr/bin/java", "-jar", ", str(jobid), slice_user])
-        output = subprocess.Popen([javacmdline, "-jar", jarname, str(jobid), "avakian"],stdout=subprocess.PIPE).communicate()[0]
+        output = subprocess.Popen([javacmdline, "-jar", jarname, str(jobid), slice_user],stdout=subprocess.PIPE).communicate()[0]
 
         print>>sys.stderr, "\r\n \r\n AddSliceToNodes wrapper returns   %s "  %(output)
         return 
