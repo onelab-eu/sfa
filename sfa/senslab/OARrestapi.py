@@ -60,17 +60,20 @@ class OARrestapi:
         self.parser = OARGETParser(self)
        
             
-    def GETRequestToOARRestAPI(self, request, strval=None  ): 
+    def GETRequestToOARRestAPI(self, request, strval=None , username = None ): 
         self.oarserver['uri'] = OARrequests_get_uri_dict[request] 
-
+        headers = {}
         data = json.dumps({})
         if strval:
           self.oarserver['uri'] = self.oarserver['uri'].replace("id",str(strval))
           print>>sys.stderr, "\r\n \r\n   GETRequestToOARRestAPI replace :  self.oarserver['uri'] %s",  self.oarserver['uri']
-        
+        if username:
+            headers['X-REMOTE_IDENT'] = username 
         try :  
-            headers = {'X-REMOTE_IDENT':'avakian',\
-            'content-length':'0'}
+            #headers = {'X-REMOTE_IDENT':'avakian',\
+            #'content-length':'0'}
+            headers['content-length'] = '0' #seems that it does not work if we don't add this
+            
             #conn = httplib.HTTPConnection(self.oarserver['ip'],self.oarserver['port'])
             #conn.putheader(headers)
             #conn.endheaders()
@@ -381,9 +384,9 @@ class OARGETParser:
         self.site_dict = {}
         self.SendRequest("GET_version")
 
-    def SendRequest(self,request, strval = None ):
+    def SendRequest(self,request, strval = None , username = None):
         if request in OARrequests_get_uri_dict:
-            self.raw_json = self.server.GETRequestToOARRestAPI(request,strval) 
+            self.raw_json = self.server.GETRequestToOARRestAPI(request,strval,username) 
             #print>>sys.stderr, "\r\n OARGetParse __init__ : request %s result %s "%(request,self.raw_json)
             return self.OARrequests_uri_dict[request]['parse_func'](self)
         else:

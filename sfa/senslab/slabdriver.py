@@ -83,7 +83,7 @@ class SlabDriver(Driver):
         print >>sys.stderr, "\r\n \r\n_____________ Sliver status urn %s hrn %s slices %s \r\n " %(slice_urn,slice_hrn,slices)
         if sl['oar_job_id'] is not -1:
     
-                # report about the local nodes only
+            # report about the local nodes only
             nodes = self.GetNodes({'hostname':sl['node_ids']},
                             ['node_id', 'hostname','site_login_base','boot_state'])
             if len(nodes) is 0:
@@ -100,13 +100,13 @@ class SlabDriver(Driver):
             result['pl_login'] = sl['job_user']
             
             timestamp = float(sl['startTime']) + float(sl['walltime'])
-            result['slab_expires'] = strftime(self.time_format, gmtime(float(timestamp)))
+            result['pl_expires'] = strftime(self.time_format, gmtime(float(timestamp)))
             
             resources = []
             for node in nodes:
                 res = {}
-                res['slab_hostname'] = node['hostname']
-                res['slab_boot_state'] = node['boot_state']
+                res['pl_hostname'] = node['hostname']
+                res['pl_boot_state'] = node['boot_state']
                 
                 sliver_id = urn_to_sliver_id(slice_urn, sl['record_id_slice'], node['node_id']) 
                 res['geni_urn'] = sliver_id
@@ -436,7 +436,7 @@ class SlabDriver(Driver):
         print>>sys.stderr, "\r\n \r\n  jobid  DeleteJobs %s "  %(answer)
         
                 
-    def GetJobs(self,job_id= None, resources=True,return_fields=None):
+    def GetJobs(self,job_id= None, resources=True,return_fields=None, username = None):
         #job_resources=['reserved_resources', 'assigned_resources','job_id', 'job_uri', 'assigned_nodes',\
         #'api_timestamp']
         #assigned_res = ['resource_id', 'resource_uri']
@@ -454,7 +454,7 @@ class SlabDriver(Driver):
       
                
         #Get job info from OAR    
-        job_info = self.oar.parser.SendRequest(req, job_id)
+        job_info = self.oar.parser.SendRequest(req, job_id, username)
         print>>sys.stderr, "\r\n \r\n \t\t GetJobs  %s " %(job_info)
         
         if 'state' in job_info :
@@ -517,12 +517,14 @@ class SlabDriver(Driver):
         print >>sys.stderr, " \r\n \r\n \tSLABDRIVER.PY  GetSlices  slices %s slice_filter %s " %(sliceslist,slice_filter)
       
         return_slice_list  = parse_filter(sliceslist, slice_filter,'slice', return_fields)
-
+        
         if return_slice_list:
             for sl in return_slice_list:
+                login = sl['slice_hrn'].split(".")[1].split("_")[0]
+                print >>sys.stderr, " \r\n \r\n \tSLABDRIVER.PY  GetSlices  sl %s " %(sl)
                 if sl['oar_job_id'] is not -1: 
-                    rslt = self.GetJobs( sl['oar_job_id'],resources=False)
-                    print >>sys.stderr, " \r\n \r\n \tSLABDRIVER.PY  GetSlices  GetJobs  %s" %(rslt)     
+                    rslt = self.GetJobs( sl['oar_job_id'],resources=False, username = login )
+                    print >>sys.stderr, " \r\n \r\n \tSLABDRIVER.PY  GetSlices  GetJobs  %s " %(rslt)     
                     if rslt :
                         sl.update(rslt)
                         sl.update({'hrn':str(sl['slice_hrn'])}) 
