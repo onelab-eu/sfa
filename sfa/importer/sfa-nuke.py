@@ -13,22 +13,31 @@ from optparse import OptionParser
 
 from sfa.util.sfalogging import logger
 
-from sfa.storage.table import SfaTable
+from sfa.storage.alchemy import engine
+from sfa.storage.dbschema import DBSchema
 
 def main():
-   usage="%prog: trash the registry DB (the 'sfa' table in the 'planetlab5' database)"
+   usage="%prog: trash the registry DB"
    parser = OptionParser(usage=usage)
-   parser.add_option('-f','--file-system',dest='clean_fs',action='store_true',default=False,
-                     help='Clean up the /var/lib/sfa/authorities area as well')
-   parser.add_option('-c','--certs',dest='clean_certs',action='store_true',default=False,
-                     help='Remove all cached certs/gids found in /var/lib/sfa/authorities area as well')
+   parser.add_option("-f","--file-system",dest='clean_fs',action='store_true',default=False,
+                     help="Clean up the /var/lib/sfa/authorities area as well")
+   parser.add_option("-c","--certs",dest='clean_certs',action='store_true',default=False,
+                     help="Remove all cached certs/gids found in /var/lib/sfa/authorities area as well")
+   parser.add_option("-0","--no-reinit",dest='reinit',action='store_false',default=True,
+                     help="By default a new DB schema is installed after the cleanup; this option prevents that")
    (options,args)=parser.parse_args()
    if args:
       parser.print_help()
       sys.exit(1)
+   dbschema=DBSchema()
    logger.info("Purging SFA records from database")
-   table = SfaTable()
-   table.nuke()
+   dbschema.nuke()
+   # for convenience we re-create the schema here, so there's no need for an explicit
+   # service sfa restart
+   # however in some (upgrade) scenarios this might be wrong
+   if options.reinit:
+      logger.info("re-creating empty schema")
+      dbschema.init_or_upgrade()
 
    if options.clean_certs:
       # remove the server certificate and all gids found in /var/lib/sfa/authorities

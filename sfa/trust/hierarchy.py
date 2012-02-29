@@ -9,7 +9,6 @@
 # subdirectory are several files:
 #      *.GID - GID file
 #      *.PKEY - private key file
-#      *.DBINFO - database info
 ##
 
 import os
@@ -32,21 +31,18 @@ class AuthInfo:
     gid_object = None
     gid_filename = None
     privkey_filename = None
-    dbinfo_filename = None
     ##
     # Initialize and authority object.
     #
     # @param xrn the human readable name of the authority (urn will be converted to hrn)
     # @param gid_filename the filename containing the GID
     # @param privkey_filename the filename containing the private key
-    # @param dbinfo_filename the filename containing the database info
 
-    def __init__(self, xrn, gid_filename, privkey_filename, dbinfo_filename):
+    def __init__(self, xrn, gid_filename, privkey_filename):
         hrn, type = urn_to_hrn(xrn)
         self.hrn = hrn
         self.set_gid_filename(gid_filename)
         self.privkey_filename = privkey_filename
-        self.dbinfo_filename = dbinfo_filename
 
     ##
     # Set the filename of the GID
@@ -78,15 +74,6 @@ class AuthInfo:
         return Keypair(filename = self.privkey_filename)
 
     ##
-    # Get the dbinfo in the form of a dictionary
-
-    def get_dbinfo(self):
-        f = file(self.dbinfo_filename)
-        dict = eval(f.read())
-        f.close()
-        return dict
-
-    ##
     # Replace the GID with a new one. The file specified by gid_filename is
     # overwritten with the new GID object
     #
@@ -102,7 +89,7 @@ class AuthInfo:
 #
 # The tree is stored on disk in a hierarchical manner than reflects the
 # structure of the tree. Each authority is a subdirectory, and each subdirectory
-# contains the GID, pkey, and dbinfo files for that authority (as well as
+# contains the GID and pkey files for that authority (as well as
 # subdirectories for each sub-authority)
 
 class Hierarchy:
@@ -117,7 +104,7 @@ class Hierarchy:
             basedir = os.path.join(self.config.SFA_DATA_DIR, "authorities")
         self.basedir = basedir
     ##
-    # Given a hrn, return the filenames of the GID, private key, and dbinfo
+    # Given a hrn, return the filenames of the GID, private key
     # files.
     #
     # @param xrn the human readable name of the authority (urn will be convertd to hrn)
@@ -130,9 +117,8 @@ class Hierarchy:
 
         gid_filename = os.path.join(directory, leaf+".gid")
         privkey_filename = os.path.join(directory, leaf+".pkey")
-        dbinfo_filename = os.path.join(directory, leaf+".dbinfo")
 
-        return (directory, gid_filename, privkey_filename, dbinfo_filename)
+        return (directory, gid_filename, privkey_filename)
 
     ##
     # Check to see if an authority exists. An authority exists if it's disk
@@ -142,12 +128,10 @@ class Hierarchy:
 
     def auth_exists(self, xrn):
         hrn, type = urn_to_hrn(xrn) 
-        (directory, gid_filename, privkey_filename, dbinfo_filename) = \
+        (directory, gid_filename, privkey_filename) = \
             self.get_auth_filenames(hrn)
         
-        return os.path.exists(gid_filename) and \
-               os.path.exists(privkey_filename) and \
-               os.path.exists(dbinfo_filename)
+        return os.path.exists(gid_filename) and os.path.exists(privkey_filename) 
 
     ##
     # Create an authority. A private key for the authority and the associated
@@ -165,7 +149,7 @@ class Hierarchy:
         parent_urn = hrn_to_urn(parent_hrn, 'authority')
         if (parent_hrn) and (not self.auth_exists(parent_urn)) and (create_parents):
             self.create_auth(parent_urn, create_parents)
-        (directory, gid_filename, privkey_filename, dbinfo_filename) = \
+        (directory, gid_filename, privkey_filename,) = \
             self.get_auth_filenames(hrn)
 
         # create the directory to hold the files
@@ -185,13 +169,6 @@ class Hierarchy:
 
         gid = self.create_gid(xrn, create_uuid(), pkey)
         gid.save_to_file(gid_filename, save_parents=True)
-
-        # XXX TODO: think up a better way for the dbinfo to work
-
-        dbinfo = Config().get_plc_dbinfo()
-        dbinfo_file = file(dbinfo_filename, "w")
-        dbinfo_file.write(str(dbinfo))
-        dbinfo_file.close()
 
     def create_top_level_auth(self, hrn=None):
         """
@@ -232,10 +209,10 @@ class Hierarchy:
             logger.warning("Hierarchy: missing authority - xrn=%s, hrn=%s"%(xrn,hrn))
             raise MissingAuthority(hrn)
 
-        (directory, gid_filename, privkey_filename, dbinfo_filename) = \
+        (directory, gid_filename, privkey_filename, ) = \
             self.get_auth_filenames(hrn)
 
-        auth_info = AuthInfo(hrn, gid_filename, privkey_filename, dbinfo_filename)
+        auth_info = AuthInfo(hrn, gid_filename, privkey_filename)
 
         # check the GID and see if it needs to be refreshed
         gid = auth_info.get_gid_object()

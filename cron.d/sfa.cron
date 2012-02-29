@@ -9,6 +9,6 @@ HOME=/
 #
 # minute hour day-of-month month day-of-week user command
 # once or twice an hour makes sense
-0 * * * * root /usr/bin/sfa-import-plc.py         >> /var/log/sfa_import.log 2>&1
+0 * * * * root /usr/bin/sfa-import.py >> /var/log/sfa_import.log 2>&1
 # this is needed only if you run RefreshPeer
 #0 0 * * * root /usr/bin/sfa-clean-peer-records.py >> /var/log/sfa_import.log 2>&1

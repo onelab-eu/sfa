@@ -20,6 +20,11 @@ class Registry(SfaServer):
     
     def __init__(self, ip, port, key_file, cert_file):
         SfaServer.__init__(self, ip, port, key_file, cert_file,'registry')
+        sfa_config=Config()
+        if Config().SFA_REGISTRY_ENABLED: 
+            from sfa.storage.alchemy import engine
+            from sfa.storage.dbschema import DBSchema
+            DBSchema().init_or_upgrade()
 
 #
 # Registries is a dictionary of registry connections keyed on the registry hrn

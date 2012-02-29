@@ -13,11 +13,10 @@ scripts = glob("sfa/clientbin/*.py") + \
     [ 
     'config/sfa-config-tty',
     'config/gen-sfa-cm-config.py',
-    'sfa/importer/sfa-import-plc.py', 
-    'sfa/importer/sfa-nuke-plc.py', 
+    'sfa/importer/sfa-import.py', 
+    'sfa/importer/sfa-nuke.py', 
     'sfa/server/sfa-ca.py', 
     'sfa/server/sfa-start.py', 
-    'sfa/server/sfa-clean-peer-records.py', 
     'sfa/server/sfa_component_setup.py', 
     'sfatables/sfatables',
     'keyconvert/keyconvert.py',
@@ -65,7 +64,8 @@ data_files = [ ('/etc/sfa/', [ 'config/aggregates.xml',
                ('/etc/sfatables/matches/', glob('sfatables/matches/*.xml')),
                ('/etc/sfatables/targets/', glob('sfatables/targets/*.xml')),
                ('/etc/init.d/', [ "init.d/%s"%x for x in initscripts ]),
-               ('/usr/share/sfa/', [ 'sfa/storage/sfa.sql' ] ),
+               ('/usr/share/sfa/migrations', glob('sfa/storage/migrations/*.*') ),
+               ('/usr/share/sfa/migrations/versions', glob('sfa/storage/migrations/versions/*') ),
                ('/usr/share/sfa/examples/', glob('sfa/examples/*' ) + [ 'cron.d/sfa.cron' ] ),
               ]
 

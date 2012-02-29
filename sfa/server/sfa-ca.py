@@ -27,7 +27,8 @@ from sfa.util.config import Config
 from sfa.trust.gid import GID, create_uuid
 from sfa.trust.hierarchy import Hierarchy
 
-from sfa.storage.table import SfaTable
+from sfa.storage.alchemy import dbsession
+from sfa.storage.model import RegRecord
 
 def main():
     args = sys.argv
@@ -116,12 +117,10 @@ def export_gid(options):
     hrn = options.export
     type = options.type
     # check sfa table first
-    filter = {'hrn': hrn}
-    if type:
-        filter['type'] = type                    
-    table = SfaTable()
-    records = table.find(filter)
-    if not records:
+    request=dbsession.query(RegRecord).filter_by(hrn=hrn)
+    if type: request = request.filter_by(type=type)
+    record=request.first()
+    if not record:
         # check the authorities hierarchy 
         hierarchy = Hierarchy()
         try:
@@ -131,8 +130,7 @@ def export_gid(options):
             print "Record: %s not found" % hrn
             sys.exit(1)
     else:
-        record = records[0]
-        gid = GID(string=record['gid'])
+        gid = GID(string=record.gid)
         
     # get the outfile
     outfile = options.outfile
@@ -163,16 +161,14 @@ def import_gid(options):
         sys.exit(1)
 
     # check if record exists in db
-    table = SfaTable()
-    records = table.find({'hrn': gid.get_hrn(), 'type': 'authority'})
-    if not records:
+    record = dbsession.query(RegRecord).filter_by(type='authority',hrn=gid.get_hrn()).first()
+    if not record:
         print "%s not found in record database" % gid.get_hrn()  
         sys.exit(1)
 
     # update the database record
-    record = records[0]
-    record['gid'] = gid.save_to_string(save_parents=True)
-    table.update(record)
+    record.gid = gid.save_to_string(save_parents=True)
+    dbsession.commit()
     if options.verbose:
         print "Imported %s gid into db" % record['hrn']
 

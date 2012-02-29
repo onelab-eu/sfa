@@ -42,6 +42,10 @@ class Generic:
         except:
             logger.log_exc("Cannot locate generic instance with flavour=%s"%flavour)
 
+    # provide default for importer_class
+    def importer_class (self): 
+        return None
+
     # in the simplest case these can be redefined to the class/module objects to be used
     # see pl.py for an example
     # some descendant of SfaApi
@@ -110,5 +114,4 @@ class Generic:
             return class_obj(config)
         except:
             logger.log_exc_critical(message)
-        
         

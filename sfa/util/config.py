@@ -82,15 +82,6 @@ class Config:
         else:
             return "plc"
 
-    def get_plc_dbinfo(self):
-        return {
-            'dbname' : self.SFA_DB_NAME,
-            'address' : self.SFA_DB_HOST,
-            'port' : self.SFA_DB_PORT,
-            'user' : self.SFA_DB_USER,
-            'password' : self.SFA_DB_PASSWORD
-            }
-
     # TODO: find a better place to put this method
     def get_max_aggrMgr_info(self):
         am_apiclient_path = '/usr/local/MAXGENI_AM_APIClient'

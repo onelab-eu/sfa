@@ -12,7 +12,7 @@ from testXrn import *
 from testKeypair import *
 # xxx broken-test
 #from testHierarchy import *
-from testRecord import *
+from testStorage import *
 
 if __name__ == "__main__":
     unittest.main()

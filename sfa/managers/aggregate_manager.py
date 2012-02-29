@@ -9,7 +9,6 @@ class AggregateManager:
     # essentially a union of the core version, the generic version (this code) and
     # whatever the driver needs to expose
     def GetVersion(self, api, options):
-    
         xrn=Xrn(api.hrn)
         version = version_core()
         version_generic = {

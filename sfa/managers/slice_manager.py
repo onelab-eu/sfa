@@ -135,7 +135,7 @@ class SliceManager:
     
         # look in cache first
         cached_requested = options.get('cached', True)
-        if not xrn and self.cache and cached_request:
+        if not xrn and self.cache and cached_requested:
             rspec =  self.cache.get(version_string)
             if rspec:
                 api.logger.debug("SliceManager.ListResources returns cached advertisement")

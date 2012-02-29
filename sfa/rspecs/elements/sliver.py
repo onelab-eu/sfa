@@ -8,4 +8,5 @@ class Sliver(Element):
         'name',
         'type',
         'tags',
+        'disk_images',
     ]

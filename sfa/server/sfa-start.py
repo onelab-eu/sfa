@@ -14,7 +14,7 @@
 # is up to date and accurate.
 #
 # 1) Import the existing planetlab database, creating the
-#    appropriate SFA records. This is done by running the "sfa-import-plc.py" tool.
+#    appropriate SFA records. This is done by running the "sfa-import.py" tool.
 #
 # 2) Create a "trusted_roots" directory and place the certificate of the root
 #    authority in that directory. Given the defaults in sfa-import-plc.py, this
@@ -40,7 +40,6 @@ from sfa.trust.trustedroots import TrustedRoots
 from sfa.trust.certificate import Keypair, Certificate
 from sfa.trust.hierarchy import Hierarchy
 from sfa.trust.gid import GID
-
 from sfa.server.sfaapi import SfaApi
 from sfa.server.registry import Registries
 from sfa.server.aggregate import Aggregates
@@ -104,22 +103,13 @@ def install_peer_certs(server_key_file, server_cert_file):
                 logger.info("get_trusted_certs: skipping non sfa aggregate: %s" % new_hrn)
                 continue
             trusted_gids = ReturnValue.get_value(interface.get_trusted_certs())
-            #trusted_gids = interface.get_trusted_certs()
-            print>>sys.stderr, " \r\n \r\n \t=============================================== install_peer_certs  TRUSTED_GIDS %s   " %(trusted_gids)
             if trusted_gids:
-                 #and not isinstance(trusted_gids,list):
                 # the gid we want should be the first one in the list,
                 # but lets make sure
-                #trusted_gids = [trusted_gids]
-                print>>sys.stderr, " \r\n \r\n \t=============================================== install_peer_certs  TRUSTED_GIDS %s   " %(trusted_gids)
-                for trusted_gid in trusted_gids: 
-                    print>>sys.stderr, " \r\n \r\n \t=============================================== install_peer_certs  trusted_gids%s   " %(trusted_gid)
                     # default message
                     message = "interface: %s\t" % (api.interface)
                     message += "unable to install trusted gid for %s" % \
-                               (new_hrn) 
-                    print>>sys.stderr, " \r\n \r\n \t=============================================== install_peer_certs   message %s   " %(message)
-                    #gid = GID(string=trusted_gids[0])
+                               (new_hrn)
                     gid = GID(string=trusted_gid)
                     print>>sys.stderr, " \r\n \r\n \t=============================================== install_peer_certs   gid %s   " %(gid)
                     peer_gids.append(gid)
@@ -141,37 +131,35 @@ def update_cert_records(gids):
     Make sure there is a record in the registry for the specified gids. 
     Removes old records from the db.
     """
-    # import SfaTable here so this module can be loaded by PlcComponentApi
-    from sfa.storage.table import SfaTable
-    from sfa.storage.record import SfaRecord
+    # import db stuff here here so this module can be loaded by PlcComponentApi
+    from sfa.storage.alchemy import dbsession
+    from sfa.storage.model import RegRecord
     if not gids:
         return
-    table = SfaTable()
     # get records that actually exist in the db
     gid_urns = [gid.get_urn() for gid in gids]
     hrns_expected = [gid.get_hrn() for gid in gids]
-    records_found = table.find({'hrn': hrns_expected, 'pointer': -1}) 
+    records_found = dbsession.query(RegRecord).\
+        filter_by(pointer=-1).filter(RegRecord.hrn.in_(hrns_expected)).all()
 
     # remove old records
     for record in records_found:
-        if record['hrn'] not in hrns_expected and \
-            record['hrn'] != self.api.config.SFA_INTERFACE_HRN:
-            table.remove(record)
+        if record.hrn not in hrns_expected and \
+            record.hrn != self.api.config.SFA_INTERFACE_HRN:
+            dbsession.delete(record)
 
     # TODO: store urn in the db so we do this in 1 query 
     for gid in gids:
         hrn, type = gid.get_hrn(), gid.get_type()
-        print>>sys.stderr, " \r\n \r\n  update_cert_records  hrn,%s type %s"%(hrn, type)       
-        record = table.find({'hrn': hrn, 'type': type, 'pointer': -1})
+        record = dbsession.query(RegRecord).filter_by(hrn=hrn, type=type,pointer=-1).first()
         if not record:
-            record = {
-                'hrn': hrn, 'type': type, 'pointer': -1,
-                'authority': get_authority(hrn),
-                'gid': gid.save_to_string(save_parents=True),
-            }
-            record = SfaRecord(dict=record)
-            print>>sys.stderr, " \r\n \r\rn record %s "%(record)
-            table.insert(record)
+            record = RegRecord (dict= {'type':type,
+                                       'hrn': hrn, 
+                                       'authority': get_authority(hrn),
+                                       'gid': gid.save_to_string(save_parents=True),
+                                       })
+            dbsession.add(record)
+    dbsession.commit()
         
 def main():
     # Generate command line parser
