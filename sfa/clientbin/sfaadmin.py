@@ -6,7 +6,7 @@ from sfa.generic import Generic
 from optparse import OptionParser
 from pprint import PrettyPrinter
 from sfa.util.xrn import Xrn
-from sfa.storage.record import SfaRecord 
+from sfa.storage.record import Record 
 from sfa.client.sfi import save_records_to_file
 pprinter = PrettyPrinter(indent=4)
 
@@ -53,7 +53,7 @@ class RegistryCommands(Commands):
     def show(self, xrn, type=None, format=None, outfile=None):
         records = self.api.manager.Resolve(self.api, xrn, type, True)
         for record in records:
-            sfa_record = SfaRecord(dict=record)
+            sfa_record = Record(dict=record)
             sfa_record.dump(format) 
         if outfile:
             save_records_to_file(outfile, records)                
