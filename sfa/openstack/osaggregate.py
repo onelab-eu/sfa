@@ -232,6 +232,11 @@ class OSAggregate:
                                              instance_type=instance_type,
                                              key_name=key_name,
                                              user_data = user_data)
+                                             #security_groups=group_names,
+                                             #placement=zone,
+                                             #min_count=min_count,
+                                             #max_count=max_count,           
+                                              
         except EC2ResponseError, ec2RespError:
             logger.log_exc(ec2RespError)
                
@@ -270,4 +275,5 @@ class OSAggregate:
                             ari_id = CloudController.image_ec2_id(disk_image['ari']['id'])
                     # start the instance
                     self.reserve_instance(ami_id, aki_id, ari_id, \
-                                          instance_type['name'], keyname, pubkeys) 
+                                          instance_type['name'], keyname, pubkeys)
+

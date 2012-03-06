@@ -4,7 +4,6 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from sqlalchemy import Column, Integer, String
-from sqlalchemy.orm import relationship, backref
 from sqlalchemy import ForeignKey
 
 from sfa.util.sfalogging import logger

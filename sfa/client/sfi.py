@@ -29,8 +29,7 @@ from sfa.util.config import Config
 from sfa.util.version import version_core
 from sfa.util.cache import Cache
 
-from sfa.storage.model import RegRecord, RegAuthority, RegUser, RegSlice, RegNode
-from sfa.storage.model import make_record
+from sfa.storage.record import Record
 
 from sfa.rspecs.rspec import RSpec
 from sfa.rspecs.rspec_converter import RSpecConverter
@@ -133,14 +132,14 @@ def save_records_to_file(filename, record_dicts, format="xml"):
         f = open(filename, "w")
         f.write("<recordlist>\n")
         for record_dict in record_dicts:
-            record_obj=make_record (dict=record_dict)
+            record_obj=Record(dict=record_dict)
             f.write('<record hrn="' + record_obj.hrn + '" type="' + record_obj.type + '" />\n')
         f.write("</recordlist>\n")
         f.close()
     elif format == "hrnlist":
         f = open(filename, "w")
         for record_dict in record_dicts:
-            record_obj=make_record (dict=record_dict)
+            record_obj=Record(dict=record_dict)
             f.write(record_obj.hrn + "\n")
         f.close()
     else:
@@ -148,7 +147,7 @@ def save_records_to_file(filename, record_dicts, format="xml"):
         print "unknown output format", format
 
 def save_record_to_file(filename, record_dict):
-    rec_record = make_record (dict=record_dict)
+    rec_record = Record(dict=record_dict)
     str = record.save_to_string()
     f=codecs.open(filename, encoding='utf-8',mode="w")
     f.write(str)
@@ -161,7 +160,7 @@ def load_record_from_file(filename):
     f=codecs.open(filename, encoding="utf-8", mode="r")
     xml_string = f.read()
     f.close()
-    return make_record (xml=xml_string)
+    return Record(xml=xml_string)
 
 
 import uuid
@@ -717,7 +716,7 @@ or version information about sfi itself
         record_dicts = filter_records(options.type, record_dicts)
         if not record_dicts:
             self.logger.error("No record of type %s"% options.type)
-        records = [ make_record (dict=record_dict) for record_dict in record_dicts ]
+        records = [ Record(dict=record_dict) for record_dict in record_dicts ]
         for record in records:
             if (options.format == "text"):      record.dump()  
             else:                               print record.save_as_xml() 

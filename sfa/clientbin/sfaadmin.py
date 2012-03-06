@@ -6,7 +6,7 @@ from sfa.generic import Generic
 from optparse import OptionParser
 from pprint import PrettyPrinter
 from sfa.util.xrn import Xrn
-from sfa.storage.record import SfaRecord 
+from sfa.storage.record import Record 
 from sfa.client.sfi import save_records_to_file
 pprinter = PrettyPrinter(indent=4)
 
@@ -53,7 +53,7 @@ class RegistryCommands(Commands):
     def show(self, xrn, type=None, format=None, outfile=None):
         records = self.api.manager.Resolve(self.api, xrn, type, True)
         for record in records:
-            sfa_record = SfaRecord(dict=record)
+            sfa_record = Record(dict=record)
             sfa_record.dump(format) 
         if outfile:
             save_records_to_file(outfile, records)                
@@ -120,29 +120,38 @@ class AggregateCommands(Commands):
         resources = self.api.manager.ListResources(self.api, [], options)
         pprinter.pprint(resources)
         
+    @args('-x', '--xrn', dest='xrn', metavar='<xrn>', help='object hrn/urn', default=None)
+    @args('-r', '--rspec', dest='rspec', metavar='<rspec>', help='rspec file')  
     def create(self, xrn, rspec):
         pass
 
+    @args('-x', '--xrn', dest='xrn', metavar='<xrn>', help='object hrn/urn', default=None)
     def delete(self, xrn):
-        pass 
-    
+        self.api.manager.DeleteSliver(self.api, xrn, [], {})
+ 
+    @args('-x', '--xrn', dest='xrn', metavar='<xrn>', help='object hrn/urn', default=None)
     def start(self, xrn):
-        pass
+        self.api.manager.start_slice(self.api, xrn, [])
 
+    @args('-x', '--xrn', dest='xrn', metavar='<xrn>', help='object hrn/urn', default=None)
     def stop(self, xrn):
-        pass      
+        self.api.manager.stop_slice(self.api, xrn, [])      
 
+    @args('-x', '--xrn', dest='xrn', metavar='<xrn>', help='object hrn/urn', default=None)
     def reset(self, xrn):
-        pass
+        self.api.manager.reset_slice(self.api, xrn)
 
-    def ticket(self):
+
+    @args('-x', '--xrn', dest='xrn', metavar='<xrn>', help='object hrn/urn', default=None)
+    @args('-r', '--rspec', dest='rspec', metavar='<rspec>', help='request rspec', default=None)
+    def ticket(self, xrn, rspec):
         pass
 
 
 class SliceManagerCommands(AggregateCommands):
     
     def __init__(self, *args, **kwds):
-        self.api= Generic().make_api(interface='slicemgr')
+        self.api= Generic.the_flavour().make_api(interface='slicemgr')
 
 
 CATEGORIES = {'registry': RegistryCommands,
