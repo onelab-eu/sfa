@@ -11,7 +11,12 @@ class slab (Generic):
     # use the standard api class
     def api_class (self):
         return sfa.server.sfaapi.SfaApi
-
+    
+    # the importer class
+    def importer_class (self): 
+        import sfa.importer.slabimporter
+        return sfa.importer.slabimporter.SlabImporter
+    
     # the manager classes for the server-side services
     def registry_manager_class (self) : 
         return sfa.managers.registry_manager.RegistryManager

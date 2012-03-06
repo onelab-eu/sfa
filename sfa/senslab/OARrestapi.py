@@ -32,6 +32,7 @@ OARrequests_get_uri_dict = { 'GET_version': '/oarapi/version.json',
 			'GET_jobs_details': '/oarapi/jobs/details.json',
 			'GET_resources_full': '/oarapi/resources/full.json',
 			'GET_resources':'/oarapi/resources.json',
+                        'GET_sites' : '/oarapi/resources/full.json',
                         
                         
 }
@@ -278,6 +279,14 @@ class OARGETParser:
         self.ParseNodes()
         self.ParseSites()
         return self.node_dictlist
+        
+    def ParseResourcesFullSites(self ) :
+        if self.version_json_dict['apilib_version'] != "0.2.10" :
+                self.raw_json = self.raw_json['items']
+        self.ParseNodes()
+        self.ParseSites()
+        return self.site_dict
+        
 
     resources_fulljson_dict= {
         'resource_id' : AddNodeId,
@@ -342,17 +351,17 @@ class OARGETParser:
             #if node_id is 1:
                 #print>>sys.stderr, " \r\n \r\n \t \t\t\t OARESTAPI Parse Sites self.node_dictlist %s " %(self.node_dictlist)
             if node['site_login_base'] not in self.site_dict.keys():
-                self.site_dict[node['site_login_base']] = [('login_base', node['site_login_base']),\
-                                                        ('node_ids',nodes_per_site[node['site_login_base']]),\
-                                                        ('latitude',"48.83726"),\
-                                                        ('longitude',"- 2.10336"),('name',"senslab"),\
-                                                        ('pcu_ids', []), ('max_slices', None), ('ext_consortium_id', None),\
-                                                        ('max_slivers', None), ('is_public', True), ('peer_site_id', None),\
-                                                        ('abbreviated_name', "senslab"), ('address_ids', []),\
-                                                        ('url', "http,//www.senslab.info"), ('person_ids', []),\
-                                                        ('site_tag_ids', []), ('enabled', True),  ('slice_ids', []),\
-                                                        ('date_created', None), ('peer_id', None),]
-                self.site_dict[node['site_login_base']] = dict(self.site_dict[node['site_login_base']])
+                self.site_dict[node['site_login_base']] = {'login_base':node['site_login_base'],
+                                                        'node_ids':nodes_per_site[node['site_login_base']],
+                                                        'latitude':"48.83726",
+                                                        'longitude':"- 2.10336",'name':"senslab",
+                                                        'pcu_ids':[], 'max_slices':None, 'ext_consortium_id':None,
+                                                        'max_slivers':None, 'is_public':True, 'peer_site_id': None,
+                                                        'abbreviated_name':"senslab", 'address_ids': [],
+                                                        'url':"http,//www.senslab.info", 'person_ids':[],
+                                                        'site_tag_ids':[], 'enabled': True,  'slice_ids':[],
+                                                        'date_created': None, 'peer_id': None } 
+
                         
 
 
@@ -365,6 +374,7 @@ class OARGETParser:
         'GET_jobs_table': {'uri':'/oarapi/jobs/table.json','parse_func': ParseJobsTable},
         'GET_jobs_details': {'uri':'/oarapi/jobs/details.json','parse_func': ParseJobsDetails},
         'GET_resources_full': {'uri':'/oarapi/resources/full.json','parse_func': ParseResourcesFull},
+        'GET_sites':{'uri':'/oarapi/resources/full.json','parse_func': ParseResourcesFullSites},
         'GET_resources':{'uri':'/oarapi/resources.json' ,'parse_func': ParseResources},
         'DELETE_jobs_id':{'uri':'/oarapi/jobs/id.json' ,'parse_func': ParseDeleteJobs}
         }

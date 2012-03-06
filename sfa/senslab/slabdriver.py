@@ -509,10 +509,21 @@ class SlabDriver(Driver):
         return return_node_list
     
   
+    def GetSites(self, site_filter = None, return_fields=None):
+        site_dict =self.oar.parser.SendRequest("GET_sites")
+        print>>sys.stderr, "\r\n \r\n \t\t  SLABDRIVER.PY GetSites " 
+        return_site_list = []
+        if not ( site_filter or return_fields):
+                return_site_list = site_dict.values()
+                return return_site_list
+    
+        return_site_list = parse_filter(site_dict.values(), site_filter,'site', return_fields)
+        return return_site_list
+        
     
     def GetSlices(self,slice_filter = None, return_fields=None):
 
-        sliceslist = self.db.find('slice',columns = ['oar_job_id', 'slice_hrn', 'record_id_slice','record_id_user'], record_filter=slice_filter)
+        sliceslist = self.db.find('slice_senslab',columns = ['oar_job_id', 'slice_hrn', 'record_id_slice','record_id_user'], record_filter=slice_filter)
         
         print >>sys.stderr, " \r\n \r\n \tSLABDRIVER.PY  GetSlices  slices %s slice_filter %s " %(sliceslist,slice_filter)
       
