@@ -93,7 +93,7 @@ class Record:
             elif attrib_name in ['date created', 'last updated']:
                 print "    %s: %s" % (attrib_name, self.date_repr(attrib_name))
             else:
-                print "     %s: %s" % (attrib_name, attrib)
+                print "    %s: %s" % (attrib_name, attrib)
 
     def dump_simple(self):
         return "%s"%self    
