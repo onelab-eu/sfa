@@ -138,7 +138,7 @@ class PlAggregate:
     def get_nodes_and_links(self, slice=None,slivers=[], options={}):
         # if we are dealing with a slice that has no node just return 
         # and empty list    
-        if slice is not None and not slice['node_ids']:
+        if not slice or  not slice['node_ids']:
             return ([],[])
 
         filter = {}

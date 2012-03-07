@@ -9,6 +9,7 @@ from sqlalchemy.orm import object_mapper
 from sqlalchemy.orm import validates
 from sqlalchemy.ext.declarative import declarative_base
 
+from sfa.storage.record import Record
 from sfa.util.sfalogging import logger
 from sfa.util.sfatime import utcparse, datetime_to_string
 from sfa.util.xml import XML 
@@ -46,99 +47,14 @@ Base=declarative_base()
 # (*) finally for converting a dictionary into an sqlalchemy object, we provide
 # obj.load_from_dict(dict)
 
-class AlchemyObj:
+class AlchemyObj(Record):
     def __iter__(self): 
         self._i = iter(object_mapper(self).columns)
         return self 
     def next(self): 
         n = self._i.next().name
         return n, getattr(self, n)
-    def todict (self):
-        d=self.__dict__
-        keys=[k for k in d.keys() if not k.startswith('_')]
-        return dict ( [ (k,d[k]) for k in keys ] )
-    def load_from_dict (self, d):
-        for (k,v) in d.iteritems():
-            # experimental
-            if isinstance(v, StringTypes) and v.lower() in ['true']: v=True
-            if isinstance(v, StringTypes) and v.lower() in ['false']: v=False
-            setattr(self,k,v)
 
-    def validate_datetime (self, key, incoming):
-        if isinstance (incoming, datetime):     return incoming
-        elif isinstance (incoming, (int,float)):return datetime.fromtimestamp (incoming)
-
-    # in addition we provide convenience for converting to and from xml records
-    # for this purpose only, we need the subclasses to define 'fields' as either 
-    # a list or a dictionary
-    def xml_fields (self):
-        fields=self.fields
-        if isinstance(fields,dict): fields=fields.keys()
-        return fields
-
-    def save_as_xml (self):
-        # xxx not sure about the scope here
-        input_dict = dict( [ (key, getattr(self.key), ) for key in self.xml_fields() if getattr(self,key,None) ] )
-        xml_record=XML("<record />")
-        xml_record.parse_dict (input_dict)
-        return xml_record.toxml()
-
-    def dump(self, format=None, dump_parents=False):
-        if not format:
-            format = 'text'
-        else:
-            format = format.lower()
-        if format == 'text':
-            self.dump_text(dump_parents)
-        elif format == 'xml':
-            print self.save_to_string()
-        elif format == 'simple':
-            print self.dump_simple()
-        else:
-            raise Exception, "Invalid format %s" % format
-   
-    # xxx fixme 
-    # turns out the date_created field is received by the client as a 'created' int
-    # (and 'last_updated' does not make it at all)
-    # let's be flexible
-    def date_repr (self,fields):
-        if not isinstance(fields,list): fields=[fields]
-        for field in fields:
-            value=getattr(self,field,None)
-            if isinstance (value,datetime): 
-                return datetime_to_string (value)
-            elif isinstance (value,(int,float)):
-                return datetime_to_string(utcparse(value))
-        # fallback
-        return "** undef_datetime **"
-
-    def dump_text(self, dump_parents=False):
-        # print core fields in this order
-        core_fields = [ 'hrn', 'type', 'authority', 'date_created', 'created', 'last_updated', 'gid',  ]
-        print "".join(['=' for i in range(40)])
-        print "RECORD"
-        print "    hrn:", self.hrn
-        print "    type:", self.type
-        print "    authority:", self.authority
-        print "    date created:", self.date_repr( ['date_created','created'] )
-        print "    last updated:", self.date_repr('last_updated')
-        print "    gid:"
-        print self.get_gid_object().dump_string(8, dump_parents)  
-        
-        # print remaining fields
-        for attrib_name in dir(self):
-            attrib = getattr(self, attrib_name)
-            # skip internals
-            if attrib_name.startswith('_'):     continue
-            # skip core fields
-            if attrib_name in core_fields:      continue
-            # skip callables 
-            if callable (attrib):               continue
-            print "     %s: %s" % (attrib_name, attrib)
-    
-    def dump_simple(self):
-        return "%s"%self
-      
 #    # only intended for debugging 
 #    def inspect (self, logger, message=""):
 #        logger.info("%s -- Inspecting AlchemyObj -- attrs"%message)
@@ -203,6 +119,10 @@ class RegRecord (Base,AlchemyObj):
         if gid is None:                     return
         elif isinstance(gid, StringTypes):  return gid
         else:                               return gid.save_to_string(save_parents=True)
+
+    def validate_datetime (self, key, incoming):
+        if isinstance (incoming, datetime):     return incoming
+        elif isinstance (incoming, (int,float)):return datetime.fromtimestamp (incoming)
 
     @validates ('date_created')
     def validate_date_created (self, key, incoming): return self.validate_datetime (key, incoming)

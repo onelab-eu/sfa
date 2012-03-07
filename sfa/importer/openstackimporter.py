@@ -56,7 +56,7 @@ class OpenstackImporter:
             existing_hrns.append(record.hrn) 
             
         # Get all users
-        persons = shell.user_get_all()
+        persons = shell.auth_manager.get_users()
         persons_dict = {}
         keys_filename = config.config_path + os.sep + 'person_keys.py' 
         old_person_keys = load_keys(keys_filename)
@@ -65,7 +65,7 @@ class OpenstackImporter:
             hrn = config.SFA_INTERFACE_HRN + "." + person.id
             persons_dict[hrn] = person
             old_keys = old_person_keys.get(person.id, [])
-            keys = [k.public_key for k in shell.key_pair_get_all_by_user(person.id)]
+            keys = [k.public_key for k in shell.db.key_pair_get_all_by_user(person.id)]
             person_keys[person.id] = keys
             update_record = False
             if old_keys != keys:
@@ -78,12 +78,12 @@ class OpenstackImporter:
                     try:
                         pkey = convert_public_key(keys[0])
                     except:
-                        logger.log_exc('unable to convert public key for %s' % hrn)
+                        self.logger.log_exc('unable to convert public key for %s' % hrn)
                         pkey = Keypair(create=True)
                 else:
-                    logger.warn("OpenstackImporter: person %s does not have a PL public key"%hrn)
+                    self.logger.warn("OpenstackImporter: person %s does not have a PL public key"%hrn)
                     pkey = Keypair(create=True) 
-                person_gid = sfaImporter.AuthHierarchy.create_gid(urn, create_uuid(), pkey)
+                person_gid = self.auth_hierarchy.create_gid(urn, create_uuid(), pkey)
                 person_record = RegUser ()
                 person_record.type='user'
                 person_record.hrn=hrn
@@ -91,10 +91,10 @@ class OpenstackImporter:
                 person_record.authority=get_authority(hrn)
                 dbsession.add(person_record)
                 dbsession.commit()
-                logger.info("OpenstackImporter: imported person %s" % person_record)
+                self.logger.info("OpenstackImporter: imported person %s" % person_record)
 
         # Get all projects
-        projects = shell.project_get_all()
+        projects = shell.auth_manager.get_projects()
         projects_dict = {}
         for project in projects:
             hrn = config.SFA_INTERFACE_HRN + '.' + project.id
@@ -103,7 +103,7 @@ class OpenstackImporter:
             (hrn, 'slice') not in existing_records:
                 pkey = Keypair(create=True)
                 urn = hrn_to_urn(hrn, 'slice')
-                project_gid = sfaImporter.AuthHierarchy.create_gid(urn, create_uuid(), pkey)
+                project_gid = self.auth_hierarchy.create_gid(urn, create_uuid(), pkey)
                 project_record = RegSlice ()
                 project_record.type='slice'
                 project_record.hrn=hrn
@@ -111,7 +111,7 @@ class OpenstackImporter:
                 project_record.authority=get_authority(hrn)
                 dbsession.add(project_record)
                 dbsession.commit()
-                logger.info("OpenstackImporter: imported slice: %s" % project_record)  
+                self.logger.info("OpenstackImporter: imported slice: %s" % project_record)  
     
         # remove stale records    
         system_records = [interface_hrn, root_auth, interface_hrn + '.slicemanager']
@@ -133,11 +133,11 @@ class OpenstackImporter:
                 continue 
         
             record_object = existing_records[ (record_hrn, type) ]
-            logger.info("OpenstackImporter: removing %s " % record)
+            self.logger.info("OpenstackImporter: removing %s " % record)
             dbsession.delete(record_object)
             dbsession.commit()
                                    
         # save pub keys
-        logger.info('OpenstackImporter: saving current pub keys')
+        self.logger.info('OpenstackImporter: saving current pub keys')
         save_keys(keys_filename, person_keys)                
         
