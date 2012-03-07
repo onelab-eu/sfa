@@ -11,13 +11,55 @@ import sys
 try: import pgdb
 except: print >> sys.stderr, "WARNING, could not import pgdb"
 
+
+from sqlalchemy import Column, Integer, String, DateTime
+from sqlalchemy import Table, Column, MetaData, join, ForeignKey
+from sfa.storage.model import Base
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import relationship, backref
+
+from sfa.storage.alchemy import dbsession, engine 
+from sqlalchemy import MetaData, Table
+from sqlalchemy.exc import NoSuchTableError
+
 #Dict holding the columns names of the table as keys
 #and their type, used for creation of the table
 slice_table = {'record_id_user':'integer PRIMARY KEY references X ON DELETE CASCADE ON UPDATE CASCADE','oar_job_id':'integer DEFAULT -1',  'record_id_slice':'integer', 'slice_hrn':'text NOT NULL'}
 
 #Dict with all the specific senslab tables
-tablenames_dict = {'slice': slice_table}
+tablenames_dict = {'slice_senslab': slice_table}
 
+##############################
+
+
+
+SlabBase = declarative_base(metadata= Base.metadata, bind=engine)
+
+
+
+
+class SlabSliceDB (SlabBase):
+    __tablename__ = 'slice_senslab'
+    record_id_user = Column(Integer, ForeignKey("records.record_id"), primary_key=True)
+    oar_job_id = Column( Integer,default = -1)
+    record_id_slice = Column(Integer)
+    slice_hrn = Column(String,nullable = False)
+    
+    def __init__ (self, slice_hrn =None, oar_job_id=None, record_id_slice=None, record_id_user= None):
+        if record_id_slice: 
+            self.record_id_slice = record_id_slice
+        if slice_hrn:
+            self.slice_hrn = slice_hrn
+        if oar_job_id:
+            self.oar_job_id = oar_job_id
+        if slice_hrn:
+            self.slice_hrn = slice_hrn 
+        if record_id_user: 
+            self.record_id_user= record_id_user
+            
+            
+
+          
 class SlabDB:
     def __init__(self):
         self.config = Config()
@@ -96,18 +138,28 @@ class SlabDB:
         Checks if the table specified as tablename exists.
     
         """
-        #mark = self.cursor()
-        sql = "SELECT * from pg_tables"
-        #mark.execute(sql)
-        #rows = mark.fetchall()
-        #mark.close()
-        #labels = [column[0] for column in mark.description]
-        #rows = [dict(zip(labels, row)) for row in rows]
-        rows = self.selectall(sql)
-        rows = filter(lambda row: row['tablename'].startswith(tablename), rows)
-        if rows:
+        
+       
+        try:
+            metadata = MetaData (bind=engine)
+            table=Table (tablename, metadata, autoload=True)
             return True
-        return False
+        except NoSuchTableError:
+            print>>sys.stderr, " \r\n \r\n \t SLABPOSTGRES EXISTS NOPE! tablename %s " %(tablename)
+            return False
+        ##mark = self.cursor()
+        #sql = "SELECT * from pg_tables"
+        ##mark.execute(sql)
+        ##rows = mark.fetchall()
+        ##mark.close()
+        ##labels = [column[0] for column in mark.description]
+        ##rows = [dict(zip(labels, row)) for row in rows]
+        #rows = self.selectall(sql)
+        #rows = filter(lambda row: row['tablename'].startswith(tablename), rows)
+        #if rows:
+            #return True
+        #print>>sys.stderr, " \r\n \r\n \t SLABPOSTGRES EXISTS NOPE ! tablename %s " %(tablename)
+        #return False
     
     def createtable(self, tablename ):
         """
@@ -115,40 +167,47 @@ class SlabDB:
         the table schema.
     
         """
-        mark = self.cursor()
-        tablelist =[]
-        if tablename not in tablenames_dict:
-            logger.error("Tablename unknown - creation failed")
-            return
+        print>>sys.stderr, " \r\n \r\n \t SLABPOSTGRES CREATETABLE " 
+        SlabBase.metadata.create_all(engine)
+        print>>sys.stderr, " \r\n \r\n \t SLABPOSTGRES CREATETABLE  YAAAAAAAAAAY" 
+        #mark = self.cursor()
+        #tablelist =[]
+        #if tablename not in tablenames_dict:
+            #logger.error("Tablename unknown - creation failed")
+            #return
             
-        T  = tablenames_dict[tablename]
+        #T  = tablenames_dict[tablename]
+        #print>>sys.stderr, " \r\n \r\n \t SLABPOSTGRES.PY T %s" %(T)
+        #for k in T.keys(): 
+            #tmp = str(k) +' ' + T[k]
+            #tablelist.append(tmp)
+            
+        #end_of_statement = ",".join(tablelist)
         
-        for k in T.keys(): 
-            tmp = str(k) +' ' + T[k]
-            tablelist.append(tmp)
+        #statement = "CREATE TABLE " + tablename + " ("+ end_of_statement +");"
+        #print>>sys.stderr, " \r\n \r\n \t SLABPOSTGRES.PY statement  %s" %(statement)
+        ##template = "CREATE INDEX %s_%s_idx ON %s (%s);"
+        ##indexes = [template % ( self.tablename, field, self.tablename, field) \
+                    ##for field in ['hrn', 'type', 'authority', 'peer_authority', 'pointer']]
+        ##IF EXISTS doenst exist in postgres < 8.2
+        #try: 
+            #print>>sys.stderr, " \r\n \r\n \t SLABPOSTGRES.PY AVANT LE DROP IF EXISTS"
+            #mark.execute('DROP TABLE IF EXISTS ' + tablename +';')
             
-        end_of_statement = ",".join(tablelist)
-        
-        statement = "CREATE TABLE " + tablename + " ("+ end_of_statement +");"
-     
-        #template = "CREATE INDEX %s_%s_idx ON %s (%s);"
-        #indexes = [template % ( self.tablename, field, self.tablename, field) \
-                    #for field in ['hrn', 'type', 'authority', 'peer_authority', 'pointer']]
-        # IF EXISTS doenst exist in postgres < 8.2
-        try:
-            mark.execute('DROP TABLE IF EXISTS ' + tablename +';')
-        except:
-            try:
-                mark.execute('DROP TABLE' + tablename +';')
-            except:
-                pass
-            
-        mark.execute(statement)
-        #for index in indexes:
-            #self.db.do(index)
-        self.connection.commit()
-        mark.close()
-        self.close()
+        #except:
+            #try:
+                #mark.execute('DROP TABLE' + tablename +';')
+            #except:
+                #pass
+        #print>>sys.stderr, " \r\n \r\n \t SLABPOSTGRES.PY AVANT EXECUTE statement ",statement     
+        #mark.execute(statement)
+        #print>>sys.stderr, " \r\n \r\n \t SLABPOSTGRES.PY OUEEEEEEEEEEEEEEEEEEEEEE "   
+        ##for index in indexes:
+            ##self.db.do(index)
+        #self.connection.commit()
+        #print>>sys.stderr, " \r\n \r\n \t SLABPOSTGRES.PY COMMIT DE OUFGUEDIN "  
+        #mark.close()
+        #self.close()
         return
     
 
@@ -193,7 +252,7 @@ class SlabDB:
             oar_dflt_jobid = -1
             values = [ str(oar_dflt_jobid), ' \''+ str(slicerec['hrn']) + '\'', str(userrecord['record_id']), str( slicerec['record_id'])]
     
-            self.insert('slice', keys, values)
+            self.insert('slice_senslab', keys, values)
         else :
             logger.error("Trying to import a not senslab slice")
         return
