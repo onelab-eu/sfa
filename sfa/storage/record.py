@@ -14,6 +14,10 @@ class Record:
             xml_dict = xml_record.todict()
             self.load_from_dict(xml_dict)  
 
+
+    def get_field(self, field):
+        return self.__dict__.get(field, None)
+
     # xxx fixme
     # turns out the date_created field is received by the client as a 'created' int
     # (and 'last_updated' does not make it at all)
