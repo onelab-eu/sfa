@@ -33,6 +33,9 @@ class Record:
         d=self.__dict__
         keys=[k for k in d.keys() if not k.startswith('_')]
         return dict ( [ (k,d[k]) for k in keys ] )
+    
+    def toxml(self):
+        return self.save_as_xml()
 
     def load_from_dict (self, d):
         for (k,v) in d.iteritems():
@@ -45,13 +48,12 @@ class Record:
     # for this purpose only, we need the subclasses to define 'fields' as either
     # a list or a dictionary
     def xml_fields (self):
-        fields=self.fields
-        if isinstance(fields,dict): fields=fields.keys()
+        fields = self.__dict__.keys()
         return fields
 
     def save_as_xml (self):
         # xxx not sure about the scope here
-        input_dict = dict( [ (key, getattr(self.key), ) for key in self.xml_fields() if getattr(self,key,None) ] )
+        input_dict = dict( [ (key, getattr(self,key)) for key in self.xml_fields() if getattr(self,key,None) ] )
         xml_record=XML("<record />")
         xml_record.parse_dict (input_dict)
         return xml_record.toxml()
