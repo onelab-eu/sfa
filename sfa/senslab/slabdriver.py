@@ -27,7 +27,7 @@ from sfa.util.plxrn import slicename_to_hrn, hostname_to_hrn, hrn_to_pl_slicenam
 ## thierry : please avoid wildcard imports :)
 from sfa.senslab.OARrestapi import  OARrestapi
 from sfa.senslab.LDAPapi import LDAPapi
-from sfa.senslab.SenslabImportUsers import SenslabImportUsers
+#from sfa.senslab.SenslabImportUsers import SenslabImportUsers
 from sfa.senslab.parsing import parse_filter
 from sfa.senslab.slabpostgres import SlabDB
 from sfa.senslab.slabaggregate import SlabAggregate
@@ -64,7 +64,7 @@ class SlabDriver(Driver):
 	#self.oar = OARapi()
         self.oar = OARrestapi()
 	self.ldap = LDAPapi()
-        self.users = SenslabImportUsers()
+        #self.users = SenslabImportUsers()
         self.time_format = "%Y-%m-%d %H:%M:%S"
         self.db = SlabDB()
         #self.logger=sfa_logger()

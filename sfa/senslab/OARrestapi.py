@@ -5,7 +5,7 @@ import json
 import datetime
 from time import gmtime, strftime 
 from sfa.senslab.parsing import *
-from sfa.senslab.SenslabImportUsers import *
+#from sfa.senslab.SenslabImportUsers import *
 import urllib
 import urllib2
 from sfa.util.config import Config
