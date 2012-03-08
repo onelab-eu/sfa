@@ -70,9 +70,10 @@ class RegistryManager:
             caller_gid = record.get_gid_object()
         else:
             caller_hrn, caller_type = urn_to_hrn(caller_xrn)
-            caller_record = dbsession.query(RegRecord).filter_by(hrn=caller_hrn).first()
             if caller_type:
-                caller_record = caller_record.filter_by(type=caller_type)
+                caller_record = dbsession.query(RegRecord).filter_by(hrn=caller_hrn,type=caller_type).first()
+            else:
+                caller_record = dbsession.query(RegRecord).filter_by(hrn=caller_hrn).first()
             if not caller_record:
                 raise RecordNotFound("Unable to associated caller (hrn=%s, type=%s) with credential for (hrn: %s, type: %s)"%(caller_hrn, caller_type, hrn, type))
             caller_gid = GID(string=caller_record.gid)
