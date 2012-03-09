@@ -1,4 +1,5 @@
 #!/usr/bin/python
+import os
 import sys
 import copy
 from pprint import pformat 
@@ -136,6 +137,8 @@ class CertCommands(Commands):
     @args('-o', '--outfile', dest='outfile', metavar='<outfile>', help='output file', default=None)
     def export(self, xrn, type=None, outfile=None):
         from sfa.storage.alchemy import dbsession
+        from sfa.storage.model import RegRecord
+        hrn = Xrn(xrn).get_hrn()
         request=dbsession.query(RegRecord).filter_by(hrn=hrn)
         if type: request = request.filter_by(type=type)
         record=request.first()
