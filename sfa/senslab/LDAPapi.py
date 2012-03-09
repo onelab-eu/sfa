@@ -68,7 +68,7 @@ class LDAPapi :
 		rindex=self.ldapserv.search("ou=people,dc=senslab,dc=info",ldap.SCOPE_SUBTREE,ldapfilter, ['mail','givenName', 'sn', 'uid','sshPublicKey'])
 		ldapresponse=self.ldapserv.result(rindex,1)
 		for ldapentry in ldapresponse[1]:
-                        print>>sys.stderr, " \r\n \t LDAP : ! hrn ldapentry[1]['uid'][0]%s " %(ldapentry[1]['uid'][0])
+                        #print>>sys.stderr, " \r\n \t LDAP : ! mail ldapentry[1]['mail'][0] %s " %(ldapentry[1]['mail'][0])
                          
                         tmpname = ldapentry[1]['uid'][0]
                         
@@ -76,8 +76,10 @@ class LDAPapi :
                             tmpname = 'avakian'
 
 			hrn=self.authname+"."+ tmpname
-
-                       
+                        
+                        tmpemail = ldapentry[1]['mail'][0]
+                        if ldapentry[1]['mail'][0] == "unknown":
+                            tmpemail = None
 #			uuid=create_uuid() 
 		
 #			RSA_KEY_STRING=ldapentry[1]['sshPublicKey'][0]
@@ -94,7 +96,8 @@ class LDAPapi :
                                 'pkey': ldapentry[1]['sshPublicKey'][0],
                                 #'uid': ldapentry[1]['uid'][0],
                                 'uid': tmpname ,
-				'email': ldapentry[1]['mail'][0],
+                                'email':tmpemail,
+				#'email': ldapentry[1]['mail'][0],
 				'first_name': ldapentry[1]['givenName'][0],
 				'last_name': ldapentry[1]['sn'][0],
 #				'phone': 'none',

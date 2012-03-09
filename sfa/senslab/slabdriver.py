@@ -6,8 +6,13 @@ from time import gmtime, strftime
 from sfa.util.faults import MissingSfaInfo , SliverDoesNotExist
 #from sfa.util.sfatime import datetime_to_string
 from sfa.util.sfalogging import logger
-from sfa.storage.table import SfaTable
+#from sfa.storage.table import SfaTable
 from sfa.util.defaultdict import defaultdict
+
+from sfa.storage.record import Record
+from sfa.storage.alchemy import dbsession
+from sfa.storage.model import RegRecord
+
 
 from sfa.trust.certificate import *
 from sfa.trust.credential import *
@@ -18,7 +23,7 @@ from sfa.rspecs.version_manager import VersionManager
 from sfa.rspecs.rspec import RSpec
 
 from sfa.util.xrn import hrn_to_urn, urn_to_sliver_id
-from sfa.util.plxrn import slicename_to_hrn, hostname_to_hrn, hrn_to_pl_slicename, hrn_to_pl_login_base
+from sfa.util.plxrn import slicename_to_hrn, hostname_to_hrn, hrn_to_pl_slicename
 
 ## thierry: everything that is API-related (i.e. handling incoming requests) 
 # is taken care of 
@@ -29,7 +34,7 @@ from sfa.senslab.OARrestapi import  OARrestapi
 from sfa.senslab.LDAPapi import LDAPapi
 #from sfa.senslab.SenslabImportUsers import SenslabImportUsers
 from sfa.senslab.parsing import parse_filter
-from sfa.senslab.slabpostgres import SlabDB
+from sfa.senslab.slabpostgres import SlabDB, slab_dbsession,SlabSliceDB
 from sfa.senslab.slabaggregate import SlabAggregate
 from sfa.senslab.slabslices import SlabSlices
 
@@ -66,7 +71,7 @@ class SlabDriver(Driver):
 	self.ldap = LDAPapi()
         #self.users = SenslabImportUsers()
         self.time_format = "%Y-%m-%d %H:%M:%S"
-        self.db = SlabDB()
+        self.db = SlabDB(config)
         #self.logger=sfa_logger()
         self.cache=None
         
@@ -97,16 +102,16 @@ class SlabDriver(Driver):
             if nodes:
                 top_level_status = 'ready'
             result['geni_urn'] = slice_urn
-            result['pl_login'] = sl['job_user']
+            result['slab_login'] = sl['job_user']
             
             timestamp = float(sl['startTime']) + float(sl['walltime'])
-            result['pl_expires'] = strftime(self.time_format, gmtime(float(timestamp)))
+            result['slab_expires'] = strftime(self.time_format, gmtime(float(timestamp)))
             
             resources = []
             for node in nodes:
                 res = {}
-                res['pl_hostname'] = node['hostname']
-                res['pl_boot_state'] = node['boot_state']
+                res['slab_hostname'] = node['hostname']
+                res['slab_boot_state'] = node['boot_state']
                 
                 sliver_id = urn_to_sliver_id(slice_urn, sl['record_id_slice'], node['node_id']) 
                 res['geni_urn'] = sliver_id
@@ -265,24 +270,24 @@ class SlabDriver(Driver):
     #No site or node register supported
     def register (self, sfa_record, hrn, pub_key):
         type = sfa_record['type']
-        pl_record = self.sfa_fields_to_pl_fields(type, hrn, sfa_record)
+        slab_record = self.sfa_fields_to_slab_fields(type, hrn, sfa_record)
     
         #if type == 'authority':
-            #sites = self.shell.GetSites([pl_record['login_base']])
+            #sites = self.shell.GetSites([slab_record['login_base']])
             #if not sites:
-                #pointer = self.shell.AddSite(pl_record)
+                #pointer = self.shell.AddSite(slab_record)
             #else:
                 #pointer = sites[0]['site_id']
     
         if type == 'slice':
             acceptable_fields=['url', 'instantiation', 'name', 'description']
-            for key in pl_record.keys():
+            for key in slab_record.keys():
                 if key not in acceptable_fields:
-                    pl_record.pop(key) 
+                    slab_record.pop(key) 
             print>>sys.stderr, " \r\n \t\t SLABDRIVER.PY register"
-            slices = self.GetSlices([pl_record['hrn']])
+            slices = self.GetSlices([slab_record['hrn']])
             if not slices:
-                    pointer = self.AddSlice(pl_record)
+                    pointer = self.AddSlice(slab_record)
             else:
                     pointer = slices[0]['slice_id']
     
@@ -312,10 +317,10 @@ class SlabDriver(Driver):
                 
         #No node adding outside OAR
         #elif type == 'node':
-            #login_base = hrn_to_pl_login_base(sfa_record['authority'])
-            #nodes = self.GetNodes([pl_record['hostname']])
+            #login_base = hrn_to_slab_login_base(sfa_record['authority'])
+            #nodes = self.GetNodes([slab_record['hostname']])
             #if not nodes:
-                #pointer = self.AddNode(login_base, pl_record)
+                #pointer = self.AddNode(login_base, slab_record)
             #else:
                 #pointer = nodes[0]['node_id']
     
@@ -334,10 +339,10 @@ class SlabDriver(Driver):
             #self.shell.UpdateSite(pointer, new_sfa_record)
     
         if type == "slice":
-            pl_record=self.sfa_fields_to_pl_fields(type, hrn, new_sfa_record)
-            if 'name' in pl_record:
-                pl_record.pop('name')
-                self.UpdateSlice(pointer, pl_record)
+            slab_record=self.sfa_fields_to_slab_fields(type, hrn, new_sfa_record)
+            if 'name' in slab_record:
+                slab_record.pop('name')
+                self.UpdateSlice(pointer, slab_record)
     
         elif type == "user":
             update_fields = {}
@@ -395,9 +400,28 @@ class SlabDriver(Driver):
         return True
             
     def GetPeers (self,auth = None, peer_filter=None, return_fields=None):
-        table = SfaTable()
+
+        existing_records = {}
+        existing_hrns_by_types= {}
+        all_records = dbsession.query(RegRecord).all
+        for record in all_records:
+            existing_records[record.hrn] = record
+            if record.type not in existing_hrns_by_types:
+                existing_hrns_by_types[record.type] = [record.hrn]
+            else:
+                existing_hrns_by_types.update({record.type:(existing_hrns_by_types[record.type].append(record.hrn))})
+                        
+        print >>sys.stderr, "\r\n \r\n SLABDRIVER GetPeers        existing_hrns_by_types %s " %( existing_hrns_by_types)
         return_records = [] 
-        records_list =  table.findObjects({'type':'authority+sa'})   
+        #records_list =  table.findObjects({'type':'authority+sa'})   
+        try:
+            for hrn in existing_hrns_by_types['authority+sa']:
+                records_list.append(existing_records[hrn])
+                print >>sys.stderr, "\r\n \r\n SLABDRIVER GetPeers  records_list  %s " %(records_list)
+                
+        except:
+                pass
+
         if not peer_filter and not return_fields:
             return records_list
         return_records = parse_filter(records_list,peer_filter, 'peers', return_fields) 
@@ -520,21 +544,25 @@ class SlabDriver(Driver):
         return_site_list = parse_filter(site_dict.values(), site_filter,'site', return_fields)
         return return_site_list
         
-    
+    #TODO : filtrer au niveau de la query voir sqlalchemy 
+    #http://docs.sqlalchemy.org/en/latest/orm/tutorial.html#returning-lists-and-scalars
     def GetSlices(self,slice_filter = None, return_fields=None):
 
-        sliceslist = self.db.find('slice_senslab',columns = ['oar_job_id', 'slice_hrn', 'record_id_slice','record_id_user'], record_filter=slice_filter)
-        
+        #sliceslist = self.db.find('slice_senslab',columns = ['oar_job_id', 'slice_hrn', 'record_id_slice','record_id_user'], record_filter=slice_filter)
+        sliceslist = slab_dbsession.query(SlabSliceDB).all()
+        #sliceslist = slices_records.order_by("record_id_slice").all()
+       
         print >>sys.stderr, " \r\n \r\n \tSLABDRIVER.PY  GetSlices  slices %s slice_filter %s " %(sliceslist,slice_filter)
-      
+       
         return_slice_list  = parse_filter(sliceslist, slice_filter,'slice', return_fields)
         
         if return_slice_list:
             for sl in return_slice_list:
-                login = sl['slice_hrn'].split(".")[1].split("_")[0]
+                #login = sl['slice_hrn'].split(".")[1].split("_")[0]
+                login = sl.slice_hrn.split(".")[1].split("_")[0]
                 print >>sys.stderr, " \r\n \r\n \tSLABDRIVER.PY  GetSlices  sl %s " %(sl)
-                if sl['oar_job_id'] is not -1: 
-                    rslt = self.GetJobs( sl['oar_job_id'],resources=False, username = login )
+                if sl.oar_job_id is not -1: 
+                    rslt = self.GetJobs( sl.oar_job_id,resources=False, username = login )
                     print >>sys.stderr, " \r\n \r\n \tSLABDRIVER.PY  GetSlices  GetJobs  %s " %(rslt)     
                     if rslt :
                         sl.update(rslt)
@@ -544,7 +572,7 @@ class SlabDriver(Driver):
                     else :
                         sl['oar_job_id'] = '-1'
                         sl.update({'hrn':str(sl['slice_hrn'])})
-                        self.db.update_senslab_slice(sl)
+                        #self.db.update_senslab_slice(sl)
             
             print >>sys.stderr, " \r\n \r\n \tSLABDRIVER.PY  GetSlices  return_slice_list  %s" %(return_slice_list)  
             return  return_slice_list
@@ -581,57 +609,58 @@ class SlabDriver(Driver):
     # @param type type of record (user, slice, ...)
     # @param hrn human readable name
     # @param sfa_fields dictionary of SFA fields
-    # @param pl_fields dictionary of PLC fields (output)
+    # @param slab_fields dictionary of PLC fields (output)
 
-    def sfa_fields_to_pl_fields(self, type, hrn, record):
+    def sfa_fields_to_slab_fields(self, type, hrn, record):
 
         def convert_ints(tmpdict, int_fields):
             for field in int_fields:
                 if field in tmpdict:
                     tmpdict[field] = int(tmpdict[field])
 
-        pl_record = {}
+        slab_record = {}
         #for field in record:
-        #    pl_record[field] = record[field]
+        #    slab_record[field] = record[field]
  
         if type == "slice":
             #instantion used in get_slivers ? 
-            if not "instantiation" in pl_record:
-                pl_record["instantiation"] = "senslab-instantiated"
-            pl_record["hrn"] = hrn_to_pl_slicename(hrn)
+            if not "instantiation" in slab_record:
+                slab_record["instantiation"] = "senslab-instantiated"
+            slab_record["hrn"] = hrn_to_pl_slicename(hrn)
+            print >>sys.stderr, "\r\n \r\n \t SLABDRIVER.PY sfa_fields_to_slab_fields slab_record %s hrn_to_pl_slicename(hrn) hrn %s " %(slab_record['hrn'], hrn)
 	    if "url" in record:
-               pl_record["url"] = record["url"]
+               slab_record["url"] = record["url"]
 	    if "description" in record:
-	        pl_record["description"] = record["description"]
+	        slab_record["description"] = record["description"]
 	    if "expires" in record:
-	        pl_record["expires"] = int(record["expires"])
+	        slab_record["expires"] = int(record["expires"])
                 
         #nodes added by OAR only and then imported to SFA
         #elif type == "node":
-            #if not "hostname" in pl_record:
+            #if not "hostname" in slab_record:
                 #if not "hostname" in record:
                     #raise MissingSfaInfo("hostname")
-                #pl_record["hostname"] = record["hostname"]
-            #if not "model" in pl_record:
-                #pl_record["model"] = "geni"
+                #slab_record["hostname"] = record["hostname"]
+            #if not "model" in slab_record:
+                #slab_record["model"] = "geni"
                 
         #One authority only 
         #elif type == "authority":
-            #pl_record["login_base"] = hrn_to_pl_login_base(hrn)
+            #slab_record["login_base"] = hrn_to_slab_login_base(hrn)
 
-            #if not "name" in pl_record:
-                #pl_record["name"] = hrn
+            #if not "name" in slab_record:
+                #slab_record["name"] = hrn
 
-            #if not "abbreviated_name" in pl_record:
-                #pl_record["abbreviated_name"] = hrn
+            #if not "abbreviated_name" in slab_record:
+                #slab_record["abbreviated_name"] = hrn
 
-            #if not "enabled" in pl_record:
-                #pl_record["enabled"] = True
+            #if not "enabled" in slab_record:
+                #slab_record["enabled"] = True
 
-            #if not "is_public" in pl_record:
-                #pl_record["is_public"] = True
+            #if not "is_public" in slab_record:
+                #slab_record["is_public"] = True
 
-        return pl_record
+        return slab_record
 
   
                  
@@ -752,9 +781,21 @@ class SlabDriver(Driver):
         # we obtain
         
         # get the sfa records
-        table = SfaTable()
+        #table = SfaTable()
+        existing_records = {}
+        all_records = dbsession.query(RegRecord).all
+        for record in all_records:
+            existing_records[(record.type,record.pointer)] = record
+            
+        print >>sys.stderr, " \r\r\n SLABDRIVER fill_record_sfa_info existing_records %s "  %(existing_records)
         person_list, persons = [], {}
-        person_list = table.find({'type': 'user', 'pointer': person_ids})
+        #person_list = table.find({'type': 'user', 'pointer': person_ids})
+        try:
+            for p_id in person_ids:
+                person_list.append( existing_records.get(('user',p_id)))
+        except KeyError:
+            print >>sys.stderr, " \r\r\n SLABDRIVER fill_record_sfa_info ERRRRRRRRRROR"
+                 
         # create a hrns keyed on the sfa record's pointer.
         # Its possible for  multiple records to have the same pointer so
         # the dict's value will be a list of hrns.
@@ -763,10 +804,10 @@ class SlabDriver(Driver):
             persons[person['pointer']].append(person)
 
         # get the pl records
-        pl_person_list, pl_persons = [], {}
-        pl_person_list = self.GetPersons(person_ids, ['person_id', 'roles'])
-        pl_persons = list_to_dict(pl_person_list, 'person_id')
-        #print>>sys.stderr, "\r\n \r\n _fill_record_sfa_info ___  _list %s \r\n \t\t SenslabUsers.GetPersons ['person_id', 'roles'] pl_persons %s \r\n records %s" %(pl_person_list, pl_persons,records) 
+        slab_person_list, slab_persons = [], {}
+        slab_person_list = self.GetPersons(person_ids, ['person_id', 'roles'])
+        slab_persons = list_to_dict(slab_person_list, 'person_id')
+        #print>>sys.stderr, "\r\n \r\n _fill_record_sfa_info ___  _list %s \r\n \t\t SenslabUsers.GetPersons ['person_id', 'roles'] slab_persons %s \r\n records %s" %(slab_person_list, slab_persons,records) 
         # fill sfa info
 	
         for record in records:
@@ -788,8 +829,8 @@ class SlabDriver(Driver):
                     record['researcher'].extend(hrns)                
 
                 # pis at the slice's site
-                pl_pis = site_pis[record['site_id']]
-                pi_ids = [pi['person_id'] for pi in pl_pis]
+                slab_pis = site_pis[record['site_id']]
+                pi_ids = [pi['person_id'] for pi in slab_pis]
                 for person_id in pi_ids:
                     hrns = [person['hrn'] for person in persons[person_id]]
                     record['PI'].extend(hrns)
@@ -801,11 +842,11 @@ class SlabDriver(Driver):
                 record['operator'] = []
                 record['owner'] = []
                 for pointer in record['person_ids']:
-                    if pointer not in persons or pointer not in pl_persons:
+                    if pointer not in persons or pointer not in slab_persons:
                         # this means there is not sfa or pl record for this user
                         continue   
                     hrns = [person['hrn'] for person in persons[pointer]] 
-                    roles = pl_persons[pointer]['roles']   
+                    roles = slab_persons[pointer]['roles']   
                     if 'pi' in roles:
                         record['PI'].extend(hrns)
                     if 'tech' in roles:
@@ -837,19 +878,26 @@ class SlabDriver(Driver):
 	print >>sys.stderr, "\r\n \t\t BEFORE fill_record_info %s" %(records)	
         if not isinstance(records, list):
             records = [records]
-	#print >>sys.stderr, "\r\n \t\t BEFORE fill_record_pl_info %s" %(records)	
+		
         parkour = records 
         try:
             for record in parkour:
                     
                 if str(record['type']) == 'slice':
                     print >>sys.stderr, "\r\n \t\t  SLABDRIVER.PY fill_record_info record %s" %(record)
-                    sfatable = SfaTable()
+                    #sfatable = SfaTable()
+                    
+                    existing_records_by_id = {}
+                    all_records = dbsession.query(RegRecord).all
+                    for rec in all_records:
+                        existing_records_by_id[rec.record_id] = rec
+                    print >>sys.stderr, "\r\n \t\t SLABDRIVER.PY  fill_record_info existing_records_by_id %s" %(existing_records_by_id)
+                        
                     recslice = self.db.find('slice',str(record['hrn']))
                     if isinstance(recslice,list) and len(recslice) == 1:
                         recslice = recslice[0]
-                    recuser = sfatable.find(  recslice['record_id_user'], ['hrn'])
-                    
+                    #recuser = sfatable.find(  recslice['record_id_user'], ['hrn'])
+                    recuser = existing_records_by_id[recslice['record_id_user']]['hrn']
                     print >>sys.stderr, "\r\n \t\t  SLABDRIVER.PY fill_record_info %s" %(recuser)
                     
                     if isinstance(recuser,list) and len(recuser) == 1:
@@ -874,8 +922,8 @@ class SlabDriver(Driver):
             print >>sys.stderr, "\r\n \t\t SLABDRIVER fill_record_info  EXCEPTION RECORDS : %s" %(records)	
             return
         
-        #self.fill_record_pl_info(records)
-	##print >>sys.stderr, "\r\n \t\t after fill_record_pl_info %s" %(records)	
+        #self.fill_record_slab_info(records)
+	##print >>sys.stderr, "\r\n \t\t after fill_record_slab_info %s" %(records)	
         #self.fill_record_sfa_info(records)
 	#print >>sys.stderr, "\r\n \t\t after fill_record_sfa_info"
 	

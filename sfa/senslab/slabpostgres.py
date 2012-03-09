@@ -1,24 +1,26 @@
-import psycopg2
-import psycopg2.extensions
-psycopg2.extensions.register_type(psycopg2.extensions.UNICODE)
-# UNICODEARRAY not exported yet
-psycopg2.extensions.register_type(psycopg2._psycopg.UNICODEARRAY)
+#import psycopg2
+#import psycopg2.extensions
+#psycopg2.extensions.register_type(psycopg2.extensions.UNICODE)
+## UNICODEARRAY not exported yet
+#psycopg2.extensions.register_type(psycopg2._psycopg.UNICODEARRAY)
 from sfa.util.config import Config
-from sfa.storage.table import SfaTable
+#from sfa.storage.table import SfaTable
 from sfa.util.sfalogging import logger
 # allow to run sfa2wsdl if this is missing (for mac)
 import sys
-try: import pgdb
-except: print >> sys.stderr, "WARNING, could not import pgdb"
-
+#try: import pgdb
+#except: print >> sys.stderr, "WARNING, could not import pgdb"
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
 
 from sqlalchemy import Column, Integer, String, DateTime
 from sqlalchemy import Table, Column, MetaData, join, ForeignKey
-from sfa.storage.model import Base
+import sfa.storage.model as model
+
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, backref
 
-from sfa.storage.alchemy import dbsession, engine 
+
 from sqlalchemy import MetaData, Table
 from sqlalchemy.exc import NoSuchTableError
 
@@ -33,14 +35,14 @@ tablenames_dict = {'slice_senslab': slice_table}
 
 
 
-SlabBase = declarative_base(metadata= Base.metadata, bind=engine)
+SlabBase = declarative_base()
 
 
 
 
 class SlabSliceDB (SlabBase):
-    __tablename__ = 'slice_senslab'
-    record_id_user = Column(Integer, ForeignKey("records.record_id"), primary_key=True)
+    __tablename__ = 'slice_senslab' 
+    record_id_user = Column(Integer, primary_key=True)
     oar_job_id = Column( Integer,default = -1)
     record_id_slice = Column(Integer)
     slice_hrn = Column(String,nullable = False)
@@ -57,19 +59,59 @@ class SlabSliceDB (SlabBase):
         if record_id_user: 
             self.record_id_user= record_id_user
             
+    def __repr__(self):
+        result="<Record id user =%s, slice hrn=%s, oar_job id=%s,Record id slice =%s" % \
+                (self.record_id_user, self.slice_hrn, self.oar_job_id, self.record_id_slice)
+        result += ">"
+        return result
+          
             
 
           
 class SlabDB:
-    def __init__(self):
-        self.config = Config()
-        self.connection = None
-        self.init_create_query()
+    def __init__(self,config):
+        #self.config = Config()
+        #self.connection = None
+        self.sl_base = SlabBase
+        #self.init_create_query()
+          
+        dbname="slab_sfa"
+        # will be created lazily on-demand
+        self.slab_session = None
+        # the former PostgreSQL.py used the psycopg2 directly and was doing
+        #self.connection.set_client_encoding("UNICODE")
+        # it's unclear how to achieve this in sqlalchemy, nor if it's needed at all
+        # http://www.sqlalchemy.org/docs/dialects/postgresql.html#unicode
+        # we indeed have /var/lib/pgsql/data/postgresql.conf where
+        # this setting is unset, it might be an angle to tweak that if need be
+        # try a unix socket first - omitting the hostname does the trick
+        unix_url = "postgresql+psycopg2://%s:%s@:%s/%s"%\
+            (config.SFA_DB_USER,config.SFA_DB_PASSWORD,config.SFA_DB_PORT,dbname)
+        print >>sys.stderr, " \r\n \r\n SLAPOSTGRES INIT unix_url %s" %(unix_url)
+        # the TCP fallback method
+        tcp_url = "postgresql+psycopg2://%s:%s@%s:%s/%s"%\
+            (config.SFA_DB_USER,config.SFA_DB_PASSWORD,config.SFA_DB_HOST,config.SFA_DB_PORT,dbname)
+        for url in [ unix_url, tcp_url ] :
+            try:
+                self.slab_engine = create_engine (url,echo_pool=True,echo=True)
+                self.check()
+                self.url=url
+                return
+            except:
+                pass
+        self.slab_engine=None
+        raise Exception,"Could not connect to database"
+
+    def check (self):
+        self.slab_engine.execute ("select 1").scalar()
+
+
+    def session (self):
+        if self.slab_session is None:
+            Session=sessionmaker ()
+            self.slab_session=Session(bind=self.slab_engine)
+        return self.slab_session
         
-    def init_create_query(self):
-        sfatable = SfaTable()
-        slice_table['record_id_user'] =  slice_table['record_id_user'].replace("X",sfatable.tablename)
-        print sys.stderr, " \r\n \r\n slice_table %s ",slice_table 
         
     def cursor(self):
         if self.connection is None:
@@ -141,8 +183,9 @@ class SlabDB:
         
        
         try:
-            metadata = MetaData (bind=engine)
+            metadata = MetaData (bind=self.slab_engine)
             table=Table (tablename, metadata, autoload=True)
+           
             return True
         except NoSuchTableError:
             print>>sys.stderr, " \r\n \r\n \t SLABPOSTGRES EXISTS NOPE! tablename %s " %(tablename)
@@ -167,47 +210,13 @@ class SlabDB:
         the table schema.
     
         """
-        print>>sys.stderr, " \r\n \r\n \t SLABPOSTGRES CREATETABLE " 
-        SlabBase.metadata.create_all(engine)
-        print>>sys.stderr, " \r\n \r\n \t SLABPOSTGRES CREATETABLE  YAAAAAAAAAAY" 
-        #mark = self.cursor()
-        #tablelist =[]
-        #if tablename not in tablenames_dict:
-            #logger.error("Tablename unknown - creation failed")
-            #return
-            
-        #T  = tablenames_dict[tablename]
-        #print>>sys.stderr, " \r\n \r\n \t SLABPOSTGRES.PY T %s" %(T)
-        #for k in T.keys(): 
-            #tmp = str(k) +' ' + T[k]
-            #tablelist.append(tmp)
-            
-        #end_of_statement = ",".join(tablelist)
-        
-        #statement = "CREATE TABLE " + tablename + " ("+ end_of_statement +");"
-        #print>>sys.stderr, " \r\n \r\n \t SLABPOSTGRES.PY statement  %s" %(statement)
-        ##template = "CREATE INDEX %s_%s_idx ON %s (%s);"
-        ##indexes = [template % ( self.tablename, field, self.tablename, field) \
-                    ##for field in ['hrn', 'type', 'authority', 'peer_authority', 'pointer']]
-        ##IF EXISTS doenst exist in postgres < 8.2
-        #try: 
-            #print>>sys.stderr, " \r\n \r\n \t SLABPOSTGRES.PY AVANT LE DROP IF EXISTS"
-            #mark.execute('DROP TABLE IF EXISTS ' + tablename +';')
-            
-        #except:
-            #try:
-                #mark.execute('DROP TABLE' + tablename +';')
-            #except:
-                #pass
-        #print>>sys.stderr, " \r\n \r\n \t SLABPOSTGRES.PY AVANT EXECUTE statement ",statement     
-        #mark.execute(statement)
-        #print>>sys.stderr, " \r\n \r\n \t SLABPOSTGRES.PY OUEEEEEEEEEEEEEEEEEEEEEE "   
-        ##for index in indexes:
-            ##self.db.do(index)
-        #self.connection.commit()
-        #print>>sys.stderr, " \r\n \r\n \t SLABPOSTGRES.PY COMMIT DE OUFGUEDIN "  
-        #mark.close()
-        #self.close()
+        #metadata = MetaData (bind=engine)
+        #table=Table (tablename, metadata, autoload=True)
+        #records = Table ( 'records', SlabBase.metadata,autoload=True )
+        #records = Table ( 'records', SlabBase.metadata,Column ('record_id', Integer, primary_key=True), )
+        print>>sys.stderr, " \r\n \r\n \t SLABPOSTGRES createtable SlabBase.metadata.sorted_tables %s \r\n engine %s" %(SlabBase.metadata.sorted_tables , slab_engine)
+        #table.create(bind =engine)
+        SlabBase.metadata.create_all(slab_engine)
         return
     
 
@@ -229,33 +238,33 @@ class SlabDB:
         self.close()
         return
     
-    def insert_slab_slice(self, person_rec):
-        """
-        Inserts information about a user and his slice into the slice table. 
+    #def insert_slab_slice(self, person_rec):
+        #"""
+        #Inserts information about a user and his slice into the slice table. 
     
-        """
-        sfatable = SfaTable()
-        keys = slice_table.keys()
+        #"""
+        #sfatable = SfaTable()
+        #keys = slice_table.keys()
         
-        #returns a list of records from the sfa table (dicts)
-        #the filters specified will return only one matching record, into a list of dicts
-        #Finds the slice associated with the user (Senslabs slices  hrns contains the user hrn)
+        ##returns a list of records from the sfa table (dicts)
+        ##the filters specified will return only one matching record, into a list of dicts
+        ##Finds the slice associated with the user (Senslabs slices  hrns contains the user hrn)
 
-        userrecord = sfatable.find({'hrn': person_rec['hrn'], 'type':'user'})
-        slicerec =  sfatable.find({'hrn': person_rec['hrn']+'_slice', 'type':'slice'})
-        if slicerec :
-            if (isinstance (userrecord, list)):
-                userrecord = userrecord[0]
-            if (isinstance (slicerec, list)):
-                slicerec = slicerec[0]
+        #userrecord = sfatable.find({'hrn': person_rec['hrn'], 'type':'user'})
+        #slicerec =  sfatable.find({'hrn': person_rec['hrn']+'_slice', 'type':'slice'})
+        #if slicerec :
+            #if (isinstance (userrecord, list)):
+                #userrecord = userrecord[0]
+            #if (isinstance (slicerec, list)):
+                #slicerec = slicerec[0]
                 
-            oar_dflt_jobid = -1
-            values = [ str(oar_dflt_jobid), ' \''+ str(slicerec['hrn']) + '\'', str(userrecord['record_id']), str( slicerec['record_id'])]
+            #oar_dflt_jobid = -1
+            #values = [ str(oar_dflt_jobid), ' \''+ str(slicerec['hrn']) + '\'', str(userrecord['record_id']), str( slicerec['record_id'])]
     
-            self.insert('slice_senslab', keys, values)
-        else :
-            logger.error("Trying to import a not senslab slice")
-        return
+            #self.insert('slice_senslab', keys, values)
+        #else :
+            #logger.error("Trying to import a not senslab slice")
+        #return
         
         
     def update(self, table, column_names, values, whereclause, valueclause):
@@ -288,18 +297,18 @@ class SlabDB:
 
         return
 
-    def update_senslab_slice(self, slice_rec):
-        sfatable = SfaTable()
-        hrn = str(slice_rec['hrn']) 
-        userhrn = hrn.rstrip('_slice')
-        userrecord = sfatable.find({'hrn': userhrn, 'type':'user'})
-        print>>sys.stderr, " \r\n \r\n \t SLABPOSTGRES.PY  update_senslab_slice : userrecord  %s slice_rec %s userhrn %s" %( userrecord, slice_rec, userhrn)
-        if (isinstance (userrecord, list)):
-                userrecord = userrecord[0]
-        columns = [ 'record_id_user', 'oar_job_id']
-        values = [slice_rec['record_id_user'],slice_rec['oar_job_id']]
-        self.update('slice',columns, values,'record_id_slice', slice_rec['record_id_slice'])
-        return 
+    #def update_senslab_slice(self, slice_rec):
+        #sfatable = SfaTable()
+        #hrn = str(slice_rec['hrn']) 
+        #userhrn = hrn.rstrip('_slice')
+        #userrecord = sfatable.find({'hrn': userhrn, 'type':'user'})
+        #print>>sys.stderr, " \r\n \r\n \t SLABPOSTGRES.PY  update_senslab_slice : userrecord  %s slice_rec %s userhrn %s" %( userrecord, slice_rec, userhrn)
+        #if (isinstance (userrecord, list)):
+                #userrecord = userrecord[0]
+        #columns = [ 'record_id_user', 'oar_job_id']
+        #values = [slice_rec['record_id_user'],slice_rec['oar_job_id']]
+        #self.update('slice',columns, values,'record_id_slice', slice_rec['record_id_slice'])
+        #return 
         
        
     def find(self, tablename,record_filter = None, columns=None):  
@@ -343,3 +352,10 @@ class SlabDB:
             results = [results]
         return results
        
+
+
+from sfa.util.config import Config
+
+slab_alchemy= SlabDB(Config())
+slab_engine=slab_alchemy.slab_engine
+slab_dbsession=slab_alchemy.session()
