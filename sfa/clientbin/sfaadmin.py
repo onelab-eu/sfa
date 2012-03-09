@@ -126,7 +126,7 @@ class RegistryCommands(Commands):
                     os.unlink(path)
         
     
-class CerficiateCommands(Commands):
+class CertCommands(Commands):
     
     def import_gid(self, xrn):
         pass
@@ -238,7 +238,7 @@ class SliceManagerCommands(AggregateCommands):
         self.api= Generic.the_flavour().make_api(interface='slicemgr')
 
 
-CATEGORIES = {'cert': CertificateCommands,
+CATEGORIES = {'cert': CertCommands,
               'registry': RegistryCommands,
               'aggregate': AggregateCommands,
               'slicemgr': SliceManagerCommands}
