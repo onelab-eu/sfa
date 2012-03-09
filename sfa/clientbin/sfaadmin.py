@@ -238,24 +238,35 @@ class SliceManagerCommands(AggregateCommands):
         self.api= Generic.the_flavour().make_api(interface='slicemgr')
 
 
-CATEGORIES = {'registry': RegistryCommands,
+CATEGORIES = {'cert': CertificateCommands,
+              'registry': RegistryCommands,
               'aggregate': AggregateCommands,
               'slicemgr': SliceManagerCommands}
 
+def category_usage():
+    print "Available categories:"
+        for k in CATEGORIES:
+            print "\t%s" % k
 def main():
     argv = copy.deepcopy(sys.argv)
     script_name = argv.pop(0)
+    # ensure category is specified    
     if len(argv) < 1:
         print script_name + " category action [<args>]"
-        print "Available categories:"
-        for k in CATEGORIES:
-            print "\t%s" % k
+        category_usage()
         sys.exit(2)
 
+    # ensure category is valid
     category = argv.pop(0)
     usage = "%%prog %s action <args> [options]" % (category)
     parser = OptionParser(usage=usage)
-    command_class =  CATEGORIES[category]
+    command_class =  CATEGORIES.get(category, None)
+    if not command_class:
+        print "no such category %s " % category
+        category_usage()
+        sys.exit(2)  
+    
+    # ensure command is valid      
     command_instance = command_class()
     actions = command_instance._get_commands()
     if len(argv) < 1:
@@ -272,6 +283,7 @@ def main():
         action = argv.pop(0)
         command = getattr(command_instance, action)
 
+    # ensure options are valid
     options = getattr(command, 'options', [])
     usage = "%%prog %s %s <args> [options]" % (category, action)
     parser = OptionParser(usage=usage)
@@ -285,6 +297,7 @@ def main():
         if v is None:
             del cmd_kwds[k]
 
+    # execute commadn
     try:
         command(*cmd_args, **cmd_kwds)
         sys.exit(0)
