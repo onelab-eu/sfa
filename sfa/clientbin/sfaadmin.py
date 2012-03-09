@@ -135,6 +135,7 @@ class CertCommands(Commands):
     @args('-t', '--type', dest='type', metavar='<type>', help='object type', default=None)
     @args('-o', '--outfile', dest='outfile', metavar='<outfile>', help='output file', default=None)
     def export(self, xrn, type=None, outfile=None):
+        from sfa.storage.alchemy import dbsession
         request=dbsession.query(RegRecord).filter_by(hrn=hrn)
         if type: request = request.filter_by(type=type)
         record=request.first()
