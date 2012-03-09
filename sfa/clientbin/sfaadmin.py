@@ -245,8 +245,9 @@ CATEGORIES = {'cert': CertificateCommands,
 
 def category_usage():
     print "Available categories:"
-        for k in CATEGORIES:
-            print "\t%s" % k
+    for k in CATEGORIES:
+        print "\t%s" % k
+
 def main():
     argv = copy.deepcopy(sys.argv)
     script_name = argv.pop(0)
