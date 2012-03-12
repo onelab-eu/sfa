@@ -110,6 +110,6 @@ class Importer:
             testbed_importer = importer_class (auth_hierarchy, self.logger)
             if testbed_importer:
                 testbed_importer.add_options(options)
-                testbed_importer.run (parser)
+                testbed_importer.run (options)
 
             
