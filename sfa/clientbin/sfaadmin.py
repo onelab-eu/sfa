@@ -82,7 +82,9 @@ class RegistryCommands(Commands):
    
 
     def import_registry(self):
-        pass
+        from sfa.importer import Importer
+        importer = Importer()
+        importer.run()
  
     
     @args('-a', '--all', dest='all', metavar='<all>', action='store_true', default=False,
@@ -90,7 +92,7 @@ class RegistryCommands(Commands):
     @args('-c', '--certs', dest='certs', metavar='<certs>', action='store_true', default=False,
           help='Remove all cached certs/gids found in %s' % Hierarchy().basedir )
     @args('-0', '--no-reinit', dest='reinit', metavar='<reinit>', action='store_false', default=True,
-          help='By default a new DB schema is installed after the cleanup; this option prevents that')
+          help='Prevents new DB schema from being installed after cleanup')
     def nuke(self, all=False, certs=False, reinit=True):
         from sfa.storage.dbschema import DBSchema
         from sfa.util.sfalogging import _SfaLogger
