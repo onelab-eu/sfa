@@ -105,9 +105,9 @@ class Importer:
         generic=Generic.the_flavour()
         importer_class = generic.importer_class()
         if importer_class:
-            logger.info ("Using flavour %s for importing (class %s)"%\
+            self.logger.info ("Using flavour %s for importing (class %s)"%\
                          (generic.flavour,importer_class.__name__))
-            testbed_importer = importer_class (auth_hierarchy, logger)
+            testbed_importer = importer_class (auth_hierarchy, self.logger)
             if testbed_importer:
                 testbed_importer.add_options(options)
                 testbed_importer.run (parser)
