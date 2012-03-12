@@ -85,7 +85,6 @@ class RegistryCommands(Commands):
         from sfa.importer import Importer
         importer = Importer()
         importer.run()
- 
     
     @args('-a', '--all', dest='all', metavar='<all>', action='store_true', default=False,
           help='Remove all registry records and all files in %s area' % Hierarchy().basedir)
@@ -105,12 +104,12 @@ class RegistryCommands(Commands):
         # for convenience we re-create the schema here, so there's no need for an explicit
         # service sfa restart
         # however in some (upgrade) scenarios this might be wrong
-        if options.reinit:
+        if reinit:
             logger.info("re-creating empty schema")
             dbschema.init_or_upgrade()
 
         # remove the server certificate and all gids found in /var/lib/sfa/authorities
-        if options.clean_certs:
+        if certs:
             logger.info("Purging cached certificates")
             for (dir, _, files) in os.walk('/var/lib/sfa/authorities'):
                 for file in files:
@@ -119,7 +118,7 @@ class RegistryCommands(Commands):
                         os.unlink(path)
 
         # just remove all files that do not match 'server.key' or 'server.cert'
-        if options.all:
+        if all:
             logger.info("Purging registry filesystem cache")
             preserved_files = [ 'server.key', 'server.cert']
             for (dir,_,files) in os.walk(Hierarchy().basedir):
@@ -277,18 +276,18 @@ def main():
     command_instance = command_class()
     actions = command_instance._get_commands()
     if len(argv) < 1:
-        if hasattr(command_instance, '__call__'):
-            action = ''
-            command = command_instance.__call__
-        else:
-            print script_name + " category action [<args>]"
-            print "Available actions for %s category:" % category
-            for k in actions:
-                print "\t%s" % k 
-            sys.exit(2)
+        action = '__call__'
     else:
         action = argv.pop(0)
+    
+    if hasattr(command_instance, action):
         command = getattr(command_instance, action)
+    else:
+        print script_name + " category action [<args>]"
+        print "Available actions for %s category:" % category
+        for k in actions:
+            print "\t%s" % k
+        sys.exit(2)
 
     # ensure options are valid
     options = getattr(command, 'options', [])
