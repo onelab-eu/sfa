@@ -19,7 +19,7 @@ class Importer:
     def __init__(self):
         self.config = Config()
         self.logger = _SfaLogger(logfile='/var/log/sfa_import.log', loggername='importlog')
-        self.logger.setLevelFromOptVerbose(config.SFA_API_LOGLEVEL)
+        self.logger.setLevelFromOptVerbose(self.config.SFA_API_LOGLEVEL)
         self.auth_hierarchy = Hierarchy ()
         self.TrustedRoots = TrustedRoots(self.config.get_trustedroots_dir())    
    
