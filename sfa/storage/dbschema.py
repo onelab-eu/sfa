@@ -120,7 +120,10 @@ class DBSchema:
     def nuke (self):
         model.drop_tables(self.engine)
         # so in this case it's like we haven't initialized the db at all
-        migrate.drop_version_control (self.url, self.repository)
+        try:
+            migrate.drop_version_control (self.url, self.repository)
+        except migrate.exceptions.DatabaseNotControlledError:
+            logger.log_exc("Failed to drop version control")
         
 
 if __name__ == '__main__':

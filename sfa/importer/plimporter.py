@@ -155,7 +155,8 @@ class PlImporter:
         key_ids = []
         for person in persons:
             key_ids.extend(person['key_ids'])
-        keys = shell.GetKeys( {'peer_id': None, 'key_id': key_ids} )
+        keys = shell.GetKeys( {'peer_id': None, 'key_id': key_ids,
+                               'key_type': 'ssh'} )
         # create a hash of keys by key_id
         keys_by_id = dict ( [ ( key['key_id'], key ) for key in keys ] ) 
         # create a dict person_id -> [ (plc)keys ]
@@ -163,7 +164,9 @@ class PlImporter:
         for person in persons:
             pubkeys = []
             for key_id in person['key_ids']:
-                pubkeys.append(keys_by_id[key_id])
+                key = keys_by_id[key_id]
+                if key['key_type'] == 'ssh': 
+                    pubkeys.append(key)
             keys_by_person_id[person['person_id']] = pubkeys
         # Get all plc nodes  
         nodes = shell.GetNodes( {'peer_id': None}, ['node_id', 'hostname', 'site_id'])
