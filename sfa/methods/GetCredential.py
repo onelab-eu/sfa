@@ -44,5 +44,5 @@ class GetCredential(Method):
         origin_hrn = Credential(string=valid_creds[0]).get_gid_caller().get_hrn()
         self.api.logger.info("interface: %s\tcaller-hrn: %s\ttarget-hrn: %s\tmethod-name: %s"%(self.api.interface, origin_hrn, hrn, self.name))	
 
-        return self.api.manager.GetCredential(self.api, xrn, self.api.auth.client_gid.get_urn())
+        return self.api.manager.GetCredential(self.api, xrn, type, self.api.auth.client_gid.get_urn())
 

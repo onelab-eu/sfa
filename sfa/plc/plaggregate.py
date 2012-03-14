@@ -135,11 +135,12 @@ class PlAggregate:
         
         return (slice, slivers)
 
-    def get_nodes_and_links(self, slice=None,slivers=[], options={}):
+    def get_nodes_and_links(self, slice_xrn, slice=None,slivers=[], options={}):
         # if we are dealing with a slice that has no node just return 
         # and empty list    
-        if not slice or  not slice['node_ids']:
-            return ([],[])
+        if slice_xrn:
+            if not slice or not slice['node_ids']:
+                return ([],[])
 
         filter = {}
         tags_filter = {}
@@ -248,7 +249,7 @@ class PlAggregate:
         if slice and 'expires' in slice:
             rspec.xml.set('expires',  datetime_to_string(utcparse(slice['expires'])))
 
-        nodes, links = self.get_nodes_and_links(slice, slivers)
+        nodes, links = self.get_nodes_and_links(slice_xrn, slice, slivers)
         rspec.version.add_nodes(nodes)
         rspec.version.add_links(links)
         

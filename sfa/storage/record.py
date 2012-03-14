@@ -14,6 +14,10 @@ class Record:
             xml_dict = xml_record.todict()
             self.load_from_dict(xml_dict)  
 
+
+    def get_field(self, field):
+        return self.__dict__.get(field, None)
+
     # xxx fixme
     # turns out the date_created field is received by the client as a 'created' int
     # (and 'last_updated' does not make it at all)
@@ -33,6 +37,9 @@ class Record:
         d=self.__dict__
         keys=[k for k in d.keys() if not k.startswith('_')]
         return dict ( [ (k,d[k]) for k in keys ] )
+    
+    def toxml(self):
+        return self.save_as_xml()
 
     def load_from_dict (self, d):
         for (k,v) in d.iteritems():
@@ -44,14 +51,13 @@ class Record:
     # in addition we provide convenience for converting to and from xml records
     # for this purpose only, we need the subclasses to define 'fields' as either
     # a list or a dictionary
-    def xml_fields (self):
-        fields=self.fields
-        if isinstance(fields,dict): fields=fields.keys()
+    def fields (self):
+        fields = self.__dict__.keys()
         return fields
 
     def save_as_xml (self):
         # xxx not sure about the scope here
-        input_dict = dict( [ (key, getattr(self.key), ) for key in self.xml_fields() if getattr(self,key,None) ] )
+        input_dict = dict( [ (key, getattr(self,key)) for key in self.fields() if getattr(self,key,None) ] )
         xml_record=XML("<record />")
         xml_record.parse_dict (input_dict)
         return xml_record.toxml()
@@ -71,29 +77,23 @@ class Record:
             raise Exception, "Invalid format %s" % format
 
     def dump_text(self, dump_parents=False):
-        # print core fields in this order
-        core_fields = [ 'hrn', 'type', 'authority', 'date_created', 'created', 'last_updated', 'gid',  ]
         print "".join(['=' for i in range(40)])
         print "RECORD"
-        print "    hrn:", self.hrn
-        print "    type:", self.type
-        print "    authority:", self.authority
-        print "    date created:", self.date_repr( ['date_created','created'] )
-        print "    last updated:", self.date_repr('last_updated')
-        print "    gid:"
-        if self.gid:
-            print GID(self.gid).dump_string(8, dump_parents)    
-
         # print remaining fields
-        for attrib_name in dir(self):
+        for attrib_name in self.fields():
             attrib = getattr(self, attrib_name)
             # skip internals
             if attrib_name.startswith('_'):     continue
-            # skip core fields
-            if attrib_name in core_fields:      continue
             # skip callables
             if callable (attrib):               continue
-            print "     %s: %s" % (attrib_name, attrib)
+            # handle gid 
+            if attrib_name == 'gid':
+                print "    gid:"      
+                print GID(attrib).dump_string(8, dump_parents)
+            elif attrib_name in ['date created', 'last updated']:
+                print "    %s: %s" % (attrib_name, self.date_repr(attrib_name))
+            else:
+                print "    %s: %s" % (attrib_name, attrib)
 
     def dump_simple(self):
         return "%s"%self    
