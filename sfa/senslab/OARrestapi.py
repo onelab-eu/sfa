@@ -12,6 +12,8 @@ from sfa.util.config import Config
 from sfa.util.plxrn import PlXrn
 from sfa.util.xrn import hrn_to_urn, get_authority,Xrn,get_leaf
 
+from sfa.util.config import Config
+
 #OARIP='10.127.255.254'
 OARIP='192.168.0.109'
 
@@ -179,7 +181,8 @@ class OARGETParser:
                     
             
     def AddNodeSite(self,tuplelist,value):
-        tuplelist.append(('site_login_base',str(value)))	
+        tuplelist.append(('site',str(value)))
+        	
             
     def AddNodeRadio(self,tuplelist,value):
         tuplelist.append(('radio',str(value)))	
@@ -330,37 +333,48 @@ class OARGETParser:
     #Retourne liste de dictionnaires contenant attributs des sites	
     def ParseSites(self):
         nodes_per_site = {}
-        
+        config = Config()
         # Create a list of nodes per  site_id
         for node_id in self.node_dictlist.keys():
             node  = self.node_dictlist[node_id]
-            
-            if node['site_login_base'] not in nodes_per_site.keys():
-                nodes_per_site[node['site_login_base']] = []
-                nodes_per_site[node['site_login_base']].append(node['node_id'])
+            if node['site'] not in nodes_per_site:
+                nodes_per_site[node['site']] = []
+                nodes_per_site[node['site']].append(node['node_id'])
             else:
-                if node['node_id'] not in nodes_per_site[node['site_login_base']]:
-                    nodes_per_site[node['site_login_base']].append(node['node_id'])
+                if node['node_id'] not in nodes_per_site[node['site']]:
+                    nodes_per_site[node['site']].append(node['node_id'])
+                        
         #Create a site dictionary with key is site_login_base (name of the site)
         # and value is a dictionary of properties, including the list of the node_ids
         for node_id in self.node_dictlist.keys():
             node  = self.node_dictlist[node_id]
-            node.update({'hrn':self.hostname_to_hrn(self.interface_hrn, node['site_login_base'],node['hostname'])})
+            node.update({'hrn':self.hostname_to_hrn(self.interface_hrn, node['site'],node['hostname'])})
             #node['hrn'] = self.hostname_to_hrn(self.interface_hrn, node['site_login_base'],node['hostname'])
             self.node_dictlist.update({node_id:node})
             #if node_id is 1:
                 #print>>sys.stderr, " \r\n \r\n \t \t\t\t OARESTAPI Parse Sites self.node_dictlist %s " %(self.node_dictlist)
-            if node['site_login_base'] not in self.site_dict.keys():
-                self.site_dict[node['site_login_base']] = {'login_base':node['site_login_base'],
-                                                        'node_ids':nodes_per_site[node['site_login_base']],
+            if node['site'] not in self.site_dict:
+                self.site_dict[node['site']] = {'site':node['site'],
+                                                        'node_ids':nodes_per_site[node['site']],
                                                         'latitude':"48.83726",
-                                                        'longitude':"- 2.10336",'name':"senslab",
+                                                        'longitude':"- 2.10336",'name':config.SFA_REGISTRY_ROOT_AUTH,
                                                         'pcu_ids':[], 'max_slices':None, 'ext_consortium_id':None,
                                                         'max_slivers':None, 'is_public':True, 'peer_site_id': None,
                                                         'abbreviated_name':"senslab", 'address_ids': [],
                                                         'url':"http,//www.senslab.info", 'person_ids':[],
                                                         'site_tag_ids':[], 'enabled': True,  'slice_ids':[],
-                                                        'date_created': None, 'peer_id': None } 
+                                                        'date_created': None, 'peer_id': None }     
+            #if node['site_login_base'] not in self.site_dict.keys():
+                #self.site_dict[node['site_login_base']] = {'login_base':node['site_login_base'],
+                                                        #'node_ids':nodes_per_site[node['site_login_base']],
+                                                        #'latitude':"48.83726",
+                                                        #'longitude':"- 2.10336",'name':"senslab",
+                                                        #'pcu_ids':[], 'max_slices':None, 'ext_consortium_id':None,
+                                                        #'max_slivers':None, 'is_public':True, 'peer_site_id': None,
+                                                        #'abbreviated_name':"senslab", 'address_ids': [],
+                                                        #'url':"http,//www.senslab.info", 'person_ids':[],
+                                                        #'site_tag_ids':[], 'enabled': True,  'slice_ids':[],
+                                                        #'date_created': None, 'peer_id': None } 
 
                         
 

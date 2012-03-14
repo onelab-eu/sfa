@@ -917,7 +917,7 @@ class SlabDriver(Driver):
                         records.append(rec)
                     print >>sys.stderr, "\r\n \t\t  SLABDRIVER.PY fill_record_info ADDING SLIC EINFO recslice %s" %(recslice) 
                     
-        
+            print >>sys.stderr, "\r\n \t\t  SLABDRIVER.PY fill_record_info OKrecords %s" %(records) 
         except TypeError:
             print >>sys.stderr, "\r\n \t\t SLABDRIVER fill_record_info  EXCEPTION RECORDS : %s" %(records)	
             return

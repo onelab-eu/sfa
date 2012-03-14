@@ -198,11 +198,11 @@ class SlabAggregate:
             # xxx how to retrieve site['login_base']
             #site_id=node['site_id']
             #site=sites_dict[site_id]
-            rspec_node['component_id'] = hostname_to_urn(self.driver.root_auth, node['site_login_base'], node['hostname'])
+            rspec_node['component_id'] = hostname_to_urn(self.driver.root_auth, node['site'], node['hostname'])
             rspec_node['component_name'] = node['hostname']  
             rspec_node['component_manager_id'] = hrn_to_urn(self.driver.root_auth, 'authority+sa')
             #rspec_node['component_manager_id'] = Xrn(self.driver.root_auth, 'authority+sa').get_urn()
-            rspec_node['authority_id'] = hrn_to_urn(PlXrn.site_hrn(self.driver.root_auth, node['site_login_base']), 'authority+sa')
+            rspec_node['authority_id'] = hrn_to_urn(PlXrn.site_hrn(self.driver.root_auth, node['site']), 'authority+sa')
             # do not include boot state (<available> element) in the manifest rspec
             if not slice:     
                 rspec_node['boot_state'] = node['boot_state']

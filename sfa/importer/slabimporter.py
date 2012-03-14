@@ -21,7 +21,7 @@ from sfa.storage.dbschema import DBSchema
 
 
 def _get_site_hrn(site):
-    hrn = site['login_base'] 
+    hrn = site['name'] 
     return hrn
 
 class SlabImporter:
@@ -131,7 +131,7 @@ class SlabImporter:
                     self.logger.warning ("SlabImporter: cannot find node_id %s - ignored"%node_id)
                     continue 
                 site_auth = get_authority(site_hrn)
-                site_name = site['login_base']
+                site_name = site['name']
                 hrn =  self.hostname_to_hrn(slabdriver.root_auth, site_name, node['hostname'])
                 # xxx this sounds suspicious
                 if len(hrn) > 64: hrn = hrn[:64]
@@ -226,15 +226,11 @@ class SlabImporter:
                         # if user's primary key has changed then we need to update the 
                         # users gid by forcing an update here
                         sfa_keys = user_record.reg_keys
-                        #def key_in_list (key,sfa_keys):
-                            #for reg_key in sfa_keys:
-                                #if reg_key.key==key['key']: return True
-                            #return False
-                        # is there a new key in myplc ?
-                        new_keys=False
+                       
+                        new_key=False
                         if slab_key is not sfa_keys : 
-                            new_keys = True
-                        if new_keys:
+                            new_key = True
+                        if new_key:
                             (pubkey,pkey) = init_person_key (person, slab_key)
                             person_gid = self.auth_hierarchy.create_gid(person_urn, create_uuid(), pkey)
                             if not pubkey:
@@ -279,6 +275,8 @@ class SlabImporter:
                         self.update_just_added_records_dict ( slice_record )
                     except:
                         self.logger.log_exc("SlabImporter: failed to import slice")
+                        
+                #No slice update upon import in senslab 
                 else:
                     # xxx update the record ...
                     self.logger.warning ("Slice update not yet implemented")
