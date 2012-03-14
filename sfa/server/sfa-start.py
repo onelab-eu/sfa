@@ -106,6 +106,7 @@ def install_peer_certs(server_key_file, server_cert_file):
             if trusted_gids:
                 # the gid we want should be the first one in the list,
                 # but lets make sure
+                for trusted_gid in trusted_gids:
                     # default message
                     message = "interface: %s\t" % (api.interface)
                     message += "unable to install trusted gid for %s" % \
