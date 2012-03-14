@@ -11,16 +11,8 @@ from sfa.rspecs.elements.services import Services
 from sfa.util.xrn import Xrn
 from sfa.util.osxrn import OSXrn
 from sfa.rspecs.version_manager import VersionManager
+from sfa.openstack.image import Image
 
-
-def disk_image_to_rspec_object(image):
-    img = DiskImage()
-    img['name'] = image['ami']['name']
-    img['description'] = image['ami']['name']
-    img['os'] = image['ami']['name']
-    img['version'] = image['ami']['name']
-    return img
-    
 
 def instance_to_sliver(instance, slice_xrn=None):
     # should include?
@@ -58,44 +50,6 @@ class OSAggregate:
     def __init__(self, driver):
         self.driver = driver
 
-    def get_machine_image_details(self, image):
-        """
-        Returns a dict that contains the ami, aki and ari details for the specified
-        ami image. 
-        """
-        disk_image = {}
-        if image['container_format'] == 'ami':
-            kernel_id = image['properties']['kernel_id']
-            ramdisk_id = image['properties']['ramdisk_id']
-            disk_image['ami'] = image
-            disk_image['aki'] = self.driver.shell.image_manager.show(kernel_id)
-            disk_image['ari'] = self.driver.shell.image_manager.show(ramdisk_id)
-        return disk_image
-        
-    def get_disk_image(self, id=None, name=None):
-        """
-        Look up a image bundle using the specifeid id or name  
-        """
-        disk_image = None    
-        try:
-            if id:
-                image = self.driver.shell.image_manager.show(image_id)
-            elif name:
-                image = self.driver.shell.image_manager.show_by_name(image_name)
-            if image['container_format'] == 'ami':
-                disk_image = self.get_machine_image_details(image)
-        except ImageNotFound:
-                pass
-        return disk_image
-
-    def get_available_disk_images(self):
-        # get image records
-        disk_images = []
-        for image in self.driver.shell.image_manager.detail():
-            if image['container_format'] == 'ami':
-                disk_images.append(self.get_machine_image_details(image))
-        return disk_images 
-
     def get_rspec(self, slice_xrn=None, version=None, options={}):
         version_manager = VersionManager()
         version = version_manager.get_version(version)
@@ -110,6 +64,7 @@ class OSAggregate:
         return rspec.toxml()
 
     def get_slice_nodes(self, slice_xrn):
+        image_manager = Image(self.driver)
         name = OSXrn(xrn = slice_xrn).name
         instances = self.driver.shell.db.instance_get_all_by_project(name)
         rspec_nodes = []
@@ -120,8 +75,8 @@ class OSAggregate:
             rspec_node['component_name'] = xrn.name
             rspec_node['component_manager_id'] = Xrn(self.driver.hrn, 'authority+cm').get_urn()   
             sliver = instance_to_sliver(instance)
-            disk_image = self.get_disk_image(instance.image_ref)
-            sliver['disk_images'] = [disk_image_to_rspec_object(disk_image)]
+            disk_image = image_manager.get_disk_image(instance.image_ref)
+            sliver['disk_images'] = [Image.disk_image_to_rspec_object(disk_image)]
             rspec_node['slivers'] = [sliver]
             rspec_nodes.append(rspec_node)
         return rspec_nodes
@@ -137,8 +92,9 @@ class OSAggregate:
         # available sliver/instance/vm types
         instances = self.driver.shell.db.instance_type_get_all().values()
         # available images
-        disk_images = self.get_available_disk_images()
-        disk_image_objects = [disk_image_to_rspec_object(image) \
+        image_manager = Image(self.driver)
+        disk_images = image_manager.get_available_disk_images()
+        disk_image_objects = [Image.disk_image_to_rspec_object(image) \
                                for image in disk_images]  
         rspec_nodes = []
         for zone in zones:
@@ -164,35 +120,24 @@ class OSAggregate:
 
     def create_project(self, slicename, users, options={}):
         """
-        Create the slice if it doesn't alredy exist  
+        Create the slice if it doesn't alredy exist. Create user
+        accounts that don't already exist   
         """
         import nova.exception.ProjectNotFound
         try:
             slice = self.driver.shell.auth_manager.get_project(slicename)
         except nova.exception.ProjectNotFound:
-            # convert urns to user names
-            usernames = [Xrn(user['urn']).get_leaf() for user in users]
             # assume that the first user is the project manager
-            proj_manager = usernames[0] 
+            proj_manager = Xrn(users[0]['urn']).get_leaf() 
             self.driver.shell.auth_manager.create_project(slicename, proj_manager)
-
-    def create_project_users(self, slicename, users, options={}):
-        """
-        Add requested users to the specified slice.  
-        """
-        
-        # There doesn't seem to be an effcient way to 
-        # look up all the users of a project, so lets not  
-        # attempt to remove stale users . For now lets just
-        # ensure that the specified users exist     
+           
         for user in users:
             username = Xrn(user['urn']).get_leaf()
             try:
                 self.driver.shell.auth_manager.get_user(username)
             except nova.exception.UserNotFound:
                 self.driver.shell.auth_manager.create_user(username)
-            self.verify_user_keys(username, user['keys'], options)
-        
+            self.verify_user_keys(username, user['keys'], options) 
 
     def verify_user_keys(self, username, keys, options={}):
         """
@@ -217,11 +162,30 @@ class OSAggregate:
             for key in existing_keys:
                 if key.public_key in removed_pub_keys:
                     self.driver.shell.db.key_pair_destroy(username, key.name)
-    
+
+
+    def create_security_group(self, slicename, fw_rules):
+        group_name = slicename
+        security_group = SecurityGroup(self.driver)
+        security_group.create_security_group(group_name)
+        for rule in fw_rules:
+            security_group.add_rule_to_group(group_name, rule.get('protocol'), 
+                                             rule.get('cidr_ip'), 
+                                             rule.get('port_range'), 
+                                             rule.get('icmp_type_code'))
+
+    def add_rule_to_security_group(self, group_name, **kwds):
+        security_group = SecurityGroup(self.driver)
+        security_group.add_rule_to_group(group_name=group_name, 
+                                         protocol=kwds.get('protocol'), 
+                                         cidr_ip =kwds.get('cidr_ip'), 
+                                         icmp_type_code = kwds.get('icmp_type_code'))
+
+ 
     def reserve_instance(self, image_id, kernel_id, ramdisk_id, \
                          instance_type, key_name, user_data):
         conn  = self.driver.euca_shell
-        logger.info('Reserving an instance: image: %s, kernel: ' \
+        logger.info('Reserving an instance: image: %s, kernel: ' + \
                     '%s, ramdisk: %s, type: %s, key: %s' % \
                     (image_id, kernel_id, ramdisk_id,
                     instance_type, key_name))
@@ -231,8 +195,8 @@ class OSAggregate:
                                              ramdisk_id=ramdisk_id,
                                              instance_type=instance_type,
                                              key_name=key_name,
-                                             user_data = user_data)
-                                             #security_groups=group_names,
+                                             user_data = user_data,
+                                             security_groups=group_names)
                                              #placement=zone,
                                              #min_count=min_count,
                                              #max_count=max_count,           
@@ -242,13 +206,14 @@ class OSAggregate:
                
     def run_instances(self, slicename, rspec, keyname, pubkeys):
         """
-        Create the instances thats requested in the rspec 
+        Create the security groups and instances. 
         """
         # the default image to use for instnaces that dont
         # explicitly request an image.
         # Just choose the first available image for now.
-        available_images = self.get_available_disk_images()
-        default_image = self.get_disk_images()[0]    
+        image_manager = Image(self.driver)
+        available_images = image_manager.get_available_disk_images()
+        default_image = image_manager.get_disk_images()[0]    
         default_ami_id = CloudController.image_ec2_id(default_image['ami']['id'])  
         default_aki_id = CloudController.image_ec2_id(default_image['aki']['id'])  
         default_ari_id = CloudController.image_ec2_id(default_image['ari']['id'])
@@ -262,18 +227,24 @@ class OSAggregate:
             if isinstance(instance_types, list):
                 # iterate over sliver/instance types
                 for instance_type in instance_types:
+                    group_name = self.create_security_group(slicename, instance_type.get('fw_rules', []))
                     ami_id = default_ami_id
                     aki_id = default_aki_id
                     ari_id = default_ari_id
                     req_image = instance_type.get('disk_images')
                     if req_image and isinstance(req_image, list):
                         req_image_name = req_image[0]['name']
-                        disk_image = self.get_disk_image(name=req_image_name)
+                        disk_image = image_manager.get_disk_image(name=req_image_name)
                         if disk_image:
                             ami_id = CloudController.image_ec2_id(disk_image['ami']['id'])
                             aki_id = CloudController.image_ec2_id(disk_image['aki']['id'])
                             ari_id = CloudController.image_ec2_id(disk_image['ari']['id'])
                     # start the instance
-                    self.reserve_instance(ami_id, aki_id, ari_id, \
-                                          instance_type['name'], keyname, pubkeys)
+                    self.reserve_instance(image_id=ami_id, 
+                                          kernel_id=aki_id, 
+                                          ramdisk_id=ari_id, 
+                                          instance_type=instance_type['name'], 
+                                          key_name=keyname, 
+                                          user_data=pubkeys, 
+                                          group_name=group_name)
 

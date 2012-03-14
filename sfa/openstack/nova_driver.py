@@ -301,8 +301,6 @@ class NovaDriver (Driver):
         # ensure slice record exists
         aggregate.create_project(slicename, users, options=options)
         # ensure person records exists
-        aggregate.create_project_users(slicename, users, options=options)
-        # add/remove slice from nodes
         aggregate.run_instances(slicename, rspec, project_key, pubkeys)    
    
         return aggregate.get_rspec(slice_xrn=slice_urn, version=rspec.version)
