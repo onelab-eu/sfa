@@ -1,3 +1,5 @@
+import base64
+
 from nova.exception import ImageNotFound
 from nova.api.ec2.cloud import CloudController
 from sfa.util.faults import SfaAPIError
@@ -164,15 +166,15 @@ class OSAggregate:
                     self.driver.shell.db.key_pair_destroy(username, key.name)
 
 
-    def create_security_group(self, slicename, fw_rules):
-        group_name = slicename
+    def create_security_group(self, group_name, fw_rules=[]):
         security_group = SecurityGroup(self.driver)
         security_group.create_security_group(group_name)
         for rule in fw_rules:
-            security_group.add_rule_to_group(group_name, rule.get('protocol'), 
-                                             rule.get('cidr_ip'), 
-                                             rule.get('port_range'), 
-                                             rule.get('icmp_type_code'))
+            security_group.add_rule_to_group(group_name, 
+                                             protocol = rule.get('protocol'), 
+                                             cidr_ip = rule.get('cidr_ip'), 
+                                             port_range = rule.get('port_range'), 
+                                             icmp_type_code = rule.get('icmp_type_code'))
 
     def add_rule_to_security_group(self, group_name, **kwds):
         security_group = SecurityGroup(self.driver)
@@ -227,7 +229,14 @@ class OSAggregate:
             if isinstance(instance_types, list):
                 # iterate over sliver/instance types
                 for instance_type in instance_types:
-                    group_name = self.create_security_group(slicename, instance_type.get('fw_rules', []))
+                    fw_rules = instance_type.get('fw_rules', [])
+                    # Each sliver get's its own security group.  
+                    # Keep security group names unique by appending some random 
+                    # characters on end.
+                    group_name = "_".join([slicename, 
+                                           instance_type['name'],
+                                           base64.b64encode(os.urandom(6))])  
+                    self.create_security_group(group_name, fw_rules)
                     ami_id = default_ami_id
                     aki_id = default_aki_id
                     ari_id = default_ari_id
