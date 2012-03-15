@@ -38,7 +38,9 @@ class EucaShell:
         elif url.find('http://') >= 0:
             use_ssl  = False
             url = url.replace('http://', '')
-        (host, parts) = url.split(':')
+        parts = url.split(':')
+        host = parts[0]
+        port = None 
         if len(parts) > 1:
             parts = parts.split('/')
             port = int(parts[0])
