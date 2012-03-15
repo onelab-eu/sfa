@@ -287,8 +287,8 @@ class NovaDriver (Driver):
 
         aggregate = OSAggregate(self)
         slicename = get_leaf(slice_hrn)
-        
         # parse rspec
+        rspec = RSpec(rspec_string)
         pubkeys = []
         for user in users:
             pubkeys.extend(user['keys']) 
