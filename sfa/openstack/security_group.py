@@ -59,9 +59,9 @@ class SecurityGroup:
 
         if group_name:
             if cidr_ip:
-                euca.validate_address(cidr_ip)
+                self.driver.euca_shell.euca2ool.validate_address(cidr_ip)
             if protocol:
-               euca.validate_protocol(protocol)
+               self.driver.euca_shell.euca2ool.validate_protocol(protocol)
             conn = self.driver.euca_shell.get_euca_connection()
             try:
                 conn.authorize_security_group(
@@ -88,9 +88,9 @@ class SecurityGroup:
 
         if group_name:
             if cidr_ip:
-                euca.validate_address(cidr_ip)
+                self.driver.euca_shell.euca2ool.validate_address(cidr_ip)
             if protocol:
-               euca.validate_protocol(protocol)
+               self.driver.euca_shell.euca2ool.validate_protocol(protocol)
             conn = self.driver.euca_shell.get_euca_connection()
             try:
                 conn.revoke_security_group(
