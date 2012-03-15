@@ -9,14 +9,14 @@ class SecurityGroup:
     def create_security_group(self, name):
         conn = self.driver.euca_shell.get_euca_connection()
         try:
-            conn.create_security_group(name=group_name)
+            conn.create_security_group(name=name, description=name)
         except Exception, ex:
             logger.log_exc("Failed to add security group")
 
     def delete_security_group(self, name):
         conn = self.driver.euca_shell.get_euca_connection()
         try:
-            conn.delete_security_group(name=group_name)
+            conn.delete_security_group(name=name)
         except Exception, ex:
             logger.log_exc("Failed to delete security group")
 
@@ -51,17 +51,12 @@ class SecurityGroup:
                           port_range=None, icmp_type_code=None,
                           source_group_name=None, source_group_owner_id=None):
 
-
         from_port, to_port = self._validate_port_range(port_range)
         icmp_type = self._validate_icmp_type_code(icmp_type_code)
         if icmp_type:
             from_port, to_port = icmp_type[0], icmp_type[1]
 
         if group_name:
-            if cidr_ip:
-                self.driver.euca_shell.euca2ool.validate_address(cidr_ip)
-            if protocol:
-               self.driver.euca_shell.euca2ool.validate_protocol(protocol)
             conn = self.driver.euca_shell.get_euca_connection()
             try:
                 conn.authorize_security_group(
@@ -71,7 +66,7 @@ class SecurityGroup:
                     ip_protocol=protocol,
                     from_port=from_port,
                     to_port=to_port,
-                    cidr_ip=ip,
+                    cidr_ip=cidr_ip,
                     )
             except Exception, ex:
                 logger.log_exc("Failed to add rule to group %s" % group_name)
@@ -87,10 +82,6 @@ class SecurityGroup:
             from_port, to_port = icmp_type[0], icmp_type[1]
 
         if group_name:
-            if cidr_ip:
-                self.driver.euca_shell.euca2ool.validate_address(cidr_ip)
-            if protocol:
-               self.driver.euca_shell.euca2ool.validate_protocol(protocol)
             conn = self.driver.euca_shell.get_euca_connection()
             try:
                 conn.revoke_security_group(
