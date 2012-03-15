@@ -16,7 +16,7 @@ class EucaShell:
     """    
 
     def __init__(self, config):
-        self.config = Config
+        self.config = config
 
     def get_euca_connection(self):
         if not has_boto:
