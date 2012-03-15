@@ -135,23 +135,21 @@ class SlabSlices:
  
     def get_peer(self, xrn):
         hrn, type = urn_to_hrn(xrn)
-        # Becaues of myplc federation,  we first need to determine if this
-        # slice belongs to out local plc or a myplc peer. We will assume it 
-        # is a local site, unless we find out otherwise  
+        #Does this slice belong to a local site or a peer senslab site?
         peer = None
-        print>>sys.stderr, " \r\n \r\n \t slices.py get_peer slice_authority  "
+        
         # get this slice's authority (site)
         slice_authority = get_authority(hrn)
-
+        
         # get this site's authority (sfa root authority or sub authority)
         site_authority = get_authority(slice_authority).lower()
-       
+        print>>sys.stderr, " \r\n \r\n \t slices.py get_peer slice_authority  %s site_authority %s " %(slice_authority, site_authority)
         # check if we are already peered with this site_authority, if so
-        peers = self.driver.GetPeers({'hrn':site_authority})
-        print>>sys.stderr, " \r\n \r\n \t slices.py get_peer slice_authority  %s site_authority %s" %(slice_authority,site_authority) 
+        peers = self.driver.GetPeers({})
+        print>>sys.stderr, " \r\n \r\n \t slices.py get_peer peers %s " %(peers)
         for peer_record in peers:
-            names = [name.lower() for name in peer_record.values() if isinstance(name, StringTypes)] 
-            if site_authority in names:
+          
+            if site_authority == peer_record.hrn:
                 peer = peer_record
         print>>sys.stderr, " \r\n \r\n \t slices.py get_peer peer  %s " %(peer) 
         return peer
@@ -296,7 +294,8 @@ class SlabSlices:
         #parts = hrn_to_pl_slicename(slice_hrn).split("_")
         login_base = slice_hrn.split(".")[0]
         slicename = slice_hrn
-        slices = self.driver.GetSlices([slicename]) 
+        slices = self.driver.GetSlices(slice_filter={'slice_hrn': slicename}) 
+        #slices = self.driver.GetSlices([slicename]) 
         print>>sys.stderr, " \r\n \r\rn Slices.py verify_slice slicename %s slices %s slice_record %s"%(slicename ,slices, slice_record)
         if not slices:
             slice = {'name': slicename,

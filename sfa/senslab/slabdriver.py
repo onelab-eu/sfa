@@ -4,9 +4,7 @@ import datetime
 from time import gmtime, strftime 
 
 from sfa.util.faults import MissingSfaInfo , SliverDoesNotExist
-#from sfa.util.sfatime import datetime_to_string
 from sfa.util.sfalogging import logger
-#from sfa.storage.table import SfaTable
 from sfa.util.defaultdict import defaultdict
 
 from sfa.storage.record import Record
@@ -32,9 +30,9 @@ from sfa.util.plxrn import slicename_to_hrn, hostname_to_hrn, hrn_to_pl_slicenam
 ## thierry : please avoid wildcard imports :)
 from sfa.senslab.OARrestapi import  OARrestapi
 from sfa.senslab.LDAPapi import LDAPapi
-#from sfa.senslab.SenslabImportUsers import SenslabImportUsers
+
 from sfa.senslab.parsing import parse_filter
-from sfa.senslab.slabpostgres import SlabDB, slab_dbsession,SlabSliceDB
+from sfa.senslab.slabpostgres import SlabDB, slab_dbsession,SliceSenslab
 from sfa.senslab.slabaggregate import SlabAggregate
 from sfa.senslab.slabslices import SlabSlices
 
@@ -403,17 +401,21 @@ class SlabDriver(Driver):
 
         existing_records = {}
         existing_hrns_by_types= {}
-        all_records = dbsession.query(RegRecord).all
+        print >>sys.stderr, "\r\n \r\n SLABDRIVER GetPeers auth = %s, peer_filter %s, return_field %s " %(auth , peer_filter, return_fields)
+        all_records = dbsession.query(RegRecord).filter(RegRecord.type.like('%authority%')).all()
         for record in all_records:
             existing_records[record.hrn] = record
             if record.type not in existing_hrns_by_types:
                 existing_hrns_by_types[record.type] = [record.hrn]
+                print >>sys.stderr, "\r\n \r\n SLABDRIVER GetPeers \t NOT IN existing_hrns_by_types %s " %( existing_hrns_by_types)
             else:
+                
+                print >>sys.stderr, "\r\n \r\n SLABDRIVER GetPeers \t INNN  type %s hrn %s " %( record.type,record.hrn )
                 existing_hrns_by_types.update({record.type:(existing_hrns_by_types[record.type].append(record.hrn))})
                         
         print >>sys.stderr, "\r\n \r\n SLABDRIVER GetPeers        existing_hrns_by_types %s " %( existing_hrns_by_types)
-        return_records = [] 
-        #records_list =  table.findObjects({'type':'authority+sa'})   
+        records_list= [] 
+      
         try:
             for hrn in existing_hrns_by_types['authority+sa']:
                 records_list.append(existing_records[hrn])
@@ -549,20 +551,22 @@ class SlabDriver(Driver):
     def GetSlices(self,slice_filter = None, return_fields=None):
 
         #sliceslist = self.db.find('slice_senslab',columns = ['oar_job_id', 'slice_hrn', 'record_id_slice','record_id_user'], record_filter=slice_filter)
-        sliceslist = slab_dbsession.query(SlabSliceDB).all()
+        #sliceslist = slab_dbsession.query(SliceSenslab).all()
+        return_slice_list = self.db.find('slice',slice_filter)
         #sliceslist = slices_records.order_by("record_id_slice").all()
        
-        print >>sys.stderr, " \r\n \r\n \tSLABDRIVER.PY  GetSlices  slices %s slice_filter %s " %(sliceslist,slice_filter)
-       
-        return_slice_list  = parse_filter(sliceslist, slice_filter,'slice', return_fields)
+        print >>sys.stderr, " \r\n \r\n \tSLABDRIVER.PY  GetSlices  slices %s slice_filter %s " %(return_slice_list,slice_filter)
+        
+        if return_fields:
+            return_slice_list  = parse_filter(sliceslist, slice_filter,'slice', return_fields)
         
         if return_slice_list:
             for sl in return_slice_list:
                 #login = sl['slice_hrn'].split(".")[1].split("_")[0]
-                login = sl.slice_hrn.split(".")[1].split("_")[0]
+                login = sl['slice_hrn'].split(".")[1].split("_")[0]
                 print >>sys.stderr, " \r\n \r\n \tSLABDRIVER.PY  GetSlices  sl %s " %(sl)
-                if sl.oar_job_id is not -1: 
-                    rslt = self.GetJobs( sl.oar_job_id,resources=False, username = login )
+                if sl['oar_job_id'] is not -1: 
+                    rslt = self.GetJobs( sl['oar_job_id'],resources=False, username = login )
                     print >>sys.stderr, " \r\n \r\n \tSLABDRIVER.PY  GetSlices  GetJobs  %s " %(rslt)     
                     if rslt :
                         sl.update(rslt)
@@ -707,8 +711,10 @@ class SlabDriver(Driver):
         #OAR = OARrestapi()
         answer = self.oar.POSTRequestToOARRestAPI('POST_job',reqdict,slice_user)
         print>>sys.stderr, "\r\n \r\n AddSliceToNodes jobid   %s "  %(answer)
-        self.db.update('slice',['oar_job_id'], [answer['id']], 'slice_hrn', slice_name)
-        
+        #self.db.update('slice',['oar_job_id'], [answer['id']], 'slice_hrn', slice_name)
+               
+
+        self.db.update_job( answer['id'], slice_name)
         jobid=answer['id']
         print>>sys.stderr, "\r\n \r\n AddSliceToNodes jobid    %s added_nodes  %s slice_user %s"  %(jobid,added_nodes,slice_user)  
         # second step : configure the experiment
@@ -783,7 +789,7 @@ class SlabDriver(Driver):
         # get the sfa records
         #table = SfaTable()
         existing_records = {}
-        all_records = dbsession.query(RegRecord).all
+        all_records = dbsession.query(RegRecord).all()
         for record in all_records:
             existing_records[(record.type,record.pointer)] = record
             
@@ -875,7 +881,7 @@ class SlabDriver(Driver):
         Given a SFA record, fill in the senslab specific and SFA specific
         fields in the record. 
         """
-	print >>sys.stderr, "\r\n \t\t BEFORE fill_record_info %s" %(records)	
+	print >>sys.stderr, "\r\n \t\t  SLABDRIVER.PY fill_record_info 000000000 fill_record_info %s" %(records)	
         if not isinstance(records, list):
             records = [records]
 		
@@ -884,26 +890,28 @@ class SlabDriver(Driver):
             for record in parkour:
                     
                 if str(record['type']) == 'slice':
-                    print >>sys.stderr, "\r\n \t\t  SLABDRIVER.PY fill_record_info record %s" %(record)
+                    print >>sys.stderr, "\r\n \t\t  SLABDRIVER.PY  fill_record_info \t \t record %s" %(record)
                     #sfatable = SfaTable()
                     
                     existing_records_by_id = {}
-                    all_records = dbsession.query(RegRecord).all
+                    all_records = dbsession.query(RegRecord).all()
                     for rec in all_records:
                         existing_records_by_id[rec.record_id] = rec
-                    print >>sys.stderr, "\r\n \t\t SLABDRIVER.PY  fill_record_info existing_records_by_id %s" %(existing_records_by_id)
+                    print >>sys.stderr, "\r\n \t\t SLABDRIVER.PY  fill_record_info \t\t existing_records_by_id %s" %(existing_records_by_id[record['record_id']])
                         
-                    recslice = self.db.find('slice',str(record['hrn']))
+                    recslice = self.db.find('slice',{'slice_hrn':str(record['hrn'])}) 
+                    
+                    print >>sys.stderr, "\r\n \t\t  SLABDRIVER.PY fill_record_info \t\t HOY HOY reclise %s" %(recslice)
                     if isinstance(recslice,list) and len(recslice) == 1:
                         recslice = recslice[0]
                     #recuser = sfatable.find(  recslice['record_id_user'], ['hrn'])
-                    recuser = existing_records_by_id[recslice['record_id_user']]['hrn']
-                    print >>sys.stderr, "\r\n \t\t  SLABDRIVER.PY fill_record_info %s" %(recuser)
+                    recuser = existing_records_by_id[recslice['record_id_user']]
+                    print >>sys.stderr, "\r\n \t\t  SLABDRIVER.PY fill_record_info \t\t recuser %s" %(recuser)
                     
                     if isinstance(recuser,list) and len(recuser) == 1:
                         recuser = recuser[0]	          
-                    record.update({'PI':[recuser['hrn']],
-                    'researcher': [recuser['hrn']],
+                    record.update({'PI':[recuser.hrn],
+                    'researcher': [recuser.hrn],
                     'name':record['hrn'], 
                     'oar_job_id':recslice['oar_job_id'],
                     'node_ids': [],

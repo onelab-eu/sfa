@@ -9,7 +9,7 @@ from sfa.util.plxrn import PlXrn, slicename_to_hrn, email_to_hrn, hrn_to_pl_slic
 
 from sfa.senslab.LDAPapi import LDAPapi
 from sfa.senslab.slabdriver import SlabDriver
-from sfa.senslab.slabpostgres import SlabSliceDB, slab_dbsession
+from sfa.senslab.slabpostgres import SliceSenslab, slab_dbsession
 
 from sfa.trust.certificate import Keypair,convert_public_key
 from sfa.trust.gid import create_uuid
@@ -66,6 +66,8 @@ class SlabImporter:
         
         if not slabdriver.db.exists('slice_senslab'):
             slabdriver.db.createtable('slice_senslab')
+            
+            
             print>>sys.stderr, " \r\n \r\n \t SLABPOSTGRES CREATETABLE  YAAAAAAAAAAY"        
        ######## retrieve all existing SFA objects
         all_records = dbsession.query(RegRecord).all()
@@ -267,7 +269,7 @@ class SlabImporter:
                         #Get it
                         sl_rec = dbsession.query(RegSlice).filter(RegSlice.hrn.match(slice_hrn)).all()
                         
-                        slab_slice = SlabSliceDB( slice_hrn = slice_hrn,  record_id_slice=sl_rec[0].record_id, record_id_user= user_record.record_id)
+                        slab_slice = SliceSenslab( slice_hrn = slice_hrn,  record_id_slice=sl_rec[0].record_id, record_id_user= user_record.record_id)
                         print>>sys.stderr, "\r\n \r\n SLAB IMPORTER SLICE IMPORT NOTslice_record %s \r\n slab_slice %s" %(sl_rec,slab_slice)
                         slab_dbsession.add(slab_slice)
                         slab_dbsession.commit()

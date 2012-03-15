@@ -1,6 +1,6 @@
 import sys
 
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, and_
 from sqlalchemy.orm import sessionmaker
 
 from sfa.util.config import Config
@@ -33,7 +33,7 @@ SlabBase = declarative_base()
 
 
 
-class SlabSliceDB (SlabBase):
+class SliceSenslab (SlabBase):
     __tablename__ = 'slice_senslab' 
     record_id_user = Column(Integer, primary_key=True)
     oar_job_id = Column( Integer,default = -1)
@@ -59,7 +59,20 @@ class SlabSliceDB (SlabBase):
         return result
           
             
-
+#class PeerSenslab(SlabBase):
+    #__tablename__ = 'peer_senslab' 
+    #peername = Column(String, nullable = False)
+    #peerid = Column( Integer,primary_key=True)
+    
+    #def __init__ (self,peername = None ):
+        #if peername:
+            #self.peername = peername
+            
+            
+      #def __repr__(self):
+        #result="<Peer id  =%s, Peer name =%s" % (self.peerid, self.peername)
+        #result += ">"
+        #return result
           
 class SlabDB:
     def __init__(self,config):
@@ -141,15 +154,54 @@ class SlabDB:
         SlabBase.metadata.create_all(slab_engine)
         return
     
+    
+    def update_job(self, job_id, hrn):
+        slice_rec = slab_dbsession.query(SliceSenslab).filter_by(slice_hrn = hrn).first()
+        print>>sys.stderr, " \r\n \r\n \t SLABPOSTGRES  update_job slice_rec %s"%(slice_rec)
+        slice_rec.oar_job_id = job_id
+        slab_dbsession.commit()
 
     def find (self, name = None, filter_dict = None):
-        if filter_dict:
-            filter_statement = "and_(SlabSliceDB."
+        print>>sys.stderr, " \r\n \r\n \t SLABPOSTGRES find  filter_dict %s"%(filter_dict)
+
+        #Filter_by can not handle more than one argument, hence these functions
+        def filter_id_user(query, user_id):
+            print>>sys.stderr, " \r\n \r\n \t SLABPOSTGRES find  filter_id_user"
+            return query.filter_by(record_id_user = user_id)
+        
+        def filter_job(query, job):
+            print>>sys.stderr, " \r\n \r\n \t SLABPOSTGRES find filter_job "
+            return query.filter_by(oar_job_id = job)
+        
+        def filer_id_slice (query, id_slice):
+            print>>sys.stderr, " \r\n \r\n \t SLABPOSTGRES find  filer_id_slice"
+            return query.filter_by(record_id_slice = id_slice)
+        
+        def filter_slice_hrn(query, hrn):
+            print>>sys.stderr, " \r\n \r\n \t SLABPOSTGRES find  filter_slice_hrn"
+            return query.filter_by(slice_hrn = hrn)
+        
+        
+        extended_filter = {'record_id_user': filter_id_user,
+         'oar_job_id':filter_job,
+         'record_id_slice': filer_id_slice,
+         'slice_hrn': filter_slice_hrn}
+         
+        Q = slab_dbsession.query(SliceSenslab) 
+        
+        if filter_dict is not None:
             for k in filter_dict:
-                filter_statement += str(k)+ "==" + str(filter_dict[l])
-            filter_statement +=')'
-            print>>sys.stderr, " \r\n \r\n \t SLABPOSTGRES find filter_statement %s"%(filter_statement)
-        slab_dbsession.query(SlabSliceDB).filter(filter_statement)
+                try:
+                  newQ= extended_filter[k](Q, filter_dict[k])
+                  Q = newQ
+                except KeyError:
+                    print>>sys.stderr, "\r\n \t\t FFFFFFFFFFFFFFFFUUUUUUUUFUFUFU!!!!!!!!"
+        print>>sys.stderr, " HEEEEEEEEEEEEY %s " %(Q.all())
+        reclist = []
+        for rec in Q.all():
+            reclist.append(dict(zip(['record_id_user','oar_job_id', 'record_id_slice','slice_hrn'],[rec.record_id_user,rec.oar_job_id,rec.record_id_slice, rec.slice_hrn])))
+        print>>sys.stderr, " \r\n \r\n \t SLABPOSTGRES find  reclist %s" %(reclist)
+        return reclist
         
        
 
