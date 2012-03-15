@@ -195,7 +195,7 @@ class AggregateCommands(Commands):
         if xrn:
             options['geni_slice_urn'] = xrn
         resources = self.api.manager.ListResources(self.api, [], options)
-        pprinter.pprint(resources)
+        print resources
         
     @args('-x', '--xrn', dest='xrn', metavar='<xrn>', help='object hrn/urn', default=None)
     @args('-r', '--rspec', dest='rspec', metavar='<rspec>', help='rspec file')  
