@@ -257,3 +257,21 @@ class OSAggregate:
                                           user_data=pubkeys, 
                                           group_name=group_name)
 
+
+    def delete_instances(self, project_name):
+        project = self.shell.project_get(project_name)
+        if not project:
+            return 1
+        instances = self.driver.shell.db.instance_get_all_by_project(project_name)
+        for instance in instances:
+            self.driver.shell.db.instance_destroy(instance.instance_id)
+        return 1
+
+    def stop_instances(self, project_name):
+        instances = self.driver.shell.db.instance_get_all_by_project(project_name)
+        for instance in instances:
+            self.driver.shell.db.instance_stop(instance.instance_id)
+        return 1
+
+    def update_instances(self, project_name):
+        pass

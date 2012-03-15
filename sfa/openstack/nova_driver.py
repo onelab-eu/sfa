@@ -297,7 +297,6 @@ class NovaDriver (Driver):
         # assume that there is a key whos nane matches the caller's username.
         project_key = Xrn(users[0]['urn']).get_leaf()    
         
-         
         # ensure slice record exists
         aggregate.create_project(slicename, users, options=options)
         # ensure person records exists
@@ -307,13 +306,13 @@ class NovaDriver (Driver):
 
     def delete_sliver (self, slice_urn, slice_hrn, creds, options):
         name = OSXrn(xrn=slice_urn).name
-        slice = self.shell.project_get(name)
-        if not slice:
-            return 1
-        instances = self.shell.db.instance_get_all_by_project(name)
-        for instance in instances:
-            self.shell.db.instance_destroy(instance.instance_id)
-        return 1
+        aggregate = OSAggregate(self)
+        return aggregate.delete_instances(name)   
+
+    def update_sliver(self, slice_urn, slice_hrn, rspec, creds, options):
+        name = OSXrn(xrn=slice_urn).name
+        aggregate = OSAggregate(self)
+        return aggregate.update_instances(name)
     
     def renew_sliver (self, slice_urn, slice_hrn, creds, expiration_time, options):
         return True
@@ -323,12 +322,9 @@ class NovaDriver (Driver):
 
     def stop_slice (self, slice_urn, slice_hrn, creds):
         name = OSXrn(xrn=slice_urn).name
-        slice = self.shell.get_project(name)
-        instances = self.shell.db.instance_get_all_by_project(name)
-        for instance in instances:
-            self.shell.db.instance_stop(instance.instance_id)
-        return 1
-    
+        aggregate = OSAggregate(self)
+        return aggregate.stop_instances(name) 
+
     def reset_slice (self, slice_urn, slice_hrn, creds):
         raise SfaNotImplemented ("reset_slice not available at this interface")
     
