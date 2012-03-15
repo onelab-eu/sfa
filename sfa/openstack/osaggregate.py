@@ -263,7 +263,12 @@ class OSAggregate:
         if not project:
             return 1
         instances = self.driver.shell.db.instance_get_all_by_project(project_name)
+        security_group_manager = SecurityGroup(self)
         for instance in instances:
+            # deleate this instance's security groups
+            for security_group in instance.security_groups:
+                security_group_manager.delete_security_group(security_group.name)
+            # destroy instance
             self.driver.shell.db.instance_destroy(instance.instance_id)
         return 1
 
