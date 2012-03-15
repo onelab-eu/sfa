@@ -136,7 +136,7 @@ CLIENTS = $(shell ls sfa/clientbin/*.py)
 
 BINS =	./config/sfa-config-tty ./config/gen-sfa-cm-config.py \
 	./sfa/server/sfa-start.py \
-	./sfa/importer/sfaadmin.py \
+	./sfa/clientbin/sfaadmin.py \
 	$(CLIENTS)
 
 synccheck: 
