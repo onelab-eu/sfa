@@ -126,10 +126,10 @@ class OSAggregate:
         Create the slice if it doesn't alredy exist. Create user
         accounts that don't already exist   
         """
-        import nova.exception.ProjectNotFound
+        from nova.exception import ProjectNotFound
         try:
             slice = self.driver.shell.auth_manager.get_project(slicename)
-        except nova.exception.ProjectNotFound:
+        except ProjectNotFound:
             # assume that the first user is the project manager
             proj_manager = Xrn(users[0]['urn']).get_leaf() 
             self.driver.shell.auth_manager.create_project(slicename, proj_manager)
