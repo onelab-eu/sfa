@@ -6,12 +6,6 @@ try:
 except:
     has_boto=False    
 
-try: 
-    from euca2ools import Euca2ool
-    has_euca = True
-except:
-    has_euca = False
-
 from sfa.util.sfalogging import logger
 from sfa.openstack.nova_shell import NovaShell
 from sfa.util.config import Config
@@ -28,20 +22,15 @@ class EucaShell:
         if not has_boto:
             logger.info('Unable to access EC2 API - boto library not found.')
             return None
-        if not has_euca:
-            logger.info('euca2ools library not found.')
-            return None
-
-        self.euca2ool = Euca2ool()
         nova = NovaShell(self.config)
         admin_user = nova.auth_manager.get_user(self.config.SFA_NOVA_USER)
         access_key = admin_user.access
         secret_key = admin_user.secret
         url = self.config.SFA_NOVA_API_URL
+        host = None
+        port = None    
         path = "/"
-        euca_port = self.config.SFA_NOVA_API_PORT        
         use_ssl = False
-
         # Split the url into parts 
         if url.find('https://') >= 0:
             use_ssl  = True
@@ -51,17 +40,17 @@ class EucaShell:
             url = url.replace('http://', '')
         parts = url.split(':')
         host = parts[0]
-        port = None 
         if len(parts) > 1:
-            parts = parts.split('/')
+            parts = parts[1].split('/')
             port = int(parts[0])
             parts = parts[1:]
             path = '/'.join(parts)
-        
+
         return boto.connect_ec2(aws_access_key_id=access_key,
                                 aws_secret_access_key=secret_key,
                                 is_secure=use_ssl,
                                 region=RegionInfo(None, 'eucalyptus', host),
+                                host=host,
                                 port=port,
                                 path=path) 
 
