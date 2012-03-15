@@ -190,7 +190,7 @@ class OSAggregate:
     def reserve_instance(self, image_id, kernel_id, ramdisk_id, \
                          instance_type, key_name, user_data, group_name):
         conn  = self.driver.euca_shell
-        logger.info('Reserving an instance: image: %s, kernel: ' + \
+        logger.info('Reserving an instance: image: %s, kernel: ' \
                     '%s, ramdisk: %s, type: %s, key: %s' % \
                     (image_id, kernel_id, ramdisk_id,
                     instance_type, key_name))
@@ -206,8 +206,8 @@ class OSAggregate:
                                              #min_count=min_count,
                                              #max_count=max_count,           
                                               
-        except EC2ResponseError, ec2RespError:
-            logger.log_exc(ec2RespError)
+        except Exception, err:
+            logger.log_exc(err)
                
     def run_instances(self, slicename, rspec, keyname, pubkeys):
         """
