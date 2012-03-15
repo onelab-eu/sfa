@@ -9,7 +9,7 @@ class SecurityGroup:
     def create_security_group(self, name):
         conn = self.driver.euca_shell.get_euca_connection()
         try:
-            conn.create_security_group(name=name, description=name)
+            conn.create_security_group(name=name, description="")
         except Exception, ex:
             logger.log_exc("Failed to add security group")
 
