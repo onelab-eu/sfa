@@ -289,8 +289,6 @@ class NovaDriver (Driver):
         slicename = get_leaf(slice_hrn)
         
         # parse rspec
-        rspec = RSpec(rspec_string)
-        requested_attributes = rspec.version.get_slice_attributes()
         pubkeys = []
         for user in users:
             pubkeys.extend(user['keys']) 
@@ -300,7 +298,7 @@ class NovaDriver (Driver):
         # ensure slice record exists
         aggregate.create_project(slicename, users, options=options)
         # ensure person records exists
-        aggregate.run_instances(slicename, rspec, project_key, pubkeys)    
+        aggregate.run_instances(slicename, rspec_string, project_key, pubkeys)    
    
         return aggregate.get_rspec(slice_xrn=slice_urn, version=rspec.version)
 
