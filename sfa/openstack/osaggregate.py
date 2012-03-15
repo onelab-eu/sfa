@@ -17,7 +17,7 @@ from sfa.util.osxrn import OSXrn
 from sfa.rspecs.version_manager import VersionManager
 from sfa.openstack.image import Image
 from sfa.openstack.security_group import SecurityGroup
-
+from sfa.util.sfalogging import logger
 
 def instance_to_sliver(instance, slice_xrn=None):
     # should include?
@@ -188,7 +188,7 @@ class OSAggregate:
 
  
     def reserve_instance(self, image_id, kernel_id, ramdisk_id, \
-                         instance_type, key_name, user_data):
+                         instance_type, key_name, user_data, group_name):
         conn  = self.driver.euca_shell
         logger.info('Reserving an instance: image: %s, kernel: ' + \
                     '%s, ramdisk: %s, type: %s, key: %s' % \
@@ -201,7 +201,7 @@ class OSAggregate:
                                              instance_type=instance_type,
                                              key_name=key_name,
                                              user_data = user_data,
-                                             security_groups=group_names)
+                                             security_groups=group_name)
                                              #placement=zone,
                                              #min_count=min_count,
                                              #max_count=max_count,           
