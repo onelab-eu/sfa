@@ -1,5 +1,7 @@
+import os
 import base64
 
+from collections import defaultdict
 from nova.exception import ImageNotFound
 from nova.api.ec2.cloud import CloudController
 from sfa.util.faults import SfaAPIError
@@ -216,7 +218,7 @@ class OSAggregate:
         # Just choose the first available image for now.
         image_manager = Image(self.driver)
         available_images = image_manager.get_available_disk_images()
-        default_image = image_manager.get_disk_images()[0]    
+        default_image = available_images[0]    
         default_ami_id = CloudController.image_ec2_id(default_image['ami']['id'])  
         default_aki_id = CloudController.image_ec2_id(default_image['aki']['id'])  
         default_ari_id = CloudController.image_ec2_id(default_image['ari']['id'])
