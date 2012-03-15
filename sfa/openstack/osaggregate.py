@@ -14,6 +14,7 @@ from sfa.util.xrn import Xrn
 from sfa.util.osxrn import OSXrn
 from sfa.rspecs.version_manager import VersionManager
 from sfa.openstack.image import Image
+from sfa.openstack.security_group import SecurityGroup
 
 
 def instance_to_sliver(instance, slice_xrn=None):
@@ -268,13 +269,13 @@ class OSAggregate:
                 if security_group.name != 'default': 
                     security_group_manager.delete_security_group(security_group.name)
             # destroy instance
-            self.driver.shell.db.instance_destroy(instance.instance_id)
+            self.driver.shell.db.instance_destroy(instance.id)
         return 1
 
     def stop_instances(self, project_name):
         instances = self.driver.shell.db.instance_get_all_by_project(project_name)
         for instance in instances:
-            self.driver.shell.db.instance_stop(instance.instance_id)
+            self.driver.shell.db.instance_stop(instance.id)
         return 1
 
     def update_instances(self, project_name):
