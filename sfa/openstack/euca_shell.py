@@ -6,6 +6,12 @@ try:
 except:
     has_boto=False    
 
+try: 
+    from euca2ools import Euca2ool
+    has_euca = True
+except:
+    has_euca = False
+
 from sfa.util.sfalogging import logger
 from sfa.openstack.nova_shell import NovaShell
 from sfa.util.config import Config
@@ -22,6 +28,11 @@ class EucaShell:
         if not has_boto:
             logger.info('Unable to access EC2 API - boto library not found.')
             return None
+        if not has_euca:
+            logger.info('euca2ools library not found.')
+            return None
+
+        self.euca2ool = Euca2ool()
         nova = NovaShell(self.config)
         admin_user = nova.auth_manager.get_user(self.config.SFA_NOVA_USER)
         access_key = admin_user.access
