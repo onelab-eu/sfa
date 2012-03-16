@@ -44,9 +44,9 @@ class Image:
         disk_image = None
         try:
             if id:
-                image = self.driver.shell.image_manager.show(image_id)
+                image = self.driver.shell.image_manager.show(id)
             elif name:
-                image = self.driver.shell.image_manager.show_by_name(image_name)
+                image = self.driver.shell.image_manager.show_by_name(name)
             if image['container_format'] == 'ami':
                 disk_image = self.get_machine_image_details(image)
         except ImageNotFound:
