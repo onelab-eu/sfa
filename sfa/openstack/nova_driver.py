@@ -292,11 +292,20 @@ class NovaDriver (Driver):
         pubkeys = []
         for user in users:
             pubkeys.extend(user['keys']) 
-        # assume that there is a key whos nane matches the caller's username.
-        project_key = Xrn(users[0]['urn']).get_leaf()    
-        
+
         # ensure slice record exists
         aggregate.create_project(slicename, users, options=options)
+        
+        # use the first keypair we find
+        project_key = None
+        for user in users:
+            username = Xrn(user['urn']).get_leaf()
+            user_keys = self.shell.db.key_pair_get_all_by_user(username)
+            if user_keys:
+                #project_key = user_keys[0].id
+                project_key = user_keys[0].name
+                
+        
         # ensure person records exists
         aggregate.run_instances(slicename, rspec_string, project_key, pubkeys)    
    
