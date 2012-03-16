@@ -15,18 +15,33 @@ class EucaShell:
     A xmlrpc connection to the euca api. 
     """    
 
-    def __init__(self, config):
-        self.config = config
+    def __init__(self):
+        self.nova_shell = NovaShell(config)
+        self.access_key = None
+        self.secret_key = None
 
-    def get_euca_connection(self):
+    def _init_ctx(self, username=None, project=None):
+        if username and project:
+            self.access_key = "%s:%s" % (username, project)
+            self.secret_key = self.nova_shell.auth_manager.get_user(username).secret
+        else:
+            admin_user = self.nova_shell.auth_manager.get_user(self.config.SFA_NOVA_USER)
+            #access_key = admin_user.access
+            self.access_key = '%s' % admin_user.name
+            self.secret_key = admin_user.secret
+        
+
+
+    def get_euca_connection(self, username=None, project=None):
         if not has_boto:
             logger.info('Unable to access EC2 API - boto library not found.')
             return None
-        nova = NovaShell(self.config)
-        admin_user = nova.auth_manager.get_user(self.config.SFA_NOVA_USER)
-        #access_key = admin_user.access
-        access_key = '%s' % admin_user.name
-        secret_key = admin_user.secret
+
+        if username and project:
+            self._init_ctx(username, project)
+        elif not self.access_key or not self.secret_key
+            self._init_ctx()
+        
         url = self.config.SFA_NOVA_API_URL
         host = None
         port = None    
@@ -46,8 +61,8 @@ class EucaShell:
             port = int(parts[0])
             parts = parts[1:]
             path = '/'+'/'.join(parts)
-        return boto.connect_ec2(aws_access_key_id=access_key,
-                                aws_secret_access_key=secret_key,
+        return boto.connect_ec2(aws_access_key_id=self.access_key,
+                                aws_secret_access_key=self.secret_key,
                                 is_secure=use_ssl,
                                 region=RegionInfo(None, 'eucalyptus', host),
                                 host=host,
