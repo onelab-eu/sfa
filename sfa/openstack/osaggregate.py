@@ -45,7 +45,7 @@ def instance_to_sliver(instance, slice_xrn=None):
 
     sliver = Sliver({'slice_id': sliver_id,
                      'name': name,
-                     'type': 'plos-' + type,
+                     'type':  type,
                      'tags': []})
     return sliver
             
@@ -189,7 +189,7 @@ class OSAggregate:
  
     def reserve_instance(self, image_id, kernel_id, ramdisk_id, \
                          instance_type, key_name, user_data, group_name):
-        conn  = self.driver.euca_shell
+        conn  = self.driver.euca_shell.get_euca_connection()
         logger.info('Reserving an instance: image: %s, kernel: ' \
                     '%s, ramdisk: %s, type: %s, key: %s' % \
                     (image_id, kernel_id, ramdisk_id,
@@ -218,13 +218,14 @@ class OSAggregate:
         # Just choose the first available image for now.
         image_manager = Image(self.driver)
         available_images = image_manager.get_available_disk_images()
-        default_image = available_images[0]    
-        default_ami_id = CloudController.image_ec2_id(default_image['ami']['id'])  
-        default_aki_id = CloudController.image_ec2_id(default_image['aki']['id'])  
-        default_ari_id = CloudController.image_ec2_id(default_image['ari']['id'])
+        default_image = available_images[0]   
+        default_ami_id = CloudController.image_ec2_id(default_image['ami']['id'], 'ami')  
+        default_aki_id = CloudController.image_ec2_id(default_image['aki']['id'], 'aki')  
+        default_ari_id = CloudController.image_ec2_id(default_image['ari']['id'], 'ari')
 
         # get requested slivers
         rspec = RSpec(rspec)
+        user_data = "\n".join(pubkeys)
         requested_instances = defaultdict(list)
         # iterate over clouds/zones/nodes
         for node in rspec.version.get_nodes_with_slivers():
@@ -238,7 +239,8 @@ class OSAggregate:
                     # characters on end.
                     group_name = "_".join([slicename, 
                                            instance_type['name'],
-                                           base64.b64encode(os.urandom(6))])  
+                                           base64.b64encode(os.urandom(6))])
+                    group_name = group_name.replace('.', '_')  
                     self.create_security_group(group_name, fw_rules)
                     ami_id = default_ami_id
                     aki_id = default_aki_id
@@ -248,16 +250,16 @@ class OSAggregate:
                         req_image_name = req_image[0]['name']
                         disk_image = image_manager.get_disk_image(name=req_image_name)
                         if disk_image:
-                            ami_id = CloudController.image_ec2_id(disk_image['ami']['id'])
-                            aki_id = CloudController.image_ec2_id(disk_image['aki']['id'])
-                            ari_id = CloudController.image_ec2_id(disk_image['ari']['id'])
+                            ami_id = CloudController.image_ec2_id(disk_image['ami']['id'], 'ami')
+                            aki_id = CloudController.image_ec2_id(disk_image['aki']['id'], 'aki')
+                            ari_id = CloudController.image_ec2_id(disk_image['ari']['id'], 'ari')
                     # start the instance
                     self.reserve_instance(image_id=ami_id, 
                                           kernel_id=aki_id, 
                                           ramdisk_id=ari_id, 
                                           instance_type=instance_type['name'], 
                                           key_name=keyname, 
-                                          user_data=pubkeys, 
+                                          user_data=user_data, 
                                           group_name=group_name)
 
 
