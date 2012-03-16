@@ -9,6 +9,7 @@ from sfa.util.defaultdict import defaultdict
 from sfa.util.sfatime import utcparse, datetime_to_string, datetime_to_epoch
 from sfa.util.xrn import Xrn, hrn_to_urn, get_leaf, urn_to_sliver_id
 from sfa.util.cache import Cache
+from sfa.trust.credential import Credential
 # used to be used in get_ticket
 #from sfa.trust.sfaticket import SfaTicket
 
@@ -306,23 +307,17 @@ class NovaDriver (Driver):
                 user_keys = self.shell.db.key_pair_get_all_by_user(username)
                 if user_keys:
                     project_key = user_keys[0].name
-                    self.euca_shell._init_ctx(username, project_name)
-        
-        # use the first keypair we find
-        for user in users:
-            username = Xrn(user['urn']).get_leaf()
-            user_keys = self.shell.db.key_pair_get_all_by_user(username)
-            if user_keys:
-                #project_key = user_keys[0].id
-                project_key = user_keys[0].name
-                
-        
-        # ensure person records exists  
+                     
+        # ensure person records exists
+        self.euca_shell.init_context(project_name)  
         aggregate.run_instances(project_name, rspec_string, project_key, pubkeys)    
    
         return aggregate.get_rspec(slice_xrn=slice_urn, version=rspec.version)
 
     def delete_sliver (self, slice_urn, slice_hrn, creds, options):
+        # we need to do this using the context of one of the slice users
+        project_name = Xrn(slice_urn).get_leaf()
+        self.euca_shell.init_context(project_name) 
         name = OSXrn(xrn=slice_urn).name
         aggregate = OSAggregate(self)
         return aggregate.delete_instances(name)   
