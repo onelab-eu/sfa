@@ -237,10 +237,10 @@ class OSAggregate:
                     # Each sliver get's its own security group.  
                     # Keep security group names unique by appending some random 
                     # characters on end.
-                    group_name = "_".join([slicename, 
-                                           instance_type['name'],
+                    group_name = "".join([slicename, 
+                                           #instance_type['name'],
                                            base64.b64encode(os.urandom(6))])
-                    group_name = group_name.replace('.', '_')  
+                    #group_name = group_name.replace('.', '_')  
                     self.create_security_group(group_name, fw_rules)
                     ami_id = default_ami_id
                     aki_id = default_aki_id
