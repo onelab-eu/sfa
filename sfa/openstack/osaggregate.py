@@ -265,7 +265,7 @@ class OSAggregate:
 
     def delete_instances(self, project_name):
         instances = self.driver.shell.db.instance_get_all_by_project(project_name)
-        security_group_manager = SecurityGroup(self)
+        security_group_manager = SecurityGroup(self.driver)
         for instance in instances:
             # deleate this instance's security groups
             for security_group in instance.security_groups:
