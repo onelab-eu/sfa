@@ -15,7 +15,8 @@ class EucaShell:
     A xmlrpc connection to the euca api. 
     """    
 
-    def __init__(self):
+    def __init__(self, config):
+        self.config = config
         self.nova_shell = NovaShell(config)
         self.access_key = None
         self.secret_key = None
@@ -39,7 +40,7 @@ class EucaShell:
 
         if username and project:
             self._init_ctx(username, project)
-        elif not self.access_key or not self.secret_key
+        elif not self.access_key or not self.secret_key:
             self._init_ctx()
         
         url = self.config.SFA_NOVA_API_URL
