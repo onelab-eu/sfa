@@ -1,6 +1,6 @@
 import time
 import datetime
-#
+
 from sfa.util.faults import MissingSfaInfo, UnknownSfaType, \
     RecordNotFound, SfaNotImplemented, SliverDoesNotExist
 
@@ -285,19 +285,30 @@ class NovaDriver (Driver):
 
     def create_sliver (self, slice_urn, slice_hrn, creds, rspec_string, users, options):
 
+        project_name = get_leaf(slice_hrn)
         aggregate = OSAggregate(self)
-        slicename = get_leaf(slice_hrn)
         # parse rspec
         rspec = RSpec(rspec_string)
+       
+        # ensure project and users exist in local db
+        aggregate.create_project(project_name, users, options=options)
+     
+        # collect publick keys
         pubkeys = []
+        project_key = None
         for user in users:
-            pubkeys.extend(user['keys']) 
-
-        # ensure slice record exists
-        aggregate.create_project(slicename, users, options=options)
+            pubkeys.extend(user['keys'])
+            # assume first user is the caller and use their context
+            # for the ec2/euca api connection. Also, use the first users
+            # key as the project key.   
+            if not project_key:
+                username = Xrn(user['urn']).get_leaf()
+                user_keys = self.shell.db.key_pair_get_all_by_user(username)
+                if user_keys:
+                    project_key = user_keys[0].name
+                    self.euca_shell._init_ctx(username, project_name)
         
         # use the first keypair we find
-        project_key = None
         for user in users:
             username = Xrn(user['urn']).get_leaf()
             user_keys = self.shell.db.key_pair_get_all_by_user(username)
@@ -306,8 +317,8 @@ class NovaDriver (Driver):
                 project_key = user_keys[0].name
                 
         
-        # ensure person records exists
-        aggregate.run_instances(slicename, rspec_string, project_key, pubkeys)    
+        # ensure person records exists  
+        aggregate.run_instances(project_name, rspec_string, project_key, pubkeys)    
    
         return aggregate.get_rspec(slice_xrn=slice_urn, version=rspec.version)
 
