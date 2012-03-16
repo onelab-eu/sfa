@@ -21,27 +21,28 @@ class EucaShell:
         self.access_key = None
         self.secret_key = None
 
-    def _init_ctx(self, username=None, project=None):
-        if username and project:
-            self.access_key = "%s:%s" % (username, project)
-            self.secret_key = self.nova_shell.auth_manager.get_user(username).secret
+    def init_context(self, project_name=None):
+        
+        # use the context of the specified  project's project
+        # manager. 
+        if project_name:
+            project = self.nova_shell.auth_manager.get_project(project_name)
+            self.access_key = "%s:%s" % (project.project_manager.name, project_name)
+            self.secret_key = project.project_manager.secret
         else:
+            # use admin user's context
             admin_user = self.nova_shell.auth_manager.get_user(self.config.SFA_NOVA_USER)
             #access_key = admin_user.access
             self.access_key = '%s' % admin_user.name
             self.secret_key = admin_user.secret
-        
 
-
-    def get_euca_connection(self, username=None, project=None):
+    def get_euca_connection(self, project_name=None):
         if not has_boto:
             logger.info('Unable to access EC2 API - boto library not found.')
             return None
 
-        if username and project:
-            self._init_ctx(username, project)
-        elif not self.access_key or not self.secret_key:
-            self._init_ctx()
+        if not self.access_key or not self.secret_key:
+            self.init_context(project_name)
         
         url = self.config.SFA_NOVA_API_URL
         host = None
