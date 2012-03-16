@@ -1,6 +1,7 @@
 import os
 import base64
-
+import string
+import random    
 from collections import defaultdict
 from nova.exception import ImageNotFound
 from nova.api.ec2.cloud import CloudController
@@ -201,7 +202,7 @@ class OSAggregate:
                                              instance_type=instance_type,
                                              key_name=key_name,
                                              user_data = user_data,
-                                             security_groups=group_name)
+                                             security_groups=[group_name])
                                              #placement=zone,
                                              #min_count=min_count,
                                              #max_count=max_count,           
@@ -237,10 +238,9 @@ class OSAggregate:
                     # Each sliver get's its own security group.  
                     # Keep security group names unique by appending some random 
                     # characters on end.
-                    group_name = "".join([slicename, 
-                                           #instance_type['name'],
-                                           base64.b64encode(os.urandom(6))])
-                    #group_name = group_name.replace('.', '_')  
+                    random_name = "".join([random.choice(string.letters+string.digits) 
+                                           for i in xrange(6)])
+                    group_name = slicename + random_name
                     self.create_security_group(group_name, fw_rules)
                     ami_id = default_ami_id
                     aki_id = default_aki_id
