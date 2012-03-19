@@ -70,7 +70,7 @@ class Record:
         if format == 'text':
             self.dump_text(dump_parents)
         elif format == 'xml':
-            print self.save_to_string()
+            print self.save_as_xml()
         elif format == 'simple':
             print self.dump_simple()
         else:
