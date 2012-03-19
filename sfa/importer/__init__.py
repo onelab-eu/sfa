@@ -99,7 +99,8 @@ class Importer:
         # testbed-neutral : create local certificates and the like
         auth_hierarchy = Hierarchy ()
         self.create_top_level_auth_records(self.config.SFA_INTERFACE_HRN)
-        
+        self.create_interface_records()
+ 
         # testbed-specific
         testbed_importer = None
         generic=Generic.the_flavour()
