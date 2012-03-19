@@ -2,7 +2,8 @@ import time
 import datetime
 
 from sfa.util.faults import MissingSfaInfo, UnknownSfaType, \
-    RecordNotFound, SfaNotImplemented, SliverDoesNotExist
+    RecordNotFound, SfaNotImplemented, SliverDoesNotExist, \
+    SfaInvalidArgument
 
 from sfa.util.sfalogging import logger
 from sfa.util.defaultdict import defaultdict
@@ -67,17 +68,48 @@ class NovaDriver (Driver):
     ########## 
     def register (self, sfa_record, hrn, pub_key):
         type = sfa_record['type']
-        pl_record = self.sfa_fields_to_pl_fields(type, hrn, sfa_record)
-
+        
+        #pl_record = self.sfa_fields_to_pl_fields(type     dd , hrn, sfa_record)
+           
         if type == 'slice':
-            acceptable_fields=['url', 'instantiation', 'name', 'description']
             # add slice description, name, researchers, PI 
-            pass
+            name = Xrn(hrn).get_leaf()
+            researchers = sfa_record.get('researchers', [])
+            pis = sfa_record.get('pis', [])
+            project_manager = None
+            description = sfa_record.get('description', None)
+            if pis:
+                project_manager = Xrn(pis[0], 'user').get_leaf()
+            elif researchers:
+                project_manager = Xrn(researchers[0], 'user').get_leaf()
+            if not project_manager:
+                err_string = "Cannot create a project without a project manager. " + \
+                             "Please specify at least one PI or researcher for project: " + \
+                             name    
+                raise SfaInvalidArgument(err_string)
+
+            users = [Xrn(user, 'user').get_leaf() for user in \
+                     pis + researchers]
+            self.shell.auth_manager.create_project(name, project_manager, description, users)
 
         elif type == 'user':
             # add person roles, projects and keys
-            pass
-        return pointer
+            name = Xrn(hrn).get_leaf()
+            self.shell.auth_manager.create_user(name)
+            projects = sfa_records.get('slices', [])
+            for project in projects:
+                project_name = Xrn(project).get_leaf()
+                self.shell.auth_manager.add_to_project(name, project_name)
+            keys = sfa_records.get('keys', [])
+            for key in keys:
+                key_dict = {
+                    'user_id': name,
+                    'name': name,
+                    'public': key,
+                }
+                self.shell.db.key_pair_create(key_dict)       
+                  
+        return name
         
     ##########
     # xxx actually old_sfa_record comes filled with plc stuff as well in the original code
