@@ -15,10 +15,6 @@ from sfa.trust.gid import GID
 pprinter = PrettyPrinter(indent=4)
 
 def optparse_listvalue_callback(option, opt, value, parser):
-    print option
-    print opt
-    print value
-    print parser
     setattr(parser.values, option.dest, value.split(','))
 
 def args(*args, **kwargs):
@@ -96,26 +92,39 @@ class RegistryCommands(Commands):
     @args('-x', '--xrn', dest='xrn', metavar='<xrn>', help='object hrn/urn') 
     @args('-t', '--type', dest='type', metavar='<type>', help='object type', default=None) 
     @args('-u', '--url', dest='url', metavar='<url>', help='URL', default=None)
+    @args('-d', '--description', dest='description', metavar='<description>', 
+          help='Description', default=None)
     @args('-k', '--key', dest='key', metavar='<key>', help='public key string or file', 
           default=None)
     @args('-s', '--slices', dest='slices', metavar='<slices>', help='slice xrns', 
           default='', type="str", action='callback', callback=optparse_listvalue_callback)
     @args('-r', '--researchers', dest='researchers', metavar='<researchers>', help='slice researchers', 
           default='', type="str", action='callback', callback=optparse_listvalue_callback)
-    def register(self, xrn, type=None, url=None, key=None, slices='', researchers=''):
+    @args('-p', '--pis', dest='pis', metavar='<PIs>', 
+          help='Principal Investigators/Project Managers ', 
+          default='', type="str", action='callback', callback=optparse_listvalue_callback)
+    def register(self, xrn, type=None, url=None, description=None, key=None, slices='', 
+                 pis='', researchers=''):
         record_dict = self._record_dict(xrn, type, url, key, slices, researchers)
         self.api.manager.Register(self.api, record_dict)         
+
 
     @args('-x', '--xrn', dest='xrn', metavar='<xrn>', help='object hrn/urn')
     @args('-t', '--type', dest='type', metavar='<type>', help='object type', default=None)
     @args('-u', '--url', dest='url', metavar='<url>', help='URL', default=None)
+    @args('-d', '--description', dest='description', metavar='<description>',
+          help='Description', default=None)
     @args('-k', '--key', dest='key', metavar='<key>', help='public key string or file',
           default=None)
     @args('-s', '--slices', dest='slices', metavar='<slices>', help='slice xrns',
           default='', type="str", action='callback', callback=optparse_listvalue_callback)
     @args('-r', '--researchers', dest='researchers', metavar='<researchers>', help='slice researchers',
           default='', type="str", action='callback', callback=optparse_listvalue_callback)
-    def update(self, record):
+    @args('-p', '--pis', dest='pis', metavar='<PIs>',
+          help='Principal Investigators/Project Managers ',
+          default='', type="str", action='callback', callback=optparse_listvalue_callback)
+    def update(self, xrn, type=None, url=None, description=None, key=None, slices='', 
+               pis='', researchers=''):
         record_dict = self._record_dict(xrn, type, url, key, slices, researchers)
         self.api.manager.Update(self.api, record_dict)
         
