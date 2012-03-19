@@ -64,8 +64,8 @@ class RegistryCommands(Commands):
             save_records_to_file(outfile, records)  
 
 
-    def _record_dict(self, xrn, type=None, url=None, key=None, \
-                     slices='', researchers=''):              
+    def _record_dict(self, xrn=None, type=None, url=None, key=None, \
+                     description=None, slices='', researchers=''):              
         record_dict = {}
         if xrn:
             if type:
@@ -87,6 +87,8 @@ class RegistryCommands(Commands):
             record_dict['slices'] = slices
         if researchers:
             record_dict['researchers'] = researchers
+        if description:
+            record_dict['description'] = description
         return record_dict
 
     @args('-x', '--xrn', dest='xrn', metavar='<xrn>', help='object hrn/urn') 
@@ -105,7 +107,8 @@ class RegistryCommands(Commands):
           default='', type="str", action='callback', callback=optparse_listvalue_callback)
     def register(self, xrn, type=None, url=None, description=None, key=None, slices='', 
                  pis='', researchers=''):
-        record_dict = self._record_dict(xrn, type, url, key, slices, researchers)
+        record_dict = self._record_dict(xrn=xrn, type=type, url=url, key=key, 
+                                        slices=slices, researchers=researchers)
         self.api.manager.Register(self.api, record_dict)         
 
 
@@ -125,7 +128,8 @@ class RegistryCommands(Commands):
           default='', type="str", action='callback', callback=optparse_listvalue_callback)
     def update(self, xrn, type=None, url=None, description=None, key=None, slices='', 
                pis='', researchers=''):
-        record_dict = self._record_dict(xrn, type, url, key, slices, researchers)
+        record_dict = self._record_dict(xrn=xrn, type=type, url=url, description=description, 
+                                        key=key, slices=slices, researchers=researchers)
         self.api.manager.Update(self.api, record_dict)
         
     @args('-x', '--xrn', dest='xrn', metavar='<xrn>', help='object hrn/urn') 
