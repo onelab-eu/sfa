@@ -79,7 +79,9 @@ class SlabDriver(Driver):
         # shall return a structure as described in
         # http://groups.geni.net/geni/wiki/GAPI_AM_API_V2#SliverStatus
         # NT : not sure if we should implement this or not, but used by sface.
-        slices = self.GetSlices([slice_hrn])
+        
+        #slices = self.GetSlices([slice_hrn])
+        slices = self.GetSlices(slice_filter= slice_hrn, filter_type = 'slice_hrn')
         if len(slices) is 0:
             raise SliverDoesNotExist("%s  slice_hrn" % (slice_hrn))
         sl = slices[0]
@@ -184,7 +186,8 @@ class SlabDriver(Driver):
         
     def delete_sliver (self, slice_urn, slice_hrn, creds, options):
         
-        slices = self.GetSlices({'slice_hrn': slice_hrn})
+        slices = self.GetSlices(slice_filter= slice_hrn, filter_type = 'slice_hrn')
+        #slices = self.GetSlices({'slice_hrn': slice_hrn})
         if not slices:
             return 1
         slice = slices[0]
@@ -283,7 +286,8 @@ class SlabDriver(Driver):
                 if key not in acceptable_fields:
                     slab_record.pop(key) 
             print>>sys.stderr, " \r\n \t\t SLABDRIVER.PY register"
-            slices = self.GetSlices([slab_record['hrn']])
+            slices = self.GetSlices(slice_filter =slab_record['hrn'], filter_type = 'slice_hrn')
+            #slices = self.GetSlices([slab_record['hrn']])
             if not slices:
                     pointer = self.AddSlice(slab_record)
             else:
@@ -388,7 +392,7 @@ class SlabDriver(Driver):
             if persons and persons[0]['site_ids']:
                 self.DeletePerson(username)
         elif type == 'slice':
-            if self.GetSlices(hrn):
+            if self.GetSlices(slice_filter = hrn, filter_type = 'slice_hrn'):
                 self.DeleteSlice(hrn)
 
         #elif type == 'authority':
@@ -548,11 +552,17 @@ class SlabDriver(Driver):
         
     #TODO : filtrer au niveau de la query voir sqlalchemy 
     #http://docs.sqlalchemy.org/en/latest/orm/tutorial.html#returning-lists-and-scalars
-    def GetSlices(self,slice_filter = None, return_fields=None):
-
+    def GetSlices(self,slice_filter = None, filter_type = None, return_fields=None):
+        return_slice_list = []
+        ftypes = ['slice_hrn', 'record_id_user']
+        if filter_type and filter_type in ftypes:
+            if filter_type == 'slice_hrn':
+                slicerec = slab_dbsession.query(SliceSenslab).filter_by(slice_hrn = slice_filter).first()    
+            if filter_type == 'record_id_user':
+                slicerec = slab_dbsession.query(SliceSenslab).filter_by(record_id_user = slice_filter).first()    
         #sliceslist = self.db.find('slice_senslab',columns = ['oar_job_id', 'slice_hrn', 'record_id_slice','record_id_user'], record_filter=slice_filter)
         #sliceslist = slab_dbsession.query(SliceSenslab).all()
-        return_slice_list = self.db.find('slice',slice_filter)
+        #return_slice_list = self.db.find('slice',slice_filter)
         #sliceslist = slices_records.order_by("record_id_slice").all()
        
         print >>sys.stderr, " \r\n \r\n \tSLABDRIVER.PY  GetSlices  slices %s slice_filter %s " %(return_slice_list,slice_filter)
@@ -560,26 +570,50 @@ class SlabDriver(Driver):
         if return_fields:
             return_slice_list  = parse_filter(sliceslist, slice_filter,'slice', return_fields)
         
-        if return_slice_list:
-            for sl in return_slice_list:
-                #login = sl['slice_hrn'].split(".")[1].split("_")[0]
-                login = sl['slice_hrn'].split(".")[1].split("_")[0]
-                print >>sys.stderr, " \r\n \r\n \tSLABDRIVER.PY  GetSlices  sl %s " %(sl)
-                if sl['oar_job_id'] is not -1: 
-                    rslt = self.GetJobs( sl['oar_job_id'],resources=False, username = login )
-                    print >>sys.stderr, " \r\n \r\n \tSLABDRIVER.PY  GetSlices  GetJobs  %s " %(rslt)     
-                    if rslt :
-                        sl.update(rslt)
-                        sl.update({'hrn':str(sl['slice_hrn'])}) 
+        if slicerec:
+            rec = slicerec.dumpquerytodict()
+            login = slicerec.slice_hrn.split(".")[1].split("_")[0]
+            print >>sys.stderr, " \r\n \r\n \tSLABDRIVER.PY slicerec GetSlices   %s " %(slicerec)
+            if slicerec.oar_job_id is not -1:
+                rslt = self.GetJobs( slicerec.oar_job_id, resources=False, username = login )
+                print >>sys.stderr, " \r\n \r\n \tSLABDRIVER.PY  GetSlices  GetJobs  %s " %(rslt)     
+                if rslt :
+                    rec.update(rslt)
+                    rec.update({'hrn':str(rec['slice_hrn'])})
                     #If GetJobs is empty, this means the job is now in the 'Terminated' state
                     #Update the slice record
-                    else :
-                        sl['oar_job_id'] = '-1'
-                        sl.update({'hrn':str(sl['slice_hrn'])})
-                        #self.db.update_senslab_slice(sl)
+                else :
+                    self.db.update_job('-1', slice_filter)
+                    rec['oar_job_id'] = '-1'
+                    rec.update({'hrn':str(rec['slice_hrn'])})
             
-            print >>sys.stderr, " \r\n \r\n \tSLABDRIVER.PY  GetSlices  return_slice_list  %s" %(return_slice_list)  
-            return  return_slice_list
+            print >>sys.stderr, " \r\n \r\n \tSLABDRIVER.PY  GetSlices  rec  %s" %(rec)              
+            return rec
+                    
+        return
+        
+
+                    
+        #if return_slice_list:
+            #for sl in return_slice_list:
+                ##login = sl['slice_hrn'].split(".")[1].split("_")[0]
+                #login = sl['slice_hrn'].split(".")[1].split("_")[0]
+                #print >>sys.stderr, " \r\n \r\n \tSLABDRIVER.PY  GetSlices  sl %s " %(sl)
+                #if sl['oar_job_id'] is not -1: 
+                    #rslt = self.GetJobs( sl['oar_job_id'],resources=False, username = login )
+                    #print >>sys.stderr, " \r\n \r\n \tSLABDRIVER.PY  GetSlices  GetJobs  %s " %(rslt)     
+                    #if rslt :
+                        #sl.update(rslt)
+                        #sl.update({'hrn':str(sl['slice_hrn'])}) 
+                    ##If GetJobs is empty, this means the job is now in the 'Terminated' state
+                    ##Update the slice record
+                    #else :
+                        #sl['oar_job_id'] = '-1'
+                        #sl.update({'hrn':str(sl['slice_hrn'])})
+                        ##self.db.update_senslab_slice(sl)
+            
+            #print >>sys.stderr, " \r\n \r\n \tSLABDRIVER.PY  GetSlices  return_slice_list  %s" %(return_slice_list)  
+            #return  return_slice_list
 
         
     
@@ -881,7 +915,7 @@ class SlabDriver(Driver):
         Given a SFA record, fill in the senslab specific and SFA specific
         fields in the record. 
         """
-	print >>sys.stderr, "\r\n \t\t  SLABDRIVER.PY fill_record_info 000000000 fill_record_info %s" %(records)	
+	print >>sys.stderr, "\r\n \t\t  SLABDRIVER.PY fill_record_info 000000000 fill_record_info %s \t \t record['type'] %s " %(records, records[0]['type'])	
         if not isinstance(records, list):
             records = [records]
 		
@@ -893,23 +927,25 @@ class SlabDriver(Driver):
                     print >>sys.stderr, "\r\n \t\t  SLABDRIVER.PY  fill_record_info \t \t record %s" %(record)
                     #sfatable = SfaTable()
                     
-                    existing_records_by_id = {}
-                    all_records = dbsession.query(RegRecord).all()
-                    for rec in all_records:
-                        existing_records_by_id[rec.record_id] = rec
-                    print >>sys.stderr, "\r\n \t\t SLABDRIVER.PY  fill_record_info \t\t existing_records_by_id %s" %(existing_records_by_id[record['record_id']])
+                    #existing_records_by_id = {}
+                    #all_records = dbsession.query(RegRecord).all()
+                    #for rec in all_records:
+                        #existing_records_by_id[rec.record_id] = rec
+                    #print >>sys.stderr, "\r\n \t\t SLABDRIVER.PY  fill_record_info \t\t existing_records_by_id %s" %(existing_records_by_id[record['record_id']])
                         
-                    recslice = self.db.find('slice',{'slice_hrn':str(record['hrn'])}) 
-                    
+                    #recslice = self.db.find('slice',{'slice_hrn':str(record['hrn'])}) 
+                    #recslice = slab_dbsession.query(SliceSenslab).filter_by(slice_hrn = str(record['hrn'])).first()
+                    recslice = self.GetSlices(slice_filter =  str(record['hrn']), filter_type = 'slice_hrn')
                     print >>sys.stderr, "\r\n \t\t  SLABDRIVER.PY fill_record_info \t\t HOY HOY reclise %s" %(recslice)
-                    if isinstance(recslice,list) and len(recslice) == 1:
-                        recslice = recslice[0]
-                    #recuser = sfatable.find(  recslice['record_id_user'], ['hrn'])
-                    recuser = existing_records_by_id[recslice['record_id_user']]
+                    #if isinstance(recslice,list) and len(recslice) == 1:
+                        #recslice = recslice[0]
+                   
+                    recuser = dbsession.query(RegRecord).filter_by(record_id = recslice['record_id_user']).first()
+                    #existing_records_by_id[recslice['record_id_user']]
                     print >>sys.stderr, "\r\n \t\t  SLABDRIVER.PY fill_record_info \t\t recuser %s" %(recuser)
                     
-                    if isinstance(recuser,list) and len(recuser) == 1:
-                        recuser = recuser[0]	          
+                    #if isinstance(recuser,list) and len(recuser) == 1:
+                        #recuser = recuser[0]	          
                     record.update({'PI':[recuser.hrn],
                     'researcher': [recuser.hrn],
                     'name':record['hrn'], 
@@ -917,13 +953,17 @@ class SlabDriver(Driver):
                     'node_ids': [],
                     'person_ids':[recslice['record_id_user']]})
                     
-                elif str(record['type']) == 'user':  
-                    recslice = self.db.find('slice', record_filter={'record_id_user':record['record_id']})
-                    for rec in recslice:
-                        rec.update({'type':'slice'})
-                        rec.update({'hrn':rec['slice_hrn'], 'record_id':rec['record_id_slice']})
-                        records.append(rec)
-                    print >>sys.stderr, "\r\n \t\t  SLABDRIVER.PY fill_record_info ADDING SLIC EINFO recslice %s" %(recslice) 
+                elif str(record['type']) == 'user':
+                    print >>sys.stderr, "\r\n \t\t  SLABDRIVER.PY fill_record_info USEEEEEEEEEERDESU!" 
+                    #recslice = self.db.find('slice', record_filter={'record_id_user':record['record_id']})
+                    #recslice = slab_dbsession.query(SliceSenslab).filter_by(record_id_user = record['record_id']).first()
+                    rec = self.GetSlices(slice_filter = record['record_id'], filter_type = 'record_id_user')
+                    #Append record in records list, therfore fetches user and slice info again(one more loop)
+                    #Will update PIs and researcher for the slice
+                    #rec = recslice.dumpquerytodict()
+                    rec.update({'type':'slice','hrn':rec['slice_hrn']})
+                    records.append(rec)
+                    print >>sys.stderr, "\r\n \t\t  SLABDRIVER.PY fill_record_info ADDING SLIC EINFO rec %s" %(rec) 
                     
             print >>sys.stderr, "\r\n \t\t  SLABDRIVER.PY fill_record_info OKrecords %s" %(records) 
         except TypeError:
@@ -935,6 +975,10 @@ class SlabDriver(Driver):
         #self.fill_record_sfa_info(records)
 	#print >>sys.stderr, "\r\n \t\t after fill_record_sfa_info"
 	
+        
+
+    
+        
     #def update_membership_list(self, oldRecord, record, listName, addFunc, delFunc):
         ## get a list of the HRNs tht are members of the old and new records
         #if oldRecord:

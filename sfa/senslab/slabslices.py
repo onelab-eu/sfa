@@ -294,10 +294,14 @@ class SlabSlices:
         #parts = hrn_to_pl_slicename(slice_hrn).split("_")
         login_base = slice_hrn.split(".")[0]
         slicename = slice_hrn
-        slices = self.driver.GetSlices(slice_filter={'slice_hrn': slicename}) 
+        sl = self.driver.GetSlices(slice_filter=slicename, filter_type = 'slice_hrn') 
+        if sl:
+        #slices = self.driver.GetSlices(slice_filter={'slice_hrn': slicename}) 
         #slices = self.driver.GetSlices([slicename]) 
-        print>>sys.stderr, " \r\n \r\rn Slices.py verify_slice slicename %s slices %s slice_record %s"%(slicename ,slices, slice_record)
-        if not slices:
+            print>>sys.stderr, " \r\n \r\rn Slices.py verify_slice slicename %s sl %s slice_record %s"%(slicename ,sl, slice_record)
+        else:
+            print>>sys.stderr, " \r\n \r\rn Slices.py verify_slice UH-Oh..."
+        if not sl:
             slice = {'name': slicename,
                      'url': slice_record.get('url', slice_hrn), 
                      #'description': slice_record.get('description', slice_hrn)
@@ -314,7 +318,7 @@ class SlabSlices:
                              #'peer_authority': sfa_peer, 'pointer': slice['slice_id']}
                 #self.registry.register_peer_object(self.credential, peer_dict)
         else:
-            slice = slices[0]
+            slice = sl
             slice.update(slice_record)
             #del slice['last_updated']
             #del slice['date_created']

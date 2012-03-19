@@ -58,7 +58,14 @@ class SliceSenslab (SlabBase):
         result += ">"
         return result
           
-            
+    def dumpquerytodict(self):
+        dict = {'slice_hrn':self.slice_hrn,
+        'record_id':self.record_id_slice, 
+        'record_id_user':self.record_id_user,
+        'oar_job_id':self.oar_job_id, 
+         'record_id_slice':self.record_id_slice, 
+         'slice_hrn':self.slice_hrn}
+        return dict       
 #class PeerSenslab(SlabBase):
     #__tablename__ = 'peer_senslab' 
     #peername = Column(String, nullable = False)
@@ -196,12 +203,15 @@ class SlabDB:
                   Q = newQ
                 except KeyError:
                     print>>sys.stderr, "\r\n \t\t FFFFFFFFFFFFFFFFUUUUUUUUFUFUFU!!!!!!!!"
-        print>>sys.stderr, " HEEEEEEEEEEEEY %s " %(Q.all())
-        reclist = []
-        for rec in Q.all():
-            reclist.append(dict(zip(['record_id_user','oar_job_id', 'record_id_slice','slice_hrn'],[rec.record_id_user,rec.oar_job_id,rec.record_id_slice, rec.slice_hrn])))
-        print>>sys.stderr, " \r\n \r\n \t SLABPOSTGRES find  reclist %s" %(reclist)
-        return reclist
+        print>>sys.stderr, " HEEEEEEEEEEEEY %s " %(Q.first())
+        rec = Q.first()
+        print>>sys.stderr, " \r\n \r\n \t SLABPOSTGRES find  rec %s" %(rec)
+        return dict(zip(['record_id_user','oar_job_id', 'record_id_slice','slice_hrn'],[rec.record_id_user,rec.oar_job_id,rec.record_id_slice, rec.slice_hrn]))
+        #reclist = []
+        ##for rec in Q.all():
+            #reclist.append(dict(zip(['record_id_user','oar_job_id', 'record_id_slice','slice_hrn'],[rec.record_id_user,rec.oar_job_id,rec.record_id_slice, rec.slice_hrn])))
+        #print>>sys.stderr, " \r\n \r\n \t SLABPOSTGRES find  reclist %s" %(reclist)
+        #return reclist
         
        
 

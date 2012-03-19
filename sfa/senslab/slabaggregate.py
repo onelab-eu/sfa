@@ -66,7 +66,8 @@ class SlabAggregate:
         slice_hrn, _ = urn_to_hrn(slice_xrn)
         slice_name = slice_hrn
         print >>sys.stderr,"\r\n \r\n \t\t_____________ Slabaggregate api get_slice_and_slivers "
-        slices = self.driver.GetSlices({'slice_hrn':str(slice_name)})
+        slices = self.driver.GetSlices(slice_filter= str(slice_name), filter_type = 'slice_hrn')
+        #slices = self.driver.GetSlices({'slice_hrn':str(slice_name)})
         print >>sys.stderr,"\r\n \r\n \t\t_____________ Slabaggregate api get_slice_and_slivers  slices %s " %(slices)
         if not slices:
             return (slice, slivers)
