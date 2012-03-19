@@ -14,6 +14,13 @@ from sfa.trust.gid import GID
 
 pprinter = PrettyPrinter(indent=4)
 
+def optparse_listvalue_callback(option, opt, value, parser):
+    print option
+    print opt
+    print value
+    print parser
+    setattr(parser.values, option.dest, value.split(','))
+
 def args(*args, **kwargs):
     def _decorator(func):
         func.__dict__.setdefault('options', []).insert(0, (args, kwargs))
@@ -21,7 +28,6 @@ def args(*args, **kwargs):
     return _decorator
 
 class Commands(object):
-
     def _get_commands(self):
         available_methods = []
         for attrib in dir(self):
@@ -59,13 +65,59 @@ class RegistryCommands(Commands):
             sfa_record = Record(dict=record)
             sfa_record.dump(format) 
         if outfile:
-            save_records_to_file(outfile, records)                
+            save_records_to_file(outfile, records)  
 
-    def register(self, record):
-        pass
 
+    def _record_dict(self, xrn, type=None, url=None, key=None, \
+                     slices='', researchers=''):              
+        record_dict = {}
+        if xrn:
+            if type:
+                xrn = Xrn(xrn, type)
+            else:
+                xrn = Xrn(xrn)
+            record_dict['urn'] = xrn.get_urn()
+            record_dict['hrn'] = xrn.get_hrn()
+            record_dict['type'] = xrn.get_type()
+        if url:
+            record_dict['url'] = url
+        if key:
+            try:
+                pubkey = open(key, 'r').read()
+            except IOError:
+                pubkey = key
+            record_dict['keys'] = [pubkey]
+        if slices:
+            record_dict['slices'] = slices
+        if researchers:
+            record_dict['researchers'] = researchers
+        return record_dict
+
+    @args('-x', '--xrn', dest='xrn', metavar='<xrn>', help='object hrn/urn') 
+    @args('-t', '--type', dest='type', metavar='<type>', help='object type', default=None) 
+    @args('-u', '--url', dest='url', metavar='<url>', help='URL', default=None)
+    @args('-k', '--key', dest='key', metavar='<key>', help='public key string or file', 
+          default=None)
+    @args('-s', '--slices', dest='slices', metavar='<slices>', help='slice xrns', 
+          default='', type="str", action='callback', callback=optparse_listvalue_callback)
+    @args('-r', '--researchers', dest='researchers', metavar='<researchers>', help='slice researchers', 
+          default='', type="str", action='callback', callback=optparse_listvalue_callback)
+    def register(self, xrn, type=None, url=None, key=None, slices='', researchers=''):
+        record_dict = self._record_dict(xrn, type, url, key, slices, researchers)
+        self.api.manager.Register(self.api, record_dict)         
+
+    @args('-x', '--xrn', dest='xrn', metavar='<xrn>', help='object hrn/urn')
+    @args('-t', '--type', dest='type', metavar='<type>', help='object type', default=None)
+    @args('-u', '--url', dest='url', metavar='<url>', help='URL', default=None)
+    @args('-k', '--key', dest='key', metavar='<key>', help='public key string or file',
+          default=None)
+    @args('-s', '--slices', dest='slices', metavar='<slices>', help='slice xrns',
+          default='', type="str", action='callback', callback=optparse_listvalue_callback)
+    @args('-r', '--researchers', dest='researchers', metavar='<researchers>', help='slice researchers',
+          default='', type="str", action='callback', callback=optparse_listvalue_callback)
     def update(self, record):
-        pass
+        record_dict = self._record_dict(xrn, type, url, key, slices, researchers)
+        self.api.manager.Update(self.api, record_dict)
         
     @args('-x', '--xrn', dest='xrn', metavar='<xrn>', help='object hrn/urn') 
     @args('-t', '--type', dest='type', metavar='<type>', help='object type', default=None) 
@@ -293,6 +345,8 @@ def main():
     usage = "%%prog %s %s <args> [options]" % (category, action)
     parser = OptionParser(usage=usage)
     for arg, kwd in options:
+        print "arg", arg
+        print "kwd", kwd 
         parser.add_option(*arg, **kwd)
     (opts, cmd_args) = parser.parse_args(argv)
     cmd_kwds = vars(opts)
