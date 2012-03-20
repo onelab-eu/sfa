@@ -1,6 +1,6 @@
 %define name sfa
 %define version 2.1
-%define taglevel 3
+%define taglevel 4
 
 %define release %{taglevel}%{?pldistro:.%{pldistro}}%{?date:.%{date}}
 %global python_sitearch	%( python -c "from distutils.sysconfig import get_python_lib; print get_python_lib(1)" )
@@ -226,6 +226,14 @@ fi
 [ "$1" -ge "1" ] && service sfa-cm restart || :
 
 %changelog
+* Tue Mar 20 2012 Tony Mack <tmack@cs.princeton.edu> - sfa-2.1-4
+- Introduced new administrative command line script, sfaadmin.py. Removed various single
+ purpose scripts and migrated their functionality into sfaadmin.py.
+- Refactored Registry import scripts.
+- Removed SQLAlchemy dependency from sfi.py.
+- Fixed bugs in sfi.py
+- Registry, Aggregate and SliceManager now support the OpenStack framework. 
+
 * Fri Feb 24 2012 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-2.1-3
 - slice x researcher rel. in database,
 - plimporter to maintain that, as well as user.email, and more robust
