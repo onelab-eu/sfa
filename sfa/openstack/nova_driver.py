@@ -114,18 +114,28 @@ class NovaDriver (Driver):
     ##########
     # xxx actually old_sfa_record comes filled with plc stuff as well in the original code
     def update (self, old_sfa_record, new_sfa_record, hrn, new_key):
-        pointer = old_sfa_record['pointer']
-        type = old_sfa_record['type']
-
+        type = new_sfa_record['type'] 
+        
         # new_key implemented for users only
         if new_key and type not in [ 'user' ]:
             raise UnknownSfaType(type)
 
         elif type == "slice":
-            # can update description, researchers and PI
-            pass 
+            # can update project manager and description
+            name = Xrn(hrn).get_leaf()
+            researchers = sfa_record.get('researchers', [])
+            pis = sfa_record.get('pis', [])
+            project_manager = None
+            description = sfa_record.get('description', None)
+            if pis:
+                project_manager = Xrn(pis[0], 'user').get_leaf()
+            elif researchers:
+                project_manager = Xrn(researchers[0], 'user').get_leaf()
+            self.shell.auth_manager.modify_project(name, project_manager, description)
+
         elif type == "user":
-            # can update  slices, keys and roles
+            # can techinally update access_key and secret_key,
+            # but that is not in our scope, so we do nothing.  
             pass
         return True
         
