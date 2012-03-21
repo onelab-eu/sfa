@@ -67,11 +67,13 @@ class SlabAggregate:
         slice_name = slice_hrn
         print >>sys.stderr,"\r\n \r\n \t\t_____________ Slabaggregate api get_slice_and_slivers "
         slices = self.driver.GetSlices(slice_filter= str(slice_name), filter_type = 'slice_hrn')
-        #slices = self.driver.GetSlices({'slice_hrn':str(slice_name)})
         print >>sys.stderr,"\r\n \r\n \t\t_____________ Slabaggregate api get_slice_and_slivers  slices %s " %(slices)
         if not slices:
             return (slice, slivers)
-        slice = slices[0]
+        if isinstance(slice, list):
+            slice = slices[0]
+        else:
+           slice =slices
 
         # sort slivers by node id , if there is a job
         #and therfore, node allocated to this slice

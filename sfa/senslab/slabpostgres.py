@@ -14,8 +14,12 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, backref
 
 
+from sqlalchemy.dialects import postgresql
+
 from sqlalchemy import MetaData, Table
 from sqlalchemy.exc import NoSuchTableError
+
+from sqlalchemy import String
 
 #Dict holding the columns names of the table as keys
 #and their type, used for creation of the table
@@ -39,8 +43,10 @@ class SliceSenslab (SlabBase):
     oar_job_id = Column( Integer,default = -1)
     record_id_slice = Column(Integer)
     slice_hrn = Column(String,nullable = False)
+    node_list = Column(postgresql.ARRAY(String), nullable =True)
     
     def __init__ (self, slice_hrn =None, oar_job_id=None, record_id_slice=None, record_id_user= None):
+        self.node_list = []
         if record_id_slice: 
             self.record_id_slice = record_id_slice
         if slice_hrn:
@@ -52,9 +58,10 @@ class SliceSenslab (SlabBase):
         if record_id_user: 
             self.record_id_user= record_id_user
             
+            
     def __repr__(self):
-        result="<Record id user =%s, slice hrn=%s, oar_job id=%s,Record id slice =%s" % \
-                (self.record_id_user, self.slice_hrn, self.oar_job_id, self.record_id_slice)
+        result="<Record id user =%s, slice hrn=%s, oar_job id=%s,Record id slice =%s  node_list =%s" % \
+                (self.record_id_user, self.slice_hrn, self.oar_job_id, self.record_id_slice, self.node_list)
         result += ">"
         return result
           
@@ -64,7 +71,8 @@ class SliceSenslab (SlabBase):
         'record_id_user':self.record_id_user,
         'oar_job_id':self.oar_job_id, 
          'record_id_slice':self.record_id_slice, 
-         'slice_hrn':self.slice_hrn}
+         'slice_hrn':self.slice_hrn,
+         'node_list':self.node_list}
         return dict       
 #class PeerSenslab(SlabBase):
     #__tablename__ = 'peer_senslab' 
@@ -84,7 +92,6 @@ class SliceSenslab (SlabBase):
 class SlabDB:
     def __init__(self,config):
         self.sl_base = SlabBase
-
         dbname="slab_sfa"
         # will be created lazily on-demand
         self.slab_session = None
@@ -111,11 +118,14 @@ class SlabDB:
                 pass
         self.slab_engine=None
         raise Exception,"Could not connect to database"
-
+    
+    
+    
     def check (self):
         self.slab_engine.execute ("select 1").scalar()
-
-
+        
+        
+        
     def session (self):
         if self.slab_session is None:
             Session=sessionmaker ()
@@ -162,10 +172,13 @@ class SlabDB:
         return
     
     
-    def update_job(self, job_id, hrn):
+    def update_job(self, hrn, job_id= None, nodes = None ):
         slice_rec = slab_dbsession.query(SliceSenslab).filter_by(slice_hrn = hrn).first()
         print>>sys.stderr, " \r\n \r\n \t SLABPOSTGRES  update_job slice_rec %s"%(slice_rec)
-        slice_rec.oar_job_id = job_id
+        if job_id is not None:
+            slice_rec.oar_job_id = job_id
+        if nodes is not None :
+            slice_rec.node_list = nodes
         slab_dbsession.commit()
 
     def find (self, name = None, filter_dict = None):

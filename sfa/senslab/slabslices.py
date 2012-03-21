@@ -290,14 +290,12 @@ class SlabSlices:
         #return site        
 
     def verify_slice(self, slice_hrn, slice_record, peer, sfa_peer, options={} ):
-        #slicename = hrn_to_pl_slicename(slice_hrn)
-        #parts = hrn_to_pl_slicename(slice_hrn).split("_")
+
         login_base = slice_hrn.split(".")[0]
         slicename = slice_hrn
         sl = self.driver.GetSlices(slice_filter=slicename, filter_type = 'slice_hrn') 
         if sl:
-        #slices = self.driver.GetSlices(slice_filter={'slice_hrn': slicename}) 
-        #slices = self.driver.GetSlices([slicename]) 
+
             print>>sys.stderr, " \r\n \r\rn Slices.py verify_slice slicename %s sl %s slice_record %s"%(slicename ,sl, slice_record)
         else:
             print>>sys.stderr, " \r\n \r\rn Slices.py verify_slice UH-Oh..."

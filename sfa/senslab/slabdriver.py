@@ -80,7 +80,7 @@ class SlabDriver(Driver):
         # http://groups.geni.net/geni/wiki/GAPI_AM_API_V2#SliverStatus
         # NT : not sure if we should implement this or not, but used by sface.
         
-        #slices = self.GetSlices([slice_hrn])
+
         slices = self.GetSlices(slice_filter= slice_hrn, filter_type = 'slice_hrn')
         if len(slices) is 0:
             raise SliverDoesNotExist("%s  slice_hrn" % (slice_hrn))
@@ -133,27 +133,16 @@ class SlabDriver(Driver):
         
     def create_sliver (self, slice_urn, slice_hrn, creds, rspec_string, users, options):
         aggregate = SlabAggregate(self)
-        #aggregate = SlabAggregate(self)
+
         slices = SlabSlices(self)
         peer = slices.get_peer(slice_hrn)
         sfa_peer = slices.get_sfa_peer(slice_hrn)
         slice_record=None 
-        #print>>sys.stderr, " \r\n \r\n   create_sliver  creds %s \r\n \r\n users %s " %(creds,users)
+
        
         if not isinstance(creds, list):
             creds = [creds]
 
-        #for cred in creds:
-            #cred_obj=Credential(string=cred)
-            #print >>sys.stderr," \r\n \r\n   create_sliver cred  %s  " %(cred)
-            #GIDcall = cred_obj.get_gid_caller()
-            #GIDobj = cred_obj.get_gid_object() 
-            #print >>sys.stderr," \r\n \r\n   create_sliver GIDobj pubkey %s hrn %s " %(GIDobj.get_pubkey().get_pubkey_string(), GIDobj.get_hrn())
-            #print >>sys.stderr," \r\n \r\n   create_sliver GIDcall pubkey %s  hrn %s" %(GIDcall.get_pubkey().get_pubkey_string(),GIDobj.get_hrn())
-
-        
-        #tmpcert = GID(string = users[0]['gid'])
-        #print >>sys.stderr," \r\n \r\n   create_sliver  tmpcer pubkey %s hrn %s " %(tmpcert.get_pubkey().get_pubkey_string(), tmpcert.get_hrn())
            
         if users:
             slice_record = users[0].get('slice_record', {})
@@ -187,7 +176,6 @@ class SlabDriver(Driver):
     def delete_sliver (self, slice_urn, slice_hrn, creds, options):
         
         slices = self.GetSlices(slice_filter= slice_hrn, filter_type = 'slice_hrn')
-        #slices = self.GetSlices({'slice_hrn': slice_hrn})
         if not slices:
             return 1
         slice = slices[0]
@@ -287,7 +275,6 @@ class SlabDriver(Driver):
                     slab_record.pop(key) 
             print>>sys.stderr, " \r\n \t\t SLABDRIVER.PY register"
             slices = self.GetSlices(slice_filter =slab_record['hrn'], filter_type = 'slice_hrn')
-            #slices = self.GetSlices([slab_record['hrn']])
             if not slices:
                     pointer = self.AddSlice(slab_record)
             else:
@@ -550,70 +537,49 @@ class SlabDriver(Driver):
         return_site_list = parse_filter(site_dict.values(), site_filter,'site', return_fields)
         return return_site_list
         
-    #TODO : filtrer au niveau de la query voir sqlalchemy 
-    #http://docs.sqlalchemy.org/en/latest/orm/tutorial.html#returning-lists-and-scalars
+
     def GetSlices(self,slice_filter = None, filter_type = None, return_fields=None):
         return_slice_list = []
+        slicerec  = {}
         ftypes = ['slice_hrn', 'record_id_user']
         if filter_type and filter_type in ftypes:
             if filter_type == 'slice_hrn':
                 slicerec = slab_dbsession.query(SliceSenslab).filter_by(slice_hrn = slice_filter).first()    
             if filter_type == 'record_id_user':
-                slicerec = slab_dbsession.query(SliceSenslab).filter_by(record_id_user = slice_filter).first()    
-        #sliceslist = self.db.find('slice_senslab',columns = ['oar_job_id', 'slice_hrn', 'record_id_slice','record_id_user'], record_filter=slice_filter)
-        #sliceslist = slab_dbsession.query(SliceSenslab).all()
-        #return_slice_list = self.db.find('slice',slice_filter)
-        #sliceslist = slices_records.order_by("record_id_slice").all()
-       
-        print >>sys.stderr, " \r\n \r\n \tSLABDRIVER.PY  GetSlices  slices %s slice_filter %s " %(return_slice_list,slice_filter)
-        
-        if return_fields:
-            return_slice_list  = parse_filter(sliceslist, slice_filter,'slice', return_fields)
-        
-        if slicerec:
-            rec = slicerec.dumpquerytodict()
-            login = slicerec.slice_hrn.split(".")[1].split("_")[0]
-            print >>sys.stderr, " \r\n \r\n \tSLABDRIVER.PY slicerec GetSlices   %s " %(slicerec)
-            if slicerec.oar_job_id is not -1:
-                rslt = self.GetJobs( slicerec.oar_job_id, resources=False, username = login )
-                print >>sys.stderr, " \r\n \r\n \tSLABDRIVER.PY  GetSlices  GetJobs  %s " %(rslt)     
-                if rslt :
-                    rec.update(rslt)
-                    rec.update({'hrn':str(rec['slice_hrn'])})
-                    #If GetJobs is empty, this means the job is now in the 'Terminated' state
-                    #Update the slice record
-                else :
-                    self.db.update_job('-1', slice_filter)
-                    rec['oar_job_id'] = '-1'
-                    rec.update({'hrn':str(rec['slice_hrn'])})
+                slicerec = slab_dbsession.query(SliceSenslab).filter_by(record_id_user = slice_filter).first()
+            if slicerec:
+                rec = slicerec.dumpquerytodict()
+                login = slicerec.slice_hrn.split(".")[1].split("_")[0]
+                print >>sys.stderr, " \r\n \r\n \tSLABDRIVER.PY slicerec GetSlices   %s " %(slicerec)
+                if slicerec.oar_job_id is not -1:
+                    rslt = self.GetJobs( slicerec.oar_job_id, resources=False, username = login )
+                    print >>sys.stderr, " \r\n \r\n \tSLABDRIVER.PY  GetSlices  GetJobs  %s " %(rslt)     
+                    if rslt :
+                        rec.update(rslt)
+                        rec.update({'hrn':str(rec['slice_hrn'])})
+                        #If GetJobs is empty, this means the job is now in the 'Terminated' state
+                        #Update the slice record
+                    else :
+                        self.db.update_job(slice_filter, job_id = '-1')
+                        rec['oar_job_id'] = '-1'
+                        rec.update({'hrn':str(rec['slice_hrn'])})
             
             print >>sys.stderr, " \r\n \r\n \tSLABDRIVER.PY  GetSlices  rec  %s" %(rec)              
             return rec
-                    
-        return
-        
+                
+                
+        else:
+            return_slice_list = slab_dbsession.query(SliceSenslab).all()
 
+        print >>sys.stderr, " \r\n \r\n \tSLABDRIVER.PY  GetSlices  slices %s slice_filter %s " %(return_slice_list,slice_filter)
+        
+        #if return_fields:
+            #return_slice_list  = parse_filter(sliceslist, slice_filter,'slice', return_fields)
+        
+        
                     
-        #if return_slice_list:
-            #for sl in return_slice_list:
-                ##login = sl['slice_hrn'].split(".")[1].split("_")[0]
-                #login = sl['slice_hrn'].split(".")[1].split("_")[0]
-                #print >>sys.stderr, " \r\n \r\n \tSLABDRIVER.PY  GetSlices  sl %s " %(sl)
-                #if sl['oar_job_id'] is not -1: 
-                    #rslt = self.GetJobs( sl['oar_job_id'],resources=False, username = login )
-                    #print >>sys.stderr, " \r\n \r\n \tSLABDRIVER.PY  GetSlices  GetJobs  %s " %(rslt)     
-                    #if rslt :
-                        #sl.update(rslt)
-                        #sl.update({'hrn':str(sl['slice_hrn'])}) 
-                    ##If GetJobs is empty, this means the job is now in the 'Terminated' state
-                    ##Update the slice record
-                    #else :
-                        #sl['oar_job_id'] = '-1'
-                        #sl.update({'hrn':str(sl['slice_hrn'])})
-                        ##self.db.update_senslab_slice(sl)
-            
-            #print >>sys.stderr, " \r\n \r\n \tSLABDRIVER.PY  GetSlices  return_slice_list  %s" %(return_slice_list)  
-            #return  return_slice_list
+        return return_slice_list
+        
 
         
     
@@ -748,7 +714,7 @@ class SlabDriver(Driver):
         #self.db.update('slice',['oar_job_id'], [answer['id']], 'slice_hrn', slice_name)
                
 
-        self.db.update_job( answer['id'], slice_name)
+        self.db.update_job( slice_name, job_id = answer['id'] )
         jobid=answer['id']
         print>>sys.stderr, "\r\n \r\n AddSliceToNodes jobid    %s added_nodes  %s slice_user %s"  %(jobid,added_nodes,slice_user)  
         # second step : configure the experiment
@@ -915,10 +881,11 @@ class SlabDriver(Driver):
         Given a SFA record, fill in the senslab specific and SFA specific
         fields in the record. 
         """
-	print >>sys.stderr, "\r\n \t\t  SLABDRIVER.PY fill_record_info 000000000 fill_record_info %s \t \t record['type'] %s " %(records, records[0]['type'])	
+                    
+        print >>sys.stderr, "\r\n \t\t  SLABDRIVER.PY fill_record_info 000000000 fill_record_info %s  " %(records)
         if not isinstance(records, list):
             records = [records]
-		
+
         parkour = records 
         try:
             for record in parkour:
@@ -944,8 +911,7 @@ class SlabDriver(Driver):
                     #existing_records_by_id[recslice['record_id_user']]
                     print >>sys.stderr, "\r\n \t\t  SLABDRIVER.PY fill_record_info \t\t recuser %s" %(recuser)
                     
-                    #if isinstance(recuser,list) and len(recuser) == 1:
-                        #recuser = recuser[0]	          
+          
                     record.update({'PI':[recuser.hrn],
                     'researcher': [recuser.hrn],
                     'name':record['hrn'], 
@@ -955,12 +921,11 @@ class SlabDriver(Driver):
                     
                 elif str(record['type']) == 'user':
                     print >>sys.stderr, "\r\n \t\t  SLABDRIVER.PY fill_record_info USEEEEEEEEEERDESU!" 
-                    #recslice = self.db.find('slice', record_filter={'record_id_user':record['record_id']})
-                    #recslice = slab_dbsession.query(SliceSenslab).filter_by(record_id_user = record['record_id']).first()
+
                     rec = self.GetSlices(slice_filter = record['record_id'], filter_type = 'record_id_user')
                     #Append record in records list, therfore fetches user and slice info again(one more loop)
                     #Will update PIs and researcher for the slice
-                    #rec = recslice.dumpquerytodict()
+
                     rec.update({'type':'slice','hrn':rec['slice_hrn']})
                     records.append(rec)
                     print >>sys.stderr, "\r\n \t\t  SLABDRIVER.PY fill_record_info ADDING SLIC EINFO rec %s" %(rec) 
