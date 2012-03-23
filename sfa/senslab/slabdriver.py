@@ -102,7 +102,8 @@ class SlabDriver(Driver):
             if nodes:
                 top_level_status = 'ready'
             result['geni_urn'] = slice_urn
-            result['slab_login'] = sl['job_user']
+            result['pl_login'] = sl['job_user']
+            #result['slab_login'] = sl['job_user']
             
             timestamp = float(sl['startTime']) + float(sl['walltime'])
             result['slab_expires'] = strftime(self.time_format, gmtime(float(timestamp)))
