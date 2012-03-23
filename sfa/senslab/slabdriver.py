@@ -81,7 +81,7 @@ class SlabDriver(Driver):
         # NT : not sure if we should implement this or not, but used by sface.
         
 
-        sl = self.GetSlices.(slice_filter= slice_hrn, filter_type = 'slice_hrn')
+        sl = self.GetSlices(slice_filter= slice_hrn, filter_type = 'slice_hrn')
         if len(sl) is 0:
             raise SliverDoesNotExist("%s  slice_hrn" % (slice_hrn))
 
