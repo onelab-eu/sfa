@@ -81,10 +81,10 @@ class SlabDriver(Driver):
         # NT : not sure if we should implement this or not, but used by sface.
         
 
-        slices = self.GetSlices(slice_filter= slice_hrn, filter_type = 'slice_hrn')
+        sl = self.GetSlices(slice_filter= slice_hrn, filter_type = 'slice_hrn')
         if len(slices) is 0:
             raise SliverDoesNotExist("%s  slice_hrn" % (slice_hrn))
-        sl = slices[0]
+        #sl = slices[0]
         print >>sys.stderr, "\r\n \r\n_____________ Sliver status urn %s hrn %s slices %s \r\n " %(slice_urn,slice_hrn,slices)
         if sl['oar_job_id'] is not -1:
     
