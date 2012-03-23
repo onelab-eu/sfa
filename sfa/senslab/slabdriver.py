@@ -81,7 +81,7 @@ class SlabDriver(Driver):
         # NT : not sure if we should implement this or not, but used by sface.
         
 
-        sl = self.GetSlices(slice_filter= slice_hrn, filter_type = 'slice_hrn')
+        sl = self.GetSlices.(slice_filter= slice_hrn, filter_type = 'slice_hrn')
         if len(sl) is 0:
             raise SliverDoesNotExist("%s  slice_hrn" % (slice_hrn))
 
@@ -117,12 +117,12 @@ class SlabDriver(Driver):
                 #res['slab_hostname'] = node['hostname']
                 #res['slab_boot_state'] = node['boot_state']
                 
-                res['pl_hostname'] = nodeall_byhostname[node['hostname']]['hostname']
-                res['pl_boot_state'] = nodeall_byhostname[node['hostname']]['boot_state']
+                res['pl_hostname'] = nodeall_byhostname[node]['hostname']
+                res['pl_boot_state'] = nodeall_byhostname[node]['boot_state']
                 res['pl_last_contact'] = strftime(self.time_format, gmtime(float(timestamp)))
-                sliver_id = urn_to_sliver_id(slice_urn, sl['record_id_slice'],nodeall_byhostname[node['hostname']]['node_id'] ) 
+                sliver_id = urn_to_sliver_id(slice_urn, sl['record_id_slice'],nodeall_byhostname[node]['node_id'] ) 
                 res['geni_urn'] = sliver_id 
-                if nodeall_byhostname[node['hostname']]['boot_state'] == 'Alive':
+                if nodeall_byhostname[node]['boot_state'] == 'Alive':
                 #if node['boot_state'] == 'Alive':
                     res['geni_status'] = 'ready'
                 else:
