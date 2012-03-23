@@ -90,12 +90,12 @@ class SlabDriver(Driver):
     
             # report about the local nodes only
             nodes = self.GetNodes({'hostname':sl['node_ids']},
-                            ['node_id', 'hostname','site_login_base','boot_state'])
+                            ['node_id', 'hostname','name','boot_state'])
             if len(nodes) is 0:
                 raise SliverDoesNotExist("No slivers allocated ") 
                     
              
-            site_logins = [node['site_login_base'] for node in nodes]
+            site_logins = [node['name'] for node in nodes]
     
             result = {}
             top_level_status = 'unknown'
