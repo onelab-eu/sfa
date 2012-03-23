@@ -82,20 +82,20 @@ class SlabDriver(Driver):
         
 
         sl = self.GetSlices(slice_filter= slice_hrn, filter_type = 'slice_hrn')
-        if len(slices) is 0:
+        if len(sl) is 0:
             raise SliverDoesNotExist("%s  slice_hrn" % (slice_hrn))
-        #sl = slices[0]
-        print >>sys.stderr, "\r\n \r\n_____________ Sliver status urn %s hrn %s slices %s \r\n " %(slice_urn,slice_hrn,slices)
+
+        print >>sys.stderr, "\r\n \r\n_____________ Sliver status urn %s hrn %s sl %s \r\n " %(slice_urn,slice_hrn,sl)
         if sl['oar_job_id'] is not -1:
     
             # report about the local nodes only
             nodes = self.GetNodes({'hostname':sl['node_ids']},
-                            ['node_id', 'hostname','name','boot_state'])
+                            ['node_id', 'hostname','site','boot_state'])
             if len(nodes) is 0:
                 raise SliverDoesNotExist("No slivers allocated ") 
                     
              
-            site_logins = [node['name'] for node in nodes]
+           
     
             result = {}
             top_level_status = 'unknown'
@@ -560,8 +560,8 @@ class SlabDriver(Driver):
                         #If GetJobs is empty, this means the job is now in the 'Terminated' state
                         #Update the slice record
                     else :
-                        self.db.update_job(slice_filter, job_id = '-1')
-                        rec['oar_job_id'] = '-1'
+                        self.db.update_job(slice_filter, job_id = -1)
+                        rec['oar_job_id'] = -1
                         rec.update({'hrn':str(rec['slice_hrn'])})
             
             print >>sys.stderr, " \r\n \r\n \tSLABDRIVER.PY  GetSlices  rec  %s" %(rec)              
