@@ -89,8 +89,10 @@ class SlabDriver(Driver):
         if sl['oar_job_id'] is not -1:
     
             # report about the local nodes only
-            nodes = self.GetNodes({'hostname':sl['node_ids']},
+            nodes_all = self.GetNodes({'hostname':sl['node_ids']},
                             ['node_id', 'hostname','site','boot_state'])
+            nodeall_byhostname = dict([(n['hostname'], n) for n in nodes_all])
+            nodes = sl['node_ids']
             if len(nodes) is 0:
                 raise SliverDoesNotExist("No slivers allocated ") 
                     
@@ -105,18 +107,23 @@ class SlabDriver(Driver):
             result['pl_login'] = sl['job_user']
             #result['slab_login'] = sl['job_user']
             
-            timestamp = float(sl['startTime']) + float(sl['walltime'])
-            result['slab_expires'] = strftime(self.time_format, gmtime(float(timestamp)))
+            timestamp = float(sl['startTime']) + float(sl['walltime']) 
+            result['pl_expires'] = strftime(self.time_format, gmtime(float(timestamp)))
+            #result['slab_expires'] = strftime(self.time_format, gmtime(float(timestamp)))
             
             resources = []
             for node in nodes:
                 res = {}
-                res['slab_hostname'] = node['hostname']
-                res['slab_boot_state'] = node['boot_state']
+                #res['slab_hostname'] = node['hostname']
+                #res['slab_boot_state'] = node['boot_state']
                 
-                sliver_id = urn_to_sliver_id(slice_urn, sl['record_id_slice'], node['node_id']) 
-                res['geni_urn'] = sliver_id
-                if node['boot_state'] == 'Alive':
+                res['pl_hostname'] = nodeall_byhostname[node['hostname']]['hostname']
+                res['pl_boot_state'] = nodeall_byhostname[node['hostname']]['boot_state']
+                res['pl_last_contact'] = strftime(self.time_format, gmtime(float(timestamp)))
+                sliver_id = urn_to_sliver_id(slice_urn, sl['record_id_slice'],nodeall_byhostname[node['hostname']]['node_id'] ) 
+                res['geni_urn'] = sliver_id 
+                if nodeall_byhostname[node['hostname']]['boot_state'] == 'Alive':
+                #if node['boot_state'] == 'Alive':
                     res['geni_status'] = 'ready'
                 else:
                     res['geni_status'] = 'failed'
@@ -490,11 +497,9 @@ class SlabDriver(Driver):
             node_hostname_list.append(node['hostname'])
         node_dict = dict(zip(node_hostname_list,node_list))
         
-        #print>>sys.stderr, "\r\n \r\n \r\n \r\n \r\n  \t\t GetJobs GetNODES %s "  %(node_list)
+
         try :
-            
-            #for n in job_info[node_list]:
-                #n = str(self.root_auth) + str(n)            
+
 
             liste =job_info[node_list_k] 
             print>>sys.stderr, "\r\n \r\n \t\t GetJobs resources  job_info liste%s" %(liste)
@@ -502,6 +507,8 @@ class SlabDriver(Driver):
                job_info[node_list_k][k] = node_dict[job_info[node_list_k][k]]['hostname']
             
             print>>sys.stderr, "\r\n \r\n \t\t YYYYYYYYYYYYGetJobs resources  job_info %s" %(job_info)  
+            #Replaces the previous entry "assigned_network_address" / "reserved_resources"
+            #with "node_ids"
             job_info.update({'node_ids':job_info[node_list_k]})
             del job_info[node_list_k]
             return job_info
@@ -542,12 +549,14 @@ class SlabDriver(Driver):
     def GetSlices(self,slice_filter = None, filter_type = None, return_fields=None):
         return_slice_list = []
         slicerec  = {}
+        rec = {}
         ftypes = ['slice_hrn', 'record_id_user']
         if filter_type and filter_type in ftypes:
             if filter_type == 'slice_hrn':
                 slicerec = slab_dbsession.query(SliceSenslab).filter_by(slice_hrn = slice_filter).first()    
             if filter_type == 'record_id_user':
                 slicerec = slab_dbsession.query(SliceSenslab).filter_by(record_id_user = slice_filter).first()
+                
             if slicerec:
                 rec = slicerec.dumpquerytodict()
                 login = slicerec.slice_hrn.split(".")[1].split("_")[0]
@@ -565,7 +574,8 @@ class SlabDriver(Driver):
                         rec['oar_job_id'] = -1
                         rec.update({'hrn':str(rec['slice_hrn'])})
             
-            print >>sys.stderr, " \r\n \r\n \tSLABDRIVER.PY  GetSlices  rec  %s" %(rec)              
+                print >>sys.stderr, " \r\n \r\n \tSLABDRIVER.PY  GetSlices  rec  %s" %(rec)
+                              
             return rec
                 
                 
