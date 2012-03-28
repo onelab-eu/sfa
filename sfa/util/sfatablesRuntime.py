@@ -30,7 +30,6 @@ try:
     
         chain = chain.upper()
         rules = SFATablesRules(chain)
-        print>>sys.stderr, " \r\n \r\n \t\t \t sfaTablesRuntime.py run_sfatables context_callback %s  chain %s rules %s " %(context_callback,chain, rules )
         if rules.sorted_rule_list:
             contexts = rules.contexts
             request_context = context_callback(hrn, origin_hrn, contexts)

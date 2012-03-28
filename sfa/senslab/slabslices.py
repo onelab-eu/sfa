@@ -9,6 +9,11 @@ from sfa.plc.vlink import VLink
 from sfa.util.xrn import Xrn
 from sfa.util.sfalogging import logger
 
+from sqlalchemy import Column, Integer, String, DateTime
+from sqlalchemy import Table, Column, MetaData, join, ForeignKey
+from sfa.storage.model import RegRecord
+from sfa.storage.alchemy import dbsession,engine
+
 MAXINT =  2L**31-1
 
 class SlabSlices:
@@ -28,7 +33,77 @@ class SlabSlices:
 
     def __init__(self, driver):
         self.driver = driver
-    #def get_slivers(self, xrn, node=None):
+        
+        
+    def get_slivers(self, xrn, node=None):
+        hrn, type = urn_to_hrn(xrn)
+         
+        slice_name = hrn_to_pl_slicename(hrn)
+        # XX Should we just call PLCAPI.GetSliceTicket(slice_name) instead
+        # of doing all of this?
+        #return self.api.driver.GetSliceTicket(self.auth, slice_name) 
+        
+
+       
+        slice = self.driver.GetSlices(slice_filter = slice_name, filter_type = 'slice_hrn')
+ 
+
+        # Get user information
+        alchemy_person = dbsession.query(RegRecord).filter_by(record_id = slice['record_id_user']).first()
+
+        slivers = []
+        sliver_attributes = []
+            
+        if slice['oar_job_id'] is not -1:
+            nodes_all = self.GetNodes({'hostname':slice['node_ids']},
+                            ['node_id', 'hostname','site','boot_state'])
+            nodeall_byhostname = dict([(n['hostname'], n) for n in nodes_all])
+            nodes = slice['node_ids']
+            
+            for node in nodes:
+                #for sliver_attribute in filter(lambda a: a['node_id'] == node['node_id'], slice_tags):
+                sliver_attribute['tagname'] = 'slab-tag'
+                sliver_attribute['value'] = 'slab-value'
+                sliver_attributes.append(sliver_attribute['tagname'])
+                attributes.append({'tagname': sliver_attribute['tagname'],
+                                    'value': sliver_attribute['value']})
+
+            # set nodegroup slice attributes
+            for slice_tag in filter(lambda a: a['nodegroup_id'] in node['nodegroup_ids'], slice_tags):
+                # Do not set any nodegroup slice attributes for
+                # which there is at least one sliver attribute
+                # already set.
+                if slice_tag not in slice_tags:
+                    attributes.append({'tagname': slice_tag['tagname'],
+                        'value': slice_tag['value']})
+
+            for slice_tag in filter(lambda a: a['node_id'] is None, slice_tags):
+                # Do not set any global slice attributes for
+                # which there is at least one sliver attribute
+                # already set.
+                if slice_tag['tagname'] not in sliver_attributes:
+                    attributes.append({'tagname': slice_tag['tagname'],
+                                   'value': slice_tag['value']})
+
+            # XXX Sanity check; though technically this should be a system invariant
+            # checked with an assertion
+            if slice['expires'] > MAXINT:  slice['expires']= MAXINT
+            
+            slivers.append({
+                'hrn': hrn,
+                'name': slice['name'],
+                'slice_id': slice['slice_id'],
+                'instantiation': slice['instantiation'],
+                'expires': slice['expires'],
+                'keys': keys,
+                'attributes': attributes
+            })
+
+        return slivers
+        
+        
+        
+ #def get_slivers(self, xrn, node=None):
         #hrn, type = urn_to_hrn(xrn)
          
         #slice_name = hrn_to_pl_slicename(hrn)
@@ -132,7 +207,6 @@ class SlabSlices:
             #})
 
         #return slivers
- 
     def get_peer(self, xrn):
         hrn, type = urn_to_hrn(xrn)
         #Does this slice belong to a local site or a peer senslab site?

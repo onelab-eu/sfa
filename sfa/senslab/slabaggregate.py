@@ -7,7 +7,7 @@ import httplib
 import json
 
 
-from sfa.rspecs.version_manager import VersionManager
+
 from sfa.senslab.OARrestapi import *
 #from sfa.senslab.slabdriver import SlabDriver
 from sfa.util.config import Config
@@ -167,7 +167,7 @@ class SlabAggregate:
         #geni_available = options.get('geni_available')    
         #if geni_available:
             #filter['boot_state'] = 'boot'     
-        print>>sys.stderr, "\r\n \r\n \t get_nodes_and_links filter %s \r\n \r\n \t slivers %s" %(filter, slivers)
+        print>>sys.stderr, "\r\n \r\n \t get_nodes_and_links filter %s \r\n \r\n \t slivers %s nodes[0] %s " %(filter, slivers,nodes[0])
         #filter.update({'peer_id': None})
         #nodes = self.driver.GetNodes(filter['hostname'])
         #print>>sys.stderr, "\r\n \r\n \t get_nodes_and_links nodes %s" %(nodes)
@@ -209,21 +209,19 @@ class SlabAggregate:
             # do not include boot state (<available> element) in the manifest rspec
             if not slice:     
                 rspec_node['boot_state'] = node['boot_state']
-            rspec_node['exclusive'] = 'true'
-            rspec_node['hardware_types'] = [HardwareType({'name': 'slab-sensor'})]
+            rspec_node['exclusive'] = 'True'
+            rspec_node['hardware_types'] = [HardwareType({'name': 'slab-node'})]
             # only doing this because protogeni rspec needs
             # to advertise available initscripts 
-            rspec_node['pl_initscripts'] = None
+            #rspec_node['pl_initscripts'] = None
             # add site/interface info to nodes.
             # assumes that sites, interfaces and tags have already been prepared.
             #site = sites_dict[node['site_id']]
-            #if site['longitude'] and site['latitude']:  
-                #location = Location({'longitude': site['longitude'], 'latitude': site['latitude'], 'country': 'unknown'})
-                #rspec_node['location'] = location
+         
             if node['posx'] and node['posy']:  
                 location = Location({'longitude':node['posx'], 'latitude': node['posy']})
                 rspec_node['location'] = location
-            rspec_node['interfaces'] = []
+            #rspec_node['interfaces'] = []
             #if_count=0
             #for if_id in node['interface_ids']:
                 #interface = Interface(interfaces[if_id]) 
@@ -250,28 +248,35 @@ class SlabAggregate:
                 #service = Services({'login': login})
                 #rspec_node['services'] = [service]
             rspec_nodes.append(rspec_node)
+        print>>sys.stderr, "\r\n \r\n \t get_nodes_and_links options %s rspec_nodes[0] %s " %(options,rspec_nodes[0])
         return (rspec_nodes)       
 
 #from plc/aggregate.py 
     def get_rspec(self, slice_xrn=None, version = None, options={}):
 
         rspec = None
-	version_manager = VersionManager()
+	version_manager = VersionManager()	
+
 	version = version_manager.get_version(version)
-        print>>sys.stderr, " \r\n SlabAggregate \t\t get_rspec ************** version %s version_manager %s options %s \r\n" %(version,version_manager,options)
-	
+        print>>sys.stderr, " \r\n SlabAggregate \t\t get_rspec ************** version %s version.type %s  version.version %s options %s \r\n" %(version,version.type,version.version,options)
+
 	if not slice_xrn:
             rspec_version = version_manager._get_version(version.type, version.version, 'ad')
+
         else:
             rspec_version = version_manager._get_version(version.type, version.version, 'manifest')
+           
         slice, slivers = self.get_slice_and_slivers(slice_xrn)
         #at this point sliver my be {} if no senslab job is running for this user/slice.
         rspec = RSpec(version=rspec_version, user_options=options)
+
+        
         #if slice and 'expires' in slice:
            #rspec.xml.set('expires',  datetime_to_epoch(slice['expires']))
          # add sliver defaults
         #nodes, links = self.get_nodes_and_links(slice, slivers)
         nodes = self.get_nodes_and_links(slice,slivers) 
+        print>>sys.stderr, " \r\n SlabAggregate \t\t get_rspec ************** options %s rspec_version %s version_manager %s  rspec.version %s \r\n" %(options, rspec_version,version_manager, rspec.version)
         rspec.version.add_nodes(nodes)
 
         #rspec.version.add_links(links)
