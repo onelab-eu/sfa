@@ -1,7 +1,9 @@
 import sys
 import subprocess
-import datetime
-from time import gmtime, strftime 
+
+from datetime import datetime
+from dateutil import tz 
+from time import strftime,gmtime
 
 from sfa.util.faults import MissingSfaInfo , SliverDoesNotExist
 from sfa.util.sfalogging import logger
@@ -447,8 +449,8 @@ class SlabDriver(Driver):
             return return_person_list
 
     def GetTimezone(self):
-        time = self.oar.parser.SendRequest("GET_timezone")
-        return time
+        server_timestamp,server_tz = self.oar.parser.SendRequest("GET_timezone")
+        return server_timestamp,server_tz
     
 
     def DeleteJobs(self, job_id, username):
@@ -707,14 +709,22 @@ class SlabDriver(Driver):
         reqdict['type'] = "deploy" 
         reqdict['directory']= ""
         reqdict['name']= "TestSandrine"
-        timestamp = self.GetTimezone()
-        print>>sys.stderr, "\r\n \r\n AddSliceToNodes  slice_name %s added_nodes %s username %s reqdict %s " %(slice_name,added_nodes,slice_user, reqdict)
-        readable_time = strftime(self.time_format, gmtime(float(timestamp))) 
-        print >>sys.stderr," \r\n \r\n \t\t\t\t AVANT ParseTimezone readable_time %s timestanp %s " %(readable_time, timestamp )
-        timestamp =  timestamp+ 3620 #Add 3 min to server time
-        readable_time = strftime(self.time_format, gmtime(float(timestamp))) 
+        # reservations are performed in the oar server timebase, so :
+        # 1- we get the server time(in UTC tz )/server timezone
+        # 2- convert the server UTC time in its timezone
+        # 3- add a custom delay to this time
+        # 4- convert this time to a readable form and it for the reservation request.
+        server_timestamp,server_tz = self.GetTimezone()
+        s_tz=tz.gettz(server_tz)
+        UTC_zone = tz.gettz("UTC")
+        #weird... datetime.fromtimestamp should work since we do from datetime import datetime
+        utc_server= datetime.datetime.fromtimestamp(float(server_timestamp)+20,UTC_zone)
+        server_localtime=utc_server.astimezone(s_tz)
 
-        print >>sys.stderr,"  \r\n \r\n \t\t\t\tAPRES ParseTimezone readable_time %s timestanp %s  " %(readable_time , timestamp)
+        print>>sys.stderr, "\r\n \r\n AddSliceToNodes  slice_name %s added_nodes %s username %s reqdict %s " %(slice_name,added_nodes,slice_user, reqdict)
+        readable_time = server_localtime.strftime(self.time_format)
+
+        print >>sys.stderr,"  \r\n \r\n \t\t\t\tAPRES ParseTimezone readable_time %s timestanp %s  " %(readable_time ,server_timestamp)
         reqdict['reservation'] = readable_time
          
         # first step : start the OAR job

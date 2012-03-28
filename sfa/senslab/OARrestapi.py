@@ -225,9 +225,10 @@ class OARGETParser:
             
     def ParseTimezone(self) : 
         api_timestamp=self.raw_json['api_timestamp']
+        api_tz=self.raw_json['timezone']
         #readable_time = strftime("%Y-%m-%d %H:%M:%S", gmtime(float(api_timestamp))) 
 
-        return api_timestamp
+        return api_timestamp,api_tz
             
     def ParseJobs(self) :
         self.jobs_list = []

@@ -236,9 +236,9 @@ class SlabAggregate:
         
             #tags = [PLTag(node_tags[tag_id]) for tag_id in node['node_tag_ids']]
             rspec_node['tags'] = []
-            if node['hrn'] in slivers:
+            if node['hostname'] in slivers:
                 # add sliver info
-                sliver = slivers[node['node_id']]
+                sliver = slivers[node['hostname']]
                 rspec_node['sliver_id'] = sliver['sliver_id']
                 rspec_node['client_id'] = node['hostname']
                 rspec_node['slivers'] = [sliver]
