@@ -237,9 +237,10 @@ class OARGETParser:
     def ParseJobsTable(self) : 
         print "ParseJobsTable"
                 
-    def ParseJobsDetails (self): 
-       
+    def ParseJobsDetails (self):
+        # currently, this function is not used a lot, so i have no idea what be usefull to parse, returning the full json. NT
         print >>sys.stderr,"ParseJobsDetails %s " %(self.raw_json)
+        return self.raw_json
         
 
     def ParseJobsIds(self):
