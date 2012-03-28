@@ -231,12 +231,12 @@ class SlabDriver(Driver):
         #print "manager options = ",options
         aggregate = SlabAggregate(self)
         origin_hrn = Credential(string=creds[0]).get_gid_caller().get_hrn()
-        print>>sys.stderr, " \r\n \r\n \t SLABDRIVER get_rspec origin_hrn %s" %(origin_hrn)
+        print>>sys.stderr, " \r\n \r\n \t SLABDRIVER list_resources origin_hrn %s" %(origin_hrn)
         options.update({'origin_hrn':origin_hrn})
-        print>>sys.stderr, " \r\n \r\n \t SLABDRIVER get_rspec options %s" %(options)
+        print>>sys.stderr, " \r\n \r\n \t SLABDRIVER  list_resources options %s" %(options)
         rspec =  aggregate.get_rspec(slice_xrn=slice_urn, version=rspec_version, 
                                      options=options)
-    
+        print>>sys.stderr, " \r\n \r\n \t SLABDRIVER list_resources rspec " 
         # cache the result
         #if self.cache and not slice_hrn:
             #logger.debug("Slab.ListResources: stores advertisement in cache")
