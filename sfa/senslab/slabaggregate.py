@@ -167,7 +167,7 @@ class SlabAggregate:
         #geni_available = options.get('geni_available')    
         #if geni_available:
             #filter['boot_state'] = 'boot'     
-        print>>sys.stderr, "\r\n \r\n \t get_nodes_and_links filter %s \r\n \r\n \t slivers %s nodes[0] %s " %(filter, slivers,nodes[0])
+       
         #filter.update({'peer_id': None})
         #nodes = self.driver.GetNodes(filter['hostname'])
         #print>>sys.stderr, "\r\n \r\n \t get_nodes_and_links nodes %s" %(nodes)
