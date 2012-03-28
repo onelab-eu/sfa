@@ -190,7 +190,7 @@ class SlabAggregate:
         #node_tags = self.get_node_tags(tags_filter)
        
         #links = self.get_links(sites_dict, nodes_dict, interfaces)
-        
+        reserved_nodes=self.driver.GetReservedNodes()
         rspec_nodes = []
         for node in nodes:
             # skip whitelisted nodes
@@ -209,6 +209,8 @@ class SlabAggregate:
             # do not include boot state (<available> element) in the manifest rspec
             if not slice:     
                 rspec_node['boot_state'] = node['boot_state']
+                if node['hostname'] in reserved_nodes:
+                    rspec_node['boot_state'] = "Reserved"
             rspec_node['exclusive'] = 'true'
             rspec_node['hardware_types'] = [HardwareType({'name': 'slab-sensor'})]
             # only doing this because protogeni rspec needs
