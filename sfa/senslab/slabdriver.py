@@ -468,7 +468,6 @@ class SlabDriver(Driver):
         #'api_timestamp']
         #assigned_res = ['resource_id', 'resource_uri']
         #assigned_n = ['node', 'node_uri']
-      
      
 	if job_id and resources is False:
             req = "GET_jobs_id"
@@ -477,8 +476,6 @@ class SlabDriver(Driver):
         if job_id and resources :
             req = "GET_jobs_id_resources"
             node_list_k = 'reserved_resources' 
-
-      
                
         #Get job info from OAR    
         job_info = self.oar.parser.SendRequest(req, job_id, username)
@@ -498,11 +495,7 @@ class SlabDriver(Driver):
         for node in node_list:
             node_hostname_list.append(node['hostname'])
         node_dict = dict(zip(node_hostname_list,node_list))
-        
-
         try :
-
-
             liste =job_info[node_list_k] 
             print>>sys.stderr, "\r\n \r\n \t\t GetJobs resources  job_info liste%s" %(liste)
             for k in range(len(liste)):
@@ -518,10 +511,14 @@ class SlabDriver(Driver):
         except KeyError:
             print>>sys.stderr, "\r\n \r\n \t\t GetJobs KEYERROR " 
             
-  
-            
+    def GetReservedNodes(self):
+        # this function returns a list of all the nodes already involved in an oar job
 
-       
+       jobs=self.oar.parser.SendRequest("GET_jobs_details") 
+       nodes=[]
+       for j in jobs :
+          nodes=j['assigned_network_address']+nodes
+       return nodes
      
     def GetNodes(self,node_filter= None, return_fields=None):
 		
