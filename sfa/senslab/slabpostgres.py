@@ -171,7 +171,7 @@ class SlabDB:
         SlabBase.metadata.create_all(slab_engine)
         return
     
-    
+    #Updates the job_id and the nodes list 
     def update_job(self, hrn, job_id= None, nodes = None ):
         slice_rec = slab_dbsession.query(SliceSenslab).filter_by(slice_hrn = hrn).first()
         print>>sys.stderr, " \r\n \r\n \t SLABPOSTGRES  update_job slice_rec %s"%(slice_rec)

@@ -185,20 +185,21 @@ class SlabDriver(Driver):
         
     def delete_sliver (self, slice_urn, slice_hrn, creds, options):
         
-        slices = self.GetSlices(slice_filter= slice_hrn, filter_type = 'slice_hrn')
-        if not slices:
+        slice = self.GetSlices(slice_filter= slice_hrn, filter_type = 'slice_hrn')
+        print>>sys.stderr, "\r\n \r\n \t\t  SLABDRIVER.PY delete_sliver slice %s" %(slice)
+        if not slice:
             return 1
-        slice = slices[0]
-    
+       
+        slices = SlabSlices(self)
         # determine if this is a peer slice
         # xxx I wonder if this would not need to use PlSlices.get_peer instead 
         # in which case plc.peers could be deprecated as this here
         # is the only/last call to this last method in plc.peers
-        peer = peers.get_peer(self, slice_hrn)
+        peer = slices.get_peer(slice_hrn)
         try:
             if peer:
-                self.UnBindObjectFromPeer('slice', slice['slice_id'], peer)
-            self.DeleteSliceFromNodes(slice_hrn, slice['node_ids'])
+                self.UnBindObjectFromPeer('slice', slice['record_id_slice'], peer)
+            self.DeleteSliceFromNodes(slice)
         finally:
             if peer:
                 self.BindObjectToPeer('slice', slice['slice_id'], peer, slice['peer_slice_id'])
@@ -453,9 +454,10 @@ class SlabDriver(Driver):
         return server_timestamp,server_tz
     
 
-    def DeleteJobs(self, job_id, username):
+    def DeleteJobs(self, job_id, slice_hrn):
         if not job_id:
             return
+        username  = slice_hrn.split(".")[-1].rstrip("_slice")
         reqdict = {}
         reqdict['method'] = "delete"
         reqdict['strval'] = str(job_id)
@@ -758,8 +760,14 @@ class SlabDriver(Driver):
     
 
         
-        
-    def DeleteSliceFromNodes(self, slice_name, deleted_nodes):
+    #Delete the jobs and updates the job id in the senslab table
+    #to set it to -1  
+    #Does not clear the node list 
+    def DeleteSliceFromNodes(self, slice_record):
+         # Get user information
+       
+        self.DeleteJobs(slice_record['oar_job_id'], slice_record['hrn'])
+        self.db.update_job(slice_record['hrn'], job_id = -1)
         return   
     
  

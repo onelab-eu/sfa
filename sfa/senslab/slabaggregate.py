@@ -251,7 +251,7 @@ class SlabAggregate:
                 #service = Services({'login': login})
                 #rspec_node['services'] = [service]
             rspec_nodes.append(rspec_node)
-        print>>sys.stderr, "\r\n \r\n \t get_nodes_and_links options %s rspec_nodes[0] %s " %(options,rspec_nodes[0])
+        
         return (rspec_nodes)       
 
 #from plc/aggregate.py 
