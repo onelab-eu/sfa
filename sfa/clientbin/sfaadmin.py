@@ -358,8 +358,6 @@ def main():
     usage = "%%prog %s %s <args> [options]" % (category, action)
     parser = OptionParser(usage=usage)
     for arg, kwd in options:
-        print "arg", arg
-        print "kwd", kwd 
         parser.add_option(*arg, **kwd)
     (opts, cmd_args) = parser.parse_args(argv)
     cmd_kwds = vars(opts)
