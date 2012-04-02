@@ -110,20 +110,34 @@ signatures:
 # 2 forms are supported
 # (*) if your plc root context has direct ssh access:
 # make sync PLC=private.one-lab.org
-# (*) otherwise, entering through the root context
-# make sync PLCHOST=testbox1.inria.fr GUEST=vplc03.inria.fr
+# (*) otherwise, for test deployments, use on your testmaster
+# $ run export
+# and cut'n paste the export lines before you run make sync
 
 PLCHOST ?= testplc.onelab.eu
 
-ifdef GUEST
-ifdef PLCHOST
-SSHURL:=root@$(PLCHOST):/vservers/$(GUEST)
-SSHCOMMAND:=ssh root@$(PLCHOST) vserver $(GUEST)
-endif
-endif
 ifdef PLC
 SSHURL:=root@$(PLC):/
 SSHCOMMAND:=ssh root@$(PLC)
+else
+ifdef PLCHOSTLXC
+SSHURL:=root@$(PLCHOST):/var/lib/lxc/$(GUESTNAME)/rootfs
+SSHCOMMAND:=ssh root@$(PLCHOSTLXC) ssh $(GUESTHOSTNAME)
+else
+ifdef PLCHOSTVS
+SSHURL:=root@$(PLCHOSTVS):/vservers/$(GUESTNAME)
+SSHCOMMAND:=ssh root@$(PLCHOSTVS) vserver $(GUESTNAME) exec
+endif
+endif
+endif
+
+synccheck: 
+ifeq (,$(SSHURL))
+	@echo "sync: I need more info from the command line, e.g."
+	@echo "  make sync PLC=boot.planetlab.eu"
+	@echo "  make sync PLCHOSTVS=.. GUESTNAME=.."
+	@echo "  make sync PLCHOSTLXC=.. GUESTNAME=.. GUESTHOSTNAME=.."
+	@exit 1
 endif
 
 LOCAL_RSYNC_EXCLUDES	+= --exclude '*.pyc' 
@@ -138,15 +152,6 @@ BINS =	./config/sfa-config-tty ./config/gen-sfa-cm-config.py \
 	./sfa/server/sfa-start.py \
 	./sfa/clientbin/sfaadmin.py \
 	$(CLIENTS)
-
-synccheck: 
-ifeq (,$(SSHURL))
-	@echo "*sync: You must define, either PLC, or PLCHOST & GUEST, on the command line"
-	@echo "  e.g. make sync PLC=private.one-lab.org"
-	@echo "  or   make sync PLCHOST=testbox1.inria.fr GUEST=vplc03.inria.fr"
-	@exit 1
-endif
-
 
 synclib: synccheck
 	+$(RSYNC) --relative ./sfa/ --exclude migrations $(SSHURL)/usr/lib\*/python2.\*/site-packages/
