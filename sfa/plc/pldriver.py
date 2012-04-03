@@ -640,6 +640,20 @@ class PlDriver (Driver):
         if len(nodes) == 0:
             raise SliverDoesNotExist("You have not allocated any slivers here") 
 
+        # get login info
+        user = {}
+        if slice['person_ids']:
+            persons = self.shell.GetPersons(slice['person_ids'], ['key_ids'])
+            key_ids = [key_id for person in persons for key_id in person['key_ids']]
+            person_keys = self.shell.GetKeys(key_ids)
+            keys = [key['key'] for key in keys]
+
+            user.update({'urn': slice_urn,
+                         'login': slice['name'],
+                         'protocol': ['ssh'],
+                         'port': ['22'],
+                         'keys': keys})
+
         site_ids = [node['site_id'] for node in nodes]
     
         result = {}
@@ -649,6 +663,7 @@ class PlDriver (Driver):
         result['geni_urn'] = slice_urn
         result['pl_login'] = slice['name']
         result['pl_expires'] = datetime_to_string(utcparse(slice['expires']))
+        result['geni_expires'] = datetime_to_string(utcparse(slice['expires']))
         
         resources = []
         for node in nodes:
@@ -656,6 +671,7 @@ class PlDriver (Driver):
             res['pl_hostname'] = node['hostname']
             res['pl_boot_state'] = node['boot_state']
             res['pl_last_contact'] = node['last_contact']
+            res['geni_expires'] = datetime_to_string(utcparse(slice['expires']))
             if node['last_contact'] is not None:
                 
                 res['pl_last_contact'] = datetime_to_string(utcparse(node['last_contact']))
@@ -668,6 +684,7 @@ class PlDriver (Driver):
                 top_level_status = 'failed' 
                 
             res['geni_error'] = ''
+            res['users'] = [user]  
     
             resources.append(res)
             
