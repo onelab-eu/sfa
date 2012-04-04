@@ -716,7 +716,15 @@ class PlDriver (Driver):
         slices.verify_slice_attributes(slice, requested_attributes, options=options)
         
         # add/remove slice from nodes
-        requested_slivers = [node.get('component_name') for node in rspec.version.get_nodes_with_slivers()]
+        requested_slivers = []
+        for node in rspec.version.get_nodes_with_slivers():
+            hostname = None
+            if node.get('component_name'):
+                hostname = node.get('component_name')
+            elif node.get('component_id'):
+                hostname = xrn_to_hostname(node.get('component_id'))
+            if hostname:
+                requested_slivers.append(hostname)
         nodes = slices.verify_slice_nodes(slice, requested_slivers, peer) 
    
         # add/remove links links 
