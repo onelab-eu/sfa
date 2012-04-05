@@ -232,7 +232,7 @@ function db_start () {
     fi
     check
 
-    MESSAGE=$"Checking for PostgreSQL server"
+    MESSAGE=$"SFA: Checking for PostgreSQL server"
     echo -n "$MESSAGE"
     [ "$ERRORS" == 0 ] && success "$MESSAGE" || failure "$MESSAGE" ; echo
 }
@@ -261,13 +261,13 @@ function start() {
     # migrations are now handled in the code by sfa.storage.dbschema
 
     # install peer certs
-    action $"SFA installing peer certs" daemon /usr/bin/sfa-start.py -t -d $OPTIONS 
+    action $"SFA: installing peer certs" daemon /usr/bin/sfa-start.py -t -d $OPTIONS 
 
-    [ "$SFA_REGISTRY_ENABLED" == 1 ] && action $"SFA Registry" daemon /usr/bin/sfa-start.py -r -d $OPTIONS
+    [ "$SFA_REGISTRY_ENABLED" == 1 ] && action $"SFA: Registry" daemon /usr/bin/sfa-start.py -r -d $OPTIONS
     
-    [ "$SFA_AGGREGATE_ENABLED" == 1 ] && action $"SFA Aggregate" daemon /usr/bin/sfa-start.py -a -d $OPTIONS
+    [ "$SFA_AGGREGATE_ENABLED" == 1 ] && action $"SFA: Aggregate" daemon /usr/bin/sfa-start.py -a -d $OPTIONS
         
-    [ "$SFA_SM_ENABLED" == 1 ] && action "SFA SliceMgr" daemon /usr/bin/sfa-start.py -s -d $OPTIONS
+    [ "$SFA_SM_ENABLED" == 1 ] && action "SFA: SliceMgr" daemon /usr/bin/sfa-start.py -s -d $OPTIONS
 
     [ "$SFA_FLASHPOLICY_ENABLED" == 1 ] && \
         action "Flash Policy Server" daemon /usr/bin/sfa_flashpolicy.py --file="$SFA_FLASHPOLICY_CONFIG_FILE" --port=$SFA_FLASHPOLICY_PORT -d
