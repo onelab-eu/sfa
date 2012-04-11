@@ -2,12 +2,12 @@ from copy import deepcopy
 from StringIO import StringIO
 from sfa.util.xrn import Xrn, urn_to_sliver_id
 from sfa.util.plxrn import hostname_to_urn, xrn_to_hostname 
-from sfa.rspecs.baseversion import BaseVersion
+from sfa.rspecs.version import RSpecVersion
 from sfa.rspecs.elements.versions.pgv2Link import PGv2Link
 from sfa.rspecs.elements.versions.pgv2Node import PGv2Node
 from sfa.rspecs.elements.versions.pgv2SliverType import PGv2SliverType
  
-class PGv2(BaseVersion):
+class PGv2(RSpecVersion):
     type = 'ProtoGENI'
     content_type = 'ad'
     version = '2'

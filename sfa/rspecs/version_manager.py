@@ -1,6 +1,6 @@
 import os
 from sfa.util.faults import InvalidRSpec, UnsupportedRSpecVersion
-from sfa.rspecs.baseversion import BaseVersion 
+from sfa.rspecs.version import RSpecVersion 
 from sfa.util.sfalogging import logger    
 
 class VersionManager:
