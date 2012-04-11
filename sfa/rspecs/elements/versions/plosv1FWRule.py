@@ -16,8 +16,8 @@ class PLOSv1FWRule:
     @staticmethod
     def get_rules(xml):
         rules = []
-        for rule_elem in xml.xpath('./plos:fw_rule | ./fw_rule'):
-            rule = FWRule(rule_elem.attrib, rule_elem)
-            rules.append(rule)  
+        #for rule_elem in xml.xpath('./plos:fw_rule | ./fw_rule'):
+        #    rule = FWRule(rule_elem.attrib, rule_elem)
+        #    rules.append(rule)  
         return rules
 
