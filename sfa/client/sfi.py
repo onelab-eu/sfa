@@ -914,7 +914,6 @@ or with an slice hrn, shows currently provisioned resources
         api_options = {}
         api_options ['append'] = False
         api_options ['call_id'] = unique_call_id()
-
         result = server.CreateSliver(slice_urn, creds, rspec, users, *self.ois(server, api_options))
         value = ReturnValue.get_value(result)
         if self.options.raw:
