@@ -49,7 +49,7 @@ class AggregateManager:
         call_id = options.get('call_id')
         if Callids().already_handled(call_id): return {}
     
-        xrn = Xrn(xrn)
+        xrn = Xrn(xrn,'slice')
         slice_urn=xrn.get_urn()
         slice_hrn=xrn.get_hrn()
         return self.driver.sliver_status (slice_urn, slice_hrn)
