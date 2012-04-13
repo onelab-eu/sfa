@@ -675,7 +675,7 @@ class PlDriver (Driver):
             if node['last_contact'] is not None:
                 
                 res['pl_last_contact'] = datetime_to_string(utcparse(node['last_contact']))
-            sliver_id = urn_to_sliver_id(slice_urn, slice['slice_id'], node['node_id']) 
+            sliver_id = urn_to_sliver_id(slice_urn, slice['slice_id'], node['node_id'], authority=self.hrn) 
             res['geni_urn'] = sliver_id
             if node['boot_state'] == 'boot':
                 res['geni_status'] = 'ready'
