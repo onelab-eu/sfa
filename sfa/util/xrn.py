@@ -166,8 +166,12 @@ class Xrn:
         self._normalize()
         urn = self.get_urn()
         if authority:
-            tmp_hrn = ".".join([authority,self.get_authority_hrn(), self.get_leaf()])
-            urn = Xrn(tmp_hrn, self.get_type()).get_urn()
+            authority_hrn = self.get_authority_hrn()
+            if not authority_hrn.startswith(authority):
+                hrn = ".".join([authority,self.get_authority_hrn(), self.get_leaf()])
+            else:
+                hrn = ".".join([self.get_authority_hrn(), self.get_leaf()])
+            urn = Xrn(hrn, self.get_type()).get_urn()
         return ":".join(map(str, [urn, slice_id, node_id, index])) 
  
     def urn_to_hrn(self):
