@@ -1,6 +1,6 @@
 %define name sfa
 %define version 2.1
-%define taglevel 4
+%define taglevel 5
 
 %define release %{taglevel}%{?pldistro:.%{pldistro}}%{?date:.%{date}}
 %global python_sitearch	%( python -c "from distutils.sysconfig import get_python_lib; print get_python_lib(1)" )
@@ -226,6 +226,13 @@ fi
 [ "$1" -ge "1" ] && service sfa-cm restart || :
 
 %changelog
+* Mon Apr 16 2012 Tony Mack <tmack@cs.princeton.edu> - sfa-2.1-5
+- make sync now supports vserver or lxc.
+- Added slice expiration and login info to SliverStatus response. 
+- Fixed CreateSliver bug that causes the method to fail if any node element is missing
+  the 'component_name' attribute.
+- Fixed various bugs that caused SFA to generate invalid or incorrect sliver ids.
+  
 * Tue Mar 20 2012 Tony Mack <tmack@cs.princeton.edu> - sfa-2.1-4
 - Introduced new administrative command line script, sfaadmin.py. Removed various single
  purpose scripts and migrated their functionality into sfaadmin.py.
