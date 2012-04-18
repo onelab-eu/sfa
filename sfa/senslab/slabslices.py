@@ -411,6 +411,10 @@ class SlabSlices:
         users_dict = {}
       
         for user in users:
+            
+            if 'urn' in user and (not 'hrn' in user ) :
+                user['hrn'],user['type'] = urn_to_hrn(user['urn'])
+               
             if 'person_id' in user and 'hrn' in user:
                 users_by_id[user['person_id']] = user
                 users_dict[user['person_id']] = {'person_id':user['person_id'], 'hrn':user['hrn']}
