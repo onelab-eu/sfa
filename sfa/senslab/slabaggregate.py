@@ -151,19 +151,20 @@ class SlabAggregate:
         filter = {}
         tags_filter = {}
         
-        if slice :
-            if 'node_ids' in slice and slice['node_ids']:
-                #first case, a non empty slice was provided
-                filter['hostname'] = slice['node_ids']
-                tags_filter=filter.copy()
-                nodes = self.driver.GetNodes(filter['hostname'])
-            else :
-                #second case, a slice was provided, but is empty
-                nodes={}
-        else :
-            #third case, no slice was provided
-            nodes = self.driver.GetNodes()
-            
+        # Commenting this part since all nodes should be returned, even if a slice is provided
+        #if slice :
+        #    if 'node_ids' in slice and slice['node_ids']:
+        #        #first case, a non empty slice was provided
+        #        filter['hostname'] = slice['node_ids']
+        #        tags_filter=filter.copy()
+        #        nodes = self.driver.GetNodes(filter['hostname'])
+        #    else :
+        #        #second case, a slice was provided, but is empty
+        #        nodes={}
+        #else :
+        #    #third case, no slice was provided
+        #    nodes = self.driver.GetNodes()
+        nodes = self.driver.GetNodes()
         #geni_available = options.get('geni_available')    
         #if geni_available:
             #filter['boot_state'] = 'boot'     
@@ -207,10 +208,14 @@ class SlabAggregate:
             #rspec_node['component_manager_id'] = Xrn(self.driver.root_auth, 'authority+sa').get_urn()
             rspec_node['authority_id'] = hrn_to_urn(PlXrn.site_hrn(self.driver.root_auth, node['site']), 'authority+sa')
             # do not include boot state (<available> element) in the manifest rspec
-            if not slice:     
-                rspec_node['boot_state'] = node['boot_state']
-                if node['hostname'] in reserved_nodes:
-                    rspec_node['boot_state'] = "Reserved"
+            
+            #if not slice:
+            #    rspec_node['boot_state'] = node['boot_state']
+            #    if node['hostname'] in reserved_nodes:
+            #        rspec_node['boot_state'] = "Reserved"
+            rspec_node['boot_state'] = node['boot_state']
+            if node['hostname'] in reserved_nodes:
+                rspec_node['boot_state'] = "Reserved"
             rspec_node['exclusive'] = 'True'
             rspec_node['hardware_types'] = [HardwareType({'name': 'slab-node'})]
 
