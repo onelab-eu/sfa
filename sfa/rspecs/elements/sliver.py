@@ -9,4 +9,5 @@ class Sliver(Element):
         'type',
         'tags',
         'disk_images',
+        'fw_rules',
     ]

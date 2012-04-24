@@ -147,10 +147,10 @@ def save_records_to_file(filename, record_dicts, format="xml"):
         print "unknown output format", format
 
 def save_record_to_file(filename, record_dict):
-    rec_record = Record(dict=record_dict)
-    str = record.save_to_string()
+    record = Record(dict=record_dict)
+    xml = record.save_as_xml()
     f=codecs.open(filename, encoding='utf-8',mode="w")
-    f.write(str)
+    f.write(xml)
     f.close()
     return
 
@@ -914,7 +914,6 @@ or with an slice hrn, shows currently provisioned resources
         api_options = {}
         api_options ['append'] = False
         api_options ['call_id'] = unique_call_id()
-
         result = server.CreateSliver(slice_urn, creds, rspec, users, *self.ois(server, api_options))
         value = ReturnValue.get_value(result)
         if self.options.raw:

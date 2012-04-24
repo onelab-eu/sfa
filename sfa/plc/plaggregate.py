@@ -115,7 +115,7 @@ class PlAggregate:
 
         # sort slivers by node id    
         for node_id in slice['node_ids']:
-            sliver = Sliver({'sliver_id': urn_to_sliver_id(slice_urn, slice['slice_id'], node_id),
+            sliver = Sliver({'sliver_id': urn_to_sliver_id(slice_urn, slice['slice_id'], node_id, authority=self.driver.hrn),
                              'name': slice['name'],
                              'type': 'plab-vserver', 
                              'tags': []})

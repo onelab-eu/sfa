@@ -1,14 +1,16 @@
 import time
 import datetime
-#
+
 from sfa.util.faults import MissingSfaInfo, UnknownSfaType, \
-    RecordNotFound, SfaNotImplemented, SliverDoesNotExist
+    RecordNotFound, SfaNotImplemented, SliverDoesNotExist, \
+    SfaInvalidArgument
 
 from sfa.util.sfalogging import logger
 from sfa.util.defaultdict import defaultdict
 from sfa.util.sfatime import utcparse, datetime_to_string, datetime_to_epoch
 from sfa.util.xrn import Xrn, hrn_to_urn, get_leaf, urn_to_sliver_id
 from sfa.util.cache import Cache
+from sfa.trust.credential import Credential
 # used to be used in get_ticket
 #from sfa.trust.sfaticket import SfaTicket
 
@@ -66,33 +68,74 @@ class NovaDriver (Driver):
     ########## 
     def register (self, sfa_record, hrn, pub_key):
         type = sfa_record['type']
-        pl_record = self.sfa_fields_to_pl_fields(type, hrn, sfa_record)
-
+        
+        #pl_record = self.sfa_fields_to_pl_fields(type     dd , hrn, sfa_record)
+           
         if type == 'slice':
-            acceptable_fields=['url', 'instantiation', 'name', 'description']
             # add slice description, name, researchers, PI 
-            pass
+            name = Xrn(hrn).get_leaf()
+            researchers = sfa_record.get('researchers', [])
+            pis = sfa_record.get('pis', [])
+            project_manager = None
+            description = sfa_record.get('description', None)
+            if pis:
+                project_manager = Xrn(pis[0], 'user').get_leaf()
+            elif researchers:
+                project_manager = Xrn(researchers[0], 'user').get_leaf()
+            if not project_manager:
+                err_string = "Cannot create a project without a project manager. " + \
+                             "Please specify at least one PI or researcher for project: " + \
+                             name    
+                raise SfaInvalidArgument(err_string)
+
+            users = [Xrn(user, 'user').get_leaf() for user in \
+                     pis + researchers]
+            self.shell.auth_manager.create_project(name, project_manager, description, users)
 
         elif type == 'user':
             # add person roles, projects and keys
-            pass
-        return pointer
+            name = Xrn(hrn).get_leaf()
+            self.shell.auth_manager.create_user(name)
+            projects = sfa_records.get('slices', [])
+            for project in projects:
+                project_name = Xrn(project).get_leaf()
+                self.shell.auth_manager.add_to_project(name, project_name)
+            keys = sfa_records.get('keys', [])
+            for key in keys:
+                key_dict = {
+                    'user_id': name,
+                    'name': name,
+                    'public': key,
+                }
+                self.shell.db.key_pair_create(key_dict)       
+                  
+        return name
         
     ##########
     # xxx actually old_sfa_record comes filled with plc stuff as well in the original code
     def update (self, old_sfa_record, new_sfa_record, hrn, new_key):
-        pointer = old_sfa_record['pointer']
-        type = old_sfa_record['type']
-
+        type = new_sfa_record['type'] 
+        
         # new_key implemented for users only
         if new_key and type not in [ 'user' ]:
             raise UnknownSfaType(type)
 
         elif type == "slice":
-            # can update description, researchers and PI
-            pass 
+            # can update project manager and description
+            name = Xrn(hrn).get_leaf()
+            researchers = sfa_record.get('researchers', [])
+            pis = sfa_record.get('pis', [])
+            project_manager = None
+            description = sfa_record.get('description', None)
+            if pis:
+                project_manager = Xrn(pis[0], 'user').get_leaf()
+            elif researchers:
+                project_manager = Xrn(researchers[0], 'user').get_leaf()
+            self.shell.auth_manager.modify_project(name, project_manager, description)
+
         elif type == "user":
-            # can update  slices, keys and roles
+            # can techinally update access_key and secret_key,
+            # but that is not in our scope, so we do nothing.  
             pass
         return True
         
@@ -285,37 +328,46 @@ class NovaDriver (Driver):
 
     def create_sliver (self, slice_urn, slice_hrn, creds, rspec_string, users, options):
 
+        project_name = get_leaf(slice_hrn)
         aggregate = OSAggregate(self)
-        slicename = get_leaf(slice_hrn)
-        
         # parse rspec
         rspec = RSpec(rspec_string)
-        requested_attributes = rspec.version.get_slice_attributes()
+       
+        # ensure project and users exist in local db
+        aggregate.create_project(project_name, users, options=options)
+     
+        # collect publick keys
         pubkeys = []
+        project_key = None
         for user in users:
-            pubkeys.extend(user['keys']) 
-        # assume that there is a key whos nane matches the caller's username.
-        project_key = Xrn(users[0]['urn']).get_leaf()    
-        
-         
-        # ensure slice record exists
-        aggregate.create_project(slicename, users, options=options)
+            pubkeys.extend(user['keys'])
+            # assume first user is the caller and use their context
+            # for the ec2/euca api connection. Also, use the first users
+            # key as the project key.   
+            if not project_key:
+                username = Xrn(user['urn']).get_leaf()
+                user_keys = self.shell.db.key_pair_get_all_by_user(username)
+                if user_keys:
+                    project_key = user_keys[0].name
+                     
         # ensure person records exists
-        aggregate.create_project_users(slicename, users, options=options)
-        # add/remove slice from nodes
-        aggregate.run_instances(slicename, rspec, project_key, pubkeys)    
+        self.euca_shell.init_context(project_name)  
+        aggregate.run_instances(project_name, rspec_string, project_key, pubkeys)    
    
         return aggregate.get_rspec(slice_xrn=slice_urn, version=rspec.version)
 
     def delete_sliver (self, slice_urn, slice_hrn, creds, options):
+        # we need to do this using the context of one of the slice users
+        project_name = Xrn(slice_urn).get_leaf()
+        self.euca_shell.init_context(project_name) 
         name = OSXrn(xrn=slice_urn).name
-        slice = self.shell.project_get(name)
-        if not slice:
-            return 1
-        instances = self.shell.db.instance_get_all_by_project(name)
-        for instance in instances:
-            self.shell.db.instance_destroy(instance.instance_id)
-        return 1
+        aggregate = OSAggregate(self)
+        return aggregate.delete_instances(name)   
+
+    def update_sliver(self, slice_urn, slice_hrn, rspec, creds, options):
+        name = OSXrn(xrn=slice_urn).name
+        aggregate = OSAggregate(self)
+        return aggregate.update_instances(name)
     
     def renew_sliver (self, slice_urn, slice_hrn, creds, expiration_time, options):
         return True
@@ -325,12 +377,9 @@ class NovaDriver (Driver):
 
     def stop_slice (self, slice_urn, slice_hrn, creds):
         name = OSXrn(xrn=slice_urn).name
-        slice = self.shell.get_project(name)
-        instances = self.shell.db.instance_get_all_by_project(name)
-        for instance in instances:
-            self.shell.db.instance_stop(instance.instance_id)
-        return 1
-    
+        aggregate = OSAggregate(self)
+        return aggregate.stop_instances(name) 
+
     def reset_slice (self, slice_urn, slice_hrn, creds):
         raise SfaNotImplemented ("reset_slice not available at this interface")
     

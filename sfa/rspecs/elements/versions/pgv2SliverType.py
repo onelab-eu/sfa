@@ -1,6 +1,7 @@
 from sfa.rspecs.elements.element import Element
 from sfa.rspecs.elements.sliver import Sliver
 from sfa.rspecs.elements.versions.pgv2DiskImage import PGv2DiskImage
+from sfa.rspecs.elements.versions.plosv1FWRule import PLOSv1FWRule
 
 class PGv2SliverType:
 
@@ -19,6 +20,9 @@ class PGv2SliverType:
             images = sliver.get('disk_images')
             if images and isinstance(images, list):
                 PGv2DiskImage.add_images(sliver_elem, images)      
+            fw_rules = sliver.get('fw_rules')
+            if fw_rules and isinstance(fw_rules, list):
+                PLOSv1FWRule.add_rules(sliver_elem, fw_rules)
             PGv2SliverType.add_sliver_attributes(sliver_elem, sliver.get('tags', []))
     
     @staticmethod
@@ -44,6 +48,7 @@ class PGv2SliverType:
             if 'name' in sliver_elem.attrib:
                 sliver['type'] = sliver_elem.attrib['name']
             sliver['images'] = PGv2DiskImage.get_images(sliver_elem)
+            sliver['fw_rules'] = PLOSv1FWRule.get_rules(sliver_elem)
             slivers.append(sliver)
         return slivers
 

@@ -1,7 +1,7 @@
 #!/usr/bin/python
 from sfa.util.sfalogging import logger
 
-class BaseVersion:
+class RSpecVersion:
     type = None
     content_type = None
     version = None
