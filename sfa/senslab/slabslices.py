@@ -220,12 +220,12 @@ class SlabSlices:
         print>>sys.stderr, " \r\n \r\n \t slices.py get_peer slice_authority  %s site_authority %s " %(slice_authority, site_authority)
         # check if we are already peered with this site_authority, if so
         peers = self.driver.GetPeers({})
-        print>>sys.stderr, " \r\n \r\n \t slices.py get_peer peers %s " %(peers)
+        #print>>sys.stderr, " \r\n \r\n \t slices.py get_peer peers %s " %(peers)
         for peer_record in peers:
           
             if site_authority == peer_record.hrn:
                 peer = peer_record
-        print>>sys.stderr, " \r\n \r\n \t slices.py get_peer peer  %s " %(peer) 
+        #print>>sys.stderr, " \r\n \r\n \t slices.py get_peer peer  %s " %(peer) 
         return peer
 
     def get_sfa_peer(self, xrn):
@@ -244,6 +244,7 @@ class SlabSlices:
     def verify_slice_nodes(self, slice, requested_slivers, peer):
         current_slivers = []
         deleted_nodes = []
+        
         if slice['node_ids']:
             nodes = self.driver.GetNodes(slice['node_ids'], ['hostname'])
             current_slivers = [node['hostname'] for node in nodes]
@@ -253,7 +254,7 @@ class SlabSlices:
     
         # add nodes from rspec
         added_nodes = list(set(requested_slivers).difference(current_slivers))        
-        print>>sys.stderr , "\r\n \r\n \t slices.py  verify_slice_nodes added_nodes %s slice %s" %( added_nodes,slice)
+        #print>>sys.stderr , "\r\n \r\n \t slices.py  verify_slice_nodes added_nodes %s slice %s" %( added_nodes,slice)
         try:
             #if peer:
                 #self.driver.UnBindObjectFromPeer('slice', slice['slice_id'], peer['shortname'])
@@ -261,7 +262,8 @@ class SlabSlices:
             #so that the OAR/LDAP knows the user: remove the authority from the name
             tmp=  slice['PI'][0].split(".")
             username = tmp[(len(tmp)-1)]
-            self.driver.AddSliceToNodes(slice['name'], added_nodes, username)
+            self.driver.AddSliceToNodes(slice, added_nodes, username)
+            #self.driver.AddSliceToNodes(slice['name'], added_nodes, username)
             
             if deleted_nodes:
                 self.driver.DeleteSliceFromNodes(slice['name'], deleted_nodes)
@@ -475,7 +477,7 @@ class SlabSlices:
         # update_existing users
         updated_users_list = [user for user in existing_slice_users if user['hrn'] in \
           updated_user_hrns]
-        print>>sys.stderr, " \r\n \r\n slices.py verify_persons  removed_user_hrns %s updated_users_list %s " %(removed_user_hrns,updated_users_list) 
+        #print>>sys.stderr, " \r\n \r\n slices.py verify_persons  removed_user_hrns %s updated_users_list %s " %(removed_user_hrns,updated_users_list) 
         #self.verify_keys(existing_slice_users, updated_users_list, peer, append)
 
         added_persons = []

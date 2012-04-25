@@ -105,18 +105,18 @@ class OARrestapi:
         print>>sys.stderr, " \r\n \r\n POSTRequestToOARRestAPI username",username
         try:
             self.oarserver['uri'] = OARrequest_post_uri_dict[request]['uri']
-            print>>sys.stderr, " \r\n \r\n POSTRequestToOARRestAPI rq %s datadict %s  " % ( self.oarserver['uri'] ,datadict)
+            #print>>sys.stderr, " \r\n \r\n POSTRequestToOARRestAPI rq %s datadict %s  " % ( self.oarserver['uri'] ,datadict)
 
         except:
             print>>sys.stderr, " \r\n \r\n POSTRequestToOARRestAPI request not in OARrequest_post_uri_dict"
             return
         try:
-            print>>sys.stderr, " \r\n \r\n POSTRequestToOARRestAPI  %s " %( 'strval' in datadict)
+            #print>>sys.stderr, " \r\n \r\n POSTRequestToOARRestAPI  %s " %( 'strval' in datadict)
             if datadict and 'strval' in datadict:
                 self.oarserver['uri'] = self.oarserver['uri'].replace("id",str(datadict['strval']))
-                print>>sys.stderr, " \r\n \r\n POSTRequestToOARRestAPI REPLACE OK %s"%(self.oarserver['uri'])
+                #print>>sys.stderr, " \r\n \r\n POSTRequestToOARRestAPI REPLACE OK %s"%(self.oarserver['uri'])
                 del datadict['strval']
-                print>>sys.stderr, " \r\n \r\n \t POSTRequestToOARRestAPI datadict %s  rq %s" %(datadict, self.oarserver['uri'] )
+                #print>>sys.stderr, " \r\n \r\n \t POSTRequestToOARRestAPI datadict %s  rq %s" %(datadict, self.oarserver['uri'] )
         except:
             print>>sys.stderr, " \r\n \r\n POSTRequestToOARRestAPI ERRRRRORRRRRR "
             return
@@ -129,7 +129,7 @@ class OARrestapi:
         try :
             #self.oarserver['postformat'] = POSTformat[format]
             
-            print>>sys.stderr, "\r\n POSTRequestToOARRestAPI   headers %s uri %s" %(headers,self.oarserver['uri'])
+            #print>>sys.stderr, "\r\n POSTRequestToOARRestAPI   headers %s uri %s" %(headers,self.oarserver['uri'])
             conn = httplib.HTTPConnection(self.oarserver['ip'],self.oarserver['port'])
             conn.request("POST",self.oarserver['uri'],data,headers )
             resp = ( conn.getresponse()).read()

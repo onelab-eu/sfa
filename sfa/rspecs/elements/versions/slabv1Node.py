@@ -31,7 +31,8 @@ class Slabv1Node:
                     node_elem.add_instance('hardware_type', hardware_type, HardwareType.fields)
             # set location
             if node.get('location'):
-                node_elem.add_instance('location', node['location'], Location.fields)       
+                node_elem.add_instance('location', node['location'], Location.fields)
+
             # set interfaces
             #if node.get('interfaces'):
                 #for interface in  node.get('interfaces', []):
@@ -55,20 +56,23 @@ class Slabv1Node:
                 if node.get('pl_initscripts'): 
                     for initscript in node.get('pl_initscripts', []):
                         slivers['tags'].append({'name': 'initscript', 'value': initscript['name']})
-        Slabv1Sliver.add_slivers(node_elem, slivers)
-        print>>sys.stderr, "\r\n \r\n SLABV1NODE.PY \t\t addnodes node_elems[0] %s" %(node_elems[0])
+           
+            Slabv1Sliver.add_slivers(node_elem, slivers)
         return node_elems
 
     @staticmethod
     def get_nodes(xml, filter={}):
         xpath = '//node%s | //default:node%s' % (XpathFilter.xpath(filter), XpathFilter.xpath(filter))
-        node_elems = xml.xpath(xpath)
+        node_elems = xml.xpath(xpath)  
+        print>>sys.stderr, "\r\n \r\n \t\t \t SLABV1NODE.pY    get_nodes!!!!!!!!!   node_elems %s"%(node_elems)
         return Slabv1Node.get_node_objs(node_elems)
 
-    @staticmethod
+    @staticmethod 
     def get_nodes_with_slivers(xml, filter={}):
-        xpath = '//node[count(sliver_type)>0] | //default:node[count(default:sliver_type) > 0]' 
-        node_elems = xml.xpath(xpath)        
+        #xpath = '//node[count(sliver_type)>0] | //default:node[count(default:sliver_type) > 0]' 
+        xpath = '//node[count(sliver)>0] | //default:node[count(default:sliver) > 0]' 
+        node_elems = xml.xpath(xpath)    
+        print>>sys.stderr, "\r\n \r\n \t\t \t SLABV1NODE.pY    get_nodes_with_slivers  node_elems %s"%(node_elems)
         return Slabv1Node.get_node_objs(node_elems)
 
     @staticmethod
@@ -96,7 +100,7 @@ class Slabv1Node:
 
             # get services
             #node['services'] = PGv2Services.get_services(node_elem)
-            
+
             # get slivers
             node['slivers'] = Slabv1Sliver.get_slivers(node_elem)    
             available_elems = node_elem.xpath('./default:available | ./available')
@@ -110,6 +114,7 @@ class Slabv1Node:
 
     @staticmethod
     def add_slivers(xml, slivers):
+        print>>sys.stderr, "\r\n \r\n \t\t SLABv1NODE.PY add_slivers "
         component_ids = []
         for sliver in slivers:
             filter = {}

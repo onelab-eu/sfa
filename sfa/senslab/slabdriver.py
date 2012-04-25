@@ -43,9 +43,8 @@ def list_to_dict(recs, key):
     convert a list of dictionaries into a dictionary keyed on the 
     specified dictionary key 
     """
-   # print>>sys.stderr, " \r\n \t\t 1list_to_dict : rec %s  \r\n \t\t list_to_dict key %s" %(recs,key)   
+
     keys = [rec[key] for rec in recs]
-    #print>>sys.stderr, " \r\n \t\t list_to_dict : rec %s  \r\n \t\t list_to_dict keys %s" %(recs,keys)   
     return dict(zip(keys, recs))
 
 # thierry : note
@@ -63,16 +62,11 @@ class SlabDriver(Driver):
 
         
 	print >>sys.stderr, "\r\n_____________ SFA SENSLAB DRIVER \r\n" 
-        # thierry - just to not break the rest of this code
 
-
-	#self.oar = OARapi()
         self.oar = OARrestapi()
 	self.ldap = LDAPapi()
-        #self.users = SenslabImportUsers()
         self.time_format = "%Y-%m-%d %H:%M:%S"
         self.db = SlabDB(config)
-        #self.logger=sfa_logger()
         self.cache=None
         
 
@@ -98,9 +92,7 @@ class SlabDriver(Driver):
             if len(nodes) is 0:
                 raise SliverDoesNotExist("No slivers allocated ") 
                     
-             
-           
-    
+
             result = {}
             top_level_status = 'unknown'
             if nodes:
@@ -125,7 +117,7 @@ class SlabDriver(Driver):
                 sliver_id = urn_to_sliver_id(slice_urn, sl['record_id_slice'],nodeall_byhostname[node]['node_id'] ) 
                 res['geni_urn'] = sliver_id 
                 if nodeall_byhostname[node]['boot_state'] == 'Alive':
-                #if node['boot_state'] == 'Alive':
+
                     res['geni_status'] = 'ready'
                 else:
                     res['geni_status'] = 'failed'
@@ -142,43 +134,47 @@ class SlabDriver(Driver):
         
         
     def create_sliver (self, slice_urn, slice_hrn, creds, rspec_string, users, options):
+        print>>sys.stderr, "\r\n \r\n \t=============================== SLABDRIVER.PY create_sliver "
         aggregate = SlabAggregate(self)
-
+        
         slices = SlabSlices(self)
         peer = slices.get_peer(slice_hrn)
         sfa_peer = slices.get_sfa_peer(slice_hrn)
         slice_record=None 
-
-       
+ 
         if not isinstance(creds, list):
             creds = [creds]
-
-           
+    
         if users:
             slice_record = users[0].get('slice_record', {})
     
         # parse rspec
         rspec = RSpec(rspec_string)
-        requested_attributes = rspec.version.get_slice_attributes()
+        print>>sys.stderr, "\r\n \r\n \t=============================== SLABDRIVER.PY create_sliver  ============================rspec.version %s " %(rspec.version)
         
-        # ensure site record exists
-        #site = slices.verify_site(slice_hrn, slice_record, peer, sfa_peer, options=options)
+        
+        # ensure site record exists?
         # ensure slice record exists
         slice = slices.verify_slice(slice_hrn, slice_record, peer, sfa_peer, options=options)
+        requested_attributes = rspec.version.get_slice_attributes()
+        
+        if requested_attributes:
+            for attrib_dict in requested_attributes:
+                if 'timeslot' in attrib_dict:
+                    slice.update({'timeslot':attrib_dict['timeslot']})
+        print >>sys.stderr, "\r\n \r\n \t=============================== SLABDRIVER.PY create_sliver  ..... slice %s " %(slice)
         # ensure person records exists
         persons = slices.verify_persons(slice_hrn, slice, users, peer, sfa_peer, options=options)
-        # ensure slice attributes exists
-        #slices.verify_slice_attributes(slice, requested_attributes, options=options)
+        # ensure slice attributes exists?
+
         
-        # add/remove slice from nodes
+        # add/remove slice from nodes 
+        print >>sys.stderr, "\r\n \r\n \t=============================== SLABDRIVER.PY create_sliver  ..... " 
+       
         requested_slivers = [node.get('component_name') for node in rspec.version.get_nodes_with_slivers()]
+        print >>sys.stderr, "\r\n \r\n \t=============================== ........... requested_slivers ============================requested_slivers %s " %(requested_slivers)
         nodes = slices.verify_slice_nodes(slice, requested_slivers, peer) 
     
-      
-    
-        # handle MyPLC peer association.
-        # only used by plc and ple.
-        #slices.handle_peer(site, slice, persons, peer)
         
         return aggregate.get_rspec(slice_xrn=slice_urn, version=rspec.version)
         
@@ -205,9 +201,7 @@ class SlabDriver(Driver):
                 self.BindObjectToPeer('slice', slice['slice_id'], peer, slice['peer_slice_id'])
         return 1
             
-            
-            
-            
+ 
     # first 2 args are None in case of resource discovery
     def list_resources (self, slice_urn, slice_hrn, creds, options):
         #cached_requested = options.get('cached', True) 
@@ -229,12 +223,12 @@ class SlabDriver(Driver):
                 #return rspec 
     
         #panos: passing user-defined options
-        #print "manager options = ",options
+
         aggregate = SlabAggregate(self)
         origin_hrn = Credential(string=creds[0]).get_gid_caller().get_hrn()
-        print>>sys.stderr, " \r\n \r\n \t SLABDRIVER list_resources origin_hrn %s" %(origin_hrn)
+        #print>>sys.stderr, " \r\n \r\n \t SLABDRIVER list_resources origin_hrn %s" %(origin_hrn)
         options.update({'origin_hrn':origin_hrn})
-        print>>sys.stderr, " \r\n \r\n \t SLABDRIVER  list_resources options %s" %(options)
+        #print>>sys.stderr, " \r\n \r\n \t SLABDRIVER  list_resources options %s" %(options)
         rspec =  aggregate.get_rspec(slice_xrn=slice_urn, version=rspec_version, 
                                      options=options)
         print>>sys.stderr, " \r\n \r\n \t SLABDRIVER list_resources rspec " 
@@ -272,13 +266,7 @@ class SlabDriver(Driver):
         type = sfa_record['type']
         slab_record = self.sfa_fields_to_slab_fields(type, hrn, sfa_record)
     
-        #if type == 'authority':
-            #sites = self.shell.GetSites([slab_record['login_base']])
-            #if not sites:
-                #pointer = self.shell.AddSite(slab_record)
-            #else:
-                #pointer = sites[0]['site_id']
-    
+
         if type == 'slice':
             acceptable_fields=['url', 'instantiation', 'name', 'description']
             for key in slab_record.keys():
@@ -316,14 +304,7 @@ class SlabDriver(Driver):
                 self.AddPersonKey(pointer, {'key_type' : 'ssh', 'key' : pub_key})
                 
         #No node adding outside OAR
-        #elif type == 'node':
-            #login_base = hrn_to_slab_login_base(sfa_record['authority'])
-            #nodes = self.GetNodes([slab_record['hostname']])
-            #if not nodes:
-                #pointer = self.AddNode(login_base, slab_record)
-            #else:
-                #pointer = nodes[0]['node_id']
-    
+
         return pointer
             
     #No site or node record update allowed       
@@ -370,9 +351,7 @@ class SlabDriver(Driver):
                         key_exists = True
                 if not key_exists:
                     self.AddPersonKey(pointer, {'key_type': 'ssh', 'key': new_key})
-    
-        #elif type == "node":
-            #self.UpdateNode(pointer, new_sfa_record)
+
 
         return True
         
@@ -499,11 +478,11 @@ class SlabDriver(Driver):
         node_dict = dict(zip(node_hostname_list,node_list))
         try :
             liste =job_info[node_list_k] 
-            print>>sys.stderr, "\r\n \r\n \t\t GetJobs resources  job_info liste%s" %(liste)
+            #print>>sys.stderr, "\r\n \r\n \t\t GetJobs resources  job_info liste%s" %(liste)
             for k in range(len(liste)):
                job_info[node_list_k][k] = node_dict[job_info[node_list_k][k]]['hostname']
             
-            print>>sys.stderr, "\r\n \r\n \t\t YYYYYYYYYYYYGetJobs resources  job_info %s" %(job_info)  
+            #print>>sys.stderr, "\r\n \r\n \t\t YYYYYYYYYYYYGetJobs resources  job_info %s" %(job_info)  
             #Replaces the previous entry "assigned_network_address" / "reserved_resources"
             #with "node_ids"
             job_info.update({'node_ids':job_info[node_list_k]})
@@ -523,9 +502,8 @@ class SlabDriver(Driver):
        return nodes
      
     def GetNodes(self,node_filter= None, return_fields=None):
-		
         node_dict =self.oar.parser.SendRequest("GET_resources_full")
-        print>>sys.stderr, "\r\n \r\n \t\t  SLABDRIVER.PY GetNodes " 
+
         return_node_list = []
         if not (node_filter or return_fields):
                 return_node_list = node_dict.values()
@@ -537,7 +515,6 @@ class SlabDriver(Driver):
   
     def GetSites(self, site_filter = None, return_fields=None):
         site_dict =self.oar.parser.SendRequest("GET_sites")
-        print>>sys.stderr, "\r\n \r\n \t\t  SLABDRIVER.PY GetSites " 
         return_site_list = []
         if not ( site_filter or return_fields):
                 return_site_list = site_dict.values()
@@ -561,10 +538,10 @@ class SlabDriver(Driver):
             if slicerec:
                 rec = slicerec.dumpquerytodict()
                 login = slicerec.slice_hrn.split(".")[1].split("_")[0]
-                print >>sys.stderr, " \r\n \r\n \tSLABDRIVER.PY slicerec GetSlices   %s " %(slicerec)
+                #print >>sys.stderr, " \r\n \r\n \tSLABDRIVER.PY slicerec GetSlices   %s " %(slicerec)
                 if slicerec.oar_job_id is not -1:
                     rslt = self.GetJobs( slicerec.oar_job_id, resources=False, username = login )
-                    print >>sys.stderr, " \r\n \r\n \tSLABDRIVER.PY  GetSlices  GetJobs  %s " %(rslt)     
+                    #print >>sys.stderr, " \r\n \r\n \tSLABDRIVER.PY  GetSlices  GetJobs  %s " %(rslt)     
                     if rslt :
                         rec.update(rslt)
                         rec.update({'hrn':str(rec['slice_hrn'])})
@@ -575,7 +552,12 @@ class SlabDriver(Driver):
                         rec['oar_job_id'] = -1
                         rec.update({'hrn':str(rec['slice_hrn'])})
             
-                print >>sys.stderr, " \r\n \r\n \tSLABDRIVER.PY  GetSlices  rec  %s" %(rec)
+                try:
+                    rec['node_ids'] = rec['node_list']
+                except KeyError:
+                    pass
+                
+                #print >>sys.stderr, " \r\n \r\n \tSLABDRIVER.PY  GetSlices  rec  %s" %(rec)
                               
             return rec
                 
@@ -678,15 +660,21 @@ class SlabDriver(Driver):
 
         return slab_record
 
-  
-                 
-                 
-    def AddSliceToNodes(self,  slice_name, added_nodes, slice_user=None):
+                   
+    def AddSliceToNodes(self,  slice_dict, added_nodes, slice_user=None):
        
         site_list = []
         nodeid_list =[]
         resource = ""
         reqdict = {}
+        slice_name = slice_dict['name']
+        try:
+            slot = slice_dict['timeslot']
+        except KeyError:
+            slot = { 'time':None, 'duration':'00:10:00' }#10 min 
+            reqdict['resource']+= ",walltime=" + str(00) + ":" + str(12) + ":" + str(20) #+2 min 20
+            reqdict['script_path'] = "/bin/sleep 620" #+20 sec
+            
         reqdict['property'] ="network_address in ("
         for node in added_nodes:
             #Get the ID of the node : remove the root auth and put the site in a separate list
@@ -701,42 +689,95 @@ class SlabDriver(Driver):
             reqdict['property'] += "'"+ nodeid +"', "
             nodeid_list.append(nodeid)
             #site_list.append( l[0] )
+            
+            
         reqdict['property'] =  reqdict['property'][0: len( reqdict['property'])-2] +")"
         reqdict['resource'] ="network_address="+ str(len(nodeid_list))
-        reqdict['resource']+= ",walltime=" + str(00) + ":" + str(12) + ":" + str(20) #+2 min 20
-        reqdict['script_path'] = "/bin/sleep 620" #+20 sec
+        
+
+        #In case of a scheduled experiment
+        if slot['time']:
+            
+            walltime = slot['duration'].split(":")
+            # Fixing the walltime by adding a few delays. First put the walltime in seconds
+            # oarAdditionalDelay = 20; additional delay for /bin/sleep command to
+            # take in account  prologue and epilogue scripts execution
+            # int walltimeAdditionalDelay = 120;  additional delay
+            desired_walltime =  int(walltime[0])*3600 + int(walltime[1]) * 60 + int(walltime[2])
+            total_walltime = desired_walltime + 140 #+2 min 20
+            sleep_walltime = desired_walltime + 20 #+20 sec
+            print>>sys.stderr, "\r\n \r\n \t\tAddSliceToNodes desired_walltime %s  total_walltime %s sleep_walltime %s  " %(desired_walltime,total_walltime,sleep_walltime)
+            #Put the walltime back in str form
+            #First get the hours
+            walltime[0] = str(total_walltime / 3600)
+            total_walltime = total_walltime - 3600 * int(walltime[0])
+            #Get the remaining minutes
+            walltime[1] = str(total_walltime / 60)
+            total_walltime =  total_walltime - 60 * int(walltime[1])
+            #Get the seconds
+            walltime[2] = str(total_walltime)
+            print>>sys.stderr, "\r\n \r\n \t\tAddSliceToNodes  walltime %s " %(walltime)
+
+            reqdict['resource']+= ",walltime=" + str(walltime[0]) + ":" + str(walltime[1]) + ":" + str(walltime[2]) 
+            reqdict['script_path'] = "/bin/sleep " + str(sleep_walltime)
+            
+            #Get the reservation time
+            parse_time = slot['time'].split(" ")
+            date = ' '.join(parse_time[:-1])
+            #Get zone of the user from the reservation time given in the rspec
+            from_zone = tz.gettz(parse_time[2])
+            user_datetime = datetime.datetime.strptime(date, self.time_format)
+            user_datetime = user_datetime.replace(tzinfo = from_zone)
+            
+            #Convert to UTC zone
+            to_zone = tz.tzutc()
+            utc_date = user_datetime.astimezone(to_zone)
+            #Readable time accpeted by OAR
+            reqdict['reservation']= utc_date.strftime(self.time_format)
+        
+            print>>sys.stderr, "\r\n \r\n \t\tAddSliceToNodes  reqdict['reservation'] %s " %(reqdict['reservation'])
+            
+        else:
+            # Immediate XP
+            # reservations are performed in the oar server timebase, so :
+            # 1- we get the server time(in UTC tz )/server timezone
+            # 2- convert the server UTC time in its timezone
+            # 3- add a custom delay to this time
+            # 4- convert this time to a readable form and it for the reservation request.
+            server_timestamp,server_tz = self.GetTimezone()
+            s_tz=tz.gettz(server_tz)
+            UTC_zone = tz.gettz("UTC")
+            #weird... datetime.fromtimestamp should work since we do from datetime import datetime
+            utc_server= datetime.datetime.fromtimestamp(float(server_timestamp)+20,UTC_zone)
+            server_localtime=utc_server.astimezone(s_tz)
+    
+            print>>sys.stderr, "\r\n \r\n \t\tAddSliceToNodes server_timestamp %s server_tz %s slice_name %s added_nodes %s username %s reqdict %s " %(server_timestamp,server_tz,slice_name,added_nodes,slice_user, reqdict )
+            readable_time = server_localtime.strftime(self.time_format)
+
+            print >>sys.stderr,"  \r\n \r\n \t\t\t\tAPRES ParseTimezone readable_time %s timestanp %s  " %(readable_time ,server_timestamp)
+            reqdict['reservation'] = readable_time
+        
+
         reqdict['type'] = "deploy" 
         reqdict['directory']= ""
         reqdict['name']= "TestSandrine"
-        # reservations are performed in the oar server timebase, so :
-        # 1- we get the server time(in UTC tz )/server timezone
-        # 2- convert the server UTC time in its timezone
-        # 3- add a custom delay to this time
-        # 4- convert this time to a readable form and it for the reservation request.
-        server_timestamp,server_tz = self.GetTimezone()
-        s_tz=tz.gettz(server_tz)
-        UTC_zone = tz.gettz("UTC")
-        #weird... datetime.fromtimestamp should work since we do from datetime import datetime
-        utc_server= datetime.datetime.fromtimestamp(float(server_timestamp)+20,UTC_zone)
-        server_localtime=utc_server.astimezone(s_tz)
-
-        print>>sys.stderr, "\r\n \r\n AddSliceToNodes  slice_name %s added_nodes %s username %s reqdict %s " %(slice_name,added_nodes,slice_user, reqdict)
-        readable_time = server_localtime.strftime(self.time_format)
-
-        print >>sys.stderr,"  \r\n \r\n \t\t\t\tAPRES ParseTimezone readable_time %s timestanp %s  " %(readable_time ,server_timestamp)
-        reqdict['reservation'] = readable_time
+       
          
-        # first step : start the OAR job
+        # first step : start the OAR job and update the job 
         print>>sys.stderr, "\r\n \r\n AddSliceToNodes reqdict   %s \r\n site_list   %s"  %(reqdict,site_list)   
-        #OAR = OARrestapi()
+       
         answer = self.oar.POSTRequestToOARRestAPI('POST_job',reqdict,slice_user)
         print>>sys.stderr, "\r\n \r\n AddSliceToNodes jobid   %s "  %(answer)
-        #self.db.update('slice',['oar_job_id'], [answer['id']], 'slice_hrn', slice_name)
-               
-
-        self.db.update_job( slice_name, job_id = answer['id'] )
-        jobid=answer['id']
-        print>>sys.stderr, "\r\n \r\n AddSliceToNodes jobid    %s added_nodes  %s slice_user %s"  %(jobid,added_nodes,slice_user)  
+        try:       
+            jobid = answer['id']
+        except KeyError:
+             print>>sys.stderr, "\r\n AddSliceTonode Impossible to create job  %s "  %( answer)
+             return
+        
+        print>>sys.stderr, "\r\n \r\n AddSliceToNodes jobid    %s added_nodes  %s slice_user %s"  %(jobid,added_nodes,slice_user)
+        self.db.update_job( slice_name, jobid ,added_nodes)
+        
+          
         # second step : configure the experiment
         # we need to store the nodes in a yaml (well...) file like this :
         # [1,56,23,14,45,75] with name /tmp/sfa<jobid>.json
@@ -757,6 +798,88 @@ class SlabDriver(Driver):
 
         print>>sys.stderr, "\r\n \r\n AddSliceToNodes wrapper returns   %s "  %(output)
         return 
+                 
+                 
+    #def AddSliceToNodes(self,  slice_name, added_nodes, slice_user=None):
+       
+        #site_list = []
+        #nodeid_list =[]
+        #resource = ""
+        #reqdict = {}
+        #reqdict['property'] ="network_address in ("
+        #for node in added_nodes:
+            ##Get the ID of the node : remove the root auth and put the site in a separate list
+            #s=node.split(".")
+            ## NT: it's not clear for me if the nodenames will have the senslab prefix
+            ## so lets take the last part only, for now.
+            #lastpart=s[-1]
+            ##if s[0] == self.root_auth :
+            ## Again here it's not clear if nodes will be prefixed with <site>_, lets split and tanke the last part for now.
+            #s=lastpart.split("_")
+            #nodeid=s[-1]
+            #reqdict['property'] += "'"+ nodeid +"', "
+            #nodeid_list.append(nodeid)
+            ##site_list.append( l[0] )
+        #reqdict['property'] =  reqdict['property'][0: len( reqdict['property'])-2] +")"
+        #reqdict['resource'] ="network_address="+ str(len(nodeid_list))
+        #reqdict['resource']+= ",walltime=" + str(00) + ":" + str(12) + ":" + str(20) #+2 min 20
+        #reqdict['script_path'] = "/bin/sleep 620" #+20 sec
+        #reqdict['type'] = "deploy" 
+        #reqdict['directory']= ""
+        #reqdict['name']= "TestSandrine"
+        ## reservations are performed in the oar server timebase, so :
+        ## 1- we get the server time(in UTC tz )/server timezone
+        ## 2- convert the server UTC time in its timezone
+        ## 3- add a custom delay to this time
+        ## 4- convert this time to a readable form and it for the reservation request.
+        #server_timestamp,server_tz = self.GetTimezone()
+        #s_tz=tz.gettz(server_tz)
+        #UTC_zone = tz.gettz("UTC")
+        ##weird... datetime.fromtimestamp should work since we do from datetime import datetime
+        #utc_server= datetime.datetime.fromtimestamp(float(server_timestamp)+20,UTC_zone)
+        #server_localtime=utc_server.astimezone(s_tz)
+
+        #print>>sys.stderr, "\r\n \r\n \t\tAddSliceToNodes server_timestamp %s server_tz %s slice_name %s added_nodes %s username %s reqdict %s " %(server_timestamp,server_tz,slice_name,added_nodes,slice_user, reqdict )
+        #readable_time = server_localtime.strftime(self.time_format)
+
+        #print >>sys.stderr,"  \r\n \r\n \t\t\t\tAPRES ParseTimezone readable_time %s timestanp %s  " %(readable_time ,server_timestamp)
+        #reqdict['reservation'] = readable_time
+         
+        ## first step : start the OAR job and update the job 
+        #print>>sys.stderr, "\r\n \r\n AddSliceToNodes reqdict   %s \r\n site_list   %s"  %(reqdict,site_list)   
+       
+        #answer = self.oar.POSTRequestToOARRestAPI('POST_job',reqdict,slice_user)
+        #print>>sys.stderr, "\r\n \r\n AddSliceToNodes jobid   %s "  %(answer)
+        #try:       
+            #jobid = answer['id']
+        #except KeyError:
+             #print>>sys.stderr, "\r\n AddSliceTonode Impossible to create job  %s "  %( answer)
+             #return
+        
+        #print>>sys.stderr, "\r\n \r\n AddSliceToNodes jobid    %s added_nodes  %s slice_user %s"  %(jobid,added_nodes,slice_user)
+        #self.db.update_job( slice_name, jobid ,added_nodes)
+        
+          
+        ## second step : configure the experiment
+        ## we need to store the nodes in a yaml (well...) file like this :
+        ## [1,56,23,14,45,75] with name /tmp/sfa<jobid>.json
+        #f=open('/tmp/sfa/'+str(jobid)+'.json','w')
+        #f.write('[')
+        #f.write(str(added_nodes[0].strip('node')))
+        #for node in added_nodes[1:len(added_nodes)] :
+            #f.write(','+node.strip('node'))
+        #f.write(']')
+        #f.close()
+        
+        ## third step : call the senslab-experiment wrapper
+        ##command= "java -jar target/sfa-1.0-jar-with-dependencies.jar "+str(jobid)+" "+slice_user
+        #javacmdline="/usr/bin/java"
+        #jarname="/opt/senslabexperimentwrapper/sfa-1.0-jar-with-dependencies.jar"
+        ##ret=subprocess.check_output(["/usr/bin/java", "-jar", ", str(jobid), slice_user])
+        #output = subprocess.Popen([javacmdline, "-jar", jarname, str(jobid), slice_user],stdout=subprocess.PIPE).communicate()[0]
+
+        #print>>sys.stderr, "\r\n \r\n AddSliceToNodes wrapper returns   %s "  %(output)
+        #return 
     
 
         
@@ -917,7 +1040,7 @@ class SlabDriver(Driver):
             for record in parkour:
                     
                 if str(record['type']) == 'slice':
-                    print >>sys.stderr, "\r\n \t\t  SLABDRIVER.PY  fill_record_info \t \t record %s" %(record)
+                    #print >>sys.stderr, "\r\n \t\t  SLABDRIVER.PY  fill_record_info \t \t record %s" %(record)
                     #sfatable = SfaTable()
                     
                     #existing_records_by_id = {}
@@ -929,13 +1052,13 @@ class SlabDriver(Driver):
                     #recslice = self.db.find('slice',{'slice_hrn':str(record['hrn'])}) 
                     #recslice = slab_dbsession.query(SliceSenslab).filter_by(slice_hrn = str(record['hrn'])).first()
                     recslice = self.GetSlices(slice_filter =  str(record['hrn']), filter_type = 'slice_hrn')
-                    print >>sys.stderr, "\r\n \t\t  SLABDRIVER.PY fill_record_info \t\t HOY HOY reclise %s" %(recslice)
+                    #print >>sys.stderr, "\r\n \t\t  SLABDRIVER.PY fill_record_info \t\t HOY HOY reclise %s" %(recslice)
                     #if isinstance(recslice,list) and len(recslice) == 1:
                         #recslice = recslice[0]
                    
                     recuser = dbsession.query(RegRecord).filter_by(record_id = recslice['record_id_user']).first()
                     #existing_records_by_id[recslice['record_id_user']]
-                    print >>sys.stderr, "\r\n \t\t  SLABDRIVER.PY fill_record_info \t\t recuser %s" %(recuser)
+                    #print >>sys.stderr, "\r\n \t\t  SLABDRIVER.PY fill_record_info \t\t recuser %s" %(recuser)
                     
           
                     record.update({'PI':[recuser.hrn],
@@ -946,7 +1069,7 @@ class SlabDriver(Driver):
                     'person_ids':[recslice['record_id_user']]})
                     
                 elif str(record['type']) == 'user':
-                    print >>sys.stderr, "\r\n \t\t  SLABDRIVER.PY fill_record_info USEEEEEEEEEERDESU!" 
+                    #print >>sys.stderr, "\r\n \t\t  SLABDRIVER.PY fill_record_info USEEEEEEEEEERDESU!" 
 
                     rec = self.GetSlices(slice_filter = record['record_id'], filter_type = 'record_id_user')
                     #Append record in records list, therfore fetches user and slice info again(one more loop)
@@ -954,7 +1077,7 @@ class SlabDriver(Driver):
 
                     rec.update({'type':'slice','hrn':rec['slice_hrn']})
                     records.append(rec)
-                    print >>sys.stderr, "\r\n \t\t  SLABDRIVER.PY fill_record_info ADDING SLIC EINFO rec %s" %(rec) 
+                    #print >>sys.stderr, "\r\n \t\t  SLABDRIVER.PY fill_record_info ADDING SLIC EINFO rec %s" %(rec) 
                     
             print >>sys.stderr, "\r\n \t\t  SLABDRIVER.PY fill_record_info OKrecords %s" %(records) 
         except TypeError:

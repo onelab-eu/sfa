@@ -1,6 +1,3 @@
-
-#!/usr/bin/python
-
 # import modules used here -- sys is a very standard one
 import sys
 import httplib
@@ -8,8 +5,8 @@ import json
 
 
 
-from sfa.senslab.OARrestapi import *
-#from sfa.senslab.slabdriver import SlabDriver
+#from sfa.senslab.OARrestapi import *
+
 from sfa.util.config import Config
 from sfa.util.xrn import hrn_to_urn, urn_to_hrn, urn_to_sliver_id
 from sfa.util.plxrn import PlXrn, hostname_to_urn, hrn_to_pl_slicename
@@ -18,16 +15,12 @@ from sfa.rspecs.rspec import RSpec
 from sfa.rspecs.elements.location import Location
 from sfa.rspecs.elements.hardware_type import HardwareType
 from sfa.rspecs.elements.node import Node
-#from sfa.rspecs.elements.link import Link
-from sfa.rspecs.elements.sliver import Sliver
 #from sfa.rspecs.elements.login import Login
-#from sfa.rspecs.elements.location import Location
-#from sfa.rspecs.elements.interface import Interface
 #from sfa.rspecs.elements.services import Services
-#from sfa.rspecs.elements.pltag import PLTag
+from sfa.rspecs.elements.sliver import Sliver
 
 from sfa.rspecs.version_manager import VersionManager
-#from sfa.plc.vlink import get_tc_rate
+
 from sfa.util.sfatime import datetime_to_epoch
 
 def hostname_to_hrn(root_auth,login_base,hostname):
@@ -35,7 +28,6 @@ def hostname_to_hrn(root_auth,login_base,hostname):
 
 class SlabAggregate:
 
-    
     sites = {}
     nodes = {}
     api = None
@@ -48,11 +40,7 @@ class SlabAggregate:
     user_options = {}
     
     def __init__(self ,driver):
-	#self.OARImporter = OARapi()	
         self.driver = driver
-	#self.api = api 
-	print >>sys.stderr,"\r\n \r\n \t\t_____________INIT Slabaggregate api : %s" %(driver)
-
 
     def get_slice_and_slivers(self, slice_xrn):
         """
@@ -84,7 +72,7 @@ class SlabAggregate:
                     #node_id = self.driver.root_auth + '.' + node_id
                     sliver = Sliver({'sliver_id': urn_to_sliver_id(slice_urn, slice['record_id_slice'], node_id),
                                     'name': slice['slice_hrn'],
-                                    'type': 'slab-vm', 
+                                    'type': 'slab-node', 
                                     'tags': []})
                     slivers[node_id]= sliver
             except KeyError:
@@ -102,47 +90,9 @@ class SlabAggregate:
         print >>sys.stderr,"\r\n \r\n \t\t_____________ Slabaggregate api get_slice_and_slivers  slivers %s " %(slivers)
         return (slice, slivers)
             
-            
-  
-    def get_nodes(self,slice=None,slivers=[], options={}):
-        filtre = {}
-        
-        nodes = self.driver.GetNodes(filtre)
-        
-        
-        interface_ids = []
-        tag_ids = []
-        nodes_dict = {}
-        for node in nodes:
-            nodes_dict[node['node_id']] = node
 
-        rspec_nodes = []
-        for node in nodes:
-          
-            node['hostname'] = hostname_to_hrn( self.driver.root_auth,node['site_login_base'], node['hostname'])
-            rspec_node = Node()
-                      
-            rspec_node['component_id'] = hostname_to_urn(self.driver.root_auth, node['site_login_base'], node['hostname'])
-            rspec_node['component_name'] = node['hostname']
-            rspec_node['component_manager_id'] = hrn_to_urn(self.driver.root_auth, 'authority+sa')
-            rspec_node['authority_id'] = hrn_to_urn(PlXrn.site_hrn(self.driver.root_auth, node['site_login_base']), 'authority+sa')
-            rspec_node['boot_state'] = node['boot_state']
-            if node['posx'] and node['posy']:  
-                location = Location({'longitude':node['posx'], 'latitude': node['posy']})
-                rspec_node['location'] = location
-    
-            rspec_node['exclusive'] = 'True'
-            rspec_node['hardware_types']= [HardwareType({'name': 'senslab sensor node'})]
-
-            rspec_node['interfaces'] = []
-          
-
-            rspec_node['tags'] = []
-           
-            rspec_nodes.append(rspec_node)
-        return (rspec_nodes)
         
-    def get_nodes_and_links(self, slice=None,slivers=[], options={}):
+    def get_nodes(self, slice=None,slivers=[], options={}):
         # NT: the semantic of this function is not clear to me :
         # if slice is not defined, then all the nodes should be returned
         # if slice is defined, we should return only the nodes that are part of this slice
@@ -171,7 +121,7 @@ class SlabAggregate:
        
         #filter.update({'peer_id': None})
         #nodes = self.driver.GetNodes(filter['hostname'])
-        #print>>sys.stderr, "\r\n \r\n \t get_nodes_and_links nodes %s" %(nodes)
+        #print>>sys.stderr, "\r\n \r\n \t get_nodes nodes %s" %(nodes)
         
         #site_ids = []
         #interface_ids = []
@@ -190,7 +140,7 @@ class SlabAggregate:
         # get tags
         #node_tags = self.get_node_tags(tags_filter)
        
-        #links = self.get_links(sites_dict, nodes_dict, interfaces)
+
         reserved_nodes=self.driver.GetReservedNodes()
         rspec_nodes = []
         for node in nodes:
@@ -282,12 +232,12 @@ class SlabAggregate:
         #if slice and 'expires' in slice:
            #rspec.xml.set('expires',  datetime_to_epoch(slice['expires']))
          # add sliver defaults
-        #nodes, links = self.get_nodes_and_links(slice, slivers)
-        nodes = self.get_nodes_and_links(slice,slivers) 
+        #nodes, links = self.get_nodes(slice, slivers)
+        nodes = self.get_nodes(slice,slivers) 
         print>>sys.stderr, " \r\n SlabAggregate \t\t get_rspec ************** options %s rspec_version %s version_manager %s  rspec.version %s \r\n" %(options, rspec_version,version_manager, rspec.version)
         rspec.version.add_nodes(nodes)
 
-        #rspec.version.add_links(links)
+
         default_sliver = slivers.get(None, [])
         if default_sliver:
             default_sliver_attribs = default_sliver.get('tags', [])

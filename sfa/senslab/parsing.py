@@ -18,12 +18,12 @@ def strip_dictionnary (dict_to_strip):
 
 def filter_return_fields( dict_to_filter, return_fields):
 	filtered_dict = {}
-	print>>sys.stderr, " \r\n \t \tfilter_return_fields return fields %s " %(return_fields)
+	#print>>sys.stderr, " \r\n \t \tfilter_return_fields return fields %s " %(return_fields)
 	for field in return_fields:
 		#print>>sys.stderr, " \r\n \t \tfield %s " %(field)	
 		if field in dict_to_filter:
 			filtered_dict[field] = dict_to_filter[field]
-	print>>sys.stderr, " \r\n \t\t filter_return_fields filtered_dict %s " %(filtered_dict)
+	#print>>sys.stderr, " \r\n \t\t filter_return_fields filtered_dict %s " %(filtered_dict)
 	return filtered_dict
 	
 	
@@ -36,12 +36,12 @@ def parse_filter(list_to_filter, param_filter, type_of_list, return_fields=None)
 	  'slice':{'str':'slice_hrn','int':'record_id_slice'},\
           'peers':{'str':'hrn'}}
         	
-	print>>sys.stderr, " \r\n ___ parse_filter param_filter %s type %s  return fields %s " %(param_filter,type_of_list, return_fields)  
+	#print>>sys.stderr, " \r\n ___ parse_filter param_filter %s type %s  return fields %s " %(param_filter,type_of_list, return_fields)  
 	if  param_filter is None and return_fields is None:
             return list_to_filter
         
 	if type_of_list not in list_type:
-		print>>sys.stderr, " \r\n type_of_list Error  parse_filter %s " %(type_of_list)
+		#print>>sys.stderr, " \r\n type_of_list Error  parse_filter %s " %(type_of_list)
 		return []
 
 	return_filtered_list= []
@@ -65,7 +65,7 @@ def parse_filter(list_to_filter, param_filter, type_of_list, return_fields=None)
 					
 				if type(p_filter) is str:
 					if item[list_type[type_of_list]['str']] == str(p_filter) :
-                                                print>>sys.stderr, " \r\n p_filter %s \t item %s "%(p_filter,item[list_type[type_of_list]['str']])
+                                                #print>>sys.stderr, " \r\n p_filter %s \t item %s "%(p_filter,item[list_type[type_of_list]['str']])
 						if return_fields:
 							tmp_item = filter_return_fields(item,return_fields)
 						else:
@@ -99,7 +99,7 @@ def parse_filter(list_to_filter, param_filter, type_of_list, return_fields=None)
 
                         if founditem: 
                             if return_fields:
-                                print>>sys.stderr, "  \r\n \r\n parsing.py param_filter dflt %s founditem %s " %(dflt, founditem)
+                                #print>>sys.stderr, "  \r\n \r\n parsing.py param_filter dflt %s founditem %s " %(dflt, founditem)
                                 tmp_item = filter_return_fields(founditem[0],return_fields)
                             else:
                                 tmp_item = founditem[0]

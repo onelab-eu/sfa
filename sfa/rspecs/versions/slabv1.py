@@ -3,9 +3,10 @@ from StringIO import StringIO
 from sfa.util.xrn import Xrn, urn_to_sliver_id
 from sfa.util.plxrn import hostname_to_urn, xrn_to_hostname 
 from sfa.rspecs.baseversion import BaseVersion
-
+import sys
 from sfa.rspecs.elements.versions.slabv1Node import Slabv1Node
 from sfa.rspecs.elements.versions.slabv1Sliver import Slabv1Sliver
+from sfa.rspecs.elements.versions.slabv1Timeslot import Slabv1Timeslot
  
 class Slabv1(BaseVersion):
     #enabled = True
@@ -47,6 +48,9 @@ class Slabv1(BaseVersion):
 
     def get_nodes_with_slivers(self):
         return Slabv1Node.get_nodes_with_slivers(self.xml)
+    
+    def get_slice_timeslot(self ):
+        return Slabv1Timeslot.get_slice_timeslot(self.xml)
 
     def add_nodes(self, nodes, check_for_dupes=False):
         return Slabv1Node.add_nodes(self.xml, nodes)
@@ -60,40 +64,56 @@ class Slabv1(BaseVersion):
 
     # Slivers
     
-    def get_sliver_attributes(self, hostname, network=None):
+    def get_sliver_attributes(self, hostname, node, network=None): 
+        print>>sys.stderr, "\r\n \r\n \r\n \t\t SLABV1.PY  get_sliver_attributes hostname %s " %(hostname)
         nodes = self.get_nodes({'component_id': '*%s*' %hostname})
-        attribs = []
+        attribs = [] 
+        print>>sys.stderr, "\r\n \r\n \r\n \t\t SLABV1.PY  get_sliver_attributes-----------------nodes %s  " %(nodes)
         if nodes is not None and isinstance(nodes, list) and len(nodes) > 0:
             node = nodes[0]
-            sliver = node.xpath('./default:sliver_type', namespaces=self.namespaces)
+        #if node : 
+            #sliver = node.xpath('./default:sliver | ./sliver')
+            #sliver = node.xpath('./default:sliver', namespaces=self.namespaces)
+            sliver = node['slivers']
+            
             if sliver is not None and isinstance(sliver, list) and len(sliver) > 0:
                 sliver = sliver[0]
+                attribs = sliver
                 #attribs = self.attributes_list(sliver)
+                print>>sys.stderr, "\r\n \r\n \r\n \t\t SLABV1.PY  get_sliver_attributes----------NN------- sliver %s self.namespaces %s attribs %s " %(sliver, self.namespaces,attribs)
         return attribs
 
     def get_slice_attributes(self, network=None):
+        
         slice_attributes = []
+        slot = self.get_slice_timeslot()
         nodes_with_slivers = self.get_nodes_with_slivers()
+        slice_attributes.append({'timeslot':slot})
+        #slice_attributes.append({'name': 'timeslot', 'value' : slot})
+        print>>sys.stderr, "\r\n \r\n \r\n \t\t SLABV1.PY get_slice_attributes -----------------nodes_with_slivers %s "%(nodes_with_slivers)
         # TODO: default sliver attributes in the PG rspec?
         default_ns_prefix = self.namespaces['default']
         for node in nodes_with_slivers:
-            sliver_attributes = self.get_sliver_attributes(node, network)
+            sliver_attributes = self.get_sliver_attributes(node['component_id'],node, network)
             for sliver_attribute in sliver_attributes:
                 name=str(sliver_attribute[0])
                 text =str(sliver_attribute[1])
                 attribs = sliver_attribute[2]
                 # we currently only suppor the <initscript> and <flack> attributes
-                if  'info' in name:
-                    attribute = {'name': 'flack_info', 'value': str(attribs), 'node_id': node}
-                    slice_attributes.append(attribute)
-                elif 'initscript' in name:
+                #if  'info' in name:
+                    #attribute = {'name': 'flack_info', 'value': str(attribs), 'node_id': node}
+                    #slice_attributes.append(attribute)
+                #elif 'initscript' in name:
+                if 'initscript' in name:
                     if attribs is not None and 'name' in attribs:
                         value = attribs['name']
                     else:
                         value = text
                     attribute = {'name': 'initscript', 'value': value, 'node_id': node}
                     slice_attributes.append(attribute)
-
+          
+                    
+        print>>sys.stderr, "\r\n \r\n \r\n \t\t SLABV1.PY get_slice_attributes ----------------- slice_attributes %s "%(slice_attributes)
         return slice_attributes
 
     def attributes_list(self, elem):
@@ -112,6 +132,7 @@ class Slabv1(BaseVersion):
     def add_slivers(self, hostnames, attributes=[], sliver_urn=None, append=False):
         # all nodes hould already be present in the rspec. Remove all
         # nodes that done have slivers
+        print>>sys.stderr, "\r\n \r\n \r\n \t\t\t SLABv1.PY add_slivers  ----->get_node "
         for hostname in hostnames:
             node_elems = self.get_nodes({'component_id': '*%s*' % hostname})
             if not node_elems:
@@ -130,7 +151,7 @@ class Slabv1(BaseVersion):
                 continue
             sliver = {'type': requested_sliver_type,
                      'pl_tags': attributes}
-
+            print>>sys.stderr, "\r\n \r\n \r\n \t\t\t SLABv1.PY add_slivers  node_elem %s sliver_type %s \r\n \r\n " %(node_elem, sliver_type)
             # remove available element
             for available_elem in node_elem.xpath('./default:available | ./available'):
                 node_elem.remove(available_elem)
@@ -215,36 +236,14 @@ class Slabv1Request(Slabv1):
     content_type = 'request'
     schema = 'http://senslab.info/resources/rspec/1/request.xsd'
     #http://www.geni.net/resources/rspec/3/request.xsd
-    template = '<rspec type="advertisement" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://senslab.info/resources/rspec/1" xmlns:flack="http://senslab.info/resources/rspec/ext/flack/1" xmlns:planetlab="http://www.planet-lab.org/resources/sfa/ext/planetlab/1" xsi:schemaLocation="http://senslab.info/resources/rspec/1 http://senslab.info/resources/rspec/1/ad.xsd http://www.planet-lab.org/resources/sfa/ext/planetlab/1 http://www.planet-lab.org/resources/sfa/ext/planetlab/1/planetlab.xsd"/>'
+    template = '<rspec type="request" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://senslab.info/resources/rspec/1" xmlns:flack="http://senslab.info/resources/rspec/ext/flack/1" xmlns:planetlab="http://www.planet-lab.org/resources/sfa/ext/planetlab/1" xsi:schemaLocation="http://senslab.info/resources/rspec/1 http://senslab.info/resources/rspec/1/request.xsd http://www.planet-lab.org/resources/sfa/ext/planetlab/1 http://www.planet-lab.org/resources/sfa/ext/planetlab/1/planetlab.xsd"/>'
 
 class Slabv1Manifest(Slabv1):
     enabled = True
     content_type = 'manifest'
     schema = 'http://senslab.info/resources/rspec/1/manifest.xsd'
     #http://www.geni.net/resources/rspec/3/manifest.xsd
-    template = '<rspec type="advertisement" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://senslab.info/resources/rspec/1" xmlns:flack="http://senslab.info/resources/rspec/ext/flack/1" xmlns:planetlab="http://www.planet-lab.org/resources/sfa/ext/planetlab/1" xsi:schemaLocation="http://senslab.info/resources/rspec/1 http://senslab.info/resources/rspec/1/ad.xsd http://www.planet-lab.org/resources/sfa/ext/planetlab/1 http://www.planet-lab.org/resources/sfa/ext/planetlab/1/planetlab.xsd"/>'
-#class Slabv1Ad(Slabv1):
-    #enabled = True
-    #content_type = 'ad'
-    #schema = 'http://senslab.info/resources/rspec/1/ad.xsd'
-    ##http://www.geni.net/resources/rspec/3/ad.xsd'
-    #template = '<rspec type="advertisement" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://www.geni.net/resources/rspec/3" xmlns:flack="http://www.protogeni.net/resources/rspec/ext/flack/1" xmlns:planetlab="http://www.planet-lab.org/resources/sfa/ext/planetlab/1" xsi:schemaLocation="http://www.geni.net/resources/rspec/3 http://www.geni.net/resources/rspec/3/ad.xsd http://www.planet-lab.org/resources/sfa/ext/planetlab/1 http://www.planet-lab.org/resources/sfa/ext/planetlab/1/planetlab.xsd"/>'
-
-#class Slabv1Request(Slabv1):
-    #enabled = True
-    #content_type = 'request'
-    #schema = 'http://senslab.info/resources/rspec/1/request.xsd'
-    ##http://www.geni.net/resources/rspec/3/request.xsd
-    #template = '<rspec type="request" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://www.geni.net/resources/rspec/3" xmlns:flack="http://www.protogeni.net/resources/rspec/ext/flack/1" xmlns:planetlab="http://www.planet-lab.org/resources/sfa/ext/planetlab/1" xsi:schemaLocation="http://www.geni.net/resources/rspec/3 http://www.geni.net/resources/rspec/3/request.xsd http://www.planet-lab.org/resources/sfa/ext/planetlab/1 http://www.planet-lab.org/resources/sfa/ext/planetlab/1/planetlab.xsd"/>'
-
-#class Slabv1Manifest(Slabv1):
-    #enabled = True
-    #content_type = 'manifest'
-    #schema = 'http://senslab.info/resources/rspec/1/manifest.xsd'
-    ##http://www.geni.net/resources/rspec/3/manifest.xsd
-    #template = '<rspec type="manifest" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://www.geni.net/resources/rspec/3" xmlns:flack="http://www.protogeni.net/resources/rspec/ext/flack/1" xmlns:planetlab="http://www.planet-lab.org/resources/sfa/ext/planetlab/1" xsi:schemaLocation="http://www.geni.net/resources/rspec/3 http://www.geni.net/resources/rspec/3/manifest.xsd http://www.planet-lab.org/resources/sfa/ext/planetlab/1 http://www.planet-lab.org/resources/sfa/ext/planetlab/1/planetlab.xsd"/>'
-
-     
+    template = '<rspec type="manifest" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://senslab.info/resources/rspec/1" xmlns:flack="http://senslab.info/resources/rspec/ext/flack/1" xmlns:planetlab="http://www.planet-lab.org/resources/sfa/ext/planetlab/1" xsi:schemaLocation="http://senslab.info/resources/rspec/1 http://senslab.info/resources/rspec/1/manifest.xsd http://www.planet-lab.org/resources/sfa/ext/planetlab/1 http://www.planet-lab.org/resources/sfa/ext/planetlab/1/planetlab.xsd"/>'
 
 
 if __name__ == '__main__':
