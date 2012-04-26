@@ -670,9 +670,11 @@ class SlabDriver(Driver):
         slice_name = slice_dict['name']
         try:
             slot = slice_dict['timeslot'] 
-           
+            print>>sys.stderr, "\r\n \r\n \t\tAddSliceToNodes slot %s   " %(slot)
         except KeyError:
-            slot = { 'time':None, 'duration':'00:10:00' }#10 min 
+            #Running on default parameters
+            #XP immediate , 10 mins
+            slot = {'date':None,'start_time':None, 'timezone':None,'duration':'00:10:00' }#10 min 
             reqdict['resource']+= ",walltime=" + str(00) + ":" + str(12) + ":" + str(20) #+2 min 20
             reqdict['script_path'] = "/bin/sleep 620" #+20 sec
             
@@ -695,10 +697,7 @@ class SlabDriver(Driver):
         reqdict['property'] =  reqdict['property'][0: len( reqdict['property'])-2] +")"
         reqdict['resource'] ="network_address="+ str(len(nodeid_list))
         
-
-        #In case of a scheduled experiment
-        if slot['time']:
-            
+        if slot['duration']:
             walltime = slot['duration'].split(":")
             # Fixing the walltime by adding a few delays. First put the walltime in seconds
             # oarAdditionalDelay = 20; additional delay for /bin/sleep command to
@@ -723,18 +722,20 @@ class SlabDriver(Driver):
             reqdict['resource']+= ",walltime=" + str(walltime[0]) + ":" + str(walltime[1]) + ":" + str(walltime[2]) 
             reqdict['script_path'] = "/bin/sleep " + str(sleep_walltime)
             
-            #Get the reservation time
-            parse_time = slot['time'].split(" ")
-            #If timezone not specified, assume it is server timezone
-            if len(parse_time) == 2:
-              server_timestamp,server_tz = self.GetTimezone()
-              from_zone=tz.gettz(server_tz) 
-              date = ' '.join(parse_time)
-            else:    
-                date = ' '.join(parse_time[:-1])
-                 #Get zone of the user from the reservation time given in the rspec
-                from_zone = tz.gettz(parse_time[2])
-
+        #In case of a scheduled experiment (not immediate)
+        #To run an XP immediately, don't specify date and time in RSpec 
+        #They will be set to None.
+        if slot['date'] and slot['start_time']:
+            if slot['timezone'] is '' or slot['timezone'] is None:
+                #assume it is server timezone
+                server_timestamp,server_tz = self.GetTimezone()
+                from_zone=tz.gettz(server_tz) 
+                print>>sys.stderr, "\r\n \r\n \t\tAddSliceToNodes  timezone not specified  server_tz %s from_zone  %s" %(server_tz,from_zone) 
+            else:
+                #Get zone of the user from the reservation time given in the rspec
+                from_zone = tz.gettz(slot['timezone'])  
+                   
+            date = str(slot['date'])  + " " + str(slot['start_time'])
             user_datetime = datetime.datetime.strptime(date, self.time_format)
             user_datetime = user_datetime.replace(tzinfo = from_zone)
             
