@@ -2,13 +2,13 @@ from copy import deepcopy
 from StringIO import StringIO
 from sfa.util.xrn import Xrn, urn_to_sliver_id
 from sfa.util.plxrn import hostname_to_urn, xrn_to_hostname 
-from sfa.rspecs.baseversion import BaseVersion
+from sfa.rspecs.version import RSpecVersion
 import sys
 from sfa.rspecs.elements.versions.slabv1Node import Slabv1Node
 from sfa.rspecs.elements.versions.slabv1Sliver import Slabv1Sliver
 from sfa.rspecs.elements.versions.slabv1Timeslot import Slabv1Timeslot
  
-class Slabv1(BaseVersion):
+class Slabv1(RSpecVersion):
     #enabled = True
     type = 'Slab'
     content_type = 'ad'
