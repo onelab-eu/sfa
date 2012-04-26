@@ -44,24 +44,14 @@ class NovaShell:
 
     # use the 'capability' auth mechanism for higher performance when the PLC db is local    
     def __init__ ( self, config ) :
-        url = config.SFA_PLC_URL
-        # try to figure if the url is local
-        is_local=False    
-        hostname=urlparse(url).hostname
-        if hostname == 'localhost': is_local=True
-        # otherwise compare IP addresses; 
-        # this might fail for any number of reasons, so let's harden that
-        try:
-            # xxx todo this seems to result in a DNS request for each incoming request to the AM
-            # should be cached or improved
-            url_ip=socket.gethostbyname(hostname)
-            local_ip=socket.gethostbyname(socket.gethostname())
-            if url_ip==local_ip: is_local=True
-        except:
-            pass
+        self.auth_manager = None
+        self.compute_manager = None
+        self.network_manager = None
+        self.scheduler_manager = None
+        self.db = None
+        self.image_manager = None
 
-
-        if is_local and has_nova:
+        if has_nova:
             logger.debug('nova access - native')
             # load the config
             flags.FLAGS(['foo', '--flagfile=/etc/nova/nova.conf', 'foo', 'foo'])
@@ -73,7 +63,5 @@ class NovaShell:
             self.db = InjectContext(db, context.get_admin_context())
             self.image_manager = InjectContext(GlanceImageService(), context.get_admin_context())
         else:
-            self.auth = None
-            self.proxy = None
             logger.debug('nova access - REST')
             raise SfaNotImplemented('nova access - Rest')

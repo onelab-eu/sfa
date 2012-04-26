@@ -77,9 +77,9 @@ class Importer:
         """
         # just create certs for all sfa interfaces even if they
         # aren't enabled
-        auth_info = self.auth_hierarchy.get_auth_info(self.interface_hrn)
+        auth_info = self.auth_hierarchy.get_auth_info(self.config.SFA_INTERFACE_HRN)
         pkey = auth_info.get_pkey_object()
-        hrn=self.interface_hrn
+        hrn=self.config.SFA_INTERFACE_HRN
         for type in  [ 'authority+sa', 'authority+am', 'authority+sm', ]:
             urn = hrn_to_urn(hrn, type)
             gid = self.auth_hierarchy.create_gid(urn, create_uuid(), pkey)
@@ -99,7 +99,8 @@ class Importer:
         # testbed-neutral : create local certificates and the like
         auth_hierarchy = Hierarchy ()
         self.create_top_level_auth_records(self.config.SFA_INTERFACE_HRN)
-        
+        self.create_interface_records()
+ 
         # testbed-specific
         testbed_importer = None
         generic=Generic.the_flavour()

@@ -14,6 +14,9 @@ from sfa.trust.gid import GID
 
 pprinter = PrettyPrinter(indent=4)
 
+def optparse_listvalue_callback(option, opt, value, parser):
+    setattr(parser.values, option.dest, value.split(','))
+
 def args(*args, **kwargs):
     def _decorator(func):
         func.__dict__.setdefault('options', []).insert(0, (args, kwargs))
@@ -21,7 +24,6 @@ def args(*args, **kwargs):
     return _decorator
 
 class Commands(object):
-
     def _get_commands(self):
         available_methods = []
         for attrib in dir(self):
@@ -59,13 +61,76 @@ class RegistryCommands(Commands):
             sfa_record = Record(dict=record)
             sfa_record.dump(format) 
         if outfile:
-            save_records_to_file(outfile, records)                
+            save_records_to_file(outfile, records)  
 
-    def register(self, record):
-        pass
 
-    def update(self, record):
-        pass
+    def _record_dict(self, xrn=None, type=None, url=None, key=None, \
+                     description=None, slices='', researchers=''):              
+        record_dict = {}
+        if xrn:
+            if type:
+                xrn = Xrn(xrn, type)
+            else:
+                xrn = Xrn(xrn)
+            record_dict['urn'] = xrn.get_urn()
+            record_dict['hrn'] = xrn.get_hrn()
+            record_dict['type'] = xrn.get_type()
+        if url:
+            record_dict['url'] = url
+        if key:
+            try:
+                pubkey = open(key, 'r').read()
+            except IOError:
+                pubkey = key
+            record_dict['keys'] = [pubkey]
+        if slices:
+            record_dict['slices'] = slices
+        if researchers:
+            record_dict['researchers'] = researchers
+        if description:
+            record_dict['description'] = description
+        return record_dict
+
+    @args('-x', '--xrn', dest='xrn', metavar='<xrn>', help='object hrn/urn') 
+    @args('-t', '--type', dest='type', metavar='<type>', help='object type', default=None) 
+    @args('-u', '--url', dest='url', metavar='<url>', help='URL', default=None)
+    @args('-d', '--description', dest='description', metavar='<description>', 
+          help='Description', default=None)
+    @args('-k', '--key', dest='key', metavar='<key>', help='public key string or file', 
+          default=None)
+    @args('-s', '--slices', dest='slices', metavar='<slices>', help='slice xrns', 
+          default='', type="str", action='callback', callback=optparse_listvalue_callback)
+    @args('-r', '--researchers', dest='researchers', metavar='<researchers>', help='slice researchers', 
+          default='', type="str", action='callback', callback=optparse_listvalue_callback)
+    @args('-p', '--pis', dest='pis', metavar='<PIs>', 
+          help='Principal Investigators/Project Managers ', 
+          default='', type="str", action='callback', callback=optparse_listvalue_callback)
+    def register(self, xrn, type=None, url=None, description=None, key=None, slices='', 
+                 pis='', researchers=''):
+        record_dict = self._record_dict(xrn=xrn, type=type, url=url, key=key, 
+                                        slices=slices, researchers=researchers)
+        self.api.manager.Register(self.api, record_dict)         
+
+
+    @args('-x', '--xrn', dest='xrn', metavar='<xrn>', help='object hrn/urn')
+    @args('-t', '--type', dest='type', metavar='<type>', help='object type', default=None)
+    @args('-u', '--url', dest='url', metavar='<url>', help='URL', default=None)
+    @args('-d', '--description', dest='description', metavar='<description>',
+          help='Description', default=None)
+    @args('-k', '--key', dest='key', metavar='<key>', help='public key string or file',
+          default=None)
+    @args('-s', '--slices', dest='slices', metavar='<slices>', help='slice xrns',
+          default='', type="str", action='callback', callback=optparse_listvalue_callback)
+    @args('-r', '--researchers', dest='researchers', metavar='<researchers>', help='slice researchers',
+          default='', type="str", action='callback', callback=optparse_listvalue_callback)
+    @args('-p', '--pis', dest='pis', metavar='<PIs>',
+          help='Principal Investigators/Project Managers ',
+          default='', type="str", action='callback', callback=optparse_listvalue_callback)
+    def update(self, xrn, type=None, url=None, description=None, key=None, slices='', 
+               pis='', researchers=''):
+        record_dict = self._record_dict(xrn=xrn, type=type, url=url, description=description, 
+                                        key=key, slices=slices, researchers=researchers)
+        self.api.manager.Update(self.api, record_dict)
         
     @args('-x', '--xrn', dest='xrn', metavar='<xrn>', help='object hrn/urn') 
     @args('-t', '--type', dest='type', metavar='<type>', help='object type', default=None) 
@@ -195,23 +260,22 @@ class AggregateCommands(Commands):
         if xrn:
             options['geni_slice_urn'] = xrn
         resources = self.api.manager.ListResources(self.api, [], options)
-        pprinter.pprint(resources)
+        print resources
         
     @args('-x', '--xrn', dest='xrn', metavar='<xrn>', help='object hrn/urn', default=None)
     @args('-r', '--rspec', dest='rspec', metavar='<rspec>', help='rspec file')  
     @args('-u', '--user', dest='user', metavar='<user>', help='hrn/urn of slice user')  
     @args('-k', '--key', dest='key', metavar='<key>', help="path to user's public key file")  
     def create(self, xrn, rspec, user, key):
-        xrn = Xrn(xrn)
+        xrn = Xrn(xrn, 'slice')
         slice_urn=xrn.get_urn()
-        slice_hrn=xrn.get_hrn()
         rspec_string = open(rspec).read()
         user_xrn = Xrn(user, 'user')
         user_urn = user_xrn.get_urn()
         user_key_string = open(key).read()
         users = [{'urn': user_urn, 'keys': [user_key_string]}]
         options={}
-        self.api.manager.CreateSliver(self, slice_urn, slice_hrn, [], rspec_string, users, options) 
+        self.api.manager.CreateSliver(self, slice_urn, [], rspec_string, users, options) 
 
     @args('-x', '--xrn', dest='xrn', metavar='<xrn>', help='object hrn/urn', default=None)
     def delete(self, xrn):
