@@ -669,7 +669,8 @@ class SlabDriver(Driver):
         reqdict = {}
         slice_name = slice_dict['name']
         try:
-            slot = slice_dict['timeslot']
+            slot = slice_dict['timeslot'] 
+           
         except KeyError:
             slot = { 'time':None, 'duration':'00:10:00' }#10 min 
             reqdict['resource']+= ",walltime=" + str(00) + ":" + str(12) + ":" + str(20) #+2 min 20
@@ -703,6 +704,7 @@ class SlabDriver(Driver):
             # oarAdditionalDelay = 20; additional delay for /bin/sleep command to
             # take in account  prologue and epilogue scripts execution
             # int walltimeAdditionalDelay = 120;  additional delay
+
             desired_walltime =  int(walltime[0])*3600 + int(walltime[1]) * 60 + int(walltime[2])
             total_walltime = desired_walltime + 140 #+2 min 20
             sleep_walltime = desired_walltime + 20 #+20 sec
@@ -723,9 +725,16 @@ class SlabDriver(Driver):
             
             #Get the reservation time
             parse_time = slot['time'].split(" ")
-            date = ' '.join(parse_time[:-1])
-            #Get zone of the user from the reservation time given in the rspec
-            from_zone = tz.gettz(parse_time[2])
+            #If timezone not specified, assume it is server timezone
+            if len(parse_time) == 2:
+              server_timestamp,server_tz = self.GetTimezone()
+              from_zone=tz.gettz(server_tz) 
+              date = ' '.join(parse_time)
+            else:    
+                date = ' '.join(parse_time[:-1])
+                 #Get zone of the user from the reservation time given in the rspec
+                from_zone = tz.gettz(parse_time[2])
+
             user_datetime = datetime.datetime.strptime(date, self.time_format)
             user_datetime = user_datetime.replace(tzinfo = from_zone)
             
