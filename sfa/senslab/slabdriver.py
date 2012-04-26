@@ -674,9 +674,8 @@ class SlabDriver(Driver):
         except KeyError:
             #Running on default parameters
             #XP immediate , 10 mins
-            slot = {'date':None,'start_time':None, 'timezone':None,'duration':'00:10:00' }#10 min 
-            reqdict['resource']+= ",walltime=" + str(00) + ":" + str(12) + ":" + str(20) #+2 min 20
-            reqdict['script_path'] = "/bin/sleep 620" #+20 sec
+            slot = {'date':None,'start_time':None, 'timezone':None,'duration':None }#10 min 
+            
             
         reqdict['property'] ="network_address in ("
         for node in added_nodes:
@@ -721,7 +720,9 @@ class SlabDriver(Driver):
 
             reqdict['resource']+= ",walltime=" + str(walltime[0]) + ":" + str(walltime[1]) + ":" + str(walltime[2]) 
             reqdict['script_path'] = "/bin/sleep " + str(sleep_walltime)
-            
+        else:
+            reqdict['resource']+= ",walltime=" + str(00) + ":" + str(12) + ":" + str(20) #+2 min 20
+            reqdict['script_path'] = "/bin/sleep 620" #+20 sec    
         #In case of a scheduled experiment (not immediate)
         #To run an XP immediately, don't specify date and time in RSpec 
         #They will be set to None.
