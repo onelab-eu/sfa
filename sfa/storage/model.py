@@ -193,11 +193,7 @@ class RegSlice (RegRecord):
         RegRecord.__init__(self, **kwds)
 
     def __repr__ (self):
-        result=RegRecord.__repr__(self).replace("Record","Slice")
-        result=result.replace(">","")
-        result += " [%d res.]"%(len(self.reg_researchers))
-        result += ">"
-        return result
+        return RegRecord.__repr__(self).replace("Record","Slice")
 
 ####################
 class RegNode (RegRecord):
