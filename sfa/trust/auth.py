@@ -234,7 +234,7 @@ class Auth:
     
         raise PermissionError(name)
 
-    def determine_user_rights(self, caller_hrn, record):
+    def determine_user_rights(self, caller_hrn, reg_record):
         """
         Given a user credential and a record, determine what set of rights the
         user should have to that record.
@@ -244,40 +244,40 @@ class Auth:
         """
 
         rl = Rights()
-        type = record['type']
+        type = reg_record.type
 
 
-        if type=="slice":
-            researchers = record.get("researcher", [])
-            pis = record.get("PI", [])
+        if type=='slice':
+            researchers = reg_record.get('researcher',[])
+            pis = reg_record.get('PI',[])
             if (caller_hrn in researchers + pis):
-                rl.add("refresh")
-                rl.add("embed")
-                rl.add("bind")
-                rl.add("control")
-                rl.add("info")
+                rl.add('refresh')
+                rl.add('embed')
+                rl.add('bind')
+                rl.add('control')
+                rl.add('info')
 
-        elif type == "authority":
-            pis = record.get("PI", [])
-            operators = record.get("operator", [])
+        elif type == 'authority':
+            pis = reg_record.get('PI',[])
+            operators = reg_record.get('operator',[])
             if (caller_hrn == self.config.SFA_INTERFACE_HRN):
-                rl.add("authority")
-                rl.add("sa")
-                rl.add("ma")
+                rl.add('authority')
+                rl.add('sa')
+                rl.add('ma')
             if (caller_hrn in pis):
-                rl.add("authority")
-                rl.add("sa")
+                rl.add('authority')
+                rl.add('sa')
             if (caller_hrn in operators):
-                rl.add("authority")
-                rl.add("ma")
+                rl.add('authority')
+                rl.add('ma')
 
-        elif type == "user":
-            rl.add("refresh")
-            rl.add("resolve")
-            rl.add("info")
+        elif type == 'user':
+            rl.add('refresh')
+            rl.add('resolve')
+            rl.add('info')
 
-        elif type == "node":
-            rl.add("operator")
+        elif type == 'node':
+            rl.add('operator')
 
         return rl
 

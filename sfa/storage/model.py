@@ -114,6 +114,10 @@ class RegRecord (Base,AlchemyObj):
         result += ">"
         return result
 
+    # shortcut - former implem. was record-based
+    def get (self, field, default):
+        return getattr(self,field,default)
+
     @validates ('gid')
     def validate_gid (self, key, gid):
         if gid is None:                     return
