@@ -281,30 +281,6 @@ class Auth:
 
         return rl
 
-    def verify_cancreate_credential(self, src_cred, record):
-        """
-        Verify that a user can retrive a particular type of credential.
-        For slices, the user must be on the researcher list. For SA and
-        MA the user must be on the pi and operator lists respectively
-        """
-
-        type = record.get_type()
-        cred_object_hrn = src_cred.get_gid_object().get_hrn()
-        if cred_object_hrn in [self.config.SFA_REGISTRY_ROOT_AUTH]:
-            return
-        if type=="slice":
-            researchers = record.get("researcher", [])
-            if not (cred_object_hrn in researchers):
-                raise PermissionError(cred_object_hrn + " is not in researcher list for " + record.get_name())
-        elif type == "sa":
-            pis = record.get("pi", [])
-            if not (cred_object_hrn in pis):
-                raise PermissionError(cred_object_hrn + " is not in pi list for " + record.get_name())
-        elif type == "ma":
-            operators = record.get("operator", [])
-            if not (cred_object_hrn in operators):
-                raise PermissionError(cred_object_hrn + " is not in operator list for " + record.get_name())
-
     def get_authority(self, hrn):
         return get_authority(hrn)
 
