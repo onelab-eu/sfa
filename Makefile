@@ -162,7 +162,7 @@ syncconfig:
 synctest: synccheck
 	+$(RSYNC) ./tests/ $(SSHURL)/root/tests-sfa
 syncrestart: synccheck
-	$(SSHCOMMAND) exec service sfa restart
+	$(SSHCOMMAND) service sfa restart
 
 syncmig:
 	+$(RSYNC) ./sfa/storage/migrations $(SSHURL)/usr/share/sfa/
