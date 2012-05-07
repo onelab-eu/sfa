@@ -68,7 +68,7 @@ class RegistryManager(RegistryManager):
             caller_gid = GID(string=caller_record.gid) 
         
         object_hrn = record.get_gid_object().get_hrn()
-        rights = api.auth.determine_user_rights(caller_hrn, record.__dict__)
+        rights = api.auth.determine_user_rights(caller_hrn, record)
         # make sure caller has rights to this object
         if rights.is_empty():
             raise PermissionError(caller_hrn + " has no rights to " + record.hrn)
