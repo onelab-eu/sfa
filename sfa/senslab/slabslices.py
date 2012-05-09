@@ -262,14 +262,23 @@ class SlabSlices:
             #so that the OAR/LDAP knows the user: remove the authority from the name
             tmp=  slice['PI'][0].split(".")
             username = tmp[(len(tmp)-1)]
-            self.driver.AddSliceToNodes(slice, added_nodes, username)
-            #self.driver.AddSliceToNodes(slice['name'], added_nodes, username)
+            #Update the table with the nodes that populate the slice
+            self.driver.db.update_job(slice['name'],nodes = added_nodes)
+            print>>sys.stderr, "\r\n \\r\n \r\n \t\t\t VERIFY_SLICE_NODES slice %s \r\n \r\n \r\n " %(slice)
+            #If there is a timeslot specified, then a job can be launched
+            try:
+                slot = slice['timeslot']
+                self.driver.LaunchExperimentOnOAR(slice, added_nodes, username)
+            except KeyError:
+                pass
+
             
             if deleted_nodes:
                 self.driver.DeleteSliceFromNodes(slice['name'], deleted_nodes)
 
         except: 
             logger.log_exc('Failed to add/remove slice from nodes')
+            
 
     def free_egre_key(self):
         used = set()
@@ -406,7 +415,7 @@ class SlabSlices:
        
         return slice
 
-    #def get_existing_persons(self, users):
+
     def verify_persons(self, slice_hrn, slice_record, users,  peer, sfa_peer, options={}):
         users_by_id = {}
         users_by_hrn = {}
@@ -442,7 +451,10 @@ class SlabSlices:
                     existing_user_ids.append (users_dict[user['hrn']]['person_id'])
                     #print>>sys.stderr, " \r\n \r\n \t slabslices.py verify_person  existing_user_ids.append (users_dict[user['hrn']][k]) %s \r\n existing_users %s " %(  existing_user_ids,existing_users) 
          
-
+            #User from another federated site , does not have a senslab account yet
+            else:
+                pass
+                
         # requested slice users        
         requested_user_ids = users_by_id.keys() 
         requested_user_hrns = users_by_hrn.keys()
@@ -700,7 +712,7 @@ class SlabSlices:
             #if peer:
                 #self.driver.UnBindObjectFromPeer('slice', slice['slice_id'], peer)
 
-            #self.driver.AddSliceToNodes(slicename, added_nodes) 
+            #self.driver.LaunchExperimentOnOAR(slicename, added_nodes) 
 
             ## Add recognized slice tags
             #for node_name in node_names:

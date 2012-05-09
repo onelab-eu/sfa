@@ -172,6 +172,7 @@ class SlabDB:
         return
     
     #Updates the job_id and the nodes list 
+    #The nodes list is never erased.
     def update_job(self, hrn, job_id= None, nodes = None ):
         slice_rec = slab_dbsession.query(SliceSenslab).filter_by(slice_hrn = hrn).first()
         print>>sys.stderr, " \r\n \r\n \t SLABPOSTGRES  update_job slice_rec %s"%(slice_rec)

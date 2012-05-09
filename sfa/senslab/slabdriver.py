@@ -160,7 +160,7 @@ class SlabDriver(Driver):
         
         if requested_attributes:
             for attrib_dict in requested_attributes:
-                if 'timeslot' in attrib_dict:
+                if 'timeslot' in attrib_dict and attrib_dict['timeslot'] is not None:
                     slice.update({'timeslot':attrib_dict['timeslot']})
         print >>sys.stderr, "\r\n \r\n \t=============================== SLABDRIVER.PY create_sliver  ..... slice %s " %(slice)
         # ensure person records exists
@@ -392,7 +392,9 @@ class SlabDriver(Driver):
             else:
                 
                 print >>sys.stderr, "\r\n \r\n SLABDRIVER GetPeers \t INNN  type %s hrn %s " %( record.type,record.hrn )
-                existing_hrns_by_types.update({record.type:(existing_hrns_by_types[record.type].append(record.hrn))})
+                existing_hrns_by_types[record.type].append(record.hrn)
+                print >>sys.stderr, "\r\n \r\n SLABDRIVER GetPeers \t INNN existing_hrns_by_types %s " %( existing_hrns_by_types)
+                #existing_hrns_by_types.update({record.type:(existing_hrns_by_types[record.type].append(record.hrn))})
                         
         print >>sys.stderr, "\r\n \r\n SLABDRIVER GetPeers        existing_hrns_by_types %s " %( existing_hrns_by_types)
         records_list= [] 
@@ -661,7 +663,7 @@ class SlabDriver(Driver):
         return slab_record
 
                    
-    def AddSliceToNodes(self,  slice_dict, added_nodes, slice_user=None):
+    def LaunchExperimentOnOAR(self,  slice_dict, added_nodes, slice_user=None):
        
         site_list = []
         nodeid_list =[]
@@ -670,7 +672,7 @@ class SlabDriver(Driver):
         slice_name = slice_dict['name']
         try:
             slot = slice_dict['timeslot'] 
-            print>>sys.stderr, "\r\n \r\n \t\tAddSliceToNodes slot %s   " %(slot)
+            print>>sys.stderr, "\r\n \r\n \t\tLaunchExperimentOnOAR slot %s   " %(slot)
         except KeyError:
             #Running on default parameters
             #XP immediate , 10 mins
@@ -706,7 +708,7 @@ class SlabDriver(Driver):
             desired_walltime =  int(walltime[0])*3600 + int(walltime[1]) * 60 + int(walltime[2])
             total_walltime = desired_walltime + 140 #+2 min 20
             sleep_walltime = desired_walltime + 20 #+20 sec
-            print>>sys.stderr, "\r\n \r\n \t\tAddSliceToNodes desired_walltime %s  total_walltime %s sleep_walltime %s  " %(desired_walltime,total_walltime,sleep_walltime)
+            print>>sys.stderr, "\r\n \r\n \t\tLaunchExperimentOnOAR desired_walltime %s  total_walltime %s sleep_walltime %s  " %(desired_walltime,total_walltime,sleep_walltime)
             #Put the walltime back in str form
             #First get the hours
             walltime[0] = str(total_walltime / 3600)
@@ -716,7 +718,7 @@ class SlabDriver(Driver):
             total_walltime =  total_walltime - 60 * int(walltime[1])
             #Get the seconds
             walltime[2] = str(total_walltime)
-            print>>sys.stderr, "\r\n \r\n \t\tAddSliceToNodes  walltime %s " %(walltime)
+            print>>sys.stderr, "\r\n \r\n \t\tLaunchExperimentOnOAR  walltime %s " %(walltime)
 
             reqdict['resource']+= ",walltime=" + str(walltime[0]) + ":" + str(walltime[1]) + ":" + str(walltime[2]) 
             reqdict['script_path'] = "/bin/sleep " + str(sleep_walltime)
@@ -731,7 +733,7 @@ class SlabDriver(Driver):
                 #assume it is server timezone
                 server_timestamp,server_tz = self.GetTimezone()
                 from_zone=tz.gettz(server_tz) 
-                print>>sys.stderr, "\r\n \r\n \t\tAddSliceToNodes  timezone not specified  server_tz %s from_zone  %s" %(server_tz,from_zone) 
+                print>>sys.stderr, "\r\n \r\n \t\tLaunchExperimentOnOAR  timezone not specified  server_tz %s from_zone  %s" %(server_tz,from_zone) 
             else:
                 #Get zone of the user from the reservation time given in the rspec
                 from_zone = tz.gettz(slot['timezone'])  
@@ -746,7 +748,7 @@ class SlabDriver(Driver):
             #Readable time accpeted by OAR
             reqdict['reservation']= utc_date.strftime(self.time_format)
         
-            print>>sys.stderr, "\r\n \r\n \t\tAddSliceToNodes  reqdict['reservation'] %s " %(reqdict['reservation'])
+            print>>sys.stderr, "\r\n \r\n \t\tLaunchExperimentOnOAR  reqdict['reservation'] %s " %(reqdict['reservation'])
             
         else:
             # Immediate XP
@@ -762,7 +764,7 @@ class SlabDriver(Driver):
             utc_server= datetime.datetime.fromtimestamp(float(server_timestamp)+20,UTC_zone)
             server_localtime=utc_server.astimezone(s_tz)
     
-            print>>sys.stderr, "\r\n \r\n \t\tAddSliceToNodes server_timestamp %s server_tz %s slice_name %s added_nodes %s username %s reqdict %s " %(server_timestamp,server_tz,slice_name,added_nodes,slice_user, reqdict )
+            print>>sys.stderr, "\r\n \r\n \t\tLaunchExperimentOnOAR server_timestamp %s server_tz %s slice_name %s added_nodes %s username %s reqdict %s " %(server_timestamp,server_tz,slice_name,added_nodes,slice_user, reqdict )
             readable_time = server_localtime.strftime(self.time_format)
 
             print >>sys.stderr,"  \r\n \r\n \t\t\t\tAPRES ParseTimezone readable_time %s timestanp %s  " %(readable_time ,server_timestamp)
@@ -775,17 +777,17 @@ class SlabDriver(Driver):
        
          
         # first step : start the OAR job and update the job 
-        print>>sys.stderr, "\r\n \r\n AddSliceToNodes reqdict   %s \r\n site_list   %s"  %(reqdict,site_list)   
+        print>>sys.stderr, "\r\n \r\n LaunchExperimentOnOAR reqdict   %s \r\n site_list   %s"  %(reqdict,site_list)   
        
         answer = self.oar.POSTRequestToOARRestAPI('POST_job',reqdict,slice_user)
-        print>>sys.stderr, "\r\n \r\n AddSliceToNodes jobid   %s "  %(answer)
+        print>>sys.stderr, "\r\n \r\n LaunchExperimentOnOAR jobid   %s "  %(answer)
         try:       
             jobid = answer['id']
         except KeyError:
              print>>sys.stderr, "\r\n AddSliceTonode Impossible to create job  %s "  %( answer)
              return
         
-        print>>sys.stderr, "\r\n \r\n AddSliceToNodes jobid    %s added_nodes  %s slice_user %s"  %(jobid,added_nodes,slice_user)
+        print>>sys.stderr, "\r\n \r\n LaunchExperimentOnOAR jobid    %s added_nodes  %s slice_user %s"  %(jobid,added_nodes,slice_user)
         self.db.update_job( slice_name, jobid ,added_nodes)
         
           
@@ -807,7 +809,7 @@ class SlabDriver(Driver):
         #ret=subprocess.check_output(["/usr/bin/java", "-jar", ", str(jobid), slice_user])
         output = subprocess.Popen([javacmdline, "-jar", jarname, str(jobid), slice_user],stdout=subprocess.PIPE).communicate()[0]
 
-        print>>sys.stderr, "\r\n \r\n AddSliceToNodes wrapper returns   %s "  %(output)
+        print>>sys.stderr, "\r\n \r\n LaunchExperimentOnOAR wrapper returns   %s "  %(output)
         return 
                  
  
@@ -997,7 +999,7 @@ class SlabDriver(Driver):
                     'person_ids':[recslice['record_id_user']]})
                     
                 elif str(record['type']) == 'user':
-                    #print >>sys.stderr, "\r\n \t\t  SLABDRIVER.PY fill_record_info USEEEEEEEEEERDESU!" 
+                    print >>sys.stderr, "\r\n \t\t  SLABDRIVER.PY fill_record_info USEEEEEEEEEERDESU!" 
 
                     rec = self.GetSlices(slice_filter = record['record_id'], filter_type = 'record_id_user')
                     #Append record in records list, therfore fetches user and slice info again(one more loop)
