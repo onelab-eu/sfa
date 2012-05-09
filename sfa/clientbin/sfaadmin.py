@@ -321,7 +321,10 @@ CATEGORIES = {'cert': CertCommands,
 def summary_usage ():
     for (k,cls) in CATEGORIES.items():
         print "==================== %s"%k
-        for (name,method) in cls.__dict__.items():
+        names=cls.__dict__.keys()
+        names.sort()
+        for name in names:
+            method=cls.__dict__[name]
             if name.startswith('_'): continue
             print "%-15s"%name,
             doc=getattr(method,'__doc__',None)
@@ -338,7 +341,7 @@ def main():
     script_name = argv.pop(0)
     # ensure category is specified    
     if len(argv) < 1:
-        print script_name + " category action [<args>]"
+        print script_name + " category action [<options>]"
         category_usage()
         sys.exit(2)
 
@@ -348,7 +351,7 @@ def main():
         summary_usage()
         sys.exit(2)
 
-    usage = "%%prog %s action [options] <args>" % (category)
+    usage = "%%prog %s action [options]" % (category)
     parser = OptionParser(usage=usage)
     command_class =  CATEGORIES.get(category, None)
     if not command_class:
@@ -367,7 +370,7 @@ def main():
     if hasattr(command_instance, action):
         command = getattr(command_instance, action)
     else:
-        print script_name + " category action [<args>]"
+        print script_name + " category action [<options>]"
         print "Available actions for %s category:" % category
         for k in actions:
             print "\t%s" % k
@@ -375,7 +378,7 @@ def main():
 
     # ensure options are valid
     options = getattr(command, 'options', [])
-    usage = "%%prog %s %s <args> [options]" % (category, action)
+    usage = "%%prog %s %s [options]" % (category, action)
     parser = OptionParser(usage=usage)
     for arg, kwd in options:
         parser.add_option(*arg, **kwd)
