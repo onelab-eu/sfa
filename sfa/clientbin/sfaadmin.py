@@ -2,10 +2,10 @@
 import os
 import sys
 import copy
-from pprint import pformat 
-from sfa.generic import Generic
+from pprint import pformat, PrettyPrinter
 from optparse import OptionParser
-from pprint import PrettyPrinter
+
+from sfa.generic import Generic
 from sfa.util.xrn import Xrn
 from sfa.storage.record import Record 
 from sfa.client.sfi import save_records_to_file
@@ -40,9 +40,10 @@ class RegistryCommands(Commands):
         version = self.api.manager.GetVersion(self.api, {})
         pprinter.pprint(version)
 
-    @args('-x', '--xrn', dest='xrn', metavar='<xrn>', help='object hrn/urn') 
+    @args('-x', '--xrn', dest='xrn', metavar='<xrn>', help='authority to list (hrn/urn - mandatory)') 
     @args('-t', '--type', dest='type', metavar='<type>', help='object type', default=None) 
     def list(self, xrn, type=None):
+        """List names registered at a given authority - possibly filtered by type"""
         xrn = Xrn(xrn, type) 
         records = self.api.manager.List(self.api, xrn.get_hrn())
         for record in records:
@@ -50,12 +51,13 @@ class RegistryCommands(Commands):
                 print "%s (%s)" % (record['hrn'], record['type'])
 
 
-    @args('-x', '--xrn', dest='xrn', metavar='<xrn>', help='object hrn/urn') 
+    @args('-x', '--xrn', dest='xrn', metavar='<xrn>', help='object hrn/urn (mandatory)') 
     @args('-t', '--type', dest='type', metavar='<type>', help='object type', default=None) 
     @args('-o', '--outfile', dest='outfile', metavar='<outfile>', help='save record to file') 
     @args('-f', '--format', dest='format', metavar='<display>', type='choice', 
           choices=('text', 'xml', 'simple'), help='display record in different formats') 
     def show(self, xrn, type=None, format=None, outfile=None):
+        """Display details for a registered object"""
         records = self.api.manager.Resolve(self.api, xrn, type, True)
         for record in records:
             sfa_record = Record(dict=record)
@@ -91,7 +93,7 @@ class RegistryCommands(Commands):
             record_dict['description'] = description
         return record_dict
 
-    @args('-x', '--xrn', dest='xrn', metavar='<xrn>', help='object hrn/urn') 
+    @args('-x', '--xrn', dest='xrn', metavar='<xrn>', help='object hrn/urn (mandatory)') 
     @args('-t', '--type', dest='type', metavar='<type>', help='object type', default=None) 
     @args('-u', '--url', dest='url', metavar='<url>', help='URL', default=None)
     @args('-d', '--description', dest='description', metavar='<description>', 
@@ -112,7 +114,7 @@ class RegistryCommands(Commands):
         self.api.manager.Register(self.api, record_dict)         
 
 
-    @args('-x', '--xrn', dest='xrn', metavar='<xrn>', help='object hrn/urn')
+    @args('-x', '--xrn', dest='xrn', metavar='<xrn>', help='object hrn/urn (mandatory)')
     @args('-t', '--type', dest='type', metavar='<type>', help='object type', default=None)
     @args('-u', '--url', dest='url', metavar='<url>', help='URL', default=None)
     @args('-d', '--description', dest='description', metavar='<description>',
@@ -132,21 +134,24 @@ class RegistryCommands(Commands):
                                         key=key, slices=slices, researchers=researchers)
         self.api.manager.Update(self.api, record_dict)
         
-    @args('-x', '--xrn', dest='xrn', metavar='<xrn>', help='object hrn/urn') 
+    @args('-x', '--xrn', dest='xrn', metavar='<xrn>', help='object hrn/urn (mandatory)') 
     @args('-t', '--type', dest='type', metavar='<type>', help='object type', default=None) 
     def remove(self, xrn, type=None):
+        """Remove given object from the registry"""
         xrn = Xrn(xrn, type)
         self.api.manager.Remove(self.api, xrn)            
 
 
-    @args('-x', '--xrn', dest='xrn', metavar='<xrn>', help='object hrn/urn') 
+    @args('-x', '--xrn', dest='xrn', metavar='<xrn>', help='object hrn/urn (mandatory)') 
     @args('-t', '--type', dest='type', metavar='<type>', help='object type', default=None) 
     def credential(self, xrn, type=None):
+        """Invoke GetCredential"""
         cred = self.api.manager.GetCredential(self.api, xrn, type, self.api.hrn)
         print cred
    
 
     def import_registry(self):
+        """Run the importer"""
         from sfa.importer import Importer
         importer = Importer()
         importer.run()
@@ -158,6 +163,7 @@ class RegistryCommands(Commands):
     @args('-0', '--no-reinit', dest='reinit', metavar='<reinit>', action='store_false', default=True,
           help='Prevents new DB schema from being installed after cleanup')
     def nuke(self, all=False, certs=False, reinit=True):
+        """Cleanup local registry DB, plus various additional filesystem cleanups optionally"""
         from sfa.storage.dbschema import DBSchema
         from sfa.util.sfalogging import _SfaLogger
         logger = _SfaLogger(logfile='/var/log/sfa_import.log', loggername='importlog')
@@ -198,7 +204,7 @@ class CertCommands(Commands):
     def import_gid(self, xrn):
         pass
 
-    @args('-x', '--xrn', dest='xrn', metavar='<xrn>', help='object hrn/urn')
+    @args('-x', '--xrn', dest='xrn', metavar='<xrn>', help='object hrn/urn (mandatory)')
     @args('-t', '--type', dest='type', metavar='<type>', help='object type', default=None)
     @args('-o', '--outfile', dest='outfile', metavar='<outfile>', help='output file', default=None)
     def export(self, xrn, type=None, outfile=None):
@@ -224,7 +230,7 @@ class CertCommands(Commands):
             outfile = os.path.abspath('./%s.gid' % gid.get_hrn())
         gid.save_to_file(outfile, save_parents=True)
         
-    @args('-g', '--gidfile', dest='gid', metavar='<gid>', help='path of gid file to display') 
+    @args('-g', '--gidfile', dest='gid', metavar='<gid>', help='path of gid file to display (mandatory)') 
     def display(self, gidfile):
         gid_path = os.path.abspath(gidfile)
         if not gid_path or not os.path.isfile(gid_path):
@@ -246,7 +252,7 @@ class AggregateCommands(Commands):
     def slices(self):
         print self.api.manager.ListSlices(self.api, [], {})
 
-    @args('-x', '--xrn', dest='xrn', metavar='<xrn>', help='object hrn/urn') 
+    @args('-x', '--xrn', dest='xrn', metavar='<xrn>', help='object hrn/urn (mandatory)') 
     def status(self, xrn):
         urn = Xrn(xrn, 'slice').get_urn()
         status = self.api.manager.SliverStatus(self.api, urn, [], {})
@@ -262,10 +268,10 @@ class AggregateCommands(Commands):
         resources = self.api.manager.ListResources(self.api, [], options)
         print resources
         
-    @args('-x', '--xrn', dest='xrn', metavar='<xrn>', help='object hrn/urn', default=None)
-    @args('-r', '--rspec', dest='rspec', metavar='<rspec>', help='rspec file')  
-    @args('-u', '--user', dest='user', metavar='<user>', help='hrn/urn of slice user')  
-    @args('-k', '--key', dest='key', metavar='<key>', help="path to user's public key file")  
+    @args('-x', '--xrn', dest='xrn', metavar='<xrn>', help='slice hrn/urn (mandatory)')
+    @args('-r', '--rspec', dest='rspec', metavar='<rspec>', help='rspec file (mandatory)')  
+    @args('-u', '--user', dest='user', metavar='<user>', help='hrn/urn of slice user (mandatory)')  
+    @args('-k', '--key', dest='key', metavar='<key>', help="path to user's public key file (mandatory)")  
     def create(self, xrn, rspec, user, key):
         xrn = Xrn(xrn, 'slice')
         slice_urn=xrn.get_urn()
@@ -277,27 +283,27 @@ class AggregateCommands(Commands):
         options={}
         self.api.manager.CreateSliver(self, slice_urn, [], rspec_string, users, options) 
 
-    @args('-x', '--xrn', dest='xrn', metavar='<xrn>', help='object hrn/urn', default=None)
+    @args('-x', '--xrn', dest='xrn', metavar='<xrn>', help='slice hrn/urn (mandatory)')
     def delete(self, xrn):
         self.api.manager.DeleteSliver(self.api, xrn, [], {})
  
-    @args('-x', '--xrn', dest='xrn', metavar='<xrn>', help='object hrn/urn', default=None)
+    @args('-x', '--xrn', dest='xrn', metavar='<xrn>', help='slice hrn/urn (mandatory)')
     def start(self, xrn):
         self.api.manager.start_slice(self.api, xrn, [])
 
-    @args('-x', '--xrn', dest='xrn', metavar='<xrn>', help='object hrn/urn', default=None)
+    @args('-x', '--xrn', dest='xrn', metavar='<xrn>', help='slice hrn/urn (mandatory)')
     def stop(self, xrn):
         self.api.manager.stop_slice(self.api, xrn, [])      
 
-    @args('-x', '--xrn', dest='xrn', metavar='<xrn>', help='object hrn/urn', default=None)
+    @args('-x', '--xrn', dest='xrn', metavar='<xrn>', help='slice hrn/urn (mandatory)')
     def reset(self, xrn):
         self.api.manager.reset_slice(self.api, xrn)
 
 
-    @args('-x', '--xrn', dest='xrn', metavar='<xrn>', help='object hrn/urn', default=None)
-    @args('-r', '--rspec', dest='rspec', metavar='<rspec>', help='request rspec', default=None)
-    def ticket(self, xrn, rspec):
-        pass
+#    @args('-x', '--xrn', dest='xrn', metavar='<xrn>', help='object hrn/urn', default=None)
+#    @args('-r', '--rspec', dest='rspec', metavar='<rspec>', help='request rspec', default=None)
+#    def ticket(self, xrn, rspec):
+#        pass
 
 
 
@@ -312,9 +318,19 @@ CATEGORIES = {'cert': CertCommands,
               'aggregate': AggregateCommands,
               'slicemgr': SliceManagerCommands}
 
+def summary_usage ():
+    for (k,cls) in CATEGORIES.items():
+        print "==================== %s"%k
+        for (name,method) in cls.__dict__.items():
+            if name.startswith('_'): continue
+            print "%-15s"%name,
+            doc=getattr(method,'__doc__',None)
+            if doc: print doc
+            else: print "<missing __doc__>"
+
 def category_usage():
     print "Available categories:"
-    for k in CATEGORIES:
+    for k in CATEGORIES.keys() + ['help']:
         print "\t%s" % k
 
 def main():
@@ -328,7 +344,11 @@ def main():
 
     # ensure category is valid
     category = argv.pop(0)
-    usage = "%%prog %s action <args> [options]" % (category)
+    if category.find("help")>=0:
+        summary_usage()
+        sys.exit(2)
+
+    usage = "%%prog %s action [options] <args>" % (category)
     parser = OptionParser(usage=usage)
     command_class =  CATEGORIES.get(category, None)
     if not command_class:
@@ -369,6 +389,7 @@ def main():
 
     # execute commadn
     try:
+#        print "invoking %s *=%s **=%s"%(command.__name__,cmd_args, cmd_kwds)
         command(*cmd_args, **cmd_kwds)
         sys.exit(0)
     except TypeError:
@@ -376,7 +397,6 @@ def main():
         print command.__doc__
         parser.print_help()
         #raise
-        raise
     except Exception:
         print "Command failed, please check log for more info"
         raise
@@ -384,7 +404,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-    
-     
-        
-     
