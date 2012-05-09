@@ -37,6 +37,7 @@ class RegistryCommands(Commands):
         self.api= Generic.the_flavour().make_api(interface='registry')
  
     def version(self):
+        """Display the Registry version""" 
         version = self.api.manager.GetVersion(self.api, {})
         pprinter.pprint(version)
 
@@ -109,6 +110,7 @@ class RegistryCommands(Commands):
           default='', type="str", action='callback', callback=optparse_listvalue_callback)
     def register(self, xrn, type=None, url=None, description=None, key=None, slices='', 
                  pis='', researchers=''):
+        """Create a new Registry recory"""
         record_dict = self._record_dict(xrn=xrn, type=type, url=url, key=key, 
                                         slices=slices, researchers=researchers)
         self.api.manager.Register(self.api, record_dict)         
@@ -130,6 +132,7 @@ class RegistryCommands(Commands):
           default='', type="str", action='callback', callback=optparse_listvalue_callback)
     def update(self, xrn, type=None, url=None, description=None, key=None, slices='', 
                pis='', researchers=''):
+        """Update an existing Registry record""" 
         record_dict = self._record_dict(xrn=xrn, type=type, url=url, description=description, 
                                         key=key, slices=slices, researchers=researchers)
         self.api.manager.Update(self.api, record_dict)
@@ -208,6 +211,7 @@ class CertCommands(Commands):
     @args('-t', '--type', dest='type', metavar='<type>', help='object type', default=None)
     @args('-o', '--outfile', dest='outfile', metavar='<outfile>', help='output file', default=None)
     def export(self, xrn, type=None, outfile=None):
+        """Fetch an object's GID from the Registry"""  
         from sfa.storage.alchemy import dbsession
         from sfa.storage.model import RegRecord
         hrn = Xrn(xrn).get_hrn()
@@ -232,6 +236,7 @@ class CertCommands(Commands):
         
     @args('-g', '--gidfile', dest='gid', metavar='<gid>', help='path of gid file to display (mandatory)') 
     def display(self, gidfile):
+        """Print contents of a GID file"""
         gid_path = os.path.abspath(gidfile)
         if not gid_path or not os.path.isfile(gid_path):
             print "No such gid file: %s" % gidfile
@@ -246,14 +251,17 @@ class AggregateCommands(Commands):
         self.api= Generic.the_flavour().make_api(interface='aggregate')
    
     def version(self):
+        """Display the Aggregate version"""
         version = self.api.manager.GetVersion(self.api, {})
         pprinter.pprint(version)
 
     def slices(self):
+        """List the running slices at this Aggregate"""
         print self.api.manager.ListSlices(self.api, [], {})
 
     @args('-x', '--xrn', dest='xrn', metavar='<xrn>', help='object hrn/urn (mandatory)') 
     def status(self, xrn):
+        """Display the status of a slice or slivers"""
         urn = Xrn(xrn, 'slice').get_urn()
         status = self.api.manager.SliverStatus(self.api, urn, [], {})
         pprinter.pprint(status)
@@ -262,6 +270,8 @@ class AggregateCommands(Commands):
     @args('-r', '--rspec-version', dest='rspec_version', metavar='<rspec_version>', 
           default='GENI', help='version/format of the resulting rspec response')  
     def resources(self, xrn=None, rspec_version='GENI'):
+        """Display the available resources at an aggregate or display the resources allocated
+           by a slice"""  
         options = {'geni_rspec_version': rspec_version}
         if xrn:
             options['geni_slice_urn'] = xrn
@@ -273,6 +283,7 @@ class AggregateCommands(Commands):
     @args('-u', '--user', dest='user', metavar='<user>', help='hrn/urn of slice user (mandatory)')  
     @args('-k', '--key', dest='key', metavar='<key>', help="path to user's public key file (mandatory)")  
     def create(self, xrn, rspec, user, key):
+        """Allocate slivers"""
         xrn = Xrn(xrn, 'slice')
         slice_urn=xrn.get_urn()
         rspec_string = open(rspec).read()
@@ -285,18 +296,22 @@ class AggregateCommands(Commands):
 
     @args('-x', '--xrn', dest='xrn', metavar='<xrn>', help='slice hrn/urn (mandatory)')
     def delete(self, xrn):
+        """Delete slivers""" 
         self.api.manager.DeleteSliver(self.api, xrn, [], {})
  
     @args('-x', '--xrn', dest='xrn', metavar='<xrn>', help='slice hrn/urn (mandatory)')
     def start(self, xrn):
+        """Start slivers"""
         self.api.manager.start_slice(self.api, xrn, [])
 
     @args('-x', '--xrn', dest='xrn', metavar='<xrn>', help='slice hrn/urn (mandatory)')
     def stop(self, xrn):
+        """Stop slivers"""
         self.api.manager.stop_slice(self.api, xrn, [])      
 
     @args('-x', '--xrn', dest='xrn', metavar='<xrn>', help='slice hrn/urn (mandatory)')
     def reset(self, xrn):
+        """Reset sliver"""
         self.api.manager.reset_slice(self.api, xrn)
 
 
