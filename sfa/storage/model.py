@@ -176,7 +176,7 @@ class RegAuthority (RegRecord):
          secondary=authority_pi_table,
          primaryjoin=RegRecord.record_id==authority_pi_table.c.authority_id,
          secondaryjoin=RegRecord.record_id==authority_pi_table.c.pi_id,
-         backref='reg_authorities_as_pis')
+         backref='reg_authorities_as_pi')
     
     def __init__ (self, **kwds):
         # fill in type if not previously set
