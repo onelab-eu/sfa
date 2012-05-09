@@ -38,7 +38,7 @@ python-install:
 	chmod 444 $(DESTDIR)/etc/sfa/default_config.xml
 	rm -rf $(DESTDIR)/usr/lib*/python*/site-packages/*egg-info
 	rm -rf $(DESTDIR)/usr/lib*/python*/site-packages/sfa/storage/migrations
-	(cd $(DESTDIR)/usr/bin ; ln -s sfi.py sfi; ln -s sfascan.py sfascan)
+	(cd $(DESTDIR)/usr/bin ; ln -s sfi.py sfi; ln -s sfascan.py sfascan; ln -s sfaadmin.py sfaadmin)
 
 python-clean: version-clean
 	python setup.py clean

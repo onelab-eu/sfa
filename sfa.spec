@@ -149,6 +149,7 @@ rm -rf $RPM_BUILD_ROOT
 /etc/init.d/sfa
 %{_bindir}/sfa-start.py*
 %{_bindir}/sfaadmin.py*
+%{_bindir}/sfaadmin
 %{_bindir}/keyconvert.py*
 %{_bindir}/sfa-config-tty
 %config /etc/sfa/default_config.xml
