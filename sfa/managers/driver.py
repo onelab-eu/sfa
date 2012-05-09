@@ -13,12 +13,9 @@ class Driver:
     ########## registry oriented
     ########################################
 
-    # redefine this if you want to check again records 
-    # when running GetCredential
-    # This is to reflect the 'enabled' user field in planetlab testbeds
-    # expected retcod boolean
-    def is_enabled (self, record) : 
-        return True
+    # NOTE: the is_enabled method is deprecated
+    # it was only making things confusing, as the (PL) import mechanism would
+    # ignore not enabled users anyway..
 
     # the following is used in Resolve (registry) when run in full mode
     #     after looking up the sfa db, we wish to be able to display

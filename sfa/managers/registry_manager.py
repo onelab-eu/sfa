@@ -53,14 +53,13 @@ class RegistryManager:
         record=dbsession.query(RegRecord).filter_by(type=type,hrn=hrn).first()
         if not record:
             raise RecordNotFound("hrn=%s, type=%s"%(hrn,type))
-    
-        # verify_cancreate_credential requires that the member lists
-        # (researchers, pis, etc) be filled in
-        logger.debug("get credential before augment dict, keys=%s"%record.__dict__.keys())
-        self.driver.augment_records_with_testbed_info (record.__dict__)
-        logger.debug("get credential after augment dict, keys=%s"%record.__dict__.keys())
-        if not self.driver.is_enabled (record.__dict__):
-              raise AccountNotEnabled(": PlanetLab account %s is not enabled. Please contact your site PI" %(record.email))
+
+        # xxx for the record only
+        # used to call this, which was wrong, now all needed data is natively is our DB
+        # self.driver.augment_records_with_testbed_info (record.__dict__)
+        # likewise, we deprecate is_enabled which was not really useful
+        # if not self.driver.is_enabled (record.__dict__): ...
+        # xxx for the record only
     
         # get the callers gid
         # if caller_xrn is not specified assume the caller is the record

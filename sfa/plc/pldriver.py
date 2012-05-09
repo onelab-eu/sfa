@@ -60,14 +60,6 @@ class PlDriver (Driver):
     ########## registry oriented
     ########################################
 
-    ########## disabled users 
-    def is_enabled (self, record):
-        # the incoming record was augmented already, so 'enabled' should be set
-        if record['type'] == 'user':
-            return record['enabled']
-        # only users can be disabled
-        return True
-
     def augment_records_with_testbed_info (self, sfa_records):
         return self.fill_record_info (sfa_records)
 
