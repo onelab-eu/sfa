@@ -147,7 +147,7 @@ class PlImporter:
 #        sites_by_login_base = dict ( [ ( site['login_base'], site ) for site in sites ] )
         # Get all plc users
         persons = shell.GetPersons({'peer_id': None, 'enabled': True}, 
-                                   ['person_id', 'email', 'key_ids', 'site_ids'])
+                                   ['person_id', 'email', 'key_ids', 'site_ids', 'role_ids'])
         # create a hash of persons by person_id
         persons_by_id = dict ( [ ( person['person_id'], person) for person in persons ] )
         # Get all plc public keys
@@ -243,6 +243,7 @@ class PlImporter:
                     pass
                 node_record.stale=False
 
+            site_pis=[]
             # import persons
             for person_id in site['person_ids']:
                 try:
@@ -318,9 +319,17 @@ class PlImporter:
                     user_record.email = person['email']
                     dbsession.commit()
                     user_record.stale=False
+                    # accumulate PIs - PLCAPI has a limitation that when someone has PI role
+                    # this is valid for all sites she is in..
+                    # PI is coded with role_id==20
+                    if 20 in person['role_ids']:
+                        site_pis.append (user_record)
                 except:
                     self.logger.log_exc("PlImporter: failed to import person %d %s"%(person['person_id'],person['email']))
     
+            # maintain the list of PIs for a given site
+            site_record.reg_pis = site_pis
+
             # import slices
             for slice_id in site['slice_ids']:
                 try:

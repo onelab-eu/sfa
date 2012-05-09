@@ -148,6 +148,20 @@ class RegRecord (Base,AlchemyObj):
         now=datetime.now()
         self.last_updated=now
 
+#################### cross-relations tables
+# authority x user (pis) association
+authority_pi_table = \
+    Table ( 'authority_pi', Base.metadata,
+            Column ('authority_id', Integer, ForeignKey ('records.record_id'), primary_key=True),
+            Column ('pi_id', Integer, ForeignKey ('records.record_id'), primary_key=True),
+            )
+# slice x user (researchers) association
+slice_researcher_table = \
+    Table ( 'slice_researcher', Base.metadata,
+            Column ('slice_id', Integer, ForeignKey ('records.record_id'), primary_key=True),
+            Column ('researcher_id', Integer, ForeignKey ('records.record_id'), primary_key=True),
+            )
+
 ##############################
 # all subclasses define a convenience constructor with a default value for type, 
 # and when applicable a way to define local fields in a kwd=value argument
@@ -156,6 +170,13 @@ class RegAuthority (RegRecord):
     __tablename__       = 'authorities'
     __mapper_args__     = { 'polymorphic_identity' : 'authority' }
     record_id           = Column (Integer, ForeignKey ("records.record_id"), primary_key=True)
+    #### extensions come here
+    reg_pis             = relationship \
+        ('RegUser',
+         secondary=authority_pi_table,
+         primaryjoin=RegRecord.record_id==authority_pi_table.c.authority_id,
+         secondaryjoin=RegRecord.record_id==authority_pi_table.c.pi_id,
+         backref='reg_authorities_as_pis')
     
     def __init__ (self, **kwds):
         # fill in type if not previously set
@@ -168,14 +189,6 @@ class RegAuthority (RegRecord):
         return RegRecord.__repr__(self).replace("Record","Authority")
 
 ####################
-# slice x user (researchers) association
-slice_researcher_table = \
-    Table ( 'slice_researcher', Base.metadata,
-            Column ('slice_id', Integer, ForeignKey ('records.record_id'), primary_key=True),
-            Column ('researcher_id', Integer, ForeignKey ('records.record_id'), primary_key=True),
-            )
-
-####################
 class RegSlice (RegRecord):
     __tablename__       = 'slices'
     __mapper_args__     = { 'polymorphic_identity' : 'slice' }
@@ -186,7 +199,7 @@ class RegSlice (RegRecord):
          secondary=slice_researcher_table,
          primaryjoin=RegRecord.record_id==slice_researcher_table.c.slice_id,
          secondaryjoin=RegRecord.record_id==slice_researcher_table.c.researcher_id,
-         backref="reg_slices_as_researcher")
+         backref='reg_slices_as_researcher')
 
     def __init__ (self, **kwds):
         if 'type' not in kwds: kwds['type']='slice'
