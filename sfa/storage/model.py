@@ -208,6 +208,16 @@ class RegSlice (RegRecord):
     def __repr__ (self):
         return RegRecord.__repr__(self).replace("Record","Slice")
 
+    # when dealing with credentials, we need to retrieve the PIs attached to a slice
+    def get_pis (self):
+        # don't ruin the import of that file in a client world
+        from sfa.storage.alchemy import dbsession
+        from sfa.util.xrn import get_authority
+        authority_hrn = get_authority(self.hrn)
+        auth_record = dbsession.query(RegAuthority).filter_by(hrn=authority_hrn).first()
+        return auth_record.reg_pis
+        
+
 ####################
 class RegNode (RegRecord):
     __tablename__       = 'nodes'

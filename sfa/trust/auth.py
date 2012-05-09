@@ -239,7 +239,7 @@ class Auth:
         Given a user credential and a record, determine what set of rights the
         user should have to that record.
         
-        This is intended to replace determine_rights() and
+        This is intended to replace determine_user_rights() and
         verify_cancreate_credential()
         """
 
@@ -248,10 +248,12 @@ class Auth:
 
         logger.debug("entering determine_user_rights with record %s and caller_hrn %s"%(reg_record, caller_hrn))
 
-        if type=='slice':
+        if type == 'slice':
+            # researchers in the slice are in the DB as-is
             researcher_hrns = [ user.hrn for user in reg_record.reg_researchers ]
-            # xxx need a means to compute pi_hrns from the registry db
-            pi_hrns = reg_record.get('PI',[])
+            # locating PIs attached to that slice
+            slice_pis=reg_record.get_pis()
+            pi_hrns = [ user.hrn for user in slice_pis ]
             if (caller_hrn in researcher_hrns + pi_hrns):
                 rl.add('refresh')
                 rl.add('embed')
@@ -261,8 +263,6 @@ class Auth:
 
         elif type == 'authority':
             pi_hrns = [ user.hrn for user in reg_record.reg_pis ]
-            # xxx need a means to compute operator_hrns from the registry db
-            operator_hrns = reg_record.get('operator',[])
             if (caller_hrn == self.config.SFA_INTERFACE_HRN):
                 rl.add('authority')
                 rl.add('sa')
@@ -270,9 +270,13 @@ class Auth:
             if (caller_hrn in pi_hrns):
                 rl.add('authority')
                 rl.add('sa')
-            if (caller_hrn in operator_hrns):
-                rl.add('authority')
-                rl.add('ma')
+            # NOTE: for the PL implementation, this 'operators' list 
+            # amounted to users with 'tech' role in that site 
+            # it seems like this is not needed any longer, so for now I just drop that
+            # operator_hrns = reg_record.get('operator',[])
+            # if (caller_hrn in operator_hrns):
+            #    rl.add('authority')
+            #    rl.add('ma')
 
         elif type == 'user':
             rl.add('refresh')
