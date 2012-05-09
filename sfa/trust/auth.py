@@ -246,11 +246,13 @@ class Auth:
         rl = Rights()
         type = reg_record.type
 
+        logger.debug("entering determine_user_rights with record %s and caller_hrn %s"%(reg_record, caller_hrn))
 
         if type=='slice':
-            researchers = reg_record.get('researcher',[])
-            pis = reg_record.get('PI',[])
-            if (caller_hrn in researchers + pis):
+            researcher_hrns = [ user.hrn for user in reg_record.reg_researchers ]
+            # xxx need a means to compute pi_hrns from the registry db
+            pi_hrns = reg_record.get('PI',[])
+            if (caller_hrn in researcher_hrns + pi_hrns):
                 rl.add('refresh')
                 rl.add('embed')
                 rl.add('bind')
@@ -258,16 +260,17 @@ class Auth:
                 rl.add('info')
 
         elif type == 'authority':
-            pis = reg_record.get('PI',[])
-            operators = reg_record.get('operator',[])
+            pi_hrns = [ user.hrn for user in reg_record.reg_pis ]
+            # xxx need a means to compute operator_hrns from the registry db
+            operator_hrns = reg_record.get('operator',[])
             if (caller_hrn == self.config.SFA_INTERFACE_HRN):
                 rl.add('authority')
                 rl.add('sa')
                 rl.add('ma')
-            if (caller_hrn in pis):
+            if (caller_hrn in pi_hrns):
                 rl.add('authority')
                 rl.add('sa')
-            if (caller_hrn in operators):
+            if (caller_hrn in operator_hrns):
                 rl.add('authority')
                 rl.add('ma')
 
