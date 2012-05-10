@@ -214,18 +214,18 @@ class SlabSlices:
         
         # get this slice's authority (site)
         slice_authority = get_authority(hrn)
-        
+        site_authority = slice_authority
         # get this site's authority (sfa root authority or sub authority)
-        site_authority = get_authority(slice_authority).lower()
-        print>>sys.stderr, " \r\n \r\n \t slices.py get_peer slice_authority  %s site_authority %s " %(slice_authority, site_authority)
+        #site_authority = get_authority(slice_authority).lower()
+        print>>sys.stderr, " \r\n \r\n \t slices.py get_peer slice_authority  %s site_authority %s hrn %s" %(slice_authority, site_authority, hrn)
         # check if we are already peered with this site_authority, if so
-        peers = self.driver.GetPeers({})
-        #print>>sys.stderr, " \r\n \r\n \t slices.py get_peer peers %s " %(peers)
+        #peers = self.driver.GetPeers({})  
+        peers = self.driver.GetPeers(peer_filter = slice_authority)
         for peer_record in peers:
           
             if site_authority == peer_record.hrn:
                 peer = peer_record
-        #print>>sys.stderr, " \r\n \r\n \t slices.py get_peer peer  %s " %(peer) 
+        print>>sys.stderr, " \r\n \r\n \t slices.py get_peerAPRES Mpeer  %s " %(peer) 
         return peer
 
     def get_sfa_peer(self, xrn):
@@ -382,25 +382,6 @@ class SlabSlices:
         if sl:
 
             print>>sys.stderr, " \r\n \r\rn Slices.py verify_slice slicename %s sl %s slice_record %s"%(slicename ,sl, slice_record)
-        else:
-            print>>sys.stderr, " \r\n \r\rn Slices.py verify_slice UH-Oh..."
-        if not sl:
-            slice = {'name': slicename,
-                     'url': slice_record.get('url', slice_hrn), 
-                     #'description': slice_record.get('description', slice_hrn)
-                     }
-            # add the slice                          
-            slice['slice_id'] = self.driver.AddSlice(slice)
-            slice['node_ids'] = []
-            slice['person_ids'] = []
-            #if peer:
-                #slice['peer_slice_id'] = slice_record.get('slice_id', None) 
-            # mark this slice as an sfa peer record
-            #if sfa_peer:
-                #peer_dict = {'type': 'slice', 'hrn': slice_hrn, 
-                             #'peer_authority': sfa_peer, 'pointer': slice['slice_id']}
-                #self.registry.register_peer_object(self.credential, peer_dict)
-        else:
             slice = sl
             slice.update(slice_record)
             #del slice['last_updated']
@@ -412,6 +393,32 @@ class SlabSlices:
 	        #Update existing record (e.g. expires field) it with the latest info.
             ##if slice_record and slice['expires'] != slice_record['expires']:
                 ##self.driver.UpdateSlice( slice['slice_id'], {'expires' : slice_record['expires']})
+        else:
+            print>>sys.stderr, " \r\n \r\rn Slices.py verify_slice UH-Oh...slice_record %s peer %s sfa_peer %s "%(slice_record, peer,sfa_peer)
+            slice = {'slice_hrn': slicename,
+                     #'url': slice_record.get('url', slice_hrn), 
+                     #'description': slice_record.get('description', slice_hrn)
+                     'node_list' : [],
+                     'record_id_user' : slice_record['person_ids'][0],
+                     'record_id_slice': slice_record['record_id'],
+                     'peer_authority':str(peer.hrn)
+                    
+                     }
+            # add the slice  
+            self.driver.AddSlice(slice)                         
+            #slice['slice_id'] = self.driver.AddSlice(slice)
+            print>>sys.stderr, " \r\n \r\rn Slices.py verify_slice ADDSLICE OHYEEEEEEEEEEAH! " 
+            #slice['node_ids']=[]
+            #slice['person_ids'] = []
+            #if peer:
+                #slice['peer_slice_id'] = slice_record.get('slice_id', None) 
+            # mark this slice as an sfa peer record
+            #if sfa_peer:
+                #peer_dict = {'type': 'slice', 'hrn': slice_hrn, 
+                             #'peer_authority': sfa_peer, 'pointer': slice['slice_id']}
+                #self.registry.register_peer_object(self.credential, peer_dict)
+            
+
        
         return slice
 
@@ -433,7 +440,7 @@ class SlabSlices:
                 users_by_hrn[user['hrn']] = user
                 users_dict[user['hrn']] = {'person_id':user['person_id'], 'hrn':user['hrn']}
                 
-        #print>>sys.stderr, " \r\n \r\n \t slabslices.py verify_person  users_dict %s \r\n user_by_hrn %s \r\n \tusers_by_id %s " %( users_dict,users_by_hrn, users_by_id) 
+        print>>sys.stderr, " \r\n \r\n \t slabslices.py verify_person  users_dict %s \r\n user_by_hrn %s \r\n \tusers_by_id %s " %( users_dict,users_by_hrn, users_by_id) 
         
         existing_user_ids = []
         existing_user_hrns = []
@@ -441,9 +448,10 @@ class SlabSlices:
         #Check if user is in LDAP using its hrn.
         #Assuming Senslab is centralised :  one LDAP for all sites, user_id unknown from LDAP
         # LDAP does not provide users id, therfore we rely on hrns
-        if users_by_hrn:
-            existing_users = self.driver.GetPersons({'hrn': users_by_hrn.keys()}, 
-                                                        ['hrn','pkey'])
+        if users_by_hrn:            
+            existing_users = self.driver.GetPersons({'hrn': users_by_hrn.keys()})
+            #existing_users = self.driver.GetPersons({'hrn': users_by_hrn.keys()}, 
+                                                        #['hrn','pkey'])
             if existing_users:
                 for user in existing_users :
                     #for  k in users_dict[user['hrn']] :
@@ -452,19 +460,24 @@ class SlabSlices:
                     #print>>sys.stderr, " \r\n \r\n \t slabslices.py verify_person  existing_user_ids.append (users_dict[user['hrn']][k]) %s \r\n existing_users %s " %(  existing_user_ids,existing_users) 
          
             #User from another federated site , does not have a senslab account yet
-            else:
+            #Add them to LDAP
+            
+            else: 
+                
+                print>>sys.stderr, " \r\n \r\n \t slabslices.py verify_person  HUMHUMHUMHUM ..." 
                 pass
                 
         # requested slice users        
         requested_user_ids = users_by_id.keys() 
         requested_user_hrns = users_by_hrn.keys()
-        #print>>sys.stderr, " \r\n \r\n \t slabslices.py verify_person  requested_user_ids  %s user_by_hrn %s " %( requested_user_ids,users_by_hrn) 
+        print>>sys.stderr, " \r\n \r\n \t slabslices.py verify_person  requested_user_ids  %s user_by_hrn %s " %( requested_user_ids,users_by_hrn) 
         # existing slice users
         existing_slice_users_filter = {'hrn': slice_record.get('PI', [])}
-        #print>>sys.stderr, " \r\n \r\n slices.py verify_person requested_user_ids %s existing_slice_users_filter %s slice_record %s" %(requested_user_ids,existing_slice_users_filter,slice_record)
+        print>>sys.stderr, " \r\n \r\n slices.py verify_person requested_user_ids %s existing_slice_users_filter %s slice_record %s" %(requested_user_ids,existing_slice_users_filter,slice_record)
         
-        existing_slice_users = self.driver.GetPersons(existing_slice_users_filter,['hrn','pkey'])
-        #print>>sys.stderr, " \r\n \r\n slices.py verify_person   existing_slice_users %s " %(existing_slice_users)
+        existing_slice_users = self.driver.GetPersons(existing_slice_users_filter)
+        #existing_slice_users = self.driver.GetPersons(existing_slice_users_filter,['hrn','pkey'])
+        print>>sys.stderr, " \r\n \r\n slices.py verify_person   existing_slice_users %s " %(existing_slice_users)
 
         existing_slice_user_hrns = [user['hrn'] for user in existing_slice_users]
 

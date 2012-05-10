@@ -39,13 +39,15 @@ SlabBase = declarative_base()
 
 class SliceSenslab (SlabBase):
     __tablename__ = 'slice_senslab' 
-    record_id_user = Column(Integer, primary_key=True)
+    #record_id_user = Column(Integer, primary_key=True)
+    slice_hrn = Column(String,primary_key=True)
+    peer_authority = Column( String,nullable = True)
+    record_id_slice = Column(Integer)    
+    record_id_user = Column(Integer)
     oar_job_id = Column( Integer,default = -1)
-    record_id_slice = Column(Integer)
-    slice_hrn = Column(String,nullable = False)
     node_list = Column(postgresql.ARRAY(String), nullable =True)
     
-    def __init__ (self, slice_hrn =None, oar_job_id=None, record_id_slice=None, record_id_user= None):
+    def __init__ (self, slice_hrn =None, oar_job_id=None, record_id_slice=None, record_id_user= None,peer_authority=None):
         self.node_list = []
         if record_id_slice: 
             self.record_id_slice = record_id_slice
@@ -57,21 +59,23 @@ class SliceSenslab (SlabBase):
             self.slice_hrn = slice_hrn 
         if record_id_user: 
             self.record_id_user= record_id_user
+        if peer_authority:
+            self.peer_authority = peer_authority
             
             
     def __repr__(self):
-        result="<Record id user =%s, slice hrn=%s, oar_job id=%s,Record id slice =%s  node_list =%s" % \
-                (self.record_id_user, self.slice_hrn, self.oar_job_id, self.record_id_slice, self.node_list)
+        result="<Record id user =%s, slice hrn=%s, oar_job id=%s,Record id slice =%s  node_list =%s peer_authority =%s"% \
+                (self.record_id_user, self.slice_hrn, self.oar_job_id, self.record_id_slice, self.node_list, self.peer_authority)
         result += ">"
         return result
           
     def dumpquerytodict(self):
         dict = {'slice_hrn':self.slice_hrn,
+        'peer_authority':self.peer_authority,
         'record_id':self.record_id_slice, 
         'record_id_user':self.record_id_user,
         'oar_job_id':self.oar_job_id, 
-         'record_id_slice':self.record_id_slice, 
-         'slice_hrn':self.slice_hrn,
+        'record_id_slice':self.record_id_slice, 
          'node_list':self.node_list}
         return dict       
 #class PeerSenslab(SlabBase):

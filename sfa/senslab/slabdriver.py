@@ -69,7 +69,7 @@ class SlabDriver(Driver):
         self.db = SlabDB(config)
         self.cache=None
         
-
+    
     def sliver_status(self,slice_urn,slice_hrn):
         # receive a status request for slice named urn/hrn urn:publicid:IDN+senslab+nturro_slice hrn senslab.nturro_slice
         # shall return a structure as described in
@@ -201,7 +201,14 @@ class SlabDriver(Driver):
                 self.BindObjectToPeer('slice', slice['slice_id'], peer, slice['peer_slice_id'])
         return 1
             
- 
+            
+    def AddSlice(self, slice_record):
+        slab_slice = SliceSenslab( slice_hrn = slice_record['slice_hrn'],  record_id_slice= slice_record['record_id_slice'] , record_id_user= slice_record['record_id_user'], peer_authority = slice_record['peer_authority'])
+        print>>sys.stderr, "\r\n \r\n \t\t\t =======SLABDRIVER.PY AddSlice slice_record %s slab_slice %s" %(slice_record,slab_slice)
+        slab_dbsession.add(slab_slice)
+        slab_dbsession.commit()
+        return
+        
     # first 2 args are None in case of resource discovery
     def list_resources (self, slice_urn, slice_hrn, creds, options):
         #cached_requested = options.get('cached', True) 
@@ -385,7 +392,7 @@ class SlabDriver(Driver):
         print >>sys.stderr, "\r\n \r\n SLABDRIVER GetPeers auth = %s, peer_filter %s, return_field %s " %(auth , peer_filter, return_fields)
         all_records = dbsession.query(RegRecord).filter(RegRecord.type.like('%authority%')).all()
         for record in all_records:
-            existing_records[record.hrn] = record
+            existing_records[(record.hrn,record.type)] = record
             if record.type not in existing_hrns_by_types:
                 existing_hrns_by_types[record.type] = [record.hrn]
                 print >>sys.stderr, "\r\n \r\n SLABDRIVER GetPeers \t NOT IN existing_hrns_by_types %s " %( existing_hrns_by_types)
@@ -399,18 +406,25 @@ class SlabDriver(Driver):
         print >>sys.stderr, "\r\n \r\n SLABDRIVER GetPeers        existing_hrns_by_types %s " %( existing_hrns_by_types)
         records_list= [] 
       
-        try:
-            for hrn in existing_hrns_by_types['authority+sa']:
-                records_list.append(existing_records[hrn])
-                print >>sys.stderr, "\r\n \r\n SLABDRIVER GetPeers  records_list  %s " %(records_list)
+        try: 
+            print >>sys.stderr, "\r\n \r\n SLABDRIVER GetPeers  existing_hrns_by_types['authority+sa']  %s \t\t existing_records %s " %(existing_hrns_by_types['authority'],existing_records)
+            if peer_filter:
+               records_list.append(existing_records[(peer_filter,'authority')])
+            else :
+                for hrn in existing_hrns_by_types['authority']:
+                    records_list.append(existing_records[(hrn,'authority')])
+                    
+            print >>sys.stderr, "\r\n \r\n SLABDRIVER GetPeers  records_list  %s " %(records_list)
                 
         except:
                 pass
-
+                
+        return_records = records_list
         if not peer_filter and not return_fields:
             return records_list
-        return_records = parse_filter(records_list,peer_filter, 'peers', return_fields) 
- 
+        #return_records = parse_filter(records_list,peer_filter, 'peers', return_fields) 
+       
+        print >>sys.stderr, "\r\n \r\n SLABDRIVER GetPeers   return_records %s " %(return_records)
         return return_records
         
      
@@ -999,12 +1013,14 @@ class SlabDriver(Driver):
                     'person_ids':[recslice['record_id_user']]})
                     
                 elif str(record['type']) == 'user':
+                    #Add the data about slice
                     print >>sys.stderr, "\r\n \t\t  SLABDRIVER.PY fill_record_info USEEEEEEEEEERDESU!" 
 
                     rec = self.GetSlices(slice_filter = record['record_id'], filter_type = 'record_id_user')
                     #Append record in records list, therfore fetches user and slice info again(one more loop)
                     #Will update PIs and researcher for the slice
-
+                    user_slab = self.GetPersons(recuser.hrn)
+                    print >>sys.stderr, "\r\n \t\t  SLABDRIVER.PY fill_record_info user_slab %s !" %(user_slab)
                     rec.update({'type':'slice','hrn':rec['slice_hrn']})
                     records.append(rec)
                     #print >>sys.stderr, "\r\n \t\t  SLABDRIVER.PY fill_record_info ADDING SLIC EINFO rec %s" %(rec) 
