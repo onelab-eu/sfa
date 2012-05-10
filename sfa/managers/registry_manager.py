@@ -187,6 +187,10 @@ class RegistryManager:
     
     def List (self, api, xrn, origin_hrn=None):
         hrn, type = urn_to_hrn(xrn)
+        recursive = False
+        if hrn.endswith('*'):
+            hrn = hrn[:-1]
+            recursive = True
         # load all know registry names into a prefix tree and attempt to find
         # the longest matching prefix
         registries = api.registries
@@ -214,7 +218,10 @@ class RegistryManager:
         if not record_dicts:
             if not api.auth.hierarchy.auth_exists(hrn):
                 raise MissingAuthority(hrn)
-            records = dbsession.query(RegRecord).filter_by(authority=hrn)
+            if recursive:
+                records = dbsession.query(RegRecord).filter(RegRecord.hrn.startswith(hrn))
+            else:
+                records = dbsession.query(RegRecord).filter_by(authority=hrn)
             record_dicts=[ record.todict() for record in records ]
     
         return record_dicts
