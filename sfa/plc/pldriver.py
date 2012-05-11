@@ -27,7 +27,7 @@ from sfa.plc.plshell import PlShell
 import sfa.plc.peers as peers
 from sfa.plc.plaggregate import PlAggregate
 from sfa.plc.plslices import PlSlices
-from sfa.util.plxrn import slicename_to_hrn, hostname_to_hrn, hrn_to_pl_slicename, hrn_to_pl_login_base
+from sfa.util.plxrn import PlXrn, slicename_to_hrn, hostname_to_hrn, hrn_to_pl_slicename
 
 
 def list_to_dict(recs, key):
@@ -118,7 +118,7 @@ class PlDriver (Driver):
                 self.shell.AddPersonKey(pointer, {'key_type' : 'ssh', 'key' : pub_key})
 
         elif type == 'node':
-            login_base = hrn_to_pl_login_base(sfa_record['authority'])
+            login_base = PlXrn(xrn=sfa_record['authority'],type='node').pl_login_base()
             nodes = self.shell.GetNodes([pl_record['hostname']])
             if not nodes:
                 pointer = self.shell.AddNode(login_base, pl_record)
@@ -244,7 +244,7 @@ class PlDriver (Driver):
                 pl_record["model"] = "geni"
 
         elif type == "authority":
-            pl_record["login_base"] = hrn_to_pl_login_base(hrn)
+            pl_record["login_base"] = PlXrn(xrn=hrn,type='authority').pl_login_base()
             if "name" not in sfa_record:
                 pl_record["name"] = hrn
             if "abbreviated_name" not in sfa_record:
