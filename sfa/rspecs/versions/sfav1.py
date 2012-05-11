@@ -3,7 +3,6 @@ from lxml import etree
 
 from sfa.util.sfalogging import logger
 from sfa.util.xrn import hrn_to_urn, urn_to_hrn
-from sfa.util.plxrn import PlXrn
 from sfa.rspecs.version import RSpecVersion
 from sfa.rspecs.elements.element import Element
 from sfa.rspecs.elements.versions.pgv2Link import PGv2Link

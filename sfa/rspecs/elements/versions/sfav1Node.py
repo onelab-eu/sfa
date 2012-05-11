@@ -1,6 +1,6 @@
 from sfa.util.sfalogging import logger
 from sfa.util.xml import XpathFilter
-from sfa.util.plxrn import PlXrn, xrn_to_hostname
+from sfa.util.plxrn import xrn_to_hostname
 from sfa.util.xrn import Xrn
 from sfa.rspecs.elements.element import Element
 from sfa.rspecs.elements.node import Node

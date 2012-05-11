@@ -9,7 +9,6 @@ from sfa.util.faults import RecordNotFound, AccountNotEnabled, PermissionError, 
 from sfa.util.sfatime import utcparse, datetime_to_epoch
 from sfa.util.prefixTree import prefixTree
 from sfa.util.xrn import Xrn, get_authority, hrn_to_urn, urn_to_hrn
-from sfa.util.plxrn import hrn_to_pl_login_base
 from sfa.util.version import version_core
 from sfa.util.sfalogging import logger
 

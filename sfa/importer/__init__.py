@@ -3,7 +3,6 @@
 import sys
 
 from sfa.util.xrn import get_authority, hrn_to_urn
-from sfa.util.plxrn import email_to_hrn
 from sfa.generic import Generic
 from sfa.util.config import Config
 from sfa.util.sfalogging import _SfaLogger
