@@ -70,8 +70,10 @@ class RegistryCommands(Commands):
             save_records_to_file(outfile, records)  
 
 
-    def _record_dict(self, xrn=None, type=None, url=None, key=None, \
-                     description=None, slices='', researchers=''):              
+    def _record_dict(self, xrn=None, type=None, 
+                     url=None, description=None, email='', 
+                     key=None, 
+                     slices=[], researchers=[], pis=[]):
         record_dict = {}
         if xrn:
             if type:
@@ -83,6 +85,8 @@ class RegistryCommands(Commands):
             record_dict['type'] = xrn.get_type()
         if url:
             record_dict['url'] = url
+        if description:
+            record_dict['description'] = description
         if key:
             try:
                 pubkey = open(key, 'r').read()
@@ -92,16 +96,21 @@ class RegistryCommands(Commands):
         if slices:
             record_dict['slices'] = slices
         if researchers:
-            record_dict['researchers'] = researchers
-        if description:
-            record_dict['description'] = description
+            record_dict['researcher'] = researchers
+        if email:
+            record_dict['email'] = email
+        if pis:
+            record_dict['pi'] = pis
         return record_dict
 
     @args('-x', '--xrn', dest='xrn', metavar='<xrn>', help='object hrn/urn (mandatory)') 
     @args('-t', '--type', dest='type', metavar='<type>', help='object type', default=None) 
-    @args('-u', '--url', dest='url', metavar='<url>', help='URL', default=None)
+    @args('-e', '--email', dest='email', default="",
+          help="email (mandatory for users)")
+    @args('-u', '--url', dest='url', metavar='<url>', default=None,
+          help="URL, useful for slices")
     @args('-d', '--description', dest='description', metavar='<description>', 
-          help='Description', default=None)
+          help='Description, useful for slices', default=None)
     @args('-k', '--key', dest='key', metavar='<key>', help='public key string or file', 
           default=None)
     @args('-s', '--slices', dest='slices', metavar='<slices>', help='slice xrns', 
@@ -112,10 +121,10 @@ class RegistryCommands(Commands):
           help='Principal Investigators/Project Managers ', 
           default='', type="str", action='callback', callback=optparse_listvalue_callback)
     def register(self, xrn, type=None, url=None, description=None, key=None, slices='', 
-                 pis='', researchers=''):
-        """Create a new Registry recory"""
+                 pis='', researchers='',email=''):
+        """Create a new Registry record"""
         record_dict = self._record_dict(xrn=xrn, type=type, url=url, key=key, 
-                                        slices=slices, researchers=researchers)
+                                        slices=slices, researchers=researchers, email=email, pis=pis)
         self.api.manager.Register(self.api, record_dict)         
 
 
@@ -137,7 +146,8 @@ class RegistryCommands(Commands):
                pis='', researchers=''):
         """Update an existing Registry record""" 
         record_dict = self._record_dict(xrn=xrn, type=type, url=url, description=description, 
-                                        key=key, slices=slices, researchers=researchers)
+                                        key=key, slices=slices, researchers=researchers, pis=pis)
+        for (k,v) in record_dict.items(): print k,'=',v
         self.api.manager.Update(self.api, record_dict)
         
     @args('-x', '--xrn', dest='xrn', metavar='<xrn>', help='object hrn/urn (mandatory)') 
@@ -420,11 +430,13 @@ class SfaAdmin:
 
         # execute command
         try:
-    #        print "invoking %s *=%s **=%s"%(command.__name__,cmd_args, cmd_kwds)
+            #print "invoking %s *=%s **=%s"%(command.__name__,cmd_args, cmd_kwds)
             command(*cmd_args, **cmd_kwds)
             sys.exit(0)
         except TypeError:
             print "Possible wrong number of arguments supplied"
+            #import traceback
+            #traceback.print_exc()
             print command.__doc__
             parser.print_help()
             #raise

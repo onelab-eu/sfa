@@ -314,18 +314,13 @@ class RegistryManager:
             gid = auth_info.get_gid_object()
             record.gid=gid.save_to_string(save_parents=True)
 
-        elif isinstance (record, RegSlice):
             # locate objects for relationships
-            if hasattr (record, 'researcher'):
-                # we get the list of researcher hrns as
-                researcher_hrns = record.researcher
-                # strip that in case we have <researcher> words </researcher>
-                researcher_hrns = [ x.strip() for x in researcher_hrns ]
-                logger.info ("incoming researchers %s"%researcher_hrns)
-                request = dbsession.query (RegUser).filter(RegUser.hrn.in_(researcher_hrns))
-                logger.info ("%d incoming hrns, %d matches found"%(len(researcher_hrns),request.count()))
-                researchers = dbsession.query (RegUser).filter(RegUser.hrn.in_(researcher_hrns)).all()
-                record.reg_researchers = researchers
+            pi_hrns = getattr(record,'pi',None)
+            if pi_hrns is not None: record.update_pis (pi_hrns)
+
+        elif isinstance (record, RegSlice):
+            researcher_hrns = getattr(record,'researcher',None)
+            if researcher_hrns is not None: record.update_researchers (researcher_hrns)
         
         elif isinstance (record, RegUser):
             # create RegKey objects for incoming keys
@@ -347,9 +342,8 @@ class RegistryManager:
     
     def Update(self, api, record_dict):
         assert ('type' in record_dict)
-        new_record=RegRecord(dict=record_dict)
-        type = new_record.type
-        hrn = new_record.hrn
+        new_record=make_record(dict=record_dict)
+        (type,hrn) = (new_record.type, new_record.hrn)
         
         # make sure the record exists
         record = dbsession.query(RegRecord).filter_by(type=type,hrn=hrn).first()
@@ -357,15 +351,11 @@ class RegistryManager:
             raise RecordNotFound("hrn=%s, type=%s"%(hrn,type))
         record.just_updated()
     
-        # validate the type
-        if type not in ['authority', 'slice', 'node', 'user']:
-            raise UnknownSfaType(type) 
-
         # Use the pointer from the existing record, not the one that the user
         # gave us. This prevents the user from inserting a forged pointer
         pointer = record.pointer
     
-        # is the a change in keys ?
+        # is there a change in keys ?
         new_key=None
         if type=='user':
             if getattr(new_key,'keys',None):
@@ -373,10 +363,6 @@ class RegistryManager:
                 if isinstance (new_key,types.ListType):
                     new_key=new_key[0]
 
-        # update the PLC information that was specified with the record
-        if not self.driver.update (record.__dict__, new_record.__dict__, hrn, new_key):
-            logger.warning("driver.update failed")
-    
         # take new_key into account
         if new_key:
             # update the openssl key and gid
@@ -388,6 +374,23 @@ class RegistryManager:
             record.gid = gid
             dsession.commit()
         
+        # xxx should do side effects from new_record to record
+        # not too sure how to do that
+        # not too big a deal with planetlab as the driver is authoritative, but...
+
+        # update native relations
+        if isinstance (record, RegSlice):
+            researcher_hrns = getattr(new_record,'researcher',None)
+            if researcher_hrns is not None: record.update_researchers (researcher_hrns)
+
+        elif isinstance (record, RegAuthority):
+            pi_hrns = getattr(new_record,'pi',None)
+            if pi_hrns is not None: record.update_pis (pi_hrns)
+        
+        # update the PLC information that was specified with the record
+        if not self.driver.update (record.__dict__, new_record.__dict__, hrn, new_key):
+            logger.warning("driver.update failed")
+    
         # update membership for researchers, pis, owners, operators
         self.update_driver_relations (record, new_record)
         

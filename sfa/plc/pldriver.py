@@ -540,7 +540,12 @@ class PlDriver (Driver):
                 logger.debug ("del_target_id = %s (type=%s)"%(target_id,type(target_id)))
                 self.shell.DeletePersonFromSlice (target_id, subject_id)
         elif subject_type == 'authority' and target_type == 'user' and relation_name == 'pi':
-            logger.log ("WARNING:  XXX todo pldriver.update_relation not implemented for the 'pi' relationship")
+            # due to the plcapi limitations this means essentially adding pi role to all people in the list
+            # it's tricky to remove any pi role here, although it might be desirable
+            persons = self.shell.GetPersons (target_ids)
+            for person in persons: 
+                if 'pi' not in person['roles']:
+                    self.shell.AddRoleToPerson('pi',person['person_id'])
         else:
             logger.info('unexpected relation %s to maintain, %s -> %s'%(relation_name,subject_type,target_type))
 

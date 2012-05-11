@@ -188,6 +188,16 @@ class RegAuthority (RegRecord):
     def __repr__ (self):
         return RegRecord.__repr__(self).replace("Record","Authority")
 
+    def update_pis (self, pi_hrns):
+        # don't ruin the import of that file in a client world
+        from sfa.storage.alchemy import dbsession
+        # strip that in case we have <researcher> words </researcher>
+        pi_hrns = [ x.strip() for x in pi_hrns ]
+        request = dbsession.query (RegUser).filter(RegUser.hrn.in_(pi_hrns))
+        logger.info ("RegAuthority.update_pis: %d incoming pis, %d matches found"%(len(pi_hrns),request.count()))
+        pis = dbsession.query (RegUser).filter(RegUser.hrn.in_(pi_hrns)).all()
+        self.reg_pis = pis
+
 ####################
 class RegSlice (RegRecord):
     __tablename__       = 'slices'
@@ -207,6 +217,16 @@ class RegSlice (RegRecord):
 
     def __repr__ (self):
         return RegRecord.__repr__(self).replace("Record","Slice")
+
+    def update_researchers (self, researcher_hrns):
+        # don't ruin the import of that file in a client world
+        from sfa.storage.alchemy import dbsession
+        # strip that in case we have <researcher> words </researcher>
+        researcher_hrns = [ x.strip() for x in researcher_hrns ]
+        request = dbsession.query (RegUser).filter(RegUser.hrn.in_(researcher_hrns))
+        logger.info ("RegSlice.update_researchers: %d incoming researchers, %d matches found"%(len(researcher_hrns),request.count()))
+        researchers = dbsession.query (RegUser).filter(RegUser.hrn.in_(researcher_hrns)).all()
+        self.reg_researchers = researchers
 
     # when dealing with credentials, we need to retrieve the PIs attached to a slice
     def get_pis (self):
