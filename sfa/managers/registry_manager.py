@@ -184,14 +184,10 @@ class RegistryManager:
     
         return records
     
-    def List (self, api, xrn, origin_hrn=None):
-        hrn, type = urn_to_hrn(xrn)
-        recursive = False
-        if hrn.endswith('*'):
-            hrn = hrn[:-1]
-            recursive = True
+    def List (self, api, xrn, origin_hrn=None, options={}):
         # load all know registry names into a prefix tree and attempt to find
         # the longest matching prefix
+        hrn, type = urn_to_hrn(xrn)
         registries = api.registries
         registry_hrns = registries.keys()
         tree = prefixTree()
@@ -208,13 +204,20 @@ class RegistryManager:
             credential = api.getCredential()
             interface = api.registries[registry_hrn]
             server_proxy = api.server_proxy(interface, credential)
-            record_list = server_proxy.List(xrn, credential)
+            record_list = server_proxy.List(xrn, credential, options)
             # same as above, no need to process what comes from through xmlrpc
             # pass foreign records as-is
             record_dicts = record_list
         
         # if we still have not found the record yet, try the local registry
         if not record_dicts:
+            recursive = False
+            if ('recursive' in options and options['recursive']):
+                recursive = True
+            elif hrn.endswith('*'):
+                hrn = hrn[:-1]
+                recursive = True
+
             if not api.auth.hierarchy.auth_exists(hrn):
                 raise MissingAuthority(hrn)
             if recursive:

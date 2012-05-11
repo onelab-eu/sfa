@@ -43,10 +43,13 @@ class RegistryCommands(Commands):
 
     @args('-x', '--xrn', dest='xrn', metavar='<xrn>', help='authority to list (hrn/urn - mandatory)') 
     @args('-t', '--type', dest='type', metavar='<type>', help='object type', default=None) 
-    def list(self, xrn, type=None):
+    @args('-r', '--recursive', dest='recursive', metavar='<recursive>', help='list all child records', 
+          action='store_true', default=False) 
+    def list(self, xrn, type=None, recursive=False):
         """List names registered at a given authority - possibly filtered by type"""
         xrn = Xrn(xrn, type) 
-        records = self.api.manager.List(self.api, xrn.get_hrn())
+        options = {'recursive': recursive}    
+        records = self.api.manager.List(self.api, xrn.get_hrn(), options=options)
         for record in records:
             if not type or record['type'] == type:
                 print "%s (%s)" % (record['hrn'], record['type'])
