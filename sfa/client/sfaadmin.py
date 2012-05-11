@@ -360,7 +360,9 @@ class SfaAdmin:
                 format="%%-%ds"%margin
                 print "%-15s"%name,
                 doc=getattr(method,'__doc__',None)
-                if not doc: print "<missing __doc__>"
+                if not doc: 
+                    print "<missing __doc__>"
+                    continue
                 lines=[line.strip() for line in doc.split("\n")]
                 line1=lines.pop(0)
                 print line1

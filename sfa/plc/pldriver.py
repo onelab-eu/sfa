@@ -87,8 +87,10 @@ class PlDriver (Driver):
                  pointer = slices[0]['slice_id']
 
         elif type == 'user':
-            persons = self.shell.GetPersons([sfa_record['email']])
+            persons = self.shell.GetPersons({'email':sfa_record['email']})
             if not persons:
+                for key in ['first_name','last_name']:
+                    if key not in sfa_record: sfa_record[key]='*from*sfa*'
                 pointer = self.shell.AddPerson(dict(sfa_record))
             else:
                 pointer = persons[0]['person_id']
