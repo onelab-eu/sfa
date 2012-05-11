@@ -219,6 +219,7 @@ class Sfi:
         ("delegate", "name"),
         ("create_gid", "[name]"),
         ("get_trusted_certs", "cred"),
+        ("config", ""),
         ]
 
     def print_command_help (self, options):
@@ -455,8 +456,20 @@ class Sfi:
            self.logger.error("You need to set e.g. SFI_AUTH='plc.princeton' in %s" % config_file)
            errors += 1 
 
+        self.config_file=config_file
         if errors:
            sys.exit(1)
+
+    def show_config (self):
+        print "From configuration file %s"%self.config_file
+        flags=[ 
+            ('SFI_USER','user'),
+            ('SFI_AUTH','authority'),
+            ('SFI_SM','sm_url'),
+            ('SFI_REGISTRY','reg_url'),
+            ]
+        for (external_name, internal_name) in flags:
+            print "%s='%s'"%(external_name,getattr(self,internal_name))
 
     #
     # Get various credential and spec files
@@ -1225,3 +1238,6 @@ or with an slice hrn, shows currently provisioned resources
             self.logger.debug('Sfi.get_trusted_certs -> %r'%cert.get_subject())
         return 
 
+    def config (self, options, args):
+        "Display contents of current config"
+        self.show_config()
