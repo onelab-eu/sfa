@@ -301,7 +301,9 @@ class Sfi:
            parser.add_option("-F", "--fileformat", dest="fileformat", type="choice",
                              help="output file format ([xml]|xmllist|hrnlist)", default="xml",
                              choices=("xml", "xmllist", "hrnlist"))
-
+        if command == 'list':
+           parser.add_option("-r", "--recursive", dest="recursive", action='store_true',
+                             help="list all child records", default=False)
         if command in ("delegate"):
            parser.add_option("-u", "--user",
                             action="store_true", dest="delegate_user", default=False,
@@ -703,8 +705,12 @@ or version information about sfi itself
             self.print_help()
             sys.exit(1)
         hrn = args[0]
+        opts = {}
+        if options.recursive:
+            opts['recursive'] = options.recursive
+        
         try:
-            list = self.registry().List(hrn, self.my_credential_string)
+            list = self.registry().List(hrn, self.my_credential_string, options)
         except IndexError:
             raise Exception, "Not enough parameters for the 'list' command"
 
