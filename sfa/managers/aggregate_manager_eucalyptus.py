@@ -17,7 +17,7 @@ from sqlobject import *
 
 from sfa.util.faults import InvalidRSpec 
 from sfa.util.xrn import urn_to_hrn, Xrn
-from sfa.util.plxrn import hrn_to_pl_slicename, slicename_to_hrn
+from sfa.util.plxrn import slicename_to_hrn
 from sfa.util.callids import Callids
 #comes with its own logging
 #from sfa.util.sfalogging import logger
