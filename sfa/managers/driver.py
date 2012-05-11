@@ -57,6 +57,15 @@ class Driver:
     def update (self, old_sfa_record, new_sfa_record, hrn, new_key): 
         return True
 
+    # callack for register/update
+    # this allows to capture changes in the relations between objects
+    # the ids below are the ones found in the 'pointer' field
+    # this can get typically called with
+    # 'slice' 'user' 'researcher' slice_id user_ids 
+    # 'authority' 'user' 'pi' authority_id user_ids 
+    def update_relation (self, subject_type, target_type, relation_name, subject_id, link_ids):
+        pass
+
     ########################################
     ########## aggregate oriented
     ########################################

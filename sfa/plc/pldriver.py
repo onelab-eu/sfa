@@ -525,9 +525,9 @@ class PlDriver (Driver):
 
     ####################
     # plcapi works by changes, compute what needs to be added/deleted
-    def update_relation (self, subject_type, target_type, subject_id, target_ids):
+    def update_relation (self, subject_type, target_type, relation_name, subject_id, target_ids):
         # hard-wire the code for slice/user for now, could be smarter if needed
-        if subject_type =='slice' and target_type == 'user':
+        if subject_type =='slice' and target_type == 'user' and relation_name == 'researcher':
             subject=self.shell.GetSlices (subject_id)[0]
             current_target_ids = subject['person_ids']
             add_target_ids = list ( set (target_ids).difference(current_target_ids))
@@ -539,8 +539,10 @@ class PlDriver (Driver):
             for target_id in del_target_ids:
                 logger.debug ("del_target_id = %s (type=%s)"%(target_id,type(target_id)))
                 self.shell.DeletePersonFromSlice (target_id, subject_id)
+        elif subject_type == 'authority' and target_type == 'user' and relation_name == 'pi':
+            logger.log ("WARNING:  XXX todo pldriver.update_relation not implemented for the 'pi' relationship")
         else:
-            logger.info('unexpected relation to maintain, %s -> %s'%(subject_type,target_type))
+            logger.info('unexpected relation %s to maintain, %s -> %s'%(relation_name,subject_type,target_type))
 
         
     ########################################

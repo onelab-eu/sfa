@@ -246,15 +246,18 @@ class RegistryManager:
     # subject_record describes the subject of the relationships
     # ref_record contains the target values for the various relationships we need to manage
     # (to begin with, this is just the slice x person relationship)
-    def update_relations (self, subject_obj, ref_obj):
+    def update_driver_relations (self, subject_obj, ref_obj):
         type=subject_obj.type
-        if type=='slice':
-            self.update_relation(subject_obj, 'researcher', ref_obj.researcher, 'user')
+        #for (k,v) in subject_obj.__dict__.items(): print k,'=',v
+        if type=='slice' and hasattr(ref_obj,'researcher'):
+            self.update_driver_relation(subject_obj, ref_obj.researcher, 'user', 'researcher')
+        elif type=='authority' and hasattr(ref_obj,'pi'):
+            self.update_driver_relation(subject_obj,ref_obj.pi, 'user', 'pi')
         
     # field_key is the name of one field in the record, typically 'researcher' for a 'slice' record
     # hrns is the list of hrns that should be linked to the subject from now on
     # target_type would be e.g. 'user' in the 'slice' x 'researcher' example
-    def update_relation (self, record_obj, field_key, hrns, target_type):
+    def update_driver_relation (self, record_obj, hrns, target_type, relation_name):
         # locate the linked objects in our db
         subject_type=record_obj.type
         subject_id=record_obj.pointer
@@ -262,7 +265,7 @@ class RegistryManager:
         link_id_tuples = dbsession.query(RegRecord.pointer).filter_by(type=target_type).filter(RegRecord.hrn.in_(hrns)).all()
         # sqlalchemy returns named tuples for columns
         link_ids = [ tuple.pointer for tuple in link_id_tuples ]
-        self.driver.update_relation (subject_type, target_type, subject_id, link_ids)
+        self.driver.update_relation (subject_type, target_type, relation_name, subject_id, link_ids)
 
     def Register(self, api, record_dict):
     
@@ -335,7 +338,7 @@ class RegistryManager:
         dbsession.commit()
     
         # update membership for researchers, pis, owners, operators
-        self.update_relations (record, record)
+        self.update_driver_relations (record, record)
         
         return record.get_gid_object().save_to_string(save_parents=True)
     
@@ -383,7 +386,7 @@ class RegistryManager:
             dsession.commit()
         
         # update membership for researchers, pis, owners, operators
-        self.update_relations (record, new_record)
+        self.update_driver_relations (record, new_record)
         
         return 1 
     
