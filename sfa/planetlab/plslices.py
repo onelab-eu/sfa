@@ -4,11 +4,11 @@ from collections import defaultdict
 from sfa.util.sfatime import utcparse, datetime_to_epoch
 from sfa.util.sfalogging import logger
 from sfa.util.xrn import Xrn, get_leaf, get_authority, urn_to_hrn
-#from sfa.util.policy import Policy
-from sfa.util.plxrn import PlXrn
+
 from sfa.rspecs.rspec import RSpec
+
 from sfa.planetlab.vlink import VLink
-from sfa.util.plxrn import hrn_to_pl_slicename
+from sfa.planetlab.plxrn import PlXrn, hrn_to_pl_slicename
 
 MAXINT =  2L**31-1
 

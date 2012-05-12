@@ -17,17 +17,19 @@ from sqlobject import *
 
 from sfa.util.faults import InvalidRSpec 
 from sfa.util.xrn import urn_to_hrn, Xrn
-from sfa.util.plxrn import slicename_to_hrn
 from sfa.util.callids import Callids
 #comes with its own logging
 #from sfa.util.sfalogging import logger
 from sfa.util.version import version_core
 
 from sfa.trust.credential import Credential
-from sfa.planetlab.plaggregate import PlAggregate
-from sfa.planetlab.plslices import PlSlices
+
 from sfa.rspecs.version_manager import VersionManager
 from sfa.rspecs.rspec import RSpec
+
+from sfa.planetlab.plaggregate import PlAggregate
+from sfa.planetlab.plslices import PlSlices
+from sfa.planetlab.plxrn import slicename_to_hrn
 
 ##
 # Meta data of an instance.

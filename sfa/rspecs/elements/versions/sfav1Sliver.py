@@ -1,9 +1,11 @@
 from sfa.util.xrn import Xrn
-from sfa.util.plxrn import PlXrn
 from sfa.util.xml import XmlElement
+
 from sfa.rspecs.elements.element import Element
 from sfa.rspecs.elements.sliver import Sliver
 from sfa.rspecs.elements.versions.sfav1PLTag import SFAv1PLTag
+
+from sfa.planetlab.plxrn import PlXrn
 
 class SFAv1Sliver:
 

@@ -2,8 +2,10 @@
 
 import sys
 from sfa.client.sfi_commands import Commands
+
 from sfa.rspecs.rspec import RSpec
-from sfa.util.plxrn import xrn_to_hostname
+
+from sfa.planetlab.plxrn import xrn_to_hostname
 
 command = Commands(usage="%prog [options]",
                    description="List all slivers in the RSpec. " + 
