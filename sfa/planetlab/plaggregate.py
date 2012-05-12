@@ -16,8 +16,8 @@ from sfa.rspecs.elements.pltag import PLTag
 from sfa.rspecs.version_manager import VersionManager
 
 from sfa.util.plxrn import PlXrn, hostname_to_urn, hrn_to_pl_slicename
-from sfa.plc.vlink import get_tc_rate
-from sfa.plc.topology import Topology
+from sfa.planetlab.vlink import get_tc_rate
+from sfa.planetlab.topology import Topology
 
 
 class PlAggregate:

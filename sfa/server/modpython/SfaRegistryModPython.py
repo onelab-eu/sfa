@@ -12,7 +12,7 @@ import traceback
 from mod_python import apache
 
 from sfa.util.sfalogging import logger
-from sfa.plc.server import SfaApi
+from sfa.planetlab.server import SfaApi
 
 api = SfaApi(interface='registry')
 

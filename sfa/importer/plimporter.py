@@ -28,7 +28,7 @@ from sfa.trust.certificate import convert_public_key, Keypair
 from sfa.storage.alchemy import dbsession
 from sfa.storage.model import RegRecord, RegAuthority, RegSlice, RegNode, RegUser, RegKey
 
-from sfa.plc.plshell import PlShell    
+from sfa.planetlab.plshell import PlShell    
 
 def _get_site_hrn(interface_hrn, site):
     # Hardcode 'internet2' into the hrn for sites hosting

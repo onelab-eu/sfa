@@ -22,17 +22,12 @@ from sfa.util.callids import Callids
 #comes with its own logging
 #from sfa.util.sfalogging import logger
 from sfa.util.version import version_core
+
 from sfa.trust.credential import Credential
-from sfa.plc.plaggregate import PlAggregate
-# No Slice symbol in there
-#from sfa.plc.plslices import Slice, Slices
-from sfa.plc.plslices import PlSlices
+from sfa.planetlab.plaggregate import PlAggregate
+from sfa.planetlab.plslices import PlSlices
 from sfa.rspecs.version_manager import VersionManager
 from sfa.rspecs.rspec import RSpec
-# not sure what this used to be nor where it is now defined
-#from sfa.rspecs.sfa_rspec import sfa_rspec_version
-# most likely this should now be
-#from sfa.rspecs.version_manager import VersionManager
 
 ##
 # Meta data of an instance.

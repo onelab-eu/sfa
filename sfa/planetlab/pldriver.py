@@ -23,10 +23,10 @@ from sfa.rspecs.rspec import RSpec
 # the driver interface, mostly provides default behaviours
 from sfa.managers.driver import Driver
 
-from sfa.plc.plshell import PlShell
-import sfa.plc.peers as peers
-from sfa.plc.plaggregate import PlAggregate
-from sfa.plc.plslices import PlSlices
+from sfa.planetlab.plshell import PlShell
+import sfa.planetlab.peers as peers
+from sfa.planetlab.plaggregate import PlAggregate
+from sfa.planetlab.plslices import PlSlices
 from sfa.util.plxrn import PlXrn, slicename_to_hrn, hostname_to_hrn, hrn_to_pl_slicename
 
 

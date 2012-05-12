@@ -2,7 +2,7 @@ from sfa.util.sfalogging import logger
 from sfa.util.faults import SfaFault
 
 # this is probably too big to swallow but for a starting point..
-from sfa.plc.pldriver import PlDriver
+from sfa.planetlab.pldriver import PlDriver
 
 from sfa.federica.fdshell import FdShell
 

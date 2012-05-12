@@ -25,8 +25,8 @@ class pl (Generic):
 
     # driver class for server-side services, talk to the whole testbed
     def driver_class (self):
-        import sfa.plc.pldriver
-        return sfa.plc.pldriver.PlDriver
+        import sfa.planetlab.pldriver
+        return sfa.planetlab.pldriver.PlDriver
 
     # for the component mode, to be run on board planetlab nodes
     # manager class
@@ -35,6 +35,6 @@ class pl (Generic):
         return sfa.managers.component_manager_pl
     # driver_class
     def component_driver_class (self):
-        import sfa.plc.plcomponentdriver
-        return sfa.plc.plcomponentdriver.PlComponentDriver
+        import sfa.planetlab.plcomponentdriver
+        return sfa.planetlab.plcomponentdriver.PlComponentDriver
 

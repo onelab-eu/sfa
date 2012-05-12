@@ -2,7 +2,7 @@ import os
 import tempfile
 
 from sfa.client.sfaserverproxy import SfaServerProxy
-from sfa.plc.nodemanager import NodeManager
+from sfa.planetlab.nodemanager import NodeManager
 
 from sfa.trust.credential import Credential
 from sfa.trust.certificate import Certificate, Keypair
