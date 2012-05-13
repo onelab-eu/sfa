@@ -71,6 +71,9 @@ class PlDriver (Driver):
         if type == 'authority':
             sites = self.shell.GetSites([pl_record['login_base']])
             if not sites:
+                # xxx when a site gets registered through SFA we need to set its max_slices
+                if 'max_slices' not in pl_record:
+                    pl_record['max_slices']=2
                 pointer = self.shell.AddSite(pl_record)
             else:
                 pointer = sites[0]['site_id']
