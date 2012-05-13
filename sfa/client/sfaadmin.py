@@ -147,7 +147,6 @@ class RegistryCommands(Commands):
         """Update an existing Registry record""" 
         record_dict = self._record_dict(xrn=xrn, type=type, url=url, description=description, 
                                         key=key, slices=slices, researchers=researchers, pis=pis)
-        for (k,v) in record_dict.items(): print k,'=',v
         self.api.manager.Update(self.api, record_dict)
         
     @args('-x', '--xrn', dest='xrn', metavar='<xrn>', help='object hrn/urn (mandatory)') 
