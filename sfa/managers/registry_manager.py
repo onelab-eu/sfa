@@ -382,10 +382,12 @@ class RegistryManager:
         if isinstance (record, RegSlice):
             researcher_hrns = getattr(new_record,'researcher',None)
             if researcher_hrns is not None: record.update_researchers (researcher_hrns)
+            dbsession.commit()
 
         elif isinstance (record, RegAuthority):
             pi_hrns = getattr(new_record,'pi',None)
             if pi_hrns is not None: record.update_pis (pi_hrns)
+            dbsession.commit()
         
         # update the PLC information that was specified with the record
         if not self.driver.update (record.__dict__, new_record.__dict__, hrn, new_key):
