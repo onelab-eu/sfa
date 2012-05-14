@@ -431,7 +431,7 @@ class SlabDriver(Driver):
             
     def GetPersons(self, person_filter=None, return_fields=None):
         
-        person_list = self.ldap.ldapFind({'authority': self.root_auth })
+        person_list = self.ldap.ldapFindHrn({'authority': self.root_auth })
         
         #check = False
         #if person_filter and isinstance(person_filter, dict):
@@ -1014,16 +1014,26 @@ class SlabDriver(Driver):
                     
                 elif str(record['type']) == 'user':
                     #Add the data about slice
-                    print >>sys.stderr, "\r\n \t\t  SLABDRIVER.PY fill_record_info USEEEEEEEEEERDESU!" 
-
                     rec = self.GetSlices(slice_filter = record['record_id'], filter_type = 'record_id_user')
+		    print >>sys.stderr, "\r\n \t\t  SLABDRIVER.PY fill_record_info USEEEEEEEEEERDESU!  rec %s" %(rec) 
                     #Append record in records list, therfore fetches user and slice info again(one more loop)
                     #Will update PIs and researcher for the slice
-                    user_slab = self.GetPersons(recuser.hrn)
-                    print >>sys.stderr, "\r\n \t\t  SLABDRIVER.PY fill_record_info user_slab %s !" %(user_slab)
+		    recuser = dbsession.query(RegRecord).filter_by(record_id = rec['record_id_user']).first()
+		    rec.update({'PI':[recuser.hrn],
+                    'researcher': [recuser.hrn],
+                    'name':record['hrn'], 
+                    'oar_job_id':rec['oar_job_id'],
+                    'node_ids': [],
+                    'person_ids':[rec['record_id_user']]})
+		    #retourne une liste 100512
+                    user_slab = self.GetPersons({'hrn':recuser.hrn})
+		    
+                    print >>sys.stderr, "\r\n \t\t  SLABDRIVER.PY fill_record_info user_slab %s !  r ecuser %s " %(user_slab, recuser.hrn)
                     rec.update({'type':'slice','hrn':rec['slice_hrn']})
+		    record.update(user_slab[0])
                     records.append(rec)
-                    #print >>sys.stderr, "\r\n \t\t  SLABDRIVER.PY fill_record_info ADDING SLIC EINFO rec %s" %(rec) 
+		    
+                    print >>sys.stderr, "\r\n \t\t  SLABDRIVER.PY fill_record_info ADDING SLICEINFO TO USER records %s" %(records) 
                     
             print >>sys.stderr, "\r\n \t\t  SLABDRIVER.PY fill_record_info OKrecords %s" %(records) 
         except TypeError:

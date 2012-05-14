@@ -459,12 +459,13 @@ class SlabSlices:
                     existing_user_ids.append (users_dict[user['hrn']]['person_id'])
                     #print>>sys.stderr, " \r\n \r\n \t slabslices.py verify_person  existing_user_ids.append (users_dict[user['hrn']][k]) %s \r\n existing_users %s " %(  existing_user_ids,existing_users) 
          
-            #User from another federated site , does not have a senslab account yet
-            #Add them to LDAP
+            #User from another federated site , does not have a senslab account yet?
+            #or have multiple SFA accounts
+            #Check before adding  them to LDAP
             
             else: 
-                
-                print>>sys.stderr, " \r\n \r\n \t slabslices.py verify_person  HUMHUMHUMHUM ..." 
+                ldap_reslt = self.driver.ldap.ldapSearch(users)
+                print>>sys.stderr, " \r\n \r\n \t slabslices.py verify_person users HUMHUMHUMHUM ... %s \r\n \t ldap_reslt %s "  %(users, ldap_reslt)
                 pass
                 
         # requested slice users        
