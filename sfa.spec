@@ -1,6 +1,6 @@
 %define name sfa
 %define version 2.1
-%define taglevel 6
+%define taglevel 7
 
 %define release %{taglevel}%{?pldistro:.%{pldistro}}%{?date:.%{date}}
 %global python_sitearch	%( python -c "from distutils.sysconfig import get_python_lib; print get_python_lib(1)" )
@@ -227,6 +227,11 @@ fi
 [ "$1" -ge "1" ] && service sfa-cm restart || :
 
 %changelog
+* Mon May 14 2012 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-2.1-7
+- renamed sfa/plc into sfa/planetlab
+- plxrn moved in sfa/planetlab as well
+- bugfix for sfaadmin reg update --pi <>
+
 * Sat May 12 2012 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-2.1-6
 - native data model now has a authority x user (PI) relationship
 - no call to 'augment_records_with_testbed_info' for GetCredential
