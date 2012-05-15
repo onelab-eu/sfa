@@ -464,9 +464,20 @@ class SlabSlices:
             #Check before adding  them to LDAP
             
             else: 
-                ldap_reslt = self.driver.ldap.ldapSearch(users)
-                print>>sys.stderr, " \r\n \r\n \t slabslices.py verify_person users HUMHUMHUMHUM ... %s \r\n \t ldap_reslt %s "  %(users, ldap_reslt)
-                pass
+               
+                if isinstance(users,list):
+                   ldap_reslt = self.driver.ldap.ldapSearch(users[0])
+                else:
+                    ldap_reslt = self.driver.ldap.ldapSearch(users)
+                if ldap_result:
+                    existing_users = ldap_reslt[0]
+                    existing_user_hrns.append (users_dict[user['hrn']]['hrn'])
+                    existing_user_ids.append (users_dict[user['hrn']]['person_id'])
+                else:
+                    #User not existing in LDAP
+            
+                    print>>sys.stderr, " \r\n \r\n \t slabslices.py verify_person users HUMHUMHUMHUM ... %s \r\n \t ldap_reslt %s "  %(users, ldap_reslt)
+
                 
         # requested slice users        
         requested_user_ids = users_by_id.keys() 

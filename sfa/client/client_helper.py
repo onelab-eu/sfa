@@ -15,8 +15,8 @@ def sfa_users_arg(records, slice_record):
     for record in records:
         if record['type'] != 'user': 
             continue
-        user = {#'urn': record['geni_urn'], 
-                #'keys': record['keys'],
+        user = {'urn': record['geni_urn'], 
+                'keys': record['keys'],
                 'email': record['email'], # needed for MyPLC
                 'person_id': record['record_id'], 
                 'hrn': record['hrn'],
@@ -26,7 +26,7 @@ def sfa_users_arg(records, slice_record):
                 'first_name': record['first_name'], # needed for MyPLC
                 'last_name': record['last_name'], # needed for MyPLC
                 'slice_record': slice_record, # needed for legacy refresh peer
-                #'key_ids': record['key_ids'] # needed for legacy refresh peer
+                'key_ids': record['key_ids'] # needed for legacy refresh peer
                 }         
         users.append(user)   
         print>>sys.stderr, " \r\n \r\n \t CLIENT_HELPER.PY sfa_users_arg user %s",user

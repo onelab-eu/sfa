@@ -999,46 +999,54 @@ class SlabDriver(Driver):
                     #print >>sys.stderr, "\r\n \t\t  SLABDRIVER.PY fill_record_info \t\t HOY HOY reclise %s" %(recslice)
                     #if isinstance(recslice,list) and len(recslice) == 1:
                         #recslice = recslice[0]
-                   
+                    
                     recuser = dbsession.query(RegRecord).filter_by(record_id = recslice['record_id_user']).first()
                     #existing_records_by_id[recslice['record_id_user']]
                     #print >>sys.stderr, "\r\n \t\t  SLABDRIVER.PY fill_record_info \t\t recuser %s" %(recuser)
                     
-          
+            
                     record.update({'PI':[recuser.hrn],
                     'researcher': [recuser.hrn],
                     'name':record['hrn'], 
                     'oar_job_id':recslice['oar_job_id'],
                     'node_ids': [],
-                    'person_ids':[recslice['record_id_user']]})
+                    'person_ids':[recslice['record_id_user']],
+                    'geni_urn':'',  #For client_helper.py compatibility
+                    'keys':'',  #For client_helper.py compatibility
+                    'key_ids':''})  #For client_helper.py compatibility
                     
                 elif str(record['type']) == 'user':
                     #Add the data about slice
                     rec = self.GetSlices(slice_filter = record['record_id'], filter_type = 'record_id_user')
-		    print >>sys.stderr, "\r\n \t\t  SLABDRIVER.PY fill_record_info USEEEEEEEEEERDESU!  rec %s" %(rec) 
+                    print >>sys.stderr, "\r\n \t\t  SLABDRIVER.PY fill_record_info USEEEEEEEEEERDESU!  rec %s \r\n \t rec['record_id_user'] %s " %(rec,rec['record_id_user']) 
                     #Append record in records list, therfore fetches user and slice info again(one more loop)
                     #Will update PIs and researcher for the slice
-		    recuser = dbsession.query(RegRecord).filter_by(record_id = rec['record_id_user']).first()
-		    rec.update({'PI':[recuser.hrn],
+                    recuser = dbsession.query(RegRecord).filter_by(record_id = rec['record_id_user']).first()
+                    rec.update({'PI':[recuser.hrn],
                     'researcher': [recuser.hrn],
                     'name':record['hrn'], 
                     'oar_job_id':rec['oar_job_id'],
                     'node_ids': [],
                     'person_ids':[rec['record_id_user']]})
-		    #retourne une liste 100512
+                    #retourne une liste 100512
+                    
                     user_slab = self.GetPersons({'hrn':recuser.hrn})
-		    
-                    print >>sys.stderr, "\r\n \t\t  SLABDRIVER.PY fill_record_info user_slab %s !  r ecuser %s " %(user_slab, recuser.hrn)
+                    
+
                     rec.update({'type':'slice','hrn':rec['slice_hrn']})
-		    record.update(user_slab[0])
+                    record.update(user_slab[0])
+                    #For client_helper.py compatibility
+                    record.update( { 'geni_urn':'',
+                    'keys':'',
+                    'key_ids':'' })                
                     records.append(rec)
-		    
+                    
                     print >>sys.stderr, "\r\n \t\t  SLABDRIVER.PY fill_record_info ADDING SLICEINFO TO USER records %s" %(records) 
                     
             print >>sys.stderr, "\r\n \t\t  SLABDRIVER.PY fill_record_info OKrecords %s" %(records) 
         except TypeError:
             print >>sys.stderr, "\r\n \t\t SLABDRIVER fill_record_info  EXCEPTION RECORDS : %s" %(records)	
-            return
+        return
         
         #self.fill_record_slab_info(records)
 	##print >>sys.stderr, "\r\n \t\t after fill_record_slab_info %s" %(records)	
