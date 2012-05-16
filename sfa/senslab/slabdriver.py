@@ -426,7 +426,7 @@ class SlabDriver(Driver):
         return return_records
         
      
-    #TODO  : Handling OR request in parse_records instead of the for loop 
+    #TODO  : Handling OR request in make_ldap_filters_from_records instead of the for loop 
     #over the records' list
     def GetPersons(self, person_filter=None, return_fields=None):
         """
