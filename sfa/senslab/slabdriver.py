@@ -426,25 +426,38 @@ class SlabDriver(Driver):
         return return_records
         
      
-            
+    #TODO  : Handling OR request in parse_records instead of the for loop 
+    #over the records' list
     def GetPersons(self, person_filter=None, return_fields=None):
-        
-        #if isinstance(person_filter,list):
-            #for f in person_filter:
-                #person = self.ldap.ldapSearch(f)
-        #if isinstance(person_filter,dict):    
-        person_list = self.ldap.ldapFindHrn({'authority': self.root_auth })
-        
-        #check = False
-        #if person_filter and isinstance(person_filter, dict):
-            #for k in  person_filter.keys():
-                #if k in person_list[0].keys():
-                    #check = True
+        """
+        person_filter should be a list of dictionnaries when not set to None.
+        Returns a list of users found.
+       
+        """
+        print>>sys.stderr, "\r\n \r\n \t\t\t GetPersons person_filter %s" %(person_filter)
+        person_list = []
+        if person_filter and isinstance(person_filter,list):
+        #If we are looking for a list of users (list of dict records)
+        #Usually the list contains only one user record
+            for f in person_filter:
+                person = self.ldap.ldapSearch(f)
+                person_list.append(person)
+          
+        else:
+              person_list  = self.ldap.ldapSearch()  
                     
-        return_person_list = parse_filter(person_list,person_filter ,'persons', return_fields)
-        if return_person_list:
-            print>>sys.stderr, " \r\n GetPersons person_filter %s return_fields %s  " %(person_filter,return_fields)
-            return return_person_list
+        return person_list
+            #person_list = self.ldap.ldapFindHrn({'authority': self.root_auth })
+        ##check = False
+        ##if person_filter and isinstance(person_filter, dict):
+            ##for k in  person_filter.keys():
+                ##if k in person_list[0].keys():
+                    ##check = True
+                    
+        #return_person_list = parse_filter(person_list,person_filter ,'persons', return_fields)
+        #if return_person_list:
+            #print>>sys.stderr, " \r\n GetPersons person_filter %s return_fields %s  " %(person_filter,return_fields)
+            #return return_person_list
 
     def GetTimezone(self):
         server_timestamp,server_tz = self.oar.parser.SendRequest("GET_timezone")
@@ -905,7 +918,8 @@ class SlabDriver(Driver):
                     'person_ids':[rec['record_id_user']]})
                     #retourne une liste 100512
                     
-                    user_slab = self.GetPersons({'hrn':recuser.hrn})
+                    #GetPersons takes [] as filters 
+                    user_slab = self.GetPersons([{'hrn':recuser.hrn}])
                     
 
                     rec.update({'type':'slice','hrn':rec['slice_hrn']})

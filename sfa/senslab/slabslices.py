@@ -346,8 +346,13 @@ class SlabSlices:
         #Check if user is in LDAP using its hrn.
         #Assuming Senslab is centralised :  one LDAP for all sites, user_id unknown from LDAP
         # LDAP does not provide users id, therfore we rely on hrns
-        if users_by_hrn:            
-            existing_users = self.driver.GetPersons({'hrn': users_by_hrn.keys()})
+        if users_by_hrn:
+            #Construct the list of filters for GetPersons
+            filter_user = []
+            for hrn in users_by_hrn:
+                filter_user.append ( {'hrn':hrn})
+            existing_users = self.driver.GetPersons(filter_user)                
+            #existing_users = self.driver.GetPersons({'hrn': users_by_hrn.keys()})
             #existing_users = self.driver.GetPersons({'hrn': users_by_hrn.keys()}, 
                                                         #['hrn','pkey'])
             if existing_users:
@@ -381,10 +386,10 @@ class SlabSlices:
         requested_user_hrns = users_by_hrn.keys()
         print>>sys.stderr, " \r\n \r\n \t slabslices.py verify_person  requested_user_ids  %s user_by_hrn %s " %( requested_user_ids,users_by_hrn) 
         # existing slice users
-        existing_slice_users_filter = {'hrn': slice_record.get('PI', [])}
+        existing_slice_users_filter = {'hrn': slice_record['PI'][0]}
         print>>sys.stderr, " \r\n \r\n slices.py verify_person requested_user_ids %s existing_slice_users_filter %s slice_record %s" %(requested_user_ids,existing_slice_users_filter,slice_record)
         
-        existing_slice_users = self.driver.GetPersons(existing_slice_users_filter)
+        existing_slice_users = self.driver.GetPersons([existing_slice_users_filter])
         #existing_slice_users = self.driver.GetPersons(existing_slice_users_filter,['hrn','pkey'])
         print>>sys.stderr, " \r\n \r\n slices.py verify_person   existing_slice_users %s " %(existing_slice_users)
 

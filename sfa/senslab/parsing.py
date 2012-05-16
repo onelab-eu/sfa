@@ -1,5 +1,4 @@
 
-# import modules used here -- sys is a very standard one
 import sys
 import httplib
 import json
