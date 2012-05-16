@@ -228,7 +228,6 @@ class SlabDB:
         #reclist = []
         ##for rec in Q.all():
             #reclist.append(dict(zip(['record_id_user','oar_job_id', 'record_id_slice','slice_hrn'],[rec.record_id_user,rec.oar_job_id,rec.record_id_slice, rec.slice_hrn])))
-        #print>>sys.stderr, " \r\n \r\n \t SLABPOSTGRES find  reclist %s" %(reclist)
         #return reclist
         
        

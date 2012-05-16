@@ -103,108 +103,7 @@ class SlabSlices:
         
         
         
- #def get_slivers(self, xrn, node=None):
-        #hrn, type = urn_to_hrn(xrn)
-         
-        #slice_name = hrn_to_pl_slicename(hrn)
-        ## XX Should we just call PLCAPI.GetSliceTicket(slice_name) instead
-        ## of doing all of this?
-        ##return self.api.driver.GetSliceTicket(self.auth, slice_name) 
-        
-        ## from PLCAPI.GetSlivers.get_slivers()
-        #slice_fields = ['slice_id', 'name', 'instantiation', 'expires', 'person_ids', 'slice_tag_ids']
-        #slices = self.api.driver.GetSlices(slice_name, slice_fields)
-        ## Build up list of users and slice attributes
-        #person_ids = set()
-        #all_slice_tag_ids = set()
-        #for slice in slices:
-            #person_ids.update(slice['person_ids'])
-            #all_slice_tag_ids.update(slice['slice_tag_ids'])
-        #person_ids = list(person_ids)
-        #all_slice_tag_ids = list(all_slice_tag_ids)
-        ## Get user information
-        #all_persons_list = self.api.driver.GetPersons({'person_id':person_ids,'enabled':True}, ['person_id', 'enabled', 'key_ids'])
-        #all_persons = {}
-        #for person in all_persons_list:
-            #all_persons[person['person_id']] = person        
 
-        ## Build up list of keys
-        #key_ids = set()
-        #for person in all_persons.values():
-            #key_ids.update(person['key_ids'])
-        #key_ids = list(key_ids)
-        ## Get user account keys
-        #all_keys_list = self.api.driver.GetKeys(key_ids, ['key_id', 'key', 'key_type'])
-        #all_keys = {}
-        #for key in all_keys_list:
-            #all_keys[key['key_id']] = key
-        ## Get slice attributes
-        #all_slice_tags_list = self.api.driver.GetSliceTags(all_slice_tag_ids)
-        #all_slice_tags = {}
-        #for slice_tag in all_slice_tags_list:
-            #all_slice_tags[slice_tag['slice_tag_id']] = slice_tag
-           
-        #slivers = []
-        #for slice in slices:
-            #keys = []
-            #for person_id in slice['person_ids']:
-                #if person_id in all_persons:
-                    #person = all_persons[person_id]
-                    #if not person['enabled']:
-                        #continue
-                    #for key_id in person['key_ids']:
-                        #if key_id in all_keys:
-                            #key = all_keys[key_id]
-                            #keys += [{'key_type': key['key_type'],
-                                    #'key': key['key']}]
-            #attributes = []
-            ## All (per-node and global) attributes for this slice
-            #slice_tags = []
-            #for slice_tag_id in slice['slice_tag_ids']:
-                #if slice_tag_id in all_slice_tags:
-                    #slice_tags.append(all_slice_tags[slice_tag_id]) 
-            ## Per-node sliver attributes take precedence over global
-            ## slice attributes, so set them first.
-            ## Then comes nodegroup slice attributes
-            ## Followed by global slice attributes
-            #sliver_attributes = []
-
-            #if node is not None:
-                #for sliver_attribute in filter(lambda a: a['node_id'] == node['node_id'], slice_tags):
-                    #sliver_attributes.append(sliver_attribute['tagname'])
-                    #attributes.append({'tagname': sliver_attribute['tagname'],
-                                    #'value': sliver_attribute['value']})
-
-            ## set nodegroup slice attributes
-            #for slice_tag in filter(lambda a: a['nodegroup_id'] in node['nodegroup_ids'], slice_tags):
-                ## Do not set any nodegroup slice attributes for
-                ## which there is at least one sliver attribute
-                ## already set.
-                #if slice_tag not in slice_tags:
-                    #attributes.append({'tagname': slice_tag['tagname'],
-                        #'value': slice_tag['value']})
-
-            #for slice_tag in filter(lambda a: a['node_id'] is None, slice_tags):
-                ## Do not set any global slice attributes for
-                ## which there is at least one sliver attribute
-                ## already set.
-                #if slice_tag['tagname'] not in sliver_attributes:
-                    #attributes.append({'tagname': slice_tag['tagname'],
-                                   #'value': slice_tag['value']})
-
-            ## XXX Sanity check; though technically this should be a system invariant
-            ## checked with an assertion
-            #if slice['expires'] > MAXINT:  slice['expires']= MAXINT
-            
-            #slivers.append({
-                #'hrn': hrn,
-                #'name': slice['name'],
-                #'slice_id': slice['slice_id'],
-                #'instantiation': slice['instantiation'],
-                #'expires': slice['expires'],
-                #'keys': keys,
-                #'attributes': attributes
-            #})
 
         #return slivers
     def get_peer(self, xrn):
@@ -254,7 +153,6 @@ class SlabSlices:
     
         # add nodes from rspec
         added_nodes = list(set(requested_slivers).difference(current_slivers))        
-        #print>>sys.stderr , "\r\n \r\n \t slices.py  verify_slice_nodes added_nodes %s slice %s" %( added_nodes,slice)
         try:
             #if peer:
                 #self.driver.UnBindObjectFromPeer('slice', slice['slice_id'], peer['shortname'])
@@ -457,7 +355,6 @@ class SlabSlices:
                     #for  k in users_dict[user['hrn']] :
                     existing_user_hrns.append (users_dict[user['hrn']]['hrn'])
                     existing_user_ids.append (users_dict[user['hrn']]['person_id'])
-                    #print>>sys.stderr, " \r\n \r\n \t slabslices.py verify_person  existing_user_ids.append (users_dict[user['hrn']][k]) %s \r\n existing_users %s " %(  existing_user_ids,existing_users) 
          
             #User from another federated site , does not have a senslab account yet?
             #or have multiple SFA accounts
@@ -493,7 +390,6 @@ class SlabSlices:
 
         existing_slice_user_hrns = [user['hrn'] for user in existing_slice_users]
 
-        #print>>sys.stderr, " \r\n \r\n slices.py verify_person requested_user_ids %s  existing_slice_user_hrns %s " %(requested_user_ids,existing_slice_user_hrns)
         # users to be added, removed or updated
 
         added_user_hrns = set(requested_user_hrns).difference(set(existing_user_hrns))
@@ -504,8 +400,6 @@ class SlabSlices:
         
 
         updated_user_hrns = set(existing_slice_user_hrns).intersection(requested_user_hrns)
-        #print>>sys.stderr, " \r\n \r\n slices.py verify_persons  added_user_ids %s added_slice_user_ids %s " %(added_user_ids,added_slice_user_ids)
-        #print>>sys.stderr, " \r\n \r\n slices.py verify_persons  removed_user_hrns %s updated_user_hrns %s " %(removed_user_hrns,updated_user_hrns)
         # Remove stale users (only if we are not appending) 
         append = options.get('append', True)
         if append == False:
@@ -514,7 +408,6 @@ class SlabSlices:
         # update_existing users
         updated_users_list = [user for user in existing_slice_users if user['hrn'] in \
           updated_user_hrns]
-        #print>>sys.stderr, " \r\n \r\n slices.py verify_persons  removed_user_hrns %s updated_users_list %s " %(removed_user_hrns,updated_users_list) 
         #self.verify_keys(existing_slice_users, updated_users_list, peer, append)
 
         added_persons = []
@@ -531,7 +424,6 @@ class SlabSlices:
                 #'key_ids': added_user.get('key_ids', []),
                 
             } 
-            #print>>sys.stderr, " \r\n \r\n slices.py verify_persons   added_user_ids %s " %(added_user_ids)
             person['person_id'] = self.driver.AddPerson(person)
             if peer:
                 person['peer_person_id'] = added_user['person_id']

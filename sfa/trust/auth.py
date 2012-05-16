@@ -40,7 +40,6 @@ class Auth:
         valid = []
         if not isinstance(creds, list):
             creds = [creds]
-        #print>>sys.stderr, "\r\n \r\n \t AUTH.PY checkCredentials hrn %s" %(hrn)
         logger.debug("Auth.checkCredentials with %d creds"%len(creds))
         for cred in creds:
             try:
@@ -69,7 +68,6 @@ class Auth:
         self.client_cred = Credential(string = cred)
         self.client_gid = self.client_cred.get_gid_caller()
         self.object_gid = self.client_cred.get_gid_object()
-        #print>>sys.stderr, " \r\n \r\n \t AUTH.PY check client_gid %s  hrn %s object_gid %s" %(self.client_gid.get_hrn(),hrn, self.object_gid.get_hrn())
         # make sure the client_gid is not blank
         if not self.client_gid:
             raise MissingCallerGID(self.client_cred.get_subject())
@@ -80,14 +78,11 @@ class Auth:
 
         # make sure the client is allowed to perform the operation
         if operation:    
-            #print>>sys.stderr, " \r\n \r\n \t AUTH.PY check operation %s trusted_cert_list %s " %(operation,self.trusted_cert_list)
             if not self.client_cred.can_perform(operation):
-                #print>>sys.stderr, " \r\n \r\n \t AUTH.PY InsufficientRights(operation)"
                 raise InsufficientRights(operation)
 
         if self.trusted_cert_list:
             self.client_cred.verify(self.trusted_cert_file_list, self.config.SFA_CREDENTIAL_SCHEMA)
-            #print>>sys.stderr, " \r\n \r\n \t AUTH.PY check  trusted_cert_file_list %s  self.config.SFA_CREDENTIAL_SCHEMA %s" %(self.trusted_cert_file_list, self.config.SFA_CREDENTIAL_SCHEMA)
             
         else:
            raise MissingTrustedRoots(self.config.get_trustedroots_dir())
@@ -95,7 +90,6 @@ class Auth:
         # Make sure the credential's target matches the specified hrn. 
         # This check does not apply to trusted peers 
         trusted_peers = [gid.get_hrn() for gid in self.trusted_cert_list]
-        #print>>sys.stderr, " \r\n \r\n \t AUTH.PY check trusted_peers ", trusted_peers
         if hrn and self.client_gid.get_hrn() not in trusted_peers:
             
             target_hrn = self.object_gid.get_hrn()

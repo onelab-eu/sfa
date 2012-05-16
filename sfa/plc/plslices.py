@@ -131,13 +131,11 @@ class PlSlices:
         # slice belongs to out local plc or a myplc peer. We will assume it 
         # is a local site, unless we find out otherwise  
         peer = None
-        print>>sys.stderr, " \r\n \r\n \tplslices.py get_peer slice_authority  "
         # get this slice's authority (site)
         slice_authority = get_authority(hrn)
 
         # get this site's authority (sfa root authority or sub authority)
         site_authority = get_authority(slice_authority).lower()
-        print>>sys.stderr, " \r\n \r\n \tplslices.py get_peer slice_authority  %s site_authority %s" %(slice_authority,site_authority) 
         # check if we are already peered with this site_authority, if so
         peers = self.driver.shell.GetPeers({}, ['peer_id', 'peername', 'shortname', 'hrn_root'])
         for peer_record in peers:

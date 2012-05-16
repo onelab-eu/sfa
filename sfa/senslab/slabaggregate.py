@@ -121,7 +121,6 @@ class SlabAggregate:
        
         #filter.update({'peer_id': None})
         #nodes = self.driver.GetNodes(filter['hostname'])
-        #print>>sys.stderr, "\r\n \r\n \t get_nodes nodes %s" %(nodes)
         
         #site_ids = []
         #interface_ids = []

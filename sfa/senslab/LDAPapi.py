@@ -1,5 +1,5 @@
 
-
+import string
 from sfa.util.xrn import Xrn,get_authority 
 import ldap
 from sfa.util.config import *
@@ -7,7 +7,75 @@ from sfa.trust.gid import *
 from sfa.trust.hierarchy import *
 from sfa.trust.auth import *
 from sfa.trust.certificate import *
+import ldap.modlist as modlist
 
+class ldap_co:
+    def __init__(self):
+    #def __init__(self, param, level):
+        """
+        Constructeur permettant l'initialisation des attributs de la classe
+        :param param: Parametres de connexion au serveur LDAP
+        :type param: dictionnary.
+        :param level: Niveau de criticite de l'execution de l'objet ('critical, warning')
+        :type level: string.
+        """
+
+        self.__level = 'warning'
+        #self.__param = param
+        #self.__level = level
+        self.login = 'cn=admin,dc=senslab,dc=info'
+    
+        self.passwd='sfa'  
+        print "\r\n INIT OK !"
+    
+    def connect(self, bind = True):
+        """
+        Methode permettant la connexion a un serveur LDAP
+        @param bool bind : Force ou non l'authentification au serveur
+        @return array : Retour d'un tableau
+        """
+        try:
+            self.ldapserv = ldap.open("192.168.0.251")
+        except ldap.LDAPError, e:
+            return {'bool' : False, 'message' : e }
+        
+        # Bind non anonyme avec authentification
+        if(bind): 
+            return self.bind()
+        
+        else:     
+            return {'bool': True}
+    
+    
+    def bind(self):
+        """
+        Methode permettant l'authentification a un serveur LDAP
+        @return array : Retour d'un tableau
+        """
+        try:
+            print "\r\n BIND ??!"
+            # Open a connection
+            self.ldapserv = ldap.initialize("ldap://192.168.0.251")    
+            ## Bind/authenticate with a user with apropriate rights to add objects
+            self.ldapserv.simple_bind_s(self.login, self.passwd)
+            print "\r\n BIND ???"
+        except ldap.LDAPError, e:
+            return {'bool' : False, 'message' : e }
+        
+        print "\r\n BIND OK !"
+        return {'bool': True}
+    
+    def close(self):
+        """
+        Methode permettant la deconnexion a un serveur LDAP
+        """
+        # Fermeture de la connexion
+        try:
+            self.ldapserv.unbind_s()
+        except ldap.LDAPError, e:
+            pass
+            
+        
 class LDAPapi :
 	def __init__(self, record_filter = None):
 		self.senslabauth=Hierarchy()
@@ -27,20 +95,56 @@ class LDAPapi :
 				'pointer' ,
 				'hrn']
                 self.baseDN = "ou=people,dc=senslab,dc=info"
-                                
-        def connect (self):
-           self.ldapserv=ldap.open("192.168.0.251")
+                self.conn =  ldap_co()    
+                          
+        #def connect (self):
+           #self.ldapserv=ldap.open("192.168.0.251")
            
-        def authenticate(self):
-            self.l = ldap.initialize("ldaps://192.168.0.251:636/")
-               
-            # Bind/authenticate with a user with apropriate rights to add objects
-            self.l = simple_bind_s(" ","")
+        #def authenticate(self):
+            #self.l = ldap.initialize("ldaps://192.168.0.251:636/")
+            #login = 'cn=admin,dc=senslab,dc=info'
+    
+            #passwd='sfa-ldap'  
+            ## Bind/authenticate with a user with apropriate rights to add objects
+            #self.l = simple_bind_s(login,passwd)
                               
-        def ldapAdd(self, record) :
-            self.authenticate()
+        def ldapAdd(self, recordix = None) :
+            attrs = {'cn': ['Bruce Wayne'], 'objectClass': ['top', 'inetOrgPerson', 'posixAccount', 'systemQuotas', 'ldapPublicKey'], 'loginShell': '/senslab/users/.ssh/welcome.sh', 'sshPublicKey': '', 'quota': '/dev/sda3:2000000:2500000:0:0', 'gidNumber': '2000', 'sn': 'Wayne', 'homeDirectory': '/senslab/users/batman', 'mail': 'bw@gotham.com', 'givenName': 'Bruce', 'uid': 'batman','description' :'SFA USER FROM OUTSIDE SENSLAB'}
+            result = self.conn.connect()
+            if(result['bool']):
+                # The dn of our new entry/object
+                dn = self.baseDN  
+                print >>sys.stderr, "\r\n \r\n \t LDAP.PY \t\t  ldapAdd  attrs %s " %(attrs)
+                # A dict to help build the "body" of the object
+                #attrs = {}
+                #attrs['objectclass'] = ['top','inetOrgPerson','posixAccount', 'systemQuotas','ldapPuclicKey']
+                #attrs['cn'] = str(record['first_name'])+' ' + str(record['last_name'])
+                #attrs['sn'] = str(record['last_name'])
+                #attrs['givenName'] = str(record['first_name'])
+                #attrs['gidNumber'] = '2000'
+                #loginslab =str(record['first_name'])+ str(record['last_name'])
+                #loginslab= loginslab.lower()
+                ##loginslab  = loginslab[0:12]
+                #attrs['uid']= loginslab
+                #attrs['mail'] = record['mail']
+                #attrs['quota'] = '/dev/sda3:2000000:2500000:0:0'
+                #attrs['homeDirectory'] = '/senslab/users/' + loginslab
+                #attrs['loginShell'] = '/senslab/users/.ssh/welcome.sh'
+                #attrs['sshPublicKey'] = ''
+                #attrs['description'] = 'SFA USER FROM OUTSIDE SENSLAB'
+                category ="ou=people, dc=senslab, dc=info"   
+                try:
+                        ldif = modlist.addModlist(attrs)
+                        print " \r\n \r\n LDAPTEST.PY add attrs %s \r\n  ldif %s  " %(attrs,ldif)
+                        self.conn.ldapserv.add_s('%s,%s' %(dn, category),ldif)
+                except ldap.LDAPError, e:
+                    return {'bool' : False, 'message' : e }
             
-            return   
+                self.close()
+                return {'bool': True}  
+            else: 
+                return result
+                return   
                                
         def parse_record(self, record):
             req_ldapdict = {}
@@ -48,6 +152,12 @@ class LDAPapi :
                 req_ldapdict['cn'] = str(record['first_name'])+" "+str(record['last_name'])
             if 'email' in record :
                 req_ldapdict['mail'] = record['email']
+            if 'hrn' in record :
+                splited_hrn = record['hrn'].split(".")
+                if splited_hrn[0] != self.authname :
+                        print >>sys.stderr,"i know nothing about",record['hrn'], " my authname is ", self.authname, " not ", splited_hrn[0]
+                login=splited_hrn[1]
+                req_ldapdict['uid'] = login
                 
             req_ldap=''
             print >>sys.stderr, "\r\n \r\n \t LDAP.PY \t\t   parse_record record %s req_ldapdict %s" %(record,req_ldapdict)
@@ -67,19 +177,18 @@ class LDAPapi :
                                        
 	def ldapSearch (self, record ):
             
-            
-            self.connect()
+            self.conn.connect(bind = False)
+            #self.connect()
             req_ldap = self.parse_record(record)
             print >>sys.stderr, "\r\n \r\n \t LDAP.PY \t\t ldapSearch  req_ldap %s" %(req_ldap)
             try:
-                msg_id=self.ldapserv.search(self.baseDN,ldap.SCOPE_SUBTREE,req_ldap, ['mail','givenName', 'sn', 'uid','sshPublicKey'])     
+                msg_id=self.conn.ldapserv.search(self.baseDN,ldap.SCOPE_SUBTREE,req_ldap, ['mail','givenName', 'sn', 'uid','sshPublicKey'])     
                 #Get all the results matching the search from ldap in one shot (1 value)
-                result_type, result_data=self.ldapserv.result(msg_id,1)
+                result_type, result_data=self.conn.ldapserv.result(msg_id,1)
                 results = []
                 print >>sys.stderr, "\r\n \r\n \t LDAP.PY \t\t ldapSearch  result_data %s" %(result_data) 
-                #Dafuq is this result_data shit ??
+
                 ldapentry = result_data[0][1]
-                #print>>sys.stderr, " \r\n \t LDAP : ! mail ldapentry[1]['mail'][0] %s " %(ldapentry[1]['mail'][0])
                 print >>sys.stderr, "\r\n \r\n \t LDAP.PY \t\t ldapSearch  ldapentry %s" %(ldapentry) 
                 tmpname = ldapentry['uid'][0]
                 
@@ -124,8 +233,9 @@ class LDAPapi :
 	def ldapFindHrn(self, record_filter = None):        
 	#def ldapFindHrn(self, record_filter = None, columns=None):
 
- 		results = []
-	        self.connect()
+ 		results = [] 
+                self.conn.connect(bind = False)
+	        #self.connect()
 		if 'authority' in record_filter:
 		# ask for authority
 			if record_filter['authority']==self.authname:
@@ -159,12 +269,10 @@ class LDAPapi :
 						ldapfilter+=")"
 				ldapfilter+=")"
 	
-	
-		rindex=self.ldapserv.search(self.baseDN,ldap.SCOPE_SUBTREE,ldapfilter, ['mail','givenName', 'sn', 'uid','sshPublicKey'])
-		ldapresponse=self.ldapserv.result(rindex,1)
-                #print>>sys.stderr, " \r\n \t LDAP : ldapresponse %s " %(ldapresponse)
+                rindex=self.conn.ldapserv.search(self.baseDN,ldap.SCOPE_SUBTREE,ldapfilter, ['mail','givenName', 'sn', 'uid','sshPublicKey'])
+		#rindex=self.ldapserv.search(self.baseDN,ldap.SCOPE_SUBTREE,ldapfilter, ['mail','givenName', 'sn', 'uid','sshPublicKey'])
+		ldapresponse=self.conn.ldapserv.result(rindex,1)
 		for ldapentry in ldapresponse[1]:
-                        #print>>sys.stderr, " \r\n \t LDAP : ! mail ldapentry[1]['mail'][0] %s " %(ldapentry[1]['mail'][0])
                          
                         tmpname = ldapentry[1]['uid'][0]
                         

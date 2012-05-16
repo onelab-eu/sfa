@@ -233,9 +233,7 @@ class SlabDriver(Driver):
 
         aggregate = SlabAggregate(self)
         origin_hrn = Credential(string=creds[0]).get_gid_caller().get_hrn()
-        #print>>sys.stderr, " \r\n \r\n \t SLABDRIVER list_resources origin_hrn %s" %(origin_hrn)
         options.update({'origin_hrn':origin_hrn})
-        #print>>sys.stderr, " \r\n \r\n \t SLABDRIVER  list_resources options %s" %(options)
         rspec =  aggregate.get_rspec(slice_xrn=slice_urn, version=rspec_version, 
                                      options=options)
         print>>sys.stderr, " \r\n \r\n \t SLABDRIVER list_resources rspec " 
@@ -431,6 +429,10 @@ class SlabDriver(Driver):
             
     def GetPersons(self, person_filter=None, return_fields=None):
         
+        #if isinstance(person_filter,list):
+            #for f in person_filter:
+                #person = self.ldap.ldapSearch(f)
+        #if isinstance(person_filter,dict):    
         person_list = self.ldap.ldapFindHrn({'authority': self.root_auth })
         
         #check = False
@@ -494,11 +496,9 @@ class SlabDriver(Driver):
         node_dict = dict(zip(node_hostname_list,node_list))
         try :
             liste =job_info[node_list_k] 
-            #print>>sys.stderr, "\r\n \r\n \t\t GetJobs resources  job_info liste%s" %(liste)
             for k in range(len(liste)):
                job_info[node_list_k][k] = node_dict[job_info[node_list_k][k]]['hostname']
             
-            #print>>sys.stderr, "\r\n \r\n \t\t YYYYYYYYYYYYGetJobs resources  job_info %s" %(job_info)  
             #Replaces the previous entry "assigned_network_address" / "reserved_resources"
             #with "node_ids"
             job_info.update({'node_ids':job_info[node_list_k]})
@@ -839,132 +839,7 @@ class SlabDriver(Driver):
     
  
 
-    def fill_record_sfa_info(self, records):
-
-        def startswith(prefix, values):
-            return [value for value in values if value.startswith(prefix)]
-
-        # get person ids
-        person_ids = []
-        site_ids = []
-        for record in records:
-            person_ids.extend(record.get("person_ids", []))
-            site_ids.extend(record.get("site_ids", [])) 
-            if 'site_id' in record:
-                site_ids.append(record['site_id']) 
-        	
-	#print>>sys.stderr, "\r\n \r\n _fill_record_sfa_info ___person_ids %s \r\n \t\t site_ids %s " %(person_ids, site_ids)
-	
-        # get all pis from the sites we've encountered
-        # and store them in a dictionary keyed on site_id 
-        site_pis = {}
-        if site_ids:
-            pi_filter = {'|roles': ['pi'], '|site_ids': site_ids} 
-            pi_list = self.GetPersons( pi_filter, ['person_id', 'site_ids'])
-	    #print>>sys.stderr, "\r\n \r\n _fill_record_sfa_info ___ GetPersons ['person_id', 'site_ids'] pi_ilist %s" %(pi_list)
-
-            for pi in pi_list:
-                # we will need the pi's hrns also
-                person_ids.append(pi['person_id'])
-                
-                # we also need to keep track of the sites these pis
-                # belong to
-                for site_id in pi['site_ids']:
-                    if site_id in site_pis:
-                        site_pis[site_id].append(pi)
-                    else:
-                        site_pis[site_id] = [pi]
-                 
-        # get sfa records for all records associated with these records.   
-        # we'll replace pl ids (person_ids) with hrns from the sfa records
-        # we obtain
-        
-        # get the sfa records
-        #table = SfaTable()
-        existing_records = {}
-        all_records = dbsession.query(RegRecord).all()
-        for record in all_records:
-            existing_records[(record.type,record.pointer)] = record
-            
-        print >>sys.stderr, " \r\r\n SLABDRIVER fill_record_sfa_info existing_records %s "  %(existing_records)
-        person_list, persons = [], {}
-        #person_list = table.find({'type': 'user', 'pointer': person_ids})
-        try:
-            for p_id in person_ids:
-                person_list.append( existing_records.get(('user',p_id)))
-        except KeyError:
-            print >>sys.stderr, " \r\r\n SLABDRIVER fill_record_sfa_info ERRRRRRRRRROR"
-                 
-        # create a hrns keyed on the sfa record's pointer.
-        # Its possible for  multiple records to have the same pointer so
-        # the dict's value will be a list of hrns.
-        persons = defaultdict(list)
-        for person in person_list:
-            persons[person['pointer']].append(person)
-
-        # get the pl records
-        slab_person_list, slab_persons = [], {}
-        slab_person_list = self.GetPersons(person_ids, ['person_id', 'roles'])
-        slab_persons = list_to_dict(slab_person_list, 'person_id')
-        #print>>sys.stderr, "\r\n \r\n _fill_record_sfa_info ___  _list %s \r\n \t\t SenslabUsers.GetPersons ['person_id', 'roles'] slab_persons %s \r\n records %s" %(slab_person_list, slab_persons,records) 
-        # fill sfa info
-	
-        for record in records:
-            # skip records with no pl info (top level authorities)
-	    #Sandrine 24 oct 11 2 lines
-            #if record['pointer'] == -1:
-                #continue 
-            sfa_info = {}
-            type = record['type']
-            if (type == "slice"):
-                # all slice users are researchers
-		#record['geni_urn'] = hrn_to_urn(record['hrn'], 'slice')  ? besoin ou pas ?
-                record['PI'] = []
-                record['researcher'] = []
-		for person_id in record.get('person_ids', []):
-			 #Sandrine 24 oct 11 line
-                #for person_id in record['person_ids']:
-                    hrns = [person['hrn'] for person in persons[person_id]]
-                    record['researcher'].extend(hrns)                
-
-                # pis at the slice's site
-                slab_pis = site_pis[record['site_id']]
-                pi_ids = [pi['person_id'] for pi in slab_pis]
-                for person_id in pi_ids:
-                    hrns = [person['hrn'] for person in persons[person_id]]
-                    record['PI'].extend(hrns)
-                record['geni_urn'] = hrn_to_urn(record['hrn'], 'slice')
-                record['geni_creator'] = record['PI'] 
-                
-            elif (type == "authority"):
-                record['PI'] = []
-                record['operator'] = []
-                record['owner'] = []
-                for pointer in record['person_ids']:
-                    if pointer not in persons or pointer not in slab_persons:
-                        # this means there is not sfa or pl record for this user
-                        continue   
-                    hrns = [person['hrn'] for person in persons[pointer]] 
-                    roles = slab_persons[pointer]['roles']   
-                    if 'pi' in roles:
-                        record['PI'].extend(hrns)
-                    if 'tech' in roles:
-                        record['operator'].extend(hrns)
-                    if 'admin' in roles:
-                        record['owner'].extend(hrns)
-                    # xxx TODO: OrganizationName
-            elif (type == "node"):
-                sfa_info['dns'] = record.get("hostname", "")
-                # xxx TODO: URI, LatLong, IP, DNS
-    
-            elif (type == "user"):
-                 sfa_info['email'] = record.get("email", "")
-                 sfa_info['geni_urn'] = hrn_to_urn(record['hrn'], 'user')
-                 sfa_info['geni_certificate'] = record['gid'] 
-                # xxx TODO: PostalAddress, Phone
-		
-            #print>>sys.stderr, "\r\n \r\rn \t\t \t <<<<<<<<<<<<<<<<<<<<<<<<  fill_record_sfa_info sfa_info %s  \r\n record %s : "%(sfa_info,record)  
-            record.update(sfa_info)
+ 
             
     def augment_records_with_testbed_info (self, sfa_records):
         return self.fill_record_info (sfa_records)

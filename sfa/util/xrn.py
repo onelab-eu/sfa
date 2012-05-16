@@ -122,13 +122,11 @@ class Xrn:
             self.hrn=None
             self.urn=xrn
             self.urn_to_hrn()
-            #print>>sys.stderr, " \r\n \r\n \t XRN.PY init  xrn.startswith(Xrn.URN_PREFIX) hrn %s urn %s type %s" %(  self.hrn,  self.urn, self.type)
         else:
             self.urn=None
             self.hrn=xrn
             self.type=type
             self.hrn_to_urn()
-            #print>>sys.stderr, " \r\n \r\n \t XRN.PY init ELSE hrn %s urn %s type %s" %(  self.hrn,  self.urn, self.type)
 # happens all the time ..
 #        if not type:
 #            debug_logger.debug("type-less Xrn's are not safe")
@@ -146,14 +144,12 @@ class Xrn:
     def get_hrn_type(self): return (self.hrn, self.type)
 
     def _normalize(self):
-        #print>>sys.stderr, " \r\n \r\n \t XRN.PY _normalize self.hrn %s ",self.hrn
         if self.hrn is None: raise SfaAPIError, "Xrn._normalize"
         if not hasattr(self,'leaf'): 
             self.leaf=Xrn.hrn_split(self.hrn)[-1]
         # self.authority keeps a list
         if not hasattr(self,'authority'): 
             self.authority=Xrn.hrn_auth_list(self.hrn)
-        #print>>sys.stderr, " \r\n \r\n \t XRN.PY _normalize self.hrn %s leaf %s authority %s"%(self.hrn, self.leaf,  self.authority)
        
        
     def get_leaf(self):

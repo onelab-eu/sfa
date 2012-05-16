@@ -105,18 +105,14 @@ class OARrestapi:
         print>>sys.stderr, " \r\n \r\n POSTRequestToOARRestAPI username",username
         try:
             self.oarserver['uri'] = OARrequest_post_uri_dict[request]['uri']
-            #print>>sys.stderr, " \r\n \r\n POSTRequestToOARRestAPI rq %s datadict %s  " % ( self.oarserver['uri'] ,datadict)
 
         except:
             print>>sys.stderr, " \r\n \r\n POSTRequestToOARRestAPI request not in OARrequest_post_uri_dict"
             return
         try:
-            #print>>sys.stderr, " \r\n \r\n POSTRequestToOARRestAPI  %s " %( 'strval' in datadict)
             if datadict and 'strval' in datadict:
                 self.oarserver['uri'] = self.oarserver['uri'].replace("id",str(datadict['strval']))
-                #print>>sys.stderr, " \r\n \r\n POSTRequestToOARRestAPI REPLACE OK %s"%(self.oarserver['uri'])
                 del datadict['strval']
-                #print>>sys.stderr, " \r\n \r\n \t POSTRequestToOARRestAPI datadict %s  rq %s" %(datadict, self.oarserver['uri'] )
         except:
             print>>sys.stderr, " \r\n \r\n POSTRequestToOARRestAPI ERRRRRORRRRRR "
             return
@@ -129,7 +125,6 @@ class OARrestapi:
         try :
             #self.oarserver['postformat'] = POSTformat[format]
             
-            #print>>sys.stderr, "\r\n POSTRequestToOARRestAPI   headers %s uri %s" %(headers,self.oarserver['uri'])
             conn = httplib.HTTPConnection(self.oarserver['ip'],self.oarserver['port'])
             conn.request("POST",self.oarserver['uri'],data,headers )
             resp = ( conn.getresponse()).read()
@@ -354,7 +349,6 @@ class OARGETParser:
             #node['hrn'] = self.hostname_to_hrn(self.interface_hrn, node['site_login_base'],node['hostname'])
             self.node_dictlist.update({node_id:node})
             #if node_id is 1:
-                #print>>sys.stderr, " \r\n \r\n \t \t\t\t OARESTAPI Parse Sites self.node_dictlist %s " %(self.node_dictlist)
             if node['site'] not in self.site_dict:
                 self.site_dict[node['site']] = {'site':node['site'],
                                                         'node_ids':nodes_per_site[node['site']],
@@ -413,7 +407,6 @@ class OARGETParser:
     def SendRequest(self,request, strval = None , username = None):
         if request in OARrequests_get_uri_dict:
             self.raw_json = self.server.GETRequestToOARRestAPI(request,strval,username) 
-            #print>>sys.stderr, "\r\n OARGetParse __init__ : request %s result %s "%(request,self.raw_json)
             return self.OARrequests_uri_dict[request]['parse_func'](self)
         else:
             print>>sys.stderr, "\r\n OARGetParse __init__ : ERROR_REQUEST "	,request
