@@ -16,7 +16,7 @@ from sfa.rspecs.elements.services import Services
 from sfa.util.xrn import Xrn
 from sfa.util.osxrn import OSXrn
 from sfa.rspecs.version_manager import VersionManager
-from sfa.openstack.image import Image
+from sfa.openstack.image import ImageManager
 from sfa.openstack.security_group import SecurityGroup
 from sfa.util.sfalogging import logger
 
@@ -49,7 +49,14 @@ def instance_to_sliver(instance, slice_xrn=None):
                      'type':  type,
                      'tags': []})
     return sliver
-            
+    
+
+def ec2_id(id=None, type=None):
+    ec2_id = None  
+    if id and type:
+        ec2_id = CloudController.image_ec2_id(id, type)        
+    return ec2_id
+
 
 class OSAggregate:
 
@@ -70,7 +77,7 @@ class OSAggregate:
         return rspec.toxml()
 
     def get_slice_nodes(self, slice_xrn):
-        image_manager = Image(self.driver)
+        image_manager = ImageManager(self.driver)
         name = OSXrn(xrn = slice_xrn).name
         instances = self.driver.shell.db.instance_get_all_by_project(name)
         rspec_nodes = []
@@ -82,7 +89,7 @@ class OSAggregate:
             rspec_node['component_manager_id'] = Xrn(self.driver.hrn, 'authority+cm').get_urn()   
             sliver = instance_to_sliver(instance)
             disk_image = image_manager.get_disk_image(instance.image_ref)
-            sliver['disk_images'] = [Image.disk_image_to_rspec_object(disk_image)]
+            sliver['disk_images'] = [disk_image.to_rspec_object()]
             rspec_node['slivers'] = [sliver]
             rspec_nodes.append(rspec_node)
         return rspec_nodes
@@ -98,9 +105,9 @@ class OSAggregate:
         # available sliver/instance/vm types
         instances = self.driver.shell.db.instance_type_get_all().values()
         # available images
-        image_manager = Image(self.driver)
+        image_manager = ImageManager(self.driver)
         disk_images = image_manager.get_available_disk_images()
-        disk_image_objects = [Image.disk_image_to_rspec_object(image) \
+        disk_image_objects = [image.to_rspec_object() \
                                for image in disk_images]  
         rspec_nodes = []
         for zone in zones:
@@ -209,6 +216,7 @@ class OSAggregate:
                                               
         except Exception, err:
             logger.log_exc(err)
+    
                
     def run_instances(self, slicename, rspec, keyname, pubkeys):
         """
@@ -217,12 +225,15 @@ class OSAggregate:
         # the default image to use for instnaces that dont
         # explicitly request an image.
         # Just choose the first available image for now.
-        image_manager = Image(self.driver)
+        image_manager = ImageManager(self.driver)
         available_images = image_manager.get_available_disk_images()
-        default_image = available_images[0]   
-        default_ami_id = CloudController.image_ec2_id(default_image['ami']['id'], 'ami')  
-        default_aki_id = CloudController.image_ec2_id(default_image['aki']['id'], 'aki')  
-        default_ari_id = CloudController.image_ec2_id(default_image['ari']['id'], 'ari')
+        default_image_id = None
+        default_aki_id  = None
+        default_ari_id = None
+        default_image = available_images[0]
+        default_image_id = ec2_id(default_image.id, default_image.container_format)  
+        default_aki_id = ec2_id(default_image.kernel_id, 'aki')  
+        default_ari_id = ec2_id(default_image.ramdisk_id, 'ari')
 
         # get requested slivers
         rspec = RSpec(rspec)
@@ -250,9 +261,9 @@ class OSAggregate:
                         req_image_name = req_image[0]['name']
                         disk_image = image_manager.get_disk_image(name=req_image_name)
                         if disk_image:
-                            ami_id = CloudController.image_ec2_id(disk_image['ami']['id'], 'ami')
-                            aki_id = CloudController.image_ec2_id(disk_image['aki']['id'], 'aki')
-                            ari_id = CloudController.image_ec2_id(disk_image['ari']['id'], 'ari')
+                            ami_id = ec2_id(disk_image.id, disk_image.container_format)
+                            aki_id = ec2_id(disk_image.kernel_id, 'aki')
+                            ari_id = ec2_id(disk_image.ramdisk_id, 'ari')
                     # start the instance
                     self.reserve_instance(image_id=ami_id, 
                                           kernel_id=aki_id, 
