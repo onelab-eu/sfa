@@ -136,21 +136,21 @@ class OSAggregate:
         Create the slice if it doesn't alredy exist. Create user
         accounts that don't already exist   
         """
-        from nova.exception import ProjectNotFound
-        try:
-            slice = self.driver.shell.auth_manager.get_project(slicename)
-        except ProjectNotFound:
-            # assume that the first user is the project manager
-            proj_manager = Xrn(users[0]['urn']).get_leaf() 
-            self.driver.shell.auth_manager.create_project(slicename, proj_manager)
-           
+        from nova.exception import ProjectNotFound, UserNotFound
         for user in users:
             username = Xrn(user['urn']).get_leaf()
             try:
                 self.driver.shell.auth_manager.get_user(username)
             except nova.exception.UserNotFound:
                 self.driver.shell.auth_manager.create_user(username)
-            self.verify_user_keys(username, user['keys'], options) 
+            self.verify_user_keys(username, user['keys'], options)
+
+        try:
+            slice = self.driver.shell.auth_manager.get_project(slicename)
+        except ProjectNotFound:
+            # assume that the first user is the project manager
+            proj_manager = Xrn(users[0]['urn']).get_leaf()
+            self.driver.shell.auth_manager.create_project(slicename, proj_manager) 
 
     def verify_user_keys(self, username, keys, options={}):
         """
@@ -253,7 +253,7 @@ class OSAggregate:
                                            for i in xrange(6)])
                     group_name = slicename + random_name
                     self.create_security_group(group_name, fw_rules)
-                    ami_id = default_ami_id
+                    ami_id = default_image_id
                     aki_id = default_aki_id
                     ari_id = default_ari_id
                     req_image = instance_type.get('disk_images')
