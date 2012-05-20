@@ -52,7 +52,9 @@ def instance_to_sliver(instance, slice_xrn=None):
     
 
 def ec2_id(id=None, type=None):
-    ec2_id = None  
+    ec2_id = None
+    if type == 'ovf':
+        type = 'ami'   
     if id and type:
         ec2_id = CloudController.image_ec2_id(id, type)        
     return ec2_id
