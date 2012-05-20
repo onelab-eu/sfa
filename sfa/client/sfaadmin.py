@@ -286,7 +286,8 @@ class AggregateCommands(Commands):
 or the resources allocated by a slice"""  
         options = {'geni_rspec_version': rspec_version}
         if xrn:
-            options['geni_slice_urn'] = xrn
+            options['geni_slice_urn'] = Xrn(xrn, 'slice').get_urn()
+        print options
         resources = self.api.manager.ListResources(self.api, [], options)
         print resources
         
