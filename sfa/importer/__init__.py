@@ -7,7 +7,7 @@ from sfa.generic import Generic
 from sfa.util.config import Config
 from sfa.util.sfalogging import _SfaLogger
 from sfa.trust.hierarchy import Hierarchy
-from sfa.trust.trustedroots import TrustedRoots
+#from sfa.trust.trustedroots import TrustedRoots
 from sfa.trust.gid import create_uuid
 from sfa.storage.alchemy import dbsession
 from sfa.storage.model import RegRecord, RegAuthority, RegUser
@@ -15,12 +15,19 @@ from sfa.trust.certificate import convert_public_key, Keypair
 
 
 class Importer:
-    def __init__(self):
+
+    def __init__(self,auth_hierarchy=None,logger=None):
         self.config = Config()
-        self.logger = _SfaLogger(logfile='/var/log/sfa_import.log', loggername='importlog')
-        self.logger.setLevelFromOptVerbose(self.config.SFA_API_LOGLEVEL)
-        self.auth_hierarchy = Hierarchy ()
-        self.TrustedRoots = TrustedRoots(self.config.get_trustedroots_dir())    
+        if auth_hierarchy is not None:
+            self.auth_hierarchy=auth_hierarchy
+        else:
+            self.auth_hierarchy = Hierarchy ()
+        if logger is not None:
+            self.logger=logger
+        else:
+            self.logger = _SfaLogger(logfile='/var/log/sfa_import.log', loggername='importlog')
+            self.logger.setLevelFromOptVerbose(self.config.SFA_API_LOGLEVEL)
+#        self.TrustedRoots = TrustedRoots(self.config.get_trustedroots_dir())    
    
     # check before creating a RegRecord entry as we run this over and over
     def record_exists (self, type, hrn):
@@ -111,5 +118,3 @@ class Importer:
             if testbed_importer:
                 testbed_importer.add_options(options)
                 testbed_importer.run (options)
-
-            
