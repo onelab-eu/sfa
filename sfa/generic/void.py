@@ -5,9 +5,12 @@ from sfa.generic import Generic
 class void (Generic):
     
     # the importer class
+    # when set to None, the importer only performs the basic stuff
+    # xxx this convention probably is confusing, since None suggests that 
+    # *nothing* should be done..
+    # xxx need to refactor the importers anyway
     def importer_class (self): 
-        import sfa.importer.plimporter
-        return sfa.importer.Importer
+        return None
         
     # use the standard api class
     def api_class (self):
@@ -29,6 +32,6 @@ class void (Generic):
 
     # driver class for server-side services, talk to the whole testbed
     def driver_class (self):
-        import sfa.managers
-        return sfa.managers.driver
+        import sfa.managers.driver
+        return sfa.managers.driver.Driver
 
