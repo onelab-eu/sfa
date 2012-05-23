@@ -181,23 +181,25 @@ class OSAggregate:
                     self.driver.shell.db.key_pair_destroy(username, key.name)
 
 
-    def create_security_group(self, group_name, fw_rules=[]):
-        security_group = SecurityGroup(self.driver)
-        security_group.create_security_group(group_name)
-        if not fw_rules:
-            # open port 22 by default
-            security_group.add_rule_to_group(group_name,
-                                             protocol='tcp',
-                                             cidr_ip = '0.0.0.0/0',
-                                             port_range='22',
-                                             icmp_type_code="-1")
-        elif isinstance(fw_rules, list): 
+    def create_security_group(self, slicename, fw_rules=[]):
+        # use default group by default
+        group_name = 'default' 
+        if isinstance(fw_rules, list) and fw_rules:
+            # Each sliver get's its own security group.
+            # Keep security group names unique by appending some random
+            # characters on end.
+            random_name = "".join([random.choice(string.letters+string.digits)
+                                           for i in xrange(6)])
+            group_name = slicename + random_name 
+            security_group = SecurityGroup(self.driver)
+            security_group.create_security_group(group_name)
             for rule in fw_rules:
                 security_group.add_rule_to_group(group_name, 
                                              protocol = rule.get('protocol'), 
                                              cidr_ip = rule.get('cidr_ip'), 
                                              port_range = rule.get('port_range'), 
                                              icmp_type_code = rule.get('icmp_type_code'))
+        return group_name
 
     def add_rule_to_security_group(self, group_name, **kwds):
         security_group = SecurityGroup(self.driver)
@@ -258,13 +260,7 @@ class OSAggregate:
                 # iterate over sliver/instance types
                 for instance_type in instance_types:
                     fw_rules = instance_type.get('fw_rules', [])
-                    # Each sliver get's its own security group.  
-                    # Keep security group names unique by appending some random 
-                    # characters on end.
-                    random_name = "".join([random.choice(string.letters+string.digits) 
-                                           for i in xrange(6)])
-                    group_name = slicename + random_name
-                    self.create_security_group(group_name, fw_rules)
+                    group_name = self.create_security_group(slicename, fw_rules)
                     ami_id = default_image_id
                     aki_id = default_aki_id
                     ari_id = default_ari_id
