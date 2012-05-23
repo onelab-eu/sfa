@@ -32,7 +32,7 @@ packages = [
     'sfa/generic',
     'sfa/managers',
     'sfa/importer',
-    'sfa/plc',
+    'sfa/planetlab',
     'sfa/rspecs',
     'sfa/rspecs/elements',
     'sfa/rspecs/elements/versions',

@@ -9,7 +9,6 @@ from sfa.util.faults import RecordNotFound, AccountNotEnabled, PermissionError, 
 from sfa.util.sfatime import utcparse, datetime_to_epoch
 from sfa.util.prefixTree import prefixTree
 from sfa.util.xrn import Xrn, get_authority, hrn_to_urn, urn_to_hrn
-from sfa.util.plxrn import hrn_to_pl_login_base
 from sfa.util.version import version_core
 from sfa.util.sfalogging import logger
 
@@ -53,14 +52,13 @@ class RegistryManager:
         record=dbsession.query(RegRecord).filter_by(type=type,hrn=hrn).first()
         if not record:
             raise RecordNotFound("hrn=%s, type=%s"%(hrn,type))
-    
-        # verify_cancreate_credential requires that the member lists
-        # (researchers, pis, etc) be filled in
-        logger.debug("get credential before augment dict, keys=%s"%record.__dict__.keys())
-        self.driver.augment_records_with_testbed_info (record.__dict__)
-        logger.debug("get credential after augment dict, keys=%s"%record.__dict__.keys())
-        if not self.driver.is_enabled (record.__dict__):
-              raise AccountNotEnabled(": PlanetLab account %s is not enabled. Please contact your site PI" %(record.email))
+
+        # xxx for the record only
+        # used to call this, which was wrong, now all needed data is natively is our DB
+        # self.driver.augment_records_with_testbed_info (record.__dict__)
+        # likewise, we deprecate is_enabled which was not really useful
+        # if not self.driver.is_enabled (record.__dict__): ...
+        # xxx for the record only
     
         # get the callers gid
         # if caller_xrn is not specified assume the caller is the record
@@ -79,7 +77,8 @@ class RegistryManager:
             caller_gid = GID(string=caller_record.gid)
  
         object_hrn = record.get_gid_object().get_hrn()
-        rights = api.auth.determine_user_rights(caller_hrn, record.__dict__)
+        # call the builtin authorization/credential generation engine
+        rights = api.auth.determine_user_rights(caller_hrn, record)
         # make sure caller has rights to this object
         if rights.is_empty():
             raise PermissionError("%s has no rights to %s (%s)" % \
@@ -185,10 +184,10 @@ class RegistryManager:
     
         return records
     
-    def List (self, api, xrn, origin_hrn=None):
-        hrn, type = urn_to_hrn(xrn)
+    def List (self, api, xrn, origin_hrn=None, options={}):
         # load all know registry names into a prefix tree and attempt to find
         # the longest matching prefix
+        hrn, type = urn_to_hrn(xrn)
         registries = api.registries
         registry_hrns = registries.keys()
         tree = prefixTree()
@@ -205,16 +204,26 @@ class RegistryManager:
             credential = api.getCredential()
             interface = api.registries[registry_hrn]
             server_proxy = api.server_proxy(interface, credential)
-            record_list = server_proxy.List(xrn, credential)
+            record_list = server_proxy.List(xrn, credential, options)
             # same as above, no need to process what comes from through xmlrpc
             # pass foreign records as-is
             record_dicts = record_list
         
         # if we still have not found the record yet, try the local registry
         if not record_dicts:
+            recursive = False
+            if ('recursive' in options and options['recursive']):
+                recursive = True
+            elif hrn.endswith('*'):
+                hrn = hrn[:-1]
+                recursive = True
+
             if not api.auth.hierarchy.auth_exists(hrn):
                 raise MissingAuthority(hrn)
-            records = dbsession.query(RegRecord).filter_by(authority=hrn)
+            if recursive:
+                records = dbsession.query(RegRecord).filter(RegRecord.hrn.startswith(hrn))
+            else:
+                records = dbsession.query(RegRecord).filter_by(authority=hrn)
             record_dicts=[ record.todict() for record in records ]
     
         return record_dicts
@@ -240,15 +249,18 @@ class RegistryManager:
     # subject_record describes the subject of the relationships
     # ref_record contains the target values for the various relationships we need to manage
     # (to begin with, this is just the slice x person relationship)
-    def update_relations (self, subject_obj, ref_obj):
+    def update_driver_relations (self, subject_obj, ref_obj):
         type=subject_obj.type
-        if type=='slice':
-            self.update_relation(subject_obj, 'researcher', ref_obj.researcher, 'user')
+        #for (k,v) in subject_obj.__dict__.items(): print k,'=',v
+        if type=='slice' and hasattr(ref_obj,'researcher'):
+            self.update_driver_relation(subject_obj, ref_obj.researcher, 'user', 'researcher')
+        elif type=='authority' and hasattr(ref_obj,'pi'):
+            self.update_driver_relation(subject_obj,ref_obj.pi, 'user', 'pi')
         
     # field_key is the name of one field in the record, typically 'researcher' for a 'slice' record
     # hrns is the list of hrns that should be linked to the subject from now on
     # target_type would be e.g. 'user' in the 'slice' x 'researcher' example
-    def update_relation (self, record_obj, field_key, hrns, target_type):
+    def update_driver_relation (self, record_obj, hrns, target_type, relation_name):
         # locate the linked objects in our db
         subject_type=record_obj.type
         subject_id=record_obj.pointer
@@ -256,7 +268,7 @@ class RegistryManager:
         link_id_tuples = dbsession.query(RegRecord.pointer).filter_by(type=target_type).filter(RegRecord.hrn.in_(hrns)).all()
         # sqlalchemy returns named tuples for columns
         link_ids = [ tuple.pointer for tuple in link_id_tuples ]
-        self.driver.update_relation (subject_type, target_type, subject_id, link_ids)
+        self.driver.update_relation (subject_type, target_type, relation_name, subject_id, link_ids)
 
     def Register(self, api, record_dict):
     
@@ -302,18 +314,13 @@ class RegistryManager:
             gid = auth_info.get_gid_object()
             record.gid=gid.save_to_string(save_parents=True)
 
-        elif isinstance (record, RegSlice):
             # locate objects for relationships
-            if hasattr (record, 'researcher'):
-                # we get the list of researcher hrns as
-                researcher_hrns = record.researcher
-                # strip that in case we have <researcher> words </researcher>
-                researcher_hrns = [ x.strip() for x in researcher_hrns ]
-                logger.info ("incoming researchers %s"%researcher_hrns)
-                request = dbsession.query (RegUser).filter(RegUser.hrn.in_(researcher_hrns))
-                logger.info ("%d incoming hrns, %d matches found"%(len(researcher_hrns),request.count()))
-                researchers = dbsession.query (RegUser).filter(RegUser.hrn.in_(researcher_hrns)).all()
-                record.reg_researchers = researchers
+            pi_hrns = getattr(record,'pi',None)
+            if pi_hrns is not None: record.update_pis (pi_hrns)
+
+        elif isinstance (record, RegSlice):
+            researcher_hrns = getattr(record,'researcher',None)
+            if researcher_hrns is not None: record.update_researchers (researcher_hrns)
         
         elif isinstance (record, RegUser):
             # create RegKey objects for incoming keys
@@ -329,15 +336,14 @@ class RegistryManager:
         dbsession.commit()
     
         # update membership for researchers, pis, owners, operators
-        self.update_relations (record, record)
+        self.update_driver_relations (record, record)
         
         return record.get_gid_object().save_to_string(save_parents=True)
     
     def Update(self, api, record_dict):
         assert ('type' in record_dict)
-        new_record=RegRecord(dict=record_dict)
-        type = new_record.type
-        hrn = new_record.hrn
+        new_record=make_record(dict=record_dict)
+        (type,hrn) = (new_record.type, new_record.hrn)
         
         # make sure the record exists
         record = dbsession.query(RegRecord).filter_by(type=type,hrn=hrn).first()
@@ -345,15 +351,11 @@ class RegistryManager:
             raise RecordNotFound("hrn=%s, type=%s"%(hrn,type))
         record.just_updated()
     
-        # validate the type
-        if type not in ['authority', 'slice', 'node', 'user']:
-            raise UnknownSfaType(type) 
-
         # Use the pointer from the existing record, not the one that the user
         # gave us. This prevents the user from inserting a forged pointer
         pointer = record.pointer
     
-        # is the a change in keys ?
+        # is there a change in keys ?
         new_key=None
         if type=='user':
             if getattr(new_key,'keys',None):
@@ -361,10 +363,6 @@ class RegistryManager:
                 if isinstance (new_key,types.ListType):
                     new_key=new_key[0]
 
-        # update the PLC information that was specified with the record
-        if not self.driver.update (record.__dict__, new_record.__dict__, hrn, new_key):
-            logger.warning("driver.update failed")
-    
         # take new_key into account
         if new_key:
             # update the openssl key and gid
@@ -376,8 +374,32 @@ class RegistryManager:
             record.gid = gid
             dsession.commit()
         
+        # xxx should do side effects from new_record to record
+        # not too sure how to do that
+        # not too big a deal with planetlab as the driver is authoritative, but...
+
+        # update native relations
+        if isinstance (record, RegSlice):
+            researcher_hrns = getattr(new_record,'researcher',None)
+            if researcher_hrns is not None: record.update_researchers (researcher_hrns)
+            dbsession.commit()
+
+        elif isinstance (record, RegAuthority):
+            pi_hrns = getattr(new_record,'pi',None)
+            if pi_hrns is not None: record.update_pis (pi_hrns)
+            dbsession.commit()
+        
+        # update the PLC information that was specified with the record
+        # xxx oddly enough, without this statement, record.__dict__ as received by 
+        # the driver seems to be off
+        # anyway the driver should receive an object 
+        # (and then extract __dict__ itself if needed)
+        print "before driver.update, record=%s"%record
+        if not self.driver.update (record.__dict__, new_record.__dict__, hrn, new_key):
+            logger.warning("driver.update failed")
+    
         # update membership for researchers, pis, owners, operators
-        self.update_relations (record, new_record)
+        self.update_driver_relations (record, new_record)
         
         return 1 
     

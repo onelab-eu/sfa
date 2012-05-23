@@ -22,7 +22,7 @@ from sfa.managers.driver import Driver
 from sfa.openstack.nova_shell import NovaShell
 from sfa.openstack.euca_shell import EucaShell
 from sfa.openstack.osaggregate import OSAggregate
-from sfa.plc.plslices import PlSlices
+from sfa.planetlab.plslices import PlSlices
 from sfa.util.osxrn import OSXrn
 
 

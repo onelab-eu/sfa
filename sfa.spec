@@ -1,6 +1,6 @@
 %define name sfa
 %define version 2.1
-%define taglevel 5
+%define taglevel 7
 
 %define release %{taglevel}%{?pldistro:.%{pldistro}}%{?date:.%{date}}
 %global python_sitearch	%( python -c "from distutils.sysconfig import get_python_lib; print get_python_lib(1)" )
@@ -149,6 +149,7 @@ rm -rf $RPM_BUILD_ROOT
 /etc/init.d/sfa
 %{_bindir}/sfa-start.py*
 %{_bindir}/sfaadmin.py*
+%{_bindir}/sfaadmin
 %{_bindir}/keyconvert.py*
 %{_bindir}/sfa-config-tty
 %config /etc/sfa/default_config.xml
@@ -226,6 +227,26 @@ fi
 [ "$1" -ge "1" ] && service sfa-cm restart || :
 
 %changelog
+* Mon May 14 2012 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-2.1-7
+- renamed sfa/plc into sfa/planetlab
+- plxrn moved in sfa/planetlab as well
+- bugfix for sfaadmin reg update --pi <>
+
+* Sat May 12 2012 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-2.1-6
+- native data model now has a authority x user (PI) relationship
+- no call to 'augment_records_with_testbed_info' for GetCredential
+- which means, registry can now be used without an underlying testbed
+- reviewed code about relationships b/w objects and related in pl driver
+- reviewed PL import wrt roles and pis
+- removed mentions to is_enabled in driver
+- small changes in update_relation* in driver interface
+- sfaadmin: can create authorities and attach pi users to them
+- sfaadmin: categories can be abbreviated
+- sfi list and sfaadmin list have a new -r/--recursive option
+- this means that List now supports an (optional) 'options' argument
+- sfi config can display config vars
+- sfaadmin code in sfa.client + /usr/bin/sfaadmin shortcut
+
 * Mon Apr 16 2012 Tony Mack <tmack@cs.princeton.edu> - sfa-2.1-5
 - make sync now supports vserver or lxc.
 - Added slice expiration and login info to SliverStatus response. 

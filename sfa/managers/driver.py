@@ -13,12 +13,9 @@ class Driver:
     ########## registry oriented
     ########################################
 
-    # redefine this if you want to check again records 
-    # when running GetCredential
-    # This is to reflect the 'enabled' user field in planetlab testbeds
-    # expected retcod boolean
-    def is_enabled (self, record) : 
-        return True
+    # NOTE: the is_enabled method is deprecated
+    # it was only making things confusing, as the (PL) import mechanism would
+    # ignore not enabled users anyway..
 
     # the following is used in Resolve (registry) when run in full mode
     #     after looking up the sfa db, we wish to be able to display
@@ -59,6 +56,15 @@ class Driver:
     # should anything be passed back to the caller in this case ?
     def update (self, old_sfa_record, new_sfa_record, hrn, new_key): 
         return True
+
+    # callack for register/update
+    # this allows to capture changes in the relations between objects
+    # the ids below are the ones found in the 'pointer' field
+    # this can get typically called with
+    # 'slice' 'user' 'researcher' slice_id user_ids 
+    # 'authority' 'user' 'pi' authority_id user_ids 
+    def update_relation (self, subject_type, target_type, relation_name, subject_id, link_ids):
+        pass
 
     ########################################
     ########## aggregate oriented

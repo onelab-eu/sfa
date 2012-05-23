@@ -6,13 +6,15 @@ from optparse import OptionParser
 
 from sfa.util.faults import ConnectionKeyGIDMismatch
 from sfa.util.config import Config
-from sfa.client.sfaserverproxy import SfaServerProxy
-from sfa.util.plxrn import hrn_to_pl_slicename, slicename_to_hrn
 
 from sfa.trust.certificate import Keypair, Certificate
 from sfa.trust.credential import Credential
 from sfa.trust.gid import GID
 from sfa.trust.hierarchy import Hierarchy
+
+from sfa.client.sfaserverproxy import SfaServerProxy
+
+from sfa.planetlab.plxrn import hrn_to_pl_slicename, slicename_to_hrn
 
 KEYDIR = "/var/lib/sfa/"
 CONFDIR = "/etc/sfa/"

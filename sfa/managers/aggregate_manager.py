@@ -42,7 +42,6 @@ class AggregateManager:
             xrn = Xrn(slice_xrn)
             slice_urn=xrn.get_urn()
             slice_hrn=xrn.get_hrn()
-
         return self.driver.list_resources (slice_urn, slice_hrn, creds, options)
     
     def SliverStatus (self, api, xrn, creds, options):

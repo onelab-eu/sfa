@@ -13,8 +13,9 @@ def email_to_hrn (auth_hrn, email):
     return PlXrn(auth=auth_hrn, email=email).get_hrn()
 def hrn_to_pl_slicename (hrn):
     return PlXrn(xrn=hrn,type='slice').pl_slicename()
-def hrn_to_pl_login_base (hrn):
-    return PlXrn(xrn=hrn,type='slice').pl_login_base()
+# removed-dangerous - was used for non-slice objects
+#def hrn_to_pl_login_base (hrn):
+#    return PlXrn(xrn=hrn,type='slice').pl_login_base()
 def hrn_to_pl_authname (hrn):
     return PlXrn(xrn=hrn,type='any').pl_authname()
 def xrn_to_hostname(hrn):
@@ -73,7 +74,6 @@ class PlXrn (Xrn):
         self._normalize()
         return self.leaf
 
-    #def hrn_to_pl_login_base(hrn):
     def pl_login_base (self):
         self._normalize()
         base = self.authority[-1]

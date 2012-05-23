@@ -94,6 +94,8 @@ class Right:
         self.kind = kind
         self.delegate = delegate
 
+    def __repr__ (self): return "<Rgt:%s>"%self.kind
+
     ##
     # Test to see if this right object is allowed to perform an operation.
     # Returns True if the operation is allowed, False otherwise.
@@ -147,6 +149,8 @@ class Rights:
         self.rights = []
         if string:
             self.load_from_string(string)
+
+    def __repr__ (self): return "[" + " ".join( ["%s"%r for r in self.rights]) + "]"
 
     def is_empty(self):
         return self.rights == []

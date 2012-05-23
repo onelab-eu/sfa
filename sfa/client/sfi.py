@@ -219,6 +219,7 @@ class Sfi:
         ("delegate", "name"),
         ("create_gid", "[name]"),
         ("get_trusted_certs", "cred"),
+        ("config", ""),
         ]
 
     def print_command_help (self, options):
@@ -300,7 +301,9 @@ class Sfi:
            parser.add_option("-F", "--fileformat", dest="fileformat", type="choice",
                              help="output file format ([xml]|xmllist|hrnlist)", default="xml",
                              choices=("xml", "xmllist", "hrnlist"))
-
+        if command == 'list':
+           parser.add_option("-r", "--recursive", dest="recursive", action='store_true',
+                             help="list all child records", default=False)
         if command in ("delegate"):
            parser.add_option("-u", "--user",
                             action="store_true", dest="delegate_user", default=False,
@@ -455,8 +458,20 @@ class Sfi:
            self.logger.error("You need to set e.g. SFI_AUTH='plc.princeton' in %s" % config_file)
            errors += 1 
 
+        self.config_file=config_file
         if errors:
            sys.exit(1)
+
+    def show_config (self):
+        print "From configuration file %s"%self.config_file
+        flags=[ 
+            ('SFI_USER','user'),
+            ('SFI_AUTH','authority'),
+            ('SFI_SM','sm_url'),
+            ('SFI_REGISTRY','reg_url'),
+            ]
+        for (external_name, internal_name) in flags:
+            print "%s='%s'"%(external_name,getattr(self,internal_name))
 
     #
     # Get various credential and spec files
@@ -473,41 +488,41 @@ class Sfi:
     
     # init self-signed cert, user credentials and gid
     def bootstrap (self):
-        bootstrap = SfaClientBootstrap (self.user, self.reg_url, self.options.sfi_dir)
+        client_bootstrap = SfaClientBootstrap (self.user, self.reg_url, self.options.sfi_dir)
         # if -k is provided, use this to initialize private key
         if self.options.user_private_key:
-            bootstrap.init_private_key_if_missing (self.options.user_private_key)
+            client_bootstrap.init_private_key_if_missing (self.options.user_private_key)
         else:
             # trigger legacy compat code if needed 
             # the name has changed from just <leaf>.pkey to <hrn>.pkey
-            if not os.path.isfile(bootstrap.private_key_filename()):
+            if not os.path.isfile(client_bootstrap.private_key_filename()):
                 self.logger.info ("private key not found, trying legacy name")
                 try:
                     legacy_private_key = os.path.join (self.options.sfi_dir, "%s.pkey"%get_leaf(self.user))
                     self.logger.debug("legacy_private_key=%s"%legacy_private_key)
-                    bootstrap.init_private_key_if_missing (legacy_private_key)
+                    client_bootstrap.init_private_key_if_missing (legacy_private_key)
                     self.logger.info("Copied private key from legacy location %s"%legacy_private_key)
                 except:
                     self.logger.log_exc("Can't find private key ")
                     sys.exit(1)
             
         # make it bootstrap
-        bootstrap.bootstrap_my_gid()
+        client_bootstrap.bootstrap_my_gid()
         # extract what's needed
-        self.private_key = bootstrap.private_key()
-        self.my_credential_string = bootstrap.my_credential_string ()
-        self.my_gid = bootstrap.my_gid ()
-        self.bootstrap = bootstrap
+        self.private_key = client_bootstrap.private_key()
+        self.my_credential_string = client_bootstrap.my_credential_string ()
+        self.my_gid = client_bootstrap.my_gid ()
+        self.client_bootstrap = client_bootstrap
 
 
     def my_authority_credential_string(self):
         if not self.authority:
             self.logger.critical("no authority specified. Use -a or set SF_AUTH")
             sys.exit(-1)
-        return self.bootstrap.authority_credential_string (self.authority)
+        return self.client_bootstrap.authority_credential_string (self.authority)
 
     def slice_credential_string(self, name):
-        return self.bootstrap.slice_credential_string (name)
+        return self.client_bootstrap.slice_credential_string (name)
 
     # xxx should be supported by sfaclientbootstrap as well
     def delegate_cred(self, object_cred, hrn, type='authority'):
@@ -525,7 +540,7 @@ class Sfi:
         caller_gidfile = self.my_gid()
   
         # the gid of the user who will be delegated to
-        delegee_gid = self.bootstrap.gid(hrn,type)
+        delegee_gid = self.client_bootstrap.gid(hrn,type)
         delegee_hrn = delegee_gid.get_hrn()
         dcred = object_cred.delegate(delegee_gid, self.private_key, caller_gidfile)
         return dcred.save_to_string(save_parents=True)
@@ -690,8 +705,12 @@ or version information about sfi itself
             self.print_help()
             sys.exit(1)
         hrn = args[0]
+        opts = {}
+        if options.recursive:
+            opts['recursive'] = options.recursive
+        
         try:
-            list = self.registry().List(hrn, self.my_credential_string)
+            list = self.registry().List(hrn, self.my_credential_string, options)
         except IndexError:
             raise Exception, "Not enough parameters for the 'list' command"
 
@@ -1178,7 +1197,7 @@ or with an slice hrn, shows currently provisioned resources
             self.print_help()
             sys.exit(1)
         target_hrn = args[0]
-        gid = self.registry().CreateGid(self.my_credential_string, target_hrn, self.bootstrap.my_gid_string())
+        gid = self.registry().CreateGid(self.my_credential_string, target_hrn, self.client_bootstrap.my_gid_string())
         if options.file:
             filename = options.file
         else:
@@ -1225,3 +1244,6 @@ or with an slice hrn, shows currently provisioned resources
             self.logger.debug('Sfi.get_trusted_certs -> %r'%cert.get_subject())
         return 
 
+    def config (self, options, args):
+        "Display contents of current config"
+        self.show_config()

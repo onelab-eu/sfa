@@ -234,76 +234,59 @@ class Auth:
     
         raise PermissionError(name)
 
-    def determine_user_rights(self, caller_hrn, record):
+    def determine_user_rights(self, caller_hrn, reg_record):
         """
         Given a user credential and a record, determine what set of rights the
         user should have to that record.
         
-        This is intended to replace determine_rights() and
+        This is intended to replace determine_user_rights() and
         verify_cancreate_credential()
         """
 
         rl = Rights()
-        type = record['type']
+        type = reg_record.type
 
+        logger.debug("entering determine_user_rights with record %s and caller_hrn %s"%(reg_record, caller_hrn))
 
-        if type=="slice":
-            researchers = record.get("researcher", [])
-            pis = record.get("PI", [])
-            if (caller_hrn in researchers + pis):
-                rl.add("refresh")
-                rl.add("embed")
-                rl.add("bind")
-                rl.add("control")
-                rl.add("info")
+        if type == 'slice':
+            # researchers in the slice are in the DB as-is
+            researcher_hrns = [ user.hrn for user in reg_record.reg_researchers ]
+            # locating PIs attached to that slice
+            slice_pis=reg_record.get_pis()
+            pi_hrns = [ user.hrn for user in slice_pis ]
+            if (caller_hrn in researcher_hrns + pi_hrns):
+                rl.add('refresh')
+                rl.add('embed')
+                rl.add('bind')
+                rl.add('control')
+                rl.add('info')
 
-        elif type == "authority":
-            pis = record.get("PI", [])
-            operators = record.get("operator", [])
+        elif type == 'authority':
+            pi_hrns = [ user.hrn for user in reg_record.reg_pis ]
             if (caller_hrn == self.config.SFA_INTERFACE_HRN):
-                rl.add("authority")
-                rl.add("sa")
-                rl.add("ma")
-            if (caller_hrn in pis):
-                rl.add("authority")
-                rl.add("sa")
-            if (caller_hrn in operators):
-                rl.add("authority")
-                rl.add("ma")
+                rl.add('authority')
+                rl.add('sa')
+                rl.add('ma')
+            if (caller_hrn in pi_hrns):
+                rl.add('authority')
+                rl.add('sa')
+            # NOTE: for the PL implementation, this 'operators' list 
+            # amounted to users with 'tech' role in that site 
+            # it seems like this is not needed any longer, so for now I just drop that
+            # operator_hrns = reg_record.get('operator',[])
+            # if (caller_hrn in operator_hrns):
+            #    rl.add('authority')
+            #    rl.add('ma')
 
-        elif type == "user":
-            rl.add("refresh")
-            rl.add("resolve")
-            rl.add("info")
+        elif type == 'user':
+            rl.add('refresh')
+            rl.add('resolve')
+            rl.add('info')
 
-        elif type == "node":
-            rl.add("operator")
+        elif type == 'node':
+            rl.add('operator')
 
         return rl
-
-    def verify_cancreate_credential(self, src_cred, record):
-        """
-        Verify that a user can retrive a particular type of credential.
-        For slices, the user must be on the researcher list. For SA and
-        MA the user must be on the pi and operator lists respectively
-        """
-
-        type = record.get_type()
-        cred_object_hrn = src_cred.get_gid_object().get_hrn()
-        if cred_object_hrn in [self.config.SFA_REGISTRY_ROOT_AUTH]:
-            return
-        if type=="slice":
-            researchers = record.get("researcher", [])
-            if not (cred_object_hrn in researchers):
-                raise PermissionError(cred_object_hrn + " is not in researcher list for " + record.get_name())
-        elif type == "sa":
-            pis = record.get("pi", [])
-            if not (cred_object_hrn in pis):
-                raise PermissionError(cred_object_hrn + " is not in pi list for " + record.get_name())
-        elif type == "ma":
-            operators = record.get("operator", [])
-            if not (cred_object_hrn in operators):
-                raise PermissionError(cred_object_hrn + " is not in operator list for " + record.get_name())
 
     def get_authority(self, hrn):
         return get_authority(hrn)

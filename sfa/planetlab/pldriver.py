@@ -23,11 +23,11 @@ from sfa.rspecs.rspec import RSpec
 # the driver interface, mostly provides default behaviours
 from sfa.managers.driver import Driver
 
-from sfa.plc.plshell import PlShell
-import sfa.plc.peers as peers
-from sfa.plc.plaggregate import PlAggregate
-from sfa.plc.plslices import PlSlices
-from sfa.util.plxrn import slicename_to_hrn, hostname_to_hrn, hrn_to_pl_slicename, hrn_to_pl_login_base
+from sfa.planetlab.plshell import PlShell
+import sfa.planetlab.peers as peers
+from sfa.planetlab.plaggregate import PlAggregate
+from sfa.planetlab.plslices import PlSlices
+from sfa.planetlab.plxrn import PlXrn, slicename_to_hrn, hostname_to_hrn, hrn_to_pl_slicename
 
 
 def list_to_dict(recs, key):
@@ -60,14 +60,6 @@ class PlDriver (Driver):
     ########## registry oriented
     ########################################
 
-    ########## disabled users 
-    def is_enabled (self, record):
-        # the incoming record was augmented already, so 'enabled' should be set
-        if record['type'] == 'user':
-            return record['enabled']
-        # only users can be disabled
-        return True
-
     def augment_records_with_testbed_info (self, sfa_records):
         return self.fill_record_info (sfa_records)
 
@@ -79,6 +71,9 @@ class PlDriver (Driver):
         if type == 'authority':
             sites = self.shell.GetSites([pl_record['login_base']])
             if not sites:
+                # xxx when a site gets registered through SFA we need to set its max_slices
+                if 'max_slices' not in pl_record:
+                    pl_record['max_slices']=2
                 pointer = self.shell.AddSite(pl_record)
             else:
                 pointer = sites[0]['site_id']
@@ -95,8 +90,10 @@ class PlDriver (Driver):
                  pointer = slices[0]['slice_id']
 
         elif type == 'user':
-            persons = self.shell.GetPersons([sfa_record['email']])
+            persons = self.shell.GetPersons({'email':sfa_record['email']})
             if not persons:
+                for key in ['first_name','last_name']:
+                    if key not in sfa_record: sfa_record[key]='*from*sfa*'
                 pointer = self.shell.AddPerson(dict(sfa_record))
             else:
                 pointer = persons[0]['person_id']
@@ -124,7 +121,7 @@ class PlDriver (Driver):
                 self.shell.AddPersonKey(pointer, {'key_type' : 'ssh', 'key' : pub_key})
 
         elif type == 'node':
-            login_base = hrn_to_pl_login_base(sfa_record['authority'])
+            login_base = PlXrn(xrn=sfa_record['authority'],type='node').pl_login_base()
             nodes = self.shell.GetNodes([pl_record['hostname']])
             if not nodes:
                 pointer = self.shell.AddNode(login_base, pl_record)
@@ -250,7 +247,7 @@ class PlDriver (Driver):
                 pl_record["model"] = "geni"
 
         elif type == "authority":
-            pl_record["login_base"] = hrn_to_pl_login_base(hrn)
+            pl_record["login_base"] = PlXrn(xrn=hrn,type='authority').pl_login_base()
             if "name" not in sfa_record:
                 pl_record["name"] = hrn
             if "abbreviated_name" not in sfa_record:
@@ -531,9 +528,9 @@ class PlDriver (Driver):
 
     ####################
     # plcapi works by changes, compute what needs to be added/deleted
-    def update_relation (self, subject_type, target_type, subject_id, target_ids):
+    def update_relation (self, subject_type, target_type, relation_name, subject_id, target_ids):
         # hard-wire the code for slice/user for now, could be smarter if needed
-        if subject_type =='slice' and target_type == 'user':
+        if subject_type =='slice' and target_type == 'user' and relation_name == 'researcher':
             subject=self.shell.GetSlices (subject_id)[0]
             current_target_ids = subject['person_ids']
             add_target_ids = list ( set (target_ids).difference(current_target_ids))
@@ -545,8 +542,15 @@ class PlDriver (Driver):
             for target_id in del_target_ids:
                 logger.debug ("del_target_id = %s (type=%s)"%(target_id,type(target_id)))
                 self.shell.DeletePersonFromSlice (target_id, subject_id)
+        elif subject_type == 'authority' and target_type == 'user' and relation_name == 'pi':
+            # due to the plcapi limitations this means essentially adding pi role to all people in the list
+            # it's tricky to remove any pi role here, although it might be desirable
+            persons = self.shell.GetPersons (target_ids)
+            for person in persons: 
+                if 'pi' not in person['roles']:
+                    self.shell.AddRoleToPerson('pi',person['person_id'])
         else:
-            logger.info('unexpected relation to maintain, %s -> %s'%(subject_type,target_type))
+            logger.info('unexpected relation %s to maintain, %s -> %s'%(relation_name,subject_type,target_type))
 
         
     ########################################

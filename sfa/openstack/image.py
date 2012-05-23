@@ -1,41 +1,60 @@
 from nova.exception import ImageNotFound
 from sfa.rspecs.elements.disk_image import DiskImage
 
+
 class Image:
+    
+    def __init__(self, image={}):
+        self.id = None
+        self.container_format = None
+        self.kernel_id = None
+        self.ramdisk_id = None
+        self.properties = None
+        self.name = None
+        self.description = None
+        self.os = None
+        self.version = None
+
+        if image:
+            self.parse_image(image)
+
+    def parse_image(self, image):
+        if isinstance(image, dict):
+            self.id = image['id'] 
+            self.name = image['name']
+            self.container_format = image['container_format']
+            self.properties = image['properties'] 
+            if 'kernel_id' in self.properties:
+                self.kernel_id = self.properties['kernel_id']
+            if 'ramdisk_id' in self.properties:
+                self.ramdisk_id = self.properties['ramdisk_id']
+   
+    def to_rspec_object(self):
+        img = DiskImage()
+        img['name'] = self.name
+        img['description'] = self.name
+        img['os'] = self.name
+        img['version'] = self.name
+        return img     
+
+class ImageManager:
 
     def __init__(self, driver):
         self.driver = driver
 
     @staticmethod
     def disk_image_to_rspec_object(image):
-        img = DiskImage()
-        img['name'] = image['ami']['name']
-        img['description'] = image['ami']['name']
-        img['os'] = image['ami']['name']
-        img['version'] = image['ami']['name']
-        return img
+        img = Image(image)
+        return img.to_rspec_object()
 
     def get_available_disk_images(self):
         # get image records
         disk_images = []
-        for image in self.driver.shell.image_manager.detail():
-            if image['container_format'] == 'ami':
-                disk_images.append(self.get_machine_image_details(image))
+        for img in self.driver.shell.image_manager.detail():
+            image = Image(img)
+            if image.container_format in ['ami', 'ovf']:
+                disk_images.append(image)
         return disk_images
-
-    def get_machine_image_details(self, image):
-        """
-        Returns a dict that contains the ami, aki and ari details for the specified
-        ami image.
-        """
-        disk_image = {}
-        if image['container_format'] == 'ami':
-            kernel_id = image['properties']['kernel_id']
-            ramdisk_id = image['properties']['ramdisk_id']
-            disk_image['ami'] = image
-            disk_image['aki'] = self.driver.shell.image_manager.show(kernel_id)
-            disk_image['ari'] = self.driver.shell.image_manager.show(ramdisk_id)
-        return disk_image
 
     def get_disk_image(self, id=None, name=None):
         """
@@ -47,8 +66,8 @@ class Image:
                 image = self.driver.shell.image_manager.show(id)
             elif name:
                 image = self.driver.shell.image_manager.show_by_name(name)
-            if image['container_format'] == 'ami':
-                disk_image = self.get_machine_image_details(image)
+            if image['container_format'] in ['ami', 'ovf']:
+                disk_image = Image(image)
         except ImageNotFound:
                 pass
         return disk_image

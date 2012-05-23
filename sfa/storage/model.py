@@ -114,6 +114,10 @@ class RegRecord (Base,AlchemyObj):
         result += ">"
         return result
 
+    # shortcut - former implem. was record-based
+    def get (self, field, default):
+        return getattr(self,field,default)
+
     @validates ('gid')
     def validate_gid (self, key, gid):
         if gid is None:                     return
@@ -144,6 +148,20 @@ class RegRecord (Base,AlchemyObj):
         now=datetime.now()
         self.last_updated=now
 
+#################### cross-relations tables
+# authority x user (pis) association
+authority_pi_table = \
+    Table ( 'authority_pi', Base.metadata,
+            Column ('authority_id', Integer, ForeignKey ('records.record_id'), primary_key=True),
+            Column ('pi_id', Integer, ForeignKey ('records.record_id'), primary_key=True),
+            )
+# slice x user (researchers) association
+slice_researcher_table = \
+    Table ( 'slice_researcher', Base.metadata,
+            Column ('slice_id', Integer, ForeignKey ('records.record_id'), primary_key=True),
+            Column ('researcher_id', Integer, ForeignKey ('records.record_id'), primary_key=True),
+            )
+
 ##############################
 # all subclasses define a convenience constructor with a default value for type, 
 # and when applicable a way to define local fields in a kwd=value argument
@@ -152,6 +170,13 @@ class RegAuthority (RegRecord):
     __tablename__       = 'authorities'
     __mapper_args__     = { 'polymorphic_identity' : 'authority' }
     record_id           = Column (Integer, ForeignKey ("records.record_id"), primary_key=True)
+    #### extensions come here
+    reg_pis             = relationship \
+        ('RegUser',
+         secondary=authority_pi_table,
+         primaryjoin=RegRecord.record_id==authority_pi_table.c.authority_id,
+         secondaryjoin=RegRecord.record_id==authority_pi_table.c.pi_id,
+         backref='reg_authorities_as_pi')
     
     def __init__ (self, **kwds):
         # fill in type if not previously set
@@ -163,13 +188,15 @@ class RegAuthority (RegRecord):
     def __repr__ (self):
         return RegRecord.__repr__(self).replace("Record","Authority")
 
-####################
-# slice x user (researchers) association
-slice_researcher_table = \
-    Table ( 'slice_researcher', Base.metadata,
-            Column ('slice_id', Integer, ForeignKey ('records.record_id'), primary_key=True),
-            Column ('researcher_id', Integer, ForeignKey ('records.record_id'), primary_key=True),
-            )
+    def update_pis (self, pi_hrns):
+        # don't ruin the import of that file in a client world
+        from sfa.storage.alchemy import dbsession
+        # strip that in case we have <researcher> words </researcher>
+        pi_hrns = [ x.strip() for x in pi_hrns ]
+        request = dbsession.query (RegUser).filter(RegUser.hrn.in_(pi_hrns))
+        logger.info ("RegAuthority.update_pis: %d incoming pis, %d matches found"%(len(pi_hrns),request.count()))
+        pis = dbsession.query (RegUser).filter(RegUser.hrn.in_(pi_hrns)).all()
+        self.reg_pis = pis
 
 ####################
 class RegSlice (RegRecord):
@@ -182,7 +209,7 @@ class RegSlice (RegRecord):
          secondary=slice_researcher_table,
          primaryjoin=RegRecord.record_id==slice_researcher_table.c.slice_id,
          secondaryjoin=RegRecord.record_id==slice_researcher_table.c.researcher_id,
-         backref="reg_slices_as_researcher")
+         backref='reg_slices_as_researcher')
 
     def __init__ (self, **kwds):
         if 'type' not in kwds: kwds['type']='slice'
@@ -190,6 +217,26 @@ class RegSlice (RegRecord):
 
     def __repr__ (self):
         return RegRecord.__repr__(self).replace("Record","Slice")
+
+    def update_researchers (self, researcher_hrns):
+        # don't ruin the import of that file in a client world
+        from sfa.storage.alchemy import dbsession
+        # strip that in case we have <researcher> words </researcher>
+        researcher_hrns = [ x.strip() for x in researcher_hrns ]
+        request = dbsession.query (RegUser).filter(RegUser.hrn.in_(researcher_hrns))
+        logger.info ("RegSlice.update_researchers: %d incoming researchers, %d matches found"%(len(researcher_hrns),request.count()))
+        researchers = dbsession.query (RegUser).filter(RegUser.hrn.in_(researcher_hrns)).all()
+        self.reg_researchers = researchers
+
+    # when dealing with credentials, we need to retrieve the PIs attached to a slice
+    def get_pis (self):
+        # don't ruin the import of that file in a client world
+        from sfa.storage.alchemy import dbsession
+        from sfa.util.xrn import get_authority
+        authority_hrn = get_authority(self.hrn)
+        auth_record = dbsession.query(RegAuthority).filter_by(hrn=authority_hrn).first()
+        return auth_record.reg_pis
+        
 
 ####################
 class RegNode (RegRecord):
