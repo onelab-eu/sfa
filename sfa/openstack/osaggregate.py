@@ -171,7 +171,7 @@ class OSAggregate:
             key = {}
             key['user_id'] = username
             key['name'] =  username
-            key['public'] = public_key
+            key['public_key'] = public_key
             self.driver.shell.db.key_pair_create(key)
 
         # remove old keys
