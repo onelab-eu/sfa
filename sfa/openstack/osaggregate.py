@@ -1,4 +1,6 @@
+
 import os
+import socket
 import base64
 import string
 import random    
@@ -182,8 +184,16 @@ class OSAggregate:
     def create_security_group(self, group_name, fw_rules=[]):
         security_group = SecurityGroup(self.driver)
         security_group.create_security_group(group_name)
-        for rule in fw_rules:
-            security_group.add_rule_to_group(group_name, 
+        if not fw_rules:
+            # open port 22 by default
+            security_group.add_rule_to_group(group_name,
+                                             protocol='tcp',
+                                             cidr_ip = '0.0.0.0/0',
+                                             port_range='22',
+                                             icmp_type_code="-1")
+        elif isinstance(fw_rules, list): 
+            for rule in fw_rules:
+                security_group.add_rule_to_group(group_name, 
                                              protocol = rule.get('protocol'), 
                                              cidr_ip = rule.get('cidr_ip'), 
                                              port_range = rule.get('port_range'), 
