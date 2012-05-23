@@ -24,7 +24,7 @@ class SecurityGroup:
     def _validate_port_range(self, port_range):
         from_port = to_port = None
         if isinstance(port_range, str):
-            ports = port_range.split('-')
+            ports = port_range.split(':')
             if len(ports) > 1:
                 from_port = int(ports[0])
                 to_port = int(ports[1])
