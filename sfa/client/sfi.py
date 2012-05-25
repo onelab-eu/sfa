@@ -24,7 +24,7 @@ from sfa.trust.credential import Credential
 from sfa.trust.sfaticket import SfaTicket
 
 from sfa.util.sfalogging import sfi_logger
-from sfa.util.xrn import get_leaf, get_authority, hrn_to_urn
+from sfa.util.xrn import get_leaf, get_authority, hrn_to_urn, Xrn
 from sfa.util.config import Config
 from sfa.util.version import version_core
 from sfa.util.cache import Cache
@@ -43,6 +43,9 @@ from sfa.client.return_value import ReturnValue
 CM_PORT=12346
 
 # utility methods here
+def optparse_listvalue_callback(option, opt, value, parser):
+    setattr(parser.values, option.dest, value.split(','))
+
 # display methods
 def display_rspec(rspec, format='rspec'):
     if format in ['dns']:
@@ -156,6 +159,44 @@ def save_record_to_file(filename, record_dict):
 
 
 # load methods
+def load_record_from_opts(options):
+    record_dict = {}
+    if hasattr(options, 'xrn') and options.xrn:
+        if hasattr(options, 'type') and options.type:
+            xrn = Xrn(options.xrn, options.type)
+        else:
+            xrn = Xrn(options.xrn)
+        record_dict['urn'] = xrn.get_urn()
+        record_dict['hrn'] = xrn.get_hrn()
+        record_dict['type'] = xrn.get_type()
+    if hasattr(options, 'url') and options.url:
+        record_dict['url'] = options.url
+    if hasattr(options, 'description') and options.description:
+        record_dict['description'] = options.description
+    if hasattr(options, 'key') and options.key:
+        try:
+            pubkey = open(options.key, 'r').read()
+        except IOError:
+            pubkey = options.key
+        record_dict['keys'] = [pubkey]
+    if hasattr(options, 'slices') and options.slices:
+        record_dict['slices'] = options.slices
+    if hasattr(options, 'researchers') and options.researchers:
+        record_dict['researcher'] = options.researchers
+    if hasattr(options, 'email') and options.email:
+        record_dict['email'] = options.email
+    if hasattr(options, 'pis') and options.pis:
+        record_dict['pi'] = options.pis
+
+    # fill in the blanks
+    if record_dict['type'] == 'user':
+        if not 'first_name' in record_dict:
+            record_dict['first_name'] = record_dict['hrn']
+        if 'last_name' not in record_dict:
+            record_dict['last_name'] = record_dict['hrn'] 
+
+    return Record(dict=record_dict)
+
 def load_record_from_file(filename):
     f=codecs.open(filename, encoding="utf-8", mode="r")
     xml_string = f.read()
@@ -257,6 +298,25 @@ class Sfi:
         parser = OptionParser(usage="sfi [sfi_options] %s [cmd_options] %s" \
                                      % (command, self.available_dict[command]))
 
+        if command in ("add", "update"):
+            parser.add_option('-x', '--xrn', dest='xrn', metavar='<xrn>', help='object hrn/urn (mandatory)')
+            parser.add_option('-t', '--type', dest='type', metavar='<type>', help='object type', default=None)
+            parser.add_option('-e', '--email', dest='email', default="",  help="email (mandatory for users)") 
+            parser.add_option('-u', '--url', dest='url', metavar='<url>', default=None, help="URL, useful for slices") 
+            parser.add_option('-d', '--description', dest='description', metavar='<description>', 
+                              help='Description, useful for slices', default=None)
+            parser.add_option('-k', '--key', dest='key', metavar='<key>', help='public key string or file', 
+                              default=None)
+            parser.add_option('-s', '--slices', dest='slices', metavar='<slices>', help='slice xrns',
+                              default='', type="str", action='callback', callback=optparse_listvalue_callback)
+            parser.add_option('-r', '--researchers', dest='researchers', metavar='<researchers>', 
+                              help='slice researchers', default='', type="str", action='callback', 
+                              callback=optparse_listvalue_callback)
+            parser.add_option('-p', '--pis', dest='pis', metavar='<PIs>', help='Principal Investigators/Project Managers',
+                              default='', type="str", action='callback', callback=optparse_listvalue_callback)
+            parser.add_option('-f', '--firstname', dest='firstname', metavar='<firstname>', help='user first name')
+            parser.add_option('-l', '--lastname', dest='lastname', metavar='<firstname>', help='user last name')
+
         # user specifies remote aggregate/sm/component                          
         if command in ("resources", "slices", "create", "delete", "start", "stop", 
                        "restart", "shutdown",  "get_ticket", "renew", "status"):
@@ -284,7 +344,7 @@ class Sfi:
                              help="display format ([xml]|dns|ip)", default="xml",
                              choices=("xml", "dns", "ip"))
             #panos: a new option to define the type of information about resources a user is interested in
-	    parser.add_option("-i", "--info", dest="info",
+            parser.add_option("-i", "--info", dest="info",
                                 help="optional component information", default=None)
 
 
@@ -746,21 +806,32 @@ or version information about sfi itself
     def add(self, options, args):
         "add record into registry from xml file (Register)"
         auth_cred = self.my_authority_credential_string()
-        if len(args)!=1:
+        record = {}
+        if len(args) > 0:
+            record_filepath = args[0]
+            rec_file = self.get_record_file(record_filepath)
+            record.update(load_record_from_file(rec_file).todict())
+        if options:
+            record.update(load_record_from_opts(options).todict())
+        if not record:
             self.print_help()
             sys.exit(1)
-        record_filepath = args[0]
-        rec_file = self.get_record_file(record_filepath)
-        record = load_record_from_file(rec_file).todict()
         return self.registry().Register(record, auth_cred)
     
     def update(self, options, args):
         "update record into registry from xml file (Update)"
-        if len(args)!=1:
+        record_dict = {}
+        if len(args) > 0:
+            record_filepath = args[0]
+            rec_file = self.get_record_file(record_filepath)
+            record_dict.update(load_record_from_file(rec_file).todict())
+        if options:
+            record_dict.update(load_record_from_opts(options).todict())
+        if not record_dict:
             self.print_help()
             sys.exit(1)
-        rec_file = self.get_record_file(args[0])
-        record = load_record_from_file(rec_file)
+
+        record = Record(dict=record_dict)        
         if record.type == "user":
             if record.hrn == self.user:
                 cred = self.my_credential_string
