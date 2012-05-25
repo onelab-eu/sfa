@@ -724,9 +724,9 @@ class PlDriver (Driver):
         for node in rspec.version.get_nodes_with_slivers():
             hostname = None
             if node.get('component_name'):
-                hostname = node.get('component_name')
+                hostname = node.get('component_name').strip()
             elif node.get('component_id'):
-                hostname = xrn_to_hostname(node.get('component_id'))
+                hostname = xrn_to_hostname(node.get('component_id').strip())
             if hostname:
                 requested_slivers.append(hostname)
         nodes = slices.verify_slice_nodes(slice, requested_slivers, peer) 
