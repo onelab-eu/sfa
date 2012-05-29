@@ -5,7 +5,8 @@ import unittest
 
 from sfa.util.faults import *
 from sfa.util.xrn import Xrn
-from sfa.util.plxrn import PlXrn
+
+from sfa.planetlab.plxrn import PlXrn
 
 verbose=False
 

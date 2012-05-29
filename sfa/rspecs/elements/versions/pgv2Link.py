@@ -1,4 +1,3 @@
-from sfa.util.plxrn import PlXrn
 from sfa.util.xrn import Xrn
 from sfa.rspecs.elements.element import Element
 from sfa.rspecs.elements.link import Link

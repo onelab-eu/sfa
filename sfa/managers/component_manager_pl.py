@@ -1,9 +1,11 @@
 import xmlrpclib
 
 from sfa.util.faults import SliverDoesNotExist
-from sfa.util.plxrn import PlXrn
-from sfa.trust.sfaticket import SfaTicket
 from sfa.util.version import version_core
+
+from sfa.trust.sfaticket import SfaTicket
+
+from sfa.planetlab.plxrn import PlXrn
 
 def GetVersion(api, options):
     return version_core({'interface':'component',

@@ -1,7 +1,7 @@
 from sfa.util.sfalogging import logger
 from sfa.util.xml import XpathFilter
-from sfa.util.plxrn import PlXrn, xrn_to_hostname
 from sfa.util.xrn import Xrn
+
 from sfa.rspecs.elements.element import Element
 from sfa.rspecs.elements.node import Node
 from sfa.rspecs.elements.sliver import Sliver
@@ -14,6 +14,8 @@ from sfa.rspecs.elements.pltag import PLTag
 from sfa.rspecs.elements.versions.sfav1Sliver import SFAv1Sliver
 from sfa.rspecs.elements.versions.sfav1PLTag import SFAv1PLTag
 from sfa.rspecs.elements.versions.pgv2Services import PGv2Services
+
+from sfa.planetlab.plxrn import xrn_to_hostname
 
 class SFAv1Node:
 

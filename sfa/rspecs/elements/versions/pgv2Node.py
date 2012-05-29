@@ -1,6 +1,6 @@
-from sfa.util.plxrn import PlXrn, xrn_to_hostname
 from sfa.util.xrn import Xrn
 from sfa.util.xml import XpathFilter
+
 from sfa.rspecs.elements.node import Node
 from sfa.rspecs.elements.sliver import Sliver
 from sfa.rspecs.elements.location import Location
@@ -11,6 +11,8 @@ from sfa.rspecs.elements.bwlimit import BWlimit
 from sfa.rspecs.elements.pltag import PLTag
 from sfa.rspecs.elements.versions.pgv2Services import PGv2Services     
 from sfa.rspecs.elements.versions.pgv2SliverType import PGv2SliverType     
+
+from sfa.planetlab.plxrn import xrn_to_hostname
 
 class PGv2Node:
     @staticmethod

@@ -14,7 +14,7 @@ from sfa.util.xrn import urn_to_hrn, hrn_to_urn, Xrn
 
 from sfa.managers.aggregate_manager import AggregateManager
 
-from sfa.plc.plslices import PlSlices
+from sfa.planetlab.plslices import PlSlices
 
 class AggregateManagerMax (AggregateManager):
 

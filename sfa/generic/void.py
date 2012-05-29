@@ -1,11 +1,16 @@
+# This setting is designed for running a registry-only SFA instance
+
 from sfa.generic import Generic
 
-class pl (Generic):
+class void (Generic):
     
     # the importer class
+    # when set to None, the importer only performs the basic stuff
+    # xxx this convention probably is confusing, since None suggests that 
+    # *nothing* should be done..
+    # xxx need to refactor the importers anyway
     def importer_class (self): 
-        import sfa.importer.plimporter
-        return sfa.importer.plimporter.PlImporter
+        return None
         
     # use the standard api class
     def api_class (self):
@@ -19,22 +24,14 @@ class pl (Generic):
     def slicemgr_manager_class (self) : 
         import sfa.managers.slice_manager
         return sfa.managers.slice_manager.SliceManager
+    # most likely you'll want to turn OFF the aggregate in sfa-config-tty
+    # SFA_AGGREGATE_ENABLED=false
     def aggregate_manager_class (self) :
         import sfa.managers.aggregate_manager
         return sfa.managers.aggregate_manager.AggregateManager
 
     # driver class for server-side services, talk to the whole testbed
     def driver_class (self):
-        import sfa.planetlab.pldriver
-        return sfa.planetlab.pldriver.PlDriver
-
-    # for the component mode, to be run on board planetlab nodes
-    # manager class
-    def component_manager_class (self):
-        import sfa.managers
-        return sfa.managers.component_manager_pl
-    # driver_class
-    def component_driver_class (self):
-        import sfa.planetlab.plcomponentdriver
-        return sfa.planetlab.plcomponentdriver.PlComponentDriver
+        import sfa.managers.driver
+        return sfa.managers.driver.Driver
 

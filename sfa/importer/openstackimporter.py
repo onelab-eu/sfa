@@ -2,11 +2,13 @@ import os
 
 from sfa.util.config import Config
 from sfa.util.xrn import Xrn, get_leaf, get_authority, hrn_to_urn
-from sfa.util.plxrn import hostname_to_hrn, slicename_to_hrn, email_to_hrn, hrn_to_pl_slicename
+
 from sfa.trust.gid import create_uuid    
 from sfa.trust.certificate import convert_public_key, Keypair
 from sfa.storage.alchemy import dbsession
 from sfa.storage.model import RegRecord, RegAuthority, RegUser, RegSlice, RegNode
+
+from sfa.planetlab.plxrn import hostname_to_hrn, slicename_to_hrn, email_to_hrn
 from sfa.openstack.nova_shell import NovaShell    
 
 def load_keys(filename):
