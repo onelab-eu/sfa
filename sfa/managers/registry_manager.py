@@ -394,7 +394,6 @@ class RegistryManager:
         # the driver seems to be off
         # anyway the driver should receive an object 
         # (and then extract __dict__ itself if needed)
-        print "before driver.update, record=%s"%record
         if not self.driver.update (record.__dict__, new_record.__dict__, hrn, new_key):
             logger.warning("driver.update failed")
     
