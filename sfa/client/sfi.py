@@ -189,7 +189,7 @@ def load_record_from_opts(options):
         record_dict['pi'] = options.pis
 
     # fill in the blanks
-    if record_dict['type'] == 'user':
+    if 'type' in record_dict and record_dict['type'] == 'user':
         if not 'first_name' in record_dict:
             record_dict['first_name'] = record_dict['hrn']
         if 'last_name' not in record_dict:
