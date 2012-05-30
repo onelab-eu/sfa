@@ -9,6 +9,7 @@ sys.path.append('.')
 
 import os, os.path
 import socket
+import re
 import datetime
 import codecs
 import pickle
@@ -23,6 +24,7 @@ from sfa.trust.gid import GID
 from sfa.trust.credential import Credential
 from sfa.trust.sfaticket import SfaTicket
 
+from sfa.util.faults import SfaInvalidArgument
 from sfa.util.sfalogging import sfi_logger
 from sfa.util.xrn import get_leaf, get_authority, hrn_to_urn, Xrn
 from sfa.util.config import Config
@@ -157,6 +159,10 @@ def save_record_to_file(filename, record_dict):
     f.close()
     return
 
+# minimally check a key argument
+def check_ssh_key (key):
+    good_ssh_key = r'^.*(?:ssh-dss|ssh-rsa)[ ]+[A-Za-z0-9+/=]+(?: .*)?$'
+    return re.match(good_ssh_key, key, re.IGNORECASE)
 
 # load methods
 def load_record_from_opts(options):
@@ -178,6 +184,8 @@ def load_record_from_opts(options):
             pubkey = open(options.key, 'r').read()
         except IOError:
             pubkey = options.key
+        if not check_ssh_key (pubkey):
+            raise SfaInvalidArgument(name='key',msg="Could not find file, or wrong key format")
         record_dict['keys'] = [pubkey]
     if hasattr(options, 'slices') and options.slices:
         record_dict['slices'] = options.slices
