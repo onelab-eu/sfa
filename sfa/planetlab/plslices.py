@@ -355,6 +355,7 @@ class PlSlices:
         users_by_site = defaultdict(list)
         users_dict = {} 
         for user in users:
+            user['urn'] = user['urn'].lower()
             hrn, type = urn_to_hrn(user['urn'])
             username = get_leaf(hrn)
             login_base = PlXrn(xrn=user['urn']).pl_login_base()
@@ -362,6 +363,7 @@ class PlSlices:
             user['site'] = login_base
 
             if 'email' in user:
+                user['email'] = user['email'].lower() 
                 users_by_email[user['email']] = user
                 users_dict[user['email']] = user
             else:
