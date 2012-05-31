@@ -45,8 +45,29 @@ from sfa.client.return_value import ReturnValue
 CM_PORT=12346
 
 # utility methods here
-def optparse_listvalue_callback(option, opt, value, parser):
+def optparse_listvalue_callback(option, option_string, value, parser):
     setattr(parser.values, option.dest, value.split(','))
+
+# a code fragment that could be helpful for argparse which unfortunately is 
+# available with 2.7 only, so this feels like too strong a requirement for the client side
+#class ExtraArgAction  (argparse.Action):
+#    def __call__ (self, parser, namespace, values, option_string=None):
+# would need a try/except of course
+#        (k,v)=values.split('=')
+#        d=getattr(namespace,self.dest)
+#        d[k]=v
+#####
+#parser.add_argument ("-X","--extra",dest='extras', default={}, action=ExtraArgAction,
+#                     help="set extra flags, testbed dependent, e.g. --extra enabled=true")
+    
+def optparse_dictvalue_callback (option, option_string, value, parser):
+    try:
+        (k,v)=value.split('=',1)
+        d=getattr(parser.values, option.dest)
+        d[k]=v
+    except:
+        parser.print_help()
+        sys.exit(1)
 
 # display methods
 def display_rspec(rspec, format='rspec'):
@@ -175,10 +196,6 @@ def load_record_from_opts(options):
         record_dict['urn'] = xrn.get_urn()
         record_dict['hrn'] = xrn.get_hrn()
         record_dict['type'] = xrn.get_type()
-    if hasattr(options, 'url') and options.url:
-        record_dict['url'] = options.url
-    if hasattr(options, 'description') and options.description:
-        record_dict['description'] = options.description
     if hasattr(options, 'key') and options.key:
         try:
             pubkey = open(options.key, 'r').read()
@@ -196,13 +213,9 @@ def load_record_from_opts(options):
     if hasattr(options, 'pis') and options.pis:
         record_dict['pi'] = options.pis
 
-    # fill in the blanks
-    if 'type' in record_dict and record_dict['type'] == 'user':
-        if not 'first_name' in record_dict:
-            record_dict['first_name'] = record_dict['hrn']
-        if 'last_name' not in record_dict:
-            record_dict['last_name'] = record_dict['hrn'] 
-
+    # handle extra settings
+    record_dict.update(options.extras)
+    
     return Record(dict=record_dict)
 
 def load_record_from_file(filename):
@@ -310,9 +323,10 @@ class Sfi:
             parser.add_option('-x', '--xrn', dest='xrn', metavar='<xrn>', help='object hrn/urn (mandatory)')
             parser.add_option('-t', '--type', dest='type', metavar='<type>', help='object type', default=None)
             parser.add_option('-e', '--email', dest='email', default="",  help="email (mandatory for users)") 
-            parser.add_option('-u', '--url', dest='url', metavar='<url>', default=None, help="URL, useful for slices") 
-            parser.add_option('-d', '--description', dest='description', metavar='<description>', 
-                              help='Description, useful for slices', default=None)
+# use --extra instead
+#            parser.add_option('-u', '--url', dest='url', metavar='<url>', default=None, help="URL, useful for slices") 
+#            parser.add_option('-d', '--description', dest='description', metavar='<description>', 
+#                              help='Description, useful for slices', default=None)
             parser.add_option('-k', '--key', dest='key', metavar='<key>', help='public key string or file', 
                               default=None)
             parser.add_option('-s', '--slices', dest='slices', metavar='<slices>', help='slice xrns',
@@ -322,8 +336,12 @@ class Sfi:
                               callback=optparse_listvalue_callback)
             parser.add_option('-p', '--pis', dest='pis', metavar='<PIs>', help='Principal Investigators/Project Managers',
                               default='', type="str", action='callback', callback=optparse_listvalue_callback)
-            parser.add_option('-f', '--firstname', dest='firstname', metavar='<firstname>', help='user first name')
-            parser.add_option('-l', '--lastname', dest='lastname', metavar='<firstname>', help='user last name')
+# use --extra instead
+#            parser.add_option('-f', '--firstname', dest='firstname', metavar='<firstname>', help='user first name')
+#            parser.add_option('-l', '--lastname', dest='lastname', metavar='<lastname>', help='user last name')
+            parser.add_option ('-X','--extra',dest='extras',default={},type='str',metavar="<EXTRA_ASSIGNS>",
+                               action="callback", callback=optparse_dictvalue_callback, nargs=1,
+                               help="set extra/testbed-dependent flags, e.g. --extra enabled=true")
 
         # user specifies remote aggregate/sm/component                          
         if command in ("resources", "slices", "create", "delete", "start", "stop", 
@@ -814,17 +832,27 @@ or version information about sfi itself
     def add(self, options, args):
         "add record into registry from xml file (Register)"
         auth_cred = self.my_authority_credential_string()
-        record = {}
+        record_dict = {}
         if len(args) > 0:
             record_filepath = args[0]
             rec_file = self.get_record_file(record_filepath)
-            record.update(load_record_from_file(rec_file).todict())
+            record_dict.update(load_record_from_file(rec_file).todict())
         if options:
-            record.update(load_record_from_opts(options).todict())
-        if not record:
+            record_dict.update(load_record_from_opts(options).todict())
+        print 'bkpt',record_dict
+        sys.exit(0)
+        # we should have a type by now
+        if 'type' not in record_dict :
             self.print_help()
             sys.exit(1)
-        return self.registry().Register(record, auth_cred)
+        # this is still planetlab dependent.. as plc will whine without that
+        # also, it's only for adding
+        if record_dict['type'] == 'user':
+            if not 'first_name' in record_dict:
+                record_dict['first_name'] = record_dict['hrn']
+            if 'last_name' not in record_dict:
+                record_dict['last_name'] = record_dict['hrn'] 
+        return self.registry().Register(record_dict, auth_cred)
     
     def update(self, options, args):
         "update record into registry from xml file (Update)"
