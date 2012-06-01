@@ -14,8 +14,8 @@ from sfa.storage.alchemy import dbsession
 from sfa.storage.model import RegRecord
 
 
-from sfa.trust.certificate import *
-from sfa.trust.credential import *
+#from sfa.trust.certificate import *
+from sfa.trust.credential import Credential
 from sfa.trust.gid import GID
 
 from sfa.managers.driver import Driver
@@ -29,7 +29,7 @@ from sfa.util.plxrn import slicename_to_hrn, hostname_to_hrn, hrn_to_pl_slicenam
 # is taken care of 
 # SlabDriver should be really only about talking to the senslab testbed
 
-## thierry : please avoid wildcard imports :)
+
 from sfa.senslab.OARrestapi import  OARrestapi
 from sfa.senslab.LDAPapi import LDAPapi
 
@@ -440,11 +440,11 @@ class SlabDriver(Driver):
         #If we are looking for a list of users (list of dict records)
         #Usually the list contains only one user record
             for f in person_filter:
-                person = self.ldap.ldapSearch(f)
+                person = self.ldap.ldapFindHrn(f)
                 person_list.append(person)
           
         else:
-              person_list  = self.ldap.ldapSearch()  
+              person_list  = self.ldap.ldapFindHrn()  
                     
         return person_list
             #person_list = self.ldap.ldapFindHrn({'authority': self.root_auth })
@@ -523,7 +523,7 @@ class SlabDriver(Driver):
             
     def GetReservedNodes(self):
         # this function returns a list of all the nodes already involved in an oar job
-
+       #jobs=self.oar.parser.SendRequest("GET_reserved_nodes") 
        jobs=self.oar.parser.SendRequest("GET_jobs_details") 
        nodes=[]
        for j in jobs :

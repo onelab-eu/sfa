@@ -66,12 +66,11 @@ class SlabImporter:
         
         if not slabdriver.db.exists('slice_senslab'):
             slabdriver.db.createtable('slice_senslab')
-            
-            
-            print>>sys.stderr, " \r\n \r\n \t SLABPOSTGRES CREATETABLE  YAAAAAAAAAAY"        
-       ######## retrieve all existing SFA objects
+            self.logger.info ("SlabImporter.run:  slice_senslab table created ")
+
+        #retrieve all existing SFA objects
         all_records = dbsession.query(RegRecord).all()
-        #print>>sys.stderr, " \r\n \r\n \t SLABPOSTGRES all_records %s" %(all_records)
+      
         #create hash by (type,hrn) 
         #used  to know if a given record is already known to SFA 
        
@@ -81,7 +80,7 @@ class SlabImporter:
         # create hash by (type,pointer) 
         self.records_by_type_pointer = \
             dict ( [ ( (str(record.type),record.pointer) , record ) for record in all_records  if record.pointer != -1] )
-        print>>sys.stderr, " \r\n \r\n \t SLABPOSTGRES   self.records_by_type_pointer  %s" %(  self.records_by_type_pointer)
+
         # initialize record.stale to True by default, then mark stale=False on the ones that are in use
         for record in all_records: 
             record.stale=True
@@ -95,9 +94,9 @@ class SlabImporter:
         try:
             slices_by_userid = dict ( [ (slice.record_id_user, slice ) for slice in slices_listdict ] )
         except TypeError:
-             print>>sys.stderr, " \r\n \r\n \t SLABPOSTGRES  slices_listdict EMPTY "
+             self.logger.log_exc("SlabImporter: failed to create list of slices by user id.") 
              pass
-        #print>>sys.stderr, " \r\n \r\n \t SLABPOSTGRES  slices_by_userid   %s" %( slices_by_userid)
+ 
         for site in sites_listdict:
             site_hrn = _get_site_hrn(site) 
             site_record = self.find_record_by_type_hrn ('authority', site_hrn)
@@ -138,12 +137,10 @@ class SlabImporter:
                 # xxx this sounds suspicious
                 if len(hrn) > 64: hrn = hrn[:64]
                 node_record = self.find_record_by_type_hrn( 'node', hrn )
-                #print >>sys.stderr, " \r\n \r\n SLAB IMPORTER node_record %s " %(node_record)
                 if not node_record:
                     try:
                         pkey = Keypair(create=True)
                         urn = hrn_to_urn(hrn, 'node') 
-                        #print>>sys.stderr, "\r\n \r\n SLAB IMPORTER NODE IMPORT urn %s hrn %s" %(urn, hrn)  
                         node_gid = self.auth_hierarchy.create_gid(urn, create_uuid(), pkey)
                         node_record = RegNode (hrn=hrn, gid=node_gid, 
                                                 pointer =node['node_id'],

@@ -5,7 +5,6 @@ import json
 import datetime
 from time import gmtime, strftime 
 from sfa.senslab.parsing import *
-#from sfa.senslab.SenslabImportUsers import *
 import urllib
 import urllib2
 from sfa.util.config import Config
@@ -32,6 +31,7 @@ OARrequests_get_uri_dict = { 'GET_version': '/oarapi/version.json',
                         'GET_resources_id': '/oarapi/resources/id.json',
 			'GET_jobs_table': '/oarapi/jobs/table.json',
 			'GET_jobs_details': '/oarapi/jobs/details.json',
+                        'GET_reserved_nodes': '/oarapi/jobs/details.json?state=Runnng,Waiting,Launching',
 			'GET_resources_full': '/oarapi/resources/full.json',
 			'GET_resources':'/oarapi/resources.json',
                         'GET_sites' : '/oarapi/resources/full.json',
