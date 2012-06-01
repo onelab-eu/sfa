@@ -98,7 +98,7 @@ def display_records(recordList, dump=False):
 
 def display_record(record, dump=False):
     if dump:
-        record.dump()
+        record.dump(sort=True)
     else:
         info = record.getdict()
         print "%s (%s)" % (info['hrn'], info['type'])
@@ -823,7 +823,7 @@ or version information about sfi itself
             self.logger.error("No record of type %s"% options.type)
         records = [ Record(dict=record_dict) for record_dict in record_dicts ]
         for record in records:
-            if (options.format == "text"):      record.dump()  
+            if (options.format == "text"):      record.dump(sort=True)  
             else:                               print record.save_as_xml() 
         if options.file:
             save_records_to_file(options.file, record_dicts, options.fileformat)
