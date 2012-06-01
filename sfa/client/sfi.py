@@ -839,8 +839,6 @@ or version information about sfi itself
             record_dict.update(load_record_from_file(rec_file).todict())
         if options:
             record_dict.update(load_record_from_opts(options).todict())
-        print 'bkpt',record_dict
-        sys.exit(0)
         # we should have a type by now
         if 'type' not in record_dict :
             self.print_help()
