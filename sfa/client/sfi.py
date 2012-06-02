@@ -861,7 +861,8 @@ or version information about sfi itself
             record_dict.update(load_record_from_file(rec_file).todict())
         if options:
             record_dict.update(load_record_from_opts(options).todict())
-        if not record_dict:
+        # at the very least we need 'type' here
+        if 'type' not in record_dict:
             self.print_help()
             sys.exit(1)
 
