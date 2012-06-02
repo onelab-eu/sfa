@@ -160,6 +160,10 @@ class PlDriver (Driver):
                            'password', 'phone', 'url', 'bio', 'accepted_aup',
                            'enabled']:
                     update_fields[key] = all_fields[key]
+            # when updating a user, we always get a 'email' field at this point
+            # this is because 'email' is a native field in the RegUser object...
+            if 'email' in update_fields and not update_fields['email']:
+                del update_fields['email']
             self.shell.UpdatePerson(pointer, update_fields)
     
             if new_key:
