@@ -866,13 +866,14 @@ or version information about sfi itself
             self.print_help()
             sys.exit(1)
 
-        record = Record(dict=record_dict)        
-        if record.type == "user":
-            if record.hrn == self.user:
+        # don't translate into an object, as this would possibly distort
+        # user-provided data; e.g. add an 'email' field to Users
+        if record_dict['type'] == "user":
+            if record_dict['hrn'] == self.user:
                 cred = self.my_credential_string
             else:
                 cred = self.my_authority_credential_string()
-        elif record.type in ["slice"]:
+        elif record_dict['type'] in ["slice"]:
             try:
                 cred = self.slice_credential_string(record.hrn)
             except ServerException, e:
@@ -882,13 +883,12 @@ or version information about sfi itself
                    cred = self.my_authority_credential_string()
                else:
                    raise
-        elif record.type in ["authority"]:
+        elif record_dict['type'] in ["authority"]:
             cred = self.my_authority_credential_string()
-        elif record.type == 'node':
+        elif record_dict['type'] == 'node':
             cred = self.my_authority_credential_string()
         else:
-            raise "unknown record type" + record.type
-        record_dict = record.todict()
+            raise "unknown record type" + record_dict['type']
         return self.registry().Update(record_dict, cred)
   
     def remove(self, options, args):
