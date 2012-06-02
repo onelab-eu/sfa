@@ -1,6 +1,6 @@
 %define name sfa
 %define version 2.1
-%define taglevel 7
+%define taglevel 8
 
 %define release %{taglevel}%{?pldistro:.%{pldistro}}%{?date:.%{date}}
 %global python_sitearch	%( python -c "from distutils.sysconfig import get_python_lib; print get_python_lib(1)" )
@@ -227,6 +227,14 @@ fi
 [ "$1" -ge "1" ] && service sfa-cm restart || :
 
 %changelog
+* Sat Jun 02 2012 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-2.1-8
+- new 'void' generic_flavour for running in registry-only mode
+- first shot at refactoring importers - probably needs more work
+- openstack: various enhancements
+- sfi interface to registry not based on xml files anymore
+- sfi show sorts result on record key
+- bugfix in sfa update on users with a pl-backed registry
+
 * Mon May 14 2012 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-2.1-7
 - renamed sfa/plc into sfa/planetlab
 - plxrn moved in sfa/planetlab as well
