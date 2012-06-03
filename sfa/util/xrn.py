@@ -93,11 +93,12 @@ class Xrn:
         return False
 
     ########## basic tools on URNs
-    URN_PREFIX = "urn:publicid:idn"
+    URN_PREFIX = "urn:publicid:IDN"
+    URN_PREFIX_lower = "urn:publicid:idn"
 
     @staticmethod
     def is_urn (text):
-        return text.lower().startswith(Xrn.URN_PREFIX)
+        return text.lower().startswith(Xrn.URN_PREFIX_lower)
 
     @staticmethod
     def urn_full (urn):
