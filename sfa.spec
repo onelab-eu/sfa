@@ -1,6 +1,6 @@
 %define name sfa
 %define version 2.1
-%define taglevel 8
+%define taglevel 9
 
 %define release %{taglevel}%{?pldistro:.%{pldistro}}%{?date:.%{date}}
 %global python_sitearch	%( python -c "from distutils.sysconfig import get_python_lib; print get_python_lib(1)" )
@@ -227,6 +227,9 @@ fi
 [ "$1" -ge "1" ] && service sfa-cm restart || :
 
 %changelog
+* Sun Jun 03 2012 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-2.1-9
+- fix broken sfa.util.xrn class for lowercase
+
 * Sat Jun 02 2012 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-2.1-8
 - new 'void' generic_flavour for running in registry-only mode
 - first shot at refactoring importers - probably needs more work
