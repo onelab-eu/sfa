@@ -27,7 +27,7 @@ from sfa.planetlab.plshell import PlShell
 import sfa.planetlab.peers as peers
 from sfa.planetlab.plaggregate import PlAggregate
 from sfa.planetlab.plslices import PlSlices
-from sfa.planetlab.plxrn import PlXrn, slicename_to_hrn, hostname_to_hrn, hrn_to_pl_slicename
+from sfa.planetlab.plxrn import PlXrn, slicename_to_hrn, hostname_to_hrn, hrn_to_pl_slicename, hrn_to_pl_login_base, xrn_to_hostname
 
 
 def list_to_dict(recs, key):
@@ -611,6 +611,10 @@ class PlDriver (Driver):
         #panos adding the info option to the caching key (can be improved)
         if options.get('info'):
             version_string = version_string + "_"+options.get('info', 'default')
+
+        # Adding the list_leases option to the caching key
+        if options.get('list_leases'):
+            version_string = version_string + "_"+options.get('list_leases', 'default')
     
         # look in cache first
         if cached_requested and self.cache and not slice_hrn:
@@ -737,6 +741,22 @@ class PlDriver (Driver):
    
         # add/remove links links 
         slices.verify_slice_links(slice, rspec.version.get_link_requests(), nodes)
+
+        # add/remove leases
+        requested_leases = []
+        kept_leases = []
+        for lease in rspec.version.get_leases():
+            requested_lease = {}
+            if not lease.get('lease_id'):
+               requested_lease['hostname'] = xrn_to_hostname(lease.get('component_id').strip())
+               requested_lease['t_from'] = lease.get('t_from')
+               requested_lease['t_until'] = lease.get('t_until')
+            else:
+               kept_leases.append(int(lease['lease_id']))
+            if requested_lease.get('hostname'):
+                requested_leases.append(requested_lease)
+
+        leases = slices.verify_slice_leases(slice, requested_leases, kept_leases, peer)
     
         # handle MyPLC peer association.
         # only used by plc and ple.

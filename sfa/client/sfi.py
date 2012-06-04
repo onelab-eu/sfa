@@ -372,6 +372,9 @@ class Sfi:
             #panos: a new option to define the type of information about resources a user is interested in
             parser.add_option("-i", "--info", dest="info",
                                 help="optional component information", default=None)
+            # a new option to retreive or not reservation-oriented RSpecs (leases)
+            parser.add_option("-l", "--list_leases", dest="list_leases", type="choice",
+                                help="Retreive or not reservation-oriented RSpecs ([resources]|leases|all )",
 
 
         # 'create' does return the new rspec, makes sense to save that too
@@ -955,6 +958,8 @@ or with an slice hrn, shows currently provisioned resources
             api_options['geni_slice_urn'] = hrn_to_urn(hrn, 'slice')
         if options.info:
             api_options['info'] = options.info
+        if options.list_leases:
+            api_options['list_leases'] = options.list_leases
         if options.current:
             if options.current == True:
                 api_options['cached'] = False
