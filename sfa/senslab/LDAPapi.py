@@ -182,6 +182,10 @@ class LDAPapi :
                        
 	   
 	def make_ldap_attributes_from_record(self, record):
+            """When addind a new user to LDAP, creates an attributes dictionnary
+            from the SFA record.
+            
+            """
 
             attrs = {}
             attrs['objectClass'] = ["top", "person", "inetOrgPerson",\
@@ -209,8 +213,8 @@ class LDAPapi :
             return attrs
         
         def ldapAdd(self, record = None) :
-            #SFA users are added from here
-            #They get a description attribute which others don't have.
+            """Add SFA user to LDAP """
+           
             user_ldap_attrs = self.make_ldap_attributes_from_record(record)
             #Bind to the server
             result = self.conn.connect()
@@ -219,17 +223,21 @@ class LDAPapi :
                 
                 # A dict to help build the "body" of the object
                 
-                
-                print >>sys.stderr, "\r\n \r\n \t LDAP.PY \t\t  ldapAdd  attrs %s " %(user_ldap_attrs)
+                logger.debug(" \r\n \t LDAP ldapAdd attrs %s " %user_ldap_attrs)
+
                 # The dn of our new entry/object
                 dn = 'uid=' + user_ldap_attrs['uid'] + "," + self.baseDN 
  
                 try:
                     ldif = modlist.addModlist(user_ldap_attrs)
-                    print " \r\n \r\n LDAPapi.PY add attrs %s \r\n  ldif %s  " %(user_ldap_attrs,ldif) 
+                    logger.debug("\r\n \tLDAPapi.PY add attrs %s \r\n  ldif %s"\
+                                 %(user_ldap_attrs,ldif) )
                     self.conn.ldapserv.add_s(dn,ldif)
+                    
                     logger.info("Adding user %s login %s in LDAP" \
                             %user_ldap_attrs['cn'] %user_ldap_attrs['uid'])
+                            
+                            
                 except ldap.LDAPError, e:
                     logger.log_exc("LDAP Add Error %s" %e)
                     return {'bool' : False, 'message' : e }
@@ -240,8 +248,27 @@ class LDAPapi :
                 return result
 
          
-         
-        def ldapDelete(self, record_filter): 
+        def ldapDelete(self, person_dn):
+            """
+            Deletes a person in LDAP. Uses the dn of the user.
+            """
+            #Connect and bind   
+            result =  self.conn.connect()
+            if(result['bool']):
+                try:
+                    self.conn.ldapserv.delete_s(person_dn)
+                    self.conn.close()
+                    return {'bool': True}
+                
+                except ldap.LDAPError, e:
+                    logger.log_exc("LDAP Delete Error %s" %e)
+                    return {'bool': False}
+            
+        
+        def ldapDeleteHrn(self, record_filter): 
+            """
+            Deletes a SFA person in LDAP, based on the user's hrn.
+            """
             #Find uid of the  person 
             person = self.ldapFindHrn(record_filter)
            
@@ -250,17 +277,9 @@ class LDAPapi :
             else:
                 return {'bool': False}
             
-            #Connect and bind   
-            result =  self.conn.connect()
-            if(result['bool']):
-                try:
-                    self.conn.ldapserv.delete_s(dn)
-                    return {'bool': True}
-                
-                except ldap.LDAPError, e:
-                    logger.log_exc("LDAP Delete Error %s" %e)
-                    print>>sys.stderr, "\r\n LDAP.PY \tldapDelete error : %s" %(e)  
-                    return {'bool': False}
+            result = self.ldapDelete(dn)
+            return result
+            
                     
                     
         def ldapModify(self, record_filter, new_attributes):
@@ -290,9 +309,11 @@ class LDAPapi :
                 if (result['bool']): 
                     try:
                         self.conn.ldapserver.modify_s(dn,ldif)
-                        self.close()
+                        self.conn.close()
                     except ldap.LDAPError, e:
-                        return {'bool' : False, 'message' : e }
+                        logger.log_exc("LDAP ldapModify Error %s" %e)
+                        return {'bool' : False }
+                
                 return {'bool': True}  
                 
                 
@@ -300,22 +321,32 @@ class LDAPapi :
         #TODO Handle OR filtering in the ldap query when 
         #dealing with a list of records instead of doing a for loop in GetPersons   
         def make_ldap_filters_from_record(self, record=None):
-            
+            """
+            Helper function to make LDAP filter requests out of SFA records.
+            """
             req_ldapdict = {}
             if record :
                 if 'first_name' in record  and 'last_name' in record:
-                    req_ldapdict['cn'] = str(record['first_name'])+" "+str(record['last_name'])
+                    req_ldapdict['cn'] = str(record['first_name'])+" "\
+                                            + str(record['last_name'])
                 if 'email' in record :
                     req_ldapdict['mail'] = record['email']
                 if 'hrn' in record :
                     splited_hrn = record['hrn'].split(".")
                     if splited_hrn[0] != self.authname :
-                            print >>sys.stderr,"i know nothing about",record['hrn'], " my authname is ", self.authname, " not ", splited_hrn[0]
+                        logger.warning(" \r\n LDAP.PY \
+                            make_ldap_filters_from_record I know nothing \
+                            about %s my authname is %s not %s" \
+                            %(record['hrn'], self.authname, splited_hrn[0]) )
+                            
                     login=splited_hrn[1]
                     req_ldapdict['uid'] = login
                 
                 req_ldap=''
-                print >>sys.stderr, "\r\n \r\n \t LDAP.PY \t\t   make_ldap_filters_from_record record %s req_ldapdict %s" %(record,req_ldapdict)
+                logger.debug("\r\n \t LDAP.PY make_ldap_filters_from_record \
+                                    record %s req_ldapdict %s" \
+                                    %(record, req_ldapdict))
+               
                 for k in req_ldapdict:
                     req_ldap += '('+str(k)+'='+str(req_ldapdict[k])+')'
                 if  len(req_ldapdict.keys()) >1 :
@@ -329,112 +360,57 @@ class LDAPapi :
 
             
             
-        #Returns one matching entry 
-	def ldapSearch (self, req_ldap = None, return_fields = None ):
-            
-            self.conn.connect(bind = False)
-            req_ldap = self.make_ldap_filters_from_record(record) 
-            return_fields = []
-            if expected_fields == None : 
-               return_fields = ['mail','givenName', 'sn', 'uid','sshPublicKey']
-            else : 
-                return_fields = expected_fields
-            print >>sys.stderr, "\r\n \r\n \t LDAP.PY \t\t ldapSearch  req_ldap %s return_fields %s " %(req_ldap,return_fields)
-            
-            try:
-                msg_id = self.conn.ldapserv.search(
-                                            self.baseDN,ldap.SCOPE_SUBTREE,\
-                                            req_ldap,return_fields)     
-                #Get all the results matching the search from ldap in one shot (1 value)
-                result_type, result_data = self.conn.ldapserv.result(msg_id,1)
-                #results = []
-                print >>sys.stderr, "\r\n \r\n \t LDAP.PY \t\t ldapSearch  result_data %s" %(result_data) 
+
+	def ldapSearch (self, req_ldap = None, expected_fields = None ):
+            """
+            Used to search directly in LDAP, by using ldap filters and
+            return fields. 
+            When req_ldap is None, returns all the entries in the LDAP.
+            """
+            result = self.conn.connect(bind = False)
+            if (result['bool']) :
                 
-                return result_data
-                #if result_data is None:
-                    #return None
-                ##Asked for a specific user
-                #if record :
-                    #ldapentry = result_data[0][1]
-                    #print >>sys.stderr, "\r\n \r\n \t LDAP.PY \t\t ldapSearch  ldapentry %s" %(ldapentry) 
-                    #tmpname = ldapentry['uid'][0]
-   
-                    #tmpemail = ldapentry['mail'][0]
-                    #if ldapentry['mail'][0] == "unknown":
-                        #tmpemail = None
-                        
-                    #try:
-                        #hrn = record['hrn']
-                        #parent_hrn = get_authority(hrn)
-                        #peer_authority = None
-                        #if parent_hrn is not self.authname:
-                            #peer_authority = parent_hrn
-                            
+                return_fields = []
+                if expected_fields == None : 
+                    return_fields = ['mail','givenName', 'sn', 'uid','sshPublicKey']
+                else : 
+                    return_fields = expected_fields
+                    
+                logger.debug("LDAP.PY \t ldapSearch  req_ldap %s \
+                                return_fields %s" %(req_ldap,return_fields))
+    
+                try:
+                    msg_id = self.conn.ldapserv.search(
+                                                self.baseDN,ldap.SCOPE_SUBTREE,\
+                                                req_ldap,return_fields)     
+                    #Get all the results matching the search from ldap in one 
+                    #shot (1 value)
+                    result_type, result_data = \
+                                         self.conn.ldapserv.result(msg_id,1)
 
-                                    
-                        #results=  {	
-                                    #'type': 'user',
-                                    #'pkey': ldapentry['sshPublicKey'][0],
-                                    ##'uid': ldapentry[1]['uid'][0],
-                                    #'uid': tmpname ,
-                                    #'email':tmpemail,
-                                    ##'email': ldapentry[1]['mail'][0],
-                                    #'first_name': ldapentry['givenName'][0],
-                                    #'last_name': ldapentry['sn'][0],
-                                    ##'phone': 'none',
-                                    #'serial': 'none',
-                                    #'authority': parent_hrn,
-                                    #'peer_authority': peer_authority,
-                                    #'pointer' : -1,
-                                    #'hrn': hrn,
-                                    #}
-                    #except KeyError:
-                        #print >>sys.stderr, "\r\n \r\n LDAPapi \t ldapSearch KEyError results %s" %(results)
-                        #pass 
-		#else:
-                ##Asked for all users in ldap
-                    #results = []
-                    #for ldapentry in result_data:
-                        #print>>sys.stderr,"\r\n\t\t LDAP.py ldapentry  name : %s " %(ldapentry[1]['uid'][0])
-                        #tmpname = ldapentry[1]['uid'][0]
-			#hrn=self.authname+"."+ tmpname
-                        
-                        #tmpemail = ldapentry[1]['mail'][0]
-                        #if ldapentry[1]['mail'][0] == "unknown":
-                            #tmpemail = None
+                    self.conn.close()
 
-		
-			#parent_hrn = get_authority(hrn)
-			#parent_auth_info = self.senslabauth.get_auth_info(parent_hrn)
-                        #try:
-                            #results.append(  {	
-                                    #'type': 'user',
-                                    #'pkey': ldapentry[1]['sshPublicKey'][0],
-                                    ##'uid': ldapentry[1]['uid'][0],
-                                    #'uid': tmpname ,
-                                    #'email':tmpemail,
-                                    ##'email': ldapentry[1]['mail'][0],
-                                    #'first_name': ldapentry[1]['givenName'][0],
-                                    #'last_name': ldapentry[1]['sn'][0],
-    ##				'phone': 'none',
-                                    #'serial': 'none',
-                                    #'authority': self.authname,
-                                    #'peer_authority': '',
-                                    #'pointer' : -1,
-                                    #'hrn': hrn,
-                                    #} ) 
-                        #except KeyError:
-                            #pass
-                #return results
-
-            
-            except  ldap.LDAPError,e :
-                print >>sys.stderr, "ERROR LDAP %s" %(e)
+                    logger.debug("LDAP.PY \t ldapSearch  result_data %s"\
+                                %(result_data))
+    
+                    return result_data
+                
+                except  ldap.LDAPError,e :
+                    logger.log_exc("LDAP ldapSearch Error %s" %e)
+                    return []
+                
+                else:
+                    logger.error("LDAP.PY \t Connection Failed" )
+                    return 
                
-        
 
         def ldapFindHrn(self,record = None, expected_fields = None):
-            self.conn.connect(bind = False)
+            """
+            Search a SFA user with a hrn. User should be already registered 
+            in Senslab LDAP. 
+            Returns one matching entry 
+            """   
+
             req_ldap = self.make_ldap_filters_from_record(record) 
             return_fields = []
             if expected_fields == None : 
@@ -449,7 +425,7 @@ class LDAPapi :
             #Asked for a specific user
             if record :
                 ldapentry = result_data[0][1]
-                print >>sys.stderr, "\r\n \r\n \t LDAP.PY \t\t ldapSearch  ldapentry %s" %(ldapentry) 
+                logger.debug("LDAP.PY \t ldapFindHrn ldapentry %s" %(ldapentry))
                 tmpname = ldapentry['uid'][0]
 
                 tmpemail = ldapentry['mail'][0]
@@ -482,13 +458,15 @@ class LDAPapi :
                                 'hrn': hrn,
                                 }
                 except KeyError:
-                    print >>sys.stderr, "\r\n \r\n LDAPapi \t ldapSearch KEyError results %s" %(results)
+                    lorrer.log_exc("LDAPapi \t ldapSearch KEyError results %s" \
+                                   %(results) )
                     pass 
             else:
             #Asked for all users in ldap
                 results = []
                 for ldapentry in result_data:
-                    print>>sys.stderr,"\r\n\t\t LDAP.py ldapentry  name : %s " %(ldapentry[1]['uid'][0])
+                    logger.debug(" LDAP.py ldapFindHrn ldapentry name : %s " \
+                                 %(ldapentry[1]['uid'][0]))
                     tmpname = ldapentry[1]['uid'][0]
                     hrn=self.authname+"."+ tmpname
                     
@@ -509,7 +487,7 @@ class LDAPapi :
                                 #'email': ldapentry[1]['mail'][0],
                                 'first_name': ldapentry[1]['givenName'][0],
                                 'last_name': ldapentry[1]['sn'][0],
-#				'phone': 'none',
+                                #'phone': 'none',
                                 'serial': 'none',
                                 'authority': self.authname,
                                 'peer_authority': '',
@@ -520,85 +498,3 @@ class LDAPapi :
                         pass
             return results   
                 
-	#def ldapFindHrn(self, record_filter = None):        
-	##def ldapFindHrn(self, record_filter = None, columns=None):
-
- 		#results = [] 
-                #self.conn.connect(bind = False)
-	        ##self.connect()
-		#if 'authority' in record_filter:
-		## ask for authority
-			#if record_filter['authority']==self.authname:
-				## which is SFA_REGISTRY_ROOT_AUTH
-				## request all records which are under our authority, ie all ldap entries
-				#ldapfilter="cn=*"
-			#else:
-				##which is NOT SFA_REGISTRY_ROOT_AUTH
-				#return []
-		#else :
-			#if not 'hrn' in record_filter:
-				#print >>sys.stderr,"find : don't know how to handle filter ",record_filter
-				#return []
-			#else:
-				#hrns=[]
-				#h=record_filter['hrn']
-				#if  isinstance(h,list):
-					#hrns=h
-				#else : 
-					#hrns.append(h)
-	
-				#ldapfilter="(|"
-				#for hrn in hrns:
-					#splited_hrn=hrn.split(".")
-					#if splited_hrn[0] != self.authname :
-						#print >>sys.stderr,"i know nothing about",hrn, " my authname is ", self.authname, " not ", splited_hrn[0]
-					#else :
-						#login=splited_hrn[1]
-						#ldapfilter+="(uid="
-						#ldapfilter+=login
-						#ldapfilter+=")"
-				#ldapfilter+=")"
-	
-                #rindex=self.conn.ldapserv.search(self.baseDN,ldap.SCOPE_SUBTREE,ldapfilter, ['mail','givenName', 'sn', 'uid','sshPublicKey'])
-		##rindex=self.ldapserv.search(self.baseDN,ldap.SCOPE_SUBTREE,ldapfilter, ['mail','givenName', 'sn', 'uid','sshPublicKey'])
-		#ldapresponse=self.conn.ldapserv.result(rindex,1)
-		#for ldapentry in ldapresponse[1]:
-                         
-                        #tmpname = ldapentry[1]['uid'][0]
-                        
-                        #if ldapentry[1]['uid'][0] == "savakian":
-                            #tmpname = 'avakian'
-
-			#hrn=self.authname+"."+ tmpname
-                        
-                        #tmpemail = ldapentry[1]['mail'][0]
-                        #if ldapentry[1]['mail'][0] == "unknown":
-                            #tmpemail = None
-##			uuid=create_uuid() 
-		
-##			RSA_KEY_STRING=ldapentry[1]['sshPublicKey'][0]
-		
-##			pkey=convert_public_key(RSA_KEY_STRING)
-		
-##			gid=self.senslabauth.create_gid("urn:publicid:IDN+"+self.authname+"+user+"+ldapentry[1]['uid'][0], uuid, pkey, CA=False)
-		
-			#parent_hrn = get_authority(hrn)
-			#parent_auth_info = self.senslabauth.get_auth_info(parent_hrn)
-
-			#results.append(  {	
-				#'type': 'user',
-                                #'pkey': ldapentry[1]['sshPublicKey'][0],
-                                ##'uid': ldapentry[1]['uid'][0],
-                                #'uid': tmpname ,
-                                #'email':tmpemail,
-				##'email': ldapentry[1]['mail'][0],
-				#'first_name': ldapentry[1]['givenName'][0],
-				#'last_name': ldapentry[1]['sn'][0],
-##				'phone': 'none',
-				#'serial': 'none',
-				#'authority': self.authname,
-				#'peer_authority': '',
-				#'pointer' : -1,
-				#'hrn': hrn,
-			 	#} )
-		#return results
