@@ -375,6 +375,7 @@ class Sfi:
             # a new option to retreive or not reservation-oriented RSpecs (leases)
             parser.add_option("-l", "--list_leases", dest="list_leases", type="choice",
                                 help="Retreive or not reservation-oriented RSpecs ([resources]|leases|all )",
+                                choices=("all", "resources", "leases"), default="resources")
 
 
         # 'create' does return the new rspec, makes sense to save that too
