@@ -17,7 +17,7 @@ class PGv2SliverType:
                 sliver_elem.set('name', sliver['type'])
             if sliver.get('client_id'):
                 sliver_elem.set('client_id', sliver['client_id'])
-            images = sliver.get('disk_images')
+            images = sliver.get('disk_image')
             if images and isinstance(images, list):
                 PGv2DiskImage.add_images(sliver_elem, images)      
             fw_rules = sliver.get('fw_rules')
@@ -47,7 +47,7 @@ class PGv2SliverType:
                 sliver['component_id'] = xml.attrib['component_id']
             if 'name' in sliver_elem.attrib:
                 sliver['type'] = sliver_elem.attrib['name']
-            sliver['images'] = PGv2DiskImage.get_images(sliver_elem)
+            sliver['disk_image'] = PGv2DiskImage.get_images(sliver_elem)
             sliver['fw_rules'] = PLOSv1FWRule.get_rules(sliver_elem)
             slivers.append(sliver)
         return slivers
