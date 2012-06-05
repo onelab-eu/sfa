@@ -82,17 +82,20 @@ class PlImporter:
     def locate_by_type_pointer (self, type, pointer):
         return self.records_by_type_pointer.get ( (type, pointer), None)
 
-    # convenience : try to locate first based on type+pointer
-    # if so, the record was created already even if e.g. its hrn has changed meanwhile
-    # otherwise we try by type+hrn (is this truly useful ?)
-    def locate (self, type, hrn=None, pointer=-1):
-        if pointer!=-1:
-            attempt = self.locate_by_type_pointer (type, pointer)
-            if attempt : return attempt
-        if hrn is not None:
-            attempt = self.locate_by_type_hrn (type, hrn,)
-            if attempt : return attempt
-        return None
+    # a convenience/helper function to see if a record is already known
+    # a former, broken, attempt (in 2.1-9) had been made 
+    # to try and use 'pointer' as a first, most significant attempt
+    # the idea being to preserve stuff as much as possible, and thus 
+    # to avoid creating a new gid in the case of a simple hrn rename
+    # however this of course doesn't work as the gid depends on the hrn...
+    #def locate (self, type, hrn=None, pointer=-1):
+    #    if pointer!=-1:
+    #        attempt = self.locate_by_type_pointer (type, pointer)
+    #        if attempt : return attempt
+    #    if hrn is not None:
+    #        attempt = self.locate_by_type_hrn (type, hrn,)
+    #        if attempt : return attempt
+    #    return None
 
     # this makes the run method a bit abtruse - out of the way
     def create_special_vini_record (self, interface_hrn):
@@ -185,7 +188,7 @@ class PlImporter:
             site_hrn = _get_site_hrn(interface_hrn, site)
             # import if hrn is not in list of existing hrns or if the hrn exists
             # but its not a site record
-            site_record=self.locate ('authority', site_hrn, site['site_id'])
+            site_record=self.locate_by_type_hrn ('authority', site_hrn)
             if not site_record:
                 try:
                     urn = hrn_to_urn(site_hrn, 'authority')
@@ -222,7 +225,7 @@ class PlImporter:
                 node_hrn =  hostname_to_hrn(site_auth, site_name, node['hostname'])
                 # xxx this sounds suspicious
                 if len(node_hrn) > 64: node_hrn = node_hrn[:64]
-                node_record = self.locate ( 'node', node_hrn , node['node_id'] )
+                node_record = self.locate_by_type_hrn ( 'node', node_hrn )
                 if not node_record:
                     try:
                         pkey = Keypair(create=True)
@@ -255,7 +258,7 @@ class PlImporter:
                 if len(person_hrn) > 64: person_hrn = person_hrn[:64]
                 person_urn = hrn_to_urn(person_hrn, 'user')
 
-                user_record = self.locate ( 'user', person_hrn, person['person_id'])
+                user_record = self.locate_by_type_hrn ( 'user', person_hrn)
 
                 # return a tuple pubkey (a plc key object) and pkey (a Keypair object)
                 def init_person_key (person, plc_keys):
@@ -337,7 +340,7 @@ class PlImporter:
                 except:
                     self.logger.warning ("PlImporter: cannot locate slice_id %s - ignored"%slice_id)
                 slice_hrn = slicename_to_hrn(interface_hrn, slice['name'])
-                slice_record = self.locate ('slice', slice_hrn, slice['slice_id'])
+                slice_record = self.locate_by_type_hrn ('slice', slice_hrn)
                 if not slice_record:
                     try:
                         pkey = Keypair(create=True)
