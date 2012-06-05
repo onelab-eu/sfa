@@ -93,7 +93,7 @@ class OSAggregate:
             rspec_node['component_manager_id'] = Xrn(self.driver.hrn, 'authority+cm').get_urn()   
             sliver = instance_to_sliver(instance)
             disk_image = image_manager.get_disk_image(instance.image_ref)
-            sliver['disk_images'] = [disk_image.to_rspec_object()]
+            sliver['disk_image'] = [disk_image.to_rspec_object()]
             rspec_node['slivers'] = [sliver]
             rspec_nodes.append(rspec_node)
         return rspec_nodes
@@ -126,7 +126,7 @@ class OSAggregate:
             slivers = []
             for instance in instances:
                 sliver = instance_to_sliver(instance)
-                sliver['disk_images'] = disk_image_objects
+                sliver['disk_image'] = disk_image_objects
                 slivers.append(sliver)
         
             rspec_node['slivers'] = slivers
@@ -264,7 +264,7 @@ class OSAggregate:
                     ami_id = default_image_id
                     aki_id = default_aki_id
                     ari_id = default_ari_id
-                    req_image = instance_type.get('disk_images')
+                    req_image = instance_type.get('disk_image')
                     if req_image and isinstance(req_image, list):
                         req_image_name = req_image[0]['name']
                         disk_image = image_manager.get_disk_image(name=req_image_name)
