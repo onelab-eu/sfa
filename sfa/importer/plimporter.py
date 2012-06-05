@@ -180,6 +180,11 @@ class PlImporter:
         # isolate special vini case in separate method
         self.create_special_vini_record (interface_hrn)
 
+        def check_hrn (record, hrn):
+            if record.hrn != hrn:
+                record.hrn=hrn
+                dbsession.commit()
+
         # start importing 
         for site in sites:
             site_hrn = _get_site_hrn(interface_hrn, site)
@@ -206,6 +211,8 @@ class PlImporter:
                     self.logger.log_exc("PlImporter: failed to import site. Skipping child records") 
                     continue 
             else:
+                # we might have renamed it - since we first use pointer to locate it
+                check_hrn(site_record, site_hrn)
                 # xxx update the record ...
                 pass
             site_record.stale=False
@@ -219,18 +226,18 @@ class PlImporter:
                     continue 
                 site_auth = get_authority(site_hrn)
                 site_name = site['login_base']
-                hrn =  hostname_to_hrn(site_auth, site_name, node['hostname'])
+                node_hrn =  hostname_to_hrn(site_auth, site_name, node['hostname'])
                 # xxx this sounds suspicious
-                if len(hrn) > 64: hrn = hrn[:64]
-                node_record = self.locate ( 'node', hrn , node['node_id'] )
+                if len(node_hrn) > 64: node_hrn = node_hrn[:64]
+                node_record = self.locate ( 'node', node_hrn , node['node_id'] )
                 if not node_record:
                     try:
                         pkey = Keypair(create=True)
-                        urn = hrn_to_urn(hrn, 'node')
+                        urn = hrn_to_urn(node_hrn, 'node')
                         node_gid = self.auth_hierarchy.create_gid(urn, create_uuid(), pkey)
-                        node_record = RegNode (hrn=hrn, gid=node_gid, 
+                        node_record = RegNode (hrn=node_hrn, gid=node_gid, 
                                                pointer =node['node_id'],
-                                               authority=get_authority(hrn))
+                                               authority=get_authority(node_hrn))
                         node_record.just_created()
                         dbsession.add(node_record)
                         dbsession.commit()
@@ -240,7 +247,7 @@ class PlImporter:
                         self.logger.log_exc("PlImporter: failed to import node") 
                 else:
                     # xxx update the record ...
-                    pass
+                    check_hrn(node_record, node_hrn)
                 node_record.stale=False
 
             site_pis=[]
@@ -298,6 +305,7 @@ class PlImporter:
                         # update the record ?
                         # if user's primary key has changed then we need to update the 
                         # users gid by forcing an update here
+                        check_hrn (user_record, person_hrn)
                         sfa_keys = user_record.reg_keys
                         def key_in_list (key,sfa_keys):
                             for reg_key in sfa_keys:
@@ -355,6 +363,7 @@ class PlImporter:
                         self.logger.log_exc("PlImporter: failed to import slice")
                 else:
                     # xxx update the record ...
+                    check_hrn (slice_record, slice_hrn)
                     self.logger.warning ("Slice update not yet implemented")
                     pass
                 # record current users affiliated with the slice
