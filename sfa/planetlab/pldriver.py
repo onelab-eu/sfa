@@ -27,7 +27,7 @@ from sfa.planetlab.plshell import PlShell
 import sfa.planetlab.peers as peers
 from sfa.planetlab.plaggregate import PlAggregate
 from sfa.planetlab.plslices import PlSlices
-from sfa.planetlab.plxrn import PlXrn, slicename_to_hrn, hostname_to_hrn, hrn_to_pl_slicename, hrn_to_pl_login_base, xrn_to_hostname
+from sfa.planetlab.plxrn import PlXrn, slicename_to_hrn, hostname_to_hrn, hrn_to_pl_slicename, xrn_to_hostname
 
 
 def list_to_dict(recs, key):
