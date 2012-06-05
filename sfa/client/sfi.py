@@ -359,7 +359,7 @@ class Sfi:
                             default="all")
         if command in ("resources"):
             # rspec version
-            parser.add_option("-r", "--rspec-version", dest="rspec_version", default="SFA 1",
+            parser.add_option("-r", "--rspec-version", dest="rspec_version", default="GENI",
                               help="schema type and version of resulting RSpec")
             # disable/enable cached rspecs
             parser.add_option("-c", "--current", dest="current", default=False,
