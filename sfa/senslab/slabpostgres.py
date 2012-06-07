@@ -69,7 +69,7 @@ class SliceSenslab (SlabBase):
         result += ">"
         return result
           
-    def dumpquerytodict(self):
+    def dump_sqlalchemyobj_to_dict(self):
         dict = {'slice_hrn':self.slice_hrn,
         'peer_authority':self.peer_authority,
         'record_id':self.record_id_slice, 

@@ -45,7 +45,7 @@ class SlabSlices:
         
 
        
-        slice = self.driver.GetSlices(slice_filter = slice_name, filter_type = 'slice_hrn')
+        slice = self.driver.GetSlices(slice_filter = slice_name, slice_filter_type = 'slice_hrn')
  
 
         # Get user information
@@ -276,7 +276,7 @@ class SlabSlices:
 
         login_base = slice_hrn.split(".")[0]
         slicename = slice_hrn
-        sl = self.driver.GetSlices(slice_filter=slicename, filter_type = 'slice_hrn') 
+        sl = self.driver.GetSlices(slice_filter=slicename, slice_filter_type = 'slice_hrn') 
         if sl:
 
             print>>sys.stderr, " \r\n \r\rn Slices.py verify_slice slicename %s sl %s slice_record %s"%(slicename ,sl, slice_record)

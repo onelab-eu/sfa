@@ -57,8 +57,11 @@ class OARrestapi:
         self.oarserver['uri'] = None
         self.oarserver['postformat'] = 'json'
         
-        self.jobstates = ["Terminated", "Running", "Error", "Waiting", "Launching","Hold"]
-             
+
+        self.jobstates  = ['Terminated','Hold','Waiting','toLaunch','toError',\
+                            'toAckReservation','Launching','Finishing',\
+                            'Running','Suspended','Resuming','Error']
+                            
         self.parser = OARGETParser(self)
        
             
@@ -329,7 +332,7 @@ class OARGETParser:
     #Retourne liste de dictionnaires contenant attributs des sites	
     def ParseSites(self):
         nodes_per_site = {}
-
+        config = Config()
         # Create a list of nodes per  site_id
         for node_id in self.node_dictlist.keys():
             node  = self.node_dictlist[node_id]
