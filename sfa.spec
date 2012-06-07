@@ -1,6 +1,6 @@
 %define name sfa
 %define version 2.1
-%define taglevel 10
+%define taglevel 11
 
 %define release %{taglevel}%{?pldistro:.%{pldistro}}%{?date:.%{date}}
 %global python_sitearch	%( python -c "from distutils.sysconfig import get_python_lib; print get_python_lib(1)" )
@@ -248,6 +248,11 @@ fi
 [ "$1" -ge "1" ] && service sfa-cm restart || :
 
 %changelog
+* Thu Jun 07 2012 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-2.1-11
+- review packaging - site-packages/planetlab now come with sfa-plc
+- new package sfa-federica
+- clientbin moved one step upwards
+
 * Wed Jun 6 2012 Tony Mack <tmack@cs.princeton.edu> - sfa-2.1-10
 - fix bug in sfi update()
 
