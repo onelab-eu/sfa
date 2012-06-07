@@ -879,7 +879,7 @@ or version information about sfi itself
                 cred = self.my_authority_credential_string()
         elif record_dict['type'] in ["slice"]:
             try:
-                cred = self.slice_credential_string(record.hrn)
+                cred = self.slice_credential_string(record_dict['hrn'])
             except ServerException, e:
                # XXX smbaker -- once we have better error return codes, update this
                # to do something better than a string compare
