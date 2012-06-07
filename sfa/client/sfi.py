@@ -1,7 +1,6 @@
 #
 # sfi.py - basic SFA command-line client
-# the actual binary in sfa/clientbin essentially runs main()
-# this module is used in sfascan
+# this module is also used in sfascan
 #
 
 import sys
