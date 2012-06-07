@@ -151,7 +151,7 @@ make VERSIONTAG="%{version}-%{taglevel}" SCMURL="%{SCMURL}" install DESTDIR="$RP
 rm -rf $RPM_BUILD_ROOT
 
 %files
-%{python_sitelib}/sfa/__init__.py
+%{python_sitelib}/sfa/__init__.py*
 %{python_sitelib}/sfa/trust
 %{python_sitelib}/sfa/storage
 %{python_sitelib}/sfa/util
