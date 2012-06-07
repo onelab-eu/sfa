@@ -35,6 +35,7 @@ packages = [
     'sfa/rspecs/elements/versions',
     'sfa/rspecs/versions',
     'sfa/client',
+    'sfa/clientbin',
     'sfa/planetlab',
     'sfa/openstack',
     'sfa/federica',
