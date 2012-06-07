@@ -368,9 +368,9 @@ class SlabSlices:
             else: 
                
                 if isinstance(users,list):
-                   ldap_reslt = self.driver.ldap.ldapSearch(users[0])
+                   ldap_reslt = self.driver.ldap.LdapSearch(users[0])
                 else:
-                    ldap_reslt = self.driver.ldap.ldapSearch(users)
+                    ldap_reslt = self.driver.ldap.LdapSearch(users)
                 if ldap_result:
                     existing_users = ldap_reslt[0]
                     existing_user_hrns.append (users_dict[user['hrn']]['hrn'])

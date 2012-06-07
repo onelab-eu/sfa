@@ -1,4 +1,3 @@
-# import modules used here -- sys is a very standard one
 import sys
 import httplib
 import json
@@ -13,7 +12,7 @@ from sfa.util.xrn import hrn_to_urn, get_authority,Xrn,get_leaf
 
 from sfa.util.config import Config
 
-#OARIP='10.127.255.254'
+
 OARIP='192.168.0.109'
 
 
@@ -330,7 +329,7 @@ class OARGETParser:
     #Retourne liste de dictionnaires contenant attributs des sites	
     def ParseSites(self):
         nodes_per_site = {}
-        config = Config()
+
         # Create a list of nodes per  site_id
         for node_id in self.node_dictlist.keys():
             node  = self.node_dictlist[node_id]
