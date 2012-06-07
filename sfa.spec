@@ -181,7 +181,6 @@ rm -rf $RPM_BUILD_ROOT
 
 %files client
 %config (noreplace) /etc/sfa/sfi_config
-%{python_sitelib}/sfa/clientbin
 %{_bindir}/sfi*.py*
 %{_bindir}/sfi
 %{_bindir}/get*.py*
