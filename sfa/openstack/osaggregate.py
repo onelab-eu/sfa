@@ -15,7 +15,9 @@ from sfa.rspecs.elements.sliver import Sliver
 from sfa.rspecs.elements.login import Login
 from sfa.rspecs.elements.disk_image import DiskImage
 from sfa.rspecs.elements.services import Services
+from sfa.rspecs.elements.interface import Interface
 from sfa.util.xrn import Xrn
+from sfa.util.plxrn import PlXrn
 from sfa.util.osxrn import OSXrn
 from sfa.rspecs.version_manager import VersionManager
 from sfa.openstack.image import ImageManager
@@ -80,32 +82,49 @@ class OSAggregate:
         rspec.version.add_nodes(nodes)
         return rspec.toxml()
 
-    def get_slice_nodes(self, slice_xrn):
-        image_manager = ImageManager(self.driver)
-        name = OSXrn(xrn = slice_xrn).name
-        instances = self.driver.shell.db.instance_get_all_by_project(name)
-        rspec_nodes = []
-        for instance in instances:
-            rspec_node = Node()
-            xrn = OSXrn(instance.hostname, 'node')
-            rspec_node['component_id'] = xrn.urn
-            rspec_node['component_name'] = xrn.name
-            rspec_node['component_manager_id'] = Xrn(self.driver.hrn, 'authority+cm').get_urn()   
-            sliver = instance_to_sliver(instance)
-            disk_image = image_manager.get_disk_image(instance.image_ref)
-            sliver['disk_image'] = [disk_image.to_rspec_object()]
-            rspec_node['slivers'] = [sliver]
-            rspec_nodes.append(rspec_node)
-        return rspec_nodes
-
-    def get_aggregate_nodes(self):
-                
+    def get_availability_zones(self):
         zones = self.driver.shell.db.zone_get_all()
         if not zones:
             zones = ['cloud']
         else:
             zones = [zone.name for zone in zones]
 
+    def get_slice_nodes(self, slice_xrn):
+        image_manager = ImageManager(self.driver)
+
+        zones = self.get_availability_zones()
+        name = OSXrn(xrn = slice_xrn).name
+        instances = self.driver.shell.db.instance_get_all_by_project(name)
+        rspec_nodes = []
+        for instance in instances:
+            rspec_node = Node()
+            interfaces = []
+            for fixed_ip in instance.fixed_ips:
+                if_xrn = PlXrn(auth=self.driver.hrn, 
+                               interface='node%s:eth0' % (instance.hostname)) 
+                interface = Interface({'component_id': if_xrn.urn})
+                interface['ips'] =  [{'address': fixed_ip['address'],
+                                     'netmask': fixed_ip['network'].netmask,
+                                     'type': 'ipv4'}]
+                interfaces.append(interface)
+            if instance.availability_zone:
+                node_xrn = OSXrn(instance.availability_zone, 'node')
+            else:
+                node_xrn = OSXrn('cloud', 'node')
+
+            rspec_node['component_id'] = node_xrn.urn
+            rspec_node['component_name'] = node_xrn.name
+            rspec_node['component_manager_id'] = Xrn(self.driver.hrn, 'authority+cm').get_urn()   
+            sliver = instance_to_sliver(instance)
+            disk_image = image_manager.get_disk_image(instance.image_ref)
+            sliver['disk_image'] = [disk_image.to_rspec_object()]
+            rspec_node['slivers'] = [sliver]
+            rspec_node['interfaces'] = interfaces 
+            rspec_nodes.append(rspec_node)
+        return rspec_nodes
+
+    def get_aggregate_nodes(self):
+        zones = self.get_availability_zones()
         # available sliver/instance/vm types
         instances = self.driver.shell.db.instance_type_get_all().values()
         # available images
