@@ -11,6 +11,7 @@ from sfa.rspecs.elements.bwlimit import BWlimit
 from sfa.rspecs.elements.pltag import PLTag
 from sfa.rspecs.elements.versions.pgv2Services import PGv2Services     
 from sfa.rspecs.elements.versions.pgv2SliverType import PGv2SliverType     
+from sfa.rspecs.elements.versions.pgv2Interface import PGv2Interface     
 
 from sfa.planetlab.plxrn import xrn_to_hostname
 
@@ -34,9 +35,10 @@ class PGv2Node:
             if node.get('location'):
                 node_elem.add_instance('location', node['location'], Location.fields)       
             # set interfaces
-            if node.get('interfaces'):
-                for interface in  node.get('interfaces', []):
-                    node_elem.add_instance('interface', interface, ['component_id', 'client_id'])
+            PGv2Interface.add_interfaces(node_elem, node.get('interfaces'))
+            #if node.get('interfaces'):
+            #    for interface in  node.get('interfaces', []):
+            #        node_elem.add_instance('interface', interface, ['component_id', 'client_id'])
             # set available element
             if node.get('boot_state'):
                 if node.get('boot_state').lower() == 'boot':
