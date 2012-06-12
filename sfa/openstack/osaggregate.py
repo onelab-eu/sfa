@@ -177,7 +177,7 @@ class OSAggregate:
             username = Xrn(user['urn']).get_leaf()
             try:
                 self.driver.shell.auth_manager.get_user(username)
-            except nova.exception.UserNotFound:
+            except UserNotFound:
                 self.driver.shell.auth_manager.create_user(username)
             self.verify_user_keys(username, user['keys'], options)
 
