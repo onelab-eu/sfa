@@ -119,7 +119,13 @@ class OSAggregate:
             disk_image = image_manager.get_disk_image(instance.image_ref)
             sliver['disk_image'] = [disk_image.to_rspec_object()]
             rspec_node['slivers'] = [sliver]
-            rspec_node['interfaces'] = interfaces 
+            rspec_node['interfaces'] = interfaces
+            # slivers always provide the ssh service
+            login = Login({'authentication': 'ssh-keys', 
+                           'hostname': interfaces[0]['ips'][0]['address'], 
+                           'port':'22', 'username': 'root'})
+            service = Services({'login': login})
+            rspec_node['services'] = [service] 
             rspec_nodes.append(rspec_node)
         return rspec_nodes
 
