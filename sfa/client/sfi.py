@@ -1,7 +1,6 @@
 #
 # sfi.py - basic SFA command-line client
-# the actual binary in sfa/clientbin essentially runs main()
-# this module is used in sfascan
+# this module is also used in sfascan
 #
 
 import sys
@@ -9,6 +8,7 @@ sys.path.append('.')
 
 import os, os.path
 import socket
+import re
 import datetime
 import codecs
 import pickle
@@ -23,8 +23,9 @@ from sfa.trust.gid import GID
 from sfa.trust.credential import Credential
 from sfa.trust.sfaticket import SfaTicket
 
+from sfa.util.faults import SfaInvalidArgument
 from sfa.util.sfalogging import sfi_logger
-from sfa.util.xrn import get_leaf, get_authority, hrn_to_urn
+from sfa.util.xrn import get_leaf, get_authority, hrn_to_urn, Xrn
 from sfa.util.config import Config
 from sfa.util.version import version_core
 from sfa.util.cache import Cache
@@ -43,6 +44,30 @@ from sfa.client.return_value import ReturnValue
 CM_PORT=12346
 
 # utility methods here
+def optparse_listvalue_callback(option, option_string, value, parser):
+    setattr(parser.values, option.dest, value.split(','))
+
+# a code fragment that could be helpful for argparse which unfortunately is 
+# available with 2.7 only, so this feels like too strong a requirement for the client side
+#class ExtraArgAction  (argparse.Action):
+#    def __call__ (self, parser, namespace, values, option_string=None):
+# would need a try/except of course
+#        (k,v)=values.split('=')
+#        d=getattr(namespace,self.dest)
+#        d[k]=v
+#####
+#parser.add_argument ("-X","--extra",dest='extras', default={}, action=ExtraArgAction,
+#                     help="set extra flags, testbed dependent, e.g. --extra enabled=true")
+    
+def optparse_dictvalue_callback (option, option_string, value, parser):
+    try:
+        (k,v)=value.split('=',1)
+        d=getattr(parser.values, option.dest)
+        d[k]=v
+    except:
+        parser.print_help()
+        sys.exit(1)
+
 # display methods
 def display_rspec(rspec, format='rspec'):
     if format in ['dns']:
@@ -72,7 +97,7 @@ def display_records(recordList, dump=False):
 
 def display_record(record, dump=False):
     if dump:
-        record.dump()
+        record.dump(sort=True)
     else:
         info = record.getdict()
         print "%s (%s)" % (info['hrn'], info['type'])
@@ -154,8 +179,44 @@ def save_record_to_file(filename, record_dict):
     f.close()
     return
 
+# minimally check a key argument
+def check_ssh_key (key):
+    good_ssh_key = r'^.*(?:ssh-dss|ssh-rsa)[ ]+[A-Za-z0-9+/=]+(?: .*)?$'
+    return re.match(good_ssh_key, key, re.IGNORECASE)
 
 # load methods
+def load_record_from_opts(options):
+    record_dict = {}
+    if hasattr(options, 'xrn') and options.xrn:
+        if hasattr(options, 'type') and options.type:
+            xrn = Xrn(options.xrn, options.type)
+        else:
+            xrn = Xrn(options.xrn)
+        record_dict['urn'] = xrn.get_urn()
+        record_dict['hrn'] = xrn.get_hrn()
+        record_dict['type'] = xrn.get_type()
+    if hasattr(options, 'key') and options.key:
+        try:
+            pubkey = open(options.key, 'r').read()
+        except IOError:
+            pubkey = options.key
+        if not check_ssh_key (pubkey):
+            raise SfaInvalidArgument(name='key',msg="Could not find file, or wrong key format")
+        record_dict['keys'] = [pubkey]
+    if hasattr(options, 'slices') and options.slices:
+        record_dict['slices'] = options.slices
+    if hasattr(options, 'researchers') and options.researchers:
+        record_dict['researcher'] = options.researchers
+    if hasattr(options, 'email') and options.email:
+        record_dict['email'] = options.email
+    if hasattr(options, 'pis') and options.pis:
+        record_dict['pi'] = options.pis
+
+    # handle extra settings
+    record_dict.update(options.extras)
+    
+    return Record(dict=record_dict)
+
 def load_record_from_file(filename):
     f=codecs.open(filename, encoding="utf-8", mode="r")
     xml_string = f.read()
@@ -257,6 +318,30 @@ class Sfi:
         parser = OptionParser(usage="sfi [sfi_options] %s [cmd_options] %s" \
                                      % (command, self.available_dict[command]))
 
+        if command in ("add", "update"):
+            parser.add_option('-x', '--xrn', dest='xrn', metavar='<xrn>', help='object hrn/urn (mandatory)')
+            parser.add_option('-t', '--type', dest='type', metavar='<type>', help='object type', default=None)
+            parser.add_option('-e', '--email', dest='email', default="",  help="email (mandatory for users)") 
+# use --extra instead
+#            parser.add_option('-u', '--url', dest='url', metavar='<url>', default=None, help="URL, useful for slices") 
+#            parser.add_option('-d', '--description', dest='description', metavar='<description>', 
+#                              help='Description, useful for slices', default=None)
+            parser.add_option('-k', '--key', dest='key', metavar='<key>', help='public key string or file', 
+                              default=None)
+            parser.add_option('-s', '--slices', dest='slices', metavar='<slices>', help='slice xrns',
+                              default='', type="str", action='callback', callback=optparse_listvalue_callback)
+            parser.add_option('-r', '--researchers', dest='researchers', metavar='<researchers>', 
+                              help='slice researchers', default='', type="str", action='callback', 
+                              callback=optparse_listvalue_callback)
+            parser.add_option('-p', '--pis', dest='pis', metavar='<PIs>', help='Principal Investigators/Project Managers',
+                              default='', type="str", action='callback', callback=optparse_listvalue_callback)
+# use --extra instead
+#            parser.add_option('-f', '--firstname', dest='firstname', metavar='<firstname>', help='user first name')
+#            parser.add_option('-l', '--lastname', dest='lastname', metavar='<lastname>', help='user last name')
+            parser.add_option ('-X','--extra',dest='extras',default={},type='str',metavar="<EXTRA_ASSIGNS>",
+                               action="callback", callback=optparse_dictvalue_callback, nargs=1,
+                               help="set extra/testbed-dependent flags, e.g. --extra enabled=true")
+
         # user specifies remote aggregate/sm/component                          
         if command in ("resources", "slices", "create", "delete", "start", "stop", 
                        "restart", "shutdown",  "get_ticket", "renew", "status"):
@@ -284,8 +369,12 @@ class Sfi:
                              help="display format ([xml]|dns|ip)", default="xml",
                              choices=("xml", "dns", "ip"))
             #panos: a new option to define the type of information about resources a user is interested in
-	    parser.add_option("-i", "--info", dest="info",
+            parser.add_option("-i", "--info", dest="info",
                                 help="optional component information", default=None)
+            # a new option to retreive or not reservation-oriented RSpecs (leases)
+            parser.add_option("-l", "--list_leases", dest="list_leases", type="choice",
+                                help="Retreive or not reservation-oriented RSpecs ([resources]|leases|all )",
+                                choices=("all", "resources", "leases"), default="resources")
 
 
         # 'create' does return the new rspec, makes sense to save that too
@@ -737,7 +826,7 @@ or version information about sfi itself
             self.logger.error("No record of type %s"% options.type)
         records = [ Record(dict=record_dict) for record_dict in record_dicts ]
         for record in records:
-            if (options.format == "text"):      record.dump()  
+            if (options.format == "text"):      record.dump(sort=True)  
             else:                               print record.save_as_xml() 
         if options.file:
             save_records_to_file(options.file, record_dicts, options.fileformat)
@@ -746,29 +835,50 @@ or version information about sfi itself
     def add(self, options, args):
         "add record into registry from xml file (Register)"
         auth_cred = self.my_authority_credential_string()
-        if len(args)!=1:
+        record_dict = {}
+        if len(args) > 0:
+            record_filepath = args[0]
+            rec_file = self.get_record_file(record_filepath)
+            record_dict.update(load_record_from_file(rec_file).todict())
+        if options:
+            record_dict.update(load_record_from_opts(options).todict())
+        # we should have a type by now
+        if 'type' not in record_dict :
             self.print_help()
             sys.exit(1)
-        record_filepath = args[0]
-        rec_file = self.get_record_file(record_filepath)
-        record = load_record_from_file(rec_file).todict()
-        return self.registry().Register(record, auth_cred)
+        # this is still planetlab dependent.. as plc will whine without that
+        # also, it's only for adding
+        if record_dict['type'] == 'user':
+            if not 'first_name' in record_dict:
+                record_dict['first_name'] = record_dict['hrn']
+            if 'last_name' not in record_dict:
+                record_dict['last_name'] = record_dict['hrn'] 
+        return self.registry().Register(record_dict, auth_cred)
     
     def update(self, options, args):
         "update record into registry from xml file (Update)"
-        if len(args)!=1:
+        record_dict = {}
+        if len(args) > 0:
+            record_filepath = args[0]
+            rec_file = self.get_record_file(record_filepath)
+            record_dict.update(load_record_from_file(rec_file).todict())
+        if options:
+            record_dict.update(load_record_from_opts(options).todict())
+        # at the very least we need 'type' here
+        if 'type' not in record_dict:
             self.print_help()
             sys.exit(1)
-        rec_file = self.get_record_file(args[0])
-        record = load_record_from_file(rec_file)
-        if record.type == "user":
-            if record.hrn == self.user:
+
+        # don't translate into an object, as this would possibly distort
+        # user-provided data; e.g. add an 'email' field to Users
+        if record_dict['type'] == "user":
+            if record_dict['hrn'] == self.user:
                 cred = self.my_credential_string
             else:
                 cred = self.my_authority_credential_string()
-        elif record.type in ["slice"]:
+        elif record_dict['type'] in ["slice"]:
             try:
-                cred = self.slice_credential_string(record.hrn)
+                cred = self.slice_credential_string(record_dict['hrn'])
             except ServerException, e:
                # XXX smbaker -- once we have better error return codes, update this
                # to do something better than a string compare
@@ -776,13 +886,12 @@ or version information about sfi itself
                    cred = self.my_authority_credential_string()
                else:
                    raise
-        elif record.type in ["authority"]:
+        elif record_dict['type'] in ["authority"]:
             cred = self.my_authority_credential_string()
-        elif record.type == 'node':
+        elif record_dict['type'] == 'node':
             cred = self.my_authority_credential_string()
         else:
-            raise "unknown record type" + record.type
-        record_dict = record.todict()
+            raise "unknown record type" + record_dict['type']
         return self.registry().Update(record_dict, cred)
   
     def remove(self, options, args):
@@ -849,6 +958,8 @@ or with an slice hrn, shows currently provisioned resources
             api_options['geni_slice_urn'] = hrn_to_urn(hrn, 'slice')
         if options.info:
             api_options['info'] = options.info
+        if options.list_leases:
+            api_options['list_leases'] = options.list_leases
         if options.current:
             if options.current == True:
                 api_options['cached'] = False

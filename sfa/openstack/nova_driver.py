@@ -9,6 +9,7 @@ from sfa.util.sfalogging import logger
 from sfa.util.defaultdict import defaultdict
 from sfa.util.sfatime import utcparse, datetime_to_string, datetime_to_epoch
 from sfa.util.xrn import Xrn, hrn_to_urn, get_leaf, urn_to_sliver_id
+from sfa.util.plxrn import PlXrn, hrn_to_pl_slicename
 from sfa.util.cache import Cache
 from sfa.trust.credential import Credential
 # used to be used in get_ticket
@@ -73,7 +74,7 @@ class NovaDriver (Driver):
            
         if type == 'slice':
             # add slice description, name, researchers, PI 
-            name = Xrn(hrn).get_leaf()
+            name = hrn_to_pl_slicename(hrn)
             researchers = sfa_record.get('researchers', [])
             pis = sfa_record.get('pis', [])
             project_manager = None
@@ -122,7 +123,7 @@ class NovaDriver (Driver):
 
         elif type == "slice":
             # can update project manager and description
-            name = Xrn(hrn).get_leaf()
+            name = hrn_to_pl_slicename(hrn)
             researchers = sfa_record.get('researchers', [])
             pis = sfa_record.get('pis', [])
             project_manager = None
@@ -143,11 +144,12 @@ class NovaDriver (Driver):
     ##########
     def remove (self, sfa_record):
         type=sfa_record['type']
-        name = Xrn(sfa_record['hrn']).get_leaf()     
         if type == 'user':
+            name = Xrn(sfa_record['hrn']).get_leaf()     
             if self.shell.auth_manager.get_user(name):
                 self.shell.auth_manager.delete_user(name)
         elif type == 'slice':
+            name = hrn_to_pl_slicename(sfa_record['hrn'])     
             if self.shell.auth_manager.get_project(name):
                 self.shell.auth_manager.delete_project(name)
         return True
@@ -163,9 +165,9 @@ class NovaDriver (Driver):
             records = [records]
 
         for record in records:
-            name = Xrn(record['hrn']).get_leaf()
             os_record = None
             if record['type'] == 'user':
+                name = Xrn(record['hrn']).get_leaf()
                 os_record = self.shell.auth_manager.get_user(name)
                 projects = self.shell.db.project_get_by_user(name)
                 record['slices'] = [self.hrn + "." + proj.name for \
@@ -173,7 +175,8 @@ class NovaDriver (Driver):
                 record['roles'] = self.shell.db.user_get_roles(name)
                 keys = self.shell.db.key_pair_get_all_by_user(name)
                 record['keys'] = [key.public_key for key in keys]     
-            elif record['type'] == 'slice': 
+            elif record['type'] == 'slice':
+                name = hrn_to_pl_slicename(record['hrn']) 
                 os_record = self.shell.auth_manager.get_project(name)
                 record['description'] = os_record.description
                 record['PI'] = [self.hrn + "." + os_record.project_manager.name]
@@ -289,7 +292,7 @@ class NovaDriver (Driver):
     
     def sliver_status (self, slice_urn, slice_hrn):
         # find out where this slice is currently running
-        project_name = Xrn(slice_urn).get_leaf()
+        project_name = hrn_to_pl_slicename(slice_hrn)
         project = self.shell.auth_manager.get_project(project_name)
         instances = self.shell.db.instance_get_all_by_project(project_name)
         if len(instances) == 0:
@@ -328,7 +331,7 @@ class NovaDriver (Driver):
 
     def create_sliver (self, slice_urn, slice_hrn, creds, rspec_string, users, options):
 
-        project_name = get_leaf(slice_hrn)
+        project_name = hrn_to_pl_slicename(slice_hrn)
         aggregate = OSAggregate(self)
         # parse rspec
         rspec = RSpec(rspec_string)
@@ -358,14 +361,13 @@ class NovaDriver (Driver):
 
     def delete_sliver (self, slice_urn, slice_hrn, creds, options):
         # we need to do this using the context of one of the slice users
-        project_name = Xrn(slice_urn).get_leaf()
+        project_name = hrn_to_pl_slicename(slice_hrn)
         self.euca_shell.init_context(project_name) 
-        name = OSXrn(xrn=slice_urn).name
         aggregate = OSAggregate(self)
-        return aggregate.delete_instances(name)   
+        return aggregate.delete_instances(project_name)   
 
     def update_sliver(self, slice_urn, slice_hrn, rspec, creds, options):
-        name = OSXrn(xrn=slice_urn).name
+        name = hrn_to_pl_slicename(slice_hrn)
         aggregate = OSAggregate(self)
         return aggregate.update_instances(name)
     

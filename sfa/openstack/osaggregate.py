@@ -1,4 +1,6 @@
+
 import os
+import socket
 import base64
 import string
 import random    
@@ -13,7 +15,9 @@ from sfa.rspecs.elements.sliver import Sliver
 from sfa.rspecs.elements.login import Login
 from sfa.rspecs.elements.disk_image import DiskImage
 from sfa.rspecs.elements.services import Services
+from sfa.rspecs.elements.interface import Interface
 from sfa.util.xrn import Xrn
+from sfa.util.plxrn import PlXrn, hrn_to_pl_slicename
 from sfa.util.osxrn import OSXrn
 from sfa.rspecs.version_manager import VersionManager
 from sfa.openstack.image import ImageManager
@@ -78,32 +82,62 @@ class OSAggregate:
         rspec.version.add_nodes(nodes)
         return rspec.toxml()
 
-    def get_slice_nodes(self, slice_xrn):
-        image_manager = ImageManager(self.driver)
-        name = OSXrn(xrn = slice_xrn).name
-        instances = self.driver.shell.db.instance_get_all_by_project(name)
-        rspec_nodes = []
-        for instance in instances:
-            rspec_node = Node()
-            xrn = OSXrn(instance.hostname, 'node')
-            rspec_node['component_id'] = xrn.urn
-            rspec_node['component_name'] = xrn.name
-            rspec_node['component_manager_id'] = Xrn(self.driver.hrn, 'authority+cm').get_urn()   
-            sliver = instance_to_sliver(instance)
-            disk_image = image_manager.get_disk_image(instance.image_ref)
-            sliver['disk_images'] = [disk_image.to_rspec_object()]
-            rspec_node['slivers'] = [sliver]
-            rspec_nodes.append(rspec_node)
-        return rspec_nodes
-
-    def get_aggregate_nodes(self):
-                
+    def get_availability_zones(self):
         zones = self.driver.shell.db.zone_get_all()
         if not zones:
             zones = ['cloud']
         else:
             zones = [zone.name for zone in zones]
 
+    def get_slice_nodes(self, slice_xrn):
+        image_manager = ImageManager(self.driver)
+
+        zones = self.get_availability_zones()
+        name = hrn_to_pl_slicename(slice_xrn)
+        instances = self.driver.shell.db.instance_get_all_by_project(name)
+        rspec_nodes = []
+        for instance in instances:
+            rspec_node = Node()
+            interfaces = []
+            for fixed_ip in instance.fixed_ips:
+                if_xrn = PlXrn(auth=self.driver.hrn, 
+                               interface='node%s:eth0' % (instance.hostname)) 
+                interface = Interface({'component_id': if_xrn.urn})
+                interface['ips'] =  [{'address': fixed_ip['address'],
+                                     'netmask': fixed_ip['network'].netmask,
+                                     'type': 'ipv4'}]
+                interfaces.append(interface)
+            if instance.availability_zone:
+                node_xrn = OSXrn(instance.availability_zone, 'node')
+            else:
+                node_xrn = OSXrn('cloud', 'node')
+
+            rspec_node['component_id'] = node_xrn.urn
+            rspec_node['component_name'] = node_xrn.name
+            rspec_node['component_manager_id'] = Xrn(self.driver.hrn, 'authority+cm').get_urn()   
+            sliver = instance_to_sliver(instance)
+            disk_image = image_manager.get_disk_image(instance.image_ref)
+            sliver['disk_image'] = [disk_image.to_rspec_object()]
+            rspec_node['slivers'] = [sliver]
+            rspec_node['interfaces'] = interfaces
+            # slivers always provide the ssh service
+            hostname = None
+            for interface in interfaces:
+                if 'ips' in interface and interface['ips'] and \
+                isinstance(interface['ips'], list):
+                    if interface['ips'][0].get('address'):
+                        hostname = interface['ips'][0].get('address')
+                        break 
+            login = Login({'authentication': 'ssh-keys', 
+                           'hostname': hostname, 
+                           'port':'22', 'username': 'root'})
+            service = Services({'login': login})
+            rspec_node['services'] = [service] 
+            rspec_nodes.append(rspec_node)
+        return rspec_nodes
+
+    def get_aggregate_nodes(self):
+        zones = self.get_availability_zones()
         # available sliver/instance/vm types
         instances = self.driver.shell.db.instance_type_get_all().values()
         # available images
@@ -124,7 +158,7 @@ class OSAggregate:
             slivers = []
             for instance in instances:
                 sliver = instance_to_sliver(instance)
-                sliver['disk_images'] = disk_image_objects
+                sliver['disk_image'] = disk_image_objects
                 slivers.append(sliver)
         
             rspec_node['slivers'] = slivers
@@ -169,7 +203,7 @@ class OSAggregate:
             key = {}
             key['user_id'] = username
             key['name'] =  username
-            key['public'] = public_key
+            key['public_key'] = public_key
             self.driver.shell.db.key_pair_create(key)
 
         # remove old keys
@@ -179,15 +213,25 @@ class OSAggregate:
                     self.driver.shell.db.key_pair_destroy(username, key.name)
 
 
-    def create_security_group(self, group_name, fw_rules=[]):
-        security_group = SecurityGroup(self.driver)
-        security_group.create_security_group(group_name)
-        for rule in fw_rules:
-            security_group.add_rule_to_group(group_name, 
+    def create_security_group(self, slicename, fw_rules=[]):
+        # use default group by default
+        group_name = 'default' 
+        if isinstance(fw_rules, list) and fw_rules:
+            # Each sliver get's its own security group.
+            # Keep security group names unique by appending some random
+            # characters on end.
+            random_name = "".join([random.choice(string.letters+string.digits)
+                                           for i in xrange(6)])
+            group_name = slicename + random_name 
+            security_group = SecurityGroup(self.driver)
+            security_group.create_security_group(group_name)
+            for rule in fw_rules:
+                security_group.add_rule_to_group(group_name, 
                                              protocol = rule.get('protocol'), 
                                              cidr_ip = rule.get('cidr_ip'), 
                                              port_range = rule.get('port_range'), 
                                              icmp_type_code = rule.get('icmp_type_code'))
+        return group_name
 
     def add_rule_to_security_group(self, group_name, **kwds):
         security_group = SecurityGroup(self.driver)
@@ -248,17 +292,11 @@ class OSAggregate:
                 # iterate over sliver/instance types
                 for instance_type in instance_types:
                     fw_rules = instance_type.get('fw_rules', [])
-                    # Each sliver get's its own security group.  
-                    # Keep security group names unique by appending some random 
-                    # characters on end.
-                    random_name = "".join([random.choice(string.letters+string.digits) 
-                                           for i in xrange(6)])
-                    group_name = slicename + random_name
-                    self.create_security_group(group_name, fw_rules)
+                    group_name = self.create_security_group(slicename, fw_rules)
                     ami_id = default_image_id
                     aki_id = default_aki_id
                     ari_id = default_ari_id
-                    req_image = instance_type.get('disk_images')
+                    req_image = instance_type.get('disk_image')
                     if req_image and isinstance(req_image, list):
                         req_image_name = req_image[0]['name']
                         disk_image = image_manager.get_disk_image(name=req_image_name)

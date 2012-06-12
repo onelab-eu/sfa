@@ -8,6 +8,7 @@ from sfa.rspecs.elements.element import Element
 from sfa.rspecs.elements.versions.pgv2Link import PGv2Link
 from sfa.rspecs.elements.versions.sfav1Node import SFAv1Node
 from sfa.rspecs.elements.versions.sfav1Sliver import SFAv1Sliver
+from sfa.rspecs.elements.versions.sfav1Lease import SFAv1Lease
 
 class SFAv1(RSpecVersion):
     enabled = True
@@ -215,6 +216,14 @@ class SFAv1(RSpecVersion):
             if current_network and current_network not in current_networks:
                 self.xml.append(network.element)
                 current_networks.append(current_network)
+
+    # Leases
+
+    def get_leases(self, filter=None):
+        return SFAv1Lease.get_leases(self.xml, filter)
+
+    def add_leases(self, leases, network = None, no_dupes=False):
+        SFAv1Lease.add_leases(self.xml, leases)
 
 if __name__ == '__main__':
     from sfa.rspecs.rspec import RSpec

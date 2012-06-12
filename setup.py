@@ -9,7 +9,7 @@ from glob import glob
 import shutil
 from distutils.core import setup
 
-scripts = glob("sfa/clientbin/*.py") + \
+scripts = glob("clientbin/*.py") + \
     [ 
     'config/sfa-config-tty',
     'config/gen-sfa-cm-config.py',
@@ -22,21 +22,22 @@ scripts = glob("sfa/clientbin/*.py") + \
 
 packages = [
     'sfa', 
-    'sfa/openstack',
     'sfa/trust',
     'sfa/storage',
     'sfa/util', 
-    'sfa/client',
     'sfa/server',
     'sfa/methods',
     'sfa/generic',
     'sfa/managers',
     'sfa/importer',
-    'sfa/planetlab',
     'sfa/rspecs',
     'sfa/rspecs/elements',
     'sfa/rspecs/elements/versions',
     'sfa/rspecs/versions',
+    'sfa/client',
+    'sfa/planetlab',
+    'sfa/openstack',
+    'sfa/federica',
     'sfatables',
     'sfatables/commands',
     'sfatables/processors',
