@@ -17,7 +17,7 @@ from sfa.rspecs.elements.disk_image import DiskImage
 from sfa.rspecs.elements.services import Services
 from sfa.rspecs.elements.interface import Interface
 from sfa.util.xrn import Xrn
-from sfa.util.plxrn import PlXrn
+from sfa.util.plxrn import PlXrn, hrn_to_pl_slicename
 from sfa.util.osxrn import OSXrn
 from sfa.rspecs.version_manager import VersionManager
 from sfa.openstack.image import ImageManager
@@ -93,7 +93,7 @@ class OSAggregate:
         image_manager = ImageManager(self.driver)
 
         zones = self.get_availability_zones()
-        name = OSXrn(xrn = slice_xrn).name
+        name = hrn_to_pl_slicename(slice_xrn)
         instances = self.driver.shell.db.instance_get_all_by_project(name)
         rspec_nodes = []
         for instance in instances:
@@ -121,8 +121,15 @@ class OSAggregate:
             rspec_node['slivers'] = [sliver]
             rspec_node['interfaces'] = interfaces
             # slivers always provide the ssh service
+            hostname = None
+            for interface in interfaces:
+                if 'ips' in interface and interface['ips'] and \
+                isinstance(interface['ips'], list):
+                    if interface['ips'][0].get('address'):
+                        hostname = interface['ips'][0].get('address')
+                        break 
             login = Login({'authentication': 'ssh-keys', 
-                           'hostname': interfaces[0]['ips'][0]['address'], 
+                           'hostname': hostname, 
                            'port':'22', 'username': 'root'})
             service = Services({'login': login})
             rspec_node['services'] = [service] 
