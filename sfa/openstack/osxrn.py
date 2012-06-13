@@ -2,6 +2,9 @@ import re
 from sfa.util.xrn import Xrn
 from sfa.util.config import Config
 
+def hrn_to_os_slicename(hrn):
+    return OSXrn(xrn=hrn, type='slice').get_slicename()        
+
 class OSXrn(Xrn):
 
     def __init__(self, name=None, type=None, **kwds):
@@ -24,4 +27,12 @@ class OSXrn(Xrn):
         name = re.sub('[^a-zA-Z0-9_]', '', name)
         return name
 
-    
+
+    def get_slicename(self):
+        self._normalize()
+        slicename = self.hrn
+        slicename = slicename.split(':')[0]
+        slicename = re.sub('[\.]', '_', slicename)
+        return slicename
+        
+            
