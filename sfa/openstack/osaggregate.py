@@ -88,6 +88,7 @@ class OSAggregate:
             zones = ['cloud']
         else:
             zones = [zone.name for zone in zones]
+        return zones
 
     def get_slice_nodes(self, slice_xrn):
         image_manager = ImageManager(self.driver)
