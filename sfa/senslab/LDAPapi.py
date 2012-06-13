@@ -19,9 +19,9 @@ class ldap_co:
     """ Set admin login and server configuration variables."""
     def __init__(self):
         
-        self.login = 'cn=admin,dc=senslab,dc=info'
-        self.passwd = 'sfa'  
-        self.server_ip = "192.168.0.251"
+        #self.login = 'cn=admin,dc=senslab,dc=info'
+        #self.passwd = 'sfa'  
+        self.server_ip = "194.199.16.161"
 
         #Senslab PROD LDAP parameters 
         #TODO : Use config file /etc/senslab/config.properties if it is possible
@@ -33,9 +33,9 @@ class ldap_co:
 	self.ldapHost = "" #set ldap.OPT_HOST_NAME maybe ?
 	self.ldapPeopleDN = 'ou=People,dc=senslab,dc=info';
 	self.ldapGroupDN = 'ou=Group,dc=senslab,dc=info';
-	self.ldapUserDN = 'uid=web,ou=Service,dc=senslab,dc=info';
-	self.ldapUserPassword = 'XNB+1z(C '
-    
+	self.ldapAdminDN = 'uid=web,ou=Service,dc=senslab,dc=info';
+	self.ldapAdminPassword = 'XNB+1z(C'
+
     def connect(self, bind = True):
         """Enables connection to the LDAP server.
         Set the bind parameter to True if a bind is needed
@@ -63,7 +63,7 @@ class ldap_co:
             self.ldapserv = ldap.initialize("ldap://" + self.server_ip )
                 
             # Bind/authenticate with a user with apropriate rights to add objects
-            self.ldapserv.simple_bind_s(self.login, self.passwd)
+            self.ldapserv.simple_bind_s(self.ldapAdminDN, self.ldapAdminPassword)
 
         except ldap.LDAPError, e:
             return {'bool' : False, 'message' : e }
@@ -84,9 +84,11 @@ class LDAPapi :
         #SFA related config
         self.senslabauth=Hierarchy()
         config=Config()
+        
         self.authname=config.SFA_REGISTRY_ROOT_AUTH
-        self.baseDN = "ou=people,dc=senslab,dc=info"
+        #self.baseDN = "ou=people,dc=senslab,dc=info"
         self.conn =  ldap_co()  
+        self.baseDN = self.conn.ldapPeopleDN
         #authinfo=self.senslabauth.get_auth_info(self.authname)
         
         
@@ -140,20 +142,20 @@ class LDAPapi :
         if length_last_name >= login_max_length :
             login = lower_last_name[0:login_max_length]
             index = 0;
-            logger.debug("login : %s index : %s" %login %index);
+            logger.debug("login : %s index : %s" %(login,index))
         elif length_last_name >= 4 :
             login = lower_last_name
             index = 0
-            logger.debug("login : %s index : %s" %login %index);
+            logger.debug("login : %s index : %s" %(login,index))
         elif length_last_name == 3 :
             login = lower_first_name[0:1] + lower_last_name
             index = 1
-            logger.debug("login : %s index : %s" %login %index);
+            logger.debug("login : %s index : %s" %(login,index))
         elif length_last_name == 2:
             if len ( lower_first_name) >=2:
                 login = lower_first_name[0:2] + lower_last_name
                 index = 2
-                logger.debug("login : %s index : %s" %login %index);
+                logger.debug("login : %s index : %s" %(login,index))
             else:
                 logger.error("LoginException : \
                             Generation login error with \
@@ -163,12 +165,13 @@ class LDAPapi :
         else :
             logger.error("LDAP generate_login failed : \
                             impossible to generate unique login for %s %s" \
-                            %lower_first_name %lower_last_name)
+                            %(lower_first_name,lower_last_name))
             
-        filter = '(uid='+ login+ ')'
+        filter = '(uid=' + login + ')'
+        
         try :
             #Check if login already in use
-            while (self.LdapSearch(filter, getAttrs) is not [] ):
+            while (len(self.LdapSearch(filter, getAttrs)) is not 0 ):
             
                 index += 1
                 if index >= 9:
@@ -176,15 +179,18 @@ class LDAPapi :
                                     with minimum four characters")
                 else:
                     try:
-                        login = lower_first_name[0,index] + \
-                                    lower_last_name[0,login_max_length-index]
+                        login = lower_first_name[0:index] + \
+                                    lower_last_name[0:login_max_length-index]
                         filter = '(uid='+ login+ ')'
                     except KeyError:
                         print "lower_first_name - lower_last_name too short"
+                        
+            logger.debug("LDAP.API \t generate_login login %s" %(login))
             return login
                     
         except  ldap.LDAPError,e :
             logger.log_exc("LDAP generate_login Error %s" %e)
+            return None
 
         
 
@@ -229,7 +235,10 @@ class LDAPapi :
             max_uidnumber = self.ldapUserUidNumberMin
         #Otherwise, get the highest uidNumber
         else:
-            uidNumberList = [r[1]['uidNumber'] for r in result_data ]
+            
+            uidNumberList = [int(r[1]['uidNumber'][0])for r in result_data ]
+            logger.debug("LDAPapi.py \tfind_max_uidNumber  \
+                                    uidNumberList %s " %(uidNumberList))
             max_uidnumber = max(uidNumberList) + 1
             
         return str(max_uidnumber)
@@ -237,7 +246,7 @@ class LDAPapi :
     #TODO ; Get ssh public key from sfa record   
     #To be filled by N. Turro                
     def get_ssh_pkey(self, record):
-        return
+        return 'A REMPLIR '
          
          
     #TODO Handle OR filtering in the ldap query when 
@@ -295,7 +304,7 @@ class LDAPapi :
                                     "shadowAccount", "systemQuotas",\
                                     "ldapPublicKey"]
         
-        attrs['givenName'] = str(record['first_name']).lower(),capitalize()
+        attrs['givenName'] = str(record['first_name']).lower().capitalize()
         attrs['sn'] = str(record['last_name']).lower().capitalize()
         attrs['cn'] = attrs['givenName'] + ' ' + attrs['sn']
         attrs['gecos'] = attrs['givenName'] + ' ' + attrs['sn']
@@ -329,8 +338,8 @@ class LDAPapi :
         
         attrs['ou'] = "SFA"         #Optional: organizational unit
         #No info about those here:
-        attrs['l'] = ''             #Optional: Locality. 
-        attrs['st'] = ''            #Optional: state or province (country).
+        attrs['l'] = 'Grenoble - TBD'#Optional: Locality. 
+        attrs['st'] = 'FRANCE - TBD' #Optional: state or province (country).
 
         return attrs
 
@@ -364,12 +373,12 @@ class LDAPapi :
 
             try:
                 ldif = modlist.addModlist(user_ldap_attrs)
-                logger.debug("\r\n \tLDAPapi.PY add attrs %s \r\n  ldif %s"\
+                logger.debug("LDAPapi.py add attrs %s \r\n  ldif %s"\
                                 %(user_ldap_attrs,ldif) )
                 self.conn.ldapserv.add_s(dn,ldif)
                 
                 logger.info("Adding user %s login %s in LDAP" \
-                        %user_ldap_attrs['cn'] %user_ldap_attrs['uid'])
+                        %(user_ldap_attrs['cn'] ,user_ldap_attrs['uid']))
                         
                         
             except ldap.LDAPError, e:
@@ -404,8 +413,10 @@ class LDAPapi :
         Deletes a SFA person in LDAP, based on the user's hrn.
         """
         #Find uid of the  person 
-        person = self.LdapFindUser(record_filter)
-        
+        person = self.LdapFindUser(record_filter,[])
+        logger.debug("LDAPapi.py \t LdapDeleteUser record %s person %s" \
+        %(record_filter,person))
+
         if person:
             dn = 'uid=' + person['uid'] + "," +self.baseDN 
         else:
@@ -418,12 +429,12 @@ class LDAPapi :
     def LdapModify(self, dn, old_attributes_dict, new_attributes_dict): 
         """ Modifies a LDAP entry """
          
-        ldif = modlist.modifyModlist(old_attributes_dict,new_attributes)
+        ldif = modlist.modifyModlist(old_attributes_dict,new_attributes_dict)
         # Connect and bind/authenticate    
-        result = self.conn.connect(bind) 
+        result = self.conn.connect() 
         if (result['bool']): 
             try:
-                self.conn.ldapserver.modify_s(dn,ldif)
+                self.conn.ldapserv.modify_s(dn,ldif)
                 self.conn.close()
                 return {'bool' : True }
             except ldap.LDAPError, e:
@@ -431,35 +442,41 @@ class LDAPapi :
                 return {'bool' : False }
     
         
-    def LdapModifyUser(self, record_filter, new_attributes):
+    def LdapModifyUser(self, user_uid_login, new_attributes_dict):
         """
-        Gets the record from one user based on record_filter 
+        Gets the record from one user_uid_login based on record_filter 
         and changes the attributes according to the specified new_attributes.
         Does not use this if we need to modify the uid. Use a ModRDN 
         #operation instead ( modify relative DN )
         """
-        if record_filter is None:
-            logger.error("LDAP \t LdapModifyUser Need record filter ")
+        if user_uid_login is None:
+            logger.error("LDAP \t LdapModifyUser Need user_uid_login  ")
             return {'bool': False} 
         
-        #Get all the attributes of the user 
-        person = self.LdapFindUser(record_filter,[])
-        if person and len(person) > 1 :
+        #Get all the attributes of the user_uid_login 
+        #person = self.LdapFindUser(record_filter,[])
+        req_ldap = "(uid=" + user_uid_login + ')'
+        person_list = self.LdapSearch(req_ldap, [], bind = True)
+        logger.debug("LDAPapi.py \t LdapModifyUser person_list : %s" %(person_list))
+        if person_list and len(person_list) > 1 :
             logger.error("LDAP \t LdapModifyUser Too many users returned")
             return {'bool': False}
-        if person is None :
+        if person_list is None :
             logger.error("LDAP \t LdapModifyUser  User %s doesn't exist "\
-                        %(record_filter['hrn']))
+                        %(user_uid_login))
             return {'bool': False} 
         
         # The dn of our existing entry/object
-        dn  = 'uid=' + person['uid'] + "," +self.baseDN  
+        #One result only from ldapSearch
+        person = person_list[0][1]
+        dn  = 'uid=' + person['uid'][0] + "," +self.baseDN  
         if new_attributes_dict:
             old = {}
-            for k in new_attributes:
+            for k in new_attributes_dict:
                 old[k] =  person[k]
-                
-            result = self.LdapModify(dn, old,new_attributes)
+            logger.debug(" LDAPapi.py \t LdapModifyUser  new_attributes %s"\
+                                %( new_attributes_dict))  
+            result = self.LdapModify(dn, old,new_attributes_dict)
             return result
         else:
             logger.error("LDAP \t LdapModifyUser  No new attributes given. ")
@@ -480,14 +497,14 @@ class LDAPapi :
         return result
         
 
-    def LdapSearch (self, req_ldap = None, expected_fields = None ):
+    def LdapSearch (self, req_ldap = None, expected_fields = None, bind = False):
         """
         Used to search directly in LDAP, by using ldap filters and
         return fields. 
         When req_ldap is None, returns all the entries in the LDAP.
         
         """
-        result = self.conn.connect(bind = False)
+        result = self.conn.connect(bind )
         if (result['bool']) :
             
             return_fields_list = []
@@ -495,7 +512,10 @@ class LDAPapi :
                 return_fields_list = ['mail','givenName', 'sn', 'uid','sshPublicKey']
             else : 
                 return_fields_list = expected_fields
-  
+            #No specifc request specified, gert the whole LDAP    
+            if req_ldap == None:
+               req_ldap = '(cn=*)'
+               
             logger.debug("LDAP.PY \t LdapSearch  req_ldap %s \
                             return_fields_list %s" %(req_ldap,return_fields_list))
 
@@ -566,7 +586,7 @@ class LDAPapi :
                 if parent_hrn is not self.authname:
                     peer_authority = parent_hrn
 
-                results=  {	
+                results =  {	
                             'type': 'user',
                             'pkey': ldapentry['sshPublicKey'][0],
                             #'uid': ldapentry[1]['uid'][0],
@@ -582,10 +602,10 @@ class LDAPapi :
                             'pointer' : -1,
                             'hrn': hrn,
                             }
-            except KeyError:
-                lorrer.log_exc("LDAPapi \t LdapSearch KEyError results %s" \
-                                %(results) )
-                pass 
+            except KeyError,e:
+                logger.log_exc("LDAPapi \t LdaFindUser KEyError %s" \
+                                %e )
+                return
         else:
         #Asked for all users in ldap
             results = []
@@ -619,7 +639,8 @@ class LDAPapi :
                             'pointer' : -1,
                             'hrn': hrn,
                             } ) 
-                except KeyError:
-                    pass
+                except KeyError,e:
+                    logger.log_exc("LDAPapi.PY \t LdapFindUser EXCEPTION %s" %(e))
+                    return
         return results   
             
