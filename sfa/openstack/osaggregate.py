@@ -17,8 +17,8 @@ from sfa.rspecs.elements.disk_image import DiskImage
 from sfa.rspecs.elements.services import Services
 from sfa.rspecs.elements.interface import Interface
 from sfa.util.xrn import Xrn
-from sfa.util.plxrn import PlXrn, hrn_to_pl_slicename
-from sfa.util.osxrn import OSXrn
+from sfa.util.plxrn import PlXrn 
+from sfa.util.osxrn import OSXrn, hrn_to_os_slicename
 from sfa.rspecs.version_manager import VersionManager
 from sfa.openstack.image import ImageManager
 from sfa.openstack.security_group import SecurityGroup
@@ -94,7 +94,7 @@ class OSAggregate:
         image_manager = ImageManager(self.driver)
 
         zones = self.get_availability_zones()
-        name = hrn_to_pl_slicename(slice_xrn)
+        name = hrn_to_os_slicename(slice_xrn)
         instances = self.driver.shell.db.instance_get_all_by_project(name)
         rspec_nodes = []
         for instance in instances:

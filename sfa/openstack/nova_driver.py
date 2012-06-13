@@ -9,7 +9,8 @@ from sfa.util.sfalogging import logger
 from sfa.util.defaultdict import defaultdict
 from sfa.util.sfatime import utcparse, datetime_to_string, datetime_to_epoch
 from sfa.util.xrn import Xrn, hrn_to_urn, get_leaf, urn_to_sliver_id
-from sfa.util.plxrn import PlXrn, hrn_to_pl_slicename
+from sfa.planetlab.plxrn import PlXrn
+from sfa.openstack.osxrn import hrn_to_os_slicename
 from sfa.util.cache import Cache
 from sfa.trust.credential import Credential
 # used to be used in get_ticket
@@ -74,7 +75,7 @@ class NovaDriver (Driver):
            
         if type == 'slice':
             # add slice description, name, researchers, PI 
-            name = hrn_to_pl_slicename(hrn)
+            name = hrn_to_os_slicename(hrn)
             researchers = sfa_record.get('researchers', [])
             pis = sfa_record.get('pis', [])
             project_manager = None
@@ -123,7 +124,7 @@ class NovaDriver (Driver):
 
         elif type == "slice":
             # can update project manager and description
-            name = hrn_to_pl_slicename(hrn)
+            name = hrn_to_os_slicename(hrn)
             researchers = sfa_record.get('researchers', [])
             pis = sfa_record.get('pis', [])
             project_manager = None
@@ -149,7 +150,7 @@ class NovaDriver (Driver):
             if self.shell.auth_manager.get_user(name):
                 self.shell.auth_manager.delete_user(name)
         elif type == 'slice':
-            name = hrn_to_pl_slicename(sfa_record['hrn'])     
+            name = hrn_to_os_slicename(sfa_record['hrn'])     
             if self.shell.auth_manager.get_project(name):
                 self.shell.auth_manager.delete_project(name)
         return True
@@ -176,7 +177,7 @@ class NovaDriver (Driver):
                 keys = self.shell.db.key_pair_get_all_by_user(name)
                 record['keys'] = [key.public_key for key in keys]     
             elif record['type'] == 'slice':
-                name = hrn_to_pl_slicename(record['hrn']) 
+                name = hrn_to_os_slicename(record['hrn']) 
                 os_record = self.shell.auth_manager.get_project(name)
                 record['description'] = os_record.description
                 record['PI'] = [self.hrn + "." + os_record.project_manager.name]
@@ -292,7 +293,7 @@ class NovaDriver (Driver):
     
     def sliver_status (self, slice_urn, slice_hrn):
         # find out where this slice is currently running
-        project_name = hrn_to_pl_slicename(slice_hrn)
+        project_name = hrn_to_os_slicename(slice_hrn)
         project = self.shell.auth_manager.get_project(project_name)
         instances = self.shell.db.instance_get_all_by_project(project_name)
         if len(instances) == 0:
@@ -331,7 +332,7 @@ class NovaDriver (Driver):
 
     def create_sliver (self, slice_urn, slice_hrn, creds, rspec_string, users, options):
 
-        project_name = hrn_to_pl_slicename(slice_hrn)
+        project_name = hrn_to_os_slicename(slice_hrn)
         aggregate = OSAggregate(self)
         # parse rspec
         rspec = RSpec(rspec_string)
@@ -361,13 +362,13 @@ class NovaDriver (Driver):
 
     def delete_sliver (self, slice_urn, slice_hrn, creds, options):
         # we need to do this using the context of one of the slice users
-        project_name = hrn_to_pl_slicename(slice_hrn)
+        project_name = hrn_to_os_slicename(slice_hrn)
         self.euca_shell.init_context(project_name) 
         aggregate = OSAggregate(self)
         return aggregate.delete_instances(project_name)   
 
     def update_sliver(self, slice_urn, slice_hrn, rspec, creds, options):
-        name = hrn_to_pl_slicename(slice_hrn)
+        name = hrn_to_os_slicename(slice_hrn)
         aggregate = OSAggregate(self)
         return aggregate.update_instances(name)
     
