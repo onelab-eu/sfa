@@ -17,8 +17,8 @@ from sfa.rspecs.elements.disk_image import DiskImage
 from sfa.rspecs.elements.services import Services
 from sfa.rspecs.elements.interface import Interface
 from sfa.util.xrn import Xrn
-from sfa.util.plxrn import PlXrn 
-from sfa.util.osxrn import OSXrn, hrn_to_os_slicename
+from sfa.planetlab.plxrn import PlXrn 
+from sfa.openstack.osxrn import OSXrn, hrn_to_os_slicename
 from sfa.rspecs.version_manager import VersionManager
 from sfa.openstack.image import ImageManager
 from sfa.openstack.security_group import SecurityGroup
