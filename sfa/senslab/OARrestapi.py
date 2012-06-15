@@ -13,9 +13,9 @@ from sfa.util.xrn import hrn_to_urn, get_authority,Xrn,get_leaf
 from sfa.util.config import Config
 
 
-OARIP='192.168.0.109'
-
-
+#OARIP='192.168.0.109'
+#OARIP='akila.inrialpes.fr'
+OARIP='194.199.16.161'
 OARrequests_list = ["GET_version", "GET_timezone", "GET_jobs", "GET_jobs_table", "GET_jobs_details",
 "GET_resources_full", "GET_resources"]
 
