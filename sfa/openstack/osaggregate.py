@@ -83,7 +83,13 @@ class OSAggregate:
         return rspec.toxml()
 
     def get_availability_zones(self):
-        zones = self.driver.shell.db.zone_get_all()
+        try:
+            # pre essex releases 
+            zones = self.driver.shell.db.zone_get_all()
+        except:
+            # essex release
+            zones = self.driver.shell.db.dnsdomain_list()
+
         if not zones:
             zones = ['cloud']
         else:
