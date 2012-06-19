@@ -24,7 +24,7 @@ from sfa.rspecs.version_manager import VersionManager
 from sfa.util.sfatime import datetime_to_epoch
 
 def hostname_to_hrn(root_auth,login_base,hostname):
-    return PlXrn(auth=root_auth,hostname=login_base+'_'+hostname).get_hrn()
+    return PlXrn(auth=root_auth,hostname=login_base + '_'+hostname).get_hrn()
 
 class SlabAggregate:
 
@@ -175,9 +175,12 @@ class SlabAggregate:
             # assumes that sites, interfaces and tags have already been prepared.
             #site = sites_dict[node['site_id']]
          
-            if node['posx'] and node['posy']:  
-                location = Location({'longitude':node['posx'], 'latitude': node['posy']})
-                rspec_node['location'] = location
+            try:
+                if node['posx'] and node['posy']:  
+                    location = Location({'longitude':node['posx'], 'latitude': node['posy']})
+                    rspec_node['location'] = location
+            except KeyError:
+                    pass
             #rspec_node['interfaces'] = []
             #if_count=0
             #for if_id in node['interface_ids']:

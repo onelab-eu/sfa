@@ -94,9 +94,15 @@ class SliceSenslab (SlabBase):
         #return result
           
 class SlabDB:
-    def __init__(self,config):
+    def __init__(self,config, debug = False):
         self.sl_base = SlabBase
         dbname="slab_sfa"
+        if debug == True :
+            l_echo_pool = True
+            l_echo=True 
+        else :
+            l_echo_pool = False
+            l_echo = False 
         # will be created lazily on-demand
         self.slab_session = None
         # the former PostgreSQL.py used the psycopg2 directly and was doing
@@ -114,7 +120,7 @@ class SlabDB:
             (config.SFA_DB_USER,config.SFA_DB_PASSWORD,config.SFA_DB_HOST,config.SFA_DB_PORT,dbname)
         for url in [ unix_url, tcp_url ] :
             try:
-                self.slab_engine = create_engine (url,echo_pool=True,echo=True)
+                self.slab_engine = create_engine (url,echo_pool = l_echo_pool, echo = l_echo)
                 self.check()
                 self.url=url
                 return

@@ -53,7 +53,7 @@ class SlabDriver(Driver):
         self.oar = OARrestapi()
 	self.ldap = LDAPapi()
         self.time_format = "%Y-%m-%d %H:%M:%S"
-        self.db = SlabDB(config)
+        self.db = SlabDB(config,debug = True)
         self.cache=None
         
     
@@ -282,8 +282,9 @@ class SlabDriver(Driver):
             else:
                     pointer = slices[0]['slice_id']
     
-        elif type == 'user':
-            persons = self.GetPersons([sfa_record['hrn']])
+        elif type == 'user':  
+            persons = self.GetPersons([sfa_record])
+            #persons = self.GetPersons([sfa_record['hrn']])
             if not persons:
                 pointer = self.AddPerson(dict(sfa_record))
                 #add in LDAP 
@@ -365,8 +366,9 @@ class SlabDriver(Driver):
         record_id= sfa_record['record_id']
         if type == 'user':
             username = hrn.split(".")[len(hrn.split(".")) -1]
-            #get user in ldap
-            persons = self.GetPersons(username)
+            #get user in ldap  
+            persons = self.GetPersons(sfa_record)
+            #persons = self.GetPersons(username)
             # only delete this person if he has site ids. if he doesnt, it probably means
             # he was just removed from a site, not actually deleted
             if persons and persons[0]['site_ids']:
@@ -548,6 +550,9 @@ class SlabDriver(Driver):
        #jobs=self.oar.parser.SendRequest("GET_reserved_nodes") 
        jobs=self.oar.parser.SendRequest("GET_jobs_details") 
        nodes=[]
+       if jobs['total'] == 0:
+           return []
+      
        for j in jobs :
           nodes=j['assigned_network_address']+nodes
        return nodes
@@ -836,7 +841,7 @@ class SlabDriver(Driver):
                 from_zone = tz.gettz(slot['timezone'])  
                    
             date = str(slot['date'])  + " " + str(slot['start_time'])
-            user_datetime = datetime.datetime.strptime(date, self.time_format)
+            user_datetime = datetime.strptime(date, self.time_format)
             user_datetime = user_datetime.replace(tzinfo = from_zone)
             
             #Convert to UTC zone
@@ -858,7 +863,7 @@ class SlabDriver(Driver):
             s_tz=tz.gettz(server_tz)
             UTC_zone = tz.gettz("UTC")
             #weird... datetime.fromtimestamp should work since we do from datetime import datetime
-            utc_server= datetime.datetime.fromtimestamp(float(server_timestamp)+20,UTC_zone)
+            utc_server= datetime.fromtimestamp(float(server_timestamp)+20,UTC_zone)
             server_localtime=utc_server.astimezone(s_tz)
     
             print>>sys.stderr, "\r\n \r\n \t\tLaunchExperimentOnOAR server_timestamp %s server_tz %s slice_name %s added_nodes %s username %s reqdict %s " %(server_timestamp,server_tz,slice_name,added_nodes,slice_user, reqdict )
@@ -984,8 +989,8 @@ class SlabDriver(Driver):
                     'person_ids':[recslice['record_id_user']]})
 
                     #GetPersons takes [] as filters 
-                    user_slab = self.GetPersons([{'hrn':recuser.hrn}])
-                    
+                    #user_slab = self.GetPersons([{'hrn':recuser.hrn}])
+                    user_slab = self.GetPersons([record])
     
                     recslice.update({'type':'slice','hrn':recslice['slice_hrn']})
                     record.update(user_slab[0])

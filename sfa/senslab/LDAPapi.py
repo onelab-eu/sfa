@@ -90,7 +90,7 @@ class ldap_co:
         
 class LDAPapi :
     def __init__(self):
-        logger.setLevelDebug() 
+        #logger.setLevelDebug() 
         #SFA related config
         self.senslabauth=Hierarchy()
         config=Config()

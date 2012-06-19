@@ -11,7 +11,7 @@ from sfa.util.plxrn import PlXrn
 from sfa.util.xrn import hrn_to_urn, get_authority,Xrn,get_leaf
 
 from sfa.util.config import Config
-
+from sfa.util.sfalogging import logger
 
 #OARIP='192.168.0.109'
 #OARIP='akila.inrialpes.fr'
@@ -53,10 +53,10 @@ class OARrestapi:
     def __init__(self):
         self.oarserver= {}
         self.oarserver['ip'] = OARIP
-        self.oarserver['port'] = 80
+        self.oarserver['port'] = 8800
         self.oarserver['uri'] = None
         self.oarserver['postformat'] = 'json'
-        
+        #logger.setLevelDebug()
 
         self.jobstates  = ['Terminated','Hold','Waiting','toLaunch','toError',\
                             'toAckReservation','Launching','Finishing',\
@@ -69,9 +69,10 @@ class OARrestapi:
         self.oarserver['uri'] = OARrequests_get_uri_dict[request] 
         headers = {}
         data = json.dumps({})
+        logger.debug("OARrestapi \tGETRequestToOARRestAPI %s" %(request))
         if strval:
           self.oarserver['uri'] = self.oarserver['uri'].replace("id",str(strval))
-          print>>sys.stderr, "\r\n \r\n   GETRequestToOARRestAPI replace :  self.oarserver['uri'] %s",  self.oarserver['uri']
+          logger.debug("OARrestapi: \t  GETRequestToOARRestAPI  self.oarserver['uri'] %s" %( self.oarserver['uri']))
         if username:
             headers['X-REMOTE_IDENT'] = username 
         try :  
@@ -84,9 +85,9 @@ class OARrestapi:
             #conn.endheaders()
             #conn.putrequest("GET",self.oarserver['uri'] ) 
             conn = httplib.HTTPConnection(self.oarserver['ip'],self.oarserver['port'])
-           
             conn.request("GET",self.oarserver['uri'],data , headers )
             resp = ( conn.getresponse()).read()
+            #logger.debug("OARrestapi: \t  GETRequestToOARRestAPI  resp %s" %( resp))
             conn.close()
         except:
             raise ServerError("GET_OAR_SRVR : Could not reach OARserver")
@@ -166,16 +167,17 @@ class OARrestapi:
 			
 class OARGETParser:
 
-    #Insert a new node into the dictnode dictionary
-    def AddNodeId(self,dictnode,value):
-        #Inserts new key. The value associated is a tuple list.
-        node_id = int(value)
-        dictnode[node_id] = [('node_id',node_id) ]	
-        return node_id
-    
-    def AddNodeNetworkAddr(self,tuplelist,value):
-        tuplelist.append(('hostname',str(value)))
-                    
+
+    #def AddNodeNetworkAddr(self,tuplelist,value):
+        #tuplelist.append(('hostname',str(value)))
+        
+    def AddNodeNetworkAddr(self,dictnode,value):
+        #Inserts new key. The value associated is a tuple list
+        node_id = value
+        
+        dictnode[node_id] = [('node_id',node_id),('hostname',node_id) ]	
+        
+        return node_id 
             
     def AddNodeSite(self,tuplelist,value):
         tuplelist.append(('site',str(value)))
@@ -185,10 +187,10 @@ class OARGETParser:
         tuplelist.append(('radio',str(value)))	
     
     
-    def AddMobility(self,tuplelist,value):
+    def AddMobility(self,tuplelist,value): 
         if value :
             tuplelist.append(('mobile',int(value)))	
-        return 0
+
     
     
     def AddPosX(self,tuplelist,value):
@@ -199,7 +201,15 @@ class OARGETParser:
         tuplelist.append(('posy',value))	
     
     def AddBootState(self,tuplelist,value):
-        tuplelist.append(('boot_state',str(value)))	
+        tuplelist.append(('boot_state',str(value)))
+        	
+    #Insert a new node into the dictnode dictionary
+    def AddNodeId(self,dictnode,value):
+        #Inserts new key. The value associated is a tuple list
+        node_id = int(value)
+        
+        dictnode[node_id] = [('node_id',node_id) ]	
+        return node_id
     
     def ParseVersion(self) : 
         #print self.raw_json
@@ -291,7 +301,6 @@ class OARGETParser:
         
 
     resources_fulljson_dict= {
-        'resource_id' : AddNodeId,
         'network_address' : AddNodeNetworkAddr,
         'site': AddNodeSite, 
         'radio': AddNodeRadio,
@@ -299,6 +308,7 @@ class OARGETParser:
         'posx': AddPosX,
         'posy': AddPosY,
         'state':AddBootState,
+        #'id' : AddNodeId,
         }
       
             
@@ -307,35 +317,39 @@ class OARGETParser:
     #of the node properties and properties'values.
     def ParseNodes(self):  
         node_id = None
+        keys = self.resources_fulljson_dict.keys()
+        keys.sort()
+
         #print >>sys.stderr, " \r\n \r\n \t\t OARrestapi.py ParseNodes self.raw_json %s" %(self.raw_json)
         for dictline in self.raw_json:
-            #print >>sys.stderr, " \r\n \r\n \t\t OARrestapi.py ParseNodes dictline %s hey" %(dictline)
-            for k in dictline:
-                if k in self.resources_fulljson_dict:
-                    # dictionary is empty and/or a new node has to be inserted 
-                    if node_id is None :
-                        node_id = self.resources_fulljson_dict[k](self,self.node_dictlist, dictline[k])	
-                    else:
-                        ret = self.resources_fulljson_dict[k](self,self.node_dictlist[node_id], dictline[k])
+            node_id = None 
+            # dictionary is empty and/or a new node has to be inserted 
+            node_id = self.resources_fulljson_dict['network_address'](self,self.node_dictlist, dictline['network_address'])
+            for k in keys:
+                if k in dictline:
+                    if k == 'network_address':
+                        continue
+                 
                     
-                        #If last property has been inserted in the property tuple list, reset node_id 
-                        if ret == 0:
-                            #Turn the property tuple list (=dict value) into a dictionary
-                            self.node_dictlist[node_id] = dict(self.node_dictlist[node_id])
-                            node_id = None
+                    self.resources_fulljson_dict[k](self,self.node_dictlist[node_id], dictline[k])
+            
+            #The last property has been inserted in the property tuple list, reset node_id 
+            #Turn the property tuple list (=dict value) into a dictionary
+            self.node_dictlist[node_id] = dict(self.node_dictlist[node_id])
+            node_id = None
                     
-                else:
-                    pass
                 
     def hostname_to_hrn(self, root_auth, login_base, hostname):
-        return PlXrn(auth=root_auth,hostname=login_base+'_'+hostname).get_hrn()
+        return PlXrn(auth=root_auth,hostname=login_base + '_' +hostname).get_hrn()
     #Retourne liste de dictionnaires contenant attributs des sites	
     def ParseSites(self):
         nodes_per_site = {}
         config = Config()
+        logger.debug(" OARrestapi.py \t ParseSites  self.node_dictlist %s"%(self.node_dictlist))
         # Create a list of nodes per  site_id
         for node_id in self.node_dictlist.keys():
             node  = self.node_dictlist[node_id]
+            
             if node['site'] not in nodes_per_site:
                 nodes_per_site[node['site']] = []
                 nodes_per_site[node['site']].append(node['node_id'])

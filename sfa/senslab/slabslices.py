@@ -338,7 +338,7 @@ class SlabSlices:
                 users_by_hrn[user['hrn']] = user
                 users_dict[user['hrn']] = {'person_id':user['person_id'], 'hrn':user['hrn']}
                 
-        print>>sys.stderr, " \r\n \r\n \t slabslices.py verify_person  users_dict %s \r\n user_by_hrn %s \r\n \tusers_by_id %s " %( users_dict,users_by_hrn, users_by_id) 
+        logger.debug( "\r\n \r\n SLABSLICE.PY \tverify_person  users_dict %s \r\n user_by_hrn %s \r\n \tusers_by_id %s " %( users_dict,users_by_hrn, users_by_id) )
         
         existing_user_ids = []
         existing_user_hrns = []
@@ -350,7 +350,9 @@ class SlabSlices:
             #Construct the list of filters for GetPersons
             filter_user = []
             for hrn in users_by_hrn:
-                filter_user.append ( {'hrn':hrn})
+                #filter_user.append ( {'hrn':hrn}) 
+                filter_user.append (users_by_hrn[hrn])
+            logger.debug(" SLABSLICE.PY \tverify_person  filter_user %s " %(filter_user) )   
             existing_users = self.driver.GetPersons(filter_user)                
             #existing_users = self.driver.GetPersons({'hrn': users_by_hrn.keys()})
             #existing_users = self.driver.GetPersons({'hrn': users_by_hrn.keys()}, 
@@ -368,7 +370,7 @@ class SlabSlices:
             else: 
                
                 if isinstance(users,list):
-                   ldap_reslt = self.driver.ldap.LdapSearch(users[0])
+                    ldap_reslt = self.driver.ldap.LdapSearch(users[0])
                 else:
                     ldap_reslt = self.driver.ldap.LdapSearch(users)
                 if ldap_result:
@@ -378,41 +380,40 @@ class SlabSlices:
                 else:
                     #User not existing in LDAP
             
-                    print>>sys.stderr, " \r\n \r\n \t slabslices.py verify_person users HUMHUMHUMHUM ... %s \r\n \t ldap_reslt %s "  %(users, ldap_reslt)
+                    logger.debug(" SLABSLICE.PY \tverify_person users HUMHUMHUMHUM ... %s \r\n \t ldap_reslt %s "  %(users, ldap_reslt))
 
                 
         # requested slice users        
         requested_user_ids = users_by_id.keys() 
         requested_user_hrns = users_by_hrn.keys()
-        print>>sys.stderr, " \r\n \r\n \t slabslices.py verify_person  requested_user_ids  %s user_by_hrn %s " %( requested_user_ids,users_by_hrn) 
+        logger.debug(" SLABSLICE.PY \tverify_person requested_user_ids  %s user_by_hrn %s " %( requested_user_ids,users_by_hrn)) 
         # existing slice users
-        existing_slice_users_filter = {'hrn': slice_record['PI'][0]}
-        print>>sys.stderr, " \r\n \r\n slices.py verify_person requested_user_ids %s existing_slice_users_filter %s slice_record %s" %(requested_user_ids,existing_slice_users_filter,slice_record)
-        
-        existing_slice_users = self.driver.GetPersons([existing_slice_users_filter])
-        #existing_slice_users = self.driver.GetPersons(existing_slice_users_filter,['hrn','pkey'])
-        print>>sys.stderr, " \r\n \r\n slices.py verify_person   existing_slice_users %s " %(existing_slice_users)
 
-        existing_slice_user_hrns = [user['hrn'] for user in existing_slice_users]
+        #existing_slice_users_filter = {'hrn': slice_record['PI'][0]}
+        #logger.debug(" SLABSLICE.PY \tverify_person requested_user_ids %s existing_slice_users_filter %s slice_record %s" %(requested_user_ids,existing_slice_users_filter,slice_record))
+        
+        #existing_slice_users = self.driver.GetPersons([existing_slice_users_filter])
+        #existing_slice_users = self.driver.GetPersons(existing_slice_users_filter,['hrn','pkey'])
+        #logger.debug(" SLABSLICE.PY \tverify_person  existing_slice_users %s " %(existing_slice_users))
+        #Check that the user of the slice in the slice record
+        #matches the existing users 
+        try:
+            if slice_record['record_id_user'] in requested_user_ids and slice_record['PI'][0] in requested_user_hrns:
+                logger.debug(" SLABSLICE.PY \tverify_person  requested_user_ids %s =  slice_record['record_id_user'] %s" %(requested_user_ids,slice_record['record_id_user']))
+           
+        except KeyError:
+                pass
+            
+        #existing_slice_user_hrns = [user['hrn'] for user in existing_slice_users]
 
         # users to be added, removed or updated
+        #One user in one senslab slice : there should be no need
+        #to remove/ add any user from/to a slice.
+        #However a user from SFA which is not registered in Senslab yet
+        #should be added to the LDAP.
 
         added_user_hrns = set(requested_user_hrns).difference(set(existing_user_hrns))
 
-        added_slice_user_hrns = set(requested_user_hrns).difference(existing_slice_user_hrns)
-        
-        removed_user_hrns = set(existing_slice_user_hrns).difference(requested_user_hrns)
-        
-
-        updated_user_hrns = set(existing_slice_user_hrns).intersection(requested_user_hrns)
-        # Remove stale users (only if we are not appending) 
-        append = options.get('append', True)
-        if append == False:
-            for removed_user_hrn in removed_user_hrns:
-                self.driver.DeletePersonFromSlice(removed_user_hrn, slice_record['name'])
-        # update_existing users
-        updated_users_list = [user for user in existing_slice_users if user['hrn'] in \
-          updated_user_hrns]
         #self.verify_keys(existing_slice_users, updated_users_list, peer, append)
 
         added_persons = []
@@ -421,12 +422,12 @@ class SlabSlices:
             added_user = users_dict[added_user_hrn]
             #hrn, type = urn_to_hrn(added_user['urn'])  
             person = {
-                #'first_name': added_user.get('first_name', hrn),
-                #'last_name': added_user.get('last_name', hrn),
+                'first_name': added_user.get('first_name', hrn),
+                'last_name': added_user.get('last_name', hrn),
                 'person_id': added_user['person_id'],
-                #'peer_person_id': None,
-                #'keys': [],
-                #'key_ids': added_user.get('key_ids', []),
+                'peer_person_id': None,
+                'keys': [],
+                'key_ids': added_user.get('key_ids', []),
                 
             } 
             person['person_id'] = self.driver.AddPerson(person)
@@ -450,8 +451,8 @@ class SlabSlices:
                 #peer_dict = {'type': 'user', 'hrn': hrn, 'peer_authority': sfa_peer, \
                     #'pointer': person['person_id']}
                 #self.registry.register_peer_object(self.credential, peer_dict)
-        for added_slice_user_hrn in added_slice_user_hrns.union(added_user_hrns):           
-            self.driver.AddPersonToSlice(added_slice_user_hrn, slice_record['name'])
+        #for added_slice_user_hrn in added_slice_user_hrns.union(added_user_hrns):           
+            #self.driver.AddPersonToSlice(added_slice_user_hrn, slice_record['name'])
         #for added_slice_user_id in added_slice_user_ids.union(added_user_ids):
             # add person to the slice 
             #self.driver.AddPersonToSlice(added_slice_user_id, slice_record['name'])
