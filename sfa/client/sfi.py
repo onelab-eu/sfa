@@ -454,7 +454,9 @@ class Sfi:
         
 
     def print_help (self):
+        print "==================== Generic sfi usage"
         self.sfi_parser.print_help()
+        print "==================== Specific command usage"
         self.command_parser.print_help()
 
     #
