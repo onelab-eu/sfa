@@ -171,9 +171,6 @@ class SlabImporter:
     
                 user_record = self.find_record_by_type_hrn( 'user', person_hrn)
                 slice_record = self.find_record_by_type_hrn ('slice', slice_hrn)
-               
-                print>>sys.stderr, "\r\n \r\n SLAB IMPORTER FROM LDAP LIST PERSON IMPORT person_hrn %s user_record %s person['pkey'] %s" %(person_hrn, user_record,person['pkey'])
-                
                 
                 # return a tuple pubkey (a plc key object) and pkey (a Keypair object)
                 def init_person_key (person, slab_key):
