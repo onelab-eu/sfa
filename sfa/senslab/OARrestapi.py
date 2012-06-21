@@ -13,14 +13,8 @@ from sfa.util.xrn import hrn_to_urn, get_authority,Xrn,get_leaf
 from sfa.util.config import Config
 from sfa.util.sfalogging import logger
 
-#OARIP='192.168.0.109'
-#OARIP='akila.inrialpes.fr'
-OARIP='194.199.16.161'
-OARrequests_list = ["GET_version", "GET_timezone", "GET_jobs", "GET_jobs_table", "GET_jobs_details",
-"GET_resources_full", "GET_resources"]
 
-OARrequests_uri_list = ['/oarapi/version.json','/oarapi/timezone.json', '/oarapi/jobs.json',
-'/oarapi/jobs/details.json', '/oarapi/resources/full.json', '/oarapi/resources.json'] 
+OARIP ='194.199.16.161'
 
 OARrequests_get_uri_dict = { 'GET_version': '/oarapi/version.json',
 			'GET_timezone':'/oarapi/timezone.json' ,
@@ -30,24 +24,21 @@ OARrequests_get_uri_dict = { 'GET_version': '/oarapi/version.json',
                         'GET_resources_id': '/oarapi/resources/id.json',
 			'GET_jobs_table': '/oarapi/jobs/table.json',
 			'GET_jobs_details': '/oarapi/jobs/details.json',
-                        'GET_reserved_nodes': '/oarapi/jobs/details.json?state=Runnng,Waiting,Launching',
+                        'GET_reserved_nodes': '/oarapi/jobs/details.json?state=Running,Waiting,Launching',
 			'GET_resources_full': '/oarapi/resources/full.json',
 			'GET_resources':'/oarapi/resources.json',
                         'GET_sites' : '/oarapi/resources/full.json',
-                        
-                        
-}
+                        }
 
-OARrequest_post_uri_dict = { 
-                            'POST_job':{'uri': '/oarapi/jobs.json'},
-                            'DELETE_jobs_id':{'uri':'/oarapi/jobs/id.json'},}
+OARrequest_post_uri_dict = { 'POST_job':{'uri': '/oarapi/jobs.json'},
+                            'DELETE_jobs_id':{'uri':'/oarapi/jobs/id.json'},
+                            }
 
-POSTformat = {  #'yaml': {'content':"text/yaml", 'object':yaml}
-'json' : {'content':"application/json",'object':json}, 
-#'http': {'content':"applicaton/x-www-form-urlencoded",'object': html},
-}
+POSTformat = {  'json' : {'content':"application/json",'object':json}, 
+                }
 
-OARpostdatareqfields = {'resource' :"/nodes=", 'command':"sleep", 'workdir':"/home/", 'walltime':""}
+OARpostdatareqfields = {'resource' :"/nodes=", 'command':"sleep", \
+                        'workdir':"/home/", 'walltime':""}
 
 class OARrestapi:
     def __init__(self):
@@ -72,89 +63,83 @@ class OARrestapi:
         logger.debug("OARrestapi \tGETRequestToOARRestAPI %s" %(request))
         if strval:
           self.oarserver['uri'] = self.oarserver['uri'].replace("id",str(strval))
-          logger.debug("OARrestapi: \t  GETRequestToOARRestAPI  self.oarserver['uri'] %s" %( self.oarserver['uri']))
+          logger.debug("OARrestapi: \t  GETRequestToOARRestAPI  \
+                            self.oarserver['uri'] %s strval %s" \
+                            %(self.oarserver['uri'], strval))
         if username:
             headers['X-REMOTE_IDENT'] = username 
         try :  
-            #headers = {'X-REMOTE_IDENT':'avakian',\
-            #'content-length':'0'}
-            headers['content-length'] = '0' #seems that it does not work if we don't add this
-            
-            #conn = httplib.HTTPConnection(self.oarserver['ip'],self.oarserver['port'])
-            #conn.putheader(headers)
-            #conn.endheaders()
-            #conn.putrequest("GET",self.oarserver['uri'] ) 
+            #seems that it does not work if we don't add this
+            headers['content-length'] = '0' 
+
             conn = httplib.HTTPConnection(self.oarserver['ip'],self.oarserver['port'])
             conn.request("GET",self.oarserver['uri'],data , headers )
             resp = ( conn.getresponse()).read()
-            #logger.debug("OARrestapi: \t  GETRequestToOARRestAPI  resp %s" %( resp))
+            #logger.debug("OARrestapi: \t GETRequestToOARRestAPI resp %s" %(resp))
             conn.close()
         except:
-            raise ServerError("GET_OAR_SRVR : Could not reach OARserver")
+            logger.log_exc("GET_OAR_SRVR : Could not reach OARserver")
+            #raise ServerError("GET_OAR_SRVR : Could not reach OARserver")
         try:
             js = json.loads(resp)
-            
-            if strval:
-                print>>sys.stderr, " \r\n \r\n \t GETRequestToOARRestAPI strval %s js %s" %(strval,js)
             return js
         
-        except ValueError:
-            raise ServerError("Failed to parse Server Response:" + js)
+        except ValueError,error:
+             logger.log_exc("Failed to parse Server Response: %s ERROR %s"\
+                                                            %(js, error))
+            #raise ServerError("Failed to parse Server Response:" + js)
 
 		
     def POSTRequestToOARRestAPI(self, request, datadict, username=None):
-        #first check that all params for are OK 
+        """ Used to post a job on OAR , along with data associated 
+        with the job.
         
-        print>>sys.stderr, " \r\n \r\n POSTRequestToOARRestAPI username",username
+        """
+
+        #first check that all params for are OK 
         try:
             self.oarserver['uri'] = OARrequest_post_uri_dict[request]['uri']
 
-        except:
-            print>>sys.stderr, " \r\n \r\n POSTRequestToOARRestAPI request not in OARrequest_post_uri_dict"
+        except KeyError:
+            logger.log_exc("OARrestapi \tPOSTRequestToOARRestAPI request not \
+                             valid")
             return
         try:
             if datadict and 'strval' in datadict:
-                self.oarserver['uri'] = self.oarserver['uri'].replace("id",str(datadict['strval']))
+                self.oarserver['uri'] = self.oarserver['uri'].replace("id",\
+                                                    str(datadict['strval']))
                 del datadict['strval']
         except:
-            print>>sys.stderr, " \r\n \r\n POSTRequestToOARRestAPI ERRRRRORRRRRR "
+            logger.log_exc("OARrestapi.py POSTRequestToOARRestAPI Error")
             return
-        #if format in POSTformat:
-            #if format is 'json':
+
         data = json.dumps(datadict)
         headers = {'X-REMOTE_IDENT':username,\
                 'content-type':POSTformat['json']['content'],\
                 'content-length':str(len(data))}     
         try :
-            #self.oarserver['postformat'] = POSTformat[format]
-            
-            conn = httplib.HTTPConnection(self.oarserver['ip'],self.oarserver['port'])
+
+            conn = httplib.HTTPConnection(self.oarserver['ip'], \
+                                        self.oarserver['port'])
             conn.request("POST",self.oarserver['uri'],data,headers )
             resp = ( conn.getresponse()).read()
             conn.close()
-            
-            #conn = httplib.HTTPConnection(self.oarserver['ip'],self.oarserver['port'])
-            #conn.putrequest("POST",self.oarserver['uri'] )
-            #self.oarserver['postformat'] = POSTformat[format]
-            #conn.putheader('HTTP X-REMOTE_IDENT', 'avakian')
-            #conn.putheader('content-type', self.oarserver['postformat']['content'])
-            #conn.putheader('content-length', str(len(data))) 
-            #conn.endheaders()
-            #conn.send(data)
-            #resp = ( conn.getresponse()).read()
-            #conn.close()
-
         except:
-            print>>sys.stderr, "\r\n POSTRequestToOARRestAPI  ERROR: data %s \r\n \t\n \t\t headers %s uri %s" %(data,headers,self.oarserver['uri'])
+           logger.log_exc("POSTRequestToOARRestAPI  ERROR: \
+                            data %s \r\n \t\n \t\t headers %s uri %s" \
+                            %(data,headers,self.oarserver['uri']))
+
             #raise ServerError("POST_OAR_SRVR : error")
                 
         try:
             answer = json.loads(resp)
-            print>>sys.stderr, "\r\n POSTRequestToOARRestAPI : ", answer
+            logger.debug("POSTRequestToOARRestAPI : answer %s" %(answer))
             return answer
 
-        except ValueError:
-            raise ServerError("Failed to parse Server Response:" + answer)
+        except ValueError,error:
+            logger.log_exc("Failed to parse Server Response: error %s answer \
+                            %s" %(error,answer))
+            #raise ServerError("Failed to parse Server Response:" + answer)
 
 
     #def createjobrequest(self, nodelist):
@@ -165,6 +150,7 @@ class OARrestapi:
                     #datadict[k] += str(nodelist)
 
 			
+                        
 class OARGETParser:
 
 
@@ -240,6 +226,7 @@ class OARGETParser:
     def ParseJobs(self) :
         self.jobs_list = []
         print " ParseJobs "
+        return self.raw_json
             
     def ParseJobsTable(self) : 
         print "ParseJobsTable"
@@ -252,9 +239,12 @@ class OARGETParser:
 
     def ParseJobsIds(self):
         
-        job_resources =['assigned_network_address', 'assigned_resources','Job_Id', 'scheduledStart','state','job_user', 'startTime','walltime','message']
-        job_resources_full = ['Job_Id', 'scheduledStart', 'resubmit_job_id', 'owner', 'submissionTime', 'message', 'id', 'jobType', 'queue', 'launchingDirectory', 'exit_code', 'state', 'array_index', 'events', 'assigned_network_address', 'cpuset_name', 'initial_request', 'job_user', 'assigned_resources', 'array_id', 'job_id', 'resources_uri', 'dependencies', 'api_timestamp', 'startTime', 'reservation', 'properties', 'types', 'walltime', 'name', 'uri', 'wanted_resources', 'project', 'command']
-   
+        job_resources =['wanted_resources', 'name','id', 'start_time','state','owner','walltime','message']
+        
+        
+        job_resources_full = ['launching_directory', 'links', 'resubmit_job_id', 'owner', 'events', 'message', 'scheduled_start', 'id', 'array_id',  'exit_code','properties', 'state','array_index', 'walltime', 'type', 'initial_request', 'stop_time', 'project',  'start_time',  'dependencies','api_timestamp','submission_time', 'reservation', 'stdout_file', 'types', 'cpuset_name',  'name',  'wanted_resources','queue','stderr_file','command']
+
+
         job_info = self.raw_json
      
         values=[]
@@ -270,7 +260,9 @@ class OARGETParser:
         
         
     def ParseJobsIdResources(self):
+        logger.debug("OARESTAPI ParseJobsIdResources %s" %(self.raw_json))
         print>>sys.stderr, "ParseJobsIdResources"
+        return self.raw_json
             
     def ParseResources(self) :
         print>>sys.stderr, " \r\n  \t\t\t ParseResources__________________________ " 
@@ -278,7 +270,11 @@ class OARGETParser:
         self.raw_json = self.raw_json['items']
         self.ParseNodes()
        
-        
+    def ParseReservedNodes(self):
+        print>>sys.stderr, " \r\n  \t\t\t ParseReservedNodes__________________________ " 
+        #resources are listed inside the 'items' list from the json
+        return self.raw_json
+    
     def ParseDeleteJobs(self):
         return  
             
@@ -340,7 +336,7 @@ class OARGETParser:
                     
                 
     def hostname_to_hrn(self, root_auth, login_base, hostname):
-        return PlXrn(auth=root_auth,hostname=login_base + '_' +hostname).get_hrn()
+        return PlXrn(auth=root_auth,hostname= login_base + '_' + hostname).get_hrn()
     #Retourne liste de dictionnaires contenant attributs des sites	
     def ParseSites(self):
         nodes_per_site = {}
@@ -399,6 +395,7 @@ class OARGETParser:
         'GET_jobs_id_resources': {'uri':'/oarapi/jobs/id/resources.json','parse_func': ParseJobsIdResources},
         'GET_jobs_table': {'uri':'/oarapi/jobs/table.json','parse_func': ParseJobsTable},
         'GET_jobs_details': {'uri':'/oarapi/jobs/details.json','parse_func': ParseJobsDetails},
+        'GET_reserved_nodes':{'uri':'/oarapi/jobs/details.json?state=Running,Waiting,Launching','parse_func':ParseReservedNodes},
         'GET_resources_full': {'uri':'/oarapi/resources/full.json','parse_func': ParseResourcesFull},
         'GET_sites':{'uri':'/oarapi/resources/full.json','parse_func': ParseResourcesFullSites},
         'GET_resources':{'uri':'/oarapi/resources.json' ,'parse_func': ParseResources},
