@@ -1193,11 +1193,7 @@ or with an slice hrn, shows currently provisioned resources
         [ slice_hrn, input_time ] = args
         # slice urn    
         slice_urn = hrn_to_urn(slice_hrn, 'slice') 
-        # time
-        timestamp=Sfi.validate_time (input_time)
-        if not timestamp:
-            print "Could not turn %s into a timestamp"%input_time
-            sys.exit(1)
+        # time: don't try to be smart on the time format, server-side will
         # creds
         slice_cred = self.slice_credential_string(args[0])
         creds = [slice_cred]
@@ -1207,7 +1203,7 @@ or with an slice hrn, shows currently provisioned resources
         # options and call_id when supported
         api_options = {}
 	api_options['call_id']=unique_call_id()
-        result =  server.RenewSliver(slice_urn, creds, timestamp, *self.ois(server,api_options))
+        result =  server.RenewSliver(slice_urn, creds, input_time, *self.ois(server,api_options))
         value = ReturnValue.get_value(result)
         if self.options.raw:
             save_raw_to_file(result, self.options.raw, self.options.rawformat, self.options.rawbanner)
