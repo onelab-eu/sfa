@@ -1,12 +1,12 @@
 
-import string
+#import string
 import random
 from passlib.hash import ldap_salted_sha1 as lssha
 from sfa.util.xrn import Xrn,get_authority 
 import ldap
 from sfa.util.config import Config
 from sfa.trust.hierarchy import Hierarchy
-from sfa.trust.certificate import *
+#from sfa.trust.certificate import *
 import ldap.modlist as modlist
 from sfa.util.sfalogging import logger
 import os.path
@@ -24,7 +24,7 @@ class ldap_config():
             self.config_file = config_file
             # path to configuration data
             self.config_path = os.path.dirname(config_file)
-        except IOError, e:
+        except IOError, error:
             raise IOError, "Could not find or load the configuration file: %s" % config_file
         
 class ldap_co:
@@ -35,16 +35,15 @@ class ldap_co:
         LdapConfig = ldap_config()
         self.config = LdapConfig
         self.ldapHost = LdapConfig.LDAP_IP_ADDRESS 
-	self.ldapPeopleDN = LdapConfig.LDAP_PEOPLE_DN
-	self.ldapGroupDN = LdapConfig.LDAP_GROUP_DN
-	self.ldapAdminDN = LdapConfig.LDAP_WEB_DN
-	self.ldapAdminPassword = LdapConfig.LDAP_WEB_PASSWORD
-        
-        
+        self.ldapPeopleDN = LdapConfig.LDAP_PEOPLE_DN
+        self.ldapGroupDN = LdapConfig.LDAP_GROUP_DN
+        self.ldapAdminDN = LdapConfig.LDAP_WEB_DN
+        self.ldapAdminPassword = LdapConfig.LDAP_WEB_PASSWORD
 
-	self.ldapPort = ldap.PORT
-	self.ldapVersion  = ldap.VERSION3
-	self.ldapSearchScope = ldap.SCOPE_SUBTREE
+
+        self.ldapPort = ldap.PORT
+        self.ldapVersion  = ldap.VERSION3
+        self.ldapSearchScope = ldap.SCOPE_SUBTREE
 
 
     def connect(self, bind = True):
@@ -56,8 +55,8 @@ class ldap_co:
         """
         try:
             self.ldapserv = ldap.open(self.ldapHost)
-        except ldap.LDAPError, e:
-            return {'bool' : False, 'message' : e }
+        except ldap.LDAPError, error:
+            return {'bool' : False, 'message' : error }
         
         # Bind with authentification
         if(bind): 
@@ -75,8 +74,8 @@ class ldap_co:
             # Bind/authenticate with a user with apropriate rights to add objects
             self.ldapserv.simple_bind_s(self.ldapAdminDN, self.ldapAdminPassword)
 
-        except ldap.LDAPError, e:
-            return {'bool' : False, 'message' : e }
+        except ldap.LDAPError, error:
+            return {'bool' : False, 'message' : error }
 
         return {'bool': True}
     
@@ -84,13 +83,13 @@ class ldap_co:
         """ Close the LDAP connection """
         try:
             self.ldapserv.unbind_s()
-        except ldap.LDAPError, e:
-            return {'bool' : False, 'message' : e }
+        except ldap.LDAPError, error:
+            return {'bool' : False, 'message' : error }
             
         
 class LDAPapi :
     def __init__(self):
-        #logger.setLevelDebug() 
+        logger.setLevelDebug() 
         #SFA related config
         self.senslabauth=Hierarchy()
         config=Config()
@@ -103,7 +102,7 @@ class LDAPapi :
         self.ldapUserGidNumber = self.conn.config.LDAP_USER_GID_NUMBER 
         self.ldapUserHomePath = self.conn.config.LDAP_USER_HOME_PATH 
         
-        self.lengthPassword = 8; 
+        self.lengthPassword = 8
         self.baseDN = self.conn.ldapPeopleDN
         #authinfo=self.senslabauth.get_auth_info(self.authname)
         
@@ -113,7 +112,7 @@ class LDAPapi :
                                 'A','B','C','D','E','F','G','H','I','J',\
                                 'K','L','M','N','O','P','Q','R','S','T',\
                                 'U','V','W','X','Y','Z','_','a','b','c',\
-                                'd','e','f','g','h','i','j','k','l','m',\
+                                'd','error','f','g','h','i','j','k','l','m',\
                                 'n','o','p','q','r','s','t','u','v','w',\
                                 'x','y','z','\'']
         
@@ -142,7 +141,7 @@ class LDAPapi :
         getAttrs = ['uid']
         if length_last_name >= login_max_length :
             login = lower_last_name[0:login_max_length]
-            index = 0;
+            index = 0
             logger.debug("login : %s index : %s" %(login,index))
         elif length_last_name >= 4 :
             login = lower_last_name
@@ -168,11 +167,11 @@ class LDAPapi :
                             impossible to generate unique login for %s %s" \
                             %(lower_first_name,lower_last_name))
             
-        filter = '(uid=' + login + ')'
+        login_filter = '(uid=' + login + ')'
         
         try :
             #Check if login already in use
-            while (len(self.LdapSearch(filter, getAttrs)) is not 0 ):
+            while (len(self.LdapSearch(login_filter, getAttrs)) is not 0 ):
             
                 index += 1
                 if index >= 9:
@@ -182,15 +181,15 @@ class LDAPapi :
                     try:
                         login = lower_first_name[0:index] + \
                                     lower_last_name[0:login_max_length-index]
-                        filter = '(uid='+ login+ ')'
+                        login_filter = '(uid='+ login+ ')'
                     except KeyError:
                         print "lower_first_name - lower_last_name too short"
                         
             logger.debug("LDAP.API \t generate_login login %s" %(login))
             return login
                     
-        except  ldap.LDAPError,e :
-            logger.log_exc("LDAP generate_login Error %s" %e)
+        except  ldap.LDAPError,error :
+            logger.log_exc("LDAP generate_login Error %s" %error)
             return None
 
         
@@ -210,13 +209,13 @@ class LDAPapi :
         return password
 
     def encrypt_password(self, password):
-       """ Use passlib library to make a RFC2307 LDAP encrypted password
-       salt size = 8, use sha-1 algorithm. Returns encrypted password.
-       
-       """
-       #Keep consistency with Java Senslab's LDAP API 
-       #RFC2307SSHAPasswordEncryptor so set the salt size to 8 bytres
-       return lssha.encrypt(password,salt_size = 8)
+        """ Use passlib library to make a RFC2307 LDAP encrypted password
+        salt size = 8, use sha-1 algorithm. Returns encrypted password.
+        
+        """
+        #Keep consistency with Java Senslab's LDAP API 
+        #RFC2307SSHAPasswordEncryptor so set the salt size to 8 bytres
+        return lssha.encrypt(password,salt_size = 8)
     
 
 
@@ -229,9 +228,9 @@ class LDAPapi :
         """
         #First, get all the users in the LDAP
         getAttrs = "(uidNumber=*)"
-        filter = ['uidNumber']
+        login_filter = ['uidNumber']
 
-        result_data = self.LdapSearch(getAttrs, filter) 
+        result_data = self.LdapSearch(getAttrs, login_filter) 
         #It there is no user in LDAP yet, First LDAP user
         if result_data == []:
             max_uidnumber = self.ldapUserUidNumberMin
@@ -244,17 +243,18 @@ class LDAPapi :
             max_uidnumber = max(uidNumberList) + 1
             
         return str(max_uidnumber)
-        
-    #TODO ; Get ssh public key from sfa record   
-    #To be filled by N. Turro                
+         
+         
     def get_ssh_pkey(self, record):
-        return 'A REMPLIR '
-         
-         
-    #TODO Handle OR filtering in the ldap query when 
-    #dealing with a list of records instead of doing a for loop in GetPersons   
-    def make_ldap_filters_from_record(self, record=None):
+        """TODO ; Get ssh public key from sfa record  
+        To be filled by N. Turro ? or using GID pl way?
+        
         """
+        return 'A REMPLIR '
+
+    def make_ldap_filters_from_record(self, record=None):
+        """TODO Handle OR filtering in the ldap query when 
+        dealing with a list of records instead of doing a for loop in GetPersons   
         Helper function to make LDAP filter requests out of SFA records.
         """
         req_ldapdict = {}
@@ -389,9 +389,9 @@ class LDAPapi :
                         %(user_ldap_attrs['cn'] ,user_ldap_attrs['uid']))
                         
                         
-            except ldap.LDAPError, e:
-                logger.log_exc("LDAP Add Error %s" %e)
-                return {'bool' : False, 'message' : e }
+            except ldap.LDAPError, error:
+                logger.log_exc("LDAP Add Error %s" %error)
+                return {'bool' : False, 'message' : error }
         
             self.conn.close()
             return {'bool': True}  
@@ -411,8 +411,8 @@ class LDAPapi :
                 self.conn.close()
                 return {'bool': True}
             
-            except ldap.LDAPError, e:
-                logger.log_exc("LDAP Delete Error %s" %e)
+            except ldap.LDAPError, error:
+                logger.log_exc("LDAP Delete Error %s" %error)
                 return {'bool': False}
         
     
@@ -445,8 +445,8 @@ class LDAPapi :
                 self.conn.ldapserv.modify_s(dn,ldif)
                 self.conn.close()
                 return {'bool' : True }
-            except ldap.LDAPError, e:
-                logger.log_exc("LDAP LdapModify Error %s" %e)
+            except ldap.LDAPError, error:
+                logger.log_exc("LDAP LdapModify Error %s" %error)
                 return {'bool' : False }
     
         
@@ -527,7 +527,7 @@ class LDAPapi :
                 return_fields_list = expected_fields
             #No specifc request specified, gert the whole LDAP    
             if req_ldap == None:
-               req_ldap = '(cn=*)'
+                req_ldap = '(cn=*)'
                
             logger.debug("LDAP.PY \t LdapSearch  req_ldap %s \
                             return_fields_list %s" %(req_ldap,return_fields_list))
@@ -548,8 +548,8 @@ class LDAPapi :
 
                 return result_data
             
-            except  ldap.LDAPError,e :
-                logger.log_exc("LDAP LdapSearch Error %s" %e)
+            except  ldap.LDAPError,error :
+                logger.log_exc("LDAP LdapSearch Error %s" %error)
                 return []
             
             else:
@@ -615,9 +615,9 @@ class LDAPapi :
                             'pointer' : -1,
                             'hrn': hrn,
                             }
-            except KeyError,e:
+            except KeyError,error:
                 logger.log_exc("LDAPapi \t LdaFindUser KEyError %s" \
-                                %e )
+                                %error )
                 return
         else:
         #Asked for all users in ldap
@@ -652,8 +652,8 @@ class LDAPapi :
                             'pointer' : -1,
                             'hrn': hrn,
                             } ) 
-                except KeyError,e:
-                    logger.log_exc("LDAPapi.PY \t LdapFindUser EXCEPTION %s" %(e))
+                except KeyError,error:
+                    logger.log_exc("LDAPapi.PY \t LdapFindUser EXCEPTION %s" %(error))
                     return
         return results   
             

@@ -1,12 +1,16 @@
 from copy import deepcopy
-from StringIO import StringIO
-from sfa.util.xrn import Xrn, urn_to_sliver_id
-from sfa.util.plxrn import hostname_to_urn, xrn_to_hostname 
+
+#from StringIO import StringIO
+#from sfa.util.xrn import urn_to_sliver_id
+#from sfa.util.plxrn import hostname_to_urn, xrn_to_hostname 
+
 from sfa.rspecs.version import RSpecVersion
 import sys
+
 from sfa.rspecs.elements.versions.slabv1Node import Slabv1Node
 from sfa.rspecs.elements.versions.slabv1Sliver import Slabv1Sliver
 from sfa.rspecs.elements.versions.slabv1Timeslot import Slabv1Timeslot
+from sfa.util.sfalogging import logger
  
 class Slabv1(RSpecVersion):
     #enabled = True
@@ -56,9 +60,10 @@ class Slabv1(RSpecVersion):
         return Slabv1Node.add_nodes(self.xml, nodes)
     
     def merge_node(self, source_node_tag, network, no_dupes = False):
-        if no_dupes and self.get_node_element(node['hostname']):
-            # node already exists
-            return
+        logger.debug("SLABV1 merge_node")
+        #if no_dupes and self.get_node_element(node['hostname']):
+            ## node already exists
+            #return
         network_tag = self.add_network(network)
         network_tag.append(deepcopy(source_node_tag))
 
@@ -175,8 +180,9 @@ class Slabv1(RSpecVersion):
                 #sliver_id = urn_to_sliver_id(sliver_urn, slice_id, node_id)
                 #node_elem.set('sliver_id', sliver_id)
 
-            # add the sliver type elemnt    
-            Slabv1SliverType.add_slivers(node_elem.element, sliver)         
+            # add the sliver type elemnt
+            Slabv1Sliver.add_slivers(node_elem.element, sliver)  
+            #Slabv1SliverType.add_slivers(node_elem.element, sliver)         
 
         # remove all nodes without slivers
         if not append:

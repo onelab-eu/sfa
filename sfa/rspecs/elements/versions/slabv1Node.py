@@ -1,4 +1,4 @@
-from sfa.util.plxrn import PlXrn, xrn_to_hostname
+from sfa.planetlab.plxrn import PlXrn, xrn_to_hostname
 from sfa.util.xrn import Xrn
 from sfa.util.xml import XpathFilter
 from sfa.rspecs.elements.node import Node
