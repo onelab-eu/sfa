@@ -1187,21 +1187,27 @@ or with an slice hrn, shows currently provisioned resources
         renew slice (RenewSliver)
         """
         server = self.sliceapi()
+        if len(args) != 2:
+            self.print_help()
+            sys.exit(1)
+        [ slice_hrn, input_time ] = args
         # slice urn    
-        slice_hrn = args[0]
         slice_urn = hrn_to_urn(slice_hrn, 'slice') 
+        # time
+        timestamp=Sfi.validate_time (input_time)
+        if not timestamp:
+            print "Could not turn %s into a timestamp"%input_time
+            sys.exit(1)
         # creds
         slice_cred = self.slice_credential_string(args[0])
         creds = [slice_cred]
         if options.delegate:
             delegated_cred = self.delegate_cred(slice_cred, get_authority(self.authority))
             creds.append(delegated_cred)
-        # time
-        time = args[1]
         # options and call_id when supported
         api_options = {}
 	api_options['call_id']=unique_call_id()
-        result =  server.RenewSliver(slice_urn, creds, time, *self.ois(server,api_options))
+        result =  server.RenewSliver(slice_urn, creds, timestamp, *self.ois(server,api_options))
         value = ReturnValue.get_value(result)
         if self.options.raw:
             save_raw_to_file(result, self.options.raw, self.options.rawformat, self.options.rawbanner)
