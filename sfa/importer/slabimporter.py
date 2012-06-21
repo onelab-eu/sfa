@@ -32,7 +32,7 @@ class SlabImporter:
 
        
     def hostname_to_hrn(self,root_auth,login_base,hostname):
-        return PlXrn(auth=root_auth,hostname=login_base+'_'+hostname).get_hrn()   
+        return PlXrn(auth=root_auth,hostname = hostname).get_hrn()   
     
     def slicename_to_hrn(self, person_hrn):
         return  (person_hrn +'_slice')
@@ -143,7 +143,7 @@ class SlabImporter:
                         urn = hrn_to_urn(hrn, 'node') 
                         node_gid = self.auth_hierarchy.create_gid(urn, create_uuid(), pkey)
                         node_record = RegNode (hrn=hrn, gid=node_gid, 
-                                                pointer =node['node_id'],
+                                                pointer = '-1',
                                                 authority=get_authority(hrn))
                         node_record.just_created()
                         dbsession.add(node_record)
@@ -171,7 +171,8 @@ class SlabImporter:
     
                 user_record = self.find_record_by_type_hrn( 'user', person_hrn)
                 slice_record = self.find_record_by_type_hrn ('slice', slice_hrn)
-                print>>sys.stderr, "\r\n \r\n SLAB IMPORTER FROM LDAP LIST PERSON IMPORT user_record %s " %(user_record)
+               
+                print>>sys.stderr, "\r\n \r\n SLAB IMPORTER FROM LDAP LIST PERSON IMPORT person_hrn %s user_record %s person['pkey'] %s" %(person_hrn, user_record,person['pkey'])
                 
                 
                 # return a tuple pubkey (a plc key object) and pkey (a Keypair object)
