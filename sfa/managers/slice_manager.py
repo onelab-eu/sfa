@@ -265,12 +265,14 @@ class SliceManager:
             try:
                 result=server.RenewSliver(xrn, creds, expiration_time, options)
                 if type(result)!=dict:
-                    result = {"code": {"geni_code": 0}, value: result}
-                result["aggregate"] = aggregate
+                    result = {'code': {'geni_code': 0}, 'value': result}
+                result['aggregate'] = aggregate
                 return result
             except:
                 logger.log_exc('Something wrong in _RenewSliver with URL %s'%server.url)
-                return {"aggregate": aggregate, "exc_info": traceback.format_exc(), "code": {"geni_code": -1}, "value": False, "output": ""}
+                return {'aggregate': aggregate, 'exc_info': traceback.format_exc(),
+                        'code': {'geni_code': -1},
+                        'value': False, 'output': ""}
 
         (hrn, urn_type) = urn_to_hrn(xrn)
         # get the callers hrn
@@ -294,14 +296,14 @@ class SliceManager:
         results = threads.get_results()
 
         geni_code = 0
-        geni_output = ",".join([x.get("output","") for x in results])
-        geni_value = reduce (lambda x,y: x and y, [result.get("value",False) for result in results], True)
+        geni_output = ",".join([x.get('output',"") for x in results])
+        geni_value = reduce (lambda x,y: x and y, [result.get('value',False) for result in results], True)
         for agg_result in results:
-            agg_geni_code = agg_result["code"].get("geni_code",0)
+            agg_geni_code = agg_result['code'].get('geni_code',0)
             if agg_geni_code:
                 geni_code = agg_geni_code
 
-        results = {"aggregates": results, "code": {"geni_code": geni_code}, "value": geni_value, "output": geni_output}
+        results = {'aggregates': results, 'code': {'geni_code': geni_code}, 'value': geni_value, 'output': geni_output}
 
         return results
 
