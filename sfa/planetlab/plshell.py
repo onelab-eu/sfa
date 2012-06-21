@@ -23,6 +23,9 @@ class PlShell:
                     'UpdateSlice', 'UpdateSliceTag',
                     # also used as-is in importer
                     'GetSites','GetNodes',
+                    # Lease management methods
+                    'GetLeases', 'GetLeaseGranularity', 'DeleteLeases','UpdateLeases',
+                    'AddLeases' 
                     ]
     # support for other names - this is experimental
     alias_calls = { 'get_authorities':'GetSites',
@@ -84,3 +87,4 @@ class PlShell:
             logger.debug('PlShell %s (%s) returned ... '%(name,actual_name))
             return result
         return func
+

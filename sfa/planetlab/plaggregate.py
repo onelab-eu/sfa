@@ -13,12 +13,15 @@ from sfa.rspecs.elements.location import Location
 from sfa.rspecs.elements.interface import Interface
 from sfa.rspecs.elements.services import Services
 from sfa.rspecs.elements.pltag import PLTag
+from sfa.rspecs.elements.lease import Lease
+from sfa.rspecs.elements.granularity import Granularity
 from sfa.rspecs.version_manager import VersionManager
 
-from sfa.planetlab.plxrn import PlXrn, hostname_to_urn, hrn_to_pl_slicename
+from sfa.planetlab.plxrn import PlXrn, hostname_to_urn, hrn_to_pl_slicename, slicename_to_hrn
 from sfa.planetlab.vlink import get_tc_rate
 from sfa.planetlab.topology import Topology
 
+import time
 
 class PlAggregate:
 
@@ -154,6 +157,9 @@ class PlAggregate:
         
         filter.update({'peer_id': None})
         nodes = self.driver.shell.GetNodes(filter)
+        
+        # get the granularity in second for the reservation system
+        grain = self.driver.shell.GetLeaseGranularity()
        
         site_ids = []
         interface_ids = []
@@ -205,6 +211,10 @@ class PlAggregate:
             if site['longitude'] and site['latitude']:  
                 location = Location({'longitude': site['longitude'], 'latitude': site['latitude'], 'country': 'unknown'})
                 rspec_node['location'] = location
+            # Granularity
+            granularity = Granularity({'grain': grain})
+            rspec_node['granularity'] = granularity
+
             rspec_node['interfaces'] = []
             if_count=0
             for if_id in node['interface_ids']:
@@ -234,7 +244,44 @@ class PlAggregate:
             rspec_nodes.append(rspec_node)
         return (rspec_nodes, links)
              
+
+    def get_leases(self, slice=None, options={}):
         
+        now = int(time.time())
+        filter={}
+        filter.update({'clip':now})
+        if slice:
+           filter.update({'name':slice['name']})
+        return_fields = ['lease_id', 'hostname', 'site_id', 'name', 't_from', 't_until']
+        leases = self.driver.shell.GetLeases(filter)
+
+        site_ids = []
+        for lease in leases:
+            site_ids.append(lease['site_id'])
+
+        # get sites
+        sites_dict  = self.get_sites({'site_id': site_ids}) 
+  
+        rspec_leases = []
+        for lease in leases:
+
+            rspec_lease = Lease()
+            
+            # xxx how to retrieve site['login_base']
+            site_id=lease['site_id']
+            site=sites_dict[site_id]
+
+            rspec_lease['lease_id'] = lease['lease_id']
+            rspec_lease['component_id'] = hostname_to_urn(self.driver.hrn, site['login_base'], lease['hostname'])
+            slice_hrn = slicename_to_hrn(self.driver.hrn, lease['name'])
+            slice_urn = hrn_to_urn(slice_hrn, 'slice')
+            rspec_lease['slice_id'] = slice_urn
+            rspec_lease['t_from'] = lease['t_from']
+            rspec_lease['t_until'] = lease['t_until']          
+            rspec_leases.append(rspec_lease)
+        return rspec_leases
+
+    
     def get_rspec(self, slice_xrn=None, version = None, options={}):
 
         version_manager = VersionManager()
@@ -249,17 +296,22 @@ class PlAggregate:
         if slice and 'expires' in slice:
             rspec.xml.set('expires',  datetime_to_string(utcparse(slice['expires'])))
 
-        nodes, links = self.get_nodes_and_links(slice_xrn, slice, slivers)
-        rspec.version.add_nodes(nodes)
-        rspec.version.add_links(links)
+        if not options.get('list_leases') or options.get('list_leases') and options['list_leases'] != 'leases':
+           nodes, links = self.get_nodes_and_links(slice_xrn, slice, slivers)
+           rspec.version.add_nodes(nodes)
+           rspec.version.add_links(links)
+           # add sliver defaults
+           default_sliver = slivers.get(None, [])
+           if default_sliver:
+              default_sliver_attribs = default_sliver.get('tags', [])
+              for attrib in default_sliver_attribs:
+                  logger.info(attrib)
+                  rspec.version.add_default_sliver_attribute(attrib['tagname'], attrib['value'])
         
-        # add sliver defaults
-        default_sliver = slivers.get(None, [])
-        if default_sliver:
-            default_sliver_attribs = default_sliver.get('tags', [])
-            for attrib in default_sliver_attribs:
-                logger.info(attrib)
-                rspec.version.add_default_sliver_attribute(attrib['tagname'], attrib['value'])
+        if not options.get('list_leases') or options.get('list_leases') and options['list_leases'] != 'resources':
+           leases = self.get_leases(slice)
+           rspec.version.add_leases(leases)
+
         return rspec.toxml()
 
 

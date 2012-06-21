@@ -144,11 +144,11 @@ RSYNC_EXCLUDES		:= --exclude .svn --exclude .git --exclude '*~' --exclude TAGS $
 RSYNC_COND_DRY_RUN	:= $(if $(findstring n,$(MAKEFLAGS)),--dry-run,)
 RSYNC			:= rsync -a -v $(RSYNC_COND_DRY_RUN) --no-owner $(RSYNC_EXCLUDES)
 
-CLIENTS = $(shell ls sfa/clientbin/*.py)
+CLIENTS = $(shell ls clientbin/*.py)
 
 BINS =	./config/sfa-config-tty ./config/gen-sfa-cm-config.py \
 	./sfa/server/sfa-start.py \
-	./sfa/clientbin/sfaadmin.py \
+	./clientbin/sfaadmin.py \
 	$(CLIENTS)
 
 synclib: synccheck

@@ -62,13 +62,13 @@ class Record:
         xml_record.parse_dict (input_dict)
         return xml_record.toxml()
 
-    def dump(self, format=None, dump_parents=False):
+    def dump(self, format=None, dump_parents=False, sort=False):
         if not format:
             format = 'text'
         else:
             format = format.lower()
         if format == 'text':
-            self.dump_text(dump_parents)
+            self.dump_text(dump_parents,sort=sort)
         elif format == 'xml':
             print self.save_as_xml()
         elif format == 'simple':
@@ -76,11 +76,13 @@ class Record:
         else:
             raise Exception, "Invalid format %s" % format
 
-    def dump_text(self, dump_parents=False):
-        print "".join(['=' for i in range(40)])
+    def dump_text(self, dump_parents=False, sort=False):
+        print 40*'='
         print "RECORD"
         # print remaining fields
-        for attrib_name in self.fields():
+        fields=self.fields()
+        if sort: fields.sort()
+        for attrib_name in fields:
             attrib = getattr(self, attrib_name)
             # skip internals
             if attrib_name.startswith('_'):     continue

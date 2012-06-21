@@ -8,6 +8,6 @@ class Sliver(Element):
         'name',
         'type',
         'tags',
-        'disk_images',
+        'disk_image',
         'fw_rules',
     ]
