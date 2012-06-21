@@ -21,7 +21,7 @@ from sfa.rspecs.version_manager import VersionManager
 from sfa.rspecs.rspec import RSpec
 
 from sfa.util.xrn import hrn_to_urn, urn_to_sliver_id
-from sfa.util.plxrn import slicename_to_hrn, hostname_to_hrn, hrn_to_pl_slicename
+from sfa.planetlab.plxrn import slicename_to_hrn, hostname_to_hrn, hrn_to_pl_slicename
 
 ## thierry: everything that is API-related (i.e. handling incoming requests) 
 # is taken care of 

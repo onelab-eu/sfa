@@ -3,11 +3,11 @@ import httplib
 import json
 import datetime
 from time import gmtime, strftime 
-from sfa.senslab.parsing import *
+
 import urllib
 import urllib2
 from sfa.util.config import Config
-from sfa.util.plxrn import PlXrn
+from sfa.planetlab.plxrn import PlXrn
 from sfa.util.xrn import hrn_to_urn, get_authority,Xrn,get_leaf
 
 from sfa.util.config import Config

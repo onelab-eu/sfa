@@ -2,10 +2,10 @@ from types import StringTypes
 from collections import defaultdict
 import sys
 from sfa.util.xrn import get_leaf, get_authority, urn_to_hrn
-from sfa.util.plxrn import hrn_to_pl_slicename
+from sfa.planetlab.plxrn import hrn_to_pl_slicename
 from sfa.util.policy import Policy
 from sfa.rspecs.rspec import RSpec
-from sfa.plc.vlink import VLink
+
 from sfa.util.xrn import Xrn
 from sfa.util.sfalogging import logger
 

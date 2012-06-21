@@ -9,7 +9,7 @@ import json
 
 from sfa.util.config import Config
 from sfa.util.xrn import hrn_to_urn, urn_to_hrn, urn_to_sliver_id
-from sfa.util.plxrn import PlXrn, hostname_to_urn, hrn_to_pl_slicename
+from sfa.planetlab.plxrn import PlXrn, hostname_to_urn, hrn_to_pl_slicename
 
 from sfa.rspecs.rspec import RSpec
 from sfa.rspecs.elements.location import Location
