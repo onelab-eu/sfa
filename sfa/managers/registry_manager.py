@@ -390,11 +390,11 @@ class RegistryManager:
             dbsession.commit()
         
         # update the PLC information that was specified with the record
-        # xxx oddly enough, without this statement, record.__dict__ as received by 
-        # the driver seems to be off
+        # xxx oddly enough, without this useless statement, 
+        # record.__dict__ as received by the driver seems to be off
         # anyway the driver should receive an object 
         # (and then extract __dict__ itself if needed)
-        print "before driver.update, record=%s"%record
+        print "DO NOT REMOVE ME before driver.update, record=%s"%record
         if not self.driver.update (record.__dict__, new_record.__dict__, hrn, new_key):
             logger.warning("driver.update failed")
     

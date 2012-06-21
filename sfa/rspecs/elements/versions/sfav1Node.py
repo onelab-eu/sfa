@@ -57,6 +57,12 @@ class SFAv1Node:
             if location:
                 node_elem.add_instance('location', location, Location.fields)
 
+            # add granularity of the reservation system
+            granularity = node.get('granularity')
+            if granularity:
+                node_elem.add_instance('granularity', granularity, granularity.fields)
+
+
             if isinstance(node.get('interfaces'), list):
                 for interface in node.get('interfaces', []):
                     node_elem.add_instance('interface', interface, ['component_id', 'client_id', 'ipv4']) 

@@ -24,14 +24,12 @@ class SecurityGroup:
     def _validate_port_range(self, port_range):
         from_port = to_port = None
         if isinstance(port_range, str):
-            ports = port_range.split('-')
+            ports = port_range.split(':')
             if len(ports) > 1:
                 from_port = int(ports[0])
                 to_port = int(ports[1])
             else:
                 from_port = to_port = int(ports[0])
-        else:
-            from_port = to_port = None
         return (from_port, to_port)
 
     def _validate_icmp_type_code(self, icmp_type_code):
@@ -53,7 +51,7 @@ class SecurityGroup:
 
         from_port, to_port = self._validate_port_range(port_range)
         icmp_type = self._validate_icmp_type_code(icmp_type_code)
-        if icmp_type:
+        if icmp_type and icmp_type[0] and icmp_type[1]:
             from_port, to_port = icmp_type[0], icmp_type[1]
 
         if group_name:

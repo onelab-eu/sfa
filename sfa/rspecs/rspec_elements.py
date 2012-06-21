@@ -20,6 +20,8 @@ RSpecElements = Enum(
     SERVICES='SERVICES',
     SLIVER='SLIVER', 
     SLIVER_TYPE='SLIVER_TYPE', 
+    LEASE='LEASE',
+    GRANULARITY='GRANULARITY',
 )
 
 class RSpecElement:

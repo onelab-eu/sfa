@@ -1,6 +1,6 @@
 %define name sfa
 %define version 2.1
-%define taglevel 7
+%define taglevel 11
 
 %define release %{taglevel}%{?pldistro:.%{pldistro}}%{?date:.%{date}}
 %global python_sitearch	%( python -c "from distutils.sysconfig import get_python_lib; print get_python_lib(1)" )
@@ -62,11 +62,10 @@ Requires: python-xmlbuilder
 #Requires: python-uuid
 #%endif
 
-%package plc
-Summary: the SFA layer around MyPLC
+%package flashpolicy
+Summary: SFA support for flash clients
 Group: Applications/System
 Requires: sfa
-Requires: python-psycopg2
 
 %package client
 Summary: the SFA experimenter-side CLI
@@ -74,8 +73,8 @@ Group: Applications/System
 Requires: sfa
 Requires: pyOpenSSL >= 0.7
 
-%package sfatables
-Summary: sfatables policy tool for SFA
+%package plc
+Summary: the SFA layer around MyPLC
 Group: Applications/System
 Requires: sfa
 
@@ -85,8 +84,13 @@ Group: Applications/System
 Requires: sfa
 Requires: pyOpenSSL >= 0.6
 
-%package flashpolicy
-Summary: SFA support for flash clients
+%package federica
+Summary: the SFA layer around Federica
+Group: Applications/System
+Requires: sfa
+
+%package sfatables
+Summary: sfatables policy tool for SFA
 Group: Applications/System
 Requires: sfa
 
@@ -103,25 +107,28 @@ Requires: sfa
 %description
 This package provides the python libraries for the PlanetLab implementation of SFA
 
-%description plc
-This package implements the SFA interface which serves as a layer
-between the existing PlanetLab interfaces and the SFA API.
+%description flashpolicy
+This package provides support for adobe flash client applications.  
 
 %description client
 This package provides the client side of the SFA API, in particular
 sfi.py, together with other utilities.
 
-%description sfatables
-sfatables is a tool for defining access and admission control policies
-in an SFA network, in much the same way as iptables is for ip
-networks. This is the command line interface to manage sfatables
+%description plc
+This package implements the SFA interface which serves as a layer
+between the existing PlanetLab interfaces and the SFA API.
 
 %description cm
 This package implements the SFA interface which serves as a layer
 between the existing PlanetLab NodeManager interfaces and the SFA API.
 
-%description flashpolicy
-This package provides support for adobe flash client applications.  
+%description federica
+The SFA driver for FEDERICA.
+
+%description sfatables
+sfatables is a tool for defining access and admission control policies
+in an SFA network, in much the same way as iptables is for ip
+networks. This is the command line interface to manage sfatables
 
 %description xmlbuilder
 This package contains the xmlbuilder python library, packaged for
@@ -144,8 +151,17 @@ make VERSIONTAG="%{version}-%{taglevel}" SCMURL="%{SCMURL}" install DESTDIR="$RP
 rm -rf $RPM_BUILD_ROOT
 
 %files
-# sfa and sfatables depend on each other.
-%{python_sitelib}/sfa
+%{python_sitelib}/sfa/__init__.py*
+%{python_sitelib}/sfa/trust
+%{python_sitelib}/sfa/storage
+%{python_sitelib}/sfa/util
+%{python_sitelib}/sfa/server
+%{python_sitelib}/sfa/methods
+%{python_sitelib}/sfa/generic
+%{python_sitelib}/sfa/managers
+%{python_sitelib}/sfa/importer
+%{python_sitelib}/sfa/rspecs
+%{python_sitelib}/sfa/client
 /etc/init.d/sfa
 %{_bindir}/sfa-start.py*
 %{_bindir}/sfaadmin.py*
@@ -159,16 +175,9 @@ rm -rf $RPM_BUILD_ROOT
 /usr/share/sfa/examples
 /var/www/html/wsdl/*.wsdl
 
-%files plc
-%defattr(-,root,root)
-/etc/sfa/pl.rng
-/etc/sfa/credential.xsd
-/etc/sfa/top.xsd
-/etc/sfa/sig.xsd
-/etc/sfa/xml.xsd
-/etc/sfa/protogeni-rspec-common.xsd
-/etc/sfa/topology
-%{_bindir}/gen-sfa-cm-config.py*
+%files flashpolicy
+%{_bindir}/sfa_flashpolicy.py*
+/etc/sfa/sfa_flashpolicy_config.xml
 
 %files client
 %config (noreplace) /etc/sfa/sfi_config
@@ -180,19 +189,31 @@ rm -rf $RPM_BUILD_ROOT
 %{_bindir}/sfascan
 %{_bindir}/sfadump.py*
 
-%files sfatables
-/etc/sfatables/*
-%{_bindir}/sfatables
-%{python_sitelib}/sfatables
+%files plc
+%defattr(-,root,root)
+%{python_sitelib}/sfa/planetlab
+%{python_sitelib}/sfa/openstack
+/etc/sfa/pl.rng
+/etc/sfa/credential.xsd
+/etc/sfa/top.xsd
+/etc/sfa/sig.xsd
+/etc/sfa/xml.xsd
+/etc/sfa/protogeni-rspec-common.xsd
+/etc/sfa/topology
+%{_bindir}/gen-sfa-cm-config.py*
 
 %files cm
 /etc/init.d/sfa-cm
 %{_bindir}/sfa_component_setup.py*
 # cron jobs here 
 
-%files flashpolicy
-%{_bindir}/sfa_flashpolicy.py*
-/etc/sfa/sfa_flashpolicy_config.xml
+%files federica
+%{python_sitelib}/sfa/federica
+
+%files sfatables
+/etc/sfatables/*
+%{_bindir}/sfatables
+%{python_sitelib}/sfatables
 
 %files xmlbuilder
 %{python_sitelib}/xmlbuilder
@@ -227,6 +248,25 @@ fi
 [ "$1" -ge "1" ] && service sfa-cm restart || :
 
 %changelog
+* Thu Jun 07 2012 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-2.1-11
+- review packaging - site-packages/planetlab now come with sfa-plc
+- new package sfa-federica
+- clientbin moved one step upwards
+
+* Wed Jun 6 2012 Tony Mack <tmack@cs.princeton.edu> - sfa-2.1-10
+- fix bug in sfi update()
+
+* Sun Jun 03 2012 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-2.1-9
+- fix broken sfa.util.xrn class for lowercase
+
+* Sat Jun 02 2012 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-2.1-8
+- new 'void' generic_flavour for running in registry-only mode
+- first shot at refactoring importers - probably needs more work
+- openstack: various enhancements
+- sfi interface to registry not based on xml files anymore
+- sfi show sorts result on record key
+- bugfix in sfa update on users with a pl-backed registry
+
 * Mon May 14 2012 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-2.1-7
 - renamed sfa/plc into sfa/planetlab
 - plxrn moved in sfa/planetlab as well
