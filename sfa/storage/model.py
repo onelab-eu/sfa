@@ -127,6 +127,8 @@ class RegRecord (Base,AlchemyObj):
     def validate_datetime (self, key, incoming):
         if isinstance (incoming, datetime):     return incoming
         elif isinstance (incoming, (int,float)):return datetime.fromtimestamp (incoming)
+        else: logger.info("Cannot validate datetime for key %s with input %s"%\
+                              (key,incoming))
 
     @validates ('date_created')
     def validate_date_created (self, key, incoming): return self.validate_datetime (key, incoming)
@@ -237,6 +239,8 @@ class RegSlice (RegRecord):
         auth_record = dbsession.query(RegAuthority).filter_by(hrn=authority_hrn).first()
         return auth_record.reg_pis
         
+    @validates ('expires')
+    def validate_expires (self, key, incoming): return self.validate_datetime (key, incoming)
 
 ####################
 class RegNode (RegRecord):
