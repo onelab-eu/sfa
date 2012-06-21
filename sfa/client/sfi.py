@@ -356,6 +356,9 @@ class Sfi:
                             help="type filter ([all]|user|slice|authority|node|aggregate)",
                             choices=("all", "user", "slice", "authority", "node", "aggregate"),
                             default="all")
+        if command in ("show"):
+            parser.add_option("-k","--key",dest="keys",action="append",default=[],
+                              help="specify specific keys to be displayed from record")
         if command in ("resources"):
             # rspec version
             parser.add_option("-r", "--rspec-version", dest="rspec_version", default="SFA 1",
@@ -493,9 +496,8 @@ class Sfi:
             self.dispatch(command, command_options, command_args)
         except KeyError:
             self.logger.critical ("Unknown command %s"%command)
-            raise
             sys.exit(1)
-    
+
         return
     
     ####################
@@ -826,6 +828,16 @@ or version information about sfi itself
         record_dicts = filter_records(options.type, record_dicts)
         if not record_dicts:
             self.logger.error("No record of type %s"% options.type)
+            return
+        # user has required to focus on some keys
+        if options.keys:
+            def project (record):
+                projected={}
+                for key in options.keys:
+                    try: projected[key]=record[key]
+                    except: pass
+                return projected
+            record_dicts = [ project (record) for record in record_dicts ]
         records = [ Record(dict=record_dict) for record_dict in record_dicts ]
         for record in records:
             if (options.format == "text"):      record.dump(sort=True)  
