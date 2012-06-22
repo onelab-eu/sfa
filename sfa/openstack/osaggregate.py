@@ -28,8 +28,10 @@ def pubkeys_to_user_data(pubkeys):
     user_data = "#!/bin/bash\n\n"
     for pubkey in pubkeys:
         pubkey = pubkey.replace('\n', '')
-        user_data += " echo %s >> /root/.ssh/authorized_keys" % pubkey
+        user_data += "echo %s >> /root/.ssh/authorized_keys" % pubkey
+        user_data += "\n"
         user_data += "echo >> /root/.ssh/authorized_keys"
+        user_data += "\n"
     return user_data
 
 def instance_to_sliver(instance, slice_xrn=None):
