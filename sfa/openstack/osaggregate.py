@@ -146,7 +146,9 @@ class OSAggregate:
     def get_aggregate_nodes(self):
         zones = self.get_availability_zones()
         # available sliver/instance/vm types
-        instances = self.driver.shell.db.instance_type_get_all().values()
+        instances = self.driver.shell.db.instance_type_get_all()
+        if isinstance(instances, dict):
+            instances = instances.values()
         # available images
         image_manager = ImageManager(self.driver)
         disk_images = image_manager.get_available_disk_images()
