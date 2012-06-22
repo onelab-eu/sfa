@@ -365,7 +365,11 @@ class SliceManager:
     
         # mmh, it is expected that all results carry the same urn
         overall['geni_urn'] = results[0]['geni_urn']
-        overall['pl_login'] = results[0]['pl_login']
+        overall['pl_login'] = None
+        for result in results:
+            if result.get('pl_login'):
+                overall['pl_login'] = result['pl_login']
+                break
         # append all geni_resources
         overall['geni_resources'] = \
             reduce (lambda x,y: x+y, [ result['geni_resources'] for result in results] , [])
