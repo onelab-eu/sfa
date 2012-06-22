@@ -24,6 +24,14 @@ from sfa.openstack.image import ImageManager
 from sfa.openstack.security_group import SecurityGroup
 from sfa.util.sfalogging import logger
 
+def pubkeys_to_user_data(pubkeys):
+    user_data = "#!/bin/bash\n\n"
+    for pubkey in pubkeys:
+        pubkey = pubkey.replace('\n', '')
+        user_data += " echo %s >> /root/.ssh/authorized_keys" % pubkey
+        user_data += "echo >> /root/.ssh/authorized_keys"
+    return user_data
+
 def instance_to_sliver(instance, slice_xrn=None):
     # should include?
     # * instance.image_ref
@@ -292,7 +300,7 @@ class OSAggregate:
 
         # get requested slivers
         rspec = RSpec(rspec)
-        user_data = "\n".join(pubkeys)
+        user_data = pubkeys_to_user_data(pubkeys)
         requested_instances = defaultdict(list)
         # iterate over clouds/zones/nodes
         for node in rspec.version.get_nodes_with_slivers():
