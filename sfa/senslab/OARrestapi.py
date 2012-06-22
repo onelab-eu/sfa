@@ -16,19 +16,7 @@ from sfa.util.sfalogging import logger
 
 OARIP ='194.199.16.161'
 
-OARrequests_get_uri_dict = { 'GET_version': '/oarapi/version.json',
-			'GET_timezone':'/oarapi/timezone.json' ,
-			'GET_jobs': '/oarapi/jobs.json',
-                        'GET_jobs_id': '/oarapi/jobs/id.json',
-                        'GET_jobs_id_resources': '/oarapi/jobs/id/resources.json',
-                        'GET_resources_id': '/oarapi/resources/id.json',
-			'GET_jobs_table': '/oarapi/jobs/table.json',
-			'GET_jobs_details': '/oarapi/jobs/details.json',
-                        'GET_reserved_nodes': '/oarapi/jobs/details.json?state=Running,Waiting,Launching',
-			'GET_resources_full': '/oarapi/resources/full.json',
-			'GET_resources':'/oarapi/resources.json',
-                        'GET_sites' : '/oarapi/resources/full.json',
-                        }
+
 
 OARrequest_post_uri_dict = { 'POST_job':{'uri': '/oarapi/jobs.json'},
                             'DELETE_jobs_id':{'uri':'/oarapi/jobs/id.json'},
@@ -57,7 +45,7 @@ class OARrestapi:
        
             
     def GETRequestToOARRestAPI(self, request, strval=None , username = None ): 
-        self.oarserver['uri'] = OARrequests_get_uri_dict[request] 
+        self.oarserver['uri'] = OARGETParser.OARrequests_uri_dict[request]['uri']
         headers = {}
         data = json.dumps({})
         logger.debug("OARrestapi \tGETRequestToOARRestAPI %s" %(request))
@@ -269,11 +257,16 @@ class OARGETParser:
         #resources are listed inside the 'items' list from the json
         self.raw_json = self.raw_json['items']
         self.ParseNodes()
-       
+
+    # Returns an array containing the list of the reserved nodes
     def ParseReservedNodes(self):
         print>>sys.stderr, " \r\n  \t\t\t ParseReservedNodes__________________________ " 
         #resources are listed inside the 'items' list from the json
-        return self.raw_json
+        nodes=[]
+        for job in  self.raw_json['items']:
+            for node in job['nodes']:
+                nodes.append(node['network_address'])
+        return nodes
     
     def ParseDeleteJobs(self):
         return  
@@ -418,7 +411,7 @@ class OARGETParser:
         self.SendRequest("GET_version")
 
     def SendRequest(self,request, strval = None , username = None):
-        if request in OARrequests_get_uri_dict:
+        if request in self.OARrequests_uri_dict :
             self.raw_json = self.server.GETRequestToOARRestAPI(request,strval,username) 
             return self.OARrequests_uri_dict[request]['parse_func'](self)
         else:
