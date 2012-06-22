@@ -370,6 +370,9 @@ class SliceManager:
             if result.get('pl_login'):
                 overall['pl_login'] = result['pl_login']
                 break
+            elif isinstance(result.get('value'), dict) and result['value'].get('pl_login'):
+                overall['pl_login'] = result['value']['pl_login']
+                break
         # append all geni_resources
         overall['geni_resources'] = \
             reduce (lambda x,y: x+y, [ result['geni_resources'] for result in results] , [])
