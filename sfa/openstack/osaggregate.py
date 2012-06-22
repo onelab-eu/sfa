@@ -113,6 +113,9 @@ class OSAggregate:
                 interface['ips'] =  [{'address': fixed_ip['address'],
                                      'netmask': fixed_ip['network'].netmask,
                                      'type': 'ipv4'}]
+                interface['floating_ips'] = []
+                for floating_ip in fixed_ip.floating_ips:
+                    interface['floating_ips'].append(floating_ip.address)
                 interfaces.append(interface)
             if instance.availability_zone:
                 node_xrn = OSXrn(instance.availability_zone, 'node')
@@ -128,18 +131,15 @@ class OSAggregate:
             rspec_node['slivers'] = [sliver]
             rspec_node['interfaces'] = interfaces
             # slivers always provide the ssh service
-            hostname = None
+            rspec_node['services'] = []
             for interface in interfaces:
-                if 'ips' in interface and interface['ips'] and \
-                isinstance(interface['ips'], list):
-                    if interface['ips'][0].get('address'):
-                        hostname = interface['ips'][0].get('address')
-                        break 
-            login = Login({'authentication': 'ssh-keys', 
-                           'hostname': hostname, 
-                           'port':'22', 'username': 'root'})
-            service = Services({'login': login})
-            rspec_node['services'] = [service] 
+                if 'floating_ips' in interface:
+                    for hostname in interface['floating_ips']:
+                        login = Login({'authentication': 'ssh-keys', 
+                                       'hostname': hostname, 
+                                       'port':'22', 'username': 'root'})
+                        service = Services({'login': login})
+                        rspec_node['services'].append(service)
             rspec_nodes.append(rspec_node)
         return rspec_nodes
 
