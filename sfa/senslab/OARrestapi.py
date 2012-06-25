@@ -25,6 +25,7 @@ OARrequests_get_uri_dict = { 'GET_version': '/oarapi/version.json',
 			'GET_jobs_table': '/oarapi/jobs/table.json',
 			'GET_jobs_details': '/oarapi/jobs/details.json',
                         'GET_reserved_nodes': '/oarapi/jobs/details.json?state=Running,Waiting,Launching',
+                        'GET_running_jobs':  '/oarapi/jobs/details.json?state=Running',
 			'GET_resources_full': '/oarapi/resources/full.json',
 			'GET_resources':'/oarapi/resources.json',
                         'GET_sites' : '/oarapi/resources/full.json',
@@ -275,6 +276,12 @@ class OARGETParser:
         #resources are listed inside the 'items' list from the json
         return self.raw_json
     
+    def ParseRunningJobs(self): 
+        print>>sys.stderr, " \r\n  \t\t\t ParseRunningJobs__________________________ " 
+        #resources are listed inside the 'items' list from the json
+        return self.raw_json
+        
+        
     def ParseDeleteJobs(self):
         return  
             
@@ -396,6 +403,7 @@ class OARGETParser:
         'GET_jobs_table': {'uri':'/oarapi/jobs/table.json','parse_func': ParseJobsTable},
         'GET_jobs_details': {'uri':'/oarapi/jobs/details.json','parse_func': ParseJobsDetails},
         'GET_reserved_nodes':{'uri':'/oarapi/jobs/details.json?state=Running,Waiting,Launching','parse_func':ParseReservedNodes},
+        'GET_running_jobs':  {'uri':'/oarapi/jobs/details.json?state=Running','parse_func':ParseRunningJobs},
         'GET_resources_full': {'uri':'/oarapi/resources/full.json','parse_func': ParseResourcesFull},
         'GET_sites':{'uri':'/oarapi/resources/full.json','parse_func': ParseResourcesFullSites},
         'GET_resources':{'uri':'/oarapi/resources.json' ,'parse_func': ParseResources},

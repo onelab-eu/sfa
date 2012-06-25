@@ -475,7 +475,7 @@ class SlabDriver(Driver):
         node_list_k = 'assigned_network_address'
         #Get job info from OAR    
         job_info = self.oar.parser.SendRequest(req, job_id, username)
-        
+
         logger.debug("SLABDRIVER \t GetJobs  %s " %(job_info))
         try:
             if job_info['state'] == 'Terminated':
@@ -500,7 +500,7 @@ class SlabDriver(Driver):
         return job_info
 
         
-    def GetJobsResources(self,job_id, return_fields_list=None, username = None):
+    def GetJobsResources(self,job_id, username = None):
         #job_resources=['reserved_resources', 'assigned_resources','job_id', 'job_uri', 'assigned_nodes',\
         #'api_timestamp']
         #assigned_res = ['resource_id', 'resource_uri']
@@ -547,14 +547,15 @@ class SlabDriver(Driver):
               
     def GetReservedNodes(self):
         # this function returns a list of all the nodes already involved in an oar job
-       #jobs=self.oar.parser.SendRequest("GET_reserved_nodes") 
-       jobs=self.oar.parser.SendRequest("GET_jobs_details") 
-       nodes=[]
+       jobs = self.oar.parser.SendRequest("GET_running_jobs") 
+       print>>sys.stderr, "\r\n \r\n GetReservedNodes jobs %s" %(jobs)
+       #jobs=self.oar.parser.SendRequest("GET_jobs_details") 
+       nodes = []
        if jobs['total'] == 0:
            return []
       
        for j in jobs :
-          nodes=j['assigned_network_address']+nodes
+          nodes = j['assigned_network_address']+nodes
        return nodes
      
     def GetNodes(self,node_filter_dict = None, return_fields_list = None):
@@ -644,7 +645,8 @@ class SlabDriver(Driver):
                                                                 %(login,rec))
                 if slicerec.oar_job_id is not -1:
                     #Check with OAR the status of the job if a job id is in 
-                    #the slice record
+                    #the slice record 
+                    #rslt = self.GetJobsResources(slicerec.oar_job_id,username = login)
                     rslt = self.GetJobsId(slicerec.oar_job_id,username = login)
                     if rslt :
                         rec.update(rslt)
@@ -774,32 +776,33 @@ class SlabDriver(Driver):
         slice_name = slice_dict['name']
         try:
             slot = slice_dict['timeslot'] 
-            print>>sys.stderr, "\r\n \r\n \t\tLaunchExperimentOnOAR slot %s   " %(slot)
+            logger.debug("SLABDRIVER.PY \tLaunchExperimentOnOAR slot %s" %(slot))
         except KeyError:
             #Running on default parameters
             #XP immediate , 10 mins
             slot = {'date':None,'start_time':None, 'timezone':None,'duration':None }#10 min 
-            
-            
-        reqdict['property'] ="network_address in ("
-        for node in added_nodes:
+        
+        reqdict['workdir']= '/tmp'   
+        reqdict['resource'] ="{network_address in ("   
+        #reqdict['property'] ="network_address in ("
+        for node in added_nodes: 
+            print>>sys.stderr, "\r\n \r\n \t\tLaunchExperimentOnOAR  node %s" %(node)
+
             #Get the ID of the node : remove the root auth and put the site in a separate list
-            s=node.split(".")
+            #s=node.split(".")
             # NT: it's not clear for me if the nodenames will have the senslab prefix
             # so lets take the last part only, for now.
-            lastpart=s[-1]
+            #lastpart=s[-1]
             #if s[0] == self.root_auth :
             # Again here it's not clear if nodes will be prefixed with <site>_, lets split and tanke the last part for now.
-            s=lastpart.split("_")
-            nodeid=s[-1]
-            reqdict['property'] += "'"+ nodeid +"', "
+            #s=lastpart.split("_")
+            #nodeid=s[-1]
+            nodeid = node
+            reqdict['resource'] += "'"+ nodeid +"', "
             nodeid_list.append(nodeid)
-            #site_list.append( l[0] )
-            
-            
-        reqdict['property'] =  reqdict['property'][0: len( reqdict['property'])-2] +")"
-        reqdict['resource'] ="network_address="+ str(len(nodeid_list))
-        
+
+
+        reqdict['resource'] =  reqdict['resource'][0: len( reqdict['resource'])-2] +")}/nodes=" + str(len(nodeid_list))
         if slot['duration']:
             walltime = slot['duration'].split(":")
             # Fixing the walltime by adding a few delays. First put the walltime in seconds
@@ -829,11 +832,11 @@ class SlabDriver(Driver):
             reqdict['script_path'] = "/bin/sleep 620" #+20 sec    
         #In case of a scheduled experiment (not immediate)
         #To run an XP immediately, don't specify date and time in RSpec 
-        #They will be set to None.
+        #They will be set to None. 
+        server_timestamp,server_tz = self.GetTimezone()
         if slot['date'] and slot['start_time']:
             if slot['timezone'] is '' or slot['timezone'] is None:
                 #assume it is server timezone
-                server_timestamp,server_tz = self.GetTimezone()
                 from_zone=tz.gettz(server_tz) 
                 print>>sys.stderr, "\r\n \r\n \t\tLaunchExperimentOnOAR  timezone not specified  server_tz %s from_zone  %s" %(server_tz,from_zone) 
             else:
@@ -844,11 +847,12 @@ class SlabDriver(Driver):
             user_datetime = datetime.strptime(date, self.time_format)
             user_datetime = user_datetime.replace(tzinfo = from_zone)
             
-            #Convert to UTC zone
-            to_zone = tz.tzutc()
-            utc_date = user_datetime.astimezone(to_zone)
+            #Convert to server zone
+            #to_zone = tz.tzutc()
+            to_zone = tz.gettz(server_tz)
+            reservation_date = user_datetime.astimezone(to_zone)
             #Readable time accpeted by OAR
-            reqdict['reservation']= utc_date.strftime(self.time_format)
+            reqdict['reservation']= reservation_date.strftime(self.time_format)
         
             print>>sys.stderr, "\r\n \r\n \t\tLaunchExperimentOnOAR  reqdict['reservation'] %s " %(reqdict['reservation'])
             
@@ -879,7 +883,7 @@ class SlabDriver(Driver):
        
          
         # first step : start the OAR job and update the job 
-        print>>sys.stderr, "\r\n \r\n LaunchExperimentOnOAR reqdict   %s \r\n site_list   %s"  %(reqdict,site_list)   
+        logger.debug("SLABDRIVER.PY \tLaunchExperimentOnOAR reqdict   %s \r\n site_list   %s"  %(reqdict,site_list) )  
        
         answer = self.oar.POSTRequestToOARRestAPI('POST_job',reqdict,slice_user)
         print>>sys.stderr, "\r\n \r\n LaunchExperimentOnOAR jobid   %s "  %(answer)
