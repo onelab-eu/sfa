@@ -547,16 +547,20 @@ class SlabDriver(Driver):
               
     def GetReservedNodes(self):
         # this function returns a list of all the nodes already involved in an oar job
-       jobs = self.oar.parser.SendRequest("GET_running_jobs") 
-       print>>sys.stderr, "\r\n \r\n GetReservedNodes jobs %s" %(jobs)
-       #jobs=self.oar.parser.SendRequest("GET_jobs_details") 
-       nodes = []
-       if jobs['total'] == 0:
-           return []
+
+
+
+
+
+
+
       
-       for j in jobs :
-          nodes = j['assigned_network_address']+nodes
-       return nodes
+
+
+
+
+       return self.oar.parser.SendRequest("GET_reserved_nodes") 
+
      
     def GetNodes(self,node_filter_dict = None, return_fields_list = None):
         """
