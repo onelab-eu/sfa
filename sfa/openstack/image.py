@@ -50,7 +50,7 @@ class ImageManager:
     def get_available_disk_images(self):
         # get image records
         disk_images = []
-        for img in self.driver.shell.image_manager.detail():
+        for img in self.driver.shell.image_manager.get_images_detailed():
             image = Image(img)
             if image.container_format in ['ami', 'ovf']:
                 disk_images.append(image)
