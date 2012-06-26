@@ -5,7 +5,7 @@ import time
 
 from sfa.util.config import Config
 from sfa.util.xrn import Xrn, get_leaf, get_authority, hrn_to_urn
-from sfa.util.plxrn import PlXrn, slicename_to_hrn, email_to_hrn, hrn_to_pl_slicename
+from sfa.planetlab.plxrn import PlXrn, slicename_to_hrn, email_to_hrn, hrn_to_pl_slicename
 
 from sfa.senslab.LDAPapi import LDAPapi
 from sfa.senslab.slabdriver import SlabDriver
