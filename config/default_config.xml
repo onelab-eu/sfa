@@ -312,6 +312,11 @@ Thierry Parmentelat
           <value>8773</value>
           <description>The Nova/EC2 API port.</description>
         </variable>
+        <variable id="novarc" type="int">
+          <name>novarc</name>
+          <value>/root/novarc</value>
+          <description>Path to novarc client config file</description>
+        </variable>
       </variablelist>
     </category>
 
