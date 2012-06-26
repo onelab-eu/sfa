@@ -1,5 +1,6 @@
 from sfa.util.sfalogging import logger
 from glance import client as glance_client
+from novaclient.v1_1.client import Client
 from sfa.util.config import Config
 
 
@@ -21,7 +22,7 @@ def parse_novarc(filename):
 
 
 class GlanceClient:
-    def __init__(self, config):
+    def __init__(self, config=None):
         if not config:
             config = Config()
         opts = parse_novarc(config.SFA_NOVA_NOVARC)
@@ -36,5 +37,24 @@ class GlanceClient:
         return getattr(self.client, name)
 
 
+class NovaClient:
+    def __init__(self, config=None):
+        if not config:
+            config = Config()
+        opts = parse_novarc(config.SFA_NOVA_NOVARC)
+        
+        self.client = Client(username=opts.get('OS_USERNAME'),
+                             api_key=opts.get('OS_PASSWORD'),
+                             project_id=opts.get('OS_TENANT_NAME'),
+                             auth_url=opts.get('OS_AUTH_URL'),
+                             region_name='',
+                             extensions=[],
+                             service_type='compute',
+                             service_name='',  
+                            )
+                              
+
+    def __getattr__(self, name):
+        return getattr(self.client, name)
 
                             
