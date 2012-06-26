@@ -17,20 +17,7 @@ from sfa.util.sfalogging import logger
 OARIP ='194.199.16.161'
 
 
-OARrequests_get_uri_dict = { 'GET_version': '/oarapi/version.json',
-			'GET_timezone':'/oarapi/timezone.json' ,
-			'GET_jobs': '/oarapi/jobs.json',
-                        'GET_jobs_id': '/oarapi/jobs/id.json',
-                        'GET_jobs_id_resources': '/oarapi/jobs/id/resources.json',
-                        'GET_resources_id': '/oarapi/resources/id.json',
-			'GET_jobs_table': '/oarapi/jobs/table.json',
-			'GET_jobs_details': '/oarapi/jobs/details.json',
-                        'GET_reserved_nodes': '/oarapi/jobs/details.json?state=Running,Waiting,Launching',
-                        'GET_running_jobs':  '/oarapi/jobs/details.json?state=Running',
-			'GET_resources_full': '/oarapi/resources/full.json',
-			'GET_resources':'/oarapi/resources.json',
-                        'GET_sites' : '/oarapi/resources/full.json',
-                        }
+
 
 
 
@@ -288,7 +275,12 @@ class OARGETParser:
     def ParseRunningJobs(self): 
         print>>sys.stderr, " \r\n  \t\t\t ParseRunningJobs__________________________ " 
         #resources are listed inside the 'items' list from the json
-        return self.raw_json
+        nodes = []
+        for job in  self.raw_json['items']:
+            for node in job['nodes']:
+                nodes.append(node['network_address'])
+        return nodes
+       
         
         
     def ParseDeleteJobs(self):
