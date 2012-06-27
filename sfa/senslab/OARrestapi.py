@@ -1,61 +1,60 @@
-import sys
+#import sys
 import httplib
 import json
-import datetime
-from time import gmtime, strftime 
+#import datetime
+#from time import gmtime, strftime 
 
-import urllib
-import urllib2
+#import urllib
+#import urllib2
 from sfa.util.config import Config
 from sfa.planetlab.plxrn import PlXrn
-from sfa.util.xrn import hrn_to_urn, get_authority,Xrn,get_leaf
+#from sfa.util.xrn import hrn_to_urn, get_authority, Xrn, get_leaf
 
-from sfa.util.config import Config
 from sfa.util.sfalogging import logger
 
 
-OARIP ='194.199.16.161'
+OARIP = '194.199.16.161'
 
-
-
-
-
-
-
-OARrequest_post_uri_dict = { 'POST_job':{'uri': '/oarapi/jobs.json'},
+OAR_REQUEST_POST_URI_DICT = {'POST_job':{'uri': '/oarapi/jobs.json'},
                             'DELETE_jobs_id':{'uri':'/oarapi/jobs/id.json'},
                             }
 
-POSTformat = {  'json' : {'content':"application/json",'object':json}, 
-                }
+POST_FORMAT = {'json' : {'content':"application/json", 'object':json},}
 
-OARpostdatareqfields = {'resource' :"/nodes=", 'command':"sleep", \
-                        'workdir':"/home/", 'walltime':""}
+#OARpostdatareqfields = {'resource' :"/nodes=", 'command':"sleep", \
+                        #'workdir':"/home/", 'walltime':""}
+
+			
+
+
 
 class OARrestapi:
     def __init__(self):
-        self.oarserver= {}
+        self.oarserver = {}
         self.oarserver['ip'] = OARIP
         self.oarserver['port'] = 8800
         self.oarserver['uri'] = None
         self.oarserver['postformat'] = 'json'
         #logger.setLevelDebug()
 
-        self.jobstates  = ['Terminated','Hold','Waiting','toLaunch','toError',\
-                            'toAckReservation','Launching','Finishing',\
-                            'Running','Suspended','Resuming','Error']
+        self.jobstates  = ['Terminated', 'Hold', 'Waiting', 'toLaunch', \
+                            'toError', 'toAckReservation', 'Launching', \
+                            'Finishing', 'Running', 'Suspended', 'Resuming',\
+                            'Error']
                             
         self.parser = OARGETParser(self)
        
             
     def GETRequestToOARRestAPI(self, request, strval=None , username = None ): 
-        self.oarserver['uri'] = OARGETParser.OARrequests_uri_dict[request]['uri']
+        self.oarserver['uri'] = \
+                            OARGETParser.OARrequests_uri_dict[request]['uri']
         headers = {}
         data = json.dumps({})
         logger.debug("OARrestapi \tGETRequestToOARRestAPI %s" %(request))
         if strval:
-          self.oarserver['uri'] = self.oarserver['uri'].replace("id",str(strval))
-          logger.debug("OARrestapi: \t  GETRequestToOARRestAPI  \
+            self.oarserver['uri'] = self.oarserver['uri'].\
+                                            replace("id",str(strval))
+            logger.debug("OARrestapi: \t  GETRequestToOARRestAPI  \
                             self.oarserver['uri'] %s strval %s" \
                             %(self.oarserver['uri'], strval))
         if username:
@@ -64,21 +63,21 @@ class OARrestapi:
             #seems that it does not work if we don't add this
             headers['content-length'] = '0' 
 
-            conn = httplib.HTTPConnection(self.oarserver['ip'],self.oarserver['port'])
-            conn.request("GET",self.oarserver['uri'],data , headers )
+            conn = httplib.HTTPConnection(self.oarserver['ip'], \
+                                                self.oarserver['port'])
+            conn.request("GET", self.oarserver['uri'], data, headers)
             resp = ( conn.getresponse()).read()
-            #logger.debug("OARrestapi: \t GETRequestToOARRestAPI resp %s" %(resp))
             conn.close()
-        except:
+        except NotConnected:
             logger.log_exc("GET_OAR_SRVR : Could not reach OARserver")
             #raise ServerError("GET_OAR_SRVR : Could not reach OARserver")
         try:
-            js = json.loads(resp)
-            return js
+            js_dict = json.loads(resp)
+            return js_dict
         
-        except ValueError,error:
-             logger.log_exc("Failed to parse Server Response: %s ERROR %s"\
-                                                            %(js, error))
+        except ValueError, error:
+            logger.log_exc("Failed to parse Server Response: %s ERROR %s"\
+                                                            %(js_dict, error))
             #raise ServerError("Failed to parse Server Response:" + js)
 
 		
@@ -90,34 +89,34 @@ class OARrestapi:
 
         #first check that all params for are OK 
         try:
-            self.oarserver['uri'] = OARrequest_post_uri_dict[request]['uri']
+            self.oarserver['uri'] = OAR_REQUEST_POST_URI_DICT[request]['uri']
 
         except KeyError:
             logger.log_exc("OARrestapi \tPOSTRequestToOARRestAPI request not \
                              valid")
             return
-        try:
-            if datadict and 'strval' in datadict:
-                self.oarserver['uri'] = self.oarserver['uri'].replace("id",\
-                                                    str(datadict['strval']))
-                del datadict['strval']
-        except:
-            logger.log_exc("OARrestapi.py POSTRequestToOARRestAPI Error")
+        #try:
+        if datadict and 'strval' in datadict:
+            self.oarserver['uri'] = self.oarserver['uri'].replace("id", \
+                                                str(datadict['strval']))
+            del datadict['strval']
+        #except:
+            #logger.log_exc("OARrestapi.py POSTRequestToOARRestAPI Error")
             return
 
         data = json.dumps(datadict)
-        headers = {'X-REMOTE_IDENT':username,\
-                'content-type':POSTformat['json']['content'],\
+        headers = {'X-REMOTE_IDENT':username, \
+                'content-type': POST_FORMAT['json']['content'], \
                 'content-length':str(len(data))}     
         try :
 
             conn = httplib.HTTPConnection(self.oarserver['ip'], \
                                         self.oarserver['port'])
-            conn.request("POST",self.oarserver['uri'],data,headers )
-            resp = ( conn.getresponse()).read()
+            conn.request("POST", self.oarserver['uri'], data, headers)
+            resp = (conn.getresponse()).read()
             conn.close()
-        except:
-           logger.log_exc("POSTRequestToOARRestAPI  ERROR: \
+        except NotConnected:
+            logger.log_exc("POSTRequestToOARRestAPI NotConnected ERROR: \
                             data %s \r\n \t\n \t\t headers %s uri %s" \
                             %(data,headers,self.oarserver['uri']))
 
@@ -128,92 +127,156 @@ class OARrestapi:
             logger.debug("POSTRequestToOARRestAPI : answer %s" %(answer))
             return answer
 
-        except ValueError,error:
+        except ValueError, error:
             logger.log_exc("Failed to parse Server Response: error %s answer \
-                            %s" %(error,answer))
+                            %s" %(error, answer))
             #raise ServerError("Failed to parse Server Response:" + answer)
 
 
-    #def createjobrequest(self, nodelist):
-        #datadict = dict(zip(self.OARpostdatareqfields.keys(), self.OARpostdatareqfields.values())
-        #for k in datadict:
-                #if k is 'resource':
-                    #for node in nodelist:
-                    #datadict[k] += str(nodelist)
+#def AddNodeNetworkAddr(self,tuplelist,value):
+        #tuplelist.append(('hostname',str(value)))
+        
+def AddNodeNetworkAddr(dictnode, value):
+    #Inserts new key. The value associated is a tuple list
+    node_id = value
+    
+    dictnode[node_id] = [('node_id', node_id),('hostname', node_id) ]	
+    
+    return node_id 
+        
+def AddNodeSite(tuplelist, value):
+    tuplelist.append(('site', str(value)))
 
-			
-                        
+def AddNodeRadio(tuplelist, value):
+    tuplelist.append(('radio', str(value)))	
+
+
+def AddMobility(tuplelist, value): 
+    if value :
+        tuplelist.append(('mobile', int(value)))	
+
+def AddPosX(tuplelist, value):
+    tuplelist.append(('posx', value))	
+
+
+def AddPosY(tuplelist, value):
+    tuplelist.append(('posy', value))	
+
+def AddBootState(tuplelist, value):
+    tuplelist.append(('boot_state', str(value)))
+            
+#Insert a new node into the dictnode dictionary
+def AddNodeId(dictnode, value):
+    #Inserts new key. The value associated is a tuple list
+    node_id = int(value)
+    
+    dictnode[node_id] = [('node_id', node_id)]	
+    return node_id 
+
+
+                       
 class OARGETParser:
+    
 
-
+    resources_fulljson_dict = {
+        'network_address' : AddNodeNetworkAddr,
+        'site': AddNodeSite, 
+        'radio': AddNodeRadio,
+        'mobile': AddMobility,
+        'posx': AddPosX,
+        'posy': AddPosY,
+        'state':AddBootState,
+        #'id' : AddNodeId,
+        }
+        
+ 
+    def __init__(self, srv) :
+        self.version_json_dict = { 
+            'api_version' : None , 'apilib_version' :None,\
+            'api_timezone': None, 'api_timestamp': None, 'oar_version': None ,}
+        self.config = Config()
+        self.interface_hrn = self.config.SFA_INTERFACE_HRN	
+        self.timezone_json_dict = { 
+            'timezone': None, 'api_timestamp': None, }
+        self.jobs_json_dict = {
+            'total' : None, 'links' : [],\
+            'offset':None , 'items' : [], }
+        self.jobs_table_json_dict = self.jobs_json_dict
+        self.jobs_details_json_dict = self.jobs_json_dict		
+        self.server = srv
+        self.node_dictlist = {}
+        self.raw_json = None
+        self.site_dict = {}
+        self.SendRequest("GET_version")
+        
+        
     #def AddNodeNetworkAddr(self,tuplelist,value):
         #tuplelist.append(('hostname',str(value)))
         
-    def AddNodeNetworkAddr(self,dictnode,value):
-        #Inserts new key. The value associated is a tuple list
-        node_id = value
+    #def AddNodeNetworkAddr(self,dictnode,value):
+        ##Inserts new key. The value associated is a tuple list
+        #node_id = value
         
-        dictnode[node_id] = [('node_id',node_id),('hostname',node_id) ]	
+        #dictnode[node_id] = [('node_id',node_id),('hostname',node_id) ]	
         
-        return node_id 
+        #return node_id 
             
-    def AddNodeSite(self,tuplelist,value):
-        tuplelist.append(('site',str(value)))
+    #def AddNodeSite(self,tuplelist,value):
+        #tuplelist.append(('site',str(value)))
         	
             
-    def AddNodeRadio(self,tuplelist,value):
-        tuplelist.append(('radio',str(value)))	
+    #def AddNodeRadio(self,tuplelist,value):
+        #tuplelist.append(('radio',str(value)))	
     
     
-    def AddMobility(self,tuplelist,value): 
-        if value :
-            tuplelist.append(('mobile',int(value)))	
+    #def AddMobility(self,tuplelist,value): 
+        #if value :
+            #tuplelist.append(('mobile',int(value)))	
 
     
     
-    def AddPosX(self,tuplelist,value):
-        tuplelist.append(('posx',value))	
+    #def AddPosX(self,tuplelist,value):
+        #tuplelist.append(('posx',value))	
     
     
-    def AddPosY(self,tuplelist,value):
-        tuplelist.append(('posy',value))	
+    #def AddPosY(self,tuplelist,value):
+        #tuplelist.append(('posy',value))	
     
-    def AddBootState(self,tuplelist,value):
-        tuplelist.append(('boot_state',str(value)))
+    #def AddBootState(self,tuplelist,value):
+        #tuplelist.append(('boot_state',str(value)))
         	
-    #Insert a new node into the dictnode dictionary
-    def AddNodeId(self,dictnode,value):
-        #Inserts new key. The value associated is a tuple list
-        node_id = int(value)
+    ##Insert a new node into the dictnode dictionary
+    #def AddNodeId(self,dictnode,value):
+        ##Inserts new key. The value associated is a tuple list
+        #node_id = int(value)
         
-        dictnode[node_id] = [('node_id',node_id) ]	
-        return node_id
+        #dictnode[node_id] = [('node_id',node_id) ]	
+        #return node_id
     
     def ParseVersion(self) : 
         #print self.raw_json
         #print >>sys.stderr, self.raw_json
         if 'oar_version' in self.raw_json :
-            self.version_json_dict.update(api_version=self.raw_json['api_version'] ,
-                            apilib_version=self.raw_json['apilib_version'],
-                            api_timezone=self.raw_json['api_timezone'],
-                            api_timestamp=self.raw_json['api_timestamp'],
-                            oar_version=self.raw_json['oar_version'] )
+            self.version_json_dict.update(api_version = \
+                                                self.raw_json['api_version'], 
+                            apilib_version = self.raw_json['apilib_version'], 
+                            api_timezone = self.raw_json['api_timezone'], 
+                            api_timestamp = self.raw_json['api_timestamp'], 
+                            oar_version = self.raw_json['oar_version'] )
         else :
-            self.version_json_dict.update(api_version=self.raw_json['api'] ,
-                            apilib_version=self.raw_json['apilib'],
-                            api_timezone=self.raw_json['api_timezone'],
-                            api_timestamp=self.raw_json['api_timestamp'],
-                            oar_version=self.raw_json['oar'] )
+            self.version_json_dict.update(api_version = self.raw_json['api'] ,
+                            apilib_version = self.raw_json['apilib'],
+                            api_timezone = self.raw_json['api_timezone'],
+                            api_timestamp = self.raw_json['api_timestamp'],
+                            oar_version = self.raw_json['oar'] )
                                 
         print self.version_json_dict['apilib_version']
         
             
     def ParseTimezone(self) : 
-        api_timestamp=self.raw_json['api_timestamp']
-        api_tz=self.raw_json['timezone']
-        #readable_time = strftime("%Y-%m-%d %H:%M:%S", gmtime(float(api_timestamp))) 
-
-        return api_timestamp,api_tz
+        api_timestamp = self.raw_json['api_timestamp']
+        api_tz = self.raw_json['timezone']
+        return api_timestamp, api_tz
             
     def ParseJobs(self) :
         self.jobs_list = []
@@ -224,56 +287,76 @@ class OARGETParser:
         print "ParseJobsTable"
                 
     def ParseJobsDetails (self):
-        # currently, this function is not used a lot, so i have no idea what be usefull to parse, returning the full json. NT
-        print >>sys.stderr,"ParseJobsDetails %s " %(self.raw_json)
+        # currently, this function is not used a lot, 
+        #so i have no idea what be usefull to parse, 
+        #returning the full json. NT
+        logger.debug("ParseJobsDetails %s " %(self.raw_json))
         return self.raw_json
         
 
     def ParseJobsIds(self):
         
-        job_resources =['wanted_resources', 'name','id', 'start_time','state','owner','walltime','message']
+        job_resources = ['wanted_resources', 'name', 'id', 'start_time', \
+                        'state','owner','walltime','message']
         
         
-        job_resources_full = ['launching_directory', 'links', 'resubmit_job_id', 'owner', 'events', 'message', 'scheduled_start', 'id', 'array_id',  'exit_code','properties', 'state','array_index', 'walltime', 'type', 'initial_request', 'stop_time', 'project',  'start_time',  'dependencies','api_timestamp','submission_time', 'reservation', 'stdout_file', 'types', 'cpuset_name',  'name',  'wanted_resources','queue','stderr_file','command']
+        job_resources_full = ['launching_directory', 'links', \
+            'resubmit_job_id', 'owner', 'events', 'message', \
+            'scheduled_start', 'id', 'array_id',  'exit_code', \
+            'properties', 'state','array_index', 'walltime', \
+            'type', 'initial_request', 'stop_time', 'project',\
+            'start_time',  'dependencies','api_timestamp','submission_time', \
+            'reservation', 'stdout_file', 'types', 'cpuset_name', \
+            'name',  'wanted_resources','queue','stderr_file','command']
 
 
         job_info = self.raw_json
-     
-        values=[]
+        logger.debug("OARESTAPI ParseJobsIds %s" %(self.raw_json))
+        values = []
         try:
             for k in job_resources:
                 values.append(job_info[k])
-            return dict(zip(job_resources,values))
+            return dict(zip(job_resources, values))
             
         except KeyError:
-                print>>sys.stderr, " \r\n \t ParseJobsIds Key Error"
+            logger.log_exc("ParseJobsIds KeyError ")
             
-        
-        
-        
+
     def ParseJobsIdResources(self):
-        logger.debug("OARESTAPI ParseJobsIdResources %s" %(self.raw_json))
-        print>>sys.stderr, "ParseJobsIdResources"
+        """ BROKEN since oar 2.5
+        Parses the json produced by the request /oarapi/jobs/id.json.
+        
+        """
+        logger.debug("OARESTAPI \tParseJobsIdResources %s" %(self.raw_json))
         return self.raw_json
             
     def ParseResources(self) :
-        print>>sys.stderr, " \r\n  \t\t\t ParseResources__________________________ " 
+        """ Parses the json produced by a get_resources request on oar."""
+        
+        logger.debug("OARESTAPI \tParseResources " )
         #resources are listed inside the 'items' list from the json
         self.raw_json = self.raw_json['items']
         self.ParseNodes()
 
-    # Returns an array containing the list of the reserved nodes
     def ParseReservedNodes(self):
-        print>>sys.stderr, " \r\n  \t\t\t ParseReservedNodes__________________________ " 
+        """  Returns an array containing the list of the reserved nodes """
+    
         #resources are listed inside the 'items' list from the json
-        nodes=[]
+        nodes = [] 
+        print "ParseReservedNodes_%s" %(self.raw_json['items'])
         for job in  self.raw_json['items']:
             for node in job['nodes']:
+                print "ParseReservedNodes________node %s" %(node)
+                logger.debug("ParseReservedNodes________node %s" %(node))  
                 nodes.append(node['network_address'])
         return nodes
     
     def ParseRunningJobs(self): 
-        print>>sys.stderr, " \r\n  \t\t\t ParseRunningJobs__________________________ " 
+        """ Gets the list of nodes currently in use from the attributes of the
+        running jobs.
+        
+        """
+        logger.debug("OARESTAPI \tParseRunningJobs__________________________ ") 
         #resources are listed inside the 'items' list from the json
         nodes = []
         for job in  self.raw_json['items']:
@@ -284,73 +367,87 @@ class OARGETParser:
         
         
     def ParseDeleteJobs(self):
+        """ No need to parse anything in this function.A POST 
+        is done to delete the job.
+        
+        """
         return  
             
-    def ParseResourcesFull(self ) :
-        print>>sys.stderr, " \r\n \t\t\t  ParseResourcesFull_____________________________ "
+    def ParseResourcesFull(self) :
+        """ This method is responsible for parsing all the attributes 
+        of all the nodes returned by OAR when issuing a get resources full.
+        The information from the nodes and the sites are separated.
+        Updates the node_dictlist so that the dictionnary of the platform's 
+        nodes is available afterwards. 
+        
+        """
+        logger.debug("OARRESTAPI ParseResourcesFull________________________ ")
         #print self.raw_json[1]
         #resources are listed inside the 'items' list from the json
         if self.version_json_dict['apilib_version'] != "0.2.10" :
-                self.raw_json = self.raw_json['items']
+            self.raw_json = self.raw_json['items']
         self.ParseNodes()
         self.ParseSites()
         return self.node_dictlist
         
-    def ParseResourcesFullSites(self ) :
+    def ParseResourcesFullSites(self) :
+        """ UNUSED. Originally used to get information from the sites.
+        ParseResourcesFull is used instead.
+        
+        """
         if self.version_json_dict['apilib_version'] != "0.2.10" :
-                self.raw_json = self.raw_json['items']
+            self.raw_json = self.raw_json['items']
         self.ParseNodes()
         self.ParseSites()
         return self.site_dict
         
 
-    resources_fulljson_dict= {
-        'network_address' : AddNodeNetworkAddr,
-        'site': AddNodeSite, 
-        'radio': AddNodeRadio,
-        'mobile': AddMobility,
-        'posx': AddPosX,
-        'posy': AddPosY,
-        'state':AddBootState,
-        #'id' : AddNodeId,
-        }
-      
-            
-    #Parse nodes properties from OAR
-    #Put them into a dictionary with key = node id and value is a dictionary 
-    #of the node properties and properties'values.
-    def ParseNodes(self):  
+   
+    def ParseNodes(self): 
+        """ Parse nodes properties from OAR
+        Put them into a dictionary with key = node id and value is a dictionary 
+        of the node properties and properties'values.
+         
+        """
         node_id = None
         keys = self.resources_fulljson_dict.keys()
         keys.sort()
 
-        #print >>sys.stderr, " \r\n \r\n \t\t OARrestapi.py ParseNodes self.raw_json %s" %(self.raw_json)
         for dictline in self.raw_json:
             node_id = None 
-            # dictionary is empty and/or a new node has to be inserted 
-            node_id = self.resources_fulljson_dict['network_address'](self,self.node_dictlist, dictline['network_address'])
+            # dictionary is empty and/or a new node has to be inserted  
+            node_id = self.resources_fulljson_dict['network_address'](\
+                                self.node_dictlist, dictline['network_address']) 
+            #node_id = self.resources_fulljson_dict['network_address'](self,self.node_dictlist, dictline['network_address'])
             for k in keys:
                 if k in dictline:
                     if k == 'network_address':
                         continue
                  
-                    
-                    self.resources_fulljson_dict[k](self,self.node_dictlist[node_id], dictline[k])
+                    self.resources_fulljson_dict[k](\
+                                    self.node_dictlist[node_id], dictline[k])
+                    #self.resources_fulljson_dict[k](self,self.node_dictlist[node_id], dictline[k])
             
-            #The last property has been inserted in the property tuple list, reset node_id 
+            #The last property has been inserted in the property tuple list, 
+            #reset node_id 
             #Turn the property tuple list (=dict value) into a dictionary
             self.node_dictlist[node_id] = dict(self.node_dictlist[node_id])
             node_id = None
                     
                 
     def hostname_to_hrn(self, root_auth, login_base, hostname):
-        return PlXrn(auth=root_auth,hostname= login_base + '_' + hostname).get_hrn()
-    #Retourne liste de dictionnaires contenant attributs des sites	
+        return PlXrn(auth = root_auth, \
+                             hostname = login_base + '_' + hostname).get_hrn()
+                             
+
     def ParseSites(self):
+        """ Returns a list of dictionnaries containing the sites' attributes."""
+        
         nodes_per_site = {}
         config = Config()
-        logger.debug(" OARrestapi.py \t ParseSites  self.node_dictlist %s"%(self.node_dictlist))
-        # Create a list of nodes per  site_id
+        logger.debug(" OARrestapi.py \tParseSites  self.node_dictlist %s"\
+                                                        %(self.node_dictlist))
+        # Create a list of nodes per site_id
         for node_id in self.node_dictlist.keys():
             node  = self.node_dictlist[node_id]
             
@@ -362,24 +459,27 @@ class OARGETParser:
                     nodes_per_site[node['site']].append(node['node_id'])
                         
         #Create a site dictionary with key is site_login_base (name of the site)
-        # and value is a dictionary of properties, including the list of the node_ids
+        # and value is a dictionary of properties, including the list 
+        #of the node_ids
         for node_id in self.node_dictlist.keys():
             node  = self.node_dictlist[node_id]
-            node.update({'hrn':self.hostname_to_hrn(self.interface_hrn, node['site'],node['hostname'])})
+            node.update({'hrn':self.hostname_to_hrn(self.interface_hrn, \
+                                            node['site'],node['hostname'])})
             #node['hrn'] = self.hostname_to_hrn(self.interface_hrn, node['site_login_base'],node['hostname'])
             self.node_dictlist.update({node_id:node})
             #if node_id is 1:
             if node['site'] not in self.site_dict:
-                self.site_dict[node['site']] = {'site':node['site'],
-                                                        'node_ids':nodes_per_site[node['site']],
-                                                        'latitude':"48.83726",
-                                                        'longitude':"- 2.10336",'name':config.SFA_REGISTRY_ROOT_AUTH,
-                                                        'pcu_ids':[], 'max_slices':None, 'ext_consortium_id':None,
-                                                        'max_slivers':None, 'is_public':True, 'peer_site_id': None,
-                                                        'abbreviated_name':"senslab", 'address_ids': [],
-                                                        'url':"http,//www.senslab.info", 'person_ids':[],
-                                                        'site_tag_ids':[], 'enabled': True,  'slice_ids':[],
-                                                        'date_created': None, 'peer_id': None }     
+                self.site_dict[node['site']] = {
+                    'site':node['site'],
+                    'node_ids':nodes_per_site[node['site']],
+                    'latitude':"48.83726",
+                    'longitude':"- 2.10336",'name':config.SFA_REGISTRY_ROOT_AUTH,
+                    'pcu_ids':[], 'max_slices':None, 'ext_consortium_id':None,
+                    'max_slivers':None, 'is_public':True, 'peer_site_id': None,
+                    'abbreviated_name':"senslab", 'address_ids': [],
+                    'url':"http,//www.senslab.info", 'person_ids':[],
+                    'site_tag_ids':[], 'enabled': True,  'slice_ids':[],
+                    'date_created': None, 'peer_id': None }     
             #if node['site_login_base'] not in self.site_dict.keys():
                 #self.site_dict[node['site_login_base']] = {'login_base':node['site_login_base'],
                                                         #'node_ids':nodes_per_site[node['site_login_base']],
@@ -396,42 +496,54 @@ class OARGETParser:
 
 
     OARrequests_uri_dict = { 
-        'GET_version': {'uri':'/oarapi/version.json', 'parse_func': ParseVersion},
-        'GET_timezone':{'uri':'/oarapi/timezone.json' ,'parse_func': ParseTimezone },
-        'GET_jobs': {'uri':'/oarapi/jobs.json','parse_func': ParseJobs},
-        'GET_jobs_id': {'uri':'/oarapi/jobs/id.json','parse_func': ParseJobsIds},
-        'GET_jobs_id_resources': {'uri':'/oarapi/jobs/id/resources.json','parse_func': ParseJobsIdResources},
-        'GET_jobs_table': {'uri':'/oarapi/jobs/table.json','parse_func': ParseJobsTable},
-        'GET_jobs_details': {'uri':'/oarapi/jobs/details.json','parse_func': ParseJobsDetails},
-        'GET_reserved_nodes':{'uri':'/oarapi/jobs/details.json?state=Running,Waiting,Launching','parse_func':ParseReservedNodes},
-        'GET_running_jobs':  {'uri':'/oarapi/jobs/details.json?state=Running','parse_func':ParseRunningJobs},
-        'GET_resources_full': {'uri':'/oarapi/resources/full.json','parse_func': ParseResourcesFull},
-        'GET_sites':{'uri':'/oarapi/resources/full.json','parse_func': ParseResourcesFullSites},
-        'GET_resources':{'uri':'/oarapi/resources.json' ,'parse_func': ParseResources},
-        'DELETE_jobs_id':{'uri':'/oarapi/jobs/id.json' ,'parse_func': ParseDeleteJobs}
+        'GET_version': 
+                {'uri':'/oarapi/version.json', 'parse_func': ParseVersion},
+        'GET_timezone':
+                {'uri':'/oarapi/timezone.json' ,'parse_func': ParseTimezone },
+        'GET_jobs': 
+                {'uri':'/oarapi/jobs.json','parse_func': ParseJobs},
+        'GET_jobs_id': 
+                {'uri':'/oarapi/jobs/id.json','parse_func': ParseJobsIds},
+        'GET_jobs_id_resources': 
+                {'uri':'/oarapi/jobs/id/resources.json',\
+                'parse_func': ParseJobsIdResources},
+        'GET_jobs_table': 
+                {'uri':'/oarapi/jobs/table.json','parse_func': ParseJobsTable},
+        'GET_jobs_details': 
+                {'uri':'/oarapi/jobs/details.json',\
+                'parse_func': ParseJobsDetails},
+        'GET_reserved_nodes':
+                {'uri':
+                '/oarapi/jobs/details.json?state=Running,Waiting,Launching',\
+                'parse_func':ParseReservedNodes},
+        'GET_running_jobs':  
+                {'uri':'/oarapi/jobs/details.json?state=Running',\
+                'parse_func':ParseRunningJobs},
+        'GET_resources_full': 
+                {'uri':'/oarapi/resources/full.json',\
+                'parse_func': ParseResourcesFull},
+        'GET_sites':
+                {'uri':'/oarapi/resources/full.json',\
+                'parse_func': ParseResourcesFullSites},
+        'GET_resources':
+                {'uri':'/oarapi/resources.json' ,'parse_func': ParseResources},
+        'DELETE_jobs_id':
+                {'uri':'/oarapi/jobs/id.json' ,'parse_func': ParseDeleteJobs}
         }
 
-    
-    def __init__(self, srv ):
-        self.version_json_dict= { 'api_version' : None , 'apilib_version' :None,  'api_timezone': None, 'api_timestamp': None, 'oar_version': None ,}
-        self.config = Config()
-        self.interface_hrn = self.config.SFA_INTERFACE_HRN	
-        self.timezone_json_dict = { 'timezone': None, 'api_timestamp': None, }
-        self.jobs_json_dict = { 'total' : None, 'links' : [] , 'offset':None , 'items' : [] , }
-        self.jobs_table_json_dict = self.jobs_json_dict
-        self.jobs_details_json_dict = self.jobs_json_dict		
-        self.server = srv
-        self.node_dictlist = {}
 
-        self.site_dict = {}
-        self.SendRequest("GET_version")
 
-    def SendRequest(self,request, strval = None , username = None):
+    def SendRequest(self, request, strval = None , username = None):
+        """ Connects to OAR , sends the valid GET requests and uses
+        the appropriate json parsing functions.
+        
+        """
         if request in self.OARrequests_uri_dict :
-            self.raw_json = self.server.GETRequestToOARRestAPI(request,strval,username) 
+            self.raw_json = self.server.GETRequestToOARRestAPI(request, \
+                                                                strval, \
+                                                                username) 
             return self.OARrequests_uri_dict[request]['parse_func'](self)
         else:
-            print>>sys.stderr, "\r\n OARGetParse __init__ : ERROR_REQUEST "	,request
+            logger.error("OARRESTAPI OARGetParse __init__ : ERROR_REQUEST " \
+                                                                 %(request))
             
-
-  
