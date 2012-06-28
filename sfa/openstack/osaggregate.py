@@ -20,7 +20,6 @@ from sfa.util.xrn import Xrn
 from sfa.planetlab.plxrn import PlXrn 
 from sfa.openstack.osxrn import OSXrn, hrn_to_os_slicename
 from sfa.rspecs.version_manager import VersionManager
-from sfa.openstack.image import ImageManager
 from sfa.openstack.security_group import SecurityGroup
 from sfa.util.sfalogging import logger
 
@@ -35,45 +34,27 @@ def pubkeys_to_user_data(pubkeys):
     return user_data
 
 def instance_to_sliver(instance, slice_xrn=None):
-    # should include?
-    # * instance.image_ref
-    # * instance.kernel_id
-    # * instance.ramdisk_id
-    import nova.db.sqlalchemy.models
-    name=None
-    type=None
     sliver_id = None
-    if isinstance(instance, dict):
-        # this is an isntance type dict
-        name = instance['name']
-        type = instance['name']
-    elif isinstance(instance, nova.db.sqlalchemy.models.Instance):
-        # this is an object that describes a running instance
-        name = instance.display_name
-        type = instance.instance_type.name
-    else:
-        raise SfaAPIError("instnace must be an instance_type dict or" + \
-                           " a nova.db.sqlalchemy.models.Instance object")
     if slice_xrn:
         xrn = Xrn(slice_xrn, 'slice')
         sliver_id = xrn.get_sliver_id(instance.project_id, instance.hostname, instance.id)
 
     sliver = Sliver({'slice_id': sliver_id,
-                     'name': name,
-                     'type':  type,
-                     'tags': []})
+                     'name': instance.name,
+                     'type': instance.name,
+                     'cpus': str(instance.vcpus),
+                     'memory': str(instance.ram),
+                     'storage':  str(instance.disk)})
     return sliver
+
+def image_to_rspec_disk_image(image):
+    img = DiskImage()
+    img['name'] = image['name']
+    img['description'] = image['name']
+    img['os'] = image['name']
+    img['version'] = image['name']    
+    return img
     
-
-def ec2_id(id=None, type=None):
-    ec2_id = None
-    if type == 'ovf':
-        type = 'ami'   
-    if id and type:
-        ec2_id = CloudController.image_ec2_id(id, type)        
-    return ec2_id
-
-
 class OSAggregate:
 
     def __init__(self, driver):
@@ -93,12 +74,8 @@ class OSAggregate:
         return rspec.toxml()
 
     def get_availability_zones(self):
-        try:
-            # pre essex releases 
-            zones = self.driver.shell.db.zone_get_all()
-        except:
-            # essex release
-            zones = self.driver.shell.db.dnsdomain_list()
+        # essex release
+        zones = self.driver.shell.nova_manager.dns_domains.domains()
 
         if not zones:
             zones = ['cloud']
@@ -107,63 +84,67 @@ class OSAggregate:
         return zones
 
     def get_slice_nodes(self, slice_xrn):
-        image_manager = ImageManager(self.driver)
-
         zones = self.get_availability_zones()
         name = hrn_to_os_slicename(slice_xrn)
-        instances = self.driver.shell.db.instance_get_all_by_project(name)
+        instances = self.driver.shell.nova_manager.servers.findall(name=name)
         rspec_nodes = []
         for instance in instances:
             rspec_node = Node()
-            interfaces = []
-            for fixed_ip in instance.fixed_ips:
-                if_xrn = PlXrn(auth=self.driver.hrn, 
-                               interface='node%s:eth0' % (instance.hostname)) 
-                interface = Interface({'component_id': if_xrn.urn})
-                interface['ips'] =  [{'address': fixed_ip['address'],
-                                     'netmask': fixed_ip['network'].netmask,
-                                     'type': 'ipv4'}]
-                interface['floating_ips'] = []
-                for floating_ip in fixed_ip.floating_ips:
-                    interface['floating_ips'].append(floating_ip.address)
-                interfaces.append(interface)
-            if instance.availability_zone:
-                node_xrn = OSXrn(instance.availability_zone, 'node')
-            else:
-                node_xrn = OSXrn('cloud', 'node')
+            
+            #TODO: find a way to look up an instances availability zone in essex
+            #if instance.availability_zone:
+            #    node_xrn = OSXrn(instance.availability_zone, 'node')
+            #else:
+            #    node_xrn = OSXrn('cloud', 'node')
+            node_xrn = instance.metatata.get('component_id')
+            if not node_xrn:
+                node_xrn = OSXrn('cloud', 'node') 
 
             rspec_node['component_id'] = node_xrn.urn
             rspec_node['component_name'] = node_xrn.name
-            rspec_node['component_manager_id'] = Xrn(self.driver.hrn, 'authority+cm').get_urn()   
-            sliver = instance_to_sliver(instance)
-            disk_image = image_manager.get_disk_image(instance.image_ref)
-            sliver['disk_image'] = [disk_image.to_rspec_object()]
+            rspec_node['component_manager_id'] = Xrn(self.driver.hrn, 'authority+cm').get_urn()
+            flavor = self.driver.shell.nova_manager.flavors.find(id=instance.flavor['id'])
+            sliver = instance_to_sliver(flavor)
             rspec_node['slivers'] = [sliver]
-            rspec_node['interfaces'] = interfaces
+            image = self.driver.shell.image_manager.get_images(id=instance.image['id'])
+            if isinstance(image, list) and len(image) > 0:
+                image = image[0]
+            disk_image = image_to_rspec_disk_image(image)
+            sliver['disk_image'] = [disk_image]
+
+            # build interfaces            
+            interfaces = []
+            addresses = instance.addresses
+            for private_ip in addresses.get('private', []):
+                if_xrn = PlXrn(auth=self.driver.hrn, 
+                               interface='node%s:eth0' % (instance.hostId)) 
+                interface = Interface({'component_id': if_xrn.urn})
+                interface['ips'] =  [{'address': private_ip['addr'],
+                                     #'netmask': private_ip['network'],
+                                     'type': private_ip['version']}]
+                interfaces.append(interface)
+            rspec_node['interfaces'] = interfaces 
+            
             # slivers always provide the ssh service
             rspec_node['services'] = []
-            for interface in interfaces:
-                if 'floating_ips' in interface:
-                    for hostname in interface['floating_ips']:
-                        login = Login({'authentication': 'ssh-keys', 
-                                       'hostname': hostname, 
-                                       'port':'22', 'username': 'root'})
-                        service = Services({'login': login})
-                        rspec_node['services'].append(service)
+            for public_ip in addresses.get('public', []):
+                login = Login({'authentication': 'ssh-keys', 
+                               'hostname': public_ip['addr'], 
+                               'port':'22', 'username': 'root'})
+                service = Services({'login': login})
+                rspec_node['services'].append(service)
             rspec_nodes.append(rspec_node)
         return rspec_nodes
 
     def get_aggregate_nodes(self):
         zones = self.get_availability_zones()
         # available sliver/instance/vm types
-        instances = self.driver.shell.db.instance_type_get_all()
+        instances = self.driver.shell.nova_manager.flavors.list()
         if isinstance(instances, dict):
             instances = instances.values()
         # available images
-        image_manager = ImageManager(self.driver)
-        disk_images = image_manager.get_available_disk_images()
-        disk_image_objects = [image.to_rspec_object() \
-                               for image in disk_images]  
+        images = self.driver.shell.image_manager.get_images_detailed()
+        disk_images  = [image_to_rspec_disk_image(img) for img in images if img['container_format'] in ['ami', 'ovf']]
         rspec_nodes = []
         for zone in zones:
             rspec_node = Node()
@@ -177,7 +158,7 @@ class OSAggregate:
             slivers = []
             for instance in instances:
                 sliver = instance_to_sliver(instance)
-                sliver['disk_image'] = disk_image_objects
+                sliver['disk_image'] = disk_images
                 slivers.append(sliver)
         
             rspec_node['slivers'] = slivers
@@ -186,51 +167,21 @@ class OSAggregate:
         return rspec_nodes 
 
 
-    def create_project(self, slicename, users, options={}):
-        """
-        Create the slice if it doesn't alredy exist. Create user
-        accounts that don't already exist   
-        """
-        from nova.exception import ProjectNotFound, UserNotFound
-        for user in users:
-            username = Xrn(user['urn']).get_leaf()
-            try:
-                self.driver.shell.auth_manager.get_user(username)
-            except UserNotFound:
-                self.driver.shell.auth_manager.create_user(username)
-            self.verify_user_keys(username, user['keys'], options)
+    def create_instance_key(self, slice_hrn, user):
+        key_name = "%s:%s" (slice_name, Xrn(user['urn']).get_hrn())
+        pubkey = user['keys'][0]
+        key_found = False
+        existing_keys = self.driver.shell.nova_manager.keypairs.findall(name=key_name)
+        for existing_key in existing_keys:
+            if existing_key.public_key != pubkey:
+                self.driver.shell.nova_manager.keypairs.delete(existing_key)
+            elif existing_key.public_key == pubkey:
+                key_found = True
 
-        try:
-            slice = self.driver.shell.auth_manager.get_project(slicename)
-        except ProjectNotFound:
-            # assume that the first user is the project manager
-            proj_manager = Xrn(users[0]['urn']).get_leaf()
-            self.driver.shell.auth_manager.create_project(slicename, proj_manager) 
-
-    def verify_user_keys(self, username, keys, options={}):
-        """
-        Add requested keys.
-        """
-        append = options.get('append', True)    
-        existing_keys = self.driver.shell.db.key_pair_get_all_by_user(username)
-        existing_pub_keys = [key.public_key for key in existing_keys]
-        removed_pub_keys = set(existing_pub_keys).difference(keys)
-        added_pub_keys = set(keys).difference(existing_pub_keys)
-        pubkeys = []
-        # add new keys
-        for public_key in added_pub_keys:
-            key = {}
-            key['user_id'] = username
-            key['name'] =  username
-            key['public_key'] = public_key
-            self.driver.shell.db.key_pair_create(key)
-
-        # remove old keys
-        if not append:
-            for key in existing_keys:
-                if key.public_key in removed_pub_keys:
-                    self.driver.shell.db.key_pair_destroy(username, key.name)
-
+        if not key_found:
+            self.driver.shll.nova_manager.keypairs.create(key_name, pubkey)
+        return key_name       
+        
 
     def create_security_group(self, slicename, fw_rules=[]):
         # use default group by default
@@ -260,96 +211,62 @@ class OSAggregate:
                                          icmp_type_code = kwds.get('icmp_type_code'))
 
  
-    def reserve_instance(self, image_id, kernel_id, ramdisk_id, \
-                         instance_type, key_name, user_data, group_name):
-        conn  = self.driver.euca_shell.get_euca_connection()
-        logger.info('Reserving an instance: image: %s, kernel: ' \
-                    '%s, ramdisk: %s, type: %s, key: %s' % \
-                    (image_id, kernel_id, ramdisk_id,
-                    instance_type, key_name))
-        try:
-            reservation = conn.run_instances(image_id=image_id,
-                                             kernel_id=kernel_id,
-                                             ramdisk_id=ramdisk_id,
-                                             instance_type=instance_type,
-                                             key_name=key_name,
-                                             user_data = user_data,
-                                             security_groups=[group_name])
-                                             #placement=zone,
-                                             #min_count=min_count,
-                                             #max_count=max_count,           
-                                              
-        except Exception, err:
-            logger.log_exc(err)
-    
-               
-    def run_instances(self, slicename, rspec, keyname, pubkeys):
-        """
-        Create the security groups and instances. 
-        """
-        # the default image to use for instnaces that dont
-        # explicitly request an image.
-        # Just choose the first available image for now.
-        image_manager = ImageManager(self.driver)
-        available_images = image_manager.get_available_disk_images()
-        default_image_id = None
-        default_aki_id  = None
-        default_ari_id = None
-        default_image = available_images[0]
-        default_image_id = ec2_id(default_image.id, default_image.container_format)  
-        default_aki_id = ec2_id(default_image.kernel_id, 'aki')  
-        default_ari_id = ec2_id(default_image.ramdisk_id, 'ari')
 
-        # get requested slivers
+    def run_instances(self, slicename, rspec, key_name, pubkeys):
+        #logger.debug('Reserving an instance: image: %s, flavor: ' \
+        #            '%s, key: %s, name: %s' % \
+        #            (image_id, flavor_id, key_name, slicename))
+
+        authorized_keys = "\n".join(pubkeys)
+        files = {'/root/.ssh/authorized_keys': authorized_keys}
         rspec = RSpec(rspec)
-        user_data = pubkeys_to_user_data(pubkeys)
         requested_instances = defaultdict(list)
         # iterate over clouds/zones/nodes
         for node in rspec.version.get_nodes_with_slivers():
-            instance_types = node.get('slivers', [])
-            if isinstance(instance_types, list):
-                # iterate over sliver/instance types
-                for instance_type in instance_types:
-                    fw_rules = instance_type.get('fw_rules', [])
-                    group_name = self.create_security_group(slicename, fw_rules)
-                    ami_id = default_image_id
-                    aki_id = default_aki_id
-                    ari_id = default_ari_id
-                    req_image = instance_type.get('disk_image')
-                    if req_image and isinstance(req_image, list):
-                        req_image_name = req_image[0]['name']
-                        disk_image = image_manager.get_disk_image(name=req_image_name)
-                        if disk_image:
-                            ami_id = ec2_id(disk_image.id, disk_image.container_format)
-                            aki_id = ec2_id(disk_image.kernel_id, 'aki')
-                            ari_id = ec2_id(disk_image.ramdisk_id, 'ari')
-                    # start the instance
-                    self.reserve_instance(image_id=ami_id, 
-                                          kernel_id=aki_id, 
-                                          ramdisk_id=ari_id, 
-                                          instance_type=instance_type['name'], 
-                                          key_name=keyname, 
-                                          user_data=user_data, 
-                                          group_name=group_name)
+            instances = node.get('slivers', [])
+            if not instances:
+                continue
+            for instance in instances:
+                metadata = {}
+                flavor_id = self.driver.shell.nova_manager.flavors.find(name=instance['name'])
+                image = instance.get('disk_image')
+                if image and isinstance(image, list):
+                    image = image[0]
+                image_id = self.driver.shell.nova_manager.images.find(name=image['name'])
+                fw_rules = instance.get('fw_rules', [])
+                group_name = self.create_security_group(slicename, fw_rules)
+                metadata['security_groups'] = [group_name]
+                metadata['component_id'] = node['component_id']
+                try: 
+                    self.driver.shell.nova_manager.servers.create(flavor=flavor_id,
+                                                            image=image_id,
+                                                            key_name = key_name,
+                                                            security_group = group_name,
+                                                            files=files,
+                                                            meta=metadata, 
+                                                            name=slicename)
+                except Exception, err:    
+                    logger.log_exc(err)                                
+                           
 
 
-    def delete_instances(self, project_name):
-        instances = self.driver.shell.db.instance_get_all_by_project(project_name)
+    def delete_instances(self, instance_name):
+        instances = self.driver.shell.nova_manager.servers.findall(name=instance_name)
         security_group_manager = SecurityGroup(self.driver)
         for instance in instances:
             # deleate this instance's security groups
-            for security_group in instance.security_groups:
+            for security_group in instance.metadata.get('security_groups', []):
                 # dont delete the default security group
-                if security_group.name != 'default': 
-                    security_group_manager.delete_security_group(security_group.name)
+                if security_group != 'default': 
+                    security_group_manager.delete_security_group(security_group)
             # destroy instance
-            self.driver.shell.db.instance_destroy(instance.id)
+            self.driver.shell.nova_manager.servers.delete(instance)
         return 1
 
-    def stop_instances(self, project_name):
-        instances = self.driver.shell.db.instance_get_all_by_project(project_name)
+    def stop_instances(self, instance_name):
+        instances = self.driver.shell.nova_manager.servers.findall(name=instance_name)
         for instance in instances:
-            self.driver.shell.db.instance_stop(instance.id)
+            self.driver.shell.nova_manager.servers.pause(instance)
         return 1
 
     def update_instances(self, project_name):
