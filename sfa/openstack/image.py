@@ -63,13 +63,11 @@ class ImageManager:
         disk_image = None
         try:
             if id:
-                image = self.driver.shell.image_manager.show(id)
+                image = self.driver.shell.nova_manager.images.find(id=id)
             elif name:
-                image = self.driver.shell.image_manager.show_by_name(name)
-            if image['container_format'] in ['ami', 'ovf']:
-                disk_image = Image(image)
+                image = self.driver.shell.nova_manager.images.find(name=name)
         except ImageNotFound:
                 pass
-        return disk_image
+        return Image(image)
 
     
