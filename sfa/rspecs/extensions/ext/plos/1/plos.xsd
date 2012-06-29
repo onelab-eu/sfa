@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  
+  Extensions for PlanetLab Resources
+  Version 1
+  
+-->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified" targetNamespace="http://www.planet-lab.org/resources/sfa/ext/plos/1" xmlns:plos="http://www.planet-lab.org/resources/sfa/ext/plos/1">
+  <xs:element name="attribute">
+    <xs:complexType>
+      <xs:attribute name="protocol" use="required"/>
+      <xs:attribute name="port_range" use="required"/>
+      <xs:attribute name="cidr_ip" use="required"/>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>

@@ -1,0 +1,15 @@
+#
+# Extensions for PlanetLab Resources
+# Version 1
+#
+
+namespace plos = "http://www.planet-lab.org/resources/sfa/ext/plos/1"
+
+FWRuleSpec = element plos:attribute {
+    attribute protocol { text }, 
+    attribute port_range { text },
+    attribute cidr_ip { text } 
+}
+
+start = FWRuleSpec
+
