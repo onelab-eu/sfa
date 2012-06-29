@@ -21,8 +21,7 @@ from sfa.rspecs.rspec import RSpec
 
 # the driver interface, mostly provides default behaviours
 from sfa.managers.driver import Driver
-from sfa.openstack.nova_shell import NovaShell
-from sfa.openstack.euca_shell import EucaShell
+from sfa.openstack.nova_shell import Shell
 from sfa.openstack.osaggregate import OSAggregate
 from sfa.planetlab.plslices import PlSlices
 from sfa.util.osxrn import OSXrn
@@ -40,14 +39,14 @@ def list_to_dict(recs, key):
 # can be sent as-is; it takes care of authentication
 # from the global config
 # 
-class NovaDriver (Driver):
+class NovaDriver(Driver):
 
     # the cache instance is a class member so it survives across incoming requests
     cache = None
 
     def __init__ (self, config):
-        Driver.__init__ (self, config)
-        self.shell = Shell (config)
+        Driver.__init__(self, config)
+        self.shell = Shell(config)
         self.cache=None
         if config.SFA_AGGREGATE_CACHING:
             if NovaDriver.cache is None:
