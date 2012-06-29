@@ -21,7 +21,7 @@ from sfa.rspecs.rspec import RSpec
 
 # the driver interface, mostly provides default behaviours
 from sfa.managers.driver import Driver
-from sfa.openstack.nova_shell import Shell
+from sfa.openstack.shell import Shell
 from sfa.openstack.osaggregate import OSAggregate
 from sfa.planetlab.plslices import PlSlices
 from sfa.util.osxrn import OSXrn
