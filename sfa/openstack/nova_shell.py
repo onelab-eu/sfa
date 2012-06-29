@@ -1,8 +1,11 @@
 import sys
 import xmlrpclib
 import socket
+import gettext
 from urlparse import urlparse
 from sfa.util.sfalogging import logger
+from sfa.util.config import Config
+
 try:
     from nova import db
     from nova import flags
@@ -11,7 +14,7 @@ try:
     from nova.compute.manager import ComputeManager
     from nova.network.manager import NetworkManager
     from nova.scheduler.manager import SchedulerManager
-    from nova.image.glance import GlanceImageService
+    from sfa.openstack.client import GlanceClient, NovaClient
     has_nova = True
 except:
     has_nova = False
@@ -44,24 +47,15 @@ class NovaShell:
 
     # use the 'capability' auth mechanism for higher performance when the PLC db is local    
     def __init__ ( self, config ) :
-        self.auth_manager = None
-        self.compute_manager = None
-        self.network_manager = None
-        self.scheduler_manager = None
-        self.db = None
+        if not config:
+            config = Config()
         self.image_manager = None
+        self.nova_manager = None
 
         if has_nova:
-            logger.debug('nova access - native')
-            # load the config
-            flags.FLAGS(['foo', '--flagfile=/etc/nova/nova.conf', 'foo', 'foo'])
             # instantiate managers 
-            self.auth_manager = AuthManager()
-            self.compute_manager = ComputeManager()
-            self.network_manager = NetworkManager()
-            self.scheduler_manager = SchedulerManager()
-            self.db = InjectContext(db, context.get_admin_context())
-            self.image_manager = InjectContext(GlanceImageService(), context.get_admin_context())
+            self.image_manager = GlanceClient(config)
+            self.nova_manager = NovaClient(config)
         else:
             logger.debug('nova access - REST')
             raise SfaNotImplemented('nova access - Rest')

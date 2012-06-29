@@ -10,7 +10,7 @@ from sfa.util.defaultdict import defaultdict
 from sfa.util.sfatime import utcparse, datetime_to_string, datetime_to_epoch
 from sfa.util.xrn import Xrn, hrn_to_urn, get_leaf, urn_to_sliver_id
 from sfa.planetlab.plxrn import PlXrn
-from sfa.openstack.osxrn import hrn_to_os_slicename
+from sfa.openstack.osxrn import OSXrn, hrn_to_os_slicename
 from sfa.util.cache import Cache
 from sfa.trust.credential import Credential
 # used to be used in get_ticket
@@ -332,39 +332,29 @@ class NovaDriver (Driver):
 
     def create_sliver (self, slice_urn, slice_hrn, creds, rspec_string, users, options):
 
-        project_name = hrn_to_os_slicename(slice_hrn)
         aggregate = OSAggregate(self)
-        # parse rspec
         rspec = RSpec(rspec_string)
+        instance_name = hrn_to_os_slicename(slice_hrn)
        
-        # ensure project and users exist in local db
-        aggregate.create_project(project_name, users, options=options)
-     
-        # collect publick keys
+        # assume first user is the caller and use their context
+        # for the ec2/euca api connection. Also, use the first users
+        # key as the project key.
+        key_name = None
+        if len(users) > 1:
+            key_name = aggregate.create_instance_key(slice_hrn, users[0])
+
+        # collect public keys
         pubkeys = []
-        project_key = None
         for user in users:
             pubkeys.extend(user['keys'])
-            # assume first user is the caller and use their context
-            # for the ec2/euca api connection. Also, use the first users
-            # key as the project key.   
-            if not project_key:
-                username = Xrn(user['urn']).get_leaf()
-                user_keys = self.shell.db.key_pair_get_all_by_user(username)
-                if user_keys:
-                    project_key = user_keys[0].name
-                     
-        # ensure person records exists
-        self.euca_shell.init_context(project_name)  
-        aggregate.run_instances(project_name, rspec_string, project_key, pubkeys)    
+           
+        aggregate.run_instances(instance_name, rspec_string, key_name, pubkeys)    
    
         return aggregate.get_rspec(slice_xrn=slice_urn, version=rspec.version)
 
     def delete_sliver (self, slice_urn, slice_hrn, creds, options):
-        # we need to do this using the context of one of the slice users
-        project_name = hrn_to_os_slicename(slice_hrn)
-        self.euca_shell.init_context(project_name) 
         aggregate = OSAggregate(self)
+        project_name = hrn_to_os_slicename(slice_hrn)
         return aggregate.delete_instances(project_name)   
 
     def update_sliver(self, slice_urn, slice_hrn, rspec, creds, options):
