@@ -3,16 +3,22 @@ from sfa.util.xrn import Xrn
 from sfa.util.config import Config
 
 def hrn_to_os_slicename(hrn):
-    return OSXrn(xrn=hrn, type='slice').get_slicename()        
+    return OSXrn(xrn=hrn, type='slice').get_slicename()
+
+def cleanup_name(name):
+    return name.replace(".", "_").replace("+", "_")                
 
 class OSXrn(Xrn):
 
-    def __init__(self, name=None, type=None, **kwds):
+    def __init__(self, name=None, type=None, auth=None, **kwds):
         
         config = Config()
         if name is not None:
             self.type = type
-            self.hrn = config.SFA_INTERFACE_HRN + "." + name
+            if auth is not None:
+                self.hrn='.'.join([auth, cleanup_name(name)]) 
+            else:
+                self.hrn = config.SFA_INTERFACE_HRN + "." + cleanup_name(name)
             self.hrn_to_urn()
         else:
             Xrn.__init__(self, **kwds)   
