@@ -35,7 +35,7 @@ class SlabAggregate:
     links = {}
     node_tags = {}
     
-    prepared=False
+    prepared = False
 
     user_options = {}
     
@@ -61,7 +61,7 @@ class SlabAggregate:
         if isinstance(slice, list):
             slice = slices[0]
         else:
-           slice =slices
+           slice = slices
 
         # sort slivers by node id , if there is a job
         #and therfore, node allocated to this slice
@@ -74,7 +74,7 @@ class SlabAggregate:
                                     'name': slice['slice_hrn'],
                                     'type': 'slab-node', 
                                     'tags': []})
-                    slivers[node_id]= sliver
+                    slivers[node_id] = sliver
             except KeyError:
                     print>>sys.stderr, " \r\n \t\t get_slice_and_slivers KeyError "
         ## sort sliver attributes by node id    
@@ -140,7 +140,7 @@ class SlabAggregate:
         #node_tags = self.get_node_tags(tags_filter)
        
 
-        reserved_nodes=self.driver.GetReservedNodes()
+        reserved_nodes = self.driver.GetNodesCurrentlyInUse()
         rspec_nodes = []
         for node in nodes:
             # skip whitelisted nodes
@@ -211,6 +211,7 @@ class SlabAggregate:
         
         return (rspec_nodes)       
 
+        
 #from plc/aggregate.py 
     def get_rspec(self, slice_xrn=None, version = None, options={}):
 

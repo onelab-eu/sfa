@@ -49,6 +49,7 @@ class SlabSlices:
  
 
         # Get user information
+        #TODO
         alchemy_person = dbsession.query(RegRecord).filter_by(record_id = slice['record_id_user']).first()
 
         slivers = []
@@ -167,7 +168,8 @@ class SlabSlices:
             try:
                 slot = slice['timeslot']
                 self.driver.LaunchExperimentOnOAR(slice, added_nodes, username)
-            except KeyError:
+            except KeyError:  
+                logger.log_exc("SLABSLICES \tVERIFY_SLICE_NODES KeyError slice %s  " %(slice))
                 pass
 
             

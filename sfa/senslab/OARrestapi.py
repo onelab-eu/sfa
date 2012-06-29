@@ -133,9 +133,13 @@ class OARrestapi:
             #raise ServerError("Failed to parse Server Response:" + answer)
 
 
-#def AddNodeNetworkAddr(self,tuplelist,value):
-        #tuplelist.append(('hostname',str(value)))
-        
+
+def AddOarNodeId(tuplelist, value):
+    """ Adds Oar internal node id to the nodes attributes """
+    
+    tuplelist.append(('oar_id', int(value)))
+
+       
 def AddNodeNetworkAddr(dictnode, value):
     #Inserts new key. The value associated is a tuple list
     node_id = value
@@ -186,7 +190,7 @@ class OARGETParser:
         'posx': AddPosX,
         'posy': AddPosY,
         'state':AddBootState,
-        #'id' : AddNodeId,
+        'id' : AddOarNodeId,
         }
         
  
@@ -324,11 +328,18 @@ class OARGETParser:
 
     def ParseJobsIdResources(self):
         """ BROKEN since oar 2.5
-        Parses the json produced by the request /oarapi/jobs/id.json.
+        Parses the json produced by the request 
+        /oarapi/jobs/id/resources.json.
+        Returns a list of oar node ids that are scheduled for the 
+        given job id.
         
         """
+        job_resources = []
+        for resource in self.raw_json['items']:
+            job_resources.append(resource['id'])
+            
         logger.debug("OARESTAPI \tParseJobsIdResources %s" %(self.raw_json))
-        return self.raw_json
+        return job_resources
             
     def ParseResources(self) :
         """ Parses the json produced by a get_resources request on oar."""
@@ -342,14 +353,24 @@ class OARGETParser:
         """  Returns an array containing the list of the reserved nodes """
     
         #resources are listed inside the 'items' list from the json
-        nodes = [] 
+        reservation_list = [] 
         print "ParseReservedNodes_%s" %(self.raw_json['items'])
-        for job in  self.raw_json['items']:
-            for node in job['nodes']:
-                print "ParseReservedNodes________node %s" %(node)
-                logger.debug("ParseReservedNodes________node %s" %(node))  
-                nodes.append(node['network_address'])
-        return nodes
+        job = {}
+        #Parse resources info
+        for json_element in  self.raw_json['items']:
+            job['t_from'] = json_element['scheduled_start']
+            #Get resources id list for the job
+            job['resource_ids'] = \
+                [ node_dict['id'] for node_dict in json_element['resources'] ]
+           
+            job['state'] = json_element['state'] 
+            job['lease_id'] = json_element['id'] 
+            job['t_until'] = json_element['scheduled_start'] + \
+                                                    json_element['walltime']
+            job['user'] = json_element['owner']
+            logger.debug("ParseReservedNodes________job %s" %(job))  
+            reservation_list.append(job)
+        return reservation_list
     
     def ParseRunningJobs(self): 
         """ Gets the list of nodes currently in use from the attributes of the
@@ -418,7 +439,6 @@ class OARGETParser:
             # dictionary is empty and/or a new node has to be inserted  
             node_id = self.resources_fulljson_dict['network_address'](\
                                 self.node_dictlist, dictline['network_address']) 
-            #node_id = self.resources_fulljson_dict['network_address'](self,self.node_dictlist, dictline['network_address'])
             for k in keys:
                 if k in dictline:
                     if k == 'network_address':
@@ -426,8 +446,7 @@ class OARGETParser:
                  
                     self.resources_fulljson_dict[k](\
                                     self.node_dictlist[node_id], dictline[k])
-                    #self.resources_fulljson_dict[k](self,self.node_dictlist[node_id], dictline[k])
-            
+
             #The last property has been inserted in the property tuple list, 
             #reset node_id 
             #Turn the property tuple list (=dict value) into a dictionary
@@ -465,9 +484,9 @@ class OARGETParser:
             node  = self.node_dictlist[node_id]
             node.update({'hrn':self.hostname_to_hrn(self.interface_hrn, \
                                             node['site'],node['hostname'])})
-            #node['hrn'] = self.hostname_to_hrn(self.interface_hrn, node['site_login_base'],node['hostname'])
+
             self.node_dictlist.update({node_id:node})
-            #if node_id is 1:
+
             if node['site'] not in self.site_dict:
                 self.site_dict[node['site']] = {
                     'site':node['site'],
