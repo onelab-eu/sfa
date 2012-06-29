@@ -47,8 +47,7 @@ class NovaDriver (Driver):
 
     def __init__ (self, config):
         Driver.__init__ (self, config)
-        self.shell = NovaShell (config)
-        self.euca_shell = EucaShell(config)
+        self.shell = Shell (config)
         self.cache=None
         if config.SFA_AGGREGATE_CACHING:
             if NovaDriver.cache is None:
