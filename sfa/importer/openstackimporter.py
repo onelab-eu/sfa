@@ -62,8 +62,8 @@ class OpenstackImporter:
             auth_hrn = config.SFA_INTERFACE_HRN 
             if user.tenantId is not None:
                 tenant = shell.auth_manager.tenants.find(id=user.tenantId)
-                auth_hrn = OSXrn(name=tenant.name, auth=config.SFA_INTERFACE_HRN).get_hrn()
-            hrn = OSXrn(name=user.name, auth=auth_hrn).get_hrn() 
+                auth_hrn = OSXrn(name=tenant.name, auth=config.SFA_INTERFACE_HRN, type='authority').get_hrn()
+            hrn = OSXrn(name=user.name, auth=auth_hrn, type='user').get_hrn() 
             users_dict[hrn] = user
             old_keys = old_user_keys.get(hrn, [])
             keys = [k.public_key for k in shell.nova_manager.keypairs.findall(name=hrn)]
@@ -103,7 +103,7 @@ class OpenstackImporter:
         for tenant in tenants:
             hrn = config.SFA_INTERFACE_HRN + '.' + tenant.name
             tenants_dict[hrn] = tenant
-            authority_hrn = OSXrn(xrn=hrn).get_authority_hrn()
+            authority_hrn = OSXrn(xrn=hrn, type='authority').get_authority_hrn()
 
             if hrn in existing_hrns:
                 continue

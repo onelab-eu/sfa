@@ -10,11 +10,12 @@ def cleanup_name(name):
 
 class OSXrn(Xrn):
 
-    def __init__(self, name=None, type=None, auth=None, **kwds):
+    def __init__(self, name=None, auth=None, **kwds):
         
         config = Config()
         if name is not None:
-            self.type = type
+            if 'type' in kwds:
+                self.type = kwds['type']
             if auth is not None:
                 self.hrn='.'.join([auth, cleanup_name(name)]) 
             else:
