@@ -107,7 +107,7 @@ class OpenstackImporter:
 
             if hrn in existing_hrns:
                 continue
-            
+        
             if authority_hrn == config.SFA_INTERFACE_HRN:
                 # import group/site
                 record = RegAuthority()
