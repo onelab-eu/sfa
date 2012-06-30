@@ -141,7 +141,7 @@ class Hierarchy:
     # @param create_parents if true, also create the parents if they do not exist
 
     def create_auth(self, xrn, create_parents=False):
-        hrn, type = urn_to_hrn(xrn)
+        hrn, type = urn_to_hrn(str(xrn))
         logger.debug("Hierarchy: creating authority: %s"% hrn)
 
         # create the parent authority if necessary
