@@ -223,7 +223,7 @@ class Xrn:
             raise SfaAPIError, "Xrn.hrn_to_urn, hrn=%s"%self.hrn
 
         if self.type and self.type.startswith('authority'):
-            self.authority = Xrn.hrn_auth_list(self.hrn)
+            self.authority = Xrn.hrn_split(self.hrn)
             if not self.authority:
                 self.authority = [self.hrn]
             type_parts = self.type.split("+")
