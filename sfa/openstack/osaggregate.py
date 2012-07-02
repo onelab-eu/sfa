@@ -148,7 +148,7 @@ class OSAggregate:
         rspec_nodes = []
         for zone in zones:
             rspec_node = Node()
-            xrn = OSXrn(zone, 'node')
+            xrn = OSXrn(zone, type='node')
             rspec_node['component_id'] = xrn.urn
             rspec_node['component_name'] = xrn.name
             rspec_node['component_manager_id'] = Xrn(self.driver.hrn, 'authority+cm').get_urn()
