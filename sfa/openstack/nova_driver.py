@@ -9,7 +9,6 @@ from sfa.util.sfalogging import logger
 from sfa.util.defaultdict import defaultdict
 from sfa.util.sfatime import utcparse, datetime_to_string, datetime_to_epoch
 from sfa.util.xrn import Xrn, hrn_to_urn, get_leaf, urn_to_sliver_id
-from sfa.planetlab.plxrn import PlXrn
 from sfa.openstack.osxrn import OSXrn, hrn_to_os_slicename, hrn_to_os_tenant_name
 from sfa.util.cache import Cache
 from sfa.trust.credential import Credential
@@ -24,8 +23,6 @@ from sfa.managers.driver import Driver
 from sfa.openstack.shell import Shell
 from sfa.openstack.osaggregate import OSAggregate
 from sfa.planetlab.plslices import PlSlices
-from sfa.util.osxrn import OSXrn
-
 
 def list_to_dict(recs, key):
     """
@@ -67,49 +64,69 @@ class NovaDriver(Driver):
 
     ########## 
     def register (self, sfa_record, hrn, pub_key):
-        type = sfa_record['type']
         
-        #pl_record = self.sfa_fields_to_pl_fields(type     dd , hrn, sfa_record)
-           
-        if type == 'slice':
-            # add slice description, name, researchers, PI 
-            name = hrn_to_os_slicename(hrn)
-            researchers = sfa_record.get('researchers', [])
-            pis = sfa_record.get('pis', [])
-            project_manager = None
-            description = sfa_record.get('description', None)
-            if pis:
-                project_manager = Xrn(pis[0], 'user').get_leaf()
-            elif researchers:
-                project_manager = Xrn(researchers[0], 'user').get_leaf()
-            if not project_manager:
-                err_string = "Cannot create a project without a project manager. " + \
-                             "Please specify at least one PI or researcher for project: " + \
-                             name    
-                raise SfaInvalidArgument(err_string)
+        if sfa_record['type'] == 'slice':
+            record = self.register_slice(sfa_record, hrn)         
+        elif sfa_record['type'] == 'user':
+            record = self.register_user(sfa_record, hrn, pub_key)
+        elif sfa_record['type'].startswith('authority'): 
+            record = self.register_authority(sfa_record, hrn)
+        # We should be returning the records id as a pointer but
+        # this is a string and the records table expects this to be an 
+        # int.
+        #return record.id
+        return -1
 
-            users = [Xrn(user, 'user').get_leaf() for user in \
-                     pis + researchers]
-            self.shell.auth_manager.create_project(name, project_manager, description, users)
+    def register_slice(self, sfa_record, hrn):
+        # add slice description, name, researchers, PI
+        name = hrn_to_os_tenant_name(hrn)
+        description = sfa_record.get('description', None)
+        self.shell.auth_manager.tenants.create(name, description)
+        tenant = self.shell.auth_manager.tenants.find(name=name)
+        auth_hrn = OSXrn(xrn=hrn, type='slice').get_authority_hrn()
+        parent_tenant_name = OSXrn(xrn=auth_hrn, type='slice').get_tenant_name()
+        parent_tenant = self.shell.auth_manager.tenants.find(name=parent_tenant_name)
+        researchers = sfa_record.get('researchers', [])
+        for researcher in researchers:
+            name = Xrn(researcher).get_leaf()
+            user = self.shell.auth_manager.users.find(name=name)
+            self.shell.auth_manager.roles.add_user_role(user, 'user', tenant)
 
-        elif type == 'user':
-            # add person roles, projects and keys
-            name = Xrn(hrn).get_leaf()
-            self.shell.auth_manager.create_user(name)
-            projects = sfa_records.get('slices', [])
-            for project in projects:
-                project_name = Xrn(project).get_leaf()
-                self.shell.auth_manager.add_to_project(name, project_name)
-            keys = sfa_records.get('keys', [])
-            for key in keys:
-                key_dict = {
-                    'user_id': name,
-                    'name': name,
-                    'public': key,
-                }
-                self.shell.db.key_pair_create(key_dict)       
-                  
-        return name
+        pis = sfa_record.get('pis', [])
+        for pi in pis:
+            name = Xrn(pi).get_leaf()
+            user = self.shell.auth_manager.users.find(name=name)
+            self.shell.auth_manager.roles.add_user_role(user, 'pi', tenant)
+            self.shell.auth_manager.roles.add_user_role(user, 'pi', parent_tenant)
+
+        return tenant
+       
+    def register_user(self, sfa_record, hrn, pub_key):
+        # add person roles, projects and keys
+        email = sfa_record.get('email', None)
+        xrn = Xrn(hrn)
+        name = xrn.get_leaf()
+        auth_hrn = xrn.get_authority_hrn()
+        tenant_name = OSXrn(xrn=auth_hrn, type='authority').get_tenant_name()  
+        tenant = self.shell.auth_manager.tenants.find(name=tenant_name)  
+        self.shell.auth_manager.users.create(name, email=email, tenant_id=tenant.id)
+        user = self.shell.auth_manager.users.find(name=name)
+        slices = sfa_records.get('slices', [])
+        for slice in projects:
+            slice_tenant_name = OSXrn(xrn=slice, type='slice').get_tenant_name()
+            slice_tenant = self.shell.auth_manager.tenants.find(name=slice_tenant_name)
+            self.shell.auth_manager.roles.add_user_role(user, slice_tenant, 'user')
+        keys = sfa_records.get('keys', [])
+        for key in keys:
+            self.shell.nova_client.keypairs.create(name, key)
+        return user
+
+    def register_authority(self, sfa_record, hrn):
+        name = OSXrn(xrn=hrn, type='authority').get_tenant_name()
+        self.shell.auth_manager.tenants.create(name, sfa_record.get('description', ''))
+        tenant = self.shell.auth_manager.tenants.find(name=name)
+        return tenant
+        
         
     ##########
     # xxx actually old_sfa_record comes filled with plc stuff as well in the original code
