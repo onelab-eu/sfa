@@ -161,12 +161,14 @@ def AddMobility(tuplelist, value):
         tuplelist.append(('mobile', int(value)))	
 
 def AddPosX(tuplelist, value):
-    tuplelist.append(('posx', value))	
-
+    tuplelist.append(('x', value))	
 
 def AddPosY(tuplelist, value):
-    tuplelist.append(('posy', value))	
-
+    tuplelist.append(('y', value))	
+    
+def AddPosZ(tuplelist, value):
+    tuplelist.append(('z', value))
+    	
 def AddBootState(tuplelist, value):
     tuplelist.append(('boot_state', str(value)))
             
@@ -178,18 +180,22 @@ def AddNodeId(dictnode, value):
     dictnode[node_id] = [('node_id', node_id)]	
     return node_id 
 
-
+def AddHardwareType(tuplelist, value):
+    value_list = value.split(':')
+    tuplelist.append(('archi', value_list[0]))	
+    tuplelist.append(('radio', value_list[1]))
+    
                        
 class OARGETParser:
-    
-
     resources_fulljson_dict = {
         'network_address' : AddNodeNetworkAddr,
         'site': AddNodeSite, 
         'radio': AddNodeRadio,
         'mobile': AddMobility,
-        'posx': AddPosX,
-        'posy': AddPosY,
+        'x': AddPosX,
+        'y': AddPosY,
+        'z':AddPosZ,
+        'archi':AddHardwareType, 
         'state':AddBootState,
         'id' : AddOarNodeId,
         }
@@ -288,8 +294,7 @@ class OARGETParser:
             
 
     def ParseJobsIdResources(self):
-        """ BROKEN since oar 2.5
-        Parses the json produced by the request 
+        """ Parses the json produced by the request 
         /oarapi/jobs/id/resources.json.
         Returns a list of oar node ids that are scheduled for the 
         given job id.
@@ -329,7 +334,7 @@ class OARGETParser:
             job['t_until'] = json_element['scheduled_start'] + \
                                                     json_element['walltime']
             job['user'] = json_element['owner']
-            logger.debug("ParseReservedNodes________job %s" %(job))  
+            logger.debug("OARRestapi \tParseReservedNodes job %s" %(job))  
             reservation_list.append(job)
             #reset dict
             job = {}
