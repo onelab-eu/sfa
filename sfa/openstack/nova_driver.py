@@ -194,7 +194,7 @@ class NovaDriver(Driver):
             if tmp_tenant.name.startswith(tenant.name +"."):
                 for tmp_user in tmp_tenant.list_users():
                     if tmp_user.name == user.name:
-                        slice_hrn = ".",join([self.hrn, tmp_tenant.name]) 
+                        slice_hrn = ".".join([self.hrn, tmp_tenant.name]) 
                         slices.append(slice_hrn)   
         record['slices'] = slices
         roles = self.shell.auth_manager.roles.roles_for_user(user, tenant)
@@ -214,17 +214,21 @@ class NovaDriver(Driver):
         # look for users and pis in slice tenant
         for user in tenant.list_users():
             for role in self.shell.auth_manager.roles.roles_for_user(user, tenant):
-                hrn = ".".join([self.hrn, tenant.name, user.name])
                 if role.name.lower() == 'pi':
+                    user_tenant = self.shell.auth_manager.tenants.find(id=user.tenantId)
+                    hrn = ".".join([self.hrn, user_tenant.name, user.name])
                     pis.append(hrn)
                 elif role.name.lower() in ['user', 'member']:
+                    user_tenant = self.shell.auth_manager.tenants.find(id=user.tenantId)
+                    hrn = ".".join([self.hrn, user_tenant.name, user.name])
                     researchers.append(hrn)
 
         # look for pis in the slice's parent (site/organization) tenant
         for user in parent_tenant.list_users():
             for role in self.shell.auth_manager.roles.roles_for_user(user, parent_tenant):
                 if role.name.lower() == 'pi':
-                    hrn = ".".join([self.hrn, tenant.name, user.name])
+                    user_tenant = self.shell.auth_manager.tenants.find(id=user.tenantId)
+                    hrn = ".".join([self.hrn, user_tenant.name, user.name])
                     pis.append(hrn)
         record['name'] = tenant_name
         record['description'] = tenant.description
