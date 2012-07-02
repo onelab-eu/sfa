@@ -10,7 +10,7 @@ from sfa.util.defaultdict import defaultdict
 from sfa.util.sfatime import utcparse, datetime_to_string, datetime_to_epoch
 from sfa.util.xrn import Xrn, hrn_to_urn, get_leaf, urn_to_sliver_id
 from sfa.planetlab.plxrn import PlXrn
-from sfa.openstack.osxrn import OSXrn, hrn_to_os_slicename
+from sfa.openstack.osxrn import OSXrn, hrn_to_os_slicename, hrn_to_os_tenant_name
 from sfa.util.cache import Cache
 from sfa.trust.credential import Credential
 # used to be used in get_ticket
@@ -164,29 +164,16 @@ class NovaDriver(Driver):
             records = [records]
 
         for record in records:
-            os_record = None
             if record['type'] == 'user':
-                name = Xrn(record['hrn']).get_leaf()
-                os_record = self.shell.auth_manager.get_user(name)
-                projects = self.shell.db.project_get_by_user(name)
-                record['slices'] = [self.hrn + "." + proj.name for \
-                                    proj in projects]
-                record['roles'] = self.shell.db.user_get_roles(name)
-                keys = self.shell.db.key_pair_get_all_by_user(name)
-                record['keys'] = [key.public_key for key in keys]     
+                record = self.fill_user_record_info(record)
             elif record['type'] == 'slice':
-                name = hrn_to_os_slicename(record['hrn']) 
-                os_record = self.shell.auth_manager.get_project(name)
-                record['description'] = os_record.description
-                record['PI'] = [self.hrn + "." + os_record.project_manager.name]
-                record['geni_creator'] = record['PI'] 
-                record['researcher'] = [self.hrn + "." + user for \
-                                         user in os_record.member_ids]
+                record = self.fill_slice_record_info(record)
+            elif record['type'].startswith('authority'):
+                record = self.fill_auth_record_info(record)
             else:
                 continue
             record['geni_urn'] = hrn_to_urn(record['hrn'], record['type'])
             record['geni_certificate'] = record['gid'] 
-            record['name'] = os_record.name
             #if os_record.created_at is not None:    
             #    record['date_created'] = datetime_to_string(utcparse(os_record.created_at))
             #if os_record.updated_at is not None:
@@ -194,6 +181,90 @@ class NovaDriver(Driver):
  
         return records
 
+    def fill_user_record_info(self, record):
+        xrn = Xrn(record['hrn'])
+        name = xrn.get_leaf()
+        record['name'] = name
+        user = self.shell.auth_manager.users.find(name=name)
+        record['email'] = user.email
+        tenant = self.shell.auth_manager.tenants.find(id=user.tenantId)
+        slices = []
+        all_tenants = self.shell.auth_manager.tenants.list()
+        for tmp_tenant in all_tenants:
+            if tmp_tenant.name.startswith(tenant.name +"."):
+                for tmp_user in tmp_tenant.list_users():
+                    if tmp_user.name == user.name:
+                        slice_hrn = ".",join([self.hrn, tmp_tenant.name]) 
+                        slices.append(slice_hrn)   
+        record['slices'] = slices
+        roles = self.shell.auth_manager.roles.roles_for_user(user, tenant)
+        record['roles'] = [role.name for role in roles] 
+        keys = self.shell.nova_manager.keypairs.findall(name=record['hrn'])
+        record['keys'] = [key.public_key for key in keys]
+        return record
+
+    def fill_slice_record_info(self, record):
+        tenant_name = hrn_to_os_tenant_name(record['hrn'])
+        tenant = self.shell.auth_manager.tenants.find(name=tenant_name)
+        parent_tenant_name = OSXrn(xrn=tenant_name).get_authority_hrn()
+        parent_tenant = self.shell.auth_manager.tenants.find(name=parent_tenant_name)
+        researchers = []
+        pis = []
+
+        # look for users and pis in slice tenant
+        for user in tenant.list_users():
+            for role in self.shell.auth_manager.roles.roles_for_user(user, tenant):
+                hrn = ".".join([self.hrn, tenant.name, user.name])
+                if role.name.lower() == 'pi':
+                    pis.append(hrn)
+                elif role.name.lower() in ['user', 'member']:
+                    researchers.append(hrn)
+
+        # look for pis in the slice's parent (site/organization) tenant
+        for user in parent_tenant.list_users():
+            for role in self.shell.auth_manager.roles.roles_for_user(user, parent_tenant):
+                if role.name.lower() == 'pi':
+                    hrn = ".".join([self.hrn, tenant.name, user.name])
+                    pis.append(hrn)
+        record['name'] = tenant_name
+        record['description'] = tenant.description
+        record['PI'] = pis
+        if pis:
+            record['geni_creator'] = pis[0]
+        else:
+            record['geni_creator'] = None
+        record['researcher'] = researchers
+        return record
+
+    def fill_auth_record_info(self, record):
+        tenant_name = hrn_to_os_tenant_name(record['hrn'])
+        tenant = self.shell.auth_manager.tenants.find(name=tenant_name)
+        researchers = []
+        pis = []
+
+        # look for users and pis in slice tenant
+        for user in tenant.list_users():
+            for role in self.shell.auth_manager.roles.roles_for_user(user, tenant):
+                hrn = ".".join([self.hrn, tenant.name, user.name])
+                if role.name.lower() == 'pi':
+                    pis.append(hrn)
+                elif role.name.lower() in ['user', 'member']:
+                    researchers.append(hrn)
+
+        # look for slices
+        slices = []
+        all_tenants = self.shell.auth_manager.tenants.list() 
+        for tmp_tenant in all_tenants:
+            if tmp_tenant.name.startswith(tenant.name+"."):
+                slices.append(".".join([self.hrn, tmp_tenant.name])) 
+
+        record['name'] = tenant_name
+        record['description'] = tenant.description
+        record['PI'] = pis
+        record['enabled'] = tenant.enabled
+        record['researchers'] = researchers
+        record['slices'] = slices
+        return record
 
     ####################
     # plcapi works by changes, compute what needs to be added/deleted
