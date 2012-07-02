@@ -1,5 +1,5 @@
 #import sys
-import httplib
+from httplib import HTTPConnection, HTTPException
 import json
 #import datetime
 #from time import gmtime, strftime 
@@ -63,13 +63,14 @@ class OARrestapi:
             #seems that it does not work if we don't add this
             headers['content-length'] = '0' 
 
-            conn = httplib.HTTPConnection(self.oarserver['ip'], \
+            conn = HTTPConnection(self.oarserver['ip'], \
                                                 self.oarserver['port'])
             conn.request("GET", self.oarserver['uri'], data, headers)
             resp = ( conn.getresponse()).read()
             conn.close()
-        except NotConnected:
-            logger.log_exc("GET_OAR_SRVR : Could not reach OARserver")
+        except HTTPException, error :
+            logger.log_exc("GET_OAR_SRVR : Problem with OAR server : %s " \
+                                                                    %(error))
             #raise ServerError("GET_OAR_SRVR : Could not reach OARserver")
         try:
             js_dict = json.loads(resp)
@@ -110,7 +111,7 @@ class OARrestapi:
                 'content-length':str(len(data))}     
         try :
 
-            conn = httplib.HTTPConnection(self.oarserver['ip'], \
+            conn = HTTPConnection(self.oarserver['ip'], \
                                         self.oarserver['port'])
             conn.request("POST", self.oarserver['uri'], data, headers)
             resp = (conn.getresponse()).read()
@@ -214,48 +215,8 @@ class OARGETParser:
         self.SendRequest("GET_version")
         
         
-    #def AddNodeNetworkAddr(self,tuplelist,value):
-        #tuplelist.append(('hostname',str(value)))
-        
-    #def AddNodeNetworkAddr(self,dictnode,value):
-        ##Inserts new key. The value associated is a tuple list
-        #node_id = value
-        
-        #dictnode[node_id] = [('node_id',node_id),('hostname',node_id) ]	
-        
-        #return node_id 
-            
-    #def AddNodeSite(self,tuplelist,value):
-        #tuplelist.append(('site',str(value)))
-        	
-            
-    #def AddNodeRadio(self,tuplelist,value):
-        #tuplelist.append(('radio',str(value)))	
-    
-    
-    #def AddMobility(self,tuplelist,value): 
-        #if value :
-            #tuplelist.append(('mobile',int(value)))	
 
-    
-    
-    #def AddPosX(self,tuplelist,value):
-        #tuplelist.append(('posx',value))	
-    
-    
-    #def AddPosY(self,tuplelist,value):
-        #tuplelist.append(('posy',value))	
-    
-    #def AddBootState(self,tuplelist,value):
-        #tuplelist.append(('boot_state',str(value)))
-        	
-    ##Insert a new node into the dictnode dictionary
-    #def AddNodeId(self,dictnode,value):
-        ##Inserts new key. The value associated is a tuple list
-        #node_id = int(value)
-        
-        #dictnode[node_id] = [('node_id',node_id) ]	
-        #return node_id
+
     
     def ParseVersion(self) : 
         #print self.raw_json
@@ -370,6 +331,8 @@ class OARGETParser:
             job['user'] = json_element['owner']
             logger.debug("ParseReservedNodes________job %s" %(job))  
             reservation_list.append(job)
+            #reset dict
+            job = {}
         return reservation_list
     
     def ParseRunningJobs(self): 

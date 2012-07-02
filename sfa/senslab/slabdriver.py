@@ -229,13 +229,13 @@ class SlabDriver(Driver):
                 #return rspec 
     
         #panos: passing user-defined options
-
+        logger.debug("SLABDRIVER \tlist_resources rspec " )
         aggregate = SlabAggregate(self)
         origin_hrn = Credential(string=creds[0]).get_gid_caller().get_hrn()
         options.update({'origin_hrn':origin_hrn})
         rspec =  aggregate.get_rspec(slice_xrn=slice_urn, version=rspec_version, 
                                      options=options)
-        print>>sys.stderr, " \r\n \r\n \t SLABDRIVER list_resources rspec " 
+       
         # cache the result
         #if self.cache and not slice_hrn:
             #logger.debug("Slab.ListResources: stores advertisement in cache")
@@ -518,9 +518,10 @@ class SlabDriver(Driver):
             self.__get_hostnames_from_oar_node_ids(node_id_list)
         
         #parsed_job_info  = self.get_info_on_reserved_nodes(job_info,node_list_k)
-        #Replaces the previous entry "assigned_network_address" / "reserved_resources"
+        #Replaces the previous entry "assigned_network_address" / 
+        #"reserved_resources"
         #with "node_ids"
-        job_info = {'node_ids':hostname_list}
+        job_info = {'node_ids': hostname_list}
 
         return job_info
 
@@ -539,7 +540,7 @@ class SlabDriver(Driver):
             for index in range(len(job_info[node_list_name])):
                #job_info[node_list_name][k] = 
                 reserved_node_hostname_list[index] = \
-                            node_dict[job_info[node_list_name][index]]['hostname']
+                        node_dict[job_info[node_list_name][index]]['hostname']
                             
             logger.debug("SLABDRIVER \t get_info_on_reserved_nodes \
                         reserved_node_hostname_list %s" \
@@ -561,21 +562,27 @@ class SlabDriver(Driver):
             oar_id_node_dict[node['oar_id']] = node
         
         hostname_list = []
+        hostname_dict_list = [] 
         for resource_id in resource_id_list:
-            hostname_list.append(oar_id_node_dict[resource_id]['hostname'])
-        return  hostname_list
+            hostname_dict_list.append({'hostname' : \
+                    oar_id_node_dict[resource_id]['hostname'], 
+                    'site_id' :  oar_id_node_dict[resource_id]['site']})
+            
+            #hostname_list.append(oar_id_node_dict[resource_id]['hostname'])
+        return hostname_dict_list 
         
     def GetReservedNodes(self):
         #Get the nodes in use and the reserved nodes
         reservation_dict_list = self.oar.parser.SendRequest("GET_reserved_nodes")
         
-        oar_node_id_dict = self.__get_oar_node_ids()
         
         for resa in reservation_dict_list:
             logger.debug ("GetReservedNodes resa %s"%(resa))
-            resa['reserved_nodes_hostnames'] = \
+            #dict list of hostnames and their site
+            resa['reserved_nodes'] = \
                 self.__get_hostnames_from_oar_node_ids(resa['resource_ids'])
-            del resa['resource_ids']
+                
+        #del resa['resource_ids']
         return reservation_dict_list
      
     def GetNodes(self,node_filter_dict = None, return_fields_list = None):
@@ -614,39 +621,41 @@ class SlabDriver(Driver):
         return return_node_list
     
   
-    def GetSites(self, site_filter_name = None, return_fields_list = None):
+    def GetSites(self, site_filter_name_list = None, return_fields_list = None):
         site_dict = self.oar.parser.SendRequest("GET_sites")
         #site_dict : dict where the key is the sit ename
         return_site_list = []
-        if not ( site_filter_name or return_fields_list):
+        if not ( site_filter_name_list or return_fields_list):
                 return_site_list = site_dict.values()
                 return return_site_list
         
-        if site_filter_name in site_dict:
-            if return_fields_list:
-                for field in return_fields_list:
-                    tmp = {}
-                    Create 
-                    try:
-                        tmp[field] = site_dict[site_filter_name][field]
-                    except KeyError:
-                        logger.error("GetSites KeyError %s "%(field))
-                        return None
-                return_site_list.append(tmp)
-            else:
-                return_site_list.append( site_dict[site_filter_name])
+        for site_filter_name in site_filter_name_list:
+            if site_filter_name in site_dict:
+                if return_fields_list:
+                    for field in return_fields_list:
+                        tmp = {}
+                        Create 
+                        try:
+                            tmp[field] = site_dict[site_filter_name][field]
+                        except KeyError:
+                            logger.error("GetSites KeyError %s "%(field))
+                            return None
+                    return_site_list.append(tmp)
+                else:
+                    return_site_list.append( site_dict[site_filter_name])
             
 
         return return_site_list
         
 
     def GetSlices(self, slice_filter = None, slice_filter_type = None, \
-                                            return_fields_list=None):
+                                            return_fields_list = None):
         return_slice_list = []
         slicerec  = {}
         rec = {}
         authorized_filter_types_list = ['slice_hrn', 'record_id_user']
-        print>>sys.stderr,"\r\n SLABDRIVER \tGetSlices authorized_filter_types_list %s" %(authorized_filter_types_list)
+        logger.debug("SLABDRIVER \tGetSlices authorized_filter_types_list %s"\
+                                                %(authorized_filter_types_list))
         if slice_filter_type in authorized_filter_types_list:
             if slice_filter_type == 'slice_hrn':
                 slicerec = slab_dbsession.query(SliceSenslab).\
@@ -661,17 +670,19 @@ class SlabDriver(Driver):
                 print>>sys.stderr,"\r\n SLABDRIVER \tGetSlices rec %s" %(rec)
                 #Get login 
                 login = slicerec.slice_hrn.split(".")[1].split("_")[0]
-                logger.debug("\r\n SLABDRIVER \tGetSlices login %s slice record %s"\
-                                                                %(login,rec))
+                logger.debug("\r\n SLABDRIVER \tGetSlices login %s \
+                                                slice record %s" %(login,rec))
                 if slicerec.oar_job_id is not -1:
                     #Check with OAR the status of the job if a job id is in 
                     #the slice record 
-                    #rslt = self.GetJobsResources(slicerec.oar_job_id,username = login)
-                    rslt = self.GetJobsId(slicerec.oar_job_id,username = login)
+                    rslt = self.GetJobsResources(slicerec.oar_job_id, \
+                                                                username = login)
+
                     if rslt :
                         rec.update(rslt)
                         rec.update({'hrn':str(rec['slice_hrn'])})
-                        #If GetJobsResources is empty, this means the job is now in the 'Terminated' state
+                        #If GetJobsResources is empty, this means the job is 
+                        #now in the 'Terminated' state
                         #Update the slice record
                     else :
                         self.db.update_job(slice_filter, job_id = -1)
@@ -996,18 +1007,24 @@ class SlabDriver(Driver):
     def GetLeases(self, lease_filter=None, return_fields_list=None):
         reservation_list = self.GetReservedNodes()
         #Find the slice associated with this user senslab ldap uid
+        logger.debug(" SLABDRIVER.PY \tGetLeases ")
         for resa in reservation_list:
             ldap_info = self.ldap.LdapSearch('(uid='+resa['user']+')')
-            user = dbsession.query(RegUser).filter_by(email = ldap_info['mail']).first()
+            ldap_info = ldap_info[0][1]
+
+            user = dbsession.query(RegUser).filter_by(email = ldap_info['mail'][0]).first()
+           
             slice_info = slab_dbsession.query(SliceSenslab).filter_by(record_id_user = user.record_id).first()
             #Put the slice_urn 
             resa['slice_id'] = hrn_to_urn(slice_info.slice_hrn, 'slice')
             resa['component_id_list'] = []
             #Transform the hostnames into urns (component ids)
-            for hostname in resa['reserved_nodes_hostnames']:
-                resa['component_id_list'].append(hostname_to_urn(self.hrn,  self.root_auth, hostname))
+            for node in resa['reserved_nodes']:
+                resa['component_id_list'].append(hostname_to_urn(self.hrn, \
+                         self.root_auth, node['hostname']))
 
-        return resa
+        logger.debug(" SLABDRIVER.PY \tGetLeases reservation_list %s"%(reservation_list))
+        return reservation_list
             
     def augment_records_with_testbed_info (self, sfa_records):
         return self.fill_record_info (sfa_records)
