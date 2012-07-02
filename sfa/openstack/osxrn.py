@@ -5,6 +5,10 @@ from sfa.util.config import Config
 def hrn_to_os_slicename(hrn):
     return OSXrn(xrn=hrn, type='slice').get_slicename()
 
+
+def hrn_to_os_tenant_name(hrn):
+    return OSXrn(xrn=hrn, type='slice').get_tenant_name()
+
 def cleanup_name(name):
     return name.replace(".", "_").replace("+", "_")                
 
@@ -41,5 +45,12 @@ class OSXrn(Xrn):
         slicename = slicename.split(':')[0]
         slicename = re.sub('[\.]', '_', slicename)
         return slicename
+
+    def get_tenant_name(self):
+        self._normalize()
+        tenant_name = self.hrn
+        tenant_name = ".".join(tenant_name.split('.')[1:])
+        return tenant_name
+        
         
             
