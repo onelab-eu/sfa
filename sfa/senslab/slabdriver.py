@@ -5,24 +5,23 @@ from datetime import datetime
 from dateutil import tz 
 from time import strftime,gmtime
 
-from sfa.util.faults import MissingSfaInfo , SliverDoesNotExist
+from sfa.util.faults import SliverDoesNotExist, UnknownSfaType
 from sfa.util.sfalogging import logger
-from sfa.util.defaultdict import defaultdict
 
-from sfa.storage.record import Record
 from sfa.storage.alchemy import dbsession
 from sfa.storage.model import RegRecord, RegUser
 
 from sfa.trust.credential import Credential
-from sfa.trust.gid import GID
+
 
 from sfa.managers.driver import Driver
 from sfa.rspecs.version_manager import VersionManager
 from sfa.rspecs.rspec import RSpec
 
-from sfa.util.xrn import hrn_to_urn, urn_to_sliver_id
-from sfa.planetlab.plxrn import slicename_to_hrn, hostname_to_hrn, \
-                                        hrn_to_pl_slicename, hostname_to_urn
+from sfa.util.xrn import hrn_to_urn, urn_to_sliver_id, get_leaf
+from sfa.planetlab.plxrn import slicename_to_hrn, hrn_to_pl_slicename, \
+                                        hostname_to_urn, \
+                                        xrn_to_hostname
 
 ## thierry: everything that is API-related (i.e. handling incoming requests) 
 # is taken care of 
@@ -52,7 +51,7 @@ class SlabDriver(Driver):
         self.root_auth = config.SFA_REGISTRY_ROOT_AUTH
 
         self.oar = OARrestapi()
-	self.ldap = LDAPapi()
+        self.ldap = LDAPapi()
         self.time_format = "%Y-%m-%d %H:%M:%S"
         self.db = SlabDB(config,debug = True)
         self.cache=None
@@ -72,9 +71,13 @@ class SlabDriver(Driver):
         if len(sl) is 0:
             raise SliverDoesNotExist("%s  slice_hrn" % (slice_hrn))
         
+        top_level_status = 'unknown'
         nodes_in_slice = sl['node_ids']
+        
         if len(nodes_in_slice) is 0:
             raise SliverDoesNotExist("No slivers allocated ") 
+        else:
+            top_level_status = 'ready' 
         
         logger.debug("Slabdriver - sliver_status Sliver status urn %s hrn %s sl\
                              %s \r\n " %(slice_urn,slice_hrn,sl) )
@@ -89,9 +92,6 @@ class SlabDriver(Driver):
             
 
             result = {}
-            top_level_status = 'unknown'
-            if nodes:
-                top_level_status = 'ready'
             result['geni_urn'] = slice_urn
             result['pl_login'] = sl['job_user'] #For compatibility
 
@@ -103,7 +103,7 @@ class SlabDriver(Driver):
                                                      #gmtime(float(timestamp)))
             
             resources = []
-            for node in nodes:
+            for node in nodeall_byhostname:
                 res = {}
                 #res['slab_hostname'] = node['hostname']
                 #res['slab_boot_state'] = node['boot_state']
@@ -133,13 +133,13 @@ class SlabDriver(Driver):
         
         
     def create_sliver (self, slice_urn, slice_hrn, creds, rspec_string, users, options):
-        print>>sys.stderr, "\r\n \r\n \t=============================== SLABDRIVER.PY create_sliver "
+        logger.debug("SLABDRIVER.PY \tcreate_sliver ")
         aggregate = SlabAggregate(self)
         
         slices = SlabSlices(self)
         peer = slices.get_peer(slice_hrn)
         sfa_peer = slices.get_sfa_peer(slice_hrn)
-        slice_record=None 
+        slice_record = None 
  
         if not isinstance(creds, list):
             creds = [creds]
@@ -149,55 +149,70 @@ class SlabDriver(Driver):
     
         # parse rspec
         rspec = RSpec(rspec_string)
-        print>>sys.stderr, "\r\n \r\n \t=============================== SLABDRIVER.PY create_sliver  ============================rspec.version %s " %(rspec.version)
+        logger.debug("SLABDRIVER.PY \tcreate_sliver \trspec.version %s " %(rspec.version))
         
         
         # ensure site record exists?
         # ensure slice record exists
-        slice = slices.verify_slice(slice_hrn, slice_record, peer, sfa_peer, options=options)
+        sfa_slice = slices.verify_slice(slice_hrn, slice_record, peer, sfa_peer, options=options)
         requested_attributes = rspec.version.get_slice_attributes()
         
         if requested_attributes:
             for attrib_dict in requested_attributes:
                 if 'timeslot' in attrib_dict and attrib_dict['timeslot'] is not None:
-                    slice.update({'timeslot':attrib_dict['timeslot']})
-        print >>sys.stderr, "\r\n \r\n \t=============================== SLABDRIVER.PY create_sliver  ..... slice %s " %(slice)
+                    sfa_slice.update({'timeslot':attrib_dict['timeslot']})
+        print >>sys.stderr, "\r\n \r\n \t=============================== SLABDRIVER.PY create_sliver  ..... slice %s " %(sfa_slice)
+        
         # ensure person records exists
-        persons = slices.verify_persons(slice_hrn, slice, users, peer, sfa_peer, options=options)
+        persons = slices.verify_persons(slice_hrn, sfa_slice, users, peer, sfa_peer, options=options)
+        
         # ensure slice attributes exists?
 
         
         # add/remove slice from nodes 
-        print >>sys.stderr, "\r\n \r\n \t=============================== SLABDRIVER.PY create_sliver  ..... " 
        
         requested_slivers = [node.get('component_name') for node in rspec.version.get_nodes_with_slivers()]
-        print >>sys.stderr, "\r\n \r\n \t=============================== ........... requested_slivers ============================requested_slivers %s " %(requested_slivers)
-        nodes = slices.verify_slice_nodes(slice, requested_slivers, peer) 
-    
+        logger.debug("SLADRIVER \tcreate_sliver requested_slivers  requested_slivers %s " %(requested_slivers))
+        
+        nodes = slices.verify_slice_nodes(sfa_slice, requested_slivers, peer) 
+        
+        # add/remove leases
+        requested_leases = []
+        kept_leases = []
+        for lease in rspec.version.get_leases():
+            requested_lease = {}
+            if not lease.get('lease_id'):
+                requested_lease['hostname'] = xrn_to_hostname(lease.get('component_id').strip())
+                requested_lease['t_from'] = lease.get('t_from')
+                requested_lease['t_until'] = lease.get('t_until')
+            else:
+                kept_leases.append(int(lease['lease_id']))
+            if requested_lease.get('hostname'):
+                requested_leases.append(requested_lease)
+                
+        leases = slices.verify_slice_leases(sfa_slice, requested_leases, kept_leases, peer)
         
         return aggregate.get_rspec(slice_xrn=slice_urn, version=rspec.version)
         
         
     def delete_sliver (self, slice_urn, slice_hrn, creds, options):
         
-        slice = self.GetSlices(slice_filter= slice_hrn, slice_filter_type = 'slice_hrn')
-        print>>sys.stderr, "\r\n \r\n \t\t  SLABDRIVER.PY delete_sliver slice %s" %(slice)
-        if not slice:
+        sfa_slice = self.GetSlices(slice_filter = slice_hrn, slice_filter_type = 'slice_hrn')
+        logger.debug("SLABDRIVER.PY delete_sliver slice %s" %(sfa_slice))
+        if not sfa_slice:
             return 1
        
         slices = SlabSlices(self)
         # determine if this is a peer slice
-        # xxx I wonder if this would not need to use PlSlices.get_peer instead 
-        # in which case plc.peers could be deprecated as this here
-        # is the only/last call to this last method in plc.peers
+      
         peer = slices.get_peer(slice_hrn)
         try:
             if peer:
-                self.UnBindObjectFromPeer('slice', slice['record_id_slice'], peer)
-            self.DeleteSliceFromNodes(slice)
+                self.UnBindObjectFromPeer('slice', sfa_slice['record_id_slice'], peer)
+            self.DeleteSliceFromNodes(sfa_slice)
         finally:
             if peer:
-                self.BindObjectToPeer('slice', slice['slice_id'], peer, slice['peer_slice_id'])
+                self.BindObjectToPeer('slice', sfa_slice['slice_id'], peer, sfa_slice['peer_slice_id'])
         return 1
             
             
@@ -279,9 +294,9 @@ class SlabDriver(Driver):
             print>>sys.stderr, " \r\n \t\t SLABDRIVER.PY register"
             slices = self.GetSlices(slice_filter =slab_record['hrn'], slice_filter_type = 'slice_hrn')
             if not slices:
-                    pointer = self.AddSlice(slab_record)
+                pointer = self.AddSlice(slab_record)
             else:
-                    pointer = slices[0]['slice_id']
+                pointer = slices[0]['slice_id']
     
         elif type == 'user':  
             persons = self.GetPersons([sfa_record])
@@ -303,6 +318,10 @@ class SlabDriver(Driver):
                 self.AddPersonToSite(pointer, login_base)
     
             # What roles should this user have?
+            #TODO : DElete this AddRoleToPerson 04/07/2012 SA
+            #Function prototype is :
+            #AddRoleToPerson(self, auth, role_id_or_name, person_id_or_email)
+            #what's the pointer doing here?
             self.AddRoleToPerson('user', pointer)
             # Add the user's key
             if pub_key:
@@ -328,6 +347,10 @@ class SlabDriver(Driver):
             slab_record=self.sfa_fields_to_slab_fields(type, hrn, new_sfa_record)
             if 'name' in slab_record:
                 slab_record.pop('name')
+                #Prototype should be UpdateSlice(self,
+                #auth, slice_id_or_name, slice_fields)
+                #Senslab cannot update slice since slice = job
+                #so we must delete and create another job
                 self.UpdateSlice(pointer, slab_record)
     
         elif type == "user":
@@ -362,8 +385,8 @@ class SlabDriver(Driver):
         
 
     def remove (self, sfa_record):
-        type=sfa_record['type']
-        hrn=sfa_record['hrn']
+        type = sfa_record['type']
+        hrn = sfa_record['hrn']
         record_id= sfa_record['record_id']
         if type == 'user':
             username = hrn.split(".")[len(hrn.split(".")) -1]
@@ -373,6 +396,7 @@ class SlabDriver(Driver):
             # only delete this person if he has site ids. if he doesnt, it probably means
             # he was just removed from a site, not actually deleted
             if persons and persons[0]['site_ids']:
+                #TODO : delete person in LDAP
                 self.DeletePerson(username)
         elif type == 'slice':
             if self.GetSlices(slice_filter = hrn, slice_filter_type = 'slice_hrn'):
@@ -408,7 +432,7 @@ class SlabDriver(Driver):
         try: 
             print >>sys.stderr, "\r\n \r\n SLABDRIVER GetPeers  existing_hrns_by_types['authority+sa']  %s \t\t existing_records %s " %(existing_hrns_by_types['authority'],existing_records)
             if peer_filter:
-               records_list.append(existing_records[(peer_filter,'authority')])
+                records_list.append(existing_records[(peer_filter,'authority')])
             else :
                 for hrn in existing_hrns_by_types['authority']:
                     records_list.append(existing_records[(hrn,'authority')])
@@ -416,7 +440,7 @@ class SlabDriver(Driver):
             print >>sys.stderr, "\r\n \r\n SLABDRIVER GetPeers  records_list  %s " %(records_list)
                 
         except:
-                pass
+            pass
                 
         return_records = records_list
         if not peer_filter and not return_fields_list:
@@ -445,7 +469,7 @@ class SlabDriver(Driver):
                 person_list.append(person)
           
         else:
-              person_list  = self.ldap.LdapFindUser()  
+            person_list  = self.ldap.LdapFindUser()  
                     
         return person_list
  
@@ -560,7 +584,9 @@ class SlabDriver(Driver):
         oar_id_node_dict = {}
         for node in full_nodes_dict_list:
             oar_id_node_dict[node['oar_id']] = node
-        
+            
+        logger.debug("SLABDRIVER \t  __get_hostnames_from_oar_node_ids\
+                        oar_id_node_dict %s" %(oar_id_node_dict))
         hostname_list = []
         hostname_dict_list = [] 
         for resource_id in resource_id_list:
@@ -607,12 +633,12 @@ class SlabDriver(Driver):
                         for node in node_dict_list:
                             if node[filter_key] == value:
                                 if return_fields_list :
-                                   tmp = {}
-                                   for k in return_fields_list:
+                                    tmp = {}
+                                    for k in return_fields_list:
                                         tmp[k] = node[k]     
-                                   return_node_list.append(tmp)
+                                    return_node_list.append(tmp)
                                 else:
-                                   return_node_list.append(node)
+                                    return_node_list.append(node)
                 except KeyError:
                     logger.log_exc("GetNodes KeyError")
                     return
@@ -626,15 +652,14 @@ class SlabDriver(Driver):
         #site_dict : dict where the key is the sit ename
         return_site_list = []
         if not ( site_filter_name_list or return_fields_list):
-                return_site_list = site_dict.values()
-                return return_site_list
+            return_site_list = site_dict.values()
+            return return_site_list
         
         for site_filter_name in site_filter_name_list:
             if site_filter_name in site_dict:
                 if return_fields_list:
                     for field in return_fields_list:
                         tmp = {}
-                        Create 
                         try:
                             tmp[field] = site_dict[site_filter_name][field]
                         except KeyError:
@@ -652,7 +677,7 @@ class SlabDriver(Driver):
                                             return_fields_list = None):
         return_slice_list = []
         slicerec  = {}
-        rec = {}
+        slicerec_dict = {}
         authorized_filter_types_list = ['slice_hrn', 'record_id_user']
         logger.debug("SLABDRIVER \tGetSlices authorized_filter_types_list %s"\
                                                 %(authorized_filter_types_list))
@@ -666,37 +691,42 @@ class SlabDriver(Driver):
                                 filter_by(record_id_user = slice_filter).first()
                 
             if slicerec:
-                rec = slicerec.dump_sqlalchemyobj_to_dict()
-                print>>sys.stderr,"\r\n SLABDRIVER \tGetSlices rec %s" %(rec)
+                
+                slicerec_dict = slicerec.dump_sqlalchemyobj_to_dict() #warning pylint OK
+                logger.debug("SLABDRIVER \tGetSlices slicerec_dict %s" \
+                                                        %(slicerec_dict))
                 #Get login 
-                login = slicerec.slice_hrn.split(".")[1].split("_")[0]
+                login = slicerec_dict['slice_hrn'].split(".")[1].split("_")[0]
                 logger.debug("\r\n SLABDRIVER \tGetSlices login %s \
-                                                slice record %s" %(login,rec))
-                if slicerec.oar_job_id is not -1:
+                                                slice record %s" \
+                                                %(login, slicerec_dict))
+                if slicerec_dict['oar_job_id'] is not -1:
                     #Check with OAR the status of the job if a job id is in 
                     #the slice record 
-                    rslt = self.GetJobsResources(slicerec.oar_job_id, \
-                                                                username = login)
+                    rslt = self.GetJobsResources(slicerec_dict['oar_job_id'], \
+                                                            username = login)
 
                     if rslt :
-                        rec.update(rslt)
-                        rec.update({'hrn':str(rec['slice_hrn'])})
+                        slicerec_dict.update(rslt)
+                        slicerec_dict.update({'hrn':\
+                                            str(slicerec_dict['slice_hrn'])})
                         #If GetJobsResources is empty, this means the job is 
                         #now in the 'Terminated' state
                         #Update the slice record
                     else :
                         self.db.update_job(slice_filter, job_id = -1)
-                        rec['oar_job_id'] = -1
-                        rec.update({'hrn':str(rec['slice_hrn'])})
+                        slicerec_dict['oar_job_id'] = -1
+                        slicerec_dict.update({'hrn':str(slicerec_dict['slice_hrn'])})
             
                 try:
-                    rec['node_ids'] = rec['node_list']
+                    slicerec_dict['node_ids'] = slicerec_dict['node_list']
                 except KeyError:
                     pass
                 
-                logger.debug("SLABDRIVER.PY  GetSlices  rec  %s" %(rec))
+                logger.debug("SLABDRIVER.PY  GetSlices  slicerec_dict  %s"\
+                                                            %(slicerec_dict))
                               
-            return rec
+            return slicerec_dict
                 
                 
         else:
@@ -763,12 +793,12 @@ class SlabDriver(Driver):
                 slab_record["instantiation"] = "senslab-instantiated"
             slab_record["hrn"] = hrn_to_pl_slicename(hrn)
             print >>sys.stderr, "\r\n \r\n \t SLABDRIVER.PY sfa_fields_to_slab_fields slab_record %s hrn_to_pl_slicename(hrn) hrn %s " %(slab_record['hrn'], hrn)
-	    if "url" in record:
-               slab_record["url"] = record["url"]
-	    if "description" in record:
-	        slab_record["description"] = record["description"]
-	    if "expires" in record:
-	        slab_record["expires"] = int(record["expires"])
+            if "url" in record:
+                slab_record["url"] = record["url"]
+            if "description" in record:
+                slab_record["description"] = record["description"]
+            if "expires" in record:
+                slab_record["expires"] = int(record["expires"])
                 
         #nodes added by OAR only and then imported to SFA
         #elif type == "node":
@@ -839,7 +869,7 @@ class SlabDriver(Driver):
         return walltime, sleep_walltime
 
             
-    def __transforms_timestamp_into_date(xp_utc_timestamp = None):
+    def __transforms_timestamp_into_date(self, xp_utc_timestamp = None):
         """ Transforms unix timestamp into valid OAR date format """
         
         #Used in case of a scheduled experiment (not immediate)
@@ -853,9 +883,9 @@ class SlabDriver(Driver):
             return xp_server_readable_date
             
         else:
-           return None
+            return None
                                
-    def LaunchExperimentOnOAR(self,  slice_dict, added_nodes, slice_user=None):
+    def LaunchExperimentOnOAR(self, slice_dict, added_nodes, slice_user=None):
         """ Creates the structure needed for a correct POST on OAR.
         Makes the timestamp transformation into the appropriate format.
         Sends the POST request to create the job with the resources in 
@@ -962,8 +992,8 @@ class SlabDriver(Driver):
         try:       
             jobid = answer['id']
         except KeyError:
-             logger.log_exc("SLABDRIVER \tLaunchExperimentOnOAR Impossible to create job  %s "  %(answer))
-             return
+            logger.log_exc("SLABDRIVER \tLaunchExperimentOnOAR Impossible to create job  %s "  %(answer))
+            return
         
         logger.debug("SLABDRIVER \tLaunchExperimentOnOAR jobid    %s added_nodes  %s slice_user %s"  %(jobid,added_nodes,slice_user))
         self.db.update_job( slice_name, jobid ,added_nodes)
@@ -1004,11 +1034,12 @@ class SlabDriver(Driver):
  
 
     
-    def GetLeases(self, lease_filter=None, return_fields_list=None):
-        reservation_list = self.GetReservedNodes()
+    def GetLeases(self, lease_filter_dict=None, return_fields_list=None):
+        unfiltered_reservation_list = self.GetReservedNodes()
+        reservation_list = []
         #Find the slice associated with this user senslab ldap uid
         logger.debug(" SLABDRIVER.PY \tGetLeases ")
-        for resa in reservation_list:
+        for resa in unfiltered_reservation_list:
             ldap_info = self.ldap.LdapSearch('(uid='+resa['user']+')')
             ldap_info = ldap_info[0][1]
 
@@ -1023,6 +1054,17 @@ class SlabDriver(Driver):
                 resa['component_id_list'].append(hostname_to_urn(self.hrn, \
                          self.root_auth, node['hostname']))
 
+        
+        #Filter the reservation list if necessary
+        #Returns all the leases associated with a given slice
+        if lease_filter_dict:
+            logger.debug("SLABDRIVER \tGetLeases lease_filter_dict %s"%(lease_filter_dict))
+            for resa in unfiltered_reservation_list:
+                if lease_filter_dict['name'] == resa['slice_id']:
+                    reservation_list.append(resa)
+        else:
+            reservation_list = unfiltered_reservation_list
+            
         logger.debug(" SLABDRIVER.PY \tGetLeases reservation_list %s"%(reservation_list))
         return reservation_list
             
@@ -1168,3 +1210,170 @@ class SlabDriver(Driver):
 ### thierry
 # I don't think you plan on running a component manager at this point
 # let me clean up the mess of ComponentAPI that is deprecated anyways
+
+
+#TODO FUNCTIONS SECTION 04/07/2012 SA
+
+    #TODO : Is UnBindObjectFromPeer still necessary ? Currently does nothing
+    #04/07/2012 SA
+    def UnBindObjectFromPeer(self, auth, object_type, object_id, shortname):
+        """ This method is a hopefully temporary hack to let the sfa correctly
+        detach the objects it creates from a remote peer object. This is 
+        needed so that the sfa federation link can work in parallel with 
+        RefreshPeer, as RefreshPeer depends on remote objects being correctly 
+        marked.
+        Parameters:
+        auth : struct, API authentication structure
+            AuthMethod : string, Authentication method to use 
+        object_type : string, Object type, among 'site','person','slice',
+        'node','key'
+        object_id : int, object_id
+        shortname : string, peer shortname 
+        FROM PLC DOC
+        
+        """
+        logger.warning("SLABDRIVER \tUnBindObjectFromPeer EMPTY-\
+                        DO NOTHING \r\n ")
+        return 
+    
+    #TODO Is BindObjectToPeer still necessary ? Currently does nothing 
+    #04/07/2012 SA
+    def BindObjectToPeer(self, auth, object_type, object_id, shortname=None, \
+                                                    remote_object_id=None):
+        """This method is a hopefully temporary hack to let the sfa correctly 
+        attach the objects it creates to a remote peer object. This is needed 
+        so that the sfa federation link can work in parallel with RefreshPeer, 
+        as RefreshPeer depends on remote objects being correctly marked.
+        Parameters:
+        shortname : string, peer shortname 
+        remote_object_id : int, remote object_id, set to 0 if unknown 
+        FROM PLC API DOC
+        
+        """
+        logger.warning("SLABDRIVER \tBindObjectToPeer EMPTY - DO NOTHING \r\n ")
+        return
+    
+    #TODO UpdateSlice 04/07/2012 SA
+    #Funciton should delete and create another job since oin senslab slice=job
+    def UpdateSlice(self, auth, slice_id_or_name, slice_fields=None):    
+        """Updates the parameters of an existing slice with the values in 
+        slice_fields.
+        Users may only update slices of which they are members. 
+        PIs may update any of the slices at their sites, or any slices of 
+        which they are members. Admins may update any slice.
+        Only PIs and admins may update max_nodes. Slices cannot be renewed
+        (by updating the expires parameter) more than 8 weeks into the future.
+         Returns 1 if successful, faults otherwise.
+        FROM PLC API DOC
+        
+        """ 
+        return
+    
+    #TODO UpdatePerson 04/07/2012 SA
+    def UpdatePerson(self, auth, person_id_or_email, person_fields=None):
+        """Updates a person. Only the fields specified in person_fields 
+        are updated, all other fields are left untouched.
+        Users and techs can only update themselves. PIs can only update
+        themselves and other non-PIs at their sites.
+        Returns 1 if successful, faults otherwise.
+        FROM PLC API DOC
+         
+        """
+        return
+    
+    #TODO GetKeys 04/07/2012 SA
+    def GetKeys(self, auth, key_filter=None, return_fields=None):
+        """Returns an array of structs containing details about keys. 
+        If key_filter is specified and is an array of key identifiers, 
+        or a struct of key attributes, only keys matching the filter 
+        will be returned. If return_fields is specified, only the 
+        specified details will be returned.
+
+        Admin may query all keys. Non-admins may only query their own keys.
+        FROM PLC API DOC
+        
+        """
+        
+        return
+    
+    #TODO DeleteKey 04/07/2012 SA
+    def DeleteKey(self, auth, key_id):
+        """  Deletes a key.
+         Non-admins may only delete their own keys.
+         Returns 1 if successful, faults otherwise.
+         FROM PLC API DOC
+         
+        """
+        return
+
+    
+    #TODO DeletePerson 04/07/2012 SA
+    def DeletePerson(self, auth, person_id_or_email):
+        """   Mark an existing account as deleted.
+        Users and techs can only delete themselves. PIs can only 
+        delete themselves and other non-PIs at their sites. 
+        ins can delete anyone.
+        Returns 1 if successful, faults otherwise.
+        FROM PLC API DOC
+        
+        """
+        return
+    
+    #TODO DeleteSlice 04/07/2012 SA
+    def DeleteSlice(self, auth, slice_id_or_name):
+        """ Deletes the specified slice.
+         Users may only delete slices of which they are members. PIs may 
+         delete any of the slices at their sites, or any slices of which 
+         they are members. Admins may delete any slice.
+         Returns 1 if successful, faults otherwise.
+         FROM PLC API DOC
+        
+        """
+         
+        return
+    
+    #TODO AddPerson 04/07/2012 SA
+    def AddPerson(self, auth, person_fields=None):
+        """Adds a new account. Any fields specified in person_fields are used, 
+        otherwise defaults are used.
+        Accounts are disabled by default. To enable an account, 
+        use UpdatePerson().
+        Returns the new person_id (> 0) if successful, faults otherwise. 
+        FROM PLC API DOC
+        
+        """
+        return
+    
+    #TODO AddPersonToSite 04/07/2012 SA
+    def AddPersonToSite (self, auth, person_id_or_email, \
+                                                site_id_or_login_base=None):
+        """  Adds the specified person to the specified site. If the person is 
+        already a member of the site, no errors are returned. Does not change 
+        the person's primary site.
+        Returns 1 if successful, faults otherwise.
+        FROM PLC API DOC
+        
+        """
+        return
+    
+    #TODO AddRoleToPerson : Not sure if needed in senslab 04/07/2012 SA
+    def AddRoleToPerson(self, auth, role_id_or_name, person_id_or_email):
+        """Grants the specified role to the person.
+        PIs can only grant the tech and user roles to users and techs at their 
+        sites. Admins can grant any role to any user.
+        Returns 1 if successful, faults otherwise.
+        FROM PLC API DOC
+        
+        """
+        
+        return
+    
+    #TODO AddPersonKey 04/07/2012 SA
+    def AddPersonKey(self, auth, person_id_or_email, key_fields=None):
+        """Adds a new key to the specified account.
+        Non-admins can only modify their own keys.
+        Returns the new key_id (> 0) if successful, faults otherwise.
+        FROM PLC API DOC
+        
+        """
+        return
