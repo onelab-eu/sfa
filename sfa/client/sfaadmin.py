@@ -14,6 +14,11 @@ from sfa.trust.gid import GID
 
 pprinter = PrettyPrinter(indent=4)
 
+try:
+    help_basedir=Hierarchy().basedir
+except:
+    help_basedir='*unable to locate Hierarchy().basedir'
+
 def optparse_listvalue_callback(option, opt, value, parser):
     setattr(parser.values, option.dest, value.split(','))
 
@@ -172,9 +177,9 @@ class RegistryCommands(Commands):
         importer.run()
     
     @args('-a', '--all', dest='all', metavar='<all>', action='store_true', default=False,
-          help='Remove all registry records and all files in %s area' % Hierarchy().basedir)
+          help='Remove all registry records and all files in %s area' % help_basedir)
     @args('-c', '--certs', dest='certs', metavar='<certs>', action='store_true', default=False,
-          help='Remove all cached certs/gids found in %s' % Hierarchy().basedir )
+          help='Remove all cached certs/gids found in %s' % help_basedir )
     @args('-0', '--no-reinit', dest='reinit', metavar='<reinit>', action='store_false', default=True,
           help='Prevents new DB schema from being installed after cleanup')
     def nuke(self, all=False, certs=False, reinit=True):
