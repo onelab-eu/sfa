@@ -34,7 +34,7 @@ class SFAv1Lease:
          
         lease_elems = []       
         for lease in leases:
-            lease_fields = ['lease_id', 'component_id', 'slice_id', 't_from', 't_until']
+            lease_fields = ['lease_id', 'component_id', 'slice_id', 'start_time', 'duration']
             lease_elem = network_elem.add_instance('lease', lease, lease_fields)
             lease_elems.append(lease_elem)
 
@@ -54,8 +54,8 @@ class SFAv1Lease:
                lease['lease_id'] = lease_elem.attrib['lease_id']
             lease['component_id'] = lease_elem.attrib['component_id']
             lease['slice_id'] = lease_elem.attrib['slice_id']
-            lease['t_from'] = lease_elem.attrib['t_from']
-            lease['t_until'] = lease_elem.attrib['t_until']
+            lease['start_time'] = lease_elem.attrib['start_time']
+            lease['duration'] = lease_elem.attrib['duration']
 
             leases.append(lease)
         return leases            

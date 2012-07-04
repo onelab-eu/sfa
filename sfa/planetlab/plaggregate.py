@@ -254,6 +254,7 @@ class PlAggregate:
            filter.update({'name':slice['name']})
         return_fields = ['lease_id', 'hostname', 'site_id', 'name', 't_from', 't_until']
         leases = self.driver.shell.GetLeases(filter)
+        grain = self.driver.shell.GetLeaseGranularity()
 
         site_ids = []
         for lease in leases:
@@ -276,8 +277,8 @@ class PlAggregate:
             slice_hrn = slicename_to_hrn(self.driver.hrn, lease['name'])
             slice_urn = hrn_to_urn(slice_hrn, 'slice')
             rspec_lease['slice_id'] = slice_urn
-            rspec_lease['t_from'] = lease['t_from']
-            rspec_lease['t_until'] = lease['t_until']          
+            rspec_lease['start_time'] = lease['t_from']
+            rspec_lease['duration'] = (lease['t_until'] - lease['t_from']) / grain
             rspec_leases.append(rspec_lease)
         return rspec_leases
 

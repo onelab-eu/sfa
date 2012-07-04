@@ -356,6 +356,9 @@ class Sfi:
                             help="type filter ([all]|user|slice|authority|node|aggregate)",
                             choices=("all", "user", "slice", "authority", "node", "aggregate"),
                             default="all")
+        if command in ("show"):
+            parser.add_option("-k","--key",dest="keys",action="append",default=[],
+                              help="specify specific keys to be displayed from record")
         if command in ("resources"):
             # rspec version
             parser.add_option("-r", "--rspec-version", dest="rspec_version", default="SFA 1",
@@ -454,7 +457,9 @@ class Sfi:
         
 
     def print_help (self):
+        print "==================== Generic sfi usage"
         self.sfi_parser.print_help()
+        print "==================== Specific command usage"
         self.command_parser.print_help()
 
     #
@@ -491,9 +496,8 @@ class Sfi:
             self.dispatch(command, command_options, command_args)
         except KeyError:
             self.logger.critical ("Unknown command %s"%command)
-            raise
             sys.exit(1)
-    
+
         return
     
     ####################
@@ -824,6 +828,16 @@ or version information about sfi itself
         record_dicts = filter_records(options.type, record_dicts)
         if not record_dicts:
             self.logger.error("No record of type %s"% options.type)
+            return
+        # user has required to focus on some keys
+        if options.keys:
+            def project (record):
+                projected={}
+                for key in options.keys:
+                    try: projected[key]=record[key]
+                    except: pass
+                return projected
+            record_dicts = [ project (record) for record in record_dicts ]
         records = [ Record(dict=record_dict) for record_dict in record_dicts ]
         for record in records:
             if (options.format == "text"):      record.dump(sort=True)  
@@ -1185,21 +1199,23 @@ or with an slice hrn, shows currently provisioned resources
         renew slice (RenewSliver)
         """
         server = self.sliceapi()
+        if len(args) != 2:
+            self.print_help()
+            sys.exit(1)
+        [ slice_hrn, input_time ] = args
         # slice urn    
-        slice_hrn = args[0]
         slice_urn = hrn_to_urn(slice_hrn, 'slice') 
+        # time: don't try to be smart on the time format, server-side will
         # creds
         slice_cred = self.slice_credential_string(args[0])
         creds = [slice_cred]
         if options.delegate:
             delegated_cred = self.delegate_cred(slice_cred, get_authority(self.authority))
             creds.append(delegated_cred)
-        # time
-        time = args[1]
         # options and call_id when supported
         api_options = {}
 	api_options['call_id']=unique_call_id()
-        result =  server.RenewSliver(slice_urn, creds, time, *self.ois(server,api_options))
+        result =  server.RenewSliver(slice_urn, creds, input_time, *self.ois(server,api_options))
         value = ReturnValue.get_value(result)
         if self.options.raw:
             save_raw_to_file(result, self.options.raw, self.options.rawformat, self.options.rawbanner)

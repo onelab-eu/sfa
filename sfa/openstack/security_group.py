@@ -3,20 +3,18 @@ from sfa.util.sfalogging import logger
 class SecurityGroup:
 
     def __init__(self, driver):
-        self.driver = driver
+        self.client = driver.shell.nova_manager
 
         
     def create_security_group(self, name):
-        conn = self.driver.euca_shell.get_euca_connection()
         try:
-            conn.create_security_group(name=name, description="")
+            self.client.security_groups.create(name=name, description="")
         except Exception, ex:
             logger.log_exc("Failed to add security group")
 
     def delete_security_group(self, name):
-        conn = self.driver.euca_shell.get_euca_connection()
         try:
-            conn.delete_security_group(name=name)
+            self.client.security_groups(name=name)
         except Exception, ex:
             logger.log_exc("Failed to delete security group")
 
@@ -49,48 +47,43 @@ class SecurityGroup:
                           port_range=None, icmp_type_code=None,
                           source_group_name=None, source_group_owner_id=None):
 
-        from_port, to_port = self._validate_port_range(port_range)
-        icmp_type = self._validate_icmp_type_code(icmp_type_code)
-        if icmp_type and icmp_type[0] and icmp_type[1]:
-            from_port, to_port = icmp_type[0], icmp_type[1]
+        try:
+            from_port, to_port = self._validate_port_range(port_range)
+            icmp_type = self._validate_icmp_type_code(icmp_type_code)
+            if icmp_type and icmp_type[0] and icmp_type[1]:
+                from_port, to_port = icmp_type[0], icmp_type[1]
 
-        if group_name:
-            conn = self.driver.euca_shell.get_euca_connection()
-            try:
-                conn.authorize_security_group(
-                    group_name=group_name,
-                    src_security_group_name=source_group_name,
-                    src_security_group_owner_id=source_group_owner_id,
+            group = self.client.security_groups.find(name=group_name)
+            self.client.security_group_rules.create(
+                    group_id=group.id,    
                     ip_protocol=protocol,
                     from_port=from_port,
                     to_port=to_port,
                     cidr_ip=cidr_ip,
                     )
-            except Exception, ex:
-                logger.log_exc("Failed to add rule to group %s" % group_name)
+        except Exception, ex:
+            logger.log_exc("Failed to add rule to group %s" % group_name)
 
 
     def remove_rule_from_group(self, group_name=None, protocol='tcp', cidr_ip='0.0.0.0/0',
                           port_range=None, icmp_type_code=None,
                           source_group_name=None, source_group_owner_id=None):
-
-        from_port, to_port = self._validate_port_range(port_range)
-        icmp_type = self._validate_icmp_type_code(icmp_type_code)
-        if icmp_type:
-            from_port, to_port = icmp_type[0], icmp_type[1]
-
-        if group_name:
-            conn = self.driver.euca_shell.get_euca_connection()
-            try:
-                conn.revoke_security_group(
-                    group_name=group_name,
-                    src_security_group_name=source_group_name,
-                    src_security_group_owner_id=source_group_owner_id,
-                    ip_protocol=protocol,
-                    from_port=from_port,
-                    to_port=to_port,
-                    cidr_ip=ip,
-                    )
-            except Exception, ex:
-                logger.log_exc("Failed to remove rule from group %s" % group_name) 
+        try:
+            from_port, to_port = self._validate_port_range(port_range)
+            icmp_type = self._validate_icmp_type_code(icmp_type_code)
+            if icmp_type:
+                from_port, to_port = icmp_type[0], icmp_type[1]
+            group = self.client.security_groups.find(name=group_name)
+            filter = {
+                'id': group.id,   
+                'from_port': from_port,
+                'to_port': to_port,
+                'cird_ip': ip,
+                'ip_protocol':protocol,
+            }
+            rule = self.client.security_group_rules.find(**filter)
+            if rule:
+                self.client.security_group_rules.delete(rule)
+        except Exception, ex:
+            logger.log_exc("Failed to remove rule from group %s" % group_name) 
              

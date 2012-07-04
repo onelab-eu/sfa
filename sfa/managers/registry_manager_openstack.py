@@ -37,9 +37,10 @@ class RegistryManager(RegistryManager):
             auth_hrn = hrn
         auth_info = api.auth.get_auth_info(auth_hrn)
         # get record info
-        record=dbsession.query(RegRecord).filter_by(hrn=hrn).first()
+        filter = {'hrn': hrn}
         if type:
-            record = record.filter_by(type=type)
+            filter['type'] = type
+        record=dbsession.query(RegRecord).filter_by(**filter).first()
         if not record:
             raise RecordNotFound("hrn=%s, type=%s"%(hrn,type))
     
@@ -59,15 +60,16 @@ class RegistryManager(RegistryManager):
             caller_gid = record.get_gid_object()
         else:
             caller_hrn, caller_type = urn_to_hrn(caller_xrn)
-            caller_record = dbsession.query(RegRecord).filter_by(hrn=caller_hrn).first()
+            caller_filter = {'hrn': caller_hrn}
             if caller_type:
-                caller_record = caller_record.filter_by(type=caller_type)
+                caller_filter['type'] = caller_type 
+            caller_record = dbsession.query(RegRecord).filter_by(**caller_filter).first()
             if not caller_record:
                 raise RecordNotFound("Unable to associated caller (hrn=%s, type=%s) with credential for (hrn: %s, type: %s)"%(caller_hrn, caller_type, hrn, type))
             caller_gid = GID(string=caller_record.gid) 
         
         object_hrn = record.get_gid_object().get_hrn()
-        rights = api.auth.determine_user_rights(caller_hrn, record)
+        rights = api.auth.determine_user_rights(caller_hrn, record.todict())
         # make sure caller has rights to this object
         if rights.is_empty():
             raise PermissionError(caller_hrn + " has no rights to " + record.hrn)
