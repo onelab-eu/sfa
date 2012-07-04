@@ -161,13 +161,13 @@ def AddMobility(tuplelist, value):
         tuplelist.append(('mobile', int(value)))	
 
 def AddPosX(tuplelist, value):
-    tuplelist.append(('x', value))	
+    tuplelist.append(('posx', value))	
 
 def AddPosY(tuplelist, value):
-    tuplelist.append(('y', value))	
+    tuplelist.append(('posy', value))	
     
 def AddPosZ(tuplelist, value):
-    tuplelist.append(('z', value))
+    tuplelist.append(('posz', value))
     	
 def AddBootState(tuplelist, value):
     tuplelist.append(('boot_state', str(value)))
