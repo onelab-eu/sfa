@@ -1,12 +1,9 @@
 from copy import deepcopy
 
-#from StringIO import StringIO
-#from sfa.util.xrn import urn_to_sliver_id
-#from sfa.util.plxrn import hostname_to_urn, xrn_to_hostname 
 
 from sfa.rspecs.version import RSpecVersion
 import sys
-
+from sfa.rspecs.elements.versions.slabv1Lease import Slabv1Lease
 from sfa.rspecs.elements.versions.slabv1Node import Slabv1Node
 from sfa.rspecs.elements.versions.slabv1Sliver import Slabv1Sliver
 from sfa.rspecs.elements.versions.slabv1Timeslot import Slabv1Timeslot
@@ -221,7 +218,13 @@ class Slabv1(RSpecVersion):
         #for child in rspec.xml.iterchildren():
         #    self.xml.root.append(child)
         
-        
+    # Leases
+
+    def get_leases(self, lease_filter=None):
+        return Slabv1Lease.get_leases(self.xml, lease_filter)
+
+    def add_leases(self, leases, network = None, no_dupes=False):
+        Slabv1Lease.add_leases(self.xml, leases)    
 
     def cleanup(self):
         # remove unncecessary elements, attributes
