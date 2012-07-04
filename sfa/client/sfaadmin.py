@@ -45,11 +45,11 @@ class Candidates:
 
 class Commands(object):
     def _get_commands(self):
-        available_methods = []
+        command_names = []
         for attrib in dir(self):
             if callable(getattr(self, attrib)) and not attrib.startswith('_'):
-                available_methods.append(attrib)
-        return available_methods         
+                command_names.append(attrib)
+        return command_names
 
 
 class RegistryCommands(Commands):
@@ -368,12 +368,11 @@ class SfaAdmin:
                   'aggregate': AggregateCommands,
                   'slicemgr': SliceManagerCommands}
 
-    def find_category (self, string):
-        for (k,v) in SfaAdmin.CATEGORIES.items():
-            if k.startswith(string): return k
-        for (k,v) in SfaAdmin.CATEGORIES.items():
-            if k.find(string) >=1: return k
-        return None
+    # returns (name,class) or (None,None)
+    def find_category (self, input):
+        full_name=Candidates (SfaAdmin.CATEGORIES.keys()).only_match(input)
+        if not full_name: return (None,None)
+        return (full_name,SfaAdmin.CATEGORIES[full_name])
 
     def summary_usage (self, category=None):
         print "Usage:", self.script_name + " category action [<options>]"
@@ -410,33 +409,32 @@ class SfaAdmin:
             self.summary_usage()
 
         # ensure category is valid
-        category_str = argv.pop(0)
-        category=self.find_category (category_str)
-        if not category:
-            self.summary_usage()
+        category_input = argv.pop(0)
+        (category_name, category_class) = self.find_category (category_input)
+        if not category_name or not category_class:
+            self.summary_usage(category_name)
 
-        usage = "%%prog %s action [options]" % (category)
+        usage = "%%prog %s action [options]" % (category_name)
         parser = OptionParser(usage=usage)
-        command_class =  SfaAdmin.CATEGORIES.get(category, None)
-        if not command_class:
-            self.summary_usage(category)
     
         # ensure command is valid      
-        command_instance = command_class()
-        actions = command_instance._get_commands()
+        category_instance = category_class()
+        commands = category_instance._get_commands()
         if len(argv) < 1:
-            action = '__call__'
+            # xxx what is this about ?
+            command_name = '__call__'
         else:
-            action = argv.pop(0)
+            command_input = argv.pop(0)
+            command_name = Candidates (commands).only_match (command_input)
     
-        if hasattr(command_instance, action):
-            command = getattr(command_instance, action)
+        if hasattr(category_instance, command_name):
+            command = getattr(category_instance, command_name)
         else:
-            self.summary_usage(category)
+            self.summary_usage(category_name)
 
         # ensure options are valid
         options = getattr(command, 'options', [])
-        usage = "%%prog %s %s [options]" % (category, action)
+        usage = "%%prog %s %s [options]" % (category_name, command_name)
         parser = OptionParser(usage=usage)
         for arg, kwd in options:
             parser.add_option(*arg, **kwd)
