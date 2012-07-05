@@ -112,6 +112,21 @@ def filter_records(type, records):
     return filtered_records
 
 
+def credential_printable (credential_string):
+    credential=Credential(string=credential_string)
+    result=""
+    result += credential.get_summary_tostring()
+    result += "\n"
+    rights = credential.get_privileges()
+    result += "rights=%s"%rights
+    result += "\n"
+    return result
+
+def show_credentials (cred_s):
+    if not isinstance (cred_s,list): cred_s = [cred_s]
+    for cred in cred_s:
+        print "Using Credential %s"%credential_printable(cred)
+
 # save methods
 def save_raw_to_file(var, filename, format="text", banner=None):
     if filename == "-":
@@ -350,6 +365,10 @@ class Sfi:
                              help="Include a credential delegated to the user's root"+\
                                   "authority in set of credentials for this call")
 
+        # show_credential option
+        if command in ("list","resources","create","add","update","remove","slices","delete","status","renew"):
+            parser.add_option("-C","--credential",dest='show_credential',action='store_true',default=False,
+                              help="show credential(s) used in human-readable form")
         # registy filter option
         if command in ("list", "show", "remove"):
             parser.add_option("-t", "--type", dest="type", type="choice",
@@ -802,6 +821,8 @@ or version information about sfi itself
         if options.recursive:
             opts['recursive'] = options.recursive
         
+        if options.show_credential:
+            show_credentials(self.my_credential_string)
         try:
             list = self.registry().List(hrn, self.my_credential_string, options)
         except IndexError:
@@ -849,6 +870,8 @@ or version information about sfi itself
     def add(self, options, args):
         "add record into registry from xml file (Register)"
         auth_cred = self.my_authority_credential_string()
+        if options.show_credential:
+            show_credentials(auth_cred)
         record_dict = {}
         if len(args) > 0:
             record_filepath = args[0]
@@ -906,6 +929,8 @@ or version information about sfi itself
             cred = self.my_authority_credential_string()
         else:
             raise "unknown record type" + record_dict['type']
+        if options.show_credential:
+            show_credentials(cred)
         return self.registry().Update(record_dict, cred)
   
     def remove(self, options, args):
@@ -918,6 +943,8 @@ or version information about sfi itself
         type = options.type 
         if type in ['all']:
             type = '*'
+        if options.show_credential:
+            show_credentials(auth_cred)
         return self.registry().Remove(hrn, auth_cred, type)
     
     # ==================================================================
@@ -935,6 +962,8 @@ or version information about sfi itself
         # options and call_id when supported
         api_options = {}
 	api_options['call_id']=unique_call_id()
+        if options.show_credential:
+            show_credentials(creds)
         result = server.ListSlices(creds, *self.ois(server,api_options))
         value = ReturnValue.get_value(result)
         if self.options.raw:
@@ -959,6 +988,8 @@ or with an slice hrn, shows currently provisioned resources
             creds.append(self.my_credential_string)
         if options.delegate:
             creds.append(self.delegate_cred(cred, get_authority(self.authority)))
+        if options.show_credential:
+            show_credentials(creds)
 
         # no need to check if server accepts the options argument since the options has
         # been a required argument since v1 API
@@ -1013,6 +1044,7 @@ or with an slice hrn, shows currently provisioned resources
 
         # credentials
         creds = [self.slice_credential_string(slice_hrn)]
+
         delegated_cred = None
         server_version = self.get_cached_server_version(server)
         if server_version.get('interface') == 'slicemgr':
@@ -1023,6 +1055,9 @@ or with an slice hrn, shows currently provisioned resources
             #    delegated_cred = self.delegate_cred(slice_cred, server_version['hrn'])
             #elif server_version.get('urn'):
             #    delegated_cred = self.delegate_cred(slice_cred, urn_to_hrn(server_version['urn']))
+
+        if options.show_credential:
+            show_credentials(creds)
 
         # rspec
         rspec_file = self.get_rspec_file(args[1])
@@ -1089,6 +1124,8 @@ or with an slice hrn, shows currently provisioned resources
         # options and call_id when supported
         api_options = {}
         api_options ['call_id'] = unique_call_id()
+        if options.show_credential:
+            show_credentials(creds)
         result = server.DeleteSliver(slice_urn, creds, *self.ois(server, api_options ) )
         value = ReturnValue.get_value(result)
         if self.options.raw:
@@ -1117,6 +1154,8 @@ or with an slice hrn, shows currently provisioned resources
         # options and call_id when supported
         api_options = {}
         api_options['call_id']=unique_call_id()
+        if options.show_credential:
+            show_credentials(creds)
         result = server.SliverStatus(slice_urn, creds, *self.ois(server,api_options))
         value = ReturnValue.get_value(result)
         if self.options.raw:
@@ -1215,6 +1254,8 @@ or with an slice hrn, shows currently provisioned resources
         # options and call_id when supported
         api_options = {}
 	api_options['call_id']=unique_call_id()
+        if options.show_credential:
+            show_credentials(creds)
         result =  server.RenewSliver(slice_urn, creds, input_time, *self.ois(server,api_options))
         value = ReturnValue.get_value(result)
         if self.options.raw:
