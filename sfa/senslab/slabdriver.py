@@ -461,18 +461,19 @@ class SlabDriver(Driver):
         hrn = sfa_record['hrn']
         record_id = sfa_record['record_id']
         if sfa_record_type == 'user':
-            #ldap_uid = hrn.split(".")[len(hrn.split(".")) -1]
-            #get user in ldap  
-            persons = self.GetPersons(sfa_record)
-            # only delete this person if he has site ids. if he doesnt, it probably means
-            # he was just removed from a site, not actually deleted
-            if persons and persons[0]['site_ids']:
-                #TODO : delete person in LDAP
+
+            #get user from senslab ldap  
+            person = self.GetPersons(sfa_record)
+            #No registering at a given site in Senslab.
+            #Once registered to the LDAP, all senslab sites are
+            #accesible.
+            if person :
+                #Mark account as disabled in ldap
                 self.DeletePerson(sfa_record)
         elif sfa_record_type == 'slice':
             if self.GetSlices(slice_filter = hrn, \
                                     slice_filter_type = 'slice_hrn'):
-                self.DeleteSlice(hrn)
+                self.DeleteSlice(sfa_record_type)
 
         #elif type == 'authority':
             #if self.GetSites(pointer):
@@ -568,17 +569,20 @@ class SlabDriver(Driver):
     
 
     def DeleteJobs(self, job_id, slice_hrn):
-        if not job_id:
+        if not job_id or job_id is -1:
             return
         username  = slice_hrn.split(".")[-1].rstrip("_slice")
         reqdict = {}
         reqdict['method'] = "delete"
         reqdict['strval'] = str(job_id)
+       
         answer = self.oar.POSTRequestToOARRestAPI('DELETE_jobs_id', \
-                                                        reqdict,username)
+                                                    reqdict,username)
         logger.debug("SLABDRIVER \tDeleteJobs jobid  %s \r\n answer %s "  \
-                                                    %(job_id,answer))
+                                                %(job_id,answer))
         return answer
+
+            
         
         ##TODO : Unused GetJobsId ? SA 05/07/12
     #def GetJobsId(self, job_id, username = None ):
@@ -1395,7 +1399,7 @@ class SlabDriver(Driver):
         return
 
     
-
+    #TODO : Check rights to delete person 
     def DeletePerson(self, auth, person_record):
         """ Disable an existing account in senslab LDAP.
         Users and techs can only delete themselves. PIs can only 
@@ -1407,12 +1411,16 @@ class SlabDriver(Driver):
         """
         #Disable user account in senslab LDAP
         ret = self.ldap.LdapMarkUserAsDeleted(person_record)
-        logger.warning("SLABDRIVER DeletePerson EMPTY - DO NOTHING \r\n ")
+        logger.warning("SLABDRIVER DeletePerson %s " %(person_record))
         return ret
     
-    #TODO DeleteSlice 04/07/2012 SA
-    def DeleteSlice(self, auth, slice_id_or_name):
+    #TODO Check DeleteSlice, check rights 05/07/2012 SA
+    def DeleteSlice(self, auth, slice_record):
         """ Deletes the specified slice.
+         Senslab : Kill the job associated with the slice if there is one
+         using DeleteSliceFromNodes.
+         Updates the slice record in slab db to remove the slice nodes.
+         
          Users may only delete slices of which they are members. PIs may 
          delete any of the slices at their sites, or any slices of which 
          they are members. Admins may delete any slice.
@@ -1420,7 +1428,9 @@ class SlabDriver(Driver):
          FROM PLC API DOC
         
         """
-        logger.warning("SLABDRIVER DeleteSlice EMPTY - DO NOTHING \r\n ")
+        self.DeleteSliceFromNodes(slice_record)
+        self.db.update_job(slice_record['hrn'], job_id = -1, nodes = [])
+        logger.warning("SLABDRIVER DeleteSlice %s "%(slice_record))
         return
     
     #TODO AddPerson 04/07/2012 SA
