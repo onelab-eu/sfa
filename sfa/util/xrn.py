@@ -225,17 +225,20 @@ class Xrn:
             raise SfaAPIError, "Xrn.hrn_to_urn, hrn=%s"%self.hrn
 
         if self.type and self.type.startswith('authority'):
-            self.authority = Xrn.hrn_split(self.hrn)
+            self.authority = Xrn.hrn_auth_list(self.hrn)
+            leaf = self.get_leaf() 
+            if not self.authority:
+                self.authority = [self.hrn]
             type_parts = self.type.split("+")
             self.type = type_parts[0]
             name = 'sa'
             if len(type_parts) > 1:
                 name = type_parts[1]
+            authority_string = ":".join([self.get_authority_urn(), leaf])
         else:
             self.authority = Xrn.hrn_auth_list(self.hrn)
             name = Xrn.hrn_leaf(self.hrn)
-
-        authority_string = self.get_authority_urn()
+            authority_string = self.get_authority_urn()
 
         if self.type == None:
             urn = "+".join(['',authority_string,Xrn.unescape(name)])

@@ -76,7 +76,10 @@ class PlXrn (Xrn):
 
     def pl_login_base (self):
         self._normalize()
-        base = self.authority[-1]
+        if self.type and self.type.startswith('authority'):
+            base = self.leaf 
+        else:
+            base = self.authority[-1]
         
         # Fix up names of GENI Federates
         base = base.lower()

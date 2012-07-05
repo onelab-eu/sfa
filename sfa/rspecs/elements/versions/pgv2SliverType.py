@@ -15,8 +15,11 @@ class PGv2SliverType:
             sliver_elem = xml.add_element('sliver_type')
             if sliver.get('type'):
                 sliver_elem.set('name', sliver['type'])
-            if sliver.get('client_id'):
-                sliver_elem.set('client_id', sliver['client_id'])
+            attrs = ['client_id', 'cpus', 'memory', 'storage']
+            for attr in attrs:
+                if sliver.get(attr):
+                    sliver_elem.set(attr, sliver[attr])
+            
             images = sliver.get('disk_image')
             if images and isinstance(images, list):
                 PGv2DiskImage.add_images(sliver_elem, images)      

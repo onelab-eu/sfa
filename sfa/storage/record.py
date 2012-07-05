@@ -91,7 +91,7 @@ class Record:
             # handle gid 
             if attrib_name == 'gid':
                 print "    gid:"      
-                print GID(attrib).dump_string(8, dump_parents)
+                print GID(string=attrib).dump_string(8, dump_parents)
             elif attrib_name in ['date created', 'last updated']:
                 print "    %s: %s" % (attrib_name, self.date_repr(attrib_name))
             else:

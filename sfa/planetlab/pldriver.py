@@ -749,8 +749,8 @@ class PlDriver (Driver):
             requested_lease = {}
             if not lease.get('lease_id'):
                requested_lease['hostname'] = xrn_to_hostname(lease.get('component_id').strip())
-               requested_lease['t_from'] = lease.get('t_from')
-               requested_lease['t_until'] = lease.get('t_until')
+               requested_lease['start_time'] = lease.get('start_time')
+               requested_lease['duration'] = lease.get('duration')
             else:
                kept_leases.append(int(lease['lease_id']))
             if requested_lease.get('hostname'):

@@ -6,6 +6,6 @@ class Lease(Element):
         'lease_id',
         'component_id',
         'slice_id'
-        't_from',
-        't_until',    
+        'start_time',
+        'duration',    
     ]
