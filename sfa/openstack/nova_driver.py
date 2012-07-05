@@ -118,7 +118,8 @@ class NovaDriver(Driver):
             self.shell.auth_manager.roles.add_user_role(user, slice_tenant, 'user')
         keys = sfa_records.get('keys', [])
         for key in keys:
-            self.shell.nova_client.keypairs.create(name, key)
+            keyname = OSXrn(xrn=hrn, type='user').get_slicename()
+            self.shell.nova_client.keypairs.create(keyname, key)
         return user
 
     def register_authority(self, sfa_record, hrn):
