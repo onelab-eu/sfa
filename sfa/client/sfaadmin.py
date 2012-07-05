@@ -375,7 +375,7 @@ class SfaAdmin:
         return (full_name,SfaAdmin.CATEGORIES[full_name])
 
     def summary_usage (self, category=None):
-        print "Usage:", self.script_name + " category action [<options>]"
+        print "Usage:", self.script_name + " category command [<options>]"
         if category and category in SfaAdmin.CATEGORIES: 
             categories=[category]
         else:
@@ -414,7 +414,7 @@ class SfaAdmin:
         if not category_name or not category_class:
             self.summary_usage(category_name)
 
-        usage = "%%prog %s action [options]" % (category_name)
+        usage = "%%prog %s command [options]" % (category_name)
         parser = OptionParser(usage=usage)
     
         # ensure command is valid      
@@ -427,7 +427,7 @@ class SfaAdmin:
             command_input = argv.pop(0)
             command_name = Candidates (commands).only_match (command_input)
     
-        if hasattr(category_instance, command_name):
+        if command_name and hasattr(category_instance, command_name):
             command = getattr(category_instance, command_name)
         else:
             self.summary_usage(category_name)
