@@ -1,8 +1,6 @@
-
-#import string
 import random
 from passlib.hash import ldap_salted_sha1 as lssha
-from sfa.util.xrn import Xrn,get_authority 
+from sfa.util.xrn import get_authority 
 import ldap
 from sfa.util.config import Config
 from sfa.trust.hierarchy import Hierarchy
@@ -91,10 +89,10 @@ class LDAPapi :
     def __init__(self):
         logger.setLevelDebug() 
         #SFA related config
-        self.senslabauth=Hierarchy()
-        config=Config()
+        self.senslabauth = Hierarchy()
+        config = Config()
         
-        self.authname=config.SFA_REGISTRY_ROOT_AUTH
+        self.authname = config.SFA_REGISTRY_ROOT_AUTH
 
         self.conn =  ldap_co() 
         self.ldapUserQuotaNFS = self.conn.config.LDAP_USER_QUOTA_NFS 
@@ -257,6 +255,7 @@ class LDAPapi :
         dealing with a list of records instead of doing a for loop in GetPersons   
         Helper function to make LDAP filter requests out of SFA records.
         """
+        req_ldap = ''
         req_ldapdict = {}
         if record :
             if 'first_name' in record  and 'last_name' in record:
@@ -266,6 +265,11 @@ class LDAPapi :
                 req_ldapdict['mail'] = record['email']
             if 'mail' in record:
                 req_ldapdict['mail'] = record['mail']
+            if 'enabled' in record:
+                if record['enabled'] == True :
+                    req_ldapdict['shadowExpire'] = '-1'
+                else:
+                    req_ldapdict['shadowExpire'] = '0'
                 
             #Hrn should not be part of the filter because the hrn 
             #presented by a certificate of a SFA user not imported in 
@@ -284,17 +288,17 @@ class LDAPapi :
                 #login=splited_hrn[1]
                 #req_ldapdict['uid'] = login
             
-            req_ldap=''
+
             logger.debug("\r\n \t LDAP.PY make_ldap_filters_from_record \
                                 record %s req_ldapdict %s" \
                                 %(record, req_ldapdict))
             
             for k in req_ldapdict:
-                req_ldap += '('+str(k)+'='+str(req_ldapdict[k])+')'
+                req_ldap += '('+ str(k)+ '=' + str(req_ldapdict[k]) + ')'
             if  len(req_ldapdict.keys()) >1 :
                 req_ldap = req_ldap[:0]+"(&"+req_ldap[0:]
                 size = len(req_ldap)
-                req_ldap= req_ldap[:(size-1)] +')'+ req_ldap[(size-1):]
+                req_ldap = req_ldap[:(size-1)] +')'+ req_ldap[(size-1):]
         else:
             req_ldap = "(cn=*)"
         
@@ -423,7 +427,7 @@ class LDAPapi :
         #Find uid of the  person 
         person = self.LdapFindUser(record_filter,[])
         logger.debug("LDAPapi.py \t LdapDeleteUser record %s person %s" \
-        %(record_filter,person))
+        %(record_filter, person))
 
         if person:
             dn = 'uid=' + person['uid'] + "," +self.baseDN 
@@ -471,7 +475,7 @@ class LDAPapi :
             return {'bool': False}
         if person_list is None :
             logger.error("LDAP \t LdapModifyUser  User %s doesn't exist "\
-                        %(user_uid_login))
+                        %(user_record))
             return {'bool': False} 
         
         # The dn of our existing entry/object
@@ -494,6 +498,19 @@ class LDAPapi :
             logger.error("LDAP \t LdapModifyUser  No new attributes given. ")
             return {'bool': False} 
             
+            
+            
+            
+    def LdapMarkUserAsDeleted(self, record): 
+
+        
+        new_attrs = {}
+        #Disable account
+        new_attrs['shadowExpire'] = '0'
+        logger.debug(" LDAPapi.py \t LdapMarkUserAsDeleted ")
+        ret = self.LdapModifyUser(record, new_attrs)
+        return ret
+
             
     def LdapResetPassword(self,record):
         """
@@ -522,20 +539,22 @@ class LDAPapi :
             
             return_fields_list = []
             if expected_fields == None : 
-                return_fields_list = ['mail','givenName', 'sn', 'uid','sshPublicKey']
+                return_fields_list = ['mail','givenName', 'sn', 'uid', \
+                                        'sshPublicKey', 'shadowExpire']
             else : 
                 return_fields_list = expected_fields
-            #No specifc request specified, gert the whole LDAP    
+            #No specifc request specified, get the whole LDAP    
             if req_ldap == None:
                 req_ldap = '(cn=*)'
                
             logger.debug("LDAP.PY \t LdapSearch  req_ldap %s \
-                            return_fields_list %s" %(req_ldap,return_fields_list))
+                                    return_fields_list %s" \
+                                    %(req_ldap, return_fields_list))
 
             try:
                 msg_id = self.conn.ldapserv.search(
                                             self.baseDN,ldap.SCOPE_SUBTREE,\
-                                            req_ldap,return_fields_list)     
+                                            req_ldap, return_fields_list)     
                 #Get all the results matching the search from ldap in one 
                 #shot (1 value)
                 result_type, result_data = \
@@ -556,22 +575,32 @@ class LDAPapi :
                 logger.error("LDAP.PY \t Connection Failed" )
                 return 
             
-
-    def LdapFindUser(self,record = None, expected_fields = None):
+    def LdapFindDisabledUsers(self):
+        return self.LdapSearch('(shadowExpire=-0)', []) 
+        
+    def LdapFindUser(self, record = None, is_user_enabled=None, \
+            expected_fields = None):
         """
         Search a SFA user with a hrn. User should be already registered 
         in Senslab LDAP. 
         Returns one matching entry 
-        """   
+        """  
+        if is_user_enabled: 
+            custom_record = {}
+            custom_record['enabled'] = is_user_enabled
+        if record:  
+            custom_record.update(record)
 
-        req_ldap = self.make_ldap_filters_from_record(record) 
+
+        req_ldap = self.make_ldap_filters_from_record(custom_record)     
         return_fields_list = []
         if expected_fields == None : 
-            return_fields_list = ['mail','givenName', 'sn', 'uid','sshPublicKey']
+            return_fields_list = ['mail','givenName', 'sn', 'uid', \
+                                    'sshPublicKey']
         else : 
             return_fields_list = expected_fields
             
-        result_data = self.LdapSearch(req_ldap,  return_fields_list )
+        result_data = self.LdapSearch(req_ldap, return_fields_list )
         logger.debug("LDAP.PY \t LdapFindUser  result_data %s" %(result_data))
            
         if len(result_data) is 0:
