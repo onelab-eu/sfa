@@ -574,9 +574,6 @@ class LDAPapi :
             else:
                 logger.error("LDAP.PY \t Connection Failed" )
                 return 
-            
-    def LdapFindDisabledUsers(self):
-        return self.LdapSearch('(shadowExpire=-0)', []) 
         
     def LdapFindUser(self, record = None, is_user_enabled=None, \
             expected_fields = None):
