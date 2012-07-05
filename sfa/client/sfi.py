@@ -40,6 +40,7 @@ from sfa.client.sfaclientlib import SfaClientBootstrap
 from sfa.client.sfaserverproxy import SfaServerProxy, ServerException
 from sfa.client.client_helper import pg_users_arg, sfa_users_arg
 from sfa.client.return_value import ReturnValue
+from sfa.client.candidates import Candidates
 
 CM_PORT=12346
 
@@ -502,7 +503,14 @@ class Sfi:
             self.print_command_help(options)
             return -1
     
-        command = args[0]
+        # complete / find unique match with command set
+        command_candidates = Candidates (self.available_names)
+        input = args[0]
+        command = command_candidates.only_match(input)
+        if not command:
+            self.print_command_help(options)
+            sys.exit(1)
+        # second pass options parsing
         self.command_parser = self.create_command_parser(command)
         (command_options, command_args) = self.command_parser.parse_args(args[1:])
         self.command_options = command_options
