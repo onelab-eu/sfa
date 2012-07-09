@@ -412,9 +412,11 @@ class NovaDriver(Driver):
             res['geni_urn'] = sliver_id
 
             if instance.vm_state == 'running':
-                res['boot_state'] = 'ready';
+                res['boot_state'] = 'ready'
+                res['geni_status'] = 'ready'
             else:
                 res['boot_state'] = 'unknown'  
+                res['geni_status'] = 'unknown'
             resources.append(res)
             
         result['geni_status'] = top_level_status
