@@ -13,3 +13,31 @@ class Candidates:
         if len(matches)==1: return matches[0]
         else: return None
 
+#################### minimal test
+candidates_specs=[
+('create delete reset resources slices start status stop version', 
+  [ ('ver','version'),
+    ('r',None),
+    ('re',None),
+    ('res',None),
+    ('rese','reset'),
+    ('reset','reset'),
+    ('reso','resources'),
+    ('sli','slices'),
+    ('st',None),
+    ('sta',None),
+    ('stop','stop'),
+    ('a',None),
+])
+]
+
+def test_candidates ():
+    for (names, tuples) in candidates_specs:
+        names=names.split()
+        for (input,expected) in tuples:
+            got=Candidates(names).only_match(input)
+            if got==expected: print '.',
+            else: print 'X FAIL','names[',names,'] input',input,'expected',expected,'got',got
+
+if __name__ == '__main__':
+    test_candidates()
