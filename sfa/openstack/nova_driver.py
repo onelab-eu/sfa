@@ -118,7 +118,8 @@ class NovaDriver(Driver):
             self.shell.auth_manager.roles.add_user_role(user, slice_tenant, 'user')
         keys = sfa_records.get('keys', [])
         for key in keys:
-            self.shell.nova_client.keypairs.create(name, key)
+            keyname = OSXrn(xrn=hrn, type='user').get_slicename()
+            self.shell.nova_client.keypairs.create(keyname, key)
         return user
 
     def register_authority(self, sfa_record, hrn):
@@ -411,9 +412,11 @@ class NovaDriver(Driver):
             res['geni_urn'] = sliver_id
 
             if instance.vm_state == 'running':
-                res['boot_state'] = 'ready';
+                res['boot_state'] = 'ready'
+                res['geni_status'] = 'ready'
             else:
                 res['boot_state'] = 'unknown'  
+                res['geni_status'] = 'unknown'
             resources.append(res)
             
         result['geni_status'] = top_level_status

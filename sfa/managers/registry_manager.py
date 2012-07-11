@@ -311,6 +311,7 @@ class RegistryManager:
                 api.auth.hierarchy.create_auth(hrn_to_urn(hrn,'authority'))
     
             # get the GID from the newly created authority
+            auth_info = api.auth.get_auth_info(hrn)
             gid = auth_info.get_gid_object()
             record.gid=gid.save_to_string(save_parents=True)
 

@@ -54,7 +54,8 @@ class OpenstackImporter:
             hrn = OSXrn(name=user.name, auth=auth_hrn, type='user').get_hrn()
             users_dict[hrn] = user
             old_keys = old_user_keys.get(hrn, [])
-            keys = [k.public_key for k in self.shell.nova_manager.keypairs.findall(name=hrn)]
+            keyname = OSXrn(xrn=hrn, type='user').get_slicename()
+            keys = [k.public_key for k in self.shell.nova_manager.keypairs.findall(name=keyname)]
             user_keys[hrn] = keys
             update_record = False
             if old_keys != keys:

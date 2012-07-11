@@ -27,6 +27,9 @@ class Importer:
         else:
             self.logger = _SfaLogger(logfile='/var/log/sfa_import.log', loggername='importlog')
             self.logger.setLevelFromOptVerbose(self.config.SFA_API_LOGLEVEL)
+# ugly side effect so that other modules get it right
+        import sfa.util.sfalogging
+        sfa.util.sfalogging.logger=logger
 #        self.TrustedRoots = TrustedRoots(self.config.get_trustedroots_dir())    
    
     # check before creating a RegRecord entry as we run this over and over
