@@ -294,8 +294,8 @@ class Sfi:
         ("get_ticket", "slice_hrn rspec"),
         ("redeem_ticket", "ticket"),
         ("delegate", "name"),
-        ("create_gid", "[name]"),
-        ("get_trusted_certs", "cred"),
+        ("gid", "[name]"),
+        ("trusted", "cred"),
         ("config", ""),
         ]
 
@@ -401,7 +401,7 @@ class Sfi:
 
 
         # 'create' does return the new rspec, makes sense to save that too
-        if command in ("resources", "show", "list", "create_gid", 'create'):
+        if command in ("resources", "show", "list", "gid", 'create'):
            parser.add_option("-o", "--output", dest="file",
                             help="output XML to file", metavar="FILE", default=None)
 
@@ -517,7 +517,7 @@ class Sfi:
 
         self.read_config () 
         self.bootstrap ()
-        self.logger.info("Command=%s" % command)
+        self.logger.debug("Command=%s" % command)
 
         try:
             self.dispatch(command, command_options, command_args)
@@ -608,7 +608,8 @@ class Sfi:
     
     # init self-signed cert, user credentials and gid
     def bootstrap (self):
-        client_bootstrap = SfaClientBootstrap (self.user, self.reg_url, self.options.sfi_dir)
+        client_bootstrap = SfaClientBootstrap (self.user, self.reg_url, self.options.sfi_dir,
+                                               logger=self.logger)
         # if -k is provided, use this to initialize private key
         if self.options.user_private_key:
             client_bootstrap.init_private_key_if_missing (self.options.user_private_key)
@@ -1365,7 +1366,7 @@ or with an slice hrn, shows currently provisioned resources
                 self.logger.log_exc(e.message)
         return
 
-    def create_gid(self, options, args):
+    def gid(self, options, args):
         """
         Create a GID (CreateGid)
         """
@@ -1408,7 +1409,7 @@ or with an slice hrn, shows currently provisioned resources
 
         self.logger.info("delegated credential for %s to %s and wrote to %s"%(object_hrn, delegee_hrn,dest_fn))
     
-    def get_trusted_certs(self, options, args):
+    def trusted(self, options, args):
         """
         return uhe trusted certs at this interface (get_trusted_certs)
         """ 
@@ -1417,7 +1418,7 @@ or with an slice hrn, shows currently provisioned resources
             gid = GID(string=trusted_cert)
             gid.dump()
             cert = Certificate(string=trusted_cert)
-            self.logger.debug('Sfi.get_trusted_certs -> %r'%cert.get_subject())
+            self.logger.debug('Sfi.trusted -> %r'%cert.get_subject())
         return 
 
     def config (self, options, args):

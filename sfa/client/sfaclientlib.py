@@ -295,6 +295,7 @@ class SfaClientBootstrap:
                         return filename
                     else:
                         # remove invalid file
+                        self.logger.warning ("Removing %s - has expired"%filename)
                         os.unlink(filename) 
                 try:
                     produce_method (self, filename, *args, **kw)

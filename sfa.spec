@@ -1,6 +1,6 @@
 %define name sfa
 %define version 2.1
-%define taglevel 12
+%define taglevel 13
 
 %define release %{taglevel}%{?pldistro:.%{pldistro}}%{?date:.%{date}}
 %global python_sitearch	%( python -c "from distutils.sysconfig import get_python_lib; print get_python_lib(1)" )
@@ -248,6 +248,10 @@ fi
 [ "$1" -ge "1" ] && service sfa-cm restart || :
 
 %changelog
+* Wed Jul 11 2012 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-2.1-13
+- bugfix that prevented to call 'sfi create' - (was broken in sfa-2.1-12)
+- sfi to remove expired credentials
+
 * Tue Jul 10 2012 Tony Mack <tmack@cs.princeton.edu> - sfa-2.1-12
 - Update Openstack driver to support Essex release/
 - Fix authority xrn bug.
