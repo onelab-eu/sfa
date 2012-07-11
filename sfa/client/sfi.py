@@ -517,7 +517,7 @@ class Sfi:
 
         self.read_config () 
         self.bootstrap ()
-        self.logger.info("Command=%s" % command)
+        self.logger.debug("Command=%s" % command)
 
         try:
             self.dispatch(command, command_options, command_args)
