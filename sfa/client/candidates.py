@@ -9,13 +9,14 @@ class Candidates:
     # returns one of the names if the input name has a unique match
     # or None otherwise
     def only_match (self, input):
+        if input in self.names: return input
         matches=[ name for name in self.names if Candidates.fits(input,name) ]
         if len(matches)==1: return matches[0]
         else: return None
 
 #################### minimal test
 candidates_specs=[
-('create delete reset resources slices start status stop version', 
+('create delete reset resources slices start status stop version create_gid', 
   [ ('ver','version'),
     ('r',None),
     ('re',None),
@@ -28,6 +29,12 @@ candidates_specs=[
     ('sta',None),
     ('stop','stop'),
     ('a',None),
+    ('cre',None),
+    ('create','create'),
+    ('create_','create_gid'),
+    ('create_g','create_gid'),
+    ('create_gi','create_gid'),
+    ('create_gid','create_gid'),
 ])
 ]
 
