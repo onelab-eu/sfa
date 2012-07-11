@@ -608,7 +608,8 @@ class Sfi:
     
     # init self-signed cert, user credentials and gid
     def bootstrap (self):
-        client_bootstrap = SfaClientBootstrap (self.user, self.reg_url, self.options.sfi_dir)
+        client_bootstrap = SfaClientBootstrap (self.user, self.reg_url, self.options.sfi_dir,
+                                               logger=self.logger)
         # if -k is provided, use this to initialize private key
         if self.options.user_private_key:
             client_bootstrap.init_private_key_if_missing (self.options.user_private_key)
