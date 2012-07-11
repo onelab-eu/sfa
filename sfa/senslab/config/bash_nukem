@@ -5,6 +5,10 @@ git_local_repo=~/flab-sfa
 # Nuke the database 
 sudo sfaadmin.py registry nuke
 
+# Drop table in slab_sfa
+# to avoid duplicates.
+psql -d slab_sfa -U sfa -W -q -c "drop table slice_senslab;"
+
 # ATTENTION :Save the config file /etc/sfa/sfa_config
 # before continuing
 
@@ -15,35 +19,35 @@ cd /etc/sfa
 sudo rm -rf *
 sudo service sfa restart
 
-# Drop table in slab_sfa
-# to avoid duplicates.
-psql -d slab_sfa -U sfa -W -q -c "drop table slice_senslab;"
+
 
 # Put back the config file that you saved before
-cd $git_local_repo/sfa/senslab/
+cd $git_local_repo
 
 sudo make clean
 make
 sudo python setup.py install
-sudo service sfa restart
+# sudo service sfa restart
 
 # Wrote /etc/sfa/configs/site.xml
 # Merged
 #         /etc/sfa/default_config.xml
 # and     /etc/sfa/configs/site.xml
 # into    /etc/sfa/sfa_config.xml
-
+# sudo sfa-config-tty
 sudo cp $git_local_repo/sfa/senslab/config/sfa_config /etc/sfa/sfa_config
 sudo cp $git_local_repo/sfa/senslab/config/sfa_config.xml /etc/sfa/sfa_config.xml
-sudo cp $git_local_repo/sfa/senslab/config/site.xml  /etc/sfa/configs/site.xml
+sudo cp $git_local_repo/sfa/senslab/config/site.xml  /etc/sfa/site.xml
 # sudo ln -s ldap_config.py  /etc/sfa/ldap_config.py
 sudo cp $git_local_repo/sfa/senslab/config/ldap_config.py  /etc/sfa/ldap_config.py 
-
+sudo service sfa restart
 # User stuff : clean your folder
 cd  ~/.sfi
-rm *.sscert *.cred *.gid
+rm *.sscert *.cred *.gid sfi_cache.dat
 cd ~
 
 # Import the datbase form ldap
 sudo sfaadmin.py registry import_registry
 sudo service sfa restart
+
+sudo rm -rf /var/lib/sfa/authorities/plc
