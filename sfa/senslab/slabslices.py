@@ -143,6 +143,7 @@ class SlabSlices:
         peer):
         
         leases = self.driver.GetLeases({'name':sfa_slice['name']}, ['lease_id'])
+        grain = self.driver.GetLeaseGranularity()
         if leases : 
             current_leases = [lease['lease_id'] for lease in leases]
             deleted_leases = list(set(current_leases).difference(kept_leases))
@@ -154,8 +155,8 @@ class SlabSlices:
                 deleted = self.driver.DeleteLeases(deleted_leases)
                 for lease in requested_leases:
                     added = self.driver.AddLeases(lease['hostname'], \
-                            sfa_slice['name'], int(lease['t_from']), \
-                            int(lease['t_until']))
+                            sfa_slice['name'], int(lease['start_time']), \
+                            int(lease['duration']))
             #TODO : catch other exception?
             except KeyError: 
                 logger.log_exc('Failed to add/remove slice leases')

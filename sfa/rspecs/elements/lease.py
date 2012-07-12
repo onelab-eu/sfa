@@ -5,7 +5,7 @@ class Lease(Element):
     fields = [
         'lease_id',
         'component_id',
-        'slice_id'
+        'slice_id',
         'start_time',
         'duration',    
     ]

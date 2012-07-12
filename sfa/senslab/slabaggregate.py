@@ -15,6 +15,7 @@ from sfa.rspecs.elements.node import Node
 #from sfa.rspecs.elements.services import Services
 from sfa.rspecs.elements.sliver import Sliver
 from sfa.rspecs.elements.lease import Lease
+from sfa.rspecs.elements.granularity import Granularity
 from sfa.rspecs.version_manager import VersionManager
 
 #from sfa.util.sfatime import datetime_to_epoch
@@ -106,6 +107,9 @@ class SlabAggregate:
         # So i assume that slice['node_ids'] will be the same as slivers for us
         #filter_dict = {}
         tags_filter = {}
+        
+        # get the granularity in second for the reservation system
+        grain = self.driver.GetLeaseGranularity()
         
         # Commenting this part since all nodes should be returned, 
         # even if a slice is provided
@@ -208,6 +212,9 @@ class SlabAggregate:
                 #if_count+=1
         
             #tags = [PLTag(node_tags[tag_id]) for tag_id in node['node_tag_ids']]
+            # Granularity
+            granularity = Granularity({'grain': grain})
+            rspec_node['granularity'] = granularity
             rspec_node['tags'] = []
             if node['hostname'] in slivers:
                 # add sliver info
@@ -231,9 +238,10 @@ class SlabAggregate:
         #if slice_record:
             #lease_filter.update({'name': slice_record['name']})
         return_fields = ['lease_id', 'hostname', 'site_id', \
-                            'name', 't_from', 't_until']
+                            'name', 'start_time', 'duration']
         #leases = self.driver.GetLeases(lease_filter)
         leases = self.driver.GetLeases()
+        grain = self.driver.GetLeaseGranularity()
         site_ids = []
         rspec_leases = []
         for lease in leases:
@@ -310,7 +318,7 @@ class SlabAggregate:
     
                     rspec.version.add_default_sliver_attribute(attrib['tagname'], \
                                                                 attrib['value'])   
-        if options.get('list_leases') :
+        if options.get('list_leases') or options.get('list_leases') and options['list_leases'] != 'resources':
             leases = self.get_leases(slices)
             rspec.version.add_leases(leases)
         return rspec.toxml()          

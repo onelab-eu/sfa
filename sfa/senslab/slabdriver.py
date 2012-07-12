@@ -194,8 +194,8 @@ class SlabDriver(Driver):
             if not lease.get('lease_id'):
                 requested_lease['hostname'] = \
                             xrn_to_hostname(lease.get('component_id').strip())
-                requested_lease['t_from'] = lease.get('t_from')
-                requested_lease['t_until'] = lease.get('t_until')
+                requested_lease['start_time'] = lease.get('start_time')
+                requested_lease['duration'] = lease.get('duration')
             else:
                 kept_leases.append(int(lease['lease_id']))
             if requested_lease.get('hostname'):
@@ -1113,7 +1113,12 @@ class SlabDriver(Driver):
         return   
     
  
-
+    def GetLeaseGranularity(self):
+        """ Returns the granularity of Senslab testbed.
+        Defined in seconds. """
+        
+        grain = 60 
+        return grain
     
     def GetLeases(self, lease_filter_dict=None, return_fields_list=None):
         unfiltered_reservation_list = self.GetReservedNodes()
