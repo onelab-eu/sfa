@@ -253,8 +253,8 @@ class SlabAggregate:
                 rspec_lease['component_id'] = hostname_to_urn(self.driver.hrn, \
                                         site, node['hostname'])
                 rspec_lease['slice_id'] = lease['slice_id']
-                rspec_lease['t_from'] = lease['t_from']
-                rspec_lease['t_until'] = lease['t_until']   
+                rspec_lease['start_time'] = lease['t_from']
+                rspec_lease['duration'] = (lease['t_until'] - lease['t_from']) / grain   
                 rspec_leases.append(rspec_lease)
         return rspec_leases    
         
