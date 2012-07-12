@@ -35,46 +35,6 @@ from sfa.senslab.slabaggregate import SlabAggregate
 from sfa.senslab.slabslices import SlabSlices
 
 
-def __process_walltime(duration=None):
-    """ Calculates the walltime in seconds from the duration in H:M:S
-        specified in the RSpec.
-        
-    """
-    if duration:
-        walltime = duration.split(":")
-        # Fixing the walltime by adding a few delays. First put the walltime 
-        # in seconds oarAdditionalDelay = 20; additional delay for 
-        # /bin/sleep command to
-        # take in account  prologue and epilogue scripts execution
-        # int walltimeAdditionalDelay = 120;  additional delay
-
-        desired_walltime = int(walltime[0])*3600 + int(walltime[1]) * 60 +\
-                                                            int(walltime[2])
-        total_walltime = desired_walltime + 140 #+2 min 20
-        sleep_walltime = desired_walltime + 20 #+20 sec
-        logger.debug("SLABDRIVER \t__process_walltime desired_walltime %s\
-                                total_walltime %s sleep_walltime %s  "\
-                                    %(desired_walltime, total_walltime, \
-                                                    sleep_walltime))
-        #Put the walltime back in str form
-        #First get the hours
-        walltime[0] = str(total_walltime / 3600)
-        total_walltime = total_walltime - 3600 * int(walltime[0])
-        #Get the remaining minutes
-        walltime[1] = str(total_walltime / 60)
-        total_walltime = total_walltime - 60 * int(walltime[1])
-        #Get the seconds
-        walltime[2] = str(total_walltime)
-        logger.debug("SLABDRIVER \t__process_walltime walltime %s "\
-                                        %(walltime))
-    else:
-        #automatically set 10min  +2 min 20
-        walltime[0] = '0'
-        walltime[1] = '12' 
-        walltime[2] = '20'
-        sleep_walltime = '620'
-        
-    return walltime, sleep_walltime
 
 
 
@@ -490,8 +450,7 @@ class SlabDriver(Driver):
         existing_hrns_by_types = {}
         logger.debug("SLABDRIVER \tGetPeers auth = %s, peer_filter %s, \
                     return_field %s " %(auth , peer_filter, return_fields_list))
-        all_records = dbsession.query(RegRecord).\
-                                filter(RegRecord.type.like('%authority%')).all()
+        all_records = dbsession.query(RegRecord).filter(RegRecord.type.like('%authority%')).all()
         for record in all_records:
             existing_records[(record.hrn, record.type)] = record
             if record.type not in existing_hrns_by_types:
@@ -791,12 +750,10 @@ class SlabDriver(Driver):
                                                 %(authorized_filter_types_list))
         if slice_filter_type in authorized_filter_types_list:
             if slice_filter_type == 'slice_hrn':
-                slicerec = slab_dbsession.query(SliceSenslab).\
-                                    filter_by(slice_hrn = slice_filter).first()
+                slicerec = slab_dbsession.query(SliceSenslab).filter_by(slice_hrn = slice_filter).first()
                                         
             if slice_filter_type == 'record_id_user':
-                slicerec = slab_dbsession.query(SliceSenslab).\
-                                filter_by(record_id_user = slice_filter).first()
+                slicerec = slab_dbsession.query(SliceSenslab).filter_by(record_id_user = slice_filter).first()
                 
             if slicerec:
                 #warning pylint OK
@@ -1003,7 +960,48 @@ class SlabDriver(Driver):
         custom_length = len(reqdict['resource'])- 2
         reqdict['resource'] = reqdict['resource'][0:custom_length] + \
                                             ")}/nodes=" + str(len(nodeid_list))
+                                            
+        def __process_walltime(duration=None):
+            """ Calculates the walltime in seconds from the duration in H:M:S
+                specified in the RSpec.
+                
+            """
+            if duration:
+                walltime = duration.split(":")
+                # Fixing the walltime by adding a few delays. First put the walltime 
+                # in seconds oarAdditionalDelay = 20; additional delay for 
+                # /bin/sleep command to
+                # take in account  prologue and epilogue scripts execution
+                # int walltimeAdditionalDelay = 120;  additional delay
         
+                desired_walltime = int(walltime[0])*3600 + int(walltime[1]) * 60 +\
+                                                                    int(walltime[2])
+                total_walltime = desired_walltime + 140 #+2 min 20
+                sleep_walltime = desired_walltime + 20 #+20 sec
+                logger.debug("SLABDRIVER \t__process_walltime desired_walltime %s\
+                                        total_walltime %s sleep_walltime %s  "\
+                                            %(desired_walltime, total_walltime, \
+                                                            sleep_walltime))
+                #Put the walltime back in str form
+                #First get the hours
+                walltime[0] = str(total_walltime / 3600)
+                total_walltime = total_walltime - 3600 * int(walltime[0])
+                #Get the remaining minutes
+                walltime[1] = str(total_walltime / 60)
+                total_walltime = total_walltime - 60 * int(walltime[1])
+                #Get the seconds
+                walltime[2] = str(total_walltime)
+                logger.debug("SLABDRIVER \t__process_walltime walltime %s "\
+                                                %(walltime))
+            else:
+                #automatically set 10min  +2 min 20
+                walltime[0] = '0'
+                walltime[1] = '12' 
+                walltime[2] = '20'
+                sleep_walltime = '620'
+                
+            return walltime, sleep_walltime
+                
         #if slot['duration']:
         walltime, sleep_walltime = __process_walltime(duration = \
                                                             slot['duration'])
@@ -1129,8 +1127,7 @@ class SlabDriver(Driver):
             user = dbsession.query(RegUser).filter_by(email = \
                                                 ldap_info['mail'][0]).first()
            
-            slice_info = slab_dbsession.query(SliceSenslab).\
-                            filter_by(record_id_user = user.record_id).first()
+            slice_info = slab_dbsession.query(SliceSenslab).filter_by(record_id_user = user.record_id).first()
             #Put the slice_urn 
             resa['slice_id'] = hrn_to_urn(slice_info.slice_hrn, 'slice')
             resa['component_id_list'] = []
@@ -1206,8 +1203,7 @@ class SlabDriver(Driver):
                     #therefore fetches user and slice info again(one more loop)
                     #Will update PIs and researcher for the slice
                     recuser = dbsession.query(RegRecord).filter_by(record_id = \
-                                                recslice['record_id_user']).\
-                                                first()
+                                                recslice['record_id_user']).first()
                     recslice.update({'PI':[recuser.hrn],
                     'researcher': [recuser.hrn],
                     'name':record['hrn'], 
