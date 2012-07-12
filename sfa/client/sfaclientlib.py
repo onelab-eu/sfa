@@ -9,6 +9,7 @@
 
 import sys
 import os,os.path
+from datetime import datetime
 
 import sfa.util.sfalogging
 # importing sfa.utils.faults does pull a lot of stuff 
@@ -19,7 +20,7 @@ from sfa.client.sfaserverproxy import SfaServerProxy
 
 # see optimizing dependencies below
 from sfa.trust.certificate import Keypair, Certificate
-
+from sfa.trust.credential import Credential
 ########## 
 # a helper class to implement the bootstrapping of crypto. material
 # assuming we are starting from scratch on the client side 
@@ -185,6 +186,17 @@ class SfaClientBootstrap:
         self.logger.debug("SfaClientBootstrap: Wrote GID for %s (%s) in %s"% (hrn,type,output))
         return output
 
+
+    # Returns True if credential file is valid. Otherwise return false.
+    def validate_credential(self, filename):
+        valid = True
+        cred = Credential(filename=filename)
+        # check if credential is expires
+        if cred.get_expiration() < datetime.now():
+            valid = False
+        return valid
+    
+
     #################### public interface
     
     # return my_gid, run all missing steps in the bootstrap sequence
@@ -271,11 +283,20 @@ class SfaClientBootstrap:
 
 
     # decorator to make up the other methods
-    def get_or_produce (filename_method, produce_method):
+    def get_or_produce (filename_method, produce_method, validate_method=None):
+        # default validator returns true
         def wrap (f):
             def wrapped (self, *args, **kw):
                 filename=filename_method (self, *args, **kw)
-                if os.path.isfile ( filename ): return filename
+                if os.path.isfile ( filename ):
+                    if not validate_method:
+                        return filename
+                    elif validate_method(self, filename): 
+                        return filename
+                    else:
+                        # remove invalid file
+                        self.logger.warning ("Removing %s - has expired"%filename)
+                        os.unlink(filename) 
                 try:
                     produce_method (self, filename, *args, **kw)
                     return filename
@@ -293,19 +314,19 @@ class SfaClientBootstrap:
     @get_or_produce (self_signed_cert_filename, self_signed_cert_produce)
     def self_signed_cert (self): pass
 
-    @get_or_produce (my_credential_filename, my_credential_produce)
+    @get_or_produce (my_credential_filename, my_credential_produce, validate_credential)
     def my_credential (self): pass
 
     @get_or_produce (my_gid_filename, my_gid_produce)
     def my_gid (self): pass
 
-    @get_or_produce (credential_filename, credential_produce)
+    @get_or_produce (credential_filename, credential_produce, validate_credential)
     def credential (self, hrn, type): pass
 
-    @get_or_produce (slice_credential_filename, slice_credential_produce)
+    @get_or_produce (slice_credential_filename, slice_credential_produce, validate_credential)
     def slice_credential (self, hrn): pass
 
-    @get_or_produce (authority_credential_filename, authority_credential_produce)
+    @get_or_produce (authority_credential_filename, authority_credential_produce, validate_credential)
     def authority_credential (self, hrn): pass
 
     @get_or_produce (gid_filename, gid_produce)
