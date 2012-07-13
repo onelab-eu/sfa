@@ -223,6 +223,9 @@ def TestOAR(job_id = None):
     print "\r\n OAR  GetTimezone ",server_timestamp, server_tz
     print(datetime.fromtimestamp(int(server_timestamp)).strftime('%Y-%m-%d %H:%M:%S'))
 
+    uri = '/oarapi/resources/full.json'
+    raw_json = get_stuff(oar,uri)
+    print "\r\n OAR  ",uri, raw_json, "\r\n KKK \t",raw_json.keys()
     
    
     return
