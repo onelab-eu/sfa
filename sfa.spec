@@ -25,7 +25,6 @@ Summary: the SFA python libraries
 Group: Applications/System
 BuildRequires: make
 
-Requires: myplc-config
 Requires: python >= 2.5
 Requires: pyOpenSSL >= 0.7
 Requires: m2crypto

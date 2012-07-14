@@ -1,96 +1,116 @@
-##
-# SFA Configuration Info
-#
-# This module holds configuration parameters for SFA. There are two
-# main pieces of information that are used: the database connection and
-# the PLCAPI connection
-##
+#!/usr/bin/python
+import sys
+import os
+import ConfigParser
+import tempfile
+from sfa.util.xml import XML
 
-##
-# SFA uses a MYSQL database to store records. This database may be
-# co-located with the PLC database, or it may be a separate database. The
-# following parameters define the connection to the database.
-#
-# Note that SFA does not access any of the PLC databases directly via
-# a mysql connection; All PLC databases are accessed via PLCAPI.
-
-import os.path
-import traceback
+default_config = \
+"""
+"""
 
 class Config:
-    """
-    Parse the bash/Python/PHP version of the configuration file. Very
-    fast but no type conversions.
-    """
+  
+    def __init__(self, config_file='/etc/sfa/sfa_config'):
+        self.config = ConfigParser.ConfigParser()  
+        self.filename = config_file
+        if not os.path.isfile(self.filename):
+            self.create(self.filename)
+        self.load(self.filename)
 
-    def __init__(self, config_file = "/etc/sfa/sfa_config.py"):
-        self.config_file = None
-        self.config_path = None
-        self.data_path = None
-        self.load(config_file)
+    def create(self, filename):
+        if not os.path.exists(os.path.dirname(filename)):
+            os.makedirs(os.path.dirname(filename))
+        configfile = open(filename, 'w')
+        configfile.write(default_config)
+        configfile.close()
+        
 
-    def load(self, config_file):
-        try:
-            execfile(config_file, self.__dict__)
-            self.config_file = config_file
-            # path to configuration data
-            self.config_path = os.path.dirname(config_file)
-            
-            ### xxx todo implement defaults in default_config.xml 
-            # path to server data
-            if not hasattr(self, 'SFA_DATA_DIR'):
-                # default to /var/lib/sfa not specified in config
-                self.SFA_DATA_DIR="/var/lib/sfa"
-                self.data_path = self.SFA_DATA_DIR
-            else:
-                self.data_path = self.SFA_DATA_DIR
-                
-            # path to config data
-            if not hasattr(self, 'SFA_CONFIG_DIR'):
-                # default to /etc/sfa not specified in config
-                self.SFA_CONFIG_DIR="/etc/sfa"
-
-            if not hasattr(self, 'SFA_REGISTRY_LEVEL1_AUTH'):
-                self.SFA_REGISTRY_LEVEL1_AUTH=None
-
-            # create the data directory if it doesnt exist
-            if not os.path.isdir(self.SFA_DATA_DIR):
+    def load(self, filename):
+        if filename:
+            if filename.endswith('.xml'):
                 try:
-                    os.mkdir(self.SFA_DATA_DIR)
-                except: pass
-             
-        except IOError, e:
-            raise IOError, "Could not find or load the configuration file: %s" % config_file
+                    self.load_xml(filename)
+                except:
+                    raise 
+                    self.config.read(filename)
+            else:
+                self.config.read(filename)
+        self.set_attributes()
+                
+    def load_xml(self, filename):
+        xml = XML(filename)
+        categories = xml.xpath('//configuration/variables/category')
+        for category in categories:
+            section_name = category.get('id')
+            if not self.config.has_section(section_name):
+                self.config.add_section(section_name)
+            options = category.xpath('./variablelist/variable')
+            for option in options:
+                option_name = option.get('id')
+                value = option.xpath('./value')[0].text
+                if not value:
+                    value = ""
+                self.config.set(section_name, option_name, value)
+         
 
-    def get_trustedroots_dir(self):
-        return self.config_path + os.sep + 'trusted_roots'
+    def locate_varname(self, varname):
+        varname = varname.lower()
+        sections = self.config.sections()
+        section_name = ""
+        var_name = ""
+        for section in sections:
+            if varname.startswith(section.lower()) and len(section) > len(section_name):
+                section_name = section.lower()
+                var_name = varname.replace(section_name, "")[1:]
+        if not self.config.has_option(section_name, var_name):
+            raise ConfigParser.NoOptionError(varname, section_name)
+        return (section_name, var_name)             
 
-    def get_openflow_aggrMgr_info(self):
-        aggr_mgr_ip = 'localhost'
-        if (hasattr(self,'OPENFLOW_AGGREGATE_MANAGER_IP')):
-            aggr_mgr_ip = self.OPENFLOW_AGGREGATE_MANAGER_IP
+    def set_attributes(self):
+        sections = self.config.sections()
+        for section in sections:
+            for item in self.config.items(section):
+                name = "%s_%s" % (section, item[0])
+                value = item[1]
+                setattr(self, name, value)
+                setattr(self, name.upper(), value)
+        
 
-        aggr_mgr_port = 2603
-        if (hasattr(self,'OPENFLOW_AGGREGATE_MANAGER_PORT')):
-            aggr_mgr_port = self.OPENFLOW_AGGREGATE_MANAGER_PORT
+    def verify(self, config1, config2, validate_method):
+        return True
 
-        return (aggr_mgr_ip,aggr_mgr_port)
+    def validate_type(self, var_type, value):
+        return True
 
-    def get_interface_hrn(self):
-        if (hasattr(self,'SFA_INTERFACE_HRN')):
-            return self.SFA_INTERFACE_HRN
-        else:
-            return "plc"
+    def dump(self, sections = []):
+        if not sections:
+            sections = self.config.sections() 
+        print "" 
+        for section in sections:
+            print "[%s]" % section
+            for item in self.config.items(section):
+                print "%s=%s" % (item[0], item[1])
+            print "" 
+        
+    def write(self, filename=None):
+        if not filename:
+            filename = self.filename
+        configfile = open(filename, 'w') 
+        self.config.write(configfile)
+    
+    def save(self, filename=None):
+        self.write(filename)
 
-    # TODO: find a better place to put this method
-    def get_max_aggrMgr_info(self):
-        am_apiclient_path = '/usr/local/MAXGENI_AM_APIClient'
-        if (hasattr(self,'MAXGENI_AM_APICLIENT_PATH')):
-            am_client_path = self.MAXGENI_AM_APICLIENT_PATH
+    def __getattr__(self, attr):
+        return getattr(self.config, attr)
 
-        am_url = 'https://geni.dragon.maxgigapop.net:8443/axis2/services/AggregateGENI'
-        if (hasattr(self,'MAXGENI_AM_URL')):
-            am_url = self.MAXGENI_AM_URL
-
-        return (am_apiclient_path,am_url)
-
+if __name__ == '__main__':
+    filename = None
+    if len(sys.argv) > 1:
+        filename = sys.argv[1]
+        config = Config(filename)
+    else:    
+        config = Config()
+    config.dump()
+    
