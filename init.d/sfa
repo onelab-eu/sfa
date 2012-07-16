@@ -10,8 +10,8 @@
 
 # source function library
 . /etc/init.d/functions
-
 # Default locations
+set -x
 PGDATA=/var/lib/pgsql/data
 postgresql_conf=$PGDATA/postgresql.conf
 pghba_conf=$PGDATA/pg_hba.conf
@@ -94,11 +94,11 @@ function reload () {
     done
 
     # Convert configuration to various formats
-    if [ -n "$force" -o $sfa_whole_config -nt /etc/sfa/sfa_config ] ; then
-	sfa-config --python $sfa_whole_config > /etc/sfa/sfa_config
+    if [ -n "$force" -o $sfa_local_config -nt $sfa_whole_config ] ; then
+	sfa-config --python $sfa_default_config $sfa_local_config > $sfa_whole_config
     fi
     if [ -n "$force" -o $sfa_whole_config -nt /etc/sfa/sfa_config.sh ] ; then
-	sfa-config --shell $sfa_whole_config > /etc/sfa/sfa_config.sh
+	sfa-config --shell $sfa_default_config $sfa_local_config > /etc/sfa/sfa_config.sh
     fi
 #    if [ -n "$force" -o $sfa_whole_config -nt /etc/sfa/php/sfa_config.php ] ; then
 #	mkdir -p /etc/sfa/php
@@ -121,7 +121,7 @@ function reload () {
 function db_start () {
     
     # only if enabled
-    [ "$SFA_DB_ENABLED" == 1 ] || return
+    [ "$SFA_DB_ENABLED" == 1 -o "$SFA_DB_ENABLED" == true ] || return
 
     if ! rpm -q myplc >& /dev/null; then
 
