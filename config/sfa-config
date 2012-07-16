@@ -1,0 +1,168 @@
+#!/usr/bin/python
+#
+# Script for basic access to the SFA configuration file store.
+#
+# $Id$
+#
+
+import sys
+import os
+import fcntl
+import getopt
+import signal
+from sfa.util.config import Config
+
+
+def usage():
+    print """
+Script to access the SFA configuration file store.
+    
+Usage: %s [OPTION]... [FILES]
+        Conversion:
+
+        --shell         Output shell configuration file
+        --python        Output Python configuration file
+        --php           Output PHP configuration file
+
+        Information:
+
+        --variables     List names of all variables
+        --packages      List names of all packages
+        --comps         List comps.xml from configuration
+
+        Basic variable value manipulation:
+
+        --category=     Category identifier
+        --variable=     Variable identifier
+        --value=        Variable value
+
+        Basic package list manipulation:
+
+        --group=        Package group identifier
+        --package=      Package name
+        --type=         Package type
+
+        Miscellaneous:
+
+        -h, --help      This message
+        -s, --save      Save changes to first configuration file
+""".lstrip() % sys.argv[0]
+    sys.exit(1)
+
+
+def deprecated (message):
+    print "%s: deprecated usage"%sys.argv[0]
+    print message
+    sys.exit(1)
+
+def main():
+    config = Config()
+    fileobjs = []
+    output = None
+    category = {}
+    variable = {}
+    group = {}
+    package = {}
+    save = False
+
+    # Standard options
+    shortopts = "hs:"
+    longopts = ["shell", "bash", "python",
+                "php",
+                "xml",
+                "variables",
+                "packages",
+                "groups",
+                "comps",
+                "category=", "variable=", "value=",
+                "group=", "package=", "type=",
+                "help",
+                "save="]
+
+    try:
+        (opts, argv) = getopt.gnu_getopt(sys.argv[1:], shortopts, longopts)
+    except Exception, err:
+        sys.stderr.write("Error: " + str(err) + os.linesep)
+        sys.exit(1)
+
+    for (opt, optval) in opts:
+        if opt == "--shell" or \
+             opt == "--bash":
+            output = config.output_shell
+        elif opt == "--python":
+            output = config.output_python
+        elif opt == "--php":
+            output = config.output_php
+        elif opt == "--xml":
+            output = config.output_xml
+        elif opt == "--variables":
+            output = config.output_variables
+        elif opt == "--packages":
+            deprecated("option --packages deprecated -- use .lst files instead")
+        elif opt == "--groups":
+            deprecated("option --groups deprecated -- use .lst files instead")
+        elif opt == "--comps":
+            deprecated("option --comps deprecated -- use .lst files instead")
+        elif opt == "--category":
+            category['id'] = optval
+        elif opt == "--variable":
+            variable['id'] = optval
+        elif opt == "--value":
+            variable['value'] = optval
+        elif opt == "--group":
+#            group['id'] = optval
+            deprecated("option --group deprecated -- use .lst files instead")
+        elif opt == "--package":
+#            package['name'] = optval
+            deprecated("option --package deprecated -- use .lst files instead")
+        elif opt == "--type":
+            package['type'] = optval
+        elif opt == '-s' or opt == "--save":
+            if not optval:
+                usage()
+            print 'parsed save option',optval
+            save = optval
+        elif opt == '-h' or opt == "--help":
+            usage()
+
+    # Try the default
+    if not argv:
+        argv = ["/etc/sfa/sfa_config"]
+
+    # Merge all files
+    for file in argv:
+        try:
+            config.load(file)
+        except IOError:
+            pass
+        except Exception, err:
+            sys.stderr.write("Error: %s: %s" % (file, str(err)) + os.linesep)
+            sys.exit(1)
+
+    # --category, --variable, --value
+    if category.has_key('id') and variable.has_key('id'):
+        if variable.has_key('value'):
+            config.set(category['id'], variable['id'], variable['value'])
+        else:
+            value = config.get(category['id'], variable['id'])
+            print value
+
+    # --shell, --php, --xml
+    if output is not None:
+        sys.stdout.write(output())
+
+    # --save
+    if save:
+        # create directory if needed
+        # so that plc.d/{api,postgres} can create configs/site.xml 
+        dirname = os.path.dirname (save)
+        if (not os.path.exists (dirname)):
+            os.makedirs(dirname,0755)
+            if (not os.path.exists (dirname)):
+                print "Cannot create dir %s - exiting" % dirname
+                sys.exit(1)
+        config.save(save)
+
+
+if __name__ == '__main__':
+    main()
