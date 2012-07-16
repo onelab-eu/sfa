@@ -127,7 +127,8 @@ DO NOT EDIT. This file was automatically generated at
                 # bash does not have the concept of NULL
                 if value:
                     option = "%s_%s" % (section.upper(), name.upper())
-                    value = "'%s'" % value  
+                    if not value.isdigit() and not bool(value):
+                        value = "'%s'" % value  
                     buf.write(option + "=" + value + os.linesep)
         return buf.getvalue()        
 
