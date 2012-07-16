@@ -1,8 +1,11 @@
 #!/usr/bin/python
 import sys
 import os
+import time
 import ConfigParser
 import tempfile
+import codecs
+from StringIO import StringIO
 from sfa.util.xml import XML
 
 default_config = \
@@ -12,11 +15,25 @@ default_config = \
 class Config:
   
     def __init__(self, config_file='/etc/sfa/sfa_config'):
+        self._files = []
+        self.config_path = os.path.dirname(config_file)
         self.config = ConfigParser.ConfigParser()  
         self.filename = config_file
         if not os.path.isfile(self.filename):
             self.create(self.filename)
         self.load(self.filename)
+        
+
+    def _header(self):
+        header = """
+DO NOT EDIT. This file was automatically generated at
+%s from:
+
+%s
+""" % (time.asctime(), os.linesep.join(self._files))
+
+        # Get rid of the surrounding newlines
+        return header.strip().split(os.linesep)
 
     def create(self, filename):
         if not os.path.exists(os.path.dirname(filename)):
@@ -32,10 +49,10 @@ class Config:
                 try:
                     self.load_xml(filename)
                 except:
-                    raise 
                     self.config.read(filename)
             else:
                 self.config.read(filename)
+        self._files.append(filename)
         self.set_attributes()
                 
     def load_xml(self, filename):
@@ -84,14 +101,74 @@ class Config:
         return True
 
     def dump(self, sections = []):
-        if not sections:
-            sections = self.config.sections() 
-        print "" 
-        for section in sections:
-            print "[%s]" % section
-            for item in self.config.items(section):
-                print "%s=%s" % (item[0], item[1])
-            print "" 
+        sys.stdout.write(output_python())
+
+    def output_python(self, encoding = "utf-8"):
+        buf = codecs.lookup(encoding)[3](StringIO())
+        buf.writelines(["# " + line + os.linesep for line in self._header()]) 
+        
+        for section in self.sections():
+            buf.write("[%s]%s" % (section, os.linesep))
+            for (name,value) in self.items(section):
+                buf.write("%s=%s%s" % (name,value,os.linesep))
+            buf.write(os.linesep)
+        return buf.getvalue()
+                
+    def output_shell(self, show_comments = True, encoding = "utf-8"):
+        """
+        Return variables as a shell script.
+        """
+
+        buf = codecs.lookup(encoding)[3](StringIO())
+        buf.writelines(["# " + line + os.linesep for line in self._header()])
+
+        for section in self.sections():
+            for (name,value) in self.items(section):
+                # bash does not have the concept of NULL
+                if value:
+                    option = "%s_%s" % (section.upper(), name.upper())
+                    value = "'%s'" % value  
+                    buf.write(option + "=" + value + os.linesep)
+        return buf.getvalue()        
+
+    def output_php(selfi, encoding = "utf-8"):
+        """
+        Return variables as a PHP script.
+        """
+
+        buf = codecs.lookup(encoding)[3](StringIO())
+        buf.write("<?php" + os.linesep)
+        buf.writelines(["// " + line + os.linesep for line in self._header()])
+
+        for section in self.sections():
+            for (name,value) in self.items(section):
+                option = "%s_%s" % (section, name)
+                buf.write(os.linesep)
+                buf.write("// " + option + os.linesep)
+                if value is None:
+                    value = 'NULL'
+                buf.write("define('%s', %s);" % (option, value) + os.linesep)
+
+        buf.write("?>" + os.linesep)
+
+        return buf.getvalue()    
+
+    def output_xml(self, encoding = "utf-8"):
+        pass
+
+    def output_variables(self):
+        """
+        Return list of all variable names.
+        """
+
+        buf = codecs.lookup(encoding)[3](StringIO())
+        for section in self.sections():
+            for (name,value) in self.items(section):
+                option = "%s_%s" % (section,name) 
+                buf.write(option + os.linesep)
+
+        return buf.getvalue()
+        pass 
         
     def write(self, filename=None):
         if not filename:
@@ -101,6 +178,27 @@ class Config:
     
     def save(self, filename=None):
         self.write(filename)
+
+
+    def get_trustedroots_dir(self):
+        return self.config_path + os.sep + 'trusted_roots'
+
+    def get_openflow_aggrMgr_info(self):
+        aggr_mgr_ip = 'localhost'
+        if (hasattr(self,'openflow_aggregate_manager_ip')):
+            aggr_mgr_ip = self.OPENFLOW_AGGREGATE_MANAGER_IP
+
+        aggr_mgr_port = 2603
+        if (hasattr(self,'openflow_aggregate_manager_port')):
+            aggr_mgr_port = self.OPENFLOW_AGGREGATE_MANAGER_PORT
+
+        return (aggr_mgr_ip,aggr_mgr_port)
+
+    def get_interface_hrn(self):
+        if (hasattr(self,'sfa_interface_hrn')):
+            return self.SFA_INTERFACE_HRN
+        else:
+            return "plc"
 
     def __getattr__(self, attr):
         return getattr(self.config, attr)
