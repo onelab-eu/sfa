@@ -155,8 +155,8 @@ def print_name_comments (config, cid, vid):
 ####################
 def list_categories (config):
     result=[]
-    for (category_id, (category, variables)) in config.variables().iteritems():
-        result += [category_id]
+    for section in config.sections():
+        result += [section]
     return result
 
 def print_categories (config):
@@ -167,10 +167,10 @@ def print_categories (config):
 ####################
 def list_category (config, cid):
     result=[]
-    for (category_id, (category, variables)) in config.variables().iteritems():
-        if (cid == category_id):
-            for variable in variables.values():
-                result += ["%s_%s" %(cid,variable['id'])]
+    for section in config.sections():
+        if section == cid.lower():
+            for (name,value) in config.items(section):
+                result += ["%s_%s" %(cid,name)]    
     return result
 
 def print_category (config, cid, show_comments=True):
