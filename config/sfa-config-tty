@@ -335,7 +335,7 @@ def mainloop (cdef, cread, cwrite, default_config, site_config, consolidated_con
     global service
     while True:
         try:
-            answer = raw_input("Enter command (u for usual changes, w to save, ? for help) ").strip()
+            answer = raw_input("Enter command (u for usual changes, w to save, ? for help) ").strip(" ")
         except EOFError:
             answer =""
         except KeyboardInterrupt:
