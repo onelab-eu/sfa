@@ -15,12 +15,23 @@ from sfa.util.sfalogging import logger
 class Slabv1Node:
     @staticmethod
     def add_nodes(xml, nodes):
-
+        #Add network item in the xml
+        network_elems = xml.xpath('//network')
+        if len(network_elems) > 0:
+            network_elem = network_elems[0]
+        elif len(nodes) > 0 and nodes[0].get('component_manager_id'):
+            network_urn = nodes[0]['component_manager_id']
+            network_elem = xml.add_element('network', name = Xrn(network_urn).get_hrn())
+        else:
+            network_elem = xml
+            
+        logger.debug("slabv1Node \t add_nodes")
         node_elems = []
+        #Then add nodes items to the network item in the xml
         for node in nodes:
             node_fields = ['component_manager_id', 'component_id', \
                         'client_id', 'sliver_id', 'exclusive','boot_state']
-            node_elem = xml.add_instance('node', node, node_fields)
+            node_elem = network_elem.add_instance('node', node, node_fields)
             node_elems.append(node_elem)
             # set component name
             if node.get('component_id'):
@@ -35,7 +46,11 @@ class Slabv1Node:
             if node.get('location'):
                 node_elem.add_instance('location', node['location'], \
                                                         Location.fields)
-
+             # add granularity of the reservation system
+            granularity = node.get('granularity')
+            if granularity:
+                node_elem.add_instance('granularity', granularity, granularity.fields)
+                
             # set interfaces
             #if node.get('interfaces'):
                 #for interface in  node.get('interfaces', []):
@@ -155,13 +170,6 @@ class Slabv1Node:
                 slivers = Slabv1Sliver.get_slivers(node.element)
                 for sliver in slivers:
                     node.element.remove(sliver.element) 
-if __name__ == '__main__':
-    from sfa.rspecs.rspec import RSpec
-
-    r = RSpec('/tmp/slab.rspec')
-    r2 = RSpec(version = 'slab')
-    getnodes = Slabv1Node.get_nodes(r.xml)
-    Slabv1Node.add_nodes(r2.xml.root, getnodes)
 
         
                                     

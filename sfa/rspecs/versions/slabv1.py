@@ -7,6 +7,9 @@ from sfa.rspecs.elements.versions.slabv1Lease import Slabv1Lease
 from sfa.rspecs.elements.versions.slabv1Node import Slabv1Node
 from sfa.rspecs.elements.versions.slabv1Sliver import Slabv1Sliver
 from sfa.rspecs.elements.versions.slabv1Timeslot import Slabv1Timeslot
+
+from sfa.rspecs.elements.versions.sfav1Lease import SFAv1Lease
+
 from sfa.util.sfalogging import logger
  
 class Slabv1(RSpecVersion):
@@ -27,9 +30,11 @@ class Slabv1(RSpecVersion):
     
     # Network 
     def get_networks(self):
-        network_elems = self.xml.xpath('//network')
+        network_elems = self.xml.xpath('//network | //default:network') 
+        logger.debug(" slabv1 \tget_networks network_elems %s  "%(network_elems) )
         networks = [network_elem.get_instance(fields=['name', 'slice']) for \
                     network_elem in network_elems]
+        logger.debug(" slabv1 \tget_networks  %s"%(networks))
         return networks    
 
 
@@ -142,6 +147,7 @@ class Slabv1(RSpecVersion):
             node_elem = node_elems[0]
             
             # determine sliver types for this node
+            #TODO : add_slivers valid type of sliver needs to be changed 13/07/12 SA
             valid_sliver_types = ['slab-node', 'emulab-openvz', 'raw-pc', 'plab-vserver', 'plab-vnode']
             #valid_sliver_types = ['emulab-openvz', 'raw-pc', 'plab-vserver', 'plab-vnode']
             requested_sliver_type = None
@@ -190,41 +196,54 @@ class Slabv1(RSpecVersion):
 
     def remove_slivers(self, slivers, network=None, no_dupes=False):
         Slabv1Node.remove_slivers(self.xml, slivers) 
-
-
-
+        
+        
     # Utility
-
+ 
     def merge(self, in_rspec):
         """
         Merge contents for specified rspec with current rspec
         """
-        from sfa.rspecs.rspec import RSpec
-        # just copy over all the child elements under the root element
-        if isinstance(in_rspec, basestring):
-            in_rspec = RSpec(in_rspec)
 
-        nodes = in_rspec.version.get_nodes()
-        # protogeni rspecs need to advertise the availabel sliver types
-        for node in nodes:
-            if not node.has_key('sliver') or not node['sliver']:
-                node['sliver'] = {'name': 'slab-node'}
-            
-        self.add_nodes(nodes)
-        #self.add_links(in_rspec.version.get_links())
+        if not in_rspec:
+            return
         
-        #
-        #rspec = RSpec(in_rspec)
-        #for child in rspec.xml.iterchildren():
-        #    self.xml.root.append(child)
+        from sfa.rspecs.rspec import RSpec
+       
+        if isinstance(in_rspec, RSpec):
+            rspec = in_rspec
+        else:
+            rspec = RSpec(in_rspec)
+        if rspec.version.type.lower() == 'protogeni':
+            from sfa.rspecs.rspec_converter import RSpecConverter
+            in_rspec = RSpecConverter.to_sfa_rspec(rspec.toxml())
+            rspec = RSpec(in_rspec)
+        logger.debug(" SLABV1 \tmerge rspec %s " %(rspec.toxml()) )
+        # just copy over all networks
+        #Attention special get_networks using //default:network xpath
+        current_networks = self.get_networks() 
+        logger.debug(" SLABV1\tmerge rspec version %s" %(rspec.version))
+        networks = rspec.version.get_networks()
+        logger.debug("SLABV1 \tmerge current_networks %s networks  %s " %(current_networks, networks) ) 
+        for network in networks:
+            current_network = network.get('name')
+            if current_network and current_network not in current_networks:
+                self.xml.append(network.element)
+                current_networks.append(current_network)
+
+
+
+
         
     # Leases
 
     def get_leases(self, lease_filter=None):
-        return Slabv1Lease.get_leases(self.xml, lease_filter)
+        return SFAv1Lease.get_leases(self.xml, lease_filter)
+        #return Slabv1Lease.get_leases(self.xml, lease_filter)
 
     def add_leases(self, leases, network = None, no_dupes=False):
-        Slabv1Lease.add_leases(self.xml, leases)    
+        SFAv1Lease.add_leases(self.xml, leases)
+        #Slabv1Lease.add_leases(self.xml, leases)    
 
     def cleanup(self):
         # remove unncecessary elements, attributes

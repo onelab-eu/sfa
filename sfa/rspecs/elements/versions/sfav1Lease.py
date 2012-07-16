@@ -22,7 +22,7 @@ class SFAv1Lease:
 
     @staticmethod
     def add_leases(xml, leases):
-        
+        logger.debug("SFAV1LEASE \t add_lease ")
         network_elems = xml.xpath('//network')
         if len(network_elems) > 0:
             network_elem = network_elems[0]
@@ -37,6 +37,7 @@ class SFAv1Lease:
             lease_fields = ['lease_id', 'component_id', 'slice_id', 'start_time', 'duration']
             lease_elem = network_elem.add_instance('lease', lease, lease_fields)
             lease_elems.append(lease_elem)
+            logger.debug("SFAV1LEASE \t add_lease lease %s" %(lease))
 
 
     @staticmethod

@@ -313,12 +313,14 @@ class SlabAggregate:
                 logger.debug("SlabAggregate \tget_rspec **** \
                         default_sliver_attribs %s \r\n" %(default_sliver_attribs))
                 for attrib in default_sliver_attribs:
-                    logger.debug("SlabAggregate \tget_rspec ******* attrib %s \r\n"\
-                                            %(attrib))
+                    
     
                     rspec.version.add_default_sliver_attribute(attrib['tagname'], \
                                                                 attrib['value'])   
         if options.get('list_leases') or options.get('list_leases') and options['list_leases'] != 'resources':
             leases = self.get_leases(slices)
             rspec.version.add_leases(leases)
+            
+        logger.debug("SlabAggregate \tget_rspec ******* rspec_toxml %s \r\n"\
+                                            %(rspec.toxml())) 
         return rspec.toxml()          
