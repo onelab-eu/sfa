@@ -395,14 +395,17 @@ class NovaDriver(Driver):
         if instances:
             top_level_status = 'ready'
         result['geni_urn'] = slice_urn
-        result['plos_login'] = 'root' 
+        result['plos_login'] = 'root'
+        # do we need real dates here? 
         result['plos_expires'] = None
+        result['geni_expires'] = None
         
         resources = []
         for instance in instances:
             res = {}
             # instances are accessed by ip, not hostname. We need to report the ip
             # somewhere so users know where to ssh to.     
+            res['geni_expires'] = None
             res['plos_hostname'] = instance.hostname
             res['plos_created_at'] = datetime_to_string(utcparse(instance.created_at))    
             res['plos_boot_state'] = instance.vm_state
