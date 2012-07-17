@@ -11,7 +11,13 @@ from sfa.rspecs.elements.interface import Interface
 from sfa.rspecs.elements.versions.slabv1Sliver import Slabv1Sliver
 from sfa.util.sfalogging import logger
 
-
+class SlabNode(Node):
+    #First get the fields already defined in the class Node
+    fields = list(Node.fields)
+    #Extend it with senslab's specific fields
+    fields.extend (['archi','radio','mobile'])
+    
+    
 class Slabv1Node:
     @staticmethod
     def add_nodes(xml, nodes):
@@ -25,12 +31,12 @@ class Slabv1Node:
         else:
             network_elem = xml
             
-        logger.debug("slabv1Node \t add_nodes")
+        logger.debug("slabv1Node \t add_nodes nodes %s"%(nodes))
         node_elems = []
         #Then add nodes items to the network item in the xml
         for node in nodes:
-            node_fields = ['component_manager_id', 'component_id', \
-                        'client_id', 'sliver_id', 'exclusive','boot_state']
+            node_fields = ['component_manager_id', 'component_id', 'exclusive',\
+                        'boot_state', 'mobile']
             node_elem = network_elem.add_instance('node', node, node_fields)
             node_elems.append(node_elem)
             # set component name
@@ -40,8 +46,10 @@ class Slabv1Node:
             # set hardware types
             if node.get('hardware_types'):
                 for hardware_type in node.get('hardware_types', []): 
-                    node_elem.add_instance('hardware_type', hardware_type, \
-                                                    HardwareType.fields)
+                    fields = HardwareType.fields
+                    fields.extend(['archi','radio'])
+                    node_elem.add_instance('hardware_type', node, fields)
+
             # set location
             if node.get('location'):
                 node_elem.add_instance('location', node['location'], \
@@ -63,7 +71,15 @@ class Slabv1Node:
                 else:
                     available_elem = node_elem.add_element('available', \
                                                                 now='false')
-           
+                                                                
+
+            #if node.get('archi'):
+                #archi_elem = node_elem.add_instance('archi',node.get('archi') , ['archi'])
+
+               
+            #if node.get('radio'):
+                #radio_elem = node_elem.add_instance('radio', node.get('radio') , ['radio'])
+          
             ## add services
             #PGv2Services.add_services(node_elem, node.get('services', [])) 
             # add slivers
@@ -72,11 +88,11 @@ class Slabv1Node:
                 # we must still advertise the available sliver types
                 slivers = Sliver({'type': 'slab-node'})
                 # we must also advertise the available initscripts
-                slivers['tags'] = []
-                if node.get('pl_initscripts'): 
-                    for initscript in node.get('pl_initscripts', []):
-                        slivers['tags'].append({'name': 'initscript', \
-                                                'value': initscript['name']})
+                #slivers['tags'] = []
+                #if node.get('pl_initscripts'): 
+                    #for initscript in node.get('pl_initscripts', []):
+                        #slivers['tags'].append({'name': 'initscript', \
+                                                #'value': initscript['name']})
            
             Slabv1Sliver.add_slivers(node_elem, slivers)
         return node_elems

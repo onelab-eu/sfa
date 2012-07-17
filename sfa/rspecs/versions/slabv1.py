@@ -30,11 +30,12 @@ class Slabv1(RSpecVersion):
     
     # Network 
     def get_networks(self):
+        #WARNING Added //default:network to the xpath 
+        #otherwise network element not detected 16/07/12 SA
+        
         network_elems = self.xml.xpath('//network | //default:network') 
-        logger.debug(" slabv1 \tget_networks network_elems %s  "%(network_elems) )
         networks = [network_elem.get_instance(fields=['name', 'slice']) for \
                     network_elem in network_elems]
-        logger.debug(" slabv1 \tget_networks  %s"%(networks))
         return networks    
 
 
@@ -218,13 +219,10 @@ class Slabv1(RSpecVersion):
             from sfa.rspecs.rspec_converter import RSpecConverter
             in_rspec = RSpecConverter.to_sfa_rspec(rspec.toxml())
             rspec = RSpec(in_rspec)
-        logger.debug(" SLABV1 \tmerge rspec %s " %(rspec.toxml()) )
         # just copy over all networks
         #Attention special get_networks using //default:network xpath
         current_networks = self.get_networks() 
-        logger.debug(" SLABV1\tmerge rspec version %s" %(rspec.version))
         networks = rspec.version.get_networks()
-        logger.debug("SLABV1 \tmerge current_networks %s networks  %s " %(current_networks, networks) ) 
         for network in networks:
             current_network = network.get('name')
             if current_network and current_network not in current_networks:
