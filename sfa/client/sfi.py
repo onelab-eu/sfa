@@ -17,6 +17,7 @@ from lxml import etree
 from StringIO import StringIO
 from optparse import OptionParser
 from pprint import PrettyPrinter
+from tempfile import mkstemp
 
 from sfa.trust.certificate import Keypair, Certificate
 from sfa.trust.gid import GID
@@ -527,19 +528,39 @@ class Sfi:
 
         return
     
+    def upgrade_config(self, config_file):
+        """
+        upgrade from shell to ini format
+        """
+        fp, fn = mkstemp(suffix='sfi_config', text=True)
+        try:
+            tmp_config = Config(fn)
+            tmp_config.add_section('sfi')
+            tmp_config.load(config_file)
+            tmp_config.save(config_file)
+        except:
+            raise
+        finally:
+            os.unlink(fn)
+        
+        
     ####################
     def read_config(self):
         config_file = os.path.join(self.options.sfi_dir,"sfi_config")
         try:
            config = Config (config_file)
         except:
-           self.logger.critical("Failed to read configuration file %s"%config_file)
-           self.logger.info("Make sure to remove the export clauses and to add quotes")
-           if self.options.verbose==0:
-               self.logger.info("Re-run with -v for more details")
-           else:
-               self.logger.log_exc("Could not read config file %s"%config_file)
-           sys.exit(1)
+            try:
+                # try upgrading from old config format
+                self.upgrade_config(config_file) 
+            except:
+               self.logger.critical("Failed to read configuration file %s"%config_file)
+               self.logger.info("Make sure to remove the export clauses and to add quotes")
+               if self.options.verbose==0:
+                   self.logger.info("Re-run with -v for more details")
+               else:
+                   self.logger.log_exc("Could not read config file %s"%config_file)
+               sys.exit(1)
      
         errors = 0
         # Set SliceMgr URL
