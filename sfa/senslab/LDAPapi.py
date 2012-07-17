@@ -581,9 +581,10 @@ class LDAPapi :
         Search a SFA user with a hrn. User should be already registered 
         in Senslab LDAP. 
         Returns one matching entry 
-        """  
+        """   
+        custom_record = {}
         if is_user_enabled: 
-            custom_record = {}
+          
             custom_record['enabled'] = is_user_enabled
         if record:  
             custom_record.update(record)
