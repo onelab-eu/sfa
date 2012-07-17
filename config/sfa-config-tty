@@ -258,6 +258,7 @@ def prompt_variable (cdef, cread, cwrite, category, variable,
         else:
             if cdef.validate_type(variable_type, answer):
                 cwrite.set(category_id, variable_id, answer)
+                return
             else:
                 print "Not a valid value"
 
@@ -335,7 +336,7 @@ def mainloop (cdef, cread, cwrite, default_config, site_config, consolidated_con
     global service
     while True:
         try:
-            answer = raw_input("Enter command (u for usual changes, w to save, ? for help) ").strip(" ")
+            answer = raw_input("Enter command (u for usual changes, w to save, ? for help) ").strip()
         except EOFError:
             answer =""
         except KeyboardInterrupt:
