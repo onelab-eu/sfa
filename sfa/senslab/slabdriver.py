@@ -1131,8 +1131,11 @@ class SlabDriver(Driver):
 
             user = dbsession.query(RegUser).filter_by(email = \
                                                 ldap_info['mail'][0]).first()
-           
-            slice_info = slab_dbsession.query(SliceSenslab).filter_by(record_id_user = user.record_id).first()
+            #Separated in case user not in database : record_id not defined SA 17/07//12
+            query_slice_info = slab_dbsession.query(SliceSenslab).filter_by(record_id_user = user.record_id)
+            if query_slice_info:
+                slice_info = query_slice_info.first()
+                
             #Put the slice_urn 
             resa['slice_id'] = hrn_to_urn(slice_info.slice_hrn, 'slice')
             resa['component_id_list'] = []
