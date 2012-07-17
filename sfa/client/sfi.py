@@ -578,7 +578,7 @@ class Sfi:
         elif hasattr(config, "SFI_REGISTRY"):
            self.reg_url = config.SFI_REGISTRY
         else:
-           self.logger.errors("You need to set e.g. SFI_REGISTRY='http://your.registry.url:12345/' in %s" % config_file)
+           self.logger.error("You need to set e.g. SFI_REGISTRY='http://your.registry.url:12345/' in %s" % config_file)
            errors += 1 
 
         # Set user HRN
@@ -587,7 +587,7 @@ class Sfi:
         elif hasattr(config, "SFI_USER"):
            self.user = config.SFI_USER
         else:
-           self.logger.errors("You need to set e.g. SFI_USER='plc.princeton.username' in %s" % config_file)
+           self.logger.error("You need to set e.g. SFI_USER='plc.princeton.username' in %s" % config_file)
            errors += 1 
 
         # Set authority HRN
