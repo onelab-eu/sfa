@@ -157,8 +157,10 @@ def AddNodeRadio(tuplelist, value):
 
 
 def AddMobility(tuplelist, value): 
-    if value :
-        tuplelist.append(('mobile', int(value)))	
+    if value is 0:
+        tuplelist.append(('mobile', 'False'))	
+    else :
+        tuplelist.append(('mobile', 'True'))
 
 def AddPosX(tuplelist, value):
     tuplelist.append(('posx', value))	
