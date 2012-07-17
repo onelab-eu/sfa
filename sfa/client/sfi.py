@@ -536,6 +536,7 @@ class Sfi:
         try:
             tmp_config = Config(fn)
             tmp_config.add_section('sfi')
+            tmp_config.add_section('sface')
             tmp_config.load(config_file)
             tmp_config.save(config_file)
         except:
