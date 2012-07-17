@@ -45,16 +45,16 @@ DO NOT EDIT. This file was automatically generated at
 
     def load(self, filename):
         if filename:
-            if filename.endswith('.xml'):
-                try:
-                    self.load_xml(filename)
-                except:
-                    self.config.read(filename)
-            else:
+            try:
                 self.config.read(filename)
-        self._files.append(filename)
-        self.set_attributes()
-                
+            except:
+                if filename.endswith('.xml'):
+                    self.load_xml(filename)
+                else:
+                    self.load_shell(filename)
+            self._files.append(filename)
+            self.set_attributes()
+
     def load_xml(self, filename):
         xml = XML(filename)
         categories = xml.xpath('//configuration/variables/category')
@@ -70,8 +70,25 @@ DO NOT EDIT. This file was automatically generated at
                     value = ""
                 self.config.set(section_name, option_name, value)
          
+    def load_shell(self, filename):
+        f = open(filename, 'r')
+        for line in f:
+            try:
+                if line.startswith('#'):
+                    continue
+                parts = line.strip().split("=")
+                if len(parts) < 2:
+                    continue
+                option = parts[0]
+                value = parts[1].replace('"', '').replace("'","")
+                section, var = self.locate_varname(option, strict=False)
+                if section and var:
+                    self.set(section, var, value)
+            except:
+                pass
+        f.close()               
 
-    def locate_varname(self, varname):
+    def locate_varname(self, varname, strict=True):
         varname = varname.lower()
         sections = self.config.sections()
         section_name = ""
@@ -80,8 +97,8 @@ DO NOT EDIT. This file was automatically generated at
             if varname.startswith(section.lower()) and len(section) > len(section_name):
                 section_name = section.lower()
                 var_name = varname.replace(section_name, "")[1:]
-        if not self.config.has_option(section_name, var_name):
-            raise ConfigParser.NoOptionError(varname, section_name)
+        if strict and not self.config.has_option(section_name, var_name):
+            raise ConfigParser.NoOptionError(var_name, section_name)
         return (section_name, var_name)             
 
     def set_attributes(self):
