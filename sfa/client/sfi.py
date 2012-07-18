@@ -549,19 +549,21 @@ class Sfi:
     def read_config(self):
         config_file = os.path.join(self.options.sfi_dir,"sfi_config")
         try:
-           config = Config (config_file)
+            if Config.is_ini(config_file):
+                config = Config (config_file)
+            else:
+                # try upgrading from shell config format
+                self.upgrade_config(config_file)
+                config = Config(config_file)
+                 
         except:
-            try:
-                # try upgrading from old config format
-                self.upgrade_config(config_file) 
-            except:
-               self.logger.critical("Failed to read configuration file %s"%config_file)
-               self.logger.info("Make sure to remove the export clauses and to add quotes")
-               if self.options.verbose==0:
-                   self.logger.info("Re-run with -v for more details")
-               else:
-                   self.logger.log_exc("Could not read config file %s"%config_file)
-               sys.exit(1)
+            self.logger.critical("Failed to read configuration file %s"%config_file)
+            self.logger.info("Make sure to remove the export clauses and to add quotes")
+            if self.options.verbose==0:
+                self.logger.info("Re-run with -v for more details")
+            else:
+                self.logger.log_exc("Could not read config file %s"%config_file)
+            sys.exit(1)
      
         errors = 0
         # Set SliceMgr URL
