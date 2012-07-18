@@ -48,9 +48,11 @@ DO NOT EDIT. This file was automatically generated at
             try:
                 self.config.read(filename)
             except:
+                print "normal read failed" 
                 if filename.endswith('.xml'):
                     self.load_xml(filename)
                 else:
+                    print "loading shell"
                     self.load_shell(filename)
             self._files.append(filename)
             self.set_attributes()
@@ -116,6 +118,24 @@ DO NOT EDIT. This file was automatically generated at
 
     def validate_type(self, var_type, value):
         return True
+
+    @staticmethod
+    def is_xml(config_file):
+        try:
+            x = Xml(config_file)
+            return True     
+        except:
+            return False
+
+    @staticmethod
+    def is_ini(config_file):
+        try:
+            c = ConfigParser.ConfigParser()
+            c.read(config_file)
+            return True
+        except:
+            return False
+
 
     def dump(self, sections = []):
         sys.stdout.write(output_python())
