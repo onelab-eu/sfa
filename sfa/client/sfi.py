@@ -13,6 +13,7 @@ import datetime
 import codecs
 import pickle
 import json
+import shutil
 from lxml import etree
 from StringIO import StringIO
 from optparse import OptionParser
@@ -528,33 +529,26 @@ class Sfi:
 
         return
     
-    def upgrade_config(self, config_file):
-        """
-        upgrade from shell to ini format
-        """
-        fp, fn = mkstemp(suffix='sfi_config', text=True)
-        try:
-            tmp_config = Config(fn)
-            tmp_config.add_section('sfi')
-            tmp_config.add_section('sface')
-            tmp_config.load(config_file)
-            tmp_config.save(config_file)
-        except:
-            raise
-        finally:
-            os.unlink(fn)
-        
-        
     ####################
     def read_config(self):
         config_file = os.path.join(self.options.sfi_dir,"sfi_config")
+        shell_config_file  = os.path.join(self.options.sfi_dir,"sfi_config.sh")
         try:
             if Config.is_ini(config_file):
                 config = Config (config_file)
             else:
                 # try upgrading from shell config format
-                self.upgrade_config(config_file)
-                config = Config(config_file)
+                fp, fn = mkstemp(suffix='sfi_config', text=True)  
+                config = Config(fn)
+                # we need to preload the sections we want parsed 
+                # from the shell config
+                config.add_section('sfi')
+                config.add_section('sface')
+                config.load(config_file)
+                # back up old config
+                shutil.move(config_file, shell_config_file)
+                # write new config
+                config.save(config_file)
                  
         except:
             self.logger.critical("Failed to read configuration file %s"%config_file)
