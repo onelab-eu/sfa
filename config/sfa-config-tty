@@ -514,15 +514,10 @@ def main(command,argv,configuration):
 
     # local settings only, will be modified & saved
     config_filename = "%s/sfa_config" % config.config_dir
-    try:
-        cwrite=Config(config_filename)
-    except ConfigParser.MissingSectionHeaderError:
-        # remove legacy config 
-        os.unlink(config_filename)
-        cwrite=Config(config_filename)
-
+    cwrite=Config(config_filename)
     try:
         cread.load(site_config)
+        cwrite.load(default_config)
         cwrite.load(site_config)
     except:
         cwrite = Config()
