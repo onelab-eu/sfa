@@ -1,7 +1,33 @@
 #!/bin/bash 
 
-git_local_repo=~/flab-sfa
-# First things first :
+# Configuration first : set the local repository
+# where the code can be found
+# Test number of arguments 
+if (( ! $# == 2 ))
+then
+    echo " Usage : bash_nukem repository_directory vm (should be senslab or senslab2)"
+    echo  $#
+    exit
+fi
+
+# Check if  directory exists
+if [ -d $1 ]
+then
+    git_local_repo=$1
+    echo "RESPOSITORY: "  $git_local_repo
+    cd $git_local_repo
+fi
+
+# Set which vm we are working on (sfa-vm or sfa-vm2)
+if [[ $2 = "senslab" || $2 = "senslab2" ]]
+then
+    vm=$2
+    echo $vm
+else
+    echo "Vm options should be senslab or senslab2, not " $2
+    exit 
+fi
+
 # Nuke the database 
 sudo sfaadmin.py registry nuke
 
@@ -19,10 +45,7 @@ cd /etc/sfa
 sudo rm -rf *
 sudo service sfa restart
 
-
-
 # Put back the config file that you saved before
-cd $git_local_repo
 
 sudo make clean
 make
@@ -35,12 +58,13 @@ sudo python setup.py install
 # and     /etc/sfa/configs/site.xml
 # into    /etc/sfa/sfa_config.xml
 # sudo sfa-config-tty
-sudo cp $git_local_repo/sfa/senslab/config/sfa_config /etc/sfa/sfa_config
-sudo cp $git_local_repo/sfa/senslab/config/sfa_config.xml /etc/sfa/sfa_config.xml
-sudo cp $git_local_repo/sfa/senslab/config/site.xml  /etc/sfa/site.xml
+sudo cp $git_local_repo/sfa/senslab/config/$vm/sfa_config /etc/sfa/sfa_config
+sudo cp $git_local_repo/sfa/senslab/config/$vm/sfa_config.xml /etc/sfa/sfa_config.xml
+sudo cp $git_local_repo/sfa/senslab/config/$vm/site.xml  /etc/sfa/site.xml
 # sudo ln -s ldap_config.py  /etc/sfa/ldap_config.py
 sudo cp $git_local_repo/sfa/senslab/config/ldap_config.py  /etc/sfa/ldap_config.py 
 sudo service sfa restart
+
 # User stuff : clean your folder
 cd  ~/.sfi
 rm *.sscert *.cred *.gid sfi_cache.dat

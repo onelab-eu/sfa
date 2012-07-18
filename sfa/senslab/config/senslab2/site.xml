@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8"?>
+<configuration>
+  <variables>
+    <category id="sfa_aggregate">
+      <name>Aggregate</name>
+      <description>The settings that affect the aggregate manager that will run
+      as part of this SFA instance.</description>
+      <variablelist>
+        <variable id="port" type="int">
+          <name>Port number</name>
+          <value>52346</value>
+          <description>The port where the aggregate is to be found.</description>
+        </variable>
+      </variablelist>
+    </category>
+    <category id="sfa_db">
+      <name/>
+      <description>The settings that tell this SFA instance where to find its database. You can essentially leave this as-is unless you plan on hosting your data on some other box.</description>
+      <variablelist>
+        <variable id="user" type="string">
+          <name>Database user</name>
+          <value>sfa</value>
+          <description>When SFA gets co-hosted with a myplc, this should match the PLC config.</description>
+        </variable>
+        <variable id="password" type="string">
+          <name>Database password</name>
+          <value>sfa</value>
+          <description>When SFA gets co-hosted with a myplc, this should match the PLC config.</description>
+        </variable>
+      </variablelist>
+    </category>
+    <category id="sfa_registry">
+      <name>Registry</name>
+      <description>The settings that affect the registry that will run
+      as part of this SFA instance.</description>
+      <variablelist>
+        <variable id="root_auth" type="string">
+          <name>Root Authority</name>
+          <value>senslab2</value>
+          <description>The hrn of the registry's root auth.</description>
+        </variable>
+        <variable id="port" type="int">
+          <name>Port number</name>
+          <value>52345</value>
+          <description>The port where the registry is to be found.</description>
+        </variable>
+      </variablelist>
+    </category>
+    <category id="sfa_sm">
+      <name>Slice Manager</name>
+      <description>The settings that affect the slice manager that will run
+      as part of this SFA instance.</description>
+      <variablelist>
+        <variable id="port" type="int">
+          <name>Port number</name>
+          <value>52347</value>
+          <description>The port where the slice manager is to be found.</description>
+        </variable>
+      </variablelist>
+    </category>
+    <category id="sfa">
+      <name>General</name>
+      <description>Basic system variables.</description>
+      <variablelist>
+        <variable id="interface_hrn" type="string">
+          <name>Human readable name</name>
+          <value>senslab2</value>
+          <description>The human readable name for this interface.</description>
+        </variable>
+        <variable id="generic_flavour" type="string">
+          <name>Generic Flavour</name>
+          <value>slab</value>
+          <description>This string refers to a class located in sfa.generic that describes 
+          which specific implementation needs to be used for api, manager and driver objects.
+          PlanetLab users do not need to change this setting.
+          </description>
+        </variable>
+        <variable id="api_loglevel" type="int">
+          <name>Debug</name>
+          <value>2</value>
+          <description>Logging level; 0=minimum, 1=info, 2=debug</description>
+        </variable>
+      </variablelist>
+    </category>
+  </variables>
+</configuration>
