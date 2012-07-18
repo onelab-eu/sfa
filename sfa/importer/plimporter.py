@@ -167,9 +167,13 @@ class PlImporter:
         for person in persons:
             pubkeys = []
             for key_id in person['key_ids']:
-                key = keys_by_id[key_id]
-                if key['key_type'] == 'ssh': 
+                # by construction all the keys we fetched are ssh keys
+                # so gpg keys won't be in there
+                try:
+                    key = keys_by_id[key_id]
                     pubkeys.append(key)
+                except:
+                    self.logger.warning("Could not spot key %d - probably non-ssh"%key_id)
             keys_by_person_id[person['person_id']] = pubkeys
         # Get all plc nodes  
         nodes = shell.GetNodes( {'peer_id': None}, ['node_id', 'hostname', 'site_id'])
