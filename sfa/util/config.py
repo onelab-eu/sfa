@@ -194,7 +194,7 @@ DO NOT EDIT. This file was automatically generated at
     def output_xml(self, encoding = "utf-8"):
         pass
 
-    def output_variables(self):
+    def output_variables(self, encoding="utf-8"):
         """
         Return list of all variable names.
         """
