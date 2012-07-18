@@ -15,7 +15,7 @@ if [ -d $1 ]
 then
     git_local_repo=$1
     echo "RESPOSITORY: "  $git_local_repo
-    cd $git_local_repo
+   
 fi
 
 # Set which vm we are working on (sfa-vm or sfa-vm2)
@@ -46,7 +46,7 @@ sudo rm -rf *
 sudo service sfa restart
 
 # Put back the config file that you saved before
-
+cd $git_local_repo
 sudo make clean
 make
 sudo python setup.py install
