@@ -336,6 +336,7 @@ class PlImporter:
     
             # maintain the list of PIs for a given site
             site_record.reg_pis = site_pis
+            dbsession.commit()
 
             # import slices
             for slice_id in site['slice_ids']:
