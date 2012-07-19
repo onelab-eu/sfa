@@ -48,11 +48,9 @@ DO NOT EDIT. This file was automatically generated at
             try:
                 self.config.read(filename)
             except:
-                print "normal read failed" 
                 if filename.endswith('.xml'):
                     self.load_xml(filename)
                 else:
-                    print "loading shell"
                     self.load_shell(filename)
             self._files.append(filename)
             self.set_attributes()
