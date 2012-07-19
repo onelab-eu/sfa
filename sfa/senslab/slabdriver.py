@@ -266,7 +266,6 @@ class SlabDriver(Driver):
                 #return rspec 
     
         #panos: passing user-defined options
-        logger.debug("SLABDRIVER \tlist_resources rspec " )
         aggregate = SlabAggregate(self)
         origin_hrn = Credential(string=creds[0]).get_gid_caller().get_hrn()
         options.update({'origin_hrn':origin_hrn})
@@ -537,8 +536,8 @@ class SlabDriver(Driver):
        
         answer = self.oar.POSTRequestToOARRestAPI('DELETE_jobs_id', \
                                                     reqdict,username)
-        logger.debug("SLABDRIVER \tDeleteJobs jobid  %s \r\n answer %s "  \
-                                                %(job_id,answer))
+        logger.debug("SLABDRIVER \tDeleteJobs jobid  %s \r\n answer %s username %s"  \
+                                                %(job_id,answer, username))
         return answer
 
             

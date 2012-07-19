@@ -8,7 +8,10 @@ from sfa.util.xrn import hrn_to_urn, urn_to_hrn, urn_to_sliver_id
 from sfa.planetlab.plxrn import PlXrn, hostname_to_urn, slicename_to_hrn
 
 from sfa.rspecs.rspec import RSpec
-from sfa.rspecs.elements.location import Location
+from sfa.rspecs.elements.versions.slabv1Node import SlabLocation
+from sfa.storage.alchemy import dbsession
+from sfa.storage.model import  RegRecord
+#from sfa.rspecs.elements.location import Location
 from sfa.rspecs.elements.hardware_type import HardwareType
 from sfa.rspecs.elements.node import Node
 #from sfa.rspecs.elements.login import Login
@@ -196,9 +199,12 @@ class SlabAggregate:
             #site = sites_dict[node['site_id']]
          
             try:
-                if node['posx'] and node['posy']:  
-                    location = Location({'longitude':node['posx'], \
-                                                    'latitude': node['posy']})
+                if node['posx'] and node['posy'] and node['posz']:  
+                    location = SlabLocation()
+                    location['longitude'] = node['posx']
+                    location['latitude'] = node['posy']
+                    location['hauteur'] = node['posz']
+
                     rspec_node['location'] = location
             except KeyError:
                 pass
@@ -232,7 +238,7 @@ class SlabAggregate:
                 #service = Services({'login': login})
                 #rspec_node['services'] = [service]
             rspec_nodes.append(rspec_node)
-        logger.debug("SLABAGGREGATE \t get_nodes rspec_nodes %s"%(rspec_nodes))
+        #logger.debug("SLABAGGREGATE \t get_nodes rspec_nodes %s"%(rspec_nodes))
         return (rspec_nodes)       
 
     def get_leases(self, slice_record = None, options = {}):
@@ -309,17 +315,31 @@ class SlabAggregate:
            #rspec.xml.set('expires',  datetime_to_epoch(slice['expires']))
          # add sliver defaults
         #nodes, links = self.get_nodes(slice, slivers)
+        logger.debug("\r\n \r\n SlabAggregate \tget_rspec ******* slice_xrn %s \r\n \r\n"\
+                                            %(slice_xrn)) 
         if not options.get('list_leases') or options.get('list_leases') and options['list_leases'] != 'leases':
             nodes = self.get_nodes(slices, slivers) 
+            #In case creating a job slice _xrn is not set to None
             rspec.version.add_nodes(nodes)
-            logger.debug("SlabAggregate \tget_rspec ******* nodes %s \r\n"\
-                                            %(nodes)) 
+            if slice_xrn :
+                #Get user associated with this slice
+                #user = dbsession.query(RegRecord).filter_by(record_id = \
+                                                #slices['record_id_user']).first()
+
+                #ldap_username = (user.hrn).split('.')[1]
+                ldap_username = slices['slice_hrn']
+                tmp = ldap_username.split('.')
+                ldap_username = tmp[1].split('_')[0]
+                logger.debug("SlabAggregate \tget_rspec **** \
+                        ldap_username %s \r\n" %(ldap_username))
+                rspec.version.add_connection_information(ldap_username)
+
             default_sliver = slivers.get(None, [])
             if default_sliver:
                 default_sliver_attribs = default_sliver.get('tags', [])
                 logger.debug("SlabAggregate \tget_rspec **** \
                         default_sliver_attribs %s \r\n" %(default_sliver_attribs))
-                for attrib in default_sliver_attribs:
+                for attrib in default_dbsessionsliver_attribs:
                     
     
                     rspec.version.add_default_sliver_attribute(attrib['tagname'], \

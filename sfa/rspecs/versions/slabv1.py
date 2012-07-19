@@ -58,9 +58,12 @@ class Slabv1(RSpecVersion):
     
     def get_slice_timeslot(self ):
         return Slabv1Timeslot.get_slice_timeslot(self.xml)
-
+    
+    def add_connection_information(self, ldap_username):
+        return Slabv1Node.add_connection_information(self.xml,ldap_username)
+    
     def add_nodes(self, nodes, check_for_dupes=False):
-        return Slabv1Node.add_nodes(self.xml, nodes)
+        return Slabv1Node.add_nodes(self.xml,nodes )
     
     def merge_node(self, source_node_tag, network, no_dupes = False):
         logger.debug("SLABV1 merge_node")

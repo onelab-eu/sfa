@@ -7,7 +7,6 @@ from sfa.rspecs.elements.location import Location
 from sfa.rspecs.elements.hardware_type import HardwareType
 
 from sfa.rspecs.elements.interface import Interface
-
 from sfa.rspecs.elements.versions.slabv1Sliver import Slabv1Sliver
 from sfa.util.sfalogging import logger
 
@@ -15,10 +14,30 @@ class SlabNode(Node):
     #First get the fields already defined in the class Node
     fields = list(Node.fields)
     #Extend it with senslab's specific fields
-    fields.extend (['archi','radio','mobile'])
+    fields.extend (['archi', 'radio', 'mobile'])
     
-    
+
+class SlabLocation(Location):
+    fields = list(Location.fields)
+    fields.extend (['hauteur'])
+
+
 class Slabv1Node:
+    
+    @staticmethod
+    def add_connection_information(xml, ldap_username):
+        #Add network item in the xml
+        network_elems = xml.xpath('//network')  
+        if len(network_elems) > 0:
+            network_elem = network_elems[0]
+
+        slab_network_dict = {}
+        slab_network_dict['login'] = ldap_username
+        slab_network_dict['vm'] = 'ssh ' + ldap_username + '@grenoble.senslab.info'
+        network_elem.set('vm', unicode(slab_network_dict['vm']))
+        network_elem.set('login', unicode( slab_network_dict['login']))
+        logger.debug("\r\n \r\n \r\n Slabv1Node  add_connection_information hrn %s\r\n \r\n \r\n " %(ldap_username))
+        
     @staticmethod
     def add_nodes(xml, nodes):
         #Add network item in the xml
@@ -30,79 +49,82 @@ class Slabv1Node:
             network_elem = xml.add_element('network', name = Xrn(network_urn).get_hrn())
         else:
             network_elem = xml
-            
-        logger.debug("slabv1Node \t add_nodes nodes %s"%(nodes))
+       
+        logger.debug("slabv1Node \t add_nodes  nodes %s \r\n "%(nodes))
         node_elems = []
         #Then add nodes items to the network item in the xml
         for node in nodes:
+            #Attach this node to the network element
             node_fields = ['component_manager_id', 'component_id', 'exclusive',\
                         'boot_state', 'mobile']
             node_elem = network_elem.add_instance('node', node, node_fields)
             node_elems.append(node_elem)
+            
+            #Set the attibutes of this node element
+            for attribute in node: 
             # set component name
-            if node.get('component_id'):
-                component_name = xrn_to_hostname(node['component_id'])
-                node_elem.set('component_name', component_name)
-            # set hardware types
-            if node.get('hardware_types'):
-                for hardware_type in node.get('hardware_types', []): 
-                    fields = HardwareType.fields
-                    fields.extend(['archi','radio'])
-                    node_elem.add_instance('hardware_type', node, fields)
+                if attribute is 'component_id':
+                    component_name = xrn_to_hostname(node['component_id'])
+                    node_elem.set('component_name', component_name)
+                    
+            # set hardware types, extend fields to add Senslab's architecture
+            #and radio type
+                
+                if attribute is 'hardware_types':
+                    for hardware_type in node.get('hardware_types', []): 
+                        fields = HardwareType.fields
+                        fields.extend(['archi','radio'])
+                        node_elem.add_instance('hardware_types', node, fields)
 
             # set location
-            if node.get('location'):
-                node_elem.add_instance('location', node['location'], \
-                                                        Location.fields)
+                if attribute is 'location':
+                    node_elem.add_instance('location', node['location'], \
+                                                        SlabLocation.fields)
              # add granularity of the reservation system
-            granularity = node.get('granularity')
-            if granularity:
-                node_elem.add_instance('granularity', granularity, granularity.fields)
+             #TODO put the granularity in network instead SA 18/07/12
+                if attribute is 'granularity' :
+                    granularity = node['granularity']
+                    if granularity:
+                        node_elem.add_instance('granularity', \
+                                    granularity, granularity.fields)
                 
-            # set interfaces
-            #if node.get('interfaces'):
-                #for interface in  node.get('interfaces', []):
-                    #node_elem.add_instance('interface', interface, ['component_id', 'client_id'])
+          
             # set available element
-            if node.get('boot_state'):
-                if node.get('boot_state').lower() == 'alive':
-                    available_elem = node_elem.add_element('available', \
+                if attribute is 'boot_state':
+                    if node.get('boot_state').lower() == 'alive':
+                        available_elem = node_elem.add_element('available', \
                                                                     now='true')
-                else:
-                    available_elem = node_elem.add_element('available', \
+                    else:
+                        available_elem = node_elem.add_element('available', \
                                                                 now='false')
-                                                                
 
-            #if node.get('archi'):
-                #archi_elem = node_elem.add_instance('archi',node.get('archi') , ['archi'])
-
-               
-            #if node.get('radio'):
-                #radio_elem = node_elem.add_instance('radio', node.get('radio') , ['radio'])
           
             ## add services
             #PGv2Services.add_services(node_elem, node.get('services', [])) 
             # add slivers
-            slivers = node.get('slivers', [])
-            if not slivers:
-                # we must still advertise the available sliver types
-                slivers = Sliver({'type': 'slab-node'})
-                # we must also advertise the available initscripts
-                #slivers['tags'] = []
-                #if node.get('pl_initscripts'): 
-                    #for initscript in node.get('pl_initscripts', []):
-                        #slivers['tags'].append({'name': 'initscript', \
-                                                #'value': initscript['name']})
+                if attribute is 'slivers':
+                    slivers = node.get('slivers', [])
+                    if not slivers:
+                    # we must still advertise the available sliver types
+                        slivers = Sliver({'type': 'slab-node'})
+                    # we must also advertise the available initscripts
+                    #slivers['tags'] = []
+                    #if node.get('pl_initscripts'): 
+                        #for initscript in node.get('pl_initscripts', []):
+                            #slivers['tags'].append({'name': 'initscript', \
+                                                    #'value': initscript['name']})
            
-            Slabv1Sliver.add_slivers(node_elem, slivers)
+                    Slabv1Sliver.add_slivers(node_elem, slivers)
         return node_elems
+                    
 
+            
     @staticmethod
     def get_nodes(xml, filter={}):
         xpath = '//node%s | //default:node%s' % (XpathFilter.xpath(filter), \
                                                     XpathFilter.xpath(filter))
         node_elems = xml.xpath(xpath)  
-        logger.debug("SLABV1NODE  \tget_nodes \tnode_elems %s"%(node_elems))
+        #logger.debug("SLABV1NODE  \tget_nodes \tnode_elems %s"%(node_elems))
         return Slabv1Node.get_node_objs(node_elems)
 
     @staticmethod 
