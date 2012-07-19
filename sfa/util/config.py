@@ -131,7 +131,7 @@ DO NOT EDIT. This file was automatically generated at
             c = ConfigParser.ConfigParser()
             c.read(config_file)
             return True
-        except:
+        except ConfigParser.MissingSectionHeaderError:
             return False
 
 
