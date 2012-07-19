@@ -96,14 +96,10 @@ class OARrestapi:
             logger.log_exc("OARrestapi \tPOSTRequestToOARRestAPI request not \
                              valid")
             return
-        #try:
         if datadict and 'strval' in datadict:
             self.oarserver['uri'] = self.oarserver['uri'].replace("id", \
                                                 str(datadict['strval']))
             del datadict['strval']
-        #except:
-            #logger.log_exc("OARrestapi.py POSTRequestToOARRestAPI Error")
-            return
 
         data = json.dumps(datadict)
         headers = {'X-REMOTE_IDENT':username, \
@@ -263,7 +259,7 @@ class OARGETParser:
         # currently, this function is not used a lot, 
         #so i have no idea what be usefull to parse, 
         #returning the full json. NT
-        logger.debug("ParseJobsDetails %s " %(self.raw_json))
+        #logger.debug("ParseJobsDetails %s " %(self.raw_json))
         return self.raw_json
         
 
@@ -284,7 +280,7 @@ class OARGETParser:
 
 
         job_info = self.raw_json
-        logger.debug("OARESTAPI ParseJobsIds %s" %(self.raw_json))
+        #logger.debug("OARESTAPI ParseJobsIds %s" %(self.raw_json))
         values = []
         try:
             for k in job_resources:
@@ -306,13 +302,13 @@ class OARGETParser:
         for resource in self.raw_json['items']:
             job_resources.append(resource['id'])
             
-        logger.debug("OARESTAPI \tParseJobsIdResources %s" %(self.raw_json))
+        #logger.debug("OARESTAPI \tParseJobsIdResources %s" %(self.raw_json))
         return job_resources
             
     def ParseResources(self) :
         """ Parses the json produced by a get_resources request on oar."""
         
-        logger.debug("OARESTAPI \tParseResources " )
+        #logger.debug("OARESTAPI \tParseResources " )
         #resources are listed inside the 'items' list from the json
         self.raw_json = self.raw_json['items']
         self.ParseNodes()
@@ -336,7 +332,7 @@ class OARGETParser:
             job['t_until'] = json_element['scheduled_start'] + \
                                                     json_element['walltime']
             job['user'] = json_element['owner']
-            logger.debug("OARRestapi \tParseReservedNodes job %s" %(job))  
+            #logger.debug("OARRestapi \tParseReservedNodes job %s" %(job))  
             reservation_list.append(job)
             #reset dict
             job = {}
@@ -434,8 +430,8 @@ class OARGETParser:
         
         nodes_per_site = {}
         config = Config()
-        logger.debug(" OARrestapi.py \tParseSites  self.node_dictlist %s"\
-                                                        %(self.node_dictlist))
+        #logger.debug(" OARrestapi.py \tParseSites  self.node_dictlist %s"\
+                                                        #%(self.node_dictlist))
         # Create a list of nodes per site_id
         for node_id in self.node_dictlist.keys():
             node  = self.node_dictlist[node_id]
