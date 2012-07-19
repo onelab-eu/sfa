@@ -47,7 +47,7 @@ DO NOT EDIT. This file was automatically generated at
         if filename:
             try:
                 self.config.read(filename)
-            except:
+            except ConfigParser.MissingSectionHeaderError:
                 if filename.endswith('.xml'):
                     self.load_xml(filename)
                 else:
