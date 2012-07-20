@@ -228,6 +228,7 @@ function db_start () {
 	check
     fi
     check
+    sfaadmin reg sync_db
 
     MESSAGE=$"SFA: Checking for PostgreSQL server"
     echo -n "$MESSAGE"
