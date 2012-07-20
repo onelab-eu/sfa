@@ -21,7 +21,7 @@ sfa_whole_config=/etc/sfa/sfa_config
 # SFA default config (read-only template)
 sfa_default_config=/etc/sfa/default_config.xml
 # SFA local (site-dependent) file
-sfa_local_config=/etc/sfa/configs/site
+sfa_local_config=/etc/sfa/configs/site_config
 
 # Source sfa shell config if present 
 [ -f /etc/sfa/sfa_config.sh ] && . /etc/sfa/sfa_config.sh
