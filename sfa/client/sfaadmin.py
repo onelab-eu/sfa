@@ -177,6 +177,12 @@ class RegistryCommands(Commands):
         from sfa.importer import Importer
         importer = Importer()
         importer.run()
+
+    def sync_db(self):
+        """Initiailize or upgrade the db"""
+        from sfa.storage.dbschema import DBSchema
+        dbschema=DBSchema()
+        dbschema.init_or_upgrade
     
     @args('-a', '--all', dest='all', metavar='<all>', action='store_true', default=False,
           help='Remove all registry records and all files in %s area' % help_basedir)
