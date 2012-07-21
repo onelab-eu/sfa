@@ -82,7 +82,7 @@ class Xrn:
     # A better alternative than childHRN.startswith(parentHRN)
     # e.g. hrn_is_auth_for_hrn('a\.b', 'a\.b.c.d') -> True,
     # but hrn_is_auth_for_hrn('a', 'a\.b.c.d') -> False
-    # Also hrn_is_uauth_for_hrn('a\.b.c.d', 'a\.b.c.d') -> True
+    # Also hrn_is_auth_for_hrn('a\.b.c.d', 'a\.b.c.d') -> True
     @staticmethod
     def hrn_is_auth_for_hrn(parenthrn, hrn):
         if parenthrn == hrn:
@@ -166,19 +166,19 @@ class Xrn:
     def get_authority_urn(self): 
         self._normalize()
         return ':'.join( [Xrn.unescape(x) for x in self.authority] )
-   
+
     def get_sliver_id(self, slice_id, node_id, index=0, authority=None):
         self._normalize()
         urn = self.get_urn()
         if authority:
             authority_hrn = self.get_authority_hrn()
             if not authority_hrn.startswith(authority):
-                hrn = ".".join([authority,self.get_authority_hrn(), self.get_leaf()])
+                hrn = ".".join([authority,authority_hrn, self.get_leaf()])
             else:
-                hrn = ".".join([self.get_authority_hrn(), self.get_leaf()])
+                hrn = ".".join([authority_hrn, self.get_leaf()])
             urn = Xrn(hrn, self.get_type()).get_urn()
-        return ":".join(map(str, [urn, slice_id, node_id, index])) 
- 
+        return ":".join(map(str, [urn, slice_id, node_id, index]))
+
     def urn_to_hrn(self):
         """
         compute tuple (hrn, type) from urn
@@ -224,7 +224,7 @@ class Xrn:
 
         if self.type and self.type.startswith('authority'):
             self.authority = Xrn.hrn_auth_list(self.hrn)
-            leaf = self.get_leaf() 
+            leaf = self.get_leaf()
             #if not self.authority:
             #    self.authority = [self.hrn]
             type_parts = self.type.split("+")
@@ -232,7 +232,7 @@ class Xrn:
             name = 'sa'
             if len(type_parts) > 1:
                 name = type_parts[1]
-            auth_parts = [part for part in [self.get_authority_urn(), leaf] if part]  
+            auth_parts = [part for part in [self.get_authority_urn(), leaf] if part]
             authority_string = ":".join(auth_parts)
         else:
             self.authority = Xrn.hrn_auth_list(self.hrn)
