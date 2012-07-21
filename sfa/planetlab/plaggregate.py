@@ -152,7 +152,7 @@ class PlAggregate:
             tags_filter=filter.copy()
 
         geni_available = options.get('geni_available')    
-        if geni_available:
+        if geni_available == True:
             filter['boot_state'] = 'boot'     
         
         filter.update({'peer_id': None})
@@ -298,7 +298,7 @@ class PlAggregate:
             rspec.xml.set('expires',  datetime_to_string(utcparse(slice['expires'])))
 
         if not options.get('list_leases') or options.get('list_leases') and options['list_leases'] != 'leases':
-           nodes, links = self.get_nodes_and_links(slice_xrn, slice, slivers)
+           nodes, links = self.get_nodes_and_links(slice_xrn, slice, slivers, options)
            rspec.version.add_nodes(nodes)
            rspec.version.add_links(links)
            # add sliver defaults

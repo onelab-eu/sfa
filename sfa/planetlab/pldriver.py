@@ -615,6 +615,10 @@ class PlDriver (Driver):
         # Adding the list_leases option to the caching key
         if options.get('list_leases'):
             version_string = version_string + "_"+options.get('list_leases', 'default')
+
+        # Adding geni_available to caching key
+        if options.get('geni_available'):
+            version_string = version_string + "_" + str(options.get('geni_available'))
     
         # look in cache first
         if cached_requested and self.cache and not slice_hrn:
