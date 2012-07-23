@@ -5,7 +5,7 @@ from sfa.rspecs.elements.node import Node
 from sfa.rspecs.elements.sliver import Sliver
 from sfa.rspecs.elements.location import Location
 from sfa.rspecs.elements.hardware_type import HardwareType
-
+from sfa.rspecs.elements.element import Element
 from sfa.rspecs.elements.interface import Interface
 from sfa.rspecs.elements.versions.slabv1Sliver import Slabv1Sliver
 from sfa.util.sfalogging import logger
@@ -14,29 +14,36 @@ class SlabNode(Node):
     #First get the fields already defined in the class Node
     fields = list(Node.fields)
     #Extend it with senslab's specific fields
-    fields.extend (['archi', 'radio', 'mobile'])
+    fields.extend (['archi', 'radio', 'mobile','position'])
     
 
-class SlabLocation(Location):
-    fields = list(Location.fields)
-    fields.extend (['hauteur'])
+class SlabPosition(Element):
+    fields = ['posx', 'posy','posz']
+
 
 
 class Slabv1Node:
     
     @staticmethod
     def add_connection_information(xml, ldap_username):
-        #Add network item in the xml
+        """ Adds login and ssh connection info in the network item in 
+        the xml. Does not create the network element, therefore 
+        should be used after add_nodes, which creates the network item.
+        
+        """
+        
+        #Get network item in the xml
         network_elems = xml.xpath('//network')  
         if len(network_elems) > 0:
             network_elem = network_elems[0]
 
         slab_network_dict = {}
         slab_network_dict['login'] = ldap_username
-        slab_network_dict['vm'] = 'ssh ' + ldap_username + '@grenoble.senslab.info'
+        slab_network_dict['vm'] = 'ssh ' + ldap_username + \
+                                        '@grenoble.senslab.info'
         network_elem.set('vm', unicode(slab_network_dict['vm']))
         network_elem.set('login', unicode( slab_network_dict['login']))
-        logger.debug("\r\n \r\n \r\n Slabv1Node  add_connection_information hrn %s\r\n \r\n \r\n " %(ldap_username))
+
         
     @staticmethod
     def add_nodes(xml, nodes):
@@ -46,7 +53,8 @@ class Slabv1Node:
             network_elem = network_elems[0]
         elif len(nodes) > 0 and nodes[0].get('component_manager_id'):
             network_urn = nodes[0]['component_manager_id']
-            network_elem = xml.add_element('network', name = Xrn(network_urn).get_hrn())
+            network_elem = xml.add_element('network', \
+                                        name = Xrn(network_urn).get_hrn())
         else:
             network_elem = xml
        
@@ -56,7 +64,7 @@ class Slabv1Node:
         for node in nodes:
             #Attach this node to the network element
             node_fields = ['component_manager_id', 'component_id', 'exclusive',\
-                        'boot_state', 'mobile']
+                                                    'boot_state', 'mobile']
             node_elem = network_elem.add_instance('node', node, node_fields)
             node_elems.append(node_elem)
             
@@ -79,7 +87,7 @@ class Slabv1Node:
             # set location
                 if attribute is 'location':
                     node_elem.add_instance('location', node['location'], \
-                                                        SlabLocation.fields)
+                                                        Location.fields)
              # add granularity of the reservation system
              #TODO put the granularity in network instead SA 18/07/12
                 if attribute is 'granularity' :
@@ -98,7 +106,10 @@ class Slabv1Node:
                         available_elem = node_elem.add_element('available', \
                                                                 now='false')
 
-          
+            #set position 
+                if attribute is 'position':
+                    node_elem.add_instance('position', node['position'], \
+                                                        SlabPosition.fields)
             ## add services
             #PGv2Services.add_services(node_elem, node.get('services', [])) 
             # add slivers
@@ -124,7 +135,6 @@ class Slabv1Node:
         xpath = '//node%s | //default:node%s' % (XpathFilter.xpath(filter), \
                                                     XpathFilter.xpath(filter))
         node_elems = xml.xpath(xpath)  
-        #logger.debug("SLABV1NODE  \tget_nodes \tnode_elems %s"%(node_elems))
         return Slabv1Node.get_node_objs(node_elems)
 
     @staticmethod 

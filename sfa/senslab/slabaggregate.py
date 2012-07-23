@@ -8,10 +8,10 @@ from sfa.util.xrn import hrn_to_urn, urn_to_hrn, urn_to_sliver_id
 from sfa.planetlab.plxrn import PlXrn, hostname_to_urn, slicename_to_hrn
 
 from sfa.rspecs.rspec import RSpec
-from sfa.rspecs.elements.versions.slabv1Node import SlabLocation
+from sfa.rspecs.elements.versions.slabv1Node import SlabPosition
 from sfa.storage.alchemy import dbsession
 from sfa.storage.model import  RegRecord
-#from sfa.rspecs.elements.location import Location
+from sfa.rspecs.elements.location import Location
 from sfa.rspecs.elements.hardware_type import HardwareType
 from sfa.rspecs.elements.node import Node
 #from sfa.rspecs.elements.login import Login
@@ -197,17 +197,19 @@ class SlabAggregate:
             # add site/interface info to nodes.
             # assumes that sites, interfaces and tags have already been prepared.
             #site = sites_dict[node['site_id']]
-         
-            try:
-                if node['posx'] and node['posy'] and node['posz']:  
-                    location = SlabLocation()
-                    location['longitude'] = node['posx']
-                    location['latitude'] = node['posy']
-                    location['hauteur'] = node['posz']
+            location = Location({'country':'France'})
+            rspec_node['location'] = location
+          
+           
+            position = SlabPosition()
+            for field in position :
+                try:
+                    position[field] = node[field]
+                    logger.debug("SLABAGGREGATE\t get_rspecposition field %s position[field] %s "%(field, position[field]))
+                except KeyError, error :
+                    logger.log_exc("SLABAGGREGATE\t get_rspec position %s "%(error))
 
-                    rspec_node['location'] = location
-            except KeyError:
-                pass
+            rspec_node['position'] = position
             #rspec_node['interfaces'] = []
             #if_count=0
             #for if_id in node['interface_ids']:
