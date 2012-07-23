@@ -5,15 +5,12 @@ import time
 
 #from sfa.util.config import Config
 from sfa.util.xrn import hrn_to_urn, urn_to_hrn, urn_to_sliver_id
-from sfa.planetlab.plxrn import PlXrn, hostname_to_urn, slicename_to_hrn
+from sfa.planetlab.plxrn import PlXrn, hostname_to_urn
 
 from sfa.rspecs.rspec import RSpec
 from sfa.rspecs.elements.versions.slabv1Node import SlabPosition
-from sfa.storage.alchemy import dbsession
-from sfa.storage.model import  RegRecord
 from sfa.rspecs.elements.location import Location
 from sfa.rspecs.elements.hardware_type import HardwareType
-from sfa.rspecs.elements.node import Node
 #from sfa.rspecs.elements.login import Login
 #from sfa.rspecs.elements.services import Services
 from sfa.rspecs.elements.sliver import Sliver

@@ -2,21 +2,13 @@ from sfa.util.sfalogging import logger
 from sfa.util.xml import XpathFilter
 from sfa.util.xrn import Xrn
 
-from sfa.rspecs.elements.element import Element
-from sfa.rspecs.elements.node import Node
-from sfa.rspecs.elements.sliver import Sliver
-from sfa.rspecs.elements.location import Location
-from sfa.rspecs.elements.hardware_type import HardwareType
 
 
-
-
-from sfa.rspecs.elements.versions.slabv1Sliver import Slabv1Sliver
 #from sfa.rspecs.elements.versions.sfav1PLTag import SFAv1PLTag
 #from sfa.rspecs.elements.versions.pgv2Services import PGv2Services
 from sfa.rspecs.elements.lease import Lease
 
-from sfa.planetlab.plxrn import xrn_to_hostname
+
 
 class Slabv1Lease:
 

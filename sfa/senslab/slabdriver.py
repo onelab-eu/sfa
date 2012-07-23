@@ -18,7 +18,7 @@ from sfa.rspecs.version_manager import VersionManager
 from sfa.rspecs.rspec import RSpec
 
 from sfa.util.xrn import hrn_to_urn, urn_to_sliver_id, get_leaf
-from sfa.planetlab.plxrn import slicename_to_hrn, hrn_to_pl_slicename, \
+from sfa.planetlab.plxrn import slicename_to_hrn, \
                                         hostname_to_urn, \
                                         xrn_to_hostname
 
@@ -857,10 +857,11 @@ class SlabDriver(Driver):
             #instantion used in get_slivers ? 
             if not "instantiation" in slab_record:
                 slab_record["instantiation"] = "senslab-instantiated"
-            slab_record["hrn"] = hrn_to_pl_slicename(hrn)
+            #slab_record["hrn"] = hrn_to_pl_slicename(hrn)     
+            #Unused hrn_to_pl_slicename because Slab's hrn already in the appropriate form SA 23/07/12
+            slab_record["hrn"] = hrn 
             logger.debug("SLABDRIVER.PY sfa_fields_to_slab_fields \
-                        slab_record %s hrn_to_pl_slicename(hrn) hrn %s " \
-                                                %(slab_record['hrn'], hrn))
+                        slab_record %s  " %(slab_record['hrn']))
             if "url" in record:
                 slab_record["url"] = record["url"]
             if "description" in record:

@@ -1,13 +1,9 @@
-import os
 import sys
-import datetime
-import time
 
 from sfa.util.config import Config
-from sfa.util.xrn import Xrn, get_leaf, get_authority, hrn_to_urn
-from sfa.planetlab.plxrn import PlXrn, slicename_to_hrn, email_to_hrn, hrn_to_pl_slicename
+from sfa.util.xrn import get_authority, hrn_to_urn
+from sfa.planetlab.plxrn import PlXrn
 
-from sfa.senslab.LDAPapi import LDAPapi
 from sfa.senslab.slabdriver import SlabDriver
 from sfa.senslab.slabpostgres import SliceSenslab, slab_dbsession
 
@@ -16,7 +12,7 @@ from sfa.trust.gid import create_uuid
 
 from sfa.storage.alchemy import dbsession
 from sfa.storage.model import RegRecord, RegAuthority, RegSlice, RegNode, RegUser, RegKey
-from sfa.storage.dbschema import DBSchema
+
 
 
 
