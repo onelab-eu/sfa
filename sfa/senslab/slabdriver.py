@@ -18,9 +18,7 @@ from sfa.rspecs.version_manager import VersionManager
 from sfa.rspecs.rspec import RSpec
 
 from sfa.util.xrn import hrn_to_urn, urn_to_sliver_id, get_leaf
-from sfa.planetlab.plxrn import slicename_to_hrn, \
-                                        hostname_to_urn, \
-                                        xrn_to_hostname
+from sfa.planetlab.plxrn import hostname_to_urn, xrn_to_hostname
 
 ## thierry: everything that is API-related (i.e. handling incoming requests) 
 # is taken care of 
@@ -291,12 +289,13 @@ class SlabDriver(Driver):
         # get data from db 
 
         slices = self.GetSlices()        
-        logger.debug("SLABDRIVER.PY \tlist_slices %s" %(slices))
-        slice_hrns = [slicename_to_hrn(self.hrn, slab_slice['slice_hrn']) \
-                                                    for slab_slice in slices]
+        logger.debug("SLABDRIVER.PY \tlist_slices hrn %s \r\n \r\n" %(slices))        
+        slice_hrns = [slab_slice['slice_hrn'] for slab_slice in slices]
+        #slice_hrns = [slicename_to_hrn(self.hrn, slab_slice['slice_hrn']) \
+                                                    #for slab_slice in slices]
         slice_urns = [hrn_to_urn(slice_hrn, 'slice') \
                                                 for slice_hrn in slice_hrns]
-    
+
         # cache the result
         #if self.cache:
             #logger.debug ("SlabDriver.list_slices stores value in cache")
