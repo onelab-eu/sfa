@@ -289,8 +289,9 @@ class SlabDriver(Driver):
                 #return slices
     
         # get data from db 
-        logger.debug("SLABDRIVER.PY \tlist_slices")
-        slices = self.GetSlices()
+
+        slices = self.GetSlices()        
+        logger.debug("SLABDRIVER.PY \tlist_slices %s" %(slices))
         slice_hrns = [slicename_to_hrn(self.hrn, slab_slice['slice_hrn']) \
                                                     for slab_slice in slices]
         slice_urns = [hrn_to_urn(slice_hrn, 'slice') \
@@ -795,8 +796,11 @@ class SlabDriver(Driver):
                 
                 
         else:
-            return_slice_list = slab_dbsession.query(SliceSenslab).all()
-
+            slice_list = slab_dbsession.query(SliceSenslab).all()
+            return_slice_list = []
+            for record in slice_list:
+                return_slice_list.append(record.dump_sqlalchemyobj_to_dict())
+ 
             logger.debug("SLABDRIVER.PY  \tGetSlices slices %s \
                         slice_filter %s " %(return_slice_list, slice_filter))
         
