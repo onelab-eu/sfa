@@ -7,7 +7,6 @@ import json
 #import urllib
 #import urllib2
 from sfa.util.config import Config
-from sfa.planetlab.plxrn import PlXrn
 #from sfa.util.xrn import hrn_to_urn, get_authority, Xrn, get_leaf
 
 from sfa.util.sfalogging import logger
@@ -419,10 +418,9 @@ class OARGETParser:
             self.node_dictlist[node_id] = dict(self.node_dictlist[node_id])
             node_id = None
                     
-                
-    def hostname_to_hrn(self, root_auth, login_base, hostname):
-        return PlXrn(auth = root_auth, \
-                             hostname = login_base + '_' + hostname).get_hrn()
+    def slab_hostname_to_hrn(self, root_auth,  hostname):             
+        return root_auth + '.'+ hostname 
+
                              
 
     def ParseSites(self):
@@ -433,7 +431,7 @@ class OARGETParser:
         #logger.debug(" OARrestapi.py \tParseSites  self.node_dictlist %s"\
                                                         #%(self.node_dictlist))
         # Create a list of nodes per site_id
-        for node_id in self.node_dictlist.keys():
+        for node_id in self.node_dictlist:
             node  = self.node_dictlist[node_id]
             
             if node['site'] not in nodes_per_site:
@@ -443,14 +441,14 @@ class OARGETParser:
                 if node['node_id'] not in nodes_per_site[node['site']]:
                     nodes_per_site[node['site']].append(node['node_id'])
                         
-        #Create a site dictionary with key is site_login_base (name of the site)
+        #Create a site dictionary whose key is site_login_base (name of the site)
         # and value is a dictionary of properties, including the list 
         #of the node_ids
-        for node_id in self.node_dictlist.keys():
+        for node_id in self.node_dictlist:
             node  = self.node_dictlist[node_id]
-            node.update({'hrn':self.hostname_to_hrn(self.interface_hrn, \
-                                            node['site'],node['hostname'])})
-
+            #node.update({'hrn':self.slab_hostname_to_hrn(self.interface_hrn, \
+                                            #node['site'],node['hostname'])})
+            node.update({'hrn':self.slab_hostname_to_hrn(self.interface_hrn, node['hostname'])})
             self.node_dictlist.update({node_id:node})
 
             if node['site'] not in self.site_dict:

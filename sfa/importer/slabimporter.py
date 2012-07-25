@@ -1,8 +1,7 @@
 import sys
 
 from sfa.util.config import Config
-from sfa.util.xrn import get_authority, hrn_to_urn
-from sfa.planetlab.plxrn import PlXrn
+from sfa.util.xrn import Xrn, get_authority, hrn_to_urn
 
 from sfa.senslab.slabdriver import SlabDriver
 from sfa.senslab.slabpostgres import SliceSenslab, slab_dbsession
@@ -11,9 +10,11 @@ from sfa.trust.certificate import Keypair,convert_public_key
 from sfa.trust.gid import create_uuid
 
 from sfa.storage.alchemy import dbsession
-from sfa.storage.model import RegRecord, RegAuthority, RegSlice, RegNode, RegUser, RegKey
+from sfa.storage.model import RegRecord, RegAuthority, RegSlice, RegNode, \
+                                                    RegUser, RegKey
 
 
+from sqlalchemy.exc import SQLAlchemyError
 
 
 def _get_site_hrn(site):
@@ -26,9 +27,10 @@ class SlabImporter:
         self.auth_hierarchy = auth_hierarchy
         self.logger=logger
 
-       
-    def hostname_to_hrn(self,root_auth,login_base,hostname):
-        return PlXrn(auth=root_auth,hostname = hostname).get_hrn()   
+    def hostname_to_hrn_escaped(self, root_auth, hostname):
+        return '.'.join( [root_auth,Xrn.escape(hostname)] )
+
+
     
     def slicename_to_hrn(self, person_hrn):
         return  (person_hrn +'_slice')
@@ -88,7 +90,7 @@ class SlabImporter:
         ldap_person_listdict = slabdriver.GetPersons()
         slices_listdict = slabdriver.GetSlices()
         try:
-            slices_by_userid = dict ( [ (slice.record_id_user, slice ) for slice in slices_listdict ] )
+            slices_by_userid = dict ( [ (one_slice['record_id_user'], one_slice ) for one_slice in slices_listdict ] )
         except TypeError:
              self.logger.log_exc("SlabImporter: failed to create list of slices by user id.") 
              pass
@@ -98,7 +100,7 @@ class SlabImporter:
             site_record = self.find_record_by_type_hrn ('authority', site_hrn)
             if not site_record:
                 try:
-                    urn = hrn_to_urn(site_hrn, 'authority')
+                    urn = hrn_to_urn(site_hrn, 'authority') 
                     if not self.auth_hierarchy.auth_exists(urn):
                         self.auth_hierarchy.create_auth(urn)
                     auth_info = self.auth_hierarchy.get_auth_info(urn)
@@ -110,7 +112,7 @@ class SlabImporter:
                     dbsession.commit()
                     self.logger.info("SlabImporter: imported authority (site) : %s" % site_record) 
                     self.update_just_added_records_dict(site_record)
-                except:
+                except SQLAlchemyError:
                     # if the site import fails then there is no point in trying to import the
                     # site's child records (node, slices, persons), so skip them.
                     self.logger.log_exc("SlabImporter: failed to import site. Skipping child records") 
@@ -128,24 +130,27 @@ class SlabImporter:
                     self.logger.warning ("SlabImporter: cannot find node_id %s - ignored"%node_id)
                     continue 
                 site_auth = get_authority(site_hrn)
-                site_name = site['name']
-                hrn =  self.hostname_to_hrn(slabdriver.root_auth, site_name, node['hostname'])
+                site_name = site['name']                
+                escaped_hrn =  self.hostname_to_hrn_escaped(slabdriver.root_auth, node['hostname'])
+                print>>sys.stderr, "\r\n \r\n SLABIMPORTER node %s " %(node)               
+                hrn =  node['hrn']
+
+
                 # xxx this sounds suspicious
                 if len(hrn) > 64: hrn = hrn[:64]
                 node_record = self.find_record_by_type_hrn( 'node', hrn )
                 if not node_record:
                     try:
                         pkey = Keypair(create=True)
-                        urn = hrn_to_urn(hrn, 'node') 
+                        urn = hrn_to_urn(escaped_hrn, 'node') 
                         node_gid = self.auth_hierarchy.create_gid(urn, create_uuid(), pkey)
                         node_record = RegNode (hrn=hrn, gid=node_gid, 
                                                 pointer = '-1',
-                                                authority=get_authority(hrn))
+                                                authority=get_authority(hrn)) 
                         node_record.just_created()
                         dbsession.add(node_record)
                         dbsession.commit()
-                        self.logger.info("SlabImporter: imported node: %s" % node_record)
-                        print>>sys.stderr, "\r\n \t\t\t SLAB IMPORTER NODE IMPORT NOTnode_record %s " %(node_record)  
+                        self.logger.info("SlabImporter: imported node: %s" % node_record)  
                         self.update_just_added_records_dict(node_record)
                     except:
                         self.logger.log_exc("SlabImporter: failed to import node") 

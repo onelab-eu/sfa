@@ -24,8 +24,7 @@ from sfa.rspecs.elements.versions.slabv1Node import SlabNode
 from sfa.util.sfalogging import logger
 
 
-def hostname_to_hrn(root_auth, login_base, hostname):
-    return PlXrn(auth=root_auth, hostname=login_base + '_' +hostname).get_hrn()
+
 
 class SlabAggregate:
 
