@@ -648,10 +648,12 @@ class SlabDriver(Driver):
         hostname_list = []
         hostname_dict_list = [] 
         for resource_id in resource_id_list:
-            hostname_dict_list.append({'hostname' : \
-                    oar_id_node_dict[resource_id]['hostname'], 
-                    'site_id' :  oar_id_node_dict[resource_id]['site']})
-            
+            #Because jobs requested "asap" do not have defined resources
+            if resource_id is not "Undefined":
+                hostname_dict_list.append({'hostname' : \
+                        oar_id_node_dict[resource_id]['hostname'], 
+                        'site_id' :  oar_id_node_dict[resource_id]['site']})
+                
             #hostname_list.append(oar_id_node_dict[resource_id]['hostname'])
         return hostname_dict_list 
         

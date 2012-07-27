@@ -321,15 +321,24 @@ class OARGETParser:
         job = {}
         #Parse resources info
         for json_element in  self.raw_json['items']:
-            job['t_from'] = json_element['scheduled_start']
-            #Get resources id list for the job
-            job['resource_ids'] = \
-                [ node_dict['id'] for node_dict in json_element['resources'] ]
+            #In case it is a real reservation (not asap case)
+            if json_element['scheduled_start']:
+                job['t_from'] = json_element['scheduled_start']
+                job['t_until'] = int(json_element['scheduled_start']) + \
+                                                       int(json_element['walltime'])
+                #Get resources id list for the job
+                job['resource_ids'] = \
+                    [ node_dict['id'] for node_dict in json_element['resources'] ]
+            else:
+                job['t_from'] = "As soon as possible"
+                job['t_until'] = "As soon as possible"
+                job['resource_ids'] = ["Undefined"]
+                
            
             job['state'] = json_element['state'] 
             job['lease_id'] = json_element['id'] 
-            job['t_until'] = json_element['scheduled_start'] + \
-                                                    json_element['walltime']
+            
+            
             job['user'] = json_element['owner']
             #logger.debug("OARRestapi \tParseReservedNodes job %s" %(job))  
             reservation_list.append(job)
