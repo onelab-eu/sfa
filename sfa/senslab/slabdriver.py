@@ -18,7 +18,7 @@ from sfa.rspecs.version_manager import VersionManager
 from sfa.rspecs.rspec import RSpec
 
 from sfa.util.xrn import hrn_to_urn, urn_to_sliver_id, get_leaf
-from sfa.planetlab.plxrn import hostname_to_urn, xrn_to_hostname
+
 
 ## thierry: everything that is API-related (i.e. handling incoming requests) 
 # is taken care of 
@@ -29,7 +29,7 @@ from sfa.senslab.OARrestapi import  OARrestapi
 from sfa.senslab.LDAPapi import LDAPapi
 
 from sfa.senslab.slabpostgres import SlabDB, slab_dbsession, SliceSenslab
-from sfa.senslab.slabaggregate import SlabAggregate
+from sfa.senslab.slabaggregate import SlabAggregate, slab_xrn_to_hostname, slab_xrn_object
 from sfa.senslab.slabslices import SlabSlices
 
 
@@ -191,7 +191,7 @@ class SlabDriver(Driver):
             requested_lease = {}
             if not lease.get('lease_id'):
                 requested_lease['hostname'] = \
-                            xrn_to_hostname(lease.get('component_id').strip())
+                            slab_xrn_to_hostname(lease.get('component_id').strip())
                 requested_lease['start_time'] = lease.get('start_time')
                 requested_lease['duration'] = lease.get('duration')
             else:
@@ -1146,9 +1146,10 @@ class SlabDriver(Driver):
             resa['component_id_list'] = []
             #Transform the hostnames into urns (component ids)
             for node in resa['reserved_nodes']:
-                resa['component_id_list'].append(hostname_to_urn(self.hrn, \
-                         self.root_auth, node['hostname']))
-
+                #resa['component_id_list'].append(hostname_to_urn(self.hrn, \
+                         #self.root_auth, node['hostname']))
+                slab_xrn = slab_xrn_object(self.root_auth, node['hostname'])
+                resa['component_id_list'].append(slab_xrn.urn)
         
         #Filter the reservation list if necessary
         #Returns all the leases associated with a given slice

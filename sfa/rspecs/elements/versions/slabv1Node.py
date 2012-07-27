@@ -1,4 +1,4 @@
-from sfa.planetlab.plxrn import xrn_to_hostname
+
 from sfa.util.xrn import Xrn
 from sfa.util.xml import XpathFilter
 from sfa.rspecs.elements.node import Node
@@ -72,7 +72,7 @@ class Slabv1Node:
             for attribute in node: 
             # set component name
                 if attribute is 'component_id':
-                    component_name = xrn_to_hostname(node['component_id'])
+                    component_name = node['component_name']
                     node_elem.set('component_name', component_name)
                     
             # set hardware types, extend fields to add Senslab's architecture

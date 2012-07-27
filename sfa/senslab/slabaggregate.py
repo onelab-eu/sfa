@@ -5,7 +5,6 @@ import time
 
 #from sfa.util.config import Config
 from sfa.util.xrn import hrn_to_urn, urn_to_hrn, urn_to_sliver_id
-from sfa.planetlab.plxrn import PlXrn, hostname_to_urn
 
 from sfa.rspecs.rspec import RSpec
 from sfa.rspecs.elements.versions.slabv1Node import SlabPosition
@@ -23,8 +22,17 @@ from sfa.rspecs.version_manager import VersionManager
 from sfa.rspecs.elements.versions.slabv1Node import SlabNode
 from sfa.util.sfalogging import logger
 
+from sfa.util.xrn import Xrn
 
+def slab_xrn_to_hostname(xrn):
+    return Xrn.unescape(Xrn(xrn=xrn, type='node').get_leaf())
 
+def slab_xrn_object(root_auth, hostname):
+    """Attributes are urn and hrn.
+    Get the hostname using slab_xrn_to_hostname on the urn.
+    
+    """
+    return Xrn('.'.join( [root_auth, Xrn.escape(hostname)]), type='node')
 
 class SlabAggregate:
 
@@ -165,16 +173,18 @@ class SlabAggregate:
             rspec_node['mobile'] = node['mobile']
             rspec_node['archi'] = node['archi']
             rspec_node['radio'] = node['radio']
-            rspec_node['component_id'] = \
-                                        hostname_to_urn(self.driver.root_auth, \
-                                        node['site'], node['hostname'])
+
+            slab_xrn = slab_xrn_object(self.driver.root_auth, node['hostname'])
+            rspec_node['component_id'] = slab_xrn.urn
             rspec_node['component_name'] = node['hostname']  
             rspec_node['component_manager_id'] = \
                             hrn_to_urn(self.driver.root_auth, 'authority+sa')
-            #rspec_node['component_manager_id'] = Xrn(self.driver.root_auth, 'authority+sa').get_urn()
-            rspec_node['authority_id'] = \
-                hrn_to_urn(PlXrn.site_hrn(self.driver.root_auth, \
-                                                node['site']), 'authority+sa')
+            
+            # Senslab's nodes are federated : there is only one authority 
+            # for all Senslab sites, registered in SFA.
+            # Removing the part including the site in authority_id SA 27/07/12
+            rspec_node['authority_id'] = rspec_node['component_manager_id']  
+
             # do not include boot state (<available> element) in the manifest rspec
             
             #if not slice:
@@ -201,7 +211,6 @@ class SlabAggregate:
             for field in position :
                 try:
                     position[field] = node[field]
-                    logger.debug("SLABAGGREGATE\t get_rspecposition field %s position[field] %s "%(field, position[field]))
                 except KeyError, error :
                     logger.log_exc("SLABAGGREGATE\t get_rspec position %s "%(error))
 
@@ -236,7 +245,7 @@ class SlabAggregate:
                 #service = Services({'login': login})
                 #rspec_node['services'] = [service]
             rspec_nodes.append(rspec_node)
-        #logger.debug("SLABAGGREGATE \t get_nodes rspec_nodes %s"%(rspec_nodes))
+
         return (rspec_nodes)       
 
     def get_leases(self, slice_record = None, options = {}):
@@ -258,8 +267,10 @@ class SlabAggregate:
                 rspec_lease = Lease()
                 rspec_lease['lease_id'] = lease['lease_id']
                 site = node['site_id']
-                rspec_lease['component_id'] = hostname_to_urn(self.driver.hrn, \
-                                        site, node['hostname'])
+                slab_xrn = slab_xrn_object(self.driver.root_auth, node['hostname'])
+                rspec_lease['component_id'] = slab_xrn.urn
+                #rspec_lease['component_id'] = hostname_to_urn(self.driver.hrn, \
+                                        #site, node['hostname'])
                 rspec_lease['slice_id'] = lease['slice_id']
                 rspec_lease['start_time'] = lease['t_from']
                 rspec_lease['duration'] = (lease['t_until'] - lease['t_from']) \
@@ -329,8 +340,9 @@ class SlabAggregate:
                 tmp = ldap_username.split('.')
                 ldap_username = tmp[1].split('_')[0]
                 logger.debug("SlabAggregate \tget_rspec **** \
-                        ldap_username %s \r\n" %(ldap_username))
-                rspec.version.add_connection_information(ldap_username)
+                        ldap_username %s rspec.version %s\r\n" %(ldap_username, rspec.version))
+                if version.type == "Slab":
+                    rspec.version.add_connection_information(ldap_username)
 
             default_sliver = slivers.get(None, [])
             if default_sliver:
