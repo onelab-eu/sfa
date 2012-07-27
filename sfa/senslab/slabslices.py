@@ -141,7 +141,7 @@ class SlabSlices:
         
     def verify_slice_leases(self, sfa_slice, requested_leases, kept_leases, \
         peer):
-        
+        logger.debug("SLABSLICES \tverify_slice_leases requested_leases %s kept_leases %s sfa_slice%s peer%s" %(requested_leases, kept_leases,sfa_slice,peer) )
         leases = self.driver.GetLeases({'name':sfa_slice['name']}, ['lease_id'])
         grain = self.driver.GetLeaseGranularity()
         if leases : 
@@ -150,9 +150,11 @@ class SlabSlices:
     
             try:
                 if peer:
-                    self.driver.UnBindObjectFromPeer('slice', \
-                                    sfa_slice['slice_id'], peer['shortname'])
-                deleted = self.driver.DeleteLeases(deleted_leases)
+                    #peer = RegAuyhority object is unsubscriptable
+                    #TODO :UnBindObjectFromPeer Quick and dirty auth='senslab2 SA 27/07/12
+                    self.driver.UnBindObjectFromPeer('senslab2', 'slice', \
+                                    sfa_slice['record_id_slice'], peer.hrn)
+                deleted = self.driver.DeleteLeases(deleted_leases, sfa_slice['name'])
                 for lease in requested_leases:
                     added = self.driver.AddLeases(lease['hostname'], \
                             sfa_slice['name'], int(lease['start_time']), \
@@ -188,16 +190,16 @@ class SlabSlices:
             username = tmp[(len(tmp)-1)]
             #Update the table with the nodes that populate the slice
             self.driver.db.update_job(sfa_slice['name'], nodes = added_nodes)
-            logger.debug("SLABSLICES \tverify_slice_nodes slice %s "\
-                                                             %(sfa_slice))
+            logger.debug("SLABSLICES \tverify_slice_nodes slice %s \r\n \r\n deleted_nodes %s"\
+                                                             %(sfa_slice,deleted_nodes))
             #If there is a timeslot specified, then a job can be launched
-            try:
-                #slot = sfa_slice['timeslot']
-                self.driver.LaunchExperimentOnOAR(sfa_slice, added_nodes, \
-                                                                    username)
-            except KeyError:  
-                logger.log_exc("SLABSLICES \verify_slice_nodes KeyError \
-                                                sfa_slice %s  " %(sfa_slice))
+            #try:
+                ##slot = sfa_slice['timeslot']
+                #self.driver.LaunchExperimentOnOAR(sfa_slice, added_nodes, \
+                                                                    #username)
+            #except KeyError:  
+                #logger.log_exc("SLABSLICES \verify_slice_nodes KeyError \
+                                                #sfa_slice %s  " %(sfa_slice))
 
 
             if deleted_nodes:
