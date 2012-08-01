@@ -139,13 +139,15 @@ class SlabSlices:
         return sfa_peer
         
         
-    def verify_slice_leases(self, sfa_slice, requested_leases, kept_leases, \
+    def verify_slice_leases(self, sfa_slice, requested_jobs_dict, kept_leases, \
         peer):
-        logger.debug("SLABSLICES \tverify_slice_leases requested_leases %s kept_leases %s sfa_slice%s peer%s" %(requested_leases, kept_leases,sfa_slice,peer) )
+
+       
+        #First get the list of current leases from OAR  
         leases = self.driver.GetLeases({'name':sfa_slice['name']}, ['lease_id'])
-        grain = self.driver.GetLeaseGranularity()
         if leases : 
             current_leases = [lease['lease_id'] for lease in leases]
+            #Deleted leases are the ones with lease id not declared in the Rspec
             deleted_leases = list(set(current_leases).difference(kept_leases))
     
             try:
@@ -154,15 +156,21 @@ class SlabSlices:
                     #TODO :UnBindObjectFromPeer Quick and dirty auth='senslab2 SA 27/07/12
                     self.driver.UnBindObjectFromPeer('senslab2', 'slice', \
                                     sfa_slice['record_id_slice'], peer.hrn)
-                deleted = self.driver.DeleteLeases(deleted_leases, sfa_slice['name'])
-                for lease in requested_leases:
-                    added = self.driver.AddLeases(lease['hostname'], \
-                            sfa_slice['name'], int(lease['start_time']), \
-                            int(lease['duration']))
+                
+                deleted = self.driver.DeleteLeases(deleted_leases, \
+                                        sfa_slice['name'])
+               
             #TODO : catch other exception?
             except KeyError: 
                 logger.log_exc('Failed to add/remove slice leases')
-
+                
+        #Add new leases        
+        for start_time in requested_jobs_dict:
+            job = requested_jobs_dict[start_time]
+            added = self.driver.AddLeases(job['hostname'], \
+                        sfa_slice, int(job['start_time']), \
+                        int(job['duration']))
+                        
         return leases
 
     def verify_slice_nodes(self, sfa_slice, requested_slivers, peer):

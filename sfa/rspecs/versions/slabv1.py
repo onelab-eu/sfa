@@ -97,18 +97,16 @@ class Slabv1(RSpecVersion):
     def get_slice_attributes(self, network=None):
         
         slice_attributes = []
-        slot = self.get_slice_timeslot()
+
         nodes_with_slivers = self.get_nodes_with_slivers()
-        slice_attributes.append({'timeslot':slot})
-        #slice_attributes.append({'name': 'timeslot', 'value' : slot})
-        print>>sys.stderr, "\r\n \r\n \r\n \t\t SLABV1.PY get_slice_attributes -----------------nodes_with_slivers %s "%(nodes_with_slivers)
+
         # TODO: default sliver attributes in the PG rspec?
         default_ns_prefix = self.namespaces['default']
         for node in nodes_with_slivers:
             sliver_attributes = self.get_sliver_attributes(node['component_id'],node, network)
             for sliver_attribute in sliver_attributes:
-                name=str(sliver_attribute[0])
-                text =str(sliver_attribute[1])
+                name = str(sliver_attribute[0])
+                text = str(sliver_attribute[1])
                 attribs = sliver_attribute[2]
                 # we currently only suppor the <initscript> and <flack> attributes
                 #if  'info' in name:
@@ -123,8 +121,7 @@ class Slabv1(RSpecVersion):
                     attribute = {'name': 'initscript', 'value': value, 'node_id': node}
                     slice_attributes.append(attribute)
           
-                    
-        print>>sys.stderr, "\r\n \r\n \r\n \t\t SLABV1.PY get_slice_attributes ----------------- slice_attributes %s "%(slice_attributes)
+
         return slice_attributes
 
     def attributes_list(self, elem):
