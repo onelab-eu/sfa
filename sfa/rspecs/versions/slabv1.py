@@ -6,7 +6,7 @@ import sys
 from sfa.rspecs.elements.versions.slabv1Lease import Slabv1Lease
 from sfa.rspecs.elements.versions.slabv1Node import Slabv1Node
 from sfa.rspecs.elements.versions.slabv1Sliver import Slabv1Sliver
-from sfa.rspecs.elements.versions.slabv1Timeslot import Slabv1Timeslot
+
 
 from sfa.rspecs.elements.versions.sfav1Lease import SFAv1Lease
 
