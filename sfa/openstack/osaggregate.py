@@ -257,7 +257,8 @@ class OSAggregate:
         security_group_manager = SecurityGroup(self.driver)
         for instance in instances:
             # deleate this instance's security groups
-            for security_group in instance.metadata.get('security_groups', []):
+            security_group = instance.metadata.get('security_groups', '')
+            if security_group:
                 # dont delete the default security group
                 if security_group != 'default': 
                     security_group_manager.delete_security_group(security_group)
