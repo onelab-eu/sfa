@@ -97,10 +97,11 @@ class OSAggregate:
             #else:
             #    node_xrn = OSXrn('cloud', 'node')
             node_xrn = instance.metadata.get('component_id')
+            node_xrn
             if not node_xrn:
                 node_xrn = OSXrn('cloud', 'node')
             else:
-                node_xrn = OSXrn(node_xrn, 'node') 
+                node_xrn = OSXrn(xrn=node_xrn, 'node') 
 
             rspec_node['component_id'] = node_xrn.urn
             rspec_node['component_name'] = node_xrn.name
