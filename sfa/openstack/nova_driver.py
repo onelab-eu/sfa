@@ -339,15 +339,18 @@ class NovaDriver(Driver):
                 return slices
     
         # get data from db
-        projs = self.shell.auth_manager.get_projects()
-        slice_urns = [OSXrn(proj.name, 'slice').urn for proj in projs] 
-    
+        instance_urns = []
+        instances = self.shell.nova_manager.servers.findall()
+        for instance in instances:
+            if instance.name not in instance_urns:
+                instance_urns.append(OSXrn(instance.name, type='slice').urn)
+
         # cache the result
         if self.cache:
             logger.debug ("OpenStackDriver.list_slices stores value in cache")
-            self.cache.add('slices', slice_urns) 
+            self.cache.add('slices', instance_urns) 
     
-        return slice_urns
+        return instance_urns
         
     # first 2 args are None in case of resource discovery
     def list_resources (self, slice_urn, slice_hrn, creds, options):
