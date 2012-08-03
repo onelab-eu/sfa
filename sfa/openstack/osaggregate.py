@@ -96,7 +96,7 @@ class OSAggregate:
             #    node_xrn = OSXrn(instance.availability_zone, 'node')
             #else:
             #    node_xrn = OSXrn('cloud', 'node')
-            node_xrn = instance.metatata.get('component_id')
+            node_xrn = instance.metadata.get('component_id')
             if not node_xrn:
                 node_xrn = OSXrn('cloud', 'node') 
 
