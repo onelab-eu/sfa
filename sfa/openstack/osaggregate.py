@@ -235,7 +235,7 @@ class OSAggregate:
                 image_id = self.driver.shell.nova_manager.images.find(name=image['name'])
                 fw_rules = instance.get('fw_rules', [])
                 group_name = self.create_security_group(slicename, fw_rules)
-                metadata['security_groups'] = [group_name]
+                metadata['security_groups'] = group_name
                 metadata['component_id'] = node['component_id']
                 try: 
                     self.driver.shell.nova_manager.servers.create(flavor=flavor_id,
