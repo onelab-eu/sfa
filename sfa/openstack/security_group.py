@@ -14,7 +14,7 @@ class SecurityGroup:
 
     def delete_security_group(self, name):
         try:
-            self.client.security_groups(name=name)
+            self.client.security_groups.delete(name)
         except Exception, ex:
             logger.log_exc("Failed to delete security group")
 
