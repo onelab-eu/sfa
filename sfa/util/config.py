@@ -107,6 +107,7 @@ DO NOT EDIT. This file was automatically generated at
             for item in self.config.items(section):
                 name = "%s_%s" % (section, item[0])
                 value = item[1]
+                if 
                 setattr(self, name, value)
                 setattr(self, name.upper(), value)
         
@@ -162,8 +163,8 @@ DO NOT EDIT. This file was automatically generated at
                 # bash does not have the concept of NULL
                 if value:
                     option = "%s_%s" % (section.upper(), name.upper())
-                    if bool(value) and not value.isdigit():
-                        value = str(bool(value))  
+                    if not isinstance(value, bool) and not value.isdigit():
+                        value = '"%s"' % value  
                     buf.write(option + "=" + value + os.linesep)
         return buf.getvalue()        
 
