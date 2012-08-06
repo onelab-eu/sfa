@@ -54,13 +54,8 @@ class SecurityGroup:
                 from_port, to_port = icmp_type[0], icmp_type[1]
 
             group = self.client.security_groups.find(name=group_name)
-            self.client.security_group_rules.create(
-                    group_id=group.id,    
-                    ip_protocol=protocol,
-                    from_port=from_port,
-                    to_port=to_port,
-                    cidr_ip=cidr_ip,
-                    )
+            self.client.security_group_rules.create(group.id, \
+                                protocol, from_port, to_port,cidr_ip)
         except Exception, ex:
             logger.log_exc("Failed to add rule to group %s" % group_name)
 
@@ -78,7 +73,7 @@ class SecurityGroup:
                 'id': group.id,   
                 'from_port': from_port,
                 'to_port': to_port,
-                'cird_ip': ip,
+                'cidr_ip': ip,
                 'ip_protocol':protocol,
             }
             rule = self.client.security_group_rules.find(**filter)
