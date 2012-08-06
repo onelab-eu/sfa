@@ -73,6 +73,10 @@ def verify_callback(conn, x509, err, depth, preverify):
        #print "  X509_V_ERR_CERT_UNTRUSTED"
        return 1
 
+    # ignore X509_V_ERR_CERT_SIGNATURE_FAILURE
+    if err == 7:
+       return 1         
+
     logger.debug("  error %s in verify_callback"%err)
 
     return 0
