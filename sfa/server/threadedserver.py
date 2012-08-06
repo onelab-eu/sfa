@@ -143,7 +143,7 @@ class SecureXMLRPCServer(BaseHTTPServer.HTTPServer,SimpleXMLRPCServer.SimpleXMLR
 
         It it very similar to SimpleXMLRPCServer but it uses HTTPS for transporting XML data.
         """
-        logger.debug("SecureXMLRPCServer.__init__, server_address=%s, cert_file=%s"%(server_address,cert_file))
+        logger.debug("SecureXMLRPCServer.__init__, server_address=%s, cert_file=%s, key_file=%s"%(server_address,cert_file,key_file))
         self.logRequests = logRequests
         self.interface = None
         self.key_file = key_file
