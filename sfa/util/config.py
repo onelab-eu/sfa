@@ -113,6 +113,10 @@ DO NOT EDIT. This file was automatically generated at
             for item in self.config.items(section):
                 name = "%s_%s" % (section, item[0])
                 value = item[1]
+                if isbool(value):
+                    value = str2bool(value)
+                elif value.isdigit():
+                    value = int(value)    
                 setattr(self, name, value)
                 setattr(self, name.upper(), value)
         
