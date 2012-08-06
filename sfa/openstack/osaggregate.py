@@ -171,7 +171,9 @@ class OSAggregate:
 
 
     def create_instance_key(self, slice_hrn, user):
-        key_name = "%s:%s" (slice_name, Xrn(user['urn']).get_hrn())
+        slice_name = Xrn(slice_hrn).leaf
+        user_name = Xrn(user['urn']).leaf
+        key_name = "%s:%s" % (slice_name, user_name)
         pubkey = user['keys'][0]
         key_found = False
         existing_keys = self.driver.shell.nova_manager.keypairs.findall(name=key_name)
