@@ -125,7 +125,7 @@ function reload () {
 function db_start () {
     
     # only if enabled
-    [ "$SFA_DB_ENABLED" == 1 -o "$SFA_DB_ENABLED" == true ] || return
+    [ "$SFA_DB_ENABLED" == 1 -o "$SFA_DB_ENABLED" == True ] || return
 
     if ! rpm -q myplc >& /dev/null; then
 
@@ -244,7 +244,7 @@ function db_start () {
 function db_stop () {
 
     # only if enabled
-    [ "$SFA_DB_ENABLED" == 1 ] || return
+    [ "$SFA_DB_ENABLED" == 1 -o "$SFA_DB_ENABLED" == True ] || return
 
     # not too nice, but.. when co-located with myplc we'll let it start/stop postgresql
     if ! rpm -q myplc >& /dev/null ; then
@@ -266,11 +266,11 @@ function start() {
     # install peer certs
     action $"SFA: installing peer certs" daemon /usr/bin/sfa-start.py -t -d $OPTIONS 
 
-    [ "$SFA_REGISTRY_ENABLED" == 1 ] && action $"SFA: Registry" daemon /usr/bin/sfa-start.py -r -d $OPTIONS
+    [ "$SFA_REGISTRY_ENABLED" == 1 -o "$SFA_REGISTRY_ENABLED" == True ] && action $"SFA: Registry" daemon /usr/bin/sfa-start.py -r -d $OPTIONS
     
-    [ "$SFA_AGGREGATE_ENABLED" == 1 ] && action $"SFA: Aggregate" daemon /usr/bin/sfa-start.py -a -d $OPTIONS
+    [ "$SFA_AGGREGATE_ENABLED" == 1  -o "$SFA_AGGREGATE_ENABLED" == True ] && action $"SFA: Aggregate" daemon /usr/bin/sfa-start.py -a -d $OPTIONS
         
-    [ "$SFA_SM_ENABLED" == 1 ] && action "SFA: SliceMgr" daemon /usr/bin/sfa-start.py -s -d $OPTIONS
+    [ "$SFA_SM_ENABLED" == 1 -o "$SFA_SM_ENABLED" == True ] && action "SFA: SliceMgr" daemon /usr/bin/sfa-start.py -s -d $OPTIONS
 
     [ "$SFA_FLASHPOLICY_ENABLED" == 1 ] && \
         action "Flash Policy Server" daemon /usr/bin/sfa_flashpolicy.py --file="$SFA_FLASHPOLICY_CONFIG_FILE" --port=$SFA_FLASHPOLICY_PORT -d
