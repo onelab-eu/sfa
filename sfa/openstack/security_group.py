@@ -8,7 +8,7 @@ class SecurityGroup:
         
     def create_security_group(self, name):
         try:
-            self.client.security_groups.create(name=name, description="")
+            self.client.security_groups.create(name=name, description=name)
         except Exception, ex:
             logger.log_exc("Failed to add security group")
 
