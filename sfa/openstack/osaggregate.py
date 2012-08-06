@@ -184,7 +184,7 @@ class OSAggregate:
                 key_found = True
 
         if not key_found:
-            self.driver.shll.nova_manager.keypairs.create(key_name, pubkey)
+            self.driver.shell.nova_manager.keypairs.create(key_name, pubkey)
         return key_name       
         
 
