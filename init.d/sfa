@@ -22,6 +22,7 @@ sfa_whole_config=/etc/sfa/sfa_config
 sfa_default_config=/etc/sfa/default_config.xml
 # SFA local (site-dependent) file
 sfa_local_config=/etc/sfa/configs/site_config
+sfa_local_config_xml=/etc/sfa/configs/site_config.xml
 
 # Source sfa shell config if present 
 [ -f /etc/sfa/sfa_config.sh ] && . /etc/sfa/sfa_config.sh
@@ -93,6 +94,10 @@ function reload () {
     done
 
     # Convert configuration to various formats
+    if [ -f $sfa_local_config_xml ] ; then
+    sfa-config --python $sfa_local_config_xml > $sfa_local_config 
+    rm $sfa_local_config_xml 
+    fi
     if [ -n "$force" -o $sfa_local_config -nt $sfa_whole_config ] ; then
 	sfa-config --python $sfa_default_config $sfa_local_config > $sfa_whole_config
     fi
