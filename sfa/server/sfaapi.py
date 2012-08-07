@@ -10,9 +10,8 @@ from sfa.trust.auth import Auth
 from sfa.trust.certificate import Keypair, Certificate
 from sfa.trust.credential import Credential
 from sfa.trust.rights import determine_rights
-
+from sfa.util.version import version_core
 from sfa.server.xmlrpcapi import XmlrpcApi
-
 from sfa.client.return_value import ReturnValue
 
 
@@ -232,9 +231,10 @@ class SfaApi (XmlrpcApi):
             output = result.faultString 
         return output
 
-    def prepare_response_v2_am(self, result):
+    def prepare_response_am(self, result):
+        version = version_core() 
         response = {
-            'geni_api': 2,             
+            'geni_api': version['geni_api'],             
             'code': self.get_geni_code(result),
             'value': self.get_geni_value(result),
             'output': self.get_geni_output(result),
@@ -248,6 +248,6 @@ class SfaApi (XmlrpcApi):
         """
         # as of dec 13 2011 we only support API v2
         if self.interface.lower() in ['aggregate', 'slicemgr']: 
-            result = self.prepare_response_v2_am(result)
+            result = self.prepare_response_am(result)
         return XmlrpcApi.prepare_response(self, result, method)
 

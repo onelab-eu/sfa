@@ -7,6 +7,7 @@ def version_core (more={}):
     core = { 'code_tag' : version_tag,
              'code_url' : scm_url,
              'hostname' : socket.gethostname(),
+             'geni_api': 3,
              }
     core.update(more)
     return core
