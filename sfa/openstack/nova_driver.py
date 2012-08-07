@@ -330,6 +330,9 @@ class NovaDriver(Driver):
             'testbed':self.testbed_name(),
             'geni_request_rspec_versions': request_rspec_versions,
             'geni_ad_rspec_versions': ad_rspec_versions,
+            'geni_single_allocation': False, # Accept operations that act on as subset of slivers in a given state
+            'geni_allocate': 'geni_many', # Multiple slivers can exist and be incrementally added, including those which connect or overlap in some way.
+            'geni_best_effort': 'true', 
             }
 
     def list_slices (self, creds, options):
