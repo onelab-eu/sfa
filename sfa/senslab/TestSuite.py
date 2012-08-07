@@ -234,7 +234,11 @@ def TestSlabDriver(job_id):
     if isinstance(job_id,list) and len(job_id) == 1:
        job_id = job_id[0]
     slabdriver = SlabDriver(Config())
-    slabdriver.DeleteJobs(job_id,'senslab2.avakian_slice')
+    l = slabdriver.GetSlices(slice_filter = 'senslab2.avakian_slice', slice_filter_type = 'slice_hrn')
+    print l
+    l = slabdriver.GetSlices(slice_filter = '29', slice_filter_type = 'record_id_user')
+    print l
+    #slabdriver.DeleteJobs(job_id,'senslab2.avakian_slice')
    
 def RunAll():
     TestLdap()
