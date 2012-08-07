@@ -677,9 +677,6 @@ t of slivers in a given state
         site_ids = [node['site_id'] for node in nodes]
     
         result = {}
-        top_level_status = 'unknown'
-        if nodes:
-            top_level_status = 'ready'
         result['geni_urn'] = slice_urn
         result['pl_login'] = slice['name']
         result['pl_expires'] = datetime_to_string(utcparse(slice['expires']))
@@ -701,14 +698,12 @@ t of slivers in a given state
                 res['geni_status'] = 'ready'
             else:
                 res['geni_status'] = 'failed'
-                top_level_status = 'failed' 
+            res['geni_allocation_status'] = 'geni_provisioned'
                 
             res['geni_error'] = ''
             res['users'] = [user]  
-    
             resources.append(res)
             
-        result['geni_status'] = top_level_status
         result['geni_resources'] = resources
         return result
 
