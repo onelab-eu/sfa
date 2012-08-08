@@ -331,27 +331,28 @@ class SlabSlices:
 
         #login_base = slice_hrn.split(".")[0]
         slicename = slice_hrn
-        sl = self.driver.GetSlices(slice_filter = slicename, \
+        slices_list = self.driver.GetSlices(slice_filter = slicename, \
                                             slice_filter_type = 'slice_hrn') 
-        if sl:
-
-            logger.debug("SLABSLICE \tverify_slice slicename %s sl %s \
-                                slice_record %s"%(slicename, sl, slice_record))
-            sfa_slice = sl
-            sfa_slice.update(slice_record)
-            #del slice['last_updated']
-            #del slice['date_created']
-            #if peer:
-                #slice['peer_slice_id'] = slice_record.get('slice_id', None)
-                ## unbind from peer so we can modify if necessary. 
-                ## Will bind back later
-                #self.driver.UnBindObjectFromPeer('slice', slice['slice_id'], \
-                                                            #peer['shortname'])
-	        #Update existing record (e.g. expires field) 
-                #it with the latest info.
-            ##if slice_record and slice['expires'] != slice_record['expires']:
-                ##self.driver.UpdateSlice( slice['slice_id'], {'expires' : \
-                                                    #slice_record['expires']})
+        if slices_list:
+            for sl in slices_list:
+            
+                logger.debug("SLABSLICE \tverify_slice slicename %s sl %s \
+                                    slice_record %s"%(slicename, sl, slice_record))
+                sfa_slice = sl
+                sfa_slice.update(slice_record)
+                #del slice['last_updated']
+                #del slice['date_created']
+                #if peer:
+                    #slice['peer_slice_id'] = slice_record.get('slice_id', None)
+                    ## unbind from peer so we can modify if necessary. 
+                    ## Will bind back later
+                    #self.driver.UnBindObjectFromPeer('slice', slice['slice_id'], \
+                                                                #peer['shortname'])
+                #Update existing record (e.g. expires field) 
+                    #it with the latest info.
+                ##if slice_record and slice['expires'] != slice_record['expires']:
+                    ##self.driver.UpdateSlice( slice['slice_id'], {'expires' : \
+                                                        #slice_record['expires']})
         else:
             logger.debug(" SLABSLICES \tverify_slice Oups \
                         slice_record %s peer %s sfa_peer %s "\

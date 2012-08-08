@@ -808,14 +808,15 @@ class SlabDriver(Driver):
                     #the slice record 
                     rslt = self.GetJobsResources(slicerec_dict['oar_job_id'], \
                                                             username = login)
-
+                    logger.debug("SLABDRIVER.PY  \tGetSlices  rslt fromn  GetJobsResources %s"\
+                                                            %(rslt))
                     if rslt :
                         slicerec_dict.update(rslt)
                         slicerec_dict.update({'hrn':\
                                             str(slicerec_dict['slice_hrn'])})
-                        #If GetJobsResources is empty, this means the job is 
-                        #now in the 'Terminated' state
-                        #Update the slice record
+                    #If GetJobsResources is empty, this means the job is 
+                    #now in the 'Terminated' state
+                    #Update the slice record
                     else :
                         self.db.update_job(slice_filter, job_id = -1)
                         slicerec_dict['oar_job_id'] = -1

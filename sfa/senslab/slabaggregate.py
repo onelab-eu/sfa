@@ -68,27 +68,28 @@ class SlabAggregate:
                                                                     %(slices))
         if not slices:
             return (sfa_slice, slivers)
-        if isinstance(sfa_slice, list):
-            sfa_slice = slices[0]
-        else:
-            sfa_slice = slices
+        #if isinstance(sfa_slice, list):
+            #sfa_slice = slices[0]
+        #else:
+            #sfa_slice = slices
 
         # sort slivers by node id , if there is a job
         #and therfore, node allocated to this slice
-        if sfa_slice['oar_job_id'] is not -1:
-            try:
-                
-                for node_id in sfa_slice['node_ids']:
-                    #node_id = self.driver.root_auth + '.' + node_id
-                    sliver = Sliver({'sliver_id': urn_to_sliver_id(slice_urn, \
-                                    sfa_slice['record_id_slice'], node_id),
-                                    'name': sfa_slice['slice_hrn'],
-                                    'type': 'slab-node', 
-                                    'tags': []})
-                    slivers[node_id] = sliver
-            except KeyError:
-                logger.log_exc("SLABAGGREGATE \t \
-                                        get_slice_and_slivers KeyError ")
+        for sfa_slice in slices:
+            if sfa_slice['oar_job_id'] is not -1:
+                try:
+                    
+                    for node_id in sfa_slice['node_ids']:
+                        #node_id = self.driver.root_auth + '.' + node_id
+                        sliver = Sliver({'sliver_id': urn_to_sliver_id(slice_urn, \
+                                        sfa_slice['record_id_slice'], node_id),
+                                        'name': sfa_slice['slice_hrn'],
+                                        'type': 'slab-node', 
+                                        'tags': []})
+                        slivers[node_id] = sliver
+                except KeyError:
+                    logger.log_exc("SLABAGGREGATE \t \
+                                            get_slice_and_slivers KeyError ")
         ## sort sliver attributes by node id    
         ##tags = self.driver.GetSliceTags({'slice_tag_id': slice['slice_tag_ids']})
         ##for tag in tags:
