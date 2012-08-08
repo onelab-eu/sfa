@@ -155,7 +155,7 @@ class RegistryManager:
         local_records = dbsession.query(RegRecord).filter(RegRecord.hrn.in_(local_hrns))
         if type:
             local_records = local_records.filter_by(type=type)
-        local_records=local_records.all()
+        local_records=local_records.all()                
         logger.info("Resolve: local_records=%s (type=%s)"%(local_records,type))
         local_dicts = [ record.__dict__ for record in local_records ]
         
@@ -163,9 +163,11 @@ class RegistryManager:
             # in full mode we get as much info as we can, which involves contacting the 
             # testbed for getting implementation details about the record
             self.driver.augment_records_with_testbed_info(local_dicts)
+            #logger.debug("Resolve: local_dicts =%s "%(local_dicts))
             # also we fill the 'url' field for known authorities
             # used to be in the driver code, sounds like a poorman thing though
             def solve_neighbour_url (record):
+                logger.debug("\r\n \t\t solve_neighbour_url: record = %s "%(record))
                 if not record.type.startswith('authority'): return 
                 hrn=record.hrn
                 for neighbour_dict in [ api.aggregates, api.registries ]:
@@ -173,12 +175,13 @@ class RegistryManager:
                         record.url=neighbour_dict[hrn].get_url()
                         return 
             for record in local_records: solve_neighbour_url (record)
-        
+            #logger.debug("\solve_neighbour_url = OK ")
         # convert local record objects to dicts for xmlrpc
         # xxx somehow here calling dict(record) issues a weird error
         # however record.todict() seems to work fine
         # records.extend( [ dict(record) for record in local_records ] )
-        records.extend( [ record.todict() for record in local_records ] )    
+        records.extend( [ record.todict() for record in local_records ] ) 
+        #logger.debug("\RESOLVE = records %s " %(records))   
         if not records:
             raise RecordNotFound(str(hrns))
     

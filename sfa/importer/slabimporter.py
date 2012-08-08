@@ -265,7 +265,7 @@ class SlabImporter:
                         #Get it
                         sl_rec = dbsession.query(RegSlice).filter(RegSlice.hrn.match(slice_hrn)).all()
                         
-                        slab_slice = SliceSenslab( slice_hrn = slice_hrn,  record_id_slice=sl_rec[0].record_id, record_id_user= user_record.record_id)
+                        slab_slice = SliceSenslab( slice_hrn = slice_hrn, oar_job_id = -1, record_id_slice=sl_rec[0].record_id, record_id_user= user_record.record_id)
                         print>>sys.stderr, "\r\n \r\n SLAB IMPORTER SLICE IMPORT NOTslice_record %s \r\n slab_slice %s" %(sl_rec,slab_slice)
                         slab_dbsession.add(slab_slice)
                         slab_dbsession.commit()

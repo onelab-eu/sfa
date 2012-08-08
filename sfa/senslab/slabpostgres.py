@@ -40,11 +40,15 @@ SlabBase = declarative_base()
 class SliceSenslab (SlabBase):
     __tablename__ = 'slice_senslab' 
     #record_id_user = Column(Integer, primary_key=True)
+    # Multiple primary key aka composite primary key
+    # so that we can have several job id for a given slice hrn
     slice_hrn = Column(String,primary_key=True)
+    oar_job_id = Column( Integer, primary_key=True)
     peer_authority = Column( String,nullable = True)
     record_id_slice = Column(Integer)    
-    record_id_user = Column(Integer)
-    oar_job_id = Column( Integer,default = -1)
+    record_id_user = Column(Integer) 
+
+    #oar_job_id = Column( Integer,default = -1)
     node_list = Column(postgresql.ARRAY(String), nullable =True)
     
     def __init__ (self, slice_hrn =None, oar_job_id=None, record_id_slice=None, record_id_user= None,peer_authority=None):
@@ -181,16 +185,38 @@ class SlabDB:
         SlabBase.metadata.create_all(slab_engine)
         return
     
+    def add_job (self, hrn, job_id, nodes = None ):
+        slice_rec = dbsession.query(RegSlice).filter(RegSlice.hrn.match(hrn)).first()
+        if slice_rec : 
+            user_record = slice_rec.reg_researchers
+            slab_slice = SliceSenslab(slice_hrn = hrn, oar_job_id = job_id, \
+                record_id_slice=slice_rec.record_id, record_id_user= user_record[0].record_id, nodes_list = nodes)
+            logger.debug("============SLABPOSTGRES \t add_job slab_slice %s" %(slab_slice))
+            slab_dbsession.add(slab_slice)
+            slab_dbsession.commit()
+     
+        
+    def delete_job (self, hrn, job_id):
+        slab_slice = slab_dbsession.query(SliceSenslab).filter_by(slice_hrn = hrn).filter_by(oar_job_id =job_id).first()
+        slab_dbsession.delete(slab_slice)
+        slab_dbsession.commit()
+        
     #Updates the job_id and the nodes list 
     #The nodes list is never erased.
-    def update_job(self, hrn, job_id= None, nodes = None ):
-        slice_rec = slab_dbsession.query(SliceSenslab).filter_by(slice_hrn = hrn).first()
-        print>>sys.stderr, " \r\n \r\n \t SLABPOSTGRES  update_job slice_rec %s"%(slice_rec)
-        if job_id is not None:
-            slice_rec.oar_job_id = job_id
-        if nodes is not None :
-            slice_rec.node_list = nodes
-        slab_dbsession.commit()
+    def update_job(self, hrn, job_id, nodes = None ):
+        
+        if job_id == -1:
+            #Delete the job in DB
+            self.delete_job(hrn, job_id)
+        else :
+            self.add_job(hrn, job_id, nodes)
+        #slice_rec = slab_dbsession.query(SliceSenslab).filter_by(slice_hrn = hrn).first()
+        #print>>sys.stderr, " \r\n \r\n \t SLABPOSTGRES  update_job slice_rec %s"%(slice_rec)
+        #if job_id is not None:
+            #slice_rec.oar_job_id = job_id
+        #if nodes is not None :
+            #slice_rec.node_list = nodes
+        #slab_dbsession.commit()
 
     def find (self, name = None, filter_dict = None):
         print>>sys.stderr, " \r\n \r\n \t SLABPOSTGRES find  filter_dict %s"%(filter_dict)
