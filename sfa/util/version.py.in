@@ -2,17 +2,11 @@
 version_tag="@VERSIONTAG@"
 scm_url="@SCMURL@"
 import socket
-
-from sfa.util.config import Config
  
 def version_core (more={}):
-    config = Config()
-    hostname = socket.gethostname()
     core = { 'code_tag' : version_tag,
              'code_url' : scm_url,
-             'hostname' : hostname,
-             'geni_api': 3,
-             'geni_api_versions': {'3': "%s:%s" % (hostname, config.sfa_aggregate_port)}, 
+             'hostname' : socket.gethostname(),
              }
     core.update(more)
     return core

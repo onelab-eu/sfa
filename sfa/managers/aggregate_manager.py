@@ -1,3 +1,5 @@
+import soctet
+from sfa.rspecs.version_manager import VersionManager
 from sfa.util.version import version_core
 from sfa.util.xrn import Xrn
 from sfa.util.callids import Callids
@@ -8,17 +10,40 @@ class AggregateManager:
     
     # essentially a union of the core version, the generic version (this code) and
     # whatever the driver needs to expose
+
+    def _rspec_versions(self):
+        version_manager = VersionManager()
+        ad_rspec_versions = []
+        request_rspec_versions = []
+        for rspec_version in version_manager.versions:
+            if rspec_version.content_type in ['*', 'ad']:
+                ad_rspec_versions.append(rspec_version.to_dict())
+            if rspec_version.content_type in ['*', 'request']:
+                request_rspec_versions.append(rspec_version.to_dict())
+        return {
+            'testbed':self.testbed_name(),
+            'geni_request_rspec_versions': request_rspec_versions,
+            'geni_ad_rspec_versions': ad_rspec_versions,
+            }
+
     def GetVersion(self, api, options):
         xrn=Xrn(api.hrn)
         version = version_core()
         version_generic = {
+            'testbed': self.driver.testbed_name(),
             'interface':'aggregate',
-            'sfa': 2,
-            'geni_api': 2,
-            'geni_api_versions': {'2': 'http://%s:%s' % (api.config.SFA_AGGREGATE_HOST, api.config.SFA_AGGREGATE_PORT)}, 
             'hrn':xrn.get_hrn(),
             'urn':xrn.get_urn(),
-            }
+            'geni_api': 3,
+            'geni_api_versions': {'3': 'http://%s:%s' % (socket.gethostname(), api.config.sfa_aggregate_port)},
+            'geni_single_allocation': 0, # Accept operations that act on as subset of slivers in a given state.
+            'geni_allocate': 'geni_many',# Multiple slivers can exist and be incrementally added, including those which connect or overlap in some way.
+            'geni_best_effort': 'true',
+            'geni_credential_types': [{
+                'geni_type': 'geni_sfa',
+                'geni_version': 3,
+            }],
+        }
         version.update(version_generic)
         testbed_version = self.driver.aggregate_version()
         version.update(testbed_version)
