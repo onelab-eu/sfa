@@ -327,13 +327,14 @@ class NovaDriver(Driver):
         return instance_urns
         
     # first 2 args are None in case of resource discovery
-    def list_resources (self, creds, options):
+    def list_resources (self, creds, version, options):
         aggregate = OSAggregate(self)
-        rspec =  aggregate.get_rspec(version=rspec_version, options=options)
+        rspec =  aggregate.get_rspec(version=version, options=options)
         return rspec
 
-    def describe(self, creds, urns, options):
-        return {}
+    def describe(self, creds, urns, version, options):
+        aggregate = OSAggregate(self)
+        return aggregate.describe(urns, version=version, options=options)
     
     def sliver_status (self, slice_urn, slice_hrn):
         # find out where this slice is currently running
