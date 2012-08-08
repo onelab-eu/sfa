@@ -316,24 +316,8 @@ class NovaDriver(Driver):
 
     def testbed_name (self): return "openstack"
 
-    # 'geni_request_rspec_versions' and 'geni_ad_rspec_versions' are mandatory
     def aggregate_version (self):
-        version_manager = VersionManager()
-        ad_rspec_versions = []
-        request_rspec_versions = []
-        for rspec_version in version_manager.versions:
-            if rspec_version.content_type in ['*', 'ad']:
-                ad_rspec_versions.append(rspec_version.to_dict())
-            if rspec_version.content_type in ['*', 'request']:
-                request_rspec_versions.append(rspec_version.to_dict()) 
-        return {
-            'testbed':self.testbed_name(),
-            'geni_request_rspec_versions': request_rspec_versions,
-            'geni_ad_rspec_versions': ad_rspec_versions,
-            'geni_single_allocation': False, # Accept operations that act on as subset of slivers in a given state
-            'geni_allocate': 'geni_many', # Multiple slivers can exist and be incrementally added, including those which connect or overlap in some way.
-            'geni_best_effort': 'true', 
-            }
+        return {}
 
     def list_slices (self, creds, options):
         # look in cache first
