@@ -3,7 +3,6 @@ import datetime
 #
 from sfa.util.faults import MissingSfaInfo, UnknownSfaType, \
     RecordNotFound, SfaNotImplemented, SliverDoesNotExist
-
 from sfa.util.sfalogging import logger
 from sfa.util.defaultdict import defaultdict
 from sfa.util.sfatime import utcparse, datetime_to_string, datetime_to_epoch
@@ -16,13 +15,11 @@ from sfa.storage.model import RegRecord
 
 # used to be used in get_ticket
 #from sfa.trust.sfaticket import SfaTicket
-
 from sfa.rspecs.version_manager import VersionManager
 from sfa.rspecs.rspec import RSpec
 
 # the driver interface, mostly provides default behaviours
 from sfa.managers.driver import Driver
-
 from sfa.planetlab.plshell import PlShell
 import sfa.planetlab.peers as peers
 from sfa.planetlab.plaggregate import PlAggregate
@@ -567,65 +564,20 @@ class PlDriver (Driver):
         return {}
 
     def list_slices (self, creds, options):
-        # look in cache first
-        if self.cache:
-            slices = self.cache.get('slices')
-            if slices:
-                logger.debug("PlDriver.list_slices returns from cache")
-                return slices
-    
         # get data from db 
         slices = self.shell.GetSlices({'peer_id': None}, ['name'])
         slice_hrns = [slicename_to_hrn(self.hrn, slice['name']) for slice in slices]
         slice_urns = [hrn_to_urn(slice_hrn, 'slice') for slice_hrn in slice_hrns]
-    
-        # cache the result
-        if self.cache:
-            logger.debug ("PlDriver.list_slices stores value in cache")
-            self.cache.add('slices', slice_urns) 
-    
         return slice_urns
         
     # first 2 args are None in case of resource discovery
-    def list_resources (self, slice_urn, slice_hrn, creds, options):
-        cached_requested = options.get('cached', True) 
-    
-        version_manager = VersionManager()
-        # get the rspec's return format from options
-        rspec_version = version_manager.get_version(options.get('geni_rspec_version'))
-        version_string = "rspec_%s" % (rspec_version)
-    
-        #panos adding the info option to the caching key (can be improved)
-        if options.get('info'):
-            version_string = version_string + "_"+options.get('info', 'default')
-
-        # Adding the list_leases option to the caching key
-        if options.get('list_leases'):
-            version_string = version_string + "_"+options.get('list_leases', 'default')
-
-        # Adding geni_available to caching key
-        if options.get('geni_available'):
-            version_string = version_string + "_" + str(options.get('geni_available'))
-    
-        # look in cache first
-        if cached_requested and self.cache and not slice_hrn:
-            rspec = self.cache.get(version_string)
-            if rspec:
-                logger.debug("PlDriver.ListResources: returning cached advertisement")
-                return rspec 
-    
-        #panos: passing user-defined options
-        #print "manager options = ",options
+    def list_resources (self, creds, options):
         aggregate = PlAggregate(self)
-        rspec =  aggregate.get_rspec(slice_xrn=slice_urn, version=rspec_version, 
-                                     options=options)
-    
-        # cache the result
-        if self.cache and not slice_hrn:
-            logger.debug("PlDriver.ListResources: stores advertisement in cache")
-            self.cache.add(version_string, rspec)
-    
+        rspec =  aggregate.get_rspec(version=rspec_version, options=options)
         return rspec
+
+    def describe(self, creds, urns, options):
+        return {}
     
     def sliver_status (self, slice_urn, slice_hrn):
         # find out where this slice is currently running

@@ -320,59 +320,22 @@ class NovaDriver(Driver):
         return {}
 
     def list_slices (self, creds, options):
-        # look in cache first
-        if self.cache:
-            slices = self.cache.get('slices')
-            if slices:
-                logger.debug("OpenStackDriver.list_slices returns from cache")
-                return slices
-    
         # get data from db
         instance_urns = []
         instances = self.shell.nova_manager.servers.findall()
         for instance in instances:
             if instance.name not in instance_urns:
                 instance_urns.append(OSXrn(instance.name, type='slice').urn)
-
-        # cache the result
-        if self.cache:
-            logger.debug ("OpenStackDriver.list_slices stores value in cache")
-            self.cache.add('slices', instance_urns) 
-    
         return instance_urns
         
     # first 2 args are None in case of resource discovery
-    def list_resources (self, slice_urn, slice_hrn, creds, options):
-        cached_requested = options.get('cached', True) 
-    
-        version_manager = VersionManager()
-        # get the rspec's return format from options
-        rspec_version = version_manager.get_version(options.get('geni_rspec_version'))
-        version_string = "rspec_%s" % (rspec_version)
-    
-        #panos adding the info option to the caching key (can be improved)
-        if options.get('info'):
-            version_string = version_string + "_"+options.get('info', 'default')
-    
-        # look in cache first
-        if cached_requested and self.cache and not slice_hrn:
-            rspec = self.cache.get(version_string)
-            if rspec:
-                logger.debug("OpenStackDriver.ListResources: returning cached advertisement")
-                return rspec 
-    
-        #panos: passing user-defined options
-        #print "manager options = ",options
+    def list_resources (self, creds, options):
         aggregate = OSAggregate(self)
-        rspec =  aggregate.get_rspec(slice_xrn=slice_urn, version=rspec_version, 
-                                     options=options)
-    
-        # cache the result
-        if self.cache and not slice_hrn:
-            logger.debug("OpenStackDriver.ListResources: stores advertisement in cache")
-            self.cache.add(version_string, rspec)
-    
+        rspec =  aggregate.get_rspec(version=rspec_version, options=options)
         return rspec
+
+    def describe(self, creds, urns, options):
+        return {}
     
     def sliver_status (self, slice_urn, slice_hrn):
         # update nova connection
