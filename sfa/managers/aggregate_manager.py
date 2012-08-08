@@ -27,6 +27,23 @@ class AggregateManager:
             'geni_ad_rspec_versions': ad_rspec_versions,
             }
 
+    def get_rspec_version_string(self, rspec_version, options={}):
+        version_string = "rspec_%s" % (rspec_version)
+
+        #panos adding the info option to the caching key (can be improved)
+        if options.get('info'):
+            version_string = version_string + "_"+options.get('info', 'default')
+
+        # Adding the list_leases option to the caching key
+        if options.get('list_leases'):
+            version_string = version_string + "_"+options.get('list_leases', 'default')
+
+        # Adding geni_available to caching key
+        if options.get('geni_available'):
+            version_string = version_string + "_" + str(options.get('geni_available'))
+
+        return version_string
+
     def GetVersion(self, api, options):
         xrn=Xrn(api.hrn)
         version = version_core()
@@ -75,22 +92,10 @@ class AggregateManager:
         call_id = options.get('call_id')
         if Callids().already_handled(call_id): return ""
 
-        version_manager = VersionManager()
         # get the rspec's return format from options
+        version_manager = VersionManager()
         rspec_version = version_manager.get_version(options.get('geni_rspec_version'))
-        version_string = "rspec_%s" % (rspec_version)
-
-        #panos adding the info option to the caching key (can be improved)
-        if options.get('info'):
-            version_string = version_string + "_"+options.get('info', 'default')
-
-        # Adding the list_leases option to the caching key
-        if options.get('list_leases'):
-            version_string = version_string + "_"+options.get('list_leases', 'default')
-
-        # Adding geni_available to caching key
-        if options.get('geni_available'):
-            version_string = version_string + "_" + str(options.get('geni_available'))
+        version_string = self.get_rspec_version_string(rspec_version, options)
 
         # look in cache first
         cached_requested = options.get('cached', True)
@@ -100,17 +105,20 @@ class AggregateManager:
                 logger.debug("%s.ListResources returning cached advertisement" % (self.driver.__module__))
                 return rspec
        
-        rspec = self.driver.list_resources (creds, options) 
+        rspec = self.driver.list_resources (creds, version, options) 
         if self.driver.cache:
             logger.debug("%s.ListResources stores advertisement in cache" % (self.driver.__module__))
             self.driver.cache.add(version_string, rspec)    
-        return self.driver.list_resources (creds, options)
+        return rspec
     
     def Describe(self, api, creds, urns, options):
         call_id = options.get('call_id')
         if Callids().already_handled(call_id): return ""
 
-        return self.driver.describe (creds, urns, options)
+        # get the rspec's return format from options
+        version_manager = VersionManager()
+        rspec_version = version_manager.get_version(options.get('geni_rspec_version'))
+        return self.driver.describe(creds, urns, rspec, options)
         
     
     def SliverStatus (self, api, xrn, creds, options):
