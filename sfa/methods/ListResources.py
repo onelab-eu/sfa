@@ -10,7 +10,7 @@ from sfa.storage.parameter import Parameter, Mixed
 
 class ListResources(Method):
     """
-    Returns information about available resources or resources allocated to this slice
+    Returns information about available resources
     @param credential list
     @param options dictionary
     @return string
@@ -33,12 +33,8 @@ class ListResources(Method):
             else:
                 raise SfaInvalidArgument('Must specify an rspec version option. geni_rspec_version cannot be null')
  
-        # get slice's hrn from options    
-        xrn = options.get('geni_slice_urn', '')
-        (hrn, _) = urn_to_hrn(xrn)
-
         # Find the valid credentials
-        valid_creds = self.api.auth.checkCredentials(creds, 'listnodes', hrn)
+        valid_creds = self.api.auth.checkCredentials(creds, 'listnodes')
 
         # get hrn of the original caller 
         origin_hrn = options.get('origin_hrn', None)
@@ -52,7 +48,7 @@ class ListResources(Method):
         elif self.api.interface in ['slicemgr']: 
             chain_name = 'FORWARD-OUTGOING'
         self.api.logger.debug("ListResources: sfatables on chain %s"%chain_name)
-        filtered_rspec = run_sfatables(chain_name, hrn, origin_hrn, rspec) 
+        filtered_rspec = run_sfatables(chain_name, '', origin_hrn, rspec) 
  
         if options.has_key('geni_compressed') and options['geni_compressed'] == True:
             filtered_rspec = zlib.compress(filtered_rspec).encode('base64')

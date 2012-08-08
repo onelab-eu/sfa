@@ -3,6 +3,7 @@ from sfa.rspecs.version_manager import VersionManager
 from sfa.util.version import version_core
 from sfa.util.xrn import Xrn
 from sfa.util.callids import Callids
+from sfa.util.sfalogging import logger
 
 class AggregateManager:
 
@@ -52,22 +53,65 @@ class AggregateManager:
     def ListSlices(self, api, creds, options):
         call_id = options.get('call_id')
         if Callids().already_handled(call_id): return []
+        
+        # look in cache first
+        if self.driver.cache:
+            slices = self.driver.cache.get('slices')
+            if slices:
+                logger.debug("%s.list_slices returns from cache" % (self.driver.__module__))
+                return slices
+
+        # call driver
+        slices = self.driver.list_slices(creds, options)
+
+        # cache the result
+        if self.driver.cache:
+            logger.debug ("%s.list_slices stores value in cache" % (self.driver.__module__))
+            self.driver.cache.add('slices', instance_urns)
+
         return self.driver.list_slices (creds, options)
 
     def ListResources(self, api, creds, options):
         call_id = options.get('call_id')
         if Callids().already_handled(call_id): return ""
 
-        # get slice's hrn from options
-        slice_xrn = options.get('geni_slice_urn', None)
-        # pass None if no slice is specified
-        if not slice_xrn:
-            slice_hrn, slice_urn = None, None
-        else:
-            xrn = Xrn(slice_xrn)
-            slice_urn=xrn.get_urn()
-            slice_hrn=xrn.get_hrn()
-        return self.driver.list_resources (slice_urn, slice_hrn, creds, options)
+        version_manager = VersionManager()
+        # get the rspec's return format from options
+        rspec_version = version_manager.get_version(options.get('geni_rspec_version'))
+        version_string = "rspec_%s" % (rspec_version)
+
+        #panos adding the info option to the caching key (can be improved)
+        if options.get('info'):
+            version_string = version_string + "_"+options.get('info', 'default')
+
+        # Adding the list_leases option to the caching key
+        if options.get('list_leases'):
+            version_string = version_string + "_"+options.get('list_leases', 'default')
+
+        # Adding geni_available to caching key
+        if options.get('geni_available'):
+            version_string = version_string + "_" + str(options.get('geni_available'))
+
+        # look in cache first
+        cached_requested = options.get('cached', True)
+        if cached_requested and self.driver.cache and not slice_hrn:
+            rspec = self.driver.cache.get(version_string)
+            if rspec:
+                logger.debug("%s.ListResources returning cached advertisement" % (self.driver.__module__))
+                return rspec
+       
+        rspec = self.driver.list_resources (creds, options) 
+        if self.driver.cache:
+            logger.debug("%s.ListResources stores advertisement in cache" % (self.driver.__module__))
+            self.driver.cache.add(version_string, rspec)    
+        return self.driver.list_resources (creds, options)
+    
+    def Describe(self, api, creds, urns, options):
+        call_id = options.get('call_id')
+        if Callids().already_handled(call_id): return ""
+
+        return self.driver.describe (creds, urns, options)
+        
     
     def SliverStatus (self, api, xrn, creds, options):
         call_id = options.get('call_id')
