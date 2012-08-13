@@ -133,7 +133,12 @@ class SfaClientBootstrap:
         self.assert_private_key()
         registry_proxy = SfaServerProxy (self.registry_url, self.private_key_filename(),
                                          certificate_filename)
-        credential_string=registry_proxy.GetSelfCredential (certificate_string, self.hrn, "user")
+        try:
+            credential_string=registry_proxy.GetSelfCredential (certificate_string, self.hrn, "user")
+        except:
+            # some urns hrns may replace non hierarchy delimiters '.' with an '_' instead of escaping the '.'
+            hrn = Xrn(self.hrn).get_hrn().replace('\.', '_') 
+            credential_string=registry_proxy.GetSelfCredential (certificate_string, hrn, "user")
         self.plain_write (output, credential_string)
         self.logger.debug("SfaClientBootstrap: Wrote result of GetSelfCredential in %s"%output)
         return output
