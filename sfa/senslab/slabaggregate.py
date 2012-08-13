@@ -253,6 +253,8 @@ class SlabAggregate:
     
         now = int(time.time())
         lease_filter = {'clip': now }
+        
+        self.driver.synchronize_oar_and_slice_table()
         #if slice_record:
             #lease_filter.update({'name': slice_record['name']})
         return_fields = ['lease_id', 'hostname', 'site_id', \

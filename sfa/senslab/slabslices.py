@@ -197,9 +197,10 @@ class SlabSlices:
             tmp = sfa_slice['PI'][0].split(".")
             username = tmp[(len(tmp)-1)]
             #Update the table with the nodes that populate the slice
-            self.driver.db.update_job(sfa_slice['name'], nodes = added_nodes)
             logger.debug("SLABSLICES \tverify_slice_nodes slice %s \r\n \r\n deleted_nodes %s"\
                                                              %(sfa_slice,deleted_nodes))
+            #self.driver.db.update_job(sfa_slice['name'], nodes = added_nodes)
+
             #If there is a timeslot specified, then a job can be launched
             #try:
                 ##slot = sfa_slice['timeslot']
@@ -213,7 +214,7 @@ class SlabSlices:
             if deleted_nodes:
                 self.driver.DeleteSliceFromNodes(sfa_slice['name'], \
                                                                 deleted_nodes)
-
+            #return added_nodes
         except: 
             logger.log_exc('Failed to add/remove slice from nodes')
             
