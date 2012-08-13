@@ -637,7 +637,7 @@ class Sfi:
             if not os.path.isfile(client_bootstrap.private_key_filename()):
                 self.logger.info ("private key not found, trying legacy name")
                 try:
-                    legacy_private_key = os.path.join (self.options.sfi_dir, "%s.pkey"%get_leaf(self.user))
+                    legacy_private_key = os.path.join (self.options.sfi_dir, "%s.pkey"%Xrn.unescape(get_leaf(self.user)))
                     self.logger.debug("legacy_private_key=%s"%legacy_private_key)
                     client_bootstrap.init_private_key_if_missing (legacy_private_key)
                     self.logger.info("Copied private key from legacy location %s"%legacy_private_key)
