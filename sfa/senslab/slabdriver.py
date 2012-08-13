@@ -68,8 +68,13 @@ class SlabDriver(Driver):
         #First get the slice with the slice hrn
         sl = self.GetSlices(slice_filter = slice_hrn, \
                                     slice_filter_type = 'slice_hrn')
+        
         if len(sl) is 0:
             raise SliverDoesNotExist("%s  slice_hrn" % (slice_hrn))
+        
+        if isinstance(sl,list):
+            sl = sl[0]
+            
         
         top_level_status = 'unknown'
         nodes_in_slice = sl['node_ids']
@@ -84,7 +89,7 @@ class SlabDriver(Driver):
         logger.debug("Slabdriver - sliver_status Sliver status urn %s hrn %s sl\
                              %s \r\n " %(slice_urn, slice_hrn, sl))
                              
-        if sl['oar_job_id'] is not -1:
+        if sl['oar_job_id'] is not []:
             #A job is running on Senslab for this slice
             # report about the local nodes that are in the slice only
             
@@ -98,9 +103,9 @@ class SlabDriver(Driver):
             result['pl_login'] = sl['user'] #For compatibility
 
             
-            timestamp = float(sl['startTime']) + float(sl['walltime']) 
-            result['pl_expires'] = strftime(self.time_format, \
-                                                    gmtime(float(timestamp)))
+            #timestamp = float(sl['startTime']) + float(sl['walltime']) 
+            #result['pl_expires'] = strftime(self.time_format, \
+                                                    #gmtime(float(timestamp)))
             #result['slab_expires'] = strftime(self.time_format,\
                                                      #gmtime(float(timestamp)))
             
@@ -112,8 +117,8 @@ class SlabDriver(Driver):
                 
                 res['pl_hostname'] = nodeall_byhostname[node]['hostname']
                 res['pl_boot_state'] = nodeall_byhostname[node]['boot_state']
-                res['pl_last_contact'] = strftime(self.time_format, \
-                                                    gmtime(float(timestamp)))
+                #res['pl_last_contact'] = strftime(self.time_format, \
+                                                    #gmtime(float(timestamp)))
                 sliver_id = urn_to_sliver_id(slice_urn, sl['record_id_slice'], \
                                             nodeall_byhostname[node]['node_id']) 
                 res['geni_urn'] = sliver_id 
