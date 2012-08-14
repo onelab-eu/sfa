@@ -115,6 +115,9 @@ class SlabSlices:
         logger.debug("SLABSLICES \ get_peer slice_authority  %s \
                     site_authority %s hrn %s" %(slice_authority, \
                                         site_authority, hrn))
+        #This slice belongs to the current site
+        if site_authority == self.driver.root_auth :
+            return None
         # check if we are already peered with this site_authority, if so
         #peers = self.driver.GetPeers({})  
         peers = self.driver.GetPeers(peer_filter = slice_authority)
@@ -157,7 +160,7 @@ class SlabSlices:
                     self.driver.UnBindObjectFromPeer('senslab2', 'slice', \
                                     sfa_slice['record_id_slice'], peer.hrn)
                 
-                deleted = self.driver.DeleteLeases(deleted_leases, \
+                self.driver.DeleteLeases(deleted_leases, \
                                         sfa_slice['name'])
                
             #TODO : catch other exception?
@@ -167,7 +170,7 @@ class SlabSlices:
         #Add new leases        
         for start_time in requested_jobs_dict:
             job = requested_jobs_dict[start_time]
-            added = self.driver.AddLeases(job['hostname'], \
+            self.driver.AddLeases(job['hostname'], \
                         sfa_slice, int(job['start_time']), \
                         int(job['duration']))
                         
@@ -184,39 +187,19 @@ class SlabSlices:
             # remove nodes not in rspec
             deleted_nodes = list(set(current_slivers).\
                                                 difference(requested_slivers))
-    
-        # add nodes from rspec
-        added_nodes = list(set(requested_slivers).difference(current_slivers))
-        try:
-            #if peer:
-                #self.driver.UnBindObjectFromPeer('slice', slice['slice_id'], \
-                                                        #peer['shortname'])
-            #PI is a list, get the only username in this list
-            #so that the OAR/LDAP knows the user: 
-            #remove the authority from the name
-            tmp = sfa_slice['PI'][0].split(".")
-            username = tmp[(len(tmp)-1)]
+            # add nodes from rspec
+            #added_nodes = list(set(requested_slivers).difference(current_slivers))
+
             #Update the table with the nodes that populate the slice
-            logger.debug("SLABSLICES \tverify_slice_nodes slice %s \r\n \r\n deleted_nodes %s"\
-                                                             %(sfa_slice,deleted_nodes))
-            #self.driver.db.update_job(sfa_slice['name'], nodes = added_nodes)
-
-            #If there is a timeslot specified, then a job can be launched
-            #try:
-                ##slot = sfa_slice['timeslot']
-                #self.driver.LaunchExperimentOnOAR(sfa_slice, added_nodes, \
-                                                                    #username)
-            #except KeyError:  
-                #logger.log_exc("SLABSLICES \verify_slice_nodes KeyError \
-                                                #sfa_slice %s  " %(sfa_slice))
-
+            logger.debug("SLABSLICES \tverify_slice_nodes slice %s\
+                                         \r\n \r\n deleted_nodes %s"\
+                                        %(sfa_slice,deleted_nodes))
 
             if deleted_nodes:
                 self.driver.DeleteSliceFromNodes(sfa_slice['name'], \
                                                                 deleted_nodes)
-            #return added_nodes
-        except: 
-            logger.log_exc('Failed to add/remove slice from nodes')
+            return nodes
+
             
 
     def free_egre_key(self):
@@ -328,7 +311,7 @@ class SlabSlices:
         
         #return site        
 
-    def verify_slice(self, slice_hrn, slice_record, peer, sfa_peer, options={}):
+    def verify_slice(self, slice_hrn, slice_record, peer, sfa_peer):
 
         #login_base = slice_hrn.split(".")[0]
         slicename = slice_hrn
@@ -407,6 +390,7 @@ class SlabSlices:
                 users_dict[user['hrn']] = {'person_id':user['person_id'], \
                                                         'hrn':user['hrn']}
                 
+        
         logger.debug( "SLABSLICE.PY \tverify_person  \
                         users_dict %s \r\n user_by_hrn %s \r\n \
                         \tusers_by_id %s " \
@@ -436,6 +420,7 @@ class SlabSlices:
             if existing_users:
                 for user in existing_users :
                     #for  k in users_dict[user['hrn']] :
+                    
                     existing_user_hrns.append(users_dict[user['hrn']]['hrn'])
                     existing_user_ids.\
                                     append(users_dict[user['hrn']]['person_id'])
@@ -453,6 +438,7 @@ class SlabSlices:
                     ldap_reslt = self.driver.ldap.LdapSearch(users)
                 if ldap_reslt:
                     existing_users = ldap_reslt[0]
+                    #TODO : DEBUG user undefined ? SA 14/08/12
                     existing_user_hrns.append(users_dict[user['hrn']]['hrn'])
                     existing_user_ids.\
                                     append(users_dict[user['hrn']]['person_id'])
@@ -614,13 +600,12 @@ class SlabSlices:
             removed_keys = set(existing_keys).difference(requested_keys)
             for existing_key_id in keydict:
                 if keydict[existing_key_id] in removed_keys:
-                    try:
-                        if peer:
-                            self.driver.UnBindObjectFromPeer('key', \
-                                            existing_key_id, peer['shortname'])
-                        self.driver.DeleteKey(existing_key_id)
-                    except:
-                        pass   
+
+                    if peer:
+                        self.driver.UnBindObjectFromPeer('key', \
+                                        existing_key_id, peer['shortname'])
+                    self.driver.DeleteKey(existing_key_id)
+ 
 
     #def verify_slice_attributes(self, slice, requested_slice_attributes, \
                                             #append=False, admin=False):
@@ -695,88 +680,4 @@ class SlabSlices:
                                 #value: %s, node_id: %s\nCause:%s'\
                                 #% (name, value,  node_id, str(error)))
 
-    #def create_slice_aggregate(self, xrn, rspec):
-        #hrn, type = urn_to_hrn(xrn)
-        ## Determine if this is a peer slice
-        #peer = self.get_peer(hrn)
-        #sfa_peer = self.get_sfa_peer(hrn)
-
-        #spec = RSpec(rspec)
-        ## Get the slice record from sfa
-        #slicename = hrn_to_pl_slicename(hrn) 
-        #slice = {}
-        #slice_record = None
-        #registry = self.api.registries[self.api.hrn]
-        #credential = self.api.getCredential()
-
-        #site_id, remote_site_id = self.verify_site(registry, \
-                                        #credential, hrn, peer, sfa_peer)
-        #slice = self.verify_slice(registry, credential, \
-                                #hrn, site_id, remote_site_id, peer, sfa_peer)
-
-        ## find out where this slice is currently running
-        #nodelist = self.driver.GetNodes(slice['node_ids'], ['hostname'])
-        #hostnames = [node['hostname'] for node in nodelist]
-
-        ## get netspec details
-        #nodespecs = spec.getDictsByTagName('NodeSpec')
-
-        ## dict in which to store slice attributes to set for the nodes
-        #nodes = {}
-        #for nodespec in nodespecs:
-            #if isinstance(nodespec['name'], list):
-                #for nodename in nodespec['name']:
-                    #nodes[nodename] = {}
-                    #for k in nodespec.keys():
-                        #rspec_attribute_value = nodespec[k]
-                        #if (self.rspec_to_slice_tag.has_key(k)):
-                            #slice_tag_name = self.rspec_to_slice_tag[k]
-                            #nodes[nodename][slice_tag_name] = \
-                                                        #rspec_attribute_value
-            #elif isinstance(nodespec['name'], StringTypes):
-                #nodename = nodespec['name']
-                #nodes[nodename] = {}
-                #for k in nodespec.keys():
-                    #rspec_attribute_value = nodespec[k]
-                    #if (self.rspec_to_slice_tag.has_key(k)):
-                        #slice_tag_name = self.rspec_to_slice_tag[k]
-                        #nodes[nodename][slice_tag_name] = rspec_attribute_value
-
-                #for k in nodespec.keys():
-                    #rspec_attribute_value = nodespec[k]
-                    #if (self.rspec_to_slice_tag.has_key(k)):
-                        #slice_tag_name = self.rspec_to_slice_tag[k]
-                        #nodes[nodename][slice_tag_name] = rspec_attribute_value
-
-        #node_names = nodes.keys()
-        ## remove nodes not in rspec
-        #deleted_nodes = list(set(hostnames).difference(node_names))
-        ## add nodes from rspec
-        #added_nodes = list(set(node_names).difference(hostnames))
-
-        #try:
-            #if peer:
-                #self.driver.UnBindObjectFromPeer('slice', \
-                                                    #slice['slice_id'], peer)
-
-            #self.driver.LaunchExperimentOnOAR(slicename, added_nodes) 
-
-            ## Add recognized slice tags
-            #for node_name in node_names:
-                #node = nodes[node_name]
-                #for slice_tag in node.keys():
-                    #value = node[slice_tag]
-                    #if (isinstance(value, list)):
-                        #value = value[0]
-
-                    #self.driver.AddSliceTag(slicename, slice_tag, \
-                                                        #value, node_name)
-
-            #self.driver.DeleteSliceFromNodes(slicename, deleted_nodes)
-        #finally:
-            #if peer:
-                #self.driver.BindObjectToPeer('slice', slice['slice_id'], \
-                                                #peer, slice['peer_slice_id'])
-
-        #return 1
-
+ 
