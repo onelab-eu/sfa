@@ -388,8 +388,7 @@ class NovaDriver(Driver):
     def sliver_status (self, slice_urn, slice_hrn):
         # find out where this slice is currently running
         project_name = hrn_to_os_slicename(slice_hrn)
-        project = self.shell.auth_manager.get_project(project_name)
-        instances = self.shell.db.instance_get_all_by_project(project_name)
+        instances = self.shell.nova_manager.servers.findall(name=project_name)
         if len(instances) == 0:
             raise SliverDoesNotExist("You have not allocated any slivers here") 
         
@@ -409,15 +408,14 @@ class NovaDriver(Driver):
             # instances are accessed by ip, not hostname. We need to report the ip
             # somewhere so users know where to ssh to.     
             res['geni_expires'] = None
-            res['plos_hostname'] = instance.hostname
-            res['plos_created_at'] = datetime_to_string(utcparse(instance.created_at))    
-            res['plos_boot_state'] = instance.vm_state
-            res['plos_sliver_type'] = instance.instance_type.name 
-            sliver_id =  Xrn(slice_urn).get_sliver_id(instance.project_id, \
-                                                      instance.hostname, instance.id)
+            #res['plos_hostname'] = instance.hostname
+            res['plos_created_at'] = datetime_to_string(utcparse(instance.created))    
+            res['plos_boot_state'] = instance.status
+            res['plos_sliver_type'] = self.shell.nova_manager.flavors.find(id=instance.flavor['id']).name 
+            sliver_id =  Xrn(slice_urn).get_sliver_id(instance.id)
             res['geni_urn'] = sliver_id
 
-            if instance.vm_state == 'running':
+            if instance.status.lower() == 'active':
                 res['boot_state'] = 'ready'
                 res['geni_status'] = 'ready'
             else:
