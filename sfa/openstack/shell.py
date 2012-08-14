@@ -31,9 +31,9 @@ class Shell:
             config = Config()
         if has_nova:
             # instantiate managers 
-            self.auth_manager = KeystoneClient(config)
-            self.image_manager = GlanceClient(config)
-            self.nova_manager = NovaClient(config)
+            self.auth_manager = KeystoneClient(config=config)
+            self.image_manager = GlanceClient(config=config)
+            self.nova_manager = NovaClient(config=config)
         else:
             logger.debug('nova access - REST')
             raise SfaNotImplemented('nova access - Rest')

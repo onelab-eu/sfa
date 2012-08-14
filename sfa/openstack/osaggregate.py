@@ -99,9 +99,9 @@ class OSAggregate:
             node_xrn = instance.metadata.get('component_id')
             node_xrn
             if not node_xrn:
-                node_xrn = OSXrn('cloud', 'node')
+                node_xrn = OSXrn('cloud', type='node')
             else:
-                node_xrn = OSXrn(xrn=node_xrn, 'node') 
+                node_xrn = OSXrn(xrn=node_xrn, type='node') 
 
             rspec_node['component_id'] = node_xrn.urn
             rspec_node['component_name'] = node_xrn.name
@@ -170,10 +170,21 @@ class OSAggregate:
         return rspec_nodes 
 
 
+    def create_tenant(self, slice_hrn):
+        tenant_name = OSXrn(xrn=slice_hrn, type='slice').get_tenant_name()
+        tenants = self.driver.shell.auth_manager.tenants.findall(name=tenant_name)
+        if not tenants:
+            self.driver.shell.auth_manager.tenants.create(tenant_name, tenant_name)
+            tenant = self.driver.shell.auth_manager.tenants.find(name=tenant_name)
+        else:
+            tenant = tenants[0]
+        return tenant
+            
+
     def create_instance_key(self, slice_hrn, user):
         slice_name = Xrn(slice_hrn).leaf
         user_name = Xrn(user['urn']).leaf
-        key_name = "%s:%s" % (slice_name, user_name)
+        key_name = "%s_%s" % (slice_name, user_name)
         pubkey = user['keys'][0]
         key_found = False
         existing_keys = self.driver.shell.nova_manager.keypairs.findall(name=key_name)

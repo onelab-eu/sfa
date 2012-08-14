@@ -43,7 +43,7 @@ class NovaDriver(Driver):
 
     def __init__ (self, config):
         Driver.__init__(self, config)
-        self.shell = Shell(config)
+        self.shell = Shell(config=config)
         self.cache=None
         if config.SFA_AGGREGATE_CACHING:
             if NovaDriver.cache is None:
@@ -90,7 +90,9 @@ class NovaDriver(Driver):
         for researcher in researchers:
             name = Xrn(researcher).get_leaf()
             user = self.shell.auth_manager.users.find(name=name)
+            self.shell.auth_manager.roles.add_user_role(user, 'Member', tenant)
             self.shell.auth_manager.roles.add_user_role(user, 'user', tenant)
+            
 
         pis = sfa_record.get('pis', [])
         for pi in pis:
@@ -432,6 +434,19 @@ class NovaDriver(Driver):
         aggregate = OSAggregate(self)
         rspec = RSpec(rspec_string)
         instance_name = hrn_to_os_slicename(slice_hrn)
+
+        # make sure a tenant exists for this slice
+        tenant = aggregate.create_tenant(slice_hrn)
+
+        # add the sfa admin user to this tenant and update our nova client connection
+        # to use these credentials for the rest of this session. This emsures that the instances
+        # we create will be assigned to the correct tenant.
+        sfa_admin_user = self.shell.auth_manager.users.find(name=self.shell.auth_manager.opts['OS_USERNAME'])
+        user_role = self.shell.auth_manager.roles.find(name='user')
+        admin_role = self.shell.auth_manager.roles.find(name='admin')
+        self.shell.auth_manager.roles.add_user_role(sfa_admin_user, admin_role, tenant)
+        self.shell.auth_manager.roles.add_user_role(sfa_admin_user, user_role, tenant)
+        self.shell.nova_manager.connect(tenant=tenant.name)
        
         # assume first user is the caller and use their context
         # for the ec2/euca api connection. Also, use the first users
