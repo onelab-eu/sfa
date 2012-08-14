@@ -388,6 +388,10 @@ class NovaDriver(Driver):
         return rspec
     
     def sliver_status (self, slice_urn, slice_hrn):
+        # update nova connection
+        tenant_name = OSXrn(xrn=slice_hrn, type='slice').get_tenant_name()
+        self.shell.nova_manager.connect(tenant=tenant_name)
+
         # find out where this slice is currently running
         project_name = hrn_to_os_slicename(slice_hrn)
         instances = self.shell.nova_manager.servers.findall(name=project_name)
@@ -432,22 +436,7 @@ class NovaDriver(Driver):
     def create_sliver (self, slice_urn, slice_hrn, creds, rspec_string, users, options):
 
         aggregate = OSAggregate(self)
-        rspec = RSpec(rspec_string)
-        instance_name = hrn_to_os_slicename(slice_hrn)
 
-        # make sure a tenant exists for this slice
-        tenant = aggregate.create_tenant(slice_hrn)
-
-        # add the sfa admin user to this tenant and update our nova client connection
-        # to use these credentials for the rest of this session. This emsures that the instances
-        # we create will be assigned to the correct tenant.
-        sfa_admin_user = self.shell.auth_manager.users.find(name=self.shell.auth_manager.opts['OS_USERNAME'])
-        user_role = self.shell.auth_manager.roles.find(name='user')
-        admin_role = self.shell.auth_manager.roles.find(name='admin')
-        self.shell.auth_manager.roles.add_user_role(sfa_admin_user, admin_role, tenant)
-        self.shell.auth_manager.roles.add_user_role(sfa_admin_user, user_role, tenant)
-        self.shell.nova_manager.connect(tenant=tenant.name)
-       
         # assume first user is the caller and use their context
         # for the ec2/euca api connection. Also, use the first users
         # key as the project key.
@@ -460,7 +449,10 @@ class NovaDriver(Driver):
         for user in users:
             pubkeys.extend(user['keys'])
            
-        aggregate.run_instances(instance_name, rspec_string, key_name, pubkeys)    
+        rspec = RSpec(rspec_string)
+        instance_name = hrn_to_os_slicename(slice_hrn)
+        tenant_name = OSXrn(xrn=slice_hrn, type='slice').get_tenant_name()
+        aggregate.run_instances(instance_name, tenant_name, rspec_string, key_name, pubkeys)    
    
         return aggregate.get_rspec(slice_xrn=slice_urn, version=rspec.version)
 

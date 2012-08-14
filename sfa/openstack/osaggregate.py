@@ -84,6 +84,10 @@ class OSAggregate:
         return zones
 
     def get_slice_nodes(self, slice_xrn):
+        # update nova connection
+        tenant_name = OSXrn(xrn=slice_xrn, type='slice').get_tenant_name()
+        self.driver.shell.nova_manager.connect(tenant=tenant_name)    
+        
         zones = self.get_availability_zones()
         name = hrn_to_os_slicename(slice_xrn)
         instances = self.driver.shell.nova_manager.servers.findall(name=name)
@@ -170,8 +174,7 @@ class OSAggregate:
         return rspec_nodes 
 
 
-    def create_tenant(self, slice_hrn):
-        tenant_name = OSXrn(xrn=slice_hrn, type='slice').get_tenant_name()
+    def create_tenant(self, tenant_name):
         tenants = self.driver.shell.auth_manager.tenants.findall(name=tenant_name)
         if not tenants:
             self.driver.shell.auth_manager.tenants.create(tenant_name, tenant_name)
@@ -228,10 +231,23 @@ class OSAggregate:
 
  
 
-    def run_instances(self, slicename, rspec, key_name, pubkeys):
+    def run_instances(self, instance_name, tenant_name, rspec, key_name, pubkeys):
         #logger.debug('Reserving an instance: image: %s, flavor: ' \
         #            '%s, key: %s, name: %s' % \
         #            (image_id, flavor_id, key_name, slicename))
+
+        # make sure a tenant exists for this slice
+        tenant = self.create_tenant(tenant_name)  
+
+        # add the sfa admin user to this tenant and update our nova client connection
+        # to use these credentials for the rest of this session. This emsures that the instances
+        # we create will be assigned to the correct tenant.
+        sfa_admin_user = self.driver.shell.auth_manager.users.find(name=self.driver.shell.auth_manager.opts['OS_USERNAME'])
+        user_role = self.driver.shell.auth_manager.roles.find(name='user')
+        admin_role = self.driver.shell.auth_manager.roles.find(name='admin')
+        self.driver.shell.auth_manager.roles.add_user_role(sfa_admin_user, admin_role, tenant)
+        self.driver.shell.auth_manager.roles.add_user_role(sfa_admin_user, user_role, tenant)
+        self.driver.shell.nova_manager.connect(tenant=tenant.name)  
 
         authorized_keys = "\n".join(pubkeys)
         files = {'/root/.ssh/authorized_keys': authorized_keys}
@@ -250,7 +266,7 @@ class OSAggregate:
                     image = image[0]
                 image_id = self.driver.shell.nova_manager.images.find(name=image['name'])
                 fw_rules = instance.get('fw_rules', [])
-                group_name = self.create_security_group(slicename, fw_rules)
+                group_name = self.create_security_group(instance_name, fw_rules)
                 metadata['security_groups'] = group_name
                 if node.get('component_id'):
                     metadata['component_id'] = node['component_id']
@@ -261,7 +277,7 @@ class OSAggregate:
                                                             security_group = group_name,
                                                             files=files,
                                                             meta=metadata, 
-                                                            name=slicename)
+                                                            name=instance_name)
                 except Exception, err:    
                     logger.log_exc(err)                                
                            
