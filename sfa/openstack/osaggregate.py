@@ -274,7 +274,7 @@ class OSAggregate:
                     self.driver.shell.nova_manager.servers.create(flavor=flavor_id,
                                                             image=image_id,
                                                             key_name = key_name,
-                                                            security_group = group_name,
+                                                            security_groups = [group_name],
                                                             files=files,
                                                             meta=metadata, 
                                                             name=instance_name)
