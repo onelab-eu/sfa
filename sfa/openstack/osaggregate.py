@@ -259,18 +259,18 @@ class OSAggregate:
             if not instances:
                 continue
             for instance in instances:
-                metadata = {}
-                flavor_id = self.driver.shell.nova_manager.flavors.find(name=instance['name'])
-                image = instance.get('disk_image')
-                if image and isinstance(image, list):
-                    image = image[0]
-                image_id = self.driver.shell.nova_manager.images.find(name=image['name'])
-                fw_rules = instance.get('fw_rules', [])
-                group_name = self.create_security_group(instance_name, fw_rules)
-                metadata['security_groups'] = group_name
-                if node.get('component_id'):
-                    metadata['component_id'] = node['component_id']
                 try: 
+                    metadata = {}
+                    flavor_id = self.driver.shell.nova_manager.flavors.find(name=instance['name'])
+                    image = instance.get('disk_image')
+                    if image and isinstance(image, list):
+                        image = image[0]
+                    image_id = self.driver.shell.nova_manager.images.find(name=image['name'])
+                    fw_rules = instance.get('fw_rules', [])
+                    group_name = self.create_security_group(instance_name, fw_rules)
+                    metadata['security_groups'] = group_name
+                    if node.get('component_id'):
+                        metadata['component_id'] = node['component_id']
                     self.driver.shell.nova_manager.servers.create(flavor=flavor_id,
                                                             image=image_id,
                                                             key_name = key_name,
@@ -283,7 +283,8 @@ class OSAggregate:
                            
 
 
-    def delete_instances(self, instance_name):
+    def delete_instances(self, instance_name, tenant_name):
+        self.driver.shell.nova_manager.connect(tenant=tenant_name)
         instances = self.driver.shell.nova_manager.servers.findall(name=instance_name)
         security_group_manager = SecurityGroup(self.driver)
         for instance in instances:
@@ -297,7 +298,8 @@ class OSAggregate:
             self.driver.shell.nova_manager.servers.delete(instance)
         return 1
 
-    def stop_instances(self, instance_name):
+    def stop_instances(self, instance_name, tenant_name):
+        self.driver.shell.nova_manager.connect(tenant=tenant_name)
         instances = self.driver.shell.nova_manager.servers.findall(name=instance_name)
         for instance in instances:
             self.driver.shell.nova_manager.servers.pause(instance)

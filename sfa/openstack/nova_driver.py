@@ -458,11 +458,13 @@ class NovaDriver(Driver):
 
     def delete_sliver (self, slice_urn, slice_hrn, creds, options):
         aggregate = OSAggregate(self)
+        tenant_name = OSXrn(xrn=slice_hrn, type='slice').get_tenant_name()
         project_name = hrn_to_os_slicename(slice_hrn)
-        return aggregate.delete_instances(project_name)   
+        return aggregate.delete_instances(project_name, tenant_name)   
 
     def update_sliver(self, slice_urn, slice_hrn, rspec, creds, options):
         name = hrn_to_os_slicename(slice_hrn)
+        tenant_name = OSXrn(xrn=slice_hrn, type='slice').get_tenant_name()
         aggregate = OSAggregate(self)
         return aggregate.update_instances(name)
     
@@ -473,9 +475,10 @@ class NovaDriver(Driver):
         return 1
 
     def stop_slice (self, slice_urn, slice_hrn, creds):
+        tenant_name = OSXrn(xrn=slice_hrn, type='slice').get_tenant_name()
         name = OSXrn(xrn=slice_urn).name
         aggregate = OSAggregate(self)
-        return aggregate.stop_instances(name) 
+        return aggregate.stop_instances(name, tenant_name) 
 
     def reset_slice (self, slice_urn, slice_hrn, creds):
         raise SfaNotImplemented ("reset_slice not available at this interface")
