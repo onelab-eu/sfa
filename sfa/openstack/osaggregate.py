@@ -91,28 +91,28 @@ class OSAggregate:
         zones = self.get_availability_zones()
         name = hrn_to_os_slicename(slice_xrn)
         instances = self.driver.shell.nova_manager.servers.findall(name=name)
-        rspec_nodes = []
+        node_dict = {}
         for instance in instances:
-            rspec_node = Node()
-            
-            #TODO: find a way to look up an instances availability zone in essex
-            #if instance.availability_zone:
-            #    node_xrn = OSXrn(instance.availability_zone, 'node')
-            #else:
-            #    node_xrn = OSXrn('cloud', 'node')
+            # determine node urn
             node_xrn = instance.metadata.get('component_id')
-            node_xrn
             if not node_xrn:
                 node_xrn = OSXrn('cloud', type='node')
             else:
-                node_xrn = OSXrn(xrn=node_xrn, type='node') 
+                node_xrn = OSXrn(xrn=node_xrn, type='node')
 
-            rspec_node['component_id'] = node_xrn.urn
-            rspec_node['component_name'] = node_xrn.name
-            rspec_node['component_manager_id'] = Xrn(self.driver.hrn, 'authority+cm').get_urn()
+            if not node_xrn.urn in node_dict:
+                rspec_node = Node()
+                rspec_node['component_id'] = node_xrn.urn
+                rspec_node['component_name'] = node_xrn.name
+                rspec_node['component_manager_id'] = Xrn(self.driver.hrn, 'authority+cm').get_urn()
+                rspec_node['slivers'] = []
+                node_dict[node_xrn.urn] = rspec_node
+            else:
+                rspec_node = node_dict[node_xrn.urn]
+            
             flavor = self.driver.shell.nova_manager.flavors.find(id=instance.flavor['id'])
             sliver = instance_to_sliver(flavor)
-            rspec_node['slivers'] = [sliver]
+            rspec_node['slivers'].append(sliver)
             image = self.driver.shell.image_manager.get_images(id=instance.image['id'])
             if isinstance(image, list) and len(image) > 0:
                 image = image[0]
@@ -150,7 +150,7 @@ class OSAggregate:
                 service = Services({'login': login})
                 rspec_node['services'].append(service)
             rspec_nodes.append(rspec_node)
-        return rspec_nodes
+        return node_dict.values()
 
     def get_aggregate_nodes(self):
         zones = self.get_availability_zones()
