@@ -573,7 +573,7 @@ class PlDriver (Driver):
     # first 2 args are None in case of resource discovery
     def list_resources (self, creds, options):
         aggregate = PlAggregate(self)
-        rspec =  aggregate.get_rspec(version=rspec_version, options=options)
+        rspec =  aggregate.list_resources(version=rspec_version, options=options)
         return rspec
 
     def describe(self, creds, urns, options):
@@ -700,7 +700,7 @@ class PlDriver (Driver):
         # only used by plc and ple.
         slices.handle_peer(site, slice, persons, peer)
         
-        return aggregate.get_rspec(slice_xrn=slice_urn, version=rspec.version)
+        return aggregate.describe_rspec(slice_xrn=slice_urn, version=rspec.version)
 
     def delete_sliver (self, slice_urn, slice_hrn, creds, options):
         slicename = hrn_to_pl_slicename(slice_hrn)
