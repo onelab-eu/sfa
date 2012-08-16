@@ -17,6 +17,7 @@ class OSXrn(Xrn):
     def __init__(self, name=None, auth=None, **kwds):
         
         config = Config()
+        self.id = id
         if name is not None:
             if 'type' in kwds:
                 self.type = kwds['type']
@@ -50,6 +51,4 @@ class OSXrn(Xrn):
         self._normalize()
         tenant_name = self.hrn.replace('\.', '')
         return tenant_name
-        
-        
-            
+       

@@ -1,5 +1,5 @@
 #!/usr/bin/python
-from sfa.util.xrn import Xrn, hrn_to_urn, urn_to_hrn, urn_to_sliver_id
+from sfa.util.xrn import Xrn, hrn_to_urn, urn_to_hrn
 from sfa.util.sfatime import utcparse, datetime_to_string
 from sfa.util.sfalogging import logger
 
@@ -118,7 +118,12 @@ class PlAggregate:
 
         # sort slivers by node id    
         for node_id in slice['node_ids']:
-            sliver = Sliver({'sliver_id': urn_to_sliver_id(slice_urn, slice['slice_id'], node_id, authority=self.driver.hrn),
+            
+            id = ":".join(map(str, [slice['slice_id'], node_id]))
+            xrn = Xrn(slice_urn, id=id).get_urn()
+            xrn.set_authority(self.driver.hrn)
+            sliver_urn = xrn.get_urn()
+            sliver = Sliver({'sliver_id': sliver_urn,
                              'name': slice['name'],
                              'type': 'plab-vserver', 
                              'tags': []})
@@ -129,7 +134,8 @@ class PlAggregate:
         for tag in tags:
             # most likely a default/global sliver attribute (node_id == None)
             if tag['node_id'] not in slivers:
-                sliver = Sliver({'sliver_id': urn_to_sliver_id(slice_urn, slice['slice_id'], ""),
+                sliver_urn = Xrn(slice_urn, id = slice['slice_id']).get_urn()
+                sliver = Sliver({'sliver_id': sliver_urn,
                                  'name': slice['name'],
                                  'type': 'plab-vserver',
                                  'tags': []})
