@@ -8,7 +8,7 @@ from sfa.util.faults import MissingSfaInfo, UnknownSfaType, \
 from sfa.util.sfalogging import logger
 from sfa.util.defaultdict import defaultdict
 from sfa.util.sfatime import utcparse, datetime_to_string, datetime_to_epoch
-from sfa.util.xrn import Xrn, hrn_to_urn, get_leaf, urn_to_sliver_id
+from sfa.util.xrn import Xrn, hrn_to_urn, get_leaf 
 from sfa.openstack.osxrn import OSXrn, hrn_to_os_slicename, hrn_to_os_tenant_name
 from sfa.util.cache import Cache
 from sfa.trust.credential import Credential
@@ -366,7 +366,7 @@ class NovaDriver(Driver):
             res['plos_created_at'] = datetime_to_string(utcparse(instance.created))    
             res['plos_boot_state'] = instance.status
             res['plos_sliver_type'] = self.shell.nova_manager.flavors.find(id=instance.flavor['id']).name 
-            sliver_id =  Xrn(slice_urn).get_sliver_id(instance.id)
+            sliver_id =  Xrn(slice_urn, id=instance.id).get_urn()
             res['geni_urn'] = sliver_id
 
             if instance.status.lower() == 'active':
