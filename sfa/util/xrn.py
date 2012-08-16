@@ -168,7 +168,7 @@ class Xrn:
         self._normalize()
         return ':'.join( [Xrn.unescape(x) for x in self.authority] )
 
-    def get_sliver_id(self, slice_id, node_id, index=0, authority=None):
+    def get_sliver_id(self, slice_id, node_id=None, index=0, authority=None):
         self._normalize()
         urn = self.get_urn()
         if authority:
@@ -178,7 +178,8 @@ class Xrn:
             else:
                 hrn = ".".join([authority_hrn, self.get_leaf()])
             urn = Xrn(hrn, self.get_type()).get_urn()
-        return ":".join(map(str, [urn, slice_id, node_id, index]))
+        parts = [part for part in [urn, slice_id, node_id, index] if part is not None]
+        return ":".join(map(str, [parts]))
 
     def urn_to_hrn(self):
         """

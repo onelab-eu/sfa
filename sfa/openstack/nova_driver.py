@@ -43,7 +43,7 @@ class NovaDriver(Driver):
 
     def __init__ (self, config):
         Driver.__init__(self, config)
-        self.shell = Shell(config)
+        self.shell = Shell(config=config)
         self.cache=None
         if config.SFA_AGGREGATE_CACHING:
             if NovaDriver.cache is None:
@@ -90,7 +90,9 @@ class NovaDriver(Driver):
         for researcher in researchers:
             name = Xrn(researcher).get_leaf()
             user = self.shell.auth_manager.users.find(name=name)
+            self.shell.auth_manager.roles.add_user_role(user, 'Member', tenant)
             self.shell.auth_manager.roles.add_user_role(user, 'user', tenant)
+            
 
         pis = sfa_record.get('pis', [])
         for pi in pis:
@@ -337,10 +339,13 @@ class NovaDriver(Driver):
         return aggregate.describe(urns, version=version, options=options)
     
     def sliver_status (self, slice_urn, slice_hrn):
+        # update nova connection
+        tenant_name = OSXrn(xrn=slice_hrn, type='slice').get_tenant_name()
+        self.shell.nova_manager.connect(tenant=tenant_name)
+
         # find out where this slice is currently running
         project_name = hrn_to_os_slicename(slice_hrn)
-        project = self.shell.auth_manager.get_project(project_name)
-        instances = self.shell.db.instance_get_all_by_project(project_name)
+        instances = self.shell.nova_manager.servers.findall(name=project_name)
         if len(instances) == 0:
             raise SliverDoesNotExist("You have not allocated any slivers here") 
         
@@ -357,15 +362,14 @@ class NovaDriver(Driver):
             # instances are accessed by ip, not hostname. We need to report the ip
             # somewhere so users know where to ssh to.     
             res['geni_expires'] = None
-            res['plos_hostname'] = instance.hostname
-            res['plos_created_at'] = datetime_to_string(utcparse(instance.created_at))    
-            res['plos_boot_state'] = instance.vm_state
-            res['plos_sliver_type'] = instance.instance_type.name 
-            sliver_id =  Xrn(slice_urn).get_sliver_id(instance.project_id, \
-                                                      instance.hostname, instance.id)
+            #res['plos_hostname'] = instance.hostname
+            res['plos_created_at'] = datetime_to_string(utcparse(instance.created))    
+            res['plos_boot_state'] = instance.status
+            res['plos_sliver_type'] = self.shell.nova_manager.flavors.find(id=instance.flavor['id']).name 
+            sliver_id =  Xrn(slice_urn).get_sliver_id(instance.id)
             res['geni_urn'] = sliver_id
 
-            if instance.vm_state == 'running':
+            if instance.status.lower() == 'active':
                 res['boot_state'] = 'ready'
                 res['geni_status'] = 'ready'
             else:
@@ -380,9 +384,7 @@ class NovaDriver(Driver):
     def create_sliver (self, slice_urn, slice_hrn, creds, rspec_string, users, options):
 
         aggregate = OSAggregate(self)
-        rspec = RSpec(rspec_string)
-        instance_name = hrn_to_os_slicename(slice_hrn)
-       
+
         # assume first user is the caller and use their context
         # for the ec2/euca api connection. Also, use the first users
         # key as the project key.
@@ -395,17 +397,22 @@ class NovaDriver(Driver):
         for user in users:
             pubkeys.extend(user['keys'])
            
-        aggregate.run_instances(instance_name, rspec_string, key_name, pubkeys)    
+        rspec = RSpec(rspec_string)
+        instance_name = hrn_to_os_slicename(slice_hrn)
+        tenant_name = OSXrn(xrn=slice_hrn, type='slice').get_tenant_name()
+        aggregate.run_instances(instance_name, tenant_name, rspec_string, key_name, pubkeys)    
    
         return aggregate.get_rspec(slice_xrn=slice_urn, version=rspec.version)
 
     def delete_sliver (self, slice_urn, slice_hrn, creds, options):
         aggregate = OSAggregate(self)
+        tenant_name = OSXrn(xrn=slice_hrn, type='slice').get_tenant_name()
         project_name = hrn_to_os_slicename(slice_hrn)
-        return aggregate.delete_instances(project_name)   
+        return aggregate.delete_instances(project_name, tenant_name)   
 
     def update_sliver(self, slice_urn, slice_hrn, rspec, creds, options):
         name = hrn_to_os_slicename(slice_hrn)
+        tenant_name = OSXrn(xrn=slice_hrn, type='slice').get_tenant_name()
         aggregate = OSAggregate(self)
         return aggregate.update_instances(name)
     
@@ -416,9 +423,10 @@ class NovaDriver(Driver):
         return 1
 
     def stop_slice (self, slice_urn, slice_hrn, creds):
+        tenant_name = OSXrn(xrn=slice_hrn, type='slice').get_tenant_name()
         name = OSXrn(xrn=slice_urn).name
         aggregate = OSAggregate(self)
-        return aggregate.stop_instances(name) 
+        return aggregate.stop_instances(name, tenant_name) 
 
     def reset_slice (self, slice_urn, slice_hrn, creds):
         raise SfaNotImplemented ("reset_slice not available at this interface")
