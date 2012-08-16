@@ -120,8 +120,19 @@ class OSAggregate:
             sliver['disk_image'] = [disk_image]
 
             # build interfaces            
-            interfaces = []
+            rspec_node['services'] = []
+            rspec_node['interfaces'] = []
             addresses = instance.addresses
+            # HACK: public ips are stored in the list of private, but 
+            # this seems wrong. Assume pub ip is the last in the list of 
+            # private ips until openstack bug is fixed.      
+            if addresses.get('private'):
+                login = Login({'authentication': 'ssh-keys',
+                               'hostname': addresses.get('private')[-1]['addr'],
+                               'port':'22', 'username': 'root'})
+                service = Services({'login': login})
+                rspec_node['services'].append(service)    
+            
             for private_ip in addresses.get('private', []):
                 if_xrn = PlXrn(auth=self.driver.hrn, 
                                interface='node%s:eth0' % (instance.hostId)) 
@@ -129,11 +140,9 @@ class OSAggregate:
                 interface['ips'] =  [{'address': private_ip['addr'],
                                      #'netmask': private_ip['network'],
                                      'type': private_ip['version']}]
-                interfaces.append(interface)
-            rspec_node['interfaces'] = interfaces 
+                rspec_node['interfaces'].append(interface) 
             
             # slivers always provide the ssh service
-            rspec_node['services'] = []
             for public_ip in addresses.get('public', []):
                 login = Login({'authentication': 'ssh-keys', 
                                'hostname': public_ip['addr'], 
