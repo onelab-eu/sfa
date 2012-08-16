@@ -331,7 +331,7 @@ class NovaDriver(Driver):
     # first 2 args are None in case of resource discovery
     def list_resources (self, creds, version, options):
         aggregate = OSAggregate(self)
-        rspec =  aggregate.get_rspec(version=version, options=options)
+        rspec =  aggregate.list_resources(version=version, options=options)
         return rspec
 
     def describe(self, creds, urns, version, options):
@@ -402,7 +402,7 @@ class NovaDriver(Driver):
         tenant_name = OSXrn(xrn=slice_hrn, type='slice').get_tenant_name()
         aggregate.run_instances(instance_name, tenant_name, rspec_string, key_name, pubkeys)    
    
-        return aggregate.get_rspec(slice_xrn=slice_urn, version=rspec.version)
+        return aggregate.describe(slice_xrn=slice_urn, version=rspec.version)
 
     def delete_sliver (self, slice_urn, slice_hrn, creds, options):
         aggregate = OSAggregate(self)

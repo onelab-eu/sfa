@@ -283,22 +283,30 @@ class PlAggregate:
         return rspec_leases
 
     
-    def get_rspec(self, slice_xrn=None, version = None, options={}):
+    def list_resources(self, version = None, options={}):
 
         version_manager = VersionManager()
         version = version_manager.get_version(version)
-        if not slice_xrn:
-            rspec_version = version_manager._get_version(version.type, version.version, 'ad')
-        else:
-            rspec_version = version_manager._get_version(version.type, version.version, 'manifest')
-
-        slice, slivers = self.get_slice_and_slivers(slice_xrn)
+        rspec_version = version_manager._get_version(version.type, version.version, 'ad')
         rspec = RSpec(version=rspec_version, user_options=options)
+        
+        if not options.get('list_leases') or options.get('list_leases') and options['list_leases'] != 'leases':
+           nodes, links = self.get_nodes_and_links(options=options)
+           rspec.version.add_nodes(nodes)
+           rspec.version.add_links(links)
+        return rspec.toxml()
+
+    def describe(self, urns, version=None, options={}):
+        version_manager = VersionManager()
+        version = version_manager.get_version(version)
+        rspec_version = version_manager._get_version(version.type, version.version, 'manifest')
+        rspec = RSpec(version=version, user_options=options)
+        slice, slivers = self.get_slice_and_slivers(urns)
         if slice and 'expires' in slice:
             rspec.xml.set('expires',  datetime_to_string(utcparse(slice['expires'])))
-
+       
         if not options.get('list_leases') or options.get('list_leases') and options['list_leases'] != 'leases':
-           nodes, links = self.get_nodes_and_links(slice_xrn, slice, slivers, options)
+           nodes, links = self.get_nodes_and_links(urns, slice, slivers, options)
            rspec.version.add_nodes(nodes)
            rspec.version.add_links(links)
            # add sliver defaults
@@ -306,13 +314,15 @@ class PlAggregate:
            if default_sliver:
               default_sliver_attribs = default_sliver.get('tags', [])
               for attrib in default_sliver_attribs:
-                  logger.info(attrib)
                   rspec.version.add_default_sliver_attribute(attrib['tagname'], attrib['value'])
         
+
         if not options.get('list_leases') or options.get('list_leases') and options['list_leases'] != 'resources':
            leases = self.get_leases(slice)
            rspec.version.add_leases(leases)
+        
+        result = {'geni_urn': '',
+                  'geni_rspec': rspec.toxml(),
+                  'geni_slivers': []}
 
-        return rspec.toxml()
-
-
+        return result  

@@ -73,29 +73,27 @@ class OSAggregate:
          
         return {}
 
-    def get_rspec(self, slice_xrn=None, version=None, options={}):
+    def list_resources(self, version=None, options={}):
         version_manager = VersionManager()
         version = version_manager.get_version(version)
-        if not slice_xrn:
-            rspec_version = version_manager._get_version(version.type, version.version, 'ad')
-            rspec = self.get_aggregate_rspec(rspec_version, options)
-        else:
-            rspec_version = version_manager._get_version(version.type, version.version, 'manifest')
-            rspec = self.get_slice_rsepc(slice_xrn, rspec_version, options)
-
-        return rspec
-
-    def get_aggregate_rspec(self, version, options={}):
+        rspec_version = version_manager._get_version(version.type, version.version, 'ad')
         rspec = RSpec(version=version, user_options=options)
         nodes = self.get_aggregate_nodes()
         rspec.version.add_nodes(nodes)
         return rspec.toxml()
 
-    def get_slice_rspec(self, xrn, version, options={}):
+    def describe(self, urns, version=None, options={}):
+        version_manager = VersionManager()
+        version = version_manager.get_version(version)
+        rspec_version = version_manager._get_version(version.type, version.version, 'manifest')
         rspec = RSpec(version=version, user_options=options)
         nodes = self.get_slice_nodes(slice_xrn)
         rspec.version.add_nodes(nodes)
-        return rspec.toxml() 
+        result = {'geni_urn': '',
+                  'geni_rspec': rspec.toxml(), 
+                  'geni_slivers': []}
+        
+        return result
 
     def get_slice_nodes(self, slice_xrn):
         # update nova connection
