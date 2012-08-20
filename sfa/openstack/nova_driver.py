@@ -2,8 +2,7 @@ import time
 import datetime
 
 from sfa.util.faults import MissingSfaInfo, UnknownSfaType, \
-    RecordNotFound, SfaNotImplemented, SliverDoesNotExist, \
-    SfaInvalidArgument
+    RecordNotFound, SfaNotImplemented, SfaInvalidArgument
 
 from sfa.util.sfalogging import logger
 from sfa.util.defaultdict import defaultdict
