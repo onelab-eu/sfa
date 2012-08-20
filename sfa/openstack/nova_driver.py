@@ -2,8 +2,7 @@ import time
 import datetime
 
 from sfa.util.faults import MissingSfaInfo, UnknownSfaType, \
-    RecordNotFound, SfaNotImplemented, SliverDoesNotExist, \
-    SfaInvalidArgument
+    RecordNotFound, SfaNotImplemented, SfaInvalidArgument
 
 from sfa.util.sfalogging import logger
 from sfa.util.defaultdict import defaultdict
@@ -338,48 +337,10 @@ class NovaDriver(Driver):
         aggregate = OSAggregate(self)
         return aggregate.describe(urns, version=version, options=options)
     
-    def sliver_status (self, slice_urn, slice_hrn):
-        # update nova connection
-        tenant_name = OSXrn(xrn=slice_hrn, type='slice').get_tenant_name()
-        self.shell.nova_manager.connect(tenant=tenant_name)
-
-        # find out where this slice is currently running
-        project_name = hrn_to_os_slicename(slice_hrn)
-        instances = self.shell.nova_manager.servers.findall(name=project_name)
-        if len(instances) == 0:
-            raise SliverDoesNotExist("You have not allocated any slivers here") 
-        
-        result = {}
-        result['geni_urn'] = slice_urn
-        result['plos_login'] = 'root'
-        # do we need real dates here? 
-        result['plos_expires'] = None
-        result['geni_expires'] = None
-        
-        resources = []
-        for instance in instances:
-            res = {}
-            # instances are accessed by ip, not hostname. We need to report the ip
-            # somewhere so users know where to ssh to.     
-            res['geni_expires'] = None
-            #res['plos_hostname'] = instance.hostname
-            res['plos_created_at'] = datetime_to_string(utcparse(instance.created))    
-            res['plos_boot_state'] = instance.status
-            res['plos_sliver_type'] = self.shell.nova_manager.flavors.find(id=instance.flavor['id']).name 
-            sliver_id =  Xrn(slice_urn, id=instance.id).get_urn()
-            res['geni_urn'] = sliver_id
-
-            if instance.status.lower() == 'active':
-                res['boot_state'] = 'ready'
-                res['geni_status'] = 'ready'
-            else:
-                res['boot_state'] = 'unknown'  
-                res['geni_status'] = 'unknown'
-            res['geni_allocation_status'] = 'geni_provisioned'
-            resources.append(res)
-            
-        result['geni_resources'] = resources
-        return result
+    def status (self, urns):
+        aggregate = OSAggregate(self)
+        desc =  aggregate.describe(urns, version=version, options=options)
+        return desc['geni_slivers']
 
     def create_sliver (self, slice_urn, slice_hrn, creds, rspec_string, users, options):
 

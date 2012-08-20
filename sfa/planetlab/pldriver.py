@@ -579,7 +579,7 @@ class PlDriver (Driver):
     def describe(self, creds, urns, options):
         return {}
     
-    def sliver_status (self, slice_urn, slice_hrn):
+    def status (self, slice_urn, slice_hrn):
         # find out where this slice is currently running
         slicename = hrn_to_pl_slicename(slice_hrn)
         

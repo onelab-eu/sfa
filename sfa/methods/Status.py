@@ -3,7 +3,7 @@ from sfa.util.method import Method
 
 from sfa.storage.parameter import Parameter, Mixed
 
-class SliverStatus(Method):
+class Status(Method):
     """
     Get the status of a sliver
     
@@ -25,7 +25,7 @@ class SliverStatus(Method):
 
         self.api.logger.info("interface: %s\ttarget-hrn: %s\tmethod-name: %s"%(self.api.interface, hrn, self.name))
     
-        status = self.api.manager.SliverStatus(self.api, hrn, valid_creds, options)
+        status = self.api.manager.Status(self.api, hrn, valid_creds, options)
 
         return status
     
