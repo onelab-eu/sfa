@@ -24,7 +24,7 @@ class OSXrn(Xrn):
             if auth is not None:
                 self.hrn='.'.join([auth, cleanup_name(name)]) 
             else:
-                self.hrn = config.SFA_INTERFACE_HRN + "." + cleanup_name(name)
+                self.hrn = name.replace('_', '.')
             self.hrn_to_urn()
         else:
             Xrn.__init__(self, **kwds)   

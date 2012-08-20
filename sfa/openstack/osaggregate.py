@@ -7,7 +7,8 @@ import random
 from collections import defaultdict
 from nova.exception import ImageNotFound
 from nova.api.ec2.cloud import CloudController
-from sfa.util.faults import SfaAPIError
+from sfa.util.faults import SfaAPIError, SliverDoesNotExist
+from sfa.util.sfatime import utcparse, datetime_to_string, datetime_to_epoch
 from sfa.rspecs.rspec import RSpec
 from sfa.rspecs.elements.hardware_type import HardwareType
 from sfa.rspecs.elements.node import Node
@@ -68,10 +69,6 @@ class OSAggregate:
         return zones
 
 
-    def describe(self, urns, version=None, options={}):
-         
-        return {}
-
     def list_resources(self, version=None, options={}):
         version_manager = VersionManager()
         version = version_manager.get_version(version)
@@ -82,86 +79,147 @@ class OSAggregate:
         return rspec.toxml()
 
     def describe(self, urns, version=None, options={}):
+        # update nova connection
+        tenant_name = OSXrn(xrn=urns[0], type='slice').get_tenant_name()
+        self.driver.shell.nova_manager.connect(tenant=tenant_name)
+        instances = self.get_instances(urns)
+        if len(instances) == 0:
+            raise SliverDoesNotExist("You have not allocated any slivers here")
+
+        geni_slivers = []
+        rspec_nodes = []
+        for instance in instances:
+            rspec_nodes.append(self.instance_to_rspec_node(instance))
+            geni_slivers.append(self.instance_to_geni_sliver(instance))
         version_manager = VersionManager()
         version = version_manager.get_version(version)
         rspec_version = version_manager._get_version(version.type, version.version, 'manifest')
         rspec = RSpec(version=version, user_options=options)
-        nodes = self.get_slice_nodes(slice_xrn)
-        rspec.version.add_nodes(nodes)
+        rspec.version.add_nodes(rspec_nodes)
         result = {'geni_urn': '',
                   'geni_rspec': rspec.toxml(), 
-                  'geni_slivers': []}
+                  'geni_slivers': geni_slivers}
         
         return result
 
-    def get_slice_nodes(self, slice_xrn):
-        # update nova connection
-        tenant_name = OSXrn(xrn=slice_xrn, type='slice').get_tenant_name()
-        self.driver.shell.nova_manager.connect(tenant=tenant_name)    
+    def get_instances(self, urns):
+        # parse slice names and sliver ids
+        names = set()
+        ids = set()
+        for urn in urns:
+            xrn = OSXrn(xrn=urn)
+            names.add(xrn.get_slice_name())
+            if xrn.id:
+                ids.add(xrn.id)
+
+        # look up instances
+        instances = []
+        for name in name:
+            servers = self.driver.shell.nova_manager.servers.findall(name=name)
+            instances.extend(servers)
+
+        # filter on id
+        if ids:
+            instances = [server in servers if server.id in ids]
+
+        return instances
+
+    def instance_to_rspec_node(self, instance):
+        # determine node urn
+        node_xrn = instance.metadata.get('component_id')
+        if not node_xrn:
+            node_xrn = OSXrn('cloud', type='node')
+        else:
+            node_xrn = OSXrn(xrn=node_xrn, type='node')
+
+        if not node_xrn.urn in node_dict:
+            rspec_node = Node()
+            rspec_node['component_id'] = node_xrn.urn
+            rspec_node['component_name'] = node_xrn.name
+            rspec_node['component_manager_id'] = Xrn(self.driver.hrn, 'authority+cm').get_urn()
+            rspec_node['slivers'] = []
+            node_dict[node_xrn.urn] = rspec_node
+        else:
+            rspec_node = node_dict[node_xrn.urn]
+
+        flavor = self.driver.shell.nova_manager.flavors.find(id=instance.flavor['id'])
+        sliver = self.instance_to_sliver(flavor)
+        rspec_node['slivers'].append(sliver)
+        image = self.driver.shell.image_manager.get_images(id=instance.image['id'])
+        if isinstance(image, list) and len(image) > 0:
+            image = image[0]
+        disk_image = image_to_rspec_disk_image(image)
+        sliver['disk_image'] = [disk_image]
+
+        # build interfaces            
+        rspec_node['services'] = []
+        rspec_node['interfaces'] = []
+        addresses = instance.addresses
+        # HACK: public ips are stored in the list of private, but 
+        # this seems wrong. Assume pub ip is the last in the list of 
+        # private ips until openstack bug is fixed.      
+        if addresses.get('private'):
+            login = Login({'authentication': 'ssh-keys',
+                           'hostname': addresses.get('private')[-1]['addr'],
+                           'port':'22', 'username': 'root'})
+            service = Services({'login': login})
+            rspec_node['services'].append(service)    
         
-        zones = self.get_availability_zones()
-        name = hrn_to_os_slicename(slice_xrn)
-        instances = self.driver.shell.nova_manager.servers.findall(name=name)
-        node_dict = {}
-        for instance in instances:
-            # determine node urn
-            node_xrn = instance.metadata.get('component_id')
-            if not node_xrn:
-                node_xrn = OSXrn('cloud', type='node')
-            else:
-                node_xrn = OSXrn(xrn=node_xrn, type='node')
+        for private_ip in addresses.get('private', []):
+            if_xrn = PlXrn(auth=self.driver.hrn, 
+                           interface='node%s:eth0' % (instance.hostId)) 
+            interface = Interface({'component_id': if_xrn.urn})
+            interface['ips'] =  [{'address': private_ip['addr'],
+                                 #'netmask': private_ip['network'],
+                                 'type': private_ip['version']}]
+            rspec_node['interfaces'].append(interface) 
+        
+        # slivers always provide the ssh service
+        for public_ip in addresses.get('public', []):
+            login = Login({'authentication': 'ssh-keys', 
+                           'hostname': public_ip['addr'], 
+                           'port':'22', 'username': 'root'})
+            service = Services({'login': login})
+            rspec_node['services'].append(service)
+        return rspec_node
 
-            if not node_xrn.urn in node_dict:
-                rspec_node = Node()
-                rspec_node['component_id'] = node_xrn.urn
-                rspec_node['component_name'] = node_xrn.name
-                rspec_node['component_manager_id'] = Xrn(self.driver.hrn, 'authority+cm').get_urn()
-                rspec_node['slivers'] = []
-                node_dict[node_xrn.urn] = rspec_node
-            else:
-                rspec_node = node_dict[node_xrn.urn]
 
-            flavor = self.driver.shell.nova_manager.flavors.find(id=instance.flavor['id'])
-            sliver = instance_to_sliver(flavor)
-            rspec_node['slivers'].append(sliver)
-            image = self.driver.shell.image_manager.get_images(id=instance.image['id'])
-            if isinstance(image, list) and len(image) > 0:
-                image = image[0]
-            disk_image = image_to_rspec_disk_image(image)
-            sliver['disk_image'] = [disk_image]
+    def instance_to_sliver(self, instance, xrn=None):
+        if xrn:
+            xrn = Xrn(xrn=slice_xrn, type='slice', id=instance.id).get_urn()
 
-            # build interfaces            
-            rspec_node['services'] = []
-            rspec_node['interfaces'] = []
-            addresses = instance.addresses
-            # HACK: public ips are stored in the list of private, but 
-            # this seems wrong. Assume pub ip is the last in the list of 
-            # private ips until openstack bug is fixed.      
-            if addresses.get('private'):
-                login = Login({'authentication': 'ssh-keys',
-                               'hostname': addresses.get('private')[-1]['addr'],
-                               'port':'22', 'username': 'root'})
-                service = Services({'login': login})
-                rspec_node['services'].append(service)    
-            
-            for private_ip in addresses.get('private', []):
-                if_xrn = PlXrn(auth=self.driver.hrn, 
-                               interface='node%s:eth0' % (instance.hostId)) 
-                interface = Interface({'component_id': if_xrn.urn})
-                interface['ips'] =  [{'address': private_ip['addr'],
-                                     #'netmask': private_ip['network'],
-                                     'type': private_ip['version']}]
-                rspec_node['interfaces'].append(interface) 
-            
-            # slivers always provide the ssh service
-            for public_ip in addresses.get('public', []):
-                login = Login({'authentication': 'ssh-keys', 
-                               'hostname': public_ip['addr'], 
-                               'port':'22', 'username': 'root'})
-                service = Services({'login': login})
-                rspec_node['services'].append(service)
-        return node_dict.values()
+        sliver = Sliver({'slice_id': xrn.get_urn(),
+                         'name': instance.name,
+                         'type': instance.name,
+                         'cpus': str(instance.vcpus),
+                         'memory': str(instance.ram),
+                         'storage':  str(instance.disk)})
+        return sliver   
 
+    def instance_to_geni_sliver(self, instance):
+        op_status = "geni_unknown"
+        state = instance.state.lower()
+        if state == 'active':
+            op_status = 'geni_ready'
+        elif state == 'building': 
+            op_status = 'geni_configuring'
+        elif state == 'failed':
+            op_status =' geni_failed'
+         
+        urn = OSXrn(name=instance.name, type='slice', id=instance.id).get_urn()
+        # required fields
+        geni_sliver = {'geni_sliver_urn': urn, 
+                       'geni_expires': None,
+                       'geni_allocation_status': 'geni_provisioned',
+                       'geni_operational_status': op_status,
+                       'geni_error': None,
+                       'plos_created_at': datetime_to_string(utcparse(instance.created)),
+                       'plos_sliver_type': self.shell.nova_manager.flavors.find(id=instance.flavor['id']).name,
+                        }
+
+
+        return geni_sliver
+                        
     def get_aggregate_nodes(self):
         zones = self.get_availability_zones()
         # available sliver/instance/vm types
@@ -183,7 +241,7 @@ class OSAggregate:
                                                 HardwareType({'name': 'pc'})]
             slivers = []
             for instance in instances:
-                sliver = instance_to_sliver(instance)
+                sliver = self.instance_to_sliver(instance)
                 sliver['disk_image'] = disk_images
                 slivers.append(sliver)
         
@@ -191,7 +249,6 @@ class OSAggregate:
             rspec_nodes.append(rspec_node) 
 
         return rspec_nodes 
-
 
     def create_tenant(self, tenant_name):
         tenants = self.driver.shell.auth_manager.tenants.findall(name=tenant_name)
@@ -202,7 +259,6 @@ class OSAggregate:
             tenant = tenants[0]
         return tenant
             
-
     def create_instance_key(self, slice_hrn, user):
         slice_name = Xrn(slice_hrn).leaf
         user_name = Xrn(user['urn']).leaf
