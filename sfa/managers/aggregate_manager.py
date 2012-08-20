@@ -115,20 +115,15 @@ class AggregateManager:
         call_id = options.get('call_id')
         if Callids().already_handled(call_id): return ""
 
-        # get the rspec's return format from options
         version_manager = VersionManager()
         rspec_version = version_manager.get_version(options.get('geni_rspec_version'))
-        return self.driver.describe(creds, urns, rspec, options)
+        return self.driver.describe(creds, urns, rspec_version, options)
         
     
-    def SliverStatus (self, api, xrn, creds, options):
+    def Status (self, api, urns, creds, options):
         call_id = options.get('call_id')
         if Callids().already_handled(call_id): return {}
-    
-        xrn = Xrn(xrn,'slice')
-        slice_urn=xrn.get_urn()
-        slice_hrn=xrn.get_hrn()
-        return self.driver.sliver_status (slice_urn, slice_hrn)
+        return self.driver.status (urns, options=options)
     
     def CreateSliver(self, api, xrn, creds, rspec_string, users, options):
         """

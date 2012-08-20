@@ -576,10 +576,15 @@ class PlDriver (Driver):
         rspec =  aggregate.list_resources(version=rspec_version, options=options)
         return rspec
 
-    def describe(self, creds, urns, options):
-        return {}
+    def describe(self, creds, urns, version, options):
+        aggregate = PlAggregate(self)
+        return aggregate.describe(urns, version=version, options=options)
     
-    def status (self, slice_urn, slice_hrn):
+    def status (self, urns, options={}):
+        aggregate = PlAggregate(self)
+        desc =  aggregate.describe(urns)
+        return desc['geni_slivers']
+
         # find out where this slice is currently running
         slicename = hrn_to_pl_slicename(slice_hrn)
         
