@@ -329,7 +329,14 @@ class SlabAggregate:
         #nodes, links = self.get_nodes(slice, slivers)
         logger.debug("\r\n \r\n SlabAggregate \tget_rspec ******* slice_xrn %s \r\n \r\n"\
                                             %(slice_xrn)) 
-        if not options.get('list_leases') or options.get('list_leases') and options['list_leases'] != 'leases':
+                                            
+        try:                                    
+            lease_option = options['list_leases']
+        except KeyError:
+            return 
+        
+        if lease_option == 'resources':
+        #if not options.get('list_leases') or options.get('list_leases') and options['list_leases'] != 'leases':
             nodes = self.get_nodes(slices, slivers) 
             #In case creating a job slice _xrn is not set to None
             rspec.version.add_nodes(nodes)
@@ -356,8 +363,9 @@ class SlabAggregate:
                     
     
                     rspec.version.add_default_sliver_attribute(attrib['tagname'], \
-                                                                attrib['value'])   
-        if options.get('list_leases') or options.get('list_leases') and options['list_leases'] != 'resources':
+                                                                attrib['value'])  
+        if lease_option in ['all','leases']:                                                         
+        #if options.get('list_leases') or options.get('list_leases') and options['list_leases'] != 'resources':
             leases = self.get_leases(slices)
             rspec.version.add_leases(leases)
             
