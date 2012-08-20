@@ -43,7 +43,7 @@ class Describe(Method):
         origin_hrn = options.get('origin_hrn', None)
         if not origin_hrn:
             origin_hrn = Credential(string=valid_creds[0]).get_gid_caller().get_hrn()
-        rspec = self.api.manager.ListResources(self.api, creds, options)
+        desc = self.api.manager.Describe(self.api, creds, urns, options)
 
         # filter rspec through sfatables 
         if self.api.interface in ['aggregate']:
@@ -51,11 +51,11 @@ class Describe(Method):
         elif self.api.interface in ['slicemgr']: 
             chain_name = 'FORWARD-OUTGOING'
         self.api.logger.debug("ListResources: sfatables on chain %s"%chain_name)
-        filtered_rspec = run_sfatables(chain_name, '', origin_hrn, rspec) 
+        desc['geni_rspec'] = run_sfatables(chain_name, '', origin_hrn, desc['geni_rspec']) 
  
         if options.has_key('geni_compressed') and options['geni_compressed'] == True:
-            filtered_rspec = zlib.compress(filtered_rspec).encode('base64')
+            desc['geni_rspec'] = zlib.compress(desc['geni_rspec']).encode('base64')
 
-        return filtered_rspec  
+        return desc  
     
     

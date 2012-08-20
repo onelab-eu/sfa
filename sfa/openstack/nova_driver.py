@@ -337,9 +337,9 @@ class NovaDriver(Driver):
         aggregate = OSAggregate(self)
         return aggregate.describe(urns, version=version, options=options)
     
-    def status (self, urns):
+    def status (self, urns, options={}):
         aggregate = OSAggregate(self)
-        desc =  aggregate.describe(urns, version=version, options=options)
+        desc =  aggregate.describe(urns)
         return desc['geni_slivers']
 
     def create_sliver (self, slice_urn, slice_hrn, creds, rspec_string, users, options):
