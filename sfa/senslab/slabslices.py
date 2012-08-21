@@ -146,8 +146,9 @@ class SlabSlices:
         peer):
 
        
-        #First get the list of current leases from OAR  
-        leases = self.driver.GetLeases({'name':sfa_slice['name']}, ['lease_id'])
+        #First get the list of current leases from OAR          
+        leases = self.driver.GetLeases({'name':sfa_slice['name']})
+        #leases = self.driver.GetLeases({'name':sfa_slice['name']}, ['lease_id'])
         if leases : 
             current_leases = [lease['lease_id'] for lease in leases]
             #Deleted leases are the ones with lease id not declared in the Rspec
@@ -372,6 +373,7 @@ class SlabSlices:
 
     def verify_persons(self, slice_hrn, slice_record, users,  peer, sfa_peer, \
                                                                 options={}):
+        #TODO SA 21/08/12 verify_persons Needs review 
         users_by_id = {}
         users_by_hrn = {}
         users_dict = {}
@@ -399,76 +401,56 @@ class SlabSlices:
         existing_user_ids = []
         existing_user_hrns = []
         existing_users = []
-        #Check if user is in LDAP using its hrn.
+        #Check if user is in Senslab LDAP using its hrn.
         #Assuming Senslab is centralised :  one LDAP for all sites, 
         # user_id unknown from LDAP
-        # LDAP does not provide users id, therfore we rely on hrns
+        # LDAP does not provide users id, therefore we rely on hrns
+        # If the hrn is not a senslab hrn, the user may not be in LDAP.
         if users_by_hrn:
             #Construct the list of filters for GetPersons
             filter_user = []
             for hrn in users_by_hrn:
-                #filter_user.append ( {'hrn':hrn}) 
                 filter_user.append (users_by_hrn[hrn])
             logger.debug(" SLABSLICE.PY \tverify_person  filter_user %s " \
                                                     %(filter_user))   
             existing_users = self.driver.GetPersons(filter_user)                
-            #existing_users = self.driver.GetPersons({'hrn': \
-                                            #users_by_hrn.keys()})
-            #existing_users = self.driver.GetPersons({'hrn': \
-                                                    #users_by_hrn.keys()}, \ 
-                                                    #['hrn','pkey'])
             if existing_users:
                 for user in existing_users :
-                    #for  k in users_dict[user['hrn']] :
-                    
                     existing_user_hrns.append(users_dict[user['hrn']]['hrn'])
                     existing_user_ids.\
                                     append(users_dict[user['hrn']]['person_id'])
          
             #User from another federated site , 
-            #does not have a senslab account yet?
-            #or have multiple SFA accounts
+            #does not have a senslab account yet? 
+            #Check in the LDAP if we know email,
+            #maybe he has multiple SFA accounts = multiple hrns.
             #Check before adding  them to LDAP
-            
             else: 
-               
+                req = 'mail='
                 if isinstance(users, list):
-                    ldap_reslt = self.driver.ldap.LdapSearch(users[0])
+                    req += users[0]['email']  
                 else:
-                    ldap_reslt = self.driver.ldap.LdapSearch(users)
+                    req += users['email']
+                    
+                ldap_reslt = self.driver.ldap.LdapSearch(req)
                 if ldap_reslt:
-                    existing_users = ldap_reslt[0]
-                    #TODO : DEBUG user undefined ? SA 14/08/12
-                    existing_user_hrns.append(users_dict[user['hrn']]['hrn'])
-                    existing_user_ids.\
-                                    append(users_dict[user['hrn']]['person_id'])
+                    logger.debug(" SLABSLICE.PY \tverify_person users \
+                                USER already in Senslab \t ldap_reslt %s "%( ldap_reslt)) 
+                    existing_users.append(ldap_reslt[1])
+                 
                 else:
                     #User not existing in LDAP
-            
+                    #TODO SA 21/08/12 raise something to add user or add it auto ?
                     logger.debug(" SLABSLICE.PY \tverify_person users \
-                                not in ldap ... %s \r\n \t ldap_reslt %s "  \
+                                not in ldap ...NEW ACCOUNT NEEDED %s \r\n \t ldap_reslt %s "  \
                                                 %(users, ldap_reslt))
-
-                
-        # requested slice users        
+   
         requested_user_ids = users_by_id.keys() 
         requested_user_hrns = users_by_hrn.keys()
         logger.debug("SLABSLICE.PY \tverify_person requested_user_ids  %s \
                         user_by_hrn %s " %(requested_user_ids, users_by_hrn)) 
-        # existing slice users
-
-        #existing_slice_users_filter = {'hrn': slice_record['PI'][0]}
-        #logger.debug(" SLABSLICE.PY \tverify_person requested_user_ids %s \
-        #existing_slice_users_filter %s slice_record %s" %(requested_user_ids,\
-        #existing_slice_users_filter,slice_record))
-        
-        #existing_slice_users = \
-                        #self.driver.GetPersons([existing_slice_users_filter])
-        #existing_slice_users = \
-                        #self.driver.GetPersons(existing_slice_users_filter, \
-                        #['hrn','pkey'])
-        #logger.debug("SLABSLICE.PY \tverify_person  existing_slice_users %s " \
-                                    #%(existing_slice_users))
+      
+   
         #Check that the user of the slice in the slice record
         #matches the existing users 
         try:
@@ -503,8 +485,10 @@ class SlabSlices:
             added_user = users_dict[added_user_hrn]
             #hrn, type = urn_to_hrn(added_user['urn'])  
             person = {
-                'first_name': added_user.get('first_name', hrn),
-                'last_name': added_user.get('last_name', hrn),
+                #'first_name': added_user.get('first_name', hrn),
+                #'last_name': added_user.get('last_name', hrn),
+                'first_name': added_user['first_name'],
+                'last_name': added_user['last_name'],
                 'person_id': added_user['person_id'],
                 'peer_person_id': None,
                 'keys': [],

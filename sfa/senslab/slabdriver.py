@@ -194,9 +194,9 @@ class SlabDriver(Driver):
             if sl['oar_job_id'] != [] :
                 #one entry in the dictionnary for each jobid/login, one login
                 #can have multiple jobs running
-                for oar_jobid in sl['oar_job_id']:
-                    if (login, oar_jobid) not in sfa_slices_dict:
-                        sfa_slices_dict[(login,oar_jobid)] = sl
+                #for oar_jobid in sl['oar_job_id']:
+                if (login, sl['oar_job_id']) not in sfa_slices_dict:
+                    sfa_slices_dict[(login,sl['oar_job_id'])] = sl
         
         for lease in oar_leases_list:
             if (lease['user'], lease['lease_id']) not in oar_leases_dict:
@@ -246,8 +246,8 @@ class SlabDriver(Driver):
     
         # parse rspec
         rspec = RSpec(rspec_string)
-        logger.debug("SLABDRIVER.PY \tcreate_sliver \trspec.version %s " \
-                                                            %(rspec.version))
+        logger.debug("SLABDRIVER.PY \t create_sliver \tr spec.version %s slice_record %s " \
+                                                            %(rspec.version,slice_record))
         
         self.synchronize_oar_and_slice_table(slice_hrn)
         # ensure site record exists?
@@ -880,7 +880,7 @@ class SlabDriver(Driver):
         slicerec  = {}
         slicerec_dict = {}
         authorized_filter_types_list = ['slice_hrn', 'record_id_user']
-        
+        slicerec_dictlist = []
         if slice_filter_type in authorized_filter_types_list:
             #Get list of slices based on the slice hrn
             if slice_filter_type == 'slice_hrn':
@@ -902,9 +902,9 @@ class SlabDriver(Driver):
                 return []
             
             #slicerec_dictlist = []
-            slicerec_dict = slicerec.dump_sqlalchemyobj_to_dict()
+            fixed_slicerec_dict = slicerec.dump_sqlalchemyobj_to_dict()
             if login is None :
-                login = slicerec_dict['slice_hrn'].split(".")[1].split("_")[0] 
+                login = fixed_slicerec_dict['slice_hrn'].split(".")[1].split("_")[0] 
 
             #for record in slicerec:
                 #slicerec_dictlist.append(record.dump_sqlalchemyobj_to_dict())
@@ -912,48 +912,56 @@ class SlabDriver(Driver):
                     #login = slicerec_dictlist[0]['slice_hrn'].split(".")[1].split("_")[0] 
 
             #One slice can have multiple jobs
-            sqljob_list = slab_dbsession.query(JobSenslab).filter_by( slice_hrn=slicerec_dict['slice_hrn']).all() 
+            sqljob_list = slab_dbsession.query(JobSenslab).filter_by( slice_hrn=fixed_slicerec_dict['slice_hrn']).all() 
             job_list = []
             for job in sqljob_list:
                 job_list.append(job.dump_sqlalchemyobj_to_dict())
                 
-            logger.debug("\r\n SLABDRIVER \tGetSlices login %s \
+            logger.debug(" SLABDRIVER \tGetSlices login %s \
                                             slice record %s" \
-                                            %(login, slicerec_dict))
+                                            %(login, fixed_slicerec_dict))
             
-            #Several jobs for one slice   
-            slicerec_dict['oar_job_id'] = []
-            for job in job_list :                          
-                #if slicerec_dict['oar_job_id'] is not -1:
+            #Several jobs for one slice  
+            #TODO : Modify to make a diff with jobs not terminated = 1 OAR request SA 20/08/12
+            for job in job_list : 
+                slicerec_dict = {} 
+                slicerec_dict['oar_job_id'] = []                         
+               
                 #Check with OAR the status of the job if a job id is in 
                 #the slice record 
                 
                 rslt = self.GetJobsResources(job['oar_job_id'], \
                                                         username = login)
-                logger.debug("SLABDRIVER.PY  \tGetSlices  rslt fromn  GetJobsResources %s"\
-                                                        %(rslt))
+                logger.debug("SLABDRIVER.PY  \tGetSlices job %s  \trslt fromn  GetJobsResources %s \r\n"\
+                                                        %(job, rslt))
                 if rslt :
-                    slicerec_dict['oar_job_id'].append(job['oar_job_id'])
+                    slicerec_dict['oar_job_id']= job['oar_job_id']
                     slicerec_dict.update(rslt)
+                    slicerec_dict.update(fixed_slicerec_dict)
                     slicerec_dict.update({'hrn':\
-                                        str(slicerec_dict['slice_hrn'])})
+                                        str(fixed_slicerec_dict['slice_hrn'])})
+                    
+                    
                 #If GetJobsResources is empty, this means the job is 
                 #now in the 'Terminated' state
                 #Update the slice record
                 else :
                     self.db.delete_job(slice_filter, job['oar_job_id'])
                     slicerec_dict.\
-                            update({'hrn':str(slicerec_dict['slice_hrn'])})
-        
+                            update({'hrn':str(fixed_slicerec_dict['slice_hrn'])})
+                
                 try:
                     slicerec_dict['node_ids'] = job['node_list']
                 except KeyError:
                     pass
-            
-            logger.debug("SLABDRIVER.PY  \tGetSlices  RETURN slicerec_dict  %s"\
-                                                        %(slicerec_dict))
+                
+                slicerec_dictlist.append(slicerec_dict)
+                logger.debug("SLABDRIVER.PY  \tGetSlices  slicerec_dict %s slicerec_dictlist %s" %(slicerec_dict, slicerec_dictlist))
+                
+            logger.debug("SLABDRIVER.PY  \tGetSlices  RETURN slicerec_dictlist  %s"\
+                                                        %(slicerec_dictlist))
                             
-            return [slicerec_dict]
+            return slicerec_dictlist
             
                 
         else:

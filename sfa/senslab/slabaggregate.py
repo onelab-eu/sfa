@@ -76,20 +76,26 @@ class SlabAggregate:
         # sort slivers by node id , if there is a job
         #and therfore, node allocated to this slice
         for sfa_slice in slices:
-            if sfa_slice['oar_job_id'] is not -1:
-                try:
+            try:
                     
-                    for node_id in sfa_slice['node_ids']:
-                        #node_id = self.driver.root_auth + '.' + node_id
-                        sliver = Sliver({'sliver_id': urn_to_sliver_id(slice_urn, \
-                                        sfa_slice['record_id_slice'], node_id),
-                                        'name': sfa_slice['slice_hrn'],
-                                        'type': 'slab-node', 
-                                        'tags': []})
-                        slivers[node_id] = sliver
-                except KeyError:
-                    logger.log_exc("SLABAGGREGATE \t \
-                                            get_slice_and_slivers KeyError ")
+                for node_id in sfa_slice['node_ids']:
+                    #node_id = self.driver.root_auth + '.' + node_id
+                    sliver = Sliver({'sliver_id': urn_to_sliver_id(slice_urn, \
+                                    sfa_slice['record_id_slice'], node_id),
+                                    'name': sfa_slice['slice_hrn'],
+                                    'type': 'slab-node', 
+                                    'tags': []})
+                    slivers[node_id] = sliver
+            except KeyError:
+                logger.log_exc("SLABAGGREGATE \t \
+                                        get_slice_and_slivers KeyError ")
+        
+        #Add default sliver attribute :
+        #connection information for senslab
+        tmp = sfa_slice['slice_hrn'].split('.')
+        ldap_username = tmp[1].split('_')[0]
+        vmaddr = 'ssh ' + ldap_username + '@grenoble.senslab.info'
+        slivers['default_sliver'] =  {'vm': vmaddr , 'login': ldap_username}
         ## sort sliver attributes by node id    
         ##tags = self.driver.GetSliceTags({'slice_tag_id': slice['slice_tag_ids']})
         ##for tag in tags:
@@ -102,7 +108,7 @@ class SlabAggregate:
             ##slivers[tag['node_id']]['tags'].append(tag)
         logger.debug("SLABAGGREGATE api get_slice_and_slivers  slivers %s "\
                                                              %(slivers))
-        return (sfa_slice, slivers)
+        return (slices, slivers)
             
 
         
@@ -114,6 +120,9 @@ class SlabAggregate:
         # but what is the role of the slivers parameter ?
         # So i assume that slice['node_ids'] will be the same as slivers for us
         #filter_dict = {}
+        #if slice_xrn:
+            #if not slices or not slices['node_ids']:
+                #return ([],[])
         tags_filter = {}
         
         # get the granularity in second for the reservation system
@@ -157,95 +166,94 @@ class SlabAggregate:
         #interfaces = self.get_interfaces({'interface_id':interface_ids}) 
         # get tags
         #node_tags = self.get_node_tags(tags_filter)
-       
-
-        reserved_nodes = self.driver.GetNodesCurrentlyInUse()
+        
+        #if slices, this means we got to list all the nodes given to this slice
+        # Make a list of all the nodes in the slice before getting their attributes
         rspec_nodes = []
+        slice_nodes_list = []
+        if slices:
+            for one_slice in slices:
+                for node_id in one_slice['node_ids']:
+                    slice_nodes_list.append(node_id)
+                   
+        reserved_nodes = self.driver.GetNodesCurrentlyInUse()
+        logger.debug("SLABAGGREGATE api get_rspec slice_nodes_list  %s "\
+                                                             %(slice_nodes_list)) 
         for node in nodes:
             # skip whitelisted nodes
             #if node['slice_ids_whitelist']:
                 #if not slice or slice['slice_id'] not in node['slice_ids_whitelist']:
                     #continue
             #rspec_node = Node()
-            rspec_node = SlabNode()
-            # xxx how to retrieve site['login_base']
-            #site_id=node['site_id']
-            #site=sites_dict[site_id]
-            rspec_node['mobile'] = node['mobile']
-            rspec_node['archi'] = node['archi']
-            rspec_node['radio'] = node['radio']
-
-            slab_xrn = slab_xrn_object(self.driver.root_auth, node['hostname'])
-            rspec_node['component_id'] = slab_xrn.urn
-            rspec_node['component_name'] = node['hostname']  
-            rspec_node['component_manager_id'] = \
-                            hrn_to_urn(self.driver.root_auth, 'authority+sa')
-            
-            # Senslab's nodes are federated : there is only one authority 
-            # for all Senslab sites, registered in SFA.
-            # Removing the part including the site in authority_id SA 27/07/12
-            rspec_node['authority_id'] = rspec_node['component_manager_id']  
-
-            # do not include boot state (<available> element) in the manifest rspec
-            
-            #if not slice:
-            #    rspec_node['boot_state'] = node['boot_state']
-            #    if node['hostname'] in reserved_nodes:
-            #        rspec_node['boot_state'] = "Reserved"
-            rspec_node['boot_state'] = node['boot_state']
-            if node['hostname'] in reserved_nodes:
-                rspec_node['boot_state'] = "Reserved"
-            rspec_node['exclusive'] = 'True'
-            rspec_node['hardware_types'] = [HardwareType({'name': 'slab-node'})]
-
-            # only doing this because protogeni rspec needs
-            # to advertise available initscripts 
-            #rspec_node['pl_initscripts'] = None
-            # add site/interface info to nodes.
-            # assumes that sites, interfaces and tags have already been prepared.
-            #site = sites_dict[node['site_id']]
-            location = Location({'country':'France'})
-            rspec_node['location'] = location
-          
-           
-            position = SlabPosition()
-            for field in position :
-                try:
-                    position[field] = node[field]
-                except KeyError, error :
-                    logger.log_exc("SLABAGGREGATE\t get_rspec position %s "%(error))
-
-            rspec_node['position'] = position
-            #rspec_node['interfaces'] = []
-            #if_count=0
-            #for if_id in node['interface_ids']:
-                #interface = Interface(interfaces[if_id]) 
-                #interface['ipv4'] = interface['ip']
-                #interface['component_id'] = PlXrn(auth=self.driver.hrn, 
-                                                #interface='node%s:eth%s' % (node['node_id'], if_count)).get_urn()
-                # interfaces in the manifest need a client id
-                #if slice:
-                    #interface['client_id'] = "%s:%s" % (node['node_id'], if_id)            
-                #rspec_node['interfaces'].append(interface)
-                #if_count+=1
-        
-            #tags = [PLTag(node_tags[tag_id]) for tag_id in node['node_tag_ids']]
-            # Granularity
-            granularity = Granularity({'grain': grain})
-            rspec_node['granularity'] = granularity
-            rspec_node['tags'] = []
-            if node['hostname'] in slivers:
-                # add sliver info
-                sliver = slivers[node['hostname']]
-                rspec_node['sliver_id'] = sliver['sliver_id']
-                rspec_node['client_id'] = node['hostname']
-                rspec_node['slivers'] = [sliver]
+            logger.debug("SLABAGGREGATE api get_rspec node  %s "\
+                                                             %(node)) 
+            if slice_nodes_list == [] or node['hostname'] in slice_nodes_list:
+                   
+                rspec_node = SlabNode()
+                # xxx how to retrieve site['login_base']
+                #site_id=node['site_id']
+                #site=sites_dict[site_id]
+                rspec_node['mobile'] = node['mobile']
+                rspec_node['archi'] = node['archi']
+                rspec_node['radio'] = node['radio']
+    
+                slab_xrn = slab_xrn_object(self.driver.root_auth, node['hostname'])
+                rspec_node['component_id'] = slab_xrn.urn
+                rspec_node['component_name'] = node['hostname']  
+                rspec_node['component_manager_id'] = \
+                                hrn_to_urn(self.driver.root_auth, 'authority+sa')
                 
-                # slivers always provide the ssh service
-                #login = Login({'authentication': 'ssh-keys', 'hostname': node['hostname'], 'port':'22', 'username': sliver['name']})
-                #service = Services({'login': login})
-                #rspec_node['services'] = [service]
-            rspec_nodes.append(rspec_node)
+                # Senslab's nodes are federated : there is only one authority 
+                # for all Senslab sites, registered in SFA.
+                # Removing the part including the site in authority_id SA 27/07/12
+                rspec_node['authority_id'] = rspec_node['component_manager_id']  
+    
+                # do not include boot state (<available> element) in the manifest rspec
+                
+               
+                rspec_node['boot_state'] = node['boot_state']
+                if node['hostname'] in reserved_nodes:
+                    rspec_node['boot_state'] = "Reserved"
+                rspec_node['exclusive'] = 'True'
+                rspec_node['hardware_types'] = [HardwareType({'name': 'slab-node'})]
+    
+                # only doing this because protogeni rspec needs
+                # to advertise available initscripts 
+                #rspec_node['pl_initscripts'] = None
+                # add site/interface info to nodes.
+                # assumes that sites, interfaces and tags have already been prepared.
+                #site = sites_dict[node['site_id']]
+                location = Location({'country':'France'})
+                rspec_node['location'] = location
+            
+            
+                position = SlabPosition()
+                for field in position :
+                    try:
+                        position[field] = node[field]
+                    except KeyError, error :
+                        logger.log_exc("SLABAGGREGATE\t get_rspec position %s "%(error))
+    
+                rspec_node['position'] = position
+                #rspec_node['interfaces'] = []
+               
+                #tags = [PLTag(node_tags[tag_id]) for tag_id in node['node_tag_ids']]
+                # Granularity
+                granularity = Granularity({'grain': grain})
+                rspec_node['granularity'] = granularity
+                rspec_node['tags'] = []
+                if node['hostname'] in slivers:
+                    # add sliver info
+                    sliver = slivers[node['hostname']]
+                    rspec_node['sliver_id'] = sliver['sliver_id']
+                    rspec_node['client_id'] = node['hostname']
+                    rspec_node['slivers'] = [sliver]
+                    
+                    # slivers always provide the ssh service
+                    #login = Login({'authentication': 'ssh-keys', 'hostname': node['hostname'], 'port':'22', 'username': sliver['name']})
+                    #service = Services({'login': login})
+                    #rspec_node['services'] = [service]
+                rspec_nodes.append(rspec_node)
 
         return (rspec_nodes)       
 
@@ -333,12 +341,15 @@ class SlabAggregate:
         try:                                    
             lease_option = options['list_leases']
         except KeyError:
-            return 
+            #If no options are specified, at least print the resources
+            if slice_xrn :
+                lease_option = 'all'
+            pass 
         
-        if lease_option == 'resources':
+        if lease_option in ['all', 'resources']:
         #if not options.get('list_leases') or options.get('list_leases') and options['list_leases'] != 'leases':
             nodes = self.get_nodes(slices, slivers) 
-            #In case creating a job slice _xrn is not set to None
+            #In case creating a job,  slice_xrn is not set to None
             rspec.version.add_nodes(nodes)
             if slice_xrn :
                 #Get user associated with this slice
@@ -346,24 +357,24 @@ class SlabAggregate:
                                                 #slices['record_id_user']).first()
 
                 #ldap_username = (user.hrn).split('.')[1]
-                ldap_username = slices['slice_hrn']
+                
+                
+                #for one_slice in slices :
+                ldap_username = slices[0]['slice_hrn']
                 tmp = ldap_username.split('.')
                 ldap_username = tmp[1].split('_')[0]
-                logger.debug("SlabAggregate \tget_rspec **** \
-                        ldap_username %s rspec.version %s\r\n" %(ldap_username, rspec.version))
+              
                 if version.type == "Slab":
                     rspec.version.add_connection_information(ldap_username)
 
-            default_sliver = slivers.get(None, [])
+            default_sliver = slivers.get('default_sliver', [])
             if default_sliver:
-                default_sliver_attribs = default_sliver.get('tags', [])
+                #default_sliver_attribs = default_sliver.get('tags', [])
                 logger.debug("SlabAggregate \tget_rspec **** \
-                        default_sliver_attribs %s \r\n" %(default_sliver_attribs))
-                for attrib in default_dbsessionsliver_attribs:
-                    
-    
-                    rspec.version.add_default_sliver_attribute(attrib['tagname'], \
-                                                                attrib['value'])  
+                        default_sliver%s \r\n" %(default_sliver))
+                for attrib in default_sliver:
+                    rspec.version.add_default_sliver_attribute(attrib, \
+                                                               default_sliver[attrib])  
         if lease_option in ['all','leases']:                                                         
         #if options.get('list_leases') or options.get('list_leases') and options['list_leases'] != 'resources':
             leases = self.get_leases(slices)
