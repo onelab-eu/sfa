@@ -33,7 +33,7 @@ sudo sfaadmin.py registry nuke
 
 # Drop table in slab_sfa
 # to avoid duplicates.
-psql -d slab_sfa -U sfa -W -q -c "drop table job_senslab;"
+
 psql -d slab_sfa -U sfa -W -q -c "drop table slice_senslab;"
 
 

@@ -47,6 +47,9 @@ class OARrestapi:
     def GETRequestToOARRestAPI(self, request, strval=None , username = None ): 
         self.oarserver['uri'] = \
                             OARGETParser.OARrequests_uri_dict[request]['uri']
+        #Get job details with username                   
+        if 'owner' in OARGETParser.OARrequests_uri_dict[request] and username:
+           self.oarserver['uri'] +=  OARGETParser.OARrequests_uri_dict[request]['owner'] + username
         headers = {}
         data = json.dumps({})
         logger.debug("OARrestapi \tGETRequestToOARRestAPI %s" %(request))
@@ -507,7 +510,10 @@ class OARGETParser:
         'GET_reserved_nodes':
                 {'uri':
                 '/oarapi/jobs/details.json?state=Running,Waiting,Launching',\
+                'owner':'&user=',
                 'parse_func':ParseReservedNodes},
+
+                
         'GET_running_jobs':  
                 {'uri':'/oarapi/jobs/details.json?state=Running',\
                 'parse_func':ParseRunningJobs},

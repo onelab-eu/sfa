@@ -373,11 +373,22 @@ class SlabSlices:
 
     def verify_persons(self, slice_hrn, slice_record, users,  peer, sfa_peer, \
                                                                 options={}):
+        """ 
+        users is a record list. Records can either be local records 
+        or users records from known and trusted federated sites. 
+        If the user is from another site that senslab doesn't trust yet,
+        then Resolve will raise an error before getting to create_sliver. 
+        """
         #TODO SA 21/08/12 verify_persons Needs review 
-        users_by_id = {}
-        users_by_hrn = {}
+        
+        
+        users_by_id = {}  
+        users_by_hrn = {} 
+        #users_dict : dict whose keys can either be the user's hrn or its id.
+        #Values contains only id and hrn 
         users_dict = {}
-      
+        
+        #First create dicts by hrn and id for each user in the user record list:      
         for user in users:
             
             if 'urn' in user and (not 'hrn' in user ) :
@@ -393,7 +404,7 @@ class SlabSlices:
                                                         'hrn':user['hrn']}
                 
         
-        logger.debug( "SLABSLICE.PY \tverify_person  \
+        logger.debug( "SLABSLICE.PY \t verify_person  \
                         users_dict %s \r\n user_by_hrn %s \r\n \
                         \tusers_by_id %s " \
                         %(users_dict,users_by_hrn, users_by_id))
@@ -401,33 +412,37 @@ class SlabSlices:
         existing_user_ids = []
         existing_user_hrns = []
         existing_users = []
-        #Check if user is in Senslab LDAP using its hrn.
-        #Assuming Senslab is centralised :  one LDAP for all sites, 
+        # Check if user is in Senslab LDAP using its hrn.
+        # Assuming Senslab is centralised :  one LDAP for all sites, 
         # user_id unknown from LDAP
-        # LDAP does not provide users id, therefore we rely on hrns
+        # LDAP does not provide users id, therefore we rely on hrns containing
+        # the login of the user.
         # If the hrn is not a senslab hrn, the user may not be in LDAP.
         if users_by_hrn:
-            #Construct the list of filters for GetPersons
+            #Construct the list of filters (list of dicts) for GetPersons
             filter_user = []
             for hrn in users_by_hrn:
                 filter_user.append (users_by_hrn[hrn])
             logger.debug(" SLABSLICE.PY \tverify_person  filter_user %s " \
-                                                    %(filter_user))   
-            existing_users = self.driver.GetPersons(filter_user)                
+                                                    %(filter_user))
+            #Check user's in LDAP with GetPersons
+            #Needed because what if the user has been deleted in LDAP but 
+            #is still in SFA?
+            existing_users = self.driver.GetPersons(filter_user) 
+                           
+            #User's in senslab LDAP               
             if existing_users:
                 for user in existing_users :
                     existing_user_hrns.append(users_dict[user['hrn']]['hrn'])
                     existing_user_ids.\
                                     append(users_dict[user['hrn']]['person_id'])
          
-            #User from another federated site , 
-            #does not have a senslab account yet? 
-            #Check in the LDAP if we know email,
-            #maybe he has multiple SFA accounts = multiple hrns.
-            #Check before adding  them to LDAP
+            # User from another known trusted federated site. Check 
+            # if a senslab account matching the email has already been created.
             else: 
                 req = 'mail='
                 if isinstance(users, list):
+                    
                     req += users[0]['email']  
                 else:
                     req += users['email']
@@ -464,9 +479,7 @@ class SlabSlices:
         except KeyError:
             pass
             
-        #existing_slice_user_hrns = [user['hrn'] for \
-                                        #user in existing_slice_users]
-
+      
         # users to be added, removed or updated
         #One user in one senslab slice : there should be no need
         #to remove/ add any user from/to a slice.
