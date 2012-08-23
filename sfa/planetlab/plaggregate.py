@@ -1,4 +1,5 @@
 #!/usr/bin/python
+from collections import defaultdict
 from sfa.util.xrn import Xrn, hrn_to_urn, urn_to_hrn
 from sfa.util.sfatime import utcparse, datetime_to_string
 from sfa.util.sfalogging import logger
@@ -27,6 +28,15 @@ class PlAggregate:
 
     def __init__(self, driver):
         self.driver = driver
+
+    def get_nodes(self, options={}):
+        filter = {'peer_id': None}
+        geni_available = options.get('geni_available')    
+        if geni_available == True:
+            filter['boot_state'] = 'boot'
+        nodes = self.driver.shell.GetNodes(filter)
+       
+        return nodes  
  
     def get_sites(self, filter={}):
         sites = {}
@@ -99,157 +109,141 @@ class PlAggregate:
             pl_initscripts[initscript['initscript_id']] = initscript
         return pl_initscripts
 
+    def get_slivers(self, urns, options):
+        names = set()
+        ids = set()
+        for urn in urns:
+            xrn = PlXrn(xrn=urn)
+            names.add(xrn.get_slice_name())
+            if xrn.id:
+                ids.add(xrn.id)
 
-    def get_slice_and_slivers(self, slice_xrn):
-        """
-        Returns a dict of slivers keyed on the sliver's node_id
-        """
-        slivers = {}
-        slice = None
-        if not slice_xrn:
-            return (slice, slivers)
-        slice_urn = hrn_to_urn(slice_xrn, 'slice')
-        slice_hrn, _ = urn_to_hrn(slice_xrn)
-        slice_name = hrn_to_pl_slicename(slice_hrn)
-        slices = self.driver.shell.GetSlices(slice_name)
-        if not slices:
-            return (slice, slivers)
-        slice = slices[0]
+        slices = self.driver.shell.GetSlices(names)
+        # filter on id
+        if ids:
+            slices = [slice in slices if slice['slice_id'] in ids]
 
-        # sort slivers by node id    
-        for node_id in slice['node_ids']:
-            
-            id = ":".join(map(str, [slice['slice_id'], node_id]))
-            xrn = Xrn(slice_urn, id=id).get_urn()
-            xrn.set_authority(self.driver.hrn)
-            sliver_urn = xrn.get_urn()
-            sliver = Sliver({'sliver_id': sliver_urn,
-                             'name': slice['name'],
-                             'type': 'plab-vserver', 
-                             'tags': []})
-            slivers[node_id]= sliver
+        tags_dict = self.get_slice_tags(slices)
+        nodes_dict = self.get_slice_nodes(slices, options)
+        slivers = []
+        for node in nodes_dict.values():
+            sliver = node.update(slices[0]) 
+            sliver['tags'] = tags_dict[node['node_id']]
+        return slivers
 
-        # sort sliver attributes by node id    
-        tags = self.driver.shell.GetSliceTags({'slice_tag_id': slice['slice_tag_ids']})
-        for tag in tags:
-            # most likely a default/global sliver attribute (node_id == None)
-            if tag['node_id'] not in slivers:
-                sliver_urn = Xrn(slice_urn, id = slice['slice_id']).get_urn()
-                sliver = Sliver({'sliver_id': sliver_urn,
-                                 'name': slice['name'],
-                                 'type': 'plab-vserver',
-                                 'tags': []})
-                slivers[tag['node_id']] = sliver
-            slivers[tag['node_id']]['tags'].append(tag)
-        
-        return (slice, slivers)
-
-    def get_nodes_and_links(self, slice_xrn, slice=None,slivers=[], options={}):
-        # if we are dealing with a slice that has no node just return 
-        # and empty list    
-        if slice_xrn:
-            if not slice or not slice['node_ids']:
-                return ([],[])
-
-        filter = {}
-        tags_filter = {}
-        if slice and 'node_ids' in slice and slice['node_ids']:
-            filter['node_id'] = slice['node_ids']
-            tags_filter=filter.copy()
-
-        geni_available = options.get('geni_available')    
-        if geni_available == True:
-            filter['boot_state'] = 'boot'     
-        
-        filter.update({'peer_id': None})
-        nodes = self.driver.shell.GetNodes(filter)
-        
-        # get the granularity in second for the reservation system
-        grain = self.driver.shell.GetLeaseGranularity()
-       
-        site_ids = []
-        interface_ids = []
-        tag_ids = []
-        nodes_dict = {}
-        for node in nodes:
-            site_ids.append(node['site_id'])
-            interface_ids.extend(node['interface_ids'])
-            tag_ids.extend(node['node_tag_ids'])
-            nodes_dict[node['node_id']] = node
- 
-        # get sites
-        sites_dict  = self.get_sites({'site_id': site_ids}) 
-        # get interfaces
-        interfaces = self.get_interfaces({'interface_id':interface_ids}) 
-        # get tags
-        node_tags = self.get_node_tags(tags_filter)
-        # get initscripts
-        pl_initscripts = self.get_pl_initscripts()
-        
-        links = self.get_links(sites_dict, nodes_dict, interfaces)
-
-        rspec_nodes = []
-        for node in nodes:
-            # skip whitelisted nodes
-            if node['slice_ids_whitelist']:
-                if not slice or slice['slice_id'] not in node['slice_ids_whitelist']:
-                    continue
-            rspec_node = Node()
-            # xxx how to retrieve site['login_base']
-            site_id=node['site_id']
-            site=sites_dict[site_id]
-            rspec_node['component_id'] = hostname_to_urn(self.driver.hrn, site['login_base'], node['hostname'])
-            rspec_node['component_name'] = node['hostname']
-            rspec_node['component_manager_id'] = Xrn(self.driver.hrn, 'authority+cm').get_urn()
-            rspec_node['authority_id'] = hrn_to_urn(PlXrn.site_hrn(self.driver.hrn, site['login_base']), 'authority+sa')
-            # do not include boot state (<available> element) in the manifest rspec
-            if not slice:     
-                rspec_node['boot_state'] = node['boot_state']
-            rspec_node['exclusive'] = 'false'
-            rspec_node['hardware_types'] = [HardwareType({'name': 'plab-pc'}),
-                                            HardwareType({'name': 'pc'})]
-            # only doing this because protogeni rspec needs
-            # to advertise available initscripts 
-            rspec_node['pl_initscripts'] = pl_initscripts.values()
-             # add site/interface info to nodes.
-            # assumes that sites, interfaces and tags have already been prepared.
-            site = sites_dict[node['site_id']]
-            if site['longitude'] and site['latitude']:  
-                location = Location({'longitude': site['longitude'], 'latitude': site['latitude'], 'country': 'unknown'})
-                rspec_node['location'] = location
-            # Granularity
-            granularity = Granularity({'grain': grain})
-            rspec_node['granularity'] = granularity
-
-            rspec_node['interfaces'] = []
-            if_count=0
-            for if_id in node['interface_ids']:
-                interface = Interface(interfaces[if_id]) 
+    def node_to_rspec_node(self, sites, interfaces, tags, pl_initscripts=[], grain=None, options={}):
+        rspec_node = Node()
+        # xxx how to retrieve site['login_base']
+        site=sites_dict[node['site_id']]
+        rspec_node['component_id'] = hostname_to_urn(self.driver.hrn, site['login_base'], node['hostname'])
+        rspec_node['component_name'] = node['hostname']
+        rspec_node['component_manager_id'] = Xrn(self.driver.hrn, 'authority+cm').get_urn()
+        rspec_node['authority_id'] = hrn_to_urn(PlXrn.site_hrn(self.driver.hrn, site['login_base']), 'authority+sa')
+        # do not include boot state (<available> element) in the manifest rspec
+        rspec_node['boot_state'] = node['boot_state']
+        rspec_node['exclusive'] = 'false'
+        rspec_node['hardware_types'] = [HardwareType({'name': 'plab-pc'}),
+                                        HardwareType({'name': 'pc'})]
+        # only doing this because protogeni rspec needs
+        # to advertise available initscripts
+        rspec_node['pl_initscripts'] = pl_initscripts.values()
+         # add site/interface info to nodes.
+        # assumes that sites, interfaces and tags have already been prepared.
+        if site['longitude'] and site['latitude']:
+            location = Location({'longitude': site['longitude'], 'latitude': site['latitude'], 'country': 'unknown'})
+            rspec_node['location'] = location
+        # Granularity
+        granularity = Granularity({'grain': grain})
+        rspec_node['granularity'] = granularity
+        rspec_node['interfaces'] = []
+        if_count=0
+        for if_id in node['interface_ids']:
+                interface = Interface(interfaces[if_id])
                 interface['ipv4'] = interface['ip']
-                interface['component_id'] = PlXrn(auth=self.driver.hrn, 
+                interface['component_id'] = PlXrn(auth=self.driver.hrn,
                                                   interface='node%s:eth%s' % (node['node_id'], if_count)).get_urn()
                 # interfaces in the manifest need a client id
                 if slice:
-                    interface['client_id'] = "%s:%s" % (node['node_id'], if_id)            
+                    interface['client_id'] = "%s:%s" % (node['node_id'], if_id)
                 rspec_node['interfaces'].append(interface)
                 if_count+=1
 
             tags = [PLTag(node_tags[tag_id]) for tag_id in node['node_tag_ids']]
             rspec_node['tags'] = tags
-            if node['node_id'] in slivers:
-                # add sliver info
-                sliver = slivers[node['node_id']]
-                rspec_node['sliver_id'] = sliver['sliver_id']
-                rspec_node['client_id'] = node['hostname']
-                rspec_node['slivers'] = [sliver]
-                
-                # slivers always provide the ssh service
-                login = Login({'authentication': 'ssh-keys', 'hostname': node['hostname'], 'port':'22', 'username': sliver['name']})
-                service = Services({'login': login})
-                rspec_node['services'] = [service]
-            rspec_nodes.append(rspec_node)
-        return (rspec_nodes, links)
-             
+        return rspec_node
+
+    def sliver_to_rspec_node(self, sliver):
+        # get the granularity in second for the reservation system
+        grain = self.driver.shell.GetLeaseGranularity()
+        if sliver['slice_ids_whitelist'] and sliver['slice_id'] not in sliver['slice_ids_whitelist']:
+            continue
+        rspec_node = self.get_rspec_node(node, sites_dict, interfaces, node_tags, pl_initscripts, grain)
+        # xxx how to retrieve site['login_base']
+        rspec_node['expires'] = datetime_to_string(utcparse(slice[0]['expires']))
+        # remove interfaces from manifest
+        rspec_node['interfaces'] = []
+        # add sliver info
+        id = ":".join(map(str, [slices[0]['slice_id'], node['node_id']]))
+        sliver_xrn = Xrn(slice_urn, id=id).get_urn()
+        sliver_xrn.set_authority(self.driver.hrn)
+        sliver = Sliver({'sliver_id': sliver_xrn.get_urn(),
+                         'name': slice[0]['name'],
+                         'type': 'plab-vserver',
+                         'tags': []})
+        rspec_node['sliver_id'] = sliver['sliver_id']
+        rspec_node['client_id'] = node['hostname']
+        rspec_node['slivers'] = [sliver]
+
+        # slivers always provide the ssh service
+        login = Login({'authentication': 'ssh-keys', 'hostname': node['hostname'], 'port':'22', 'username': sliver['name']})
+        service = Services({'login': login})
+        rspec_node['services'] = [service]    
+        rspec_nodes.append(rspec_node)
+        return rspec_node      
+
+    def get_slice_tags(self, slices):
+        slice_tag_ids = []
+        for slice in slices:
+            slice_tag_ids.extend(slice['slice_tag_ids'])
+        tags = self.driver.shell.GetSliceTags({'slice_tag_id': slice_tag_ids})
+        # sorted by node_id
+        tags_dict = defaultdict([])
+        for tag in tags:
+            tags_dict[tag['node_id']] = tag
+        return tags_dict
+
+    def get_slice_nodes(self, slices, options={}):
+        filter = {'peer_id': None}
+        tags_filter = {}
+        if slice and 'node_ids' in slice and slice['node_ids']:
+            filter['node_id'] = slice['node_ids']
+            tags_filter=filter.copy()
+
+        geni_available = options.get('geni_available')
+        if geni_available == True:
+            filter['boot_state'] = 'boot'
+        nodes = self.driver.shell.GetNodes(filter)
+        nodes_dict = {}
+        for node in nodes:
+            nodes_dict[node['node_id']] = node
+        return nodes_dict
+
+    def rspec_node_to_geni_sliver(self, rspec_node):
+        op_status = "geni_unknown"
+        state = sliver['boot_stat'].lower()
+        if state == 'boot':
+            op_status = 'geni_ready'
+        else:
+            op_status =' geni_failed'
+
+        # required fields
+        geni_sliver = {'geni_sliver_urn': rspec_node['sliver_id'],
+                       'geni_expires': rspec_node['expires'],
+                       'geni_allocation_status': 'geni_provisioned',
+                       'geni_operational_status': op_status,
+                       'geni_error': None,
+                       }
+        return geni_sliver        
 
     def get_leases(self, slice=None, options={}):
         
@@ -295,40 +289,94 @@ class PlAggregate:
         version = version_manager.get_version(version)
         rspec_version = version_manager._get_version(version.type, version.version, 'ad')
         rspec = RSpec(version=rspec_version, user_options=options)
-        
-        if not options.get('list_leases') or options.get('list_leases') and options['list_leases'] != 'leases':
-           nodes, links = self.get_nodes_and_links(options=options)
-           rspec.version.add_nodes(nodes)
-           rspec.version.add_links(links)
+       
+        if not options.get('list_leases') or options['list_leases'] != 'leases':
+            # get nodes
+            nodes  = self.get_nodes(options)
+            site_ids = []
+            interface_ids = []
+            tag_ids = []
+            nodes_dict = {}
+            for sliver in slivers:
+                site_ids.append(sliver['site_id'])
+                interface_ids.extend(sliver['interface_ids'])
+                tag_ids.extend(sliver['node_tag_ids'])
+                nodes_dict[sliver['node_id']] = sliver
+            sites = self.get_sites({'site_id': site_ids})
+            interfaces = self.get_interfaces({'interface_id':interface_ids})
+            node_tags = self.get_node_tags(tags_filter)
+            pl_initscripts = self.get_pl_initscripts()
+            # convert nodes to rspec nodes
+            rspec_nodes = []
+            for node in nodes:
+                rspec_node = self.node_to_rspec_node(node, sites, interfaces, node_tags, pl_initscripts)
+                rspec_nodes.append(rspec_node)
+            rspec.version.add_nodes(rspec_nodes)
+
+            # add links
+            links = self.get_links(sites_dict, nodes_dict, interfaces)        
+            rspec.version.add_links(links)
         return rspec.toxml()
 
     def describe(self, urns, version=None, options={}):
+        # update nova connection
+        tenant_name = OSXrn(xrn=urns[0], type='slice').get_tenant_name()
+        self.driver.shell.nova_manager.connect(tenant=tenant_name)
+
         version_manager = VersionManager()
         version = version_manager.get_version(version)
         rspec_version = version_manager._get_version(version.type, version.version, 'manifest')
         rspec = RSpec(version=version, user_options=options)
-        slice, slivers = self.get_slice_and_slivers(urns)
-        if slice and 'expires' in slice:
-            rspec.xml.set('expires',  datetime_to_string(utcparse(slice['expires'])))
-       
-        if not options.get('list_leases') or options.get('list_leases') and options['list_leases'] != 'leases':
-           nodes, links = self.get_nodes_and_links(urns, slice, slivers, options)
-           rspec.version.add_nodes(nodes)
-           rspec.version.add_links(links)
+
+        # get slivers
+        geni_slivers = []
+        slivers = self.get_slivers(urns, options) 
+        if len(slivers) == 0:
+            raise SliverDoesNotExist("You have not allocated any slivers here")
+        rspec.xml.set('expires',  datetime_to_string(utcparse(slivers[0]['expires'])))
+      
+        if not options.get('list_leases') or options['list_leases'] != 'leases':
+            # add slivers
+            site_ids = []
+            interface_ids = []
+            tag_ids = []
+            nodes_dict = {}
+            for sliver in slivers:
+                site_ids.append(sliver['site_id'])
+                interface_ids.extend(sliver['interface_ids'])
+                tag_ids.extend(sliver['node_tag_ids'])
+                nodes_dict[sliver['node_id']] = sliver
+            sites = self.get_sites({'site_id': site_ids})
+            interfaces = self.get_interfaces({'interface_id':interface_ids})
+            node_tags = self.get_node_tags(tags_filter)
+            pl_initscripts = self.get_pl_initscripts()
+            rspec_nodes = []
+            for sliver in slivers:
+                if sliver['slice_ids_whitelist'] and sliver['slice_id'] not in sliver['slice_ids_whitelist']:
+                    continue
+                rspec_node = self.sliver_to_rspec_node(sites, interfaces, node_tags)
+                geni_sliver = self.rspec_node_to_geni_sliver(rspec_node)
+                rspec_nodes.append(rspec_node) 
+                geni_slivers.append(geni_sliver)
+           rspec.version.add_nodes(rspec_nodes)
+
            # add sliver defaults
            default_sliver = slivers.get(None, [])
            if default_sliver:
               default_sliver_attribs = default_sliver.get('tags', [])
               for attrib in default_sliver_attribs:
                   rspec.version.add_default_sliver_attribute(attrib['tagname'], attrib['value'])
-        
 
-        if not options.get('list_leases') or options.get('list_leases') and options['list_leases'] != 'resources':
-           leases = self.get_leases(slice)
+            # add links 
+            links = self.get_links(sites_dict, nodes_dict, interfaces)        
+            rspec.version.add_links(links)
+
+        if not options.get('list_leases') or options['list_leases'] != 'resources':
+           leases = self.get_leases(slivers[0])
            rspec.version.add_leases(leases)
-        
-        result = {'geni_urn': '',
-                  'geni_rspec': rspec.toxml(),
-                  'geni_slivers': []}
 
-        return result  
+               
+        return = {'geni_urn': urns[0], 
+                  'geni_rspec': rspec.toxml(),
+                  'geni_slivers': geni_slivers}
+
