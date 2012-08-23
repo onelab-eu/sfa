@@ -318,22 +318,13 @@ class NovaDriver(Driver):
     def aggregate_version (self):
         return {}
 
-    def list_slices (self, creds, options):
-        # get data from db
-        instance_urns = []
-        instances = self.shell.nova_manager.servers.findall()
-        for instance in instances:
-            if instance.name not in instance_urns:
-                instance_urns.append(OSXrn(instance.name, type='slice').urn)
-        return instance_urns
-        
     # first 2 args are None in case of resource discovery
-    def list_resources (self, creds, version, options):
+    def list_resources (self, version, options):
         aggregate = OSAggregate(self)
         rspec =  aggregate.list_resources(version=version, options=options)
         return rspec
 
-    def describe(self, creds, urns, version, options):
+    def describe(self, urns, version, options):
         aggregate = OSAggregate(self)
         return aggregate.describe(urns, version=version, options=options)
     
@@ -342,8 +333,8 @@ class NovaDriver(Driver):
         desc =  aggregate.describe(urns)
         return desc['geni_slivers']
 
-    def create_sliver (self, slice_urn, slice_hrn, creds, rspec_string, users, options):
-
+    def allocate (self, urn, rspec_string, options):
+        xrn = Xrn(urn) 
         aggregate = OSAggregate(self)
 
         # assume first user is the caller and use their context
@@ -351,9 +342,10 @@ class NovaDriver(Driver):
         # key as the project key.
         key_name = None
         if len(users) > 1:
-            key_name = aggregate.create_instance_key(slice_hrn, users[0])
+            key_name = aggregate.create_instance_key(xrn.get_hrn(), users[0])
 
         # collect public keys
+        users = options.get('geni_users', [])
         pubkeys = []
         for user in users:
             pubkeys.extend(user['keys'])
@@ -365,33 +357,29 @@ class NovaDriver(Driver):
    
         return aggregate.describe(slice_xrn=slice_urn, version=rspec.version)
 
-    def delete_sliver (self, slice_urn, slice_hrn, creds, options):
+    def provision(self, urns, version, options):
         aggregate = OSAggregate(self)
-        tenant_name = OSXrn(xrn=slice_hrn, type='slice').get_tenant_name()
-        project_name = hrn_to_os_slicename(slice_hrn)
-        return aggregate.delete_instances(project_name, tenant_name)   
+        return aggregate.describe(urns, version=version, options=options) 
 
-    def update_sliver(self, slice_urn, slice_hrn, rspec, creds, options):
-        name = hrn_to_os_slicename(slice_hrn)
-        tenant_name = OSXrn(xrn=slice_hrn, type='slice').get_tenant_name()
+    def delete (self, urns, options):
         aggregate = OSAggregate(self)
-        return aggregate.update_instances(name)
-    
-    def renew_sliver (self, slice_urn, slice_hrn, creds, expiration_time, options):
-        return True
-
-    def start_slice (self, slice_urn, slice_hrn, creds):
+        for urn in urns:
+            xrn = OSXrn(xrn=urn, type='slice')
+            tenant_name = xrn.get_tenant_name()
+            project_name = xrn.get_slicename()
+            id = xrn.id
+            aggregate.delete_instance(tenant_name, project_name, id)   
         return 1
 
-    def stop_slice (self, slice_urn, slice_hrn, creds):
+    def renew (self, urns, expiration_time, options):
+        return True
+
+    def perform_operational_action  (self, urns, action, options):
         tenant_name = OSXrn(xrn=slice_hrn, type='slice').get_tenant_name()
         name = OSXrn(xrn=slice_urn).name
         aggregate = OSAggregate(self)
         return aggregate.stop_instances(name, tenant_name) 
 
-    def reset_slice (self, slice_urn, slice_hrn, creds):
-        raise SfaNotImplemented ("reset_slice not available at this interface")
-    
     # xxx this code is quite old and has not run for ages
     # it is obviously totally broken and needs a rewrite
     def get_ticket (self, slice_urn, slice_hrn, creds, rspec_string, options):

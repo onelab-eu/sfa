@@ -337,9 +337,9 @@ class SliceManager:
     
     
     # first draft at a merging SliverStatus
-    def SliverStatus(self, api, slice_xrn, creds, options):
-        def _SliverStatus(server, xrn, creds, options):
-            return server.SliverStatus(xrn, creds, options)
+    def Status(self, api, slice_xrn, creds, options):
+        def _Status(server, xrn, creds, options):
+            return server.Status(xrn, creds, options)
 
         call_id = options.get('call_id') 
         if Callids().already_handled(call_id): return {}
@@ -351,7 +351,7 @@ class SliceManager:
         for aggregate in api.aggregates:
             interface = api.aggregates[aggregate]
             server = api.server_proxy(interface, cred)
-            threads.run (_SliverStatus, server, slice_xrn, [cred], options)
+            threads.run (_Status, server, slice_xrn, [cred], options)
         results = [ReturnValue.get_value(result) for result in threads.get_results()]
     
         # get rid of any void result - e.g. when call_id was hit, where by convention we return {}

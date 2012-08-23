@@ -101,6 +101,14 @@ class TreeException(SfaFault):
     def __str__(self):
         return repr(self.value)
 
+class SearchFailed(SfaFault):
+    def __init__(self, value, extra = None):
+        self.value = value
+        faultString = "%s does not exist here " % self.value
+        SfaFault.__init__(self, GENICODE.SEARCHFAILED, faultString, extra)
+    def __str__(self):
+        return repr(self.value)
+
 class NonExistingRecord(SfaFault):
     def __init__(self, value, extra = None):
         self.value = value
@@ -329,4 +337,9 @@ class CertExpired(SfaFault):
         self.value = value
         faultString = "%s cert is expired" % value
         SfaFault.__init__(self, GENICODE.ERROR, faultString, extra)
-   
+  
+class SfatablesRejected(SfaFault):
+    def __init__(self, value, extra=None):
+        self.value =value
+        faultString = "%s rejected by sfatables"
+        SfaFault.__init__(self, GENICODE.FORBIDDEN, faultString, extra)  
