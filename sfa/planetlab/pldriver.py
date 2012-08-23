@@ -2,7 +2,7 @@ import time
 import datetime
 #
 from sfa.util.faults import MissingSfaInfo, UnknownSfaType, \
-    RecordNotFound, SfaNotImplemented, SliverDoesNotExist
+    RecordNotFound, SfaNotImplemented, SliverDoesNotExist, SearchFailed
 from sfa.util.sfalogging import logger
 from sfa.util.defaultdict import defaultdict
 from sfa.util.sfatime import utcparse, datetime_to_string, datetime_to_epoch
@@ -571,12 +571,12 @@ class PlDriver (Driver):
         return slice_urns
         
     # first 2 args are None in case of resource discovery
-    def list_resources (self, creds, options):
+    def list_resources (self, version, options):
         aggregate = PlAggregate(self)
-        rspec =  aggregate.list_resources(version=rspec_version, options=options)
+        rspec =  aggregate.list_resources(version=version, options=options)
         return rspec
 
-    def describe(self, creds, urns, version, options):
+    def describe(self, urns, version, options):
         aggregate = PlAggregate(self)
         return aggregate.describe(urns, version=version, options=options)
     
@@ -649,13 +649,14 @@ class PlDriver (Driver):
         result['geni_resources'] = resources
         return result
 
-    def create_sliver (self, slice_urn, slice_hrn, creds, rspec_string, users, options):
-
+    def allocate (self, urn, rspec_string, options):
+        xrn = Xrn(urn)
         aggregate = PlAggregate(self)
         slices = PlSlices(self)
-        peer = slices.get_peer(slice_hrn)
-        sfa_peer = slices.get_sfa_peer(slice_hrn)
+        peer = slices.get_peer(xrn.get_hrn())
+        sfa_peer = slices.get_sfa_peer(xrn.get_hrn())
         slice_record=None    
+        users = options.get('geni_users', [])
         if users:
             slice_record = users[0].get('slice_record', {})
     
@@ -664,11 +665,11 @@ class PlDriver (Driver):
         requested_attributes = rspec.version.get_slice_attributes()
         
         # ensure site record exists
-        site = slices.verify_site(slice_hrn, slice_record, peer, sfa_peer, options=options)
+        site = slices.verify_site(xrn.hrn, slice_record, peer, sfa_peer, options=options)
         # ensure slice record exists
-        slice = slices.verify_slice(slice_hrn, slice_record, peer, sfa_peer, options=options)
+        slice = slices.verify_slice(xrn.hrn, slice_record, peer, sfa_peer, options=options)
         # ensure person records exists
-        persons = slices.verify_persons(slice_hrn, slice, users, peer, sfa_peer, options=options)
+        persons = slices.verify_persons(xrn.hrn, slice, users, peer, sfa_peer, options=options)
         # ensure slice attributes exists
         slices.verify_slice_attributes(slice, requested_attributes, options=options)
         
@@ -707,15 +708,25 @@ class PlDriver (Driver):
         # only used by plc and ple.
         slices.handle_peer(site, slice, persons, peer)
         
-        return aggregate.describe_rspec(slice_xrn=slice_urn, version=rspec.version)
+        return aggregate.describe(slice_xrn=xrn.get_urn(), version=rspec.version)
 
-    def delete_sliver (self, slice_urn, slice_hrn, creds, options):
-        slicename = hrn_to_pl_slicename(slice_hrn)
-        slices = self.shell.GetSlices({'name': slicename})
+    def delete(self, urns, options):
+        names = []
+        ids = []
+        for urn in urns:
+            xrn = PlXrn(xrn=urn, type='slice')
+            names.append(xrn.pl_slicename())
+            if xrn.id:
+                ids.append(xrn.id)    
+        slices = self.shell.GetSlices({'name': names})
         if not slices:
-            return 1
+            raise SearchFailed(urns)
         slice = slices[0]
-    
+        if ids:
+            node_ids = ids
+        else:
+            node_ids = slice['node_ids']
+     
         # determine if this is a peer slice
         # xxx I wonder if this would not need to use PlSlices.get_peer instead 
         # in which case plc.peers could be deprecated as this here
@@ -724,17 +735,22 @@ class PlDriver (Driver):
         try:
             if peer:
                 self.shell.UnBindObjectFromPeer('slice', slice['slice_id'], peer)
-            self.shell.DeleteSliceFromNodes(slicename, slice['node_ids'])
+            self.shell.DeleteSliceFromNodes(slice['slice_id'], node_ids)
         finally:
             if peer:
                 self.shell.BindObjectToPeer('slice', slice['slice_id'], peer, slice['peer_slice_id'])
         return 1
     
-    def renew_sliver (self, slice_urn, slice_hrn, creds, expiration_time, options):
-        slicename = hrn_to_pl_slicename(slice_hrn)
-        slices = self.shell.GetSlices({'name': slicename}, ['slice_id'])
+    def renew (self, urns, expiration_time, options):
+        # we can only renew slices, not individual slivers. ignore sliver
+        # ids in the urn 
+        names = []
+        for urn in urns:
+            xrn = PlXrn(urn=urn, type='slice')
+            names.append(xrn.pl_slicename())
+        slices = self.shell.GetSlices(names, ['slice_id'])
         if not slices:
-            raise RecordNotFound(slice_hrn)
+            raise SearchFailed(urns)
         slice = slices[0]
         requested_time = utcparse(expiration_time)
         record = {'expires': int(datetime_to_epoch(requested_time))}

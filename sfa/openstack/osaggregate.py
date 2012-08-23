@@ -351,9 +351,12 @@ class OSAggregate:
                            
 
 
-    def delete_instances(self, instance_name, tenant_name):
+    def delete_instance(self, tenant_name, instance_name, id=None):
         self.driver.shell.nova_manager.connect(tenant=tenant_name)
-        instances = self.driver.shell.nova_manager.servers.findall(name=instance_name)
+        args = {'name': instance_name}
+        if id:
+            args['id'] = id
+        instances = self.driver.shell.nova_manager.servers.findall(**args)
         security_group_manager = SecurityGroup(self.driver)
         for instance in instances:
             # deleate this instance's security groups

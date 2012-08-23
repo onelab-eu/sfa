@@ -105,7 +105,7 @@ class AggregateManager:
                 logger.debug("%s.ListResources returning cached advertisement" % (self.driver.__module__))
                 return rspec
        
-        rspec = self.driver.list_resources (creds, version, options) 
+        rspec = self.driver.list_resources (version, options) 
         if self.driver.cache:
             logger.debug("%s.ListResources stores advertisement in cache" % (self.driver.__module__))
             self.driver.cache.add(version_string, rspec)    
@@ -117,65 +117,43 @@ class AggregateManager:
 
         version_manager = VersionManager()
         rspec_version = version_manager.get_version(options.get('geni_rspec_version'))
-        return self.driver.describe(creds, urns, rspec_version, options)
+        return self.driver.describe(urns, rspec_version, options)
         
     
-    def Status (self, api, urns, creds, options):
+    def Status (self, api, urns, options):
         call_id = options.get('call_id')
         if Callids().already_handled(call_id): return {}
         return self.driver.status (urns, options=options)
-    
-    def CreateSliver(self, api, xrn, creds, rspec_string, users, options):
+   
+
+    def Allocate(self, api, xrn, creds, rspec_string, options):
+        """
+        Allocate resources as described in a request RSpec argument 
+        to a slice with the named URN.
+        """
+        call_id = options.get('call_id')
+        if Callids().already_handled(call_id): return ""
+        return self.driver.allocate(xrn, creds, rspec_string, options)
+ 
+    def Provision(self, api, xrns, options):
         """
         Create the sliver[s] (slice) at this aggregate.    
         Verify HRN and initialize the slice record in PLC if necessary.
         """
         call_id = options.get('call_id')
         if Callids().already_handled(call_id): return ""
+        return self.driver.provision(xrns, creds, options)
     
-        xrn = Xrn(xrn, 'slice')
-        slice_urn=xrn.get_urn()
-        slice_hrn=xrn.get_hrn()
-
-        return self.driver.create_sliver (slice_urn, slice_hrn, creds, rspec_string, users, options)
-    
-    def DeleteSliver(self, api, xrn, creds, options):
+    def Delete(self, api, xrns, options):
         call_id = options.get('call_id')
         if Callids().already_handled(call_id): return True
+        return self.driver.delete_sliver (xrns, options)
 
-        xrn = Xrn(xrn, 'slice')
-        slice_urn=xrn.get_urn()
-        slice_hrn=xrn.get_hrn()
-        return self.driver.delete_sliver (slice_urn, slice_hrn, creds, options)
-
-    def RenewSliver(self, api, xrn, creds, expiration_time, options):
+    def Renew(self, api, xrns, expiration_time, options):
         call_id = options.get('call_id')
         if Callids().already_handled(call_id): return True
-        
-        xrn = Xrn(xrn, 'slice')
-        slice_urn=xrn.get_urn()
-        slice_hrn=xrn.get_hrn()
-        return self.driver.renew_sliver (slice_urn, slice_hrn, creds, expiration_time, options)
+        return self.driver.renew(xrns, expiration_time, options)
     
-    ### these methods could use an options extension for at least call_id
-    def start_slice(self, api, xrn, creds):
-        xrn = Xrn(xrn)
-        slice_urn=xrn.get_urn()
-        slice_hrn=xrn.get_hrn()
-        return self.driver.start_slice (slice_urn, slice_hrn, creds)
-     
-    def stop_slice(self, api, xrn, creds):
-        xrn = Xrn(xrn)
-        slice_urn=xrn.get_urn()
-        slice_hrn=xrn.get_hrn()
-        return self.driver.stop_slice (slice_urn, slice_hrn, creds)
-
-    def reset_slice(self, api, xrn):
-        xrn = Xrn(xrn)
-        slice_urn=xrn.get_urn()
-        slice_hrn=xrn.get_hrn()
-        return self.driver.reset_slice (slice_urn, slice_hrn)
-
     def GetTicket(self, api, xrn, creds, rspec, users, options):
     
         xrn = Xrn(xrn)
