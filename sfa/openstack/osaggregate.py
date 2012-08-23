@@ -96,7 +96,7 @@ class OSAggregate:
         rspec_version = version_manager._get_version(version.type, version.version, 'manifest')
         rspec = RSpec(version=version, user_options=options)
         rspec.version.add_nodes(rspec_nodes)
-        result = {'geni_urn': '',
+        result = {'geni_urn': Xrn(urns[0]).get_urn(),
                   'geni_rspec': rspec.toxml(), 
                   'geni_slivers': geni_slivers}
         
@@ -132,19 +132,12 @@ class OSAggregate:
         else:
             node_xrn = OSXrn(xrn=node_xrn, type='node')
 
-        if not node_xrn.urn in node_dict:
-            rspec_node = Node()
-            rspec_node['component_id'] = node_xrn.urn
-            rspec_node['component_name'] = node_xrn.name
-            rspec_node['component_manager_id'] = Xrn(self.driver.hrn, 'authority+cm').get_urn()
-            rspec_node['slivers'] = []
-            node_dict[node_xrn.urn] = rspec_node
-        else:
-            rspec_node = node_dict[node_xrn.urn]
-
+        rspec_node = Node()
+        rspec_node['component_id'] = node_xrn.urn
+        rspec_node['component_name'] = node_xrn.name
+        rspec_node['component_manager_id'] = Xrn(self.driver.hrn, 'authority+cm').get_urn()
         flavor = self.driver.shell.nova_manager.flavors.find(id=instance.flavor['id'])
-        sliver = self.instance_to_sliver(flavor)
-        rspec_node['slivers'].append(sliver)
+        rspec_node['slivers'] = [self.instance_to_sliver(flavor)]
         image = self.driver.shell.image_manager.get_images(id=instance.image['id'])
         if isinstance(image, list) and len(image) > 0:
             image = image[0]
@@ -188,7 +181,7 @@ class OSAggregate:
         if xrn:
             xrn = Xrn(xrn=slice_xrn, type='slice', id=instance.id).get_urn()
 
-        sliver = Sliver({'slice_id': xrn.get_urn(),
+        sliver = Sliver({'sliver_id': xrn.get_urn(),
                          'name': instance.name,
                          'type': instance.name,
                          'cpus': str(instance.vcpus),
