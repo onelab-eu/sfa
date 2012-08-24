@@ -17,8 +17,7 @@ class Delete(Method):
     
     accepts = [
         Parameter([str], "Human readable name of slice to delete (hrn or urn)"),
-        Mixed(Parameter(str, "Credential string"),
-              Parameter(type([str]), "List of credentials")),
+        Parameter(dict), "Credentials")),
         Parameter(dict, "options"),
         ]
 
@@ -31,6 +30,6 @@ class Delete(Method):
         origin_hrn = Credential(string=valid_creds[0]).get_gid_caller().get_hrn()
         self.api.logger.info("interface: %s\tcaller-hrn: %s\ttarget-hrn: %s\tmethod-name: %s"%(self.api.interface, origin_hrn, xrns, self.name))
 
-        self.api.manager.Delete(self.api, xrns, options)
+        self.api.manager.Delete(self.api, xrns, creds, options)
  
         return 1 
