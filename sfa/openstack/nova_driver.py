@@ -2,7 +2,7 @@ import time
 import datetime
 
 from sfa.util.faults import MissingSfaInfo, UnknownSfaType, \
-    RecordNotFound, SfaNotImplemented, SfaInvalidArgument
+    RecordNotFound, SfaNotImplemented, SfaInvalidArgument, UnsupportedOperation
 
 from sfa.util.sfalogging import logger
 from sfa.util.defaultdict import defaultdict
@@ -319,12 +319,12 @@ class NovaDriver(Driver):
         return {}
 
     # first 2 args are None in case of resource discovery
-    def list_resources (self, version, options):
+    def list_resources (self, version=None, options={}):
         aggregate = OSAggregate(self)
         rspec =  aggregate.list_resources(version=version, options=options)
         return rspec
 
-    def describe(self, urns, version, options):
+    def describe(self, urns, version=None, options={}):
         aggregate = OSAggregate(self)
         return aggregate.describe(urns, version=version, options=options)
     
@@ -333,7 +333,7 @@ class NovaDriver(Driver):
         desc =  aggregate.describe(urns)
         return desc['geni_slivers']
 
-    def allocate (self, urn, rspec_string, options):
+    def allocate (self, urn, rspec_string, options={}):
         xrn = Xrn(urn) 
         aggregate = OSAggregate(self)
 
@@ -355,13 +355,12 @@ class NovaDriver(Driver):
         tenant_name = OSXrn(xrn=slice_hrn, type='slice').get_tenant_name()
         aggregate.run_instances(instance_name, tenant_name, rspec_string, key_name, pubkeys)    
    
-        return aggregate.describe(slice_xrn=slice_urn, version=rspec.version)
+        return aggregate.describe(urns=[urn], version=rspec.version)
 
-    def provision(self, urns, version, options):
-        aggregate = OSAggregate(self)
-        return aggregate.describe(urns, version=version, options=options) 
+    def provision(self, urns, options={}):
+        return self.describe(urns, options=options) 
 
-    def delete (self, urns, options):
+    def delete (self, urns, options={}):
         aggregate = OSAggregate(self)
         for urn in urns:
             xrn = OSXrn(xrn=urn, type='slice')
@@ -371,13 +370,30 @@ class NovaDriver(Driver):
             aggregate.delete_instance(tenant_name, project_name, id)   
         return 1
 
-    def renew (self, urns, expiration_time, options):
+    def renew (self, urns, expiration_time, options={}):
         return True
 
-    def perform_operational_action  (self, urns, action, options):
-        pass
+    def perform_operational_action  (self, urns, action, options={}):
+        aggregate = OSAggregate(self)
+        action = action.lower() 
+        if action == 'geni_start':
+            action_method = aggregate.start_instances
+        elif action == 'geni_stop':
+            action_method = aggregate.stop_instances
+        elif action == 'geni_restart':
+            action_method = aggreate.restart_instances
+        else:
+            raise UnsupportedOperation(action)
+        for urn in urns:
+            xrn = OSXrn(urn=urn)
+            tenant_name = xrn.get_tenant_name()
+            project_name = xrn.get_slicename()
+            id = xrn.id
+            aggreate.action_method(tenant_name, project_name, id)
+        description = self.describe(urns)
+        return description['geni_slivers']      
 
-    def shutdown(self, xrn, options):
+    def shutdown(self, xrn, options={}):
         xrn = OSXrn(xrn=xrn, type='slice')
         tenant_name = xrn.get_tenant_name()
         name = xrn.get_slicename()
@@ -386,73 +402,3 @@ class NovaDriver(Driver):
         for instance in instances:
             self.driver.shell.nova_manager.servers.shutdown(instance)
         return True
- 
-    # xxx this code is quite old and has not run for ages
-    # it is obviously totally broken and needs a rewrite
-    def get_ticket (self, slice_urn, slice_hrn, creds, rspec_string, options):
-        raise SfaNotImplemented,"OpenStackDriver.get_ticket needs a rewrite"
-# please keep this code for future reference
-#        slices = PlSlices(self)
-#        peer = slices.get_peer(slice_hrn)
-#        sfa_peer = slices.get_sfa_peer(slice_hrn)
-#    
-#        # get the slice record
-#        credential = api.getCredential()
-#        interface = api.registries[api.hrn]
-#        registry = api.server_proxy(interface, credential)
-#        records = registry.Resolve(xrn, credential)
-#    
-#        # make sure we get a local slice record
-#        record = None
-#        for tmp_record in records:
-#            if tmp_record['type'] == 'slice' and \
-#               not tmp_record['peer_authority']:
-#    #Error (E0602, GetTicket): Undefined variable 'SliceRecord'
-#                slice_record = SliceRecord(dict=tmp_record)
-#        if not record:
-#            raise RecordNotFound(slice_hrn)
-#        
-#        # similar to CreateSliver, we must verify that the required records exist
-#        # at this aggregate before we can issue a ticket
-#        # parse rspec
-#        rspec = RSpec(rspec_string)
-#        requested_attributes = rspec.version.get_slice_attributes()
-#    
-#        # ensure site record exists
-#        site = slices.verify_site(slice_hrn, slice_record, peer, sfa_peer)
-#        # ensure slice record exists
-#        slice = slices.verify_slice(slice_hrn, slice_record, peer, sfa_peer)
-#        # ensure person records exists
-#    # xxx users is undefined in this context
-#        persons = slices.verify_persons(slice_hrn, slice, users, peer, sfa_peer)
-#        # ensure slice attributes exists
-#        slices.verify_slice_attributes(slice, requested_attributes)
-#        
-#        # get sliver info
-#        slivers = slices.get_slivers(slice_hrn)
-#    
-#        if not slivers:
-#            raise SliverDoesNotExist(slice_hrn)
-#    
-#        # get initscripts
-#        initscripts = []
-#        data = {
-#            'timestamp': int(time.time()),
-#            'initscripts': initscripts,
-#            'slivers': slivers
-#        }
-#    
-#        # create the ticket
-#        object_gid = record.get_gid_object()
-#        new_ticket = SfaTicket(subject = object_gid.get_subject())
-#        new_ticket.set_gid_caller(api.auth.client_gid)
-#        new_ticket.set_gid_object(object_gid)
-#        new_ticket.set_issuer(key=api.key, subject=self.hrn)
-#        new_ticket.set_pubkey(object_gid.get_pubkey())
-#        new_ticket.set_attributes(data)
-#        new_ticket.set_rspec(rspec)
-#        #new_ticket.set_parent(api.auth.hierarchy.get_auth_ticket(auth_hrn))
-#        new_ticket.encode()
-#        new_ticket.sign()
-#    
-#        return new_ticket.save_to_string(save_parents=True)

@@ -563,20 +563,13 @@ class PlDriver (Driver):
     def aggregate_version (self):
         return {}
 
-    def list_slices (self, creds, options):
-        # get data from db 
-        slices = self.shell.GetSlices({'peer_id': None}, ['name'])
-        slice_hrns = [slicename_to_hrn(self.hrn, slice['name']) for slice in slices]
-        slice_urns = [hrn_to_urn(slice_hrn, 'slice') for slice_hrn in slice_hrns]
-        return slice_urns
-        
     # first 2 args are None in case of resource discovery
-    def list_resources (self, version, options):
+    def list_resources (self, version=None, options={}):
         aggregate = PlAggregate(self)
         rspec =  aggregate.list_resources(version=version, options=options)
         return rspec
 
-    def describe(self, urns, version, options):
+    def describe(self, urns, version, options={}):
         aggregate = PlAggregate(self)
         return aggregate.describe(urns, version=version, options=options)
     
@@ -649,7 +642,7 @@ class PlDriver (Driver):
         result['geni_resources'] = resources
         return result
 
-    def allocate (self, urn, rspec_string, options):
+    def allocate (self, urn, rspec_string, options={}):
         xrn = Xrn(urn)
         aggregate = PlAggregate(self)
         slices = PlSlices(self)
@@ -710,7 +703,10 @@ class PlDriver (Driver):
         
         return aggregate.describe(slice_xrn=xrn.get_urn(), version=rspec.version)
 
-    def delete(self, urns, options):
+    def provision(self, urns, options={}):
+        return self.describe(urns, options=options)
+
+    def delete(self, urns, options={}):
         names = []
         ids = []
         for urn in urns:
@@ -741,7 +737,7 @@ class PlDriver (Driver):
                 self.shell.BindObjectToPeer('slice', slice['slice_id'], peer, slice['peer_slice_id'])
         return 1
     
-    def renew (self, urns, expiration_time, options):
+    def renew (self, urns, expiration_time, options={}):
         # we can only renew slices, not individual slivers. ignore sliver
         # ids in the urn 
         names = []
@@ -760,8 +756,19 @@ class PlDriver (Driver):
         except:
             return False
 
+    def perform_operational_action (self, urns, action, options={}):
+        # MyPLC doesn't support operational actions. Lets pretend like it
+        # supports start, but reject everything else.
+        action = action.lower()
+        if action == 'geni_start':
+            pass
+        else:
+            raise UnsupportedOperation(action)
+        description = self.describe(urns)
+        return description['geni_slivers']
+
     # set the 'enabled' tag to 0
-    def shutdown (self, xrn, options):
+    def shutdown (self, xrn, options={}):
         xrn = PlXrn(xrn=xrn, type='slice')
         slicename = xrn.pl_slicename()
         slices = self.shell.GetSlices({'name': slicename}, ['slice_id'])
@@ -775,73 +782,3 @@ class PlDriver (Driver):
             tag_id = slice_tags[0]['slice_tag_id']
             self.shell.UpdateSliceTag(tag_id, '0')
         return 1
-    
-    # xxx this code is quite old and has not run for ages
-    # it is obviously totally broken and needs a rewrite
-    def get_ticket (self, slice_urn, slice_hrn, creds, rspec_string, options):
-        raise SfaNotImplemented,"PlDriver.get_ticket needs a rewrite"
-# please keep this code for future reference
-#        slices = PlSlices(self)
-#        peer = slices.get_peer(slice_hrn)
-#        sfa_peer = slices.get_sfa_peer(slice_hrn)
-#    
-#        # get the slice record
-#        credential = api.getCredential()
-#        interface = api.registries[api.hrn]
-#        registry = api.server_proxy(interface, credential)
-#        records = registry.Resolve(xrn, credential)
-#    
-#        # make sure we get a local slice record
-#        record = None
-#        for tmp_record in records:
-#            if tmp_record['type'] == 'slice' and \
-#               not tmp_record['peer_authority']:
-#    #Error (E0602, GetTicket): Undefined variable 'SliceRecord'
-#                slice_record = SliceRecord(dict=tmp_record)
-#        if not record:
-#            raise RecordNotFound(slice_hrn)
-#        
-#        # similar to CreateSliver, we must verify that the required records exist
-#        # at this aggregate before we can issue a ticket
-#        # parse rspec
-#        rspec = RSpec(rspec_string)
-#        requested_attributes = rspec.version.get_slice_attributes()
-#    
-#        # ensure site record exists
-#        site = slices.verify_site(slice_hrn, slice_record, peer, sfa_peer)
-#        # ensure slice record exists
-#        slice = slices.verify_slice(slice_hrn, slice_record, peer, sfa_peer)
-#        # ensure person records exists
-#    # xxx users is undefined in this context
-#        persons = slices.verify_persons(slice_hrn, slice, users, peer, sfa_peer)
-#        # ensure slice attributes exists
-#        slices.verify_slice_attributes(slice, requested_attributes)
-#        
-#        # get sliver info
-#        slivers = slices.get_slivers(slice_hrn)
-#    
-#        if not slivers:
-#            raise SliverDoesNotExist(slice_hrn)
-#    
-#        # get initscripts
-#        initscripts = []
-#        data = {
-#            'timestamp': int(time.time()),
-#            'initscripts': initscripts,
-#            'slivers': slivers
-#        }
-#    
-#        # create the ticket
-#        object_gid = record.get_gid_object()
-#        new_ticket = SfaTicket(subject = object_gid.get_subject())
-#        new_ticket.set_gid_caller(api.auth.client_gid)
-#        new_ticket.set_gid_object(object_gid)
-#        new_ticket.set_issuer(key=api.key, subject=self.hrn)
-#        new_ticket.set_pubkey(object_gid.get_pubkey())
-#        new_ticket.set_attributes(data)
-#        new_ticket.set_rspec(rspec)
-#        #new_ticket.set_parent(api.auth.hierarchy.get_auth_ticket(auth_hrn))
-#        new_ticket.encode()
-#        new_ticket.sign()
-#    
-#        return new_ticket.save_to_string(save_parents=True)

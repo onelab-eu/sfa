@@ -67,27 +67,6 @@ class AggregateManager:
         version.update(testbed_version)
         return version
     
-    def ListSlices(self, api, creds, options):
-        call_id = options.get('call_id')
-        if Callids().already_handled(call_id): return []
-        
-        # look in cache first
-        if self.driver.cache:
-            slices = self.driver.cache.get('slices')
-            if slices:
-                logger.debug("%s.list_slices returns from cache" % (self.driver.__module__))
-                return slices
-
-        # call driver
-        slices = self.driver.list_slices(creds, options)
-
-        # cache the result
-        if self.driver.cache:
-            logger.debug ("%s.list_slices stores value in cache" % (self.driver.__module__))
-            self.driver.cache.add('slices', instance_urns)
-
-        return self.driver.list_slices (creds, options)
-
     def ListResources(self, api, creds, options):
         call_id = options.get('call_id')
         if Callids().already_handled(call_id): return ""
@@ -133,7 +112,7 @@ class AggregateManager:
         """
         call_id = options.get('call_id')
         if Callids().already_handled(call_id): return ""
-        return self.driver.allocate(xrn, creds, rspec_string, options)
+        return self.driver.allocate(xrn, rspec_string, options)
  
     def Provision(self, api, xrns, creds, options):
         """
@@ -142,7 +121,7 @@ class AggregateManager:
         """
         call_id = options.get('call_id')
         if Callids().already_handled(call_id): return ""
-        return self.driver.provision(xrns, creds, options)
+        return self.driver.provision(xrns, options)
     
     def Delete(self, api, xrns, creds, options):
         call_id = options.get('call_id')
@@ -164,11 +143,3 @@ class AggregateManager:
         if Callids().already_handled(call_id): return True
         return self.driver.shutdown(xrn, options) 
     
-    def GetTicket(self, api, xrn, creds, rspec, users, options):
-    
-        xrn = Xrn(xrn)
-        slice_urn=xrn.get_urn()
-        slice_hrn=xrn.get_hrn()
-
-        return self.driver.get_ticket (slice_urn, slice_hrn, creds, rspec, options)
-

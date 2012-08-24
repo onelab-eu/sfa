@@ -369,12 +369,30 @@ class OSAggregate:
             self.driver.shell.nova_manager.servers.delete(instance)
         return 1
 
-    def stop_instances(self, instance_name, tenant_name):
+    def stop_instances(self, instance_name, tenant_name, id=None):
         self.driver.shell.nova_manager.connect(tenant=tenant_name)
-        instances = self.driver.shell.nova_manager.servers.findall(name=instance_name)
+        args = {'name': instance_name}
+        if id:
+            args['id'] = id
+        instances = self.driver.shell.nova_manager.servers.findall(**args)
         for instance in instances:
             self.driver.shell.nova_manager.servers.pause(instance)
         return 1
+
+    def start_instances(self, instance_name, tenant_name, id=None):
+        self.driver.shell.nova_manager.connect(tenant=tenant_name)
+        args = {'name': instance_name}
+        if id:
+            args['id'] = id
+        instances = self.driver.shell.nova_manager.servers.findall(**args)
+        for instance in instances:
+            self.driver.shell.nova_manager.servers.resume(instance)
+        return 1
+
+    def restart_instances(self, instacne_name, tenant_name, id=None):
+        self.stop_instances(instance_name, tenant_name, id)
+        self.start_instances(instance_name, tenant_name, id)
+        return 1 
 
     def update_instances(self, project_name):
         pass
