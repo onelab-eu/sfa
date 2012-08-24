@@ -342,4 +342,11 @@ class SfatablesRejected(SfaFault):
     def __init__(self, value, extra=None):
         self.value =value
         faultString = "%s rejected by sfatables"
-        SfaFault.__init__(self, GENICODE.FORBIDDEN, faultString, extra)  
+        SfaFault.__init__(self, GENICODE.FORBIDDEN, faultString, extra) 
+
+class UnsupportedOperation(SfaFault):
+    def __init__(self, value, extra=None):
+        self.value = value
+        faultString = "Unsupported operation: %s" % value
+        SfaFault.__init__(self, GENICODE.UNSUPPORTED, faultString, extra) 
+                 
