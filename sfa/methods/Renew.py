@@ -42,5 +42,5 @@ class Renew(Method):
             raise InsufficientRights('Renewsliver: Credential expires before requested expiration time')
         if requested_time > datetime.datetime.utcnow() + datetime.timedelta(days=max_renew_days):
             raise Exception('Cannot renew > %s days from now' % max_renew_days)
-        return self.api.manager.Renew(self.api, urns, expiration_time, options)
+        return self.api.manager.Renew(self.api, urns, creds, expiration_time, options)
     

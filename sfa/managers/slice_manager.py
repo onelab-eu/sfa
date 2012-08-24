@@ -519,11 +519,10 @@ class SliceManager:
         threads.get_results()    
         return 1
      
-    def stop_slice(self, api, xrn, creds):
-        hrn, type = urn_to_hrn(xrn)
-    
+    def Shutdown(self, api, xrn, creds, options={}):
+        xrn = Xrn(xrn)  
         # get the callers hrn
-        valid_cred = api.auth.checkCredentials(creds, 'stopslice', hrn)[0]
+        valid_cred = api.auth.checkCredentials(creds, 'stopslice', xrn.hrn)[0]
         caller_hrn = Credential(string=valid_cred).get_gid_caller().get_hrn()
     
         # attempt to use delegated credential first
@@ -538,25 +537,7 @@ class SliceManager:
                 continue
             interface = api.aggregates[aggregate]
             server = api.server_proxy(interface, cred)
-            threads.run(server.Stop, xrn, cred)
+            threads.run(server.Shutdown, xrn.urn, cred)
         threads.get_results()    
         return 1
     
-    def reset_slice(self, api, xrn):
-        """
-        Not implemented
-        """
-        return 1
-    
-    def shutdown(self, api, xrn, creds):
-        """
-        Not implemented   
-        """
-        return 1
-    
-    def status(self, api, xrn, creds):
-        """
-        Not implemented 
-        """
-        return 1
-

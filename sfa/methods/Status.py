@@ -12,20 +12,15 @@ class Status(Method):
     """
     interfaces = ['aggregate', 'slicemgr', 'component']
     accepts = [
-        Parameter(str, "Slice URN"),
-        Mixed(Parameter(str, "Credential string"),
-              Parameter(type([str]), "List of credentials")),
+        Parameter([str], "Slice or sliver URNs"),
+        Parameter(dict), "credentials")),
         Parameter(dict, "Options")
         ]
     returns = Parameter(dict, "Status details")
 
-    def call(self, slice_xrn, creds, options):
-        hrn, type = urn_to_hrn(slice_xrn)
-        valid_creds = self.api.auth.checkCredentials(creds, 'sliverstatus', hrn)
+    def call(self, xrns, creds, options):
+        valid_creds = self.api.auth.checkCredentials(creds, 'sliverstatus', xrns)
 
-        self.api.logger.info("interface: %s\ttarget-hrn: %s\tmethod-name: %s"%(self.api.interface, hrn, self.name))
-    
-        status = self.api.manager.Status(self.api, hrn, valid_creds, options)
-
-        return status
+        self.api.logger.info("interface: %s\ttarget-hrn: %s\tmethod-name: %s"%(self.api.interface, xrns, self.name))
+        return self.api.manager.Status(self.api, xrns, creds, options)
     

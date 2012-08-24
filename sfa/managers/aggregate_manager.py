@@ -120,7 +120,7 @@ class AggregateManager:
         return self.driver.describe(urns, rspec_version, options)
         
     
-    def Status (self, api, urns, options):
+    def Status (self, api, urns, creds, options):
         call_id = options.get('call_id')
         if Callids().already_handled(call_id): return {}
         return self.driver.status (urns, options=options)
@@ -135,7 +135,7 @@ class AggregateManager:
         if Callids().already_handled(call_id): return ""
         return self.driver.allocate(xrn, creds, rspec_string, options)
  
-    def Provision(self, api, xrns, options):
+    def Provision(self, api, xrns, creds, options):
         """
         Create the sliver[s] (slice) at this aggregate.    
         Verify HRN and initialize the slice record in PLC if necessary.
@@ -144,22 +144,22 @@ class AggregateManager:
         if Callids().already_handled(call_id): return ""
         return self.driver.provision(xrns, creds, options)
     
-    def Delete(self, api, xrns, options):
+    def Delete(self, api, xrns, creds, options):
         call_id = options.get('call_id')
         if Callids().already_handled(call_id): return True
         return self.driver.delete_sliver (xrns, options)
 
-    def Renew(self, api, xrns, expiration_time, options):
+    def Renew(self, api, xrns, creds, expiration_time, options):
         call_id = options.get('call_id')
         if Callids().already_handled(call_id): return True
         return self.driver.renew(xrns, expiration_time, options)
 
-    def PerformOperationalAction(self, api, xrns, action, options={}):
+    def PerformOperationalAction(self, api, xrns, creds, action, options={}):
         call_id = options.get('call_id')
         if Callids().already_handled(call_id): return True
         return self.driver.performOperationalAction(xrns, action, options) 
 
-    def Shutdown(self, api, xrn, options={}):
+    def Shutdown(self, api, xrn, creds, options={}):
         call_id = options.get('call_id')
         if Callids().already_handled(call_id): return True
         return self.driver.shutdown(xrn, options) 
