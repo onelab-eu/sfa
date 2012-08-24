@@ -375,11 +375,18 @@ class NovaDriver(Driver):
         return True
 
     def perform_operational_action  (self, urns, action, options):
-        tenant_name = OSXrn(xrn=slice_hrn, type='slice').get_tenant_name()
-        name = OSXrn(xrn=slice_urn).name
-        aggregate = OSAggregate(self)
-        return aggregate.stop_instances(name, tenant_name) 
+        pass
 
+    def shutdown(self, xrn, options):
+        xrn = OSXrn(xrn=xrn, type='slice')
+        tenant_name = xrn.get_tenant_name()
+        name = xrn.get_slicename()
+        self.driver.shell.nova_manager.connect(tenant=tenant_name)
+        instances = self.driver.shell.nova_manager.servers.findall(name=name)
+        for instance in instances:
+            self.driver.shell.nova_manager.servers.shutdown(instance)
+        return True
+ 
     # xxx this code is quite old and has not run for ages
     # it is obviously totally broken and needs a rewrite
     def get_ticket (self, slice_urn, slice_hrn, creds, rspec_string, options):

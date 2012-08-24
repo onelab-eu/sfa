@@ -760,22 +760,10 @@ class PlDriver (Driver):
         except:
             return False
 
-    # remove the 'enabled' tag 
-    def start_slice (self, slice_urn, slice_hrn, creds):
-        slicename = hrn_to_pl_slicename(slice_hrn)
-        slices = self.shell.GetSlices({'name': slicename}, ['slice_id'])
-        if not slices:
-            raise RecordNotFound(slice_hrn)
-        slice_id = slices[0]['slice_id']
-        slice_tags = self.shell.GetSliceTags({'slice_id': slice_id, 'tagname': 'enabled'}, ['slice_tag_id'])
-        # just remove the tag if it exists
-        if slice_tags:
-            self.shell.DeleteSliceTag(slice_tags[0]['slice_tag_id'])
-        return 1
-
     # set the 'enabled' tag to 0
-    def stop_slice (self, slice_urn, slice_hrn, creds):
-        slicename = hrn_to_pl_slicename(slice_hrn)
+    def shutdown (self, xrn, options):
+        xrn = PlXrn(xrn=xrn, type='slice')
+        slicename = xrn.pl_slicename()
         slices = self.shell.GetSlices({'name': slicename}, ['slice_id'])
         if not slices:
             raise RecordNotFound(slice_hrn)
@@ -787,9 +775,6 @@ class PlDriver (Driver):
             tag_id = slice_tags[0]['slice_tag_id']
             self.shell.UpdateSliceTag(tag_id, '0')
         return 1
-    
-    def reset_slice (self, slice_urn, slice_hrn, creds):
-        raise SfaNotImplemented ("reset_slice not available at this interface")
     
     # xxx this code is quite old and has not run for ages
     # it is obviously totally broken and needs a rewrite
