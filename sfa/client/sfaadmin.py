@@ -280,66 +280,81 @@ class AggregateCommands(Commands):
         version = self.api.manager.GetVersion(self.api, {})
         pprinter.pprint(version)
 
-    def slices(self):
-        """List the running slices at this Aggregate"""
-        print self.api.manager.ListSlices(self.api, [], {})
 
     @args('-x', '--xrn', dest='xrn', metavar='<xrn>', help='object hrn/urn (mandatory)') 
     def status(self, xrn):
         """Display the status of a slice or slivers"""
         urn = Xrn(xrn, 'slice').get_urn()
-        status = self.api.manager.SliverStatus(self.api, urn, [], {})
+        status = self.api.manager.SliverStatus(self.api, [urn], {}, {})
         pprinter.pprint(status)
  
-    @args('-x', '--xrn', dest='xrn', metavar='<xrn>', help='object hrn/urn', default=None)
     @args('-r', '--rspec-version', dest='rspec_version', metavar='<rspec_version>', 
           default='GENI', help='version/format of the resulting rspec response')  
-    def resources(self, xrn=None, rspec_version='GENI'):
-        """Display the available resources at an aggregate 
-or the resources allocated by a slice"""  
+    def resources(self, rspec_version='GENI'):
+        """Display the available resources at an aggregate"""  
         options = {'geni_rspec_version': rspec_version}
         if xrn:
             options['geni_slice_urn'] = Xrn(xrn, 'slice').get_urn()
-        print options
-        resources = self.api.manager.ListResources(self.api, [], options)
+        resources = self.api.manager.ListResources(self.api, {}, options)
         print resources
-        
+    
+    @args('-x', '--xrn', dest='xrn', metavar='<xrn>', help='object hrn/urn', default=None)
+    @args('-r', '--rspec-version', dest='rspec_version', metavar='<rspec_version>', 
+          default='GENI', help='version/format of the resulting rspec response')  
+    def describe(self, xrn, rspec_version='GENI'):
+        """Display the resources allocated by a slice or slivers"""
+        urn = Xrn(xrn, 'slice').get_urn()
+        options = {'geni_rspec_version': rspec_version}
+        status = self.api.manager.Describe(self.api, {}, [urn], options)      
+        print status
+    
     @args('-x', '--xrn', dest='xrn', metavar='<xrn>', help='slice hrn/urn (mandatory)')
     @args('-r', '--rspec', dest='rspec', metavar='<rspec>', help='rspec file (mandatory)')  
     @args('-u', '--user', dest='user', metavar='<user>', help='hrn/urn of slice user (mandatory)')  
     @args('-k', '--key', dest='key', metavar='<key>', help="path to user's public key file (mandatory)")  
-    def create(self, xrn, rspec, user, key):
+    def allocate(self, xrn, rspec, user, key):
         """Allocate slivers"""
         xrn = Xrn(xrn, 'slice')
-        slice_urn=xrn.get_urn()
+        urn=xrn.get_urn()
         rspec_string = open(rspec).read()
         user_xrn = Xrn(user, 'user')
         user_urn = user_xrn.get_urn()
         user_key_string = open(key).read()
         users = [{'urn': user_urn, 'keys': [user_key_string]}]
-        options={}
-        self.api.manager.CreateSliver(self, slice_urn, [], rspec_string, users, options) 
+        options={'geni_users': users}
+        status = self.api.manager.Allocate(self.api, urn, {}, rspec_string, options) 
+        print status
+
+    @args('-x', '--xrn', dest='xrn', metavar='<xrn>', help='slice hrn/urn (mandatory)')
+    def provision(self, xrns):
+        status = self.api.manager.Provision(self.api, [xrns], {}, {})
+        print status         
 
     @args('-x', '--xrn', dest='xrn', metavar='<xrn>', help='slice hrn/urn (mandatory)')
     def delete(self, xrn):
         """Delete slivers""" 
-        self.api.manager.DeleteSliver(self.api, xrn, [], {})
- 
+        result = self.api.manager.DeleteSliver(self.api, [xrn], {}, {})
+        print result
+
     @args('-x', '--xrn', dest='xrn', metavar='<xrn>', help='slice hrn/urn (mandatory)')
-    def start(self, xrn):
+    @args('-e', '--expiration', dest='expiration', metavar='<expiration>', help='Expiration date (mandatory)')
+    def renew(self, xrn, expiration):
         """Start slivers"""
-        self.api.manager.start_slice(self.api, xrn, [])
+        result = self.api.manager.start_slice(self.api, xrn, {}, expiration, {})
+        print result
 
     @args('-x', '--xrn', dest='xrn', metavar='<xrn>', help='slice hrn/urn (mandatory)')
-    def stop(self, xrn):
+    def shutdown(self, xrn):
         """Stop slivers"""
-        self.api.manager.stop_slice(self.api, xrn, [])      
+        result = self.api.manager.Shutdown(self.api, xrn, {}, {})      
+        print result
 
     @args('-x', '--xrn', dest='xrn', metavar='<xrn>', help='slice hrn/urn (mandatory)')
-    def reset(self, xrn):
+    @args('-a', '--action', dest='action', metavar='<action>', help='Action name (mandatory)')
+    def operation(self, xrn, action):
         """Reset sliver"""
-        self.api.manager.reset_slice(self.api, xrn)
-
+        result = self.api.manager.PerformOperationalAction(self.api, [xrn], {}, action, {})
+        print result
 
 #    @args('-x', '--xrn', dest='xrn', metavar='<xrn>', help='object hrn/urn', default=None)
 #    @args('-r', '--rspec', dest='rspec', metavar='<rspec>', help='request rspec', default=None)
