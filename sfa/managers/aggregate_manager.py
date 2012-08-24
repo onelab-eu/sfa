@@ -153,6 +153,16 @@ class AggregateManager:
         call_id = options.get('call_id')
         if Callids().already_handled(call_id): return True
         return self.driver.renew(xrns, expiration_time, options)
+
+    def PerformOperationalAction(self, api, xrns, action, options={}):
+        call_id = options.get('call_id')
+        if Callids().already_handled(call_id): return True
+        return self.driver.performOperationalAction(xrns, action, options) 
+
+    def Shutdown(self, api, xrn, options={}):
+        call_id = options.get('call_id')
+        if Callids().already_handled(call_id): return True
+        return self.driver.shutdown(xrn, options) 
     
     def GetTicket(self, api, xrn, creds, rspec, users, options):
     
