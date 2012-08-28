@@ -26,7 +26,7 @@ class Describe(Method):
         ]
     returns = Parameter(str, "List of resources")
 
-    def call(self, creds, options):
+    def call(self, urns, creds, options):
         self.api.logger.info("interface: %s\tmethod-name: %s" % (self.api.interface, self.name))
        
         # client must specify a version
@@ -37,7 +37,7 @@ class Describe(Method):
                 raise SfaInvalidArgument('Must specify an rspec version option. geni_rspec_version cannot be null')
  
         # Find the valid credentials
-        valid_creds = self.api.auth.checkCredentials(creds, 'listnodes')
+        valid_creds = self.api.auth.checkCredentials(creds, 'listnodes', urns)
 
         # get hrn of the original caller 
         origin_hrn = options.get('origin_hrn', None)
