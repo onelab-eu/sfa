@@ -283,14 +283,14 @@ class Sfi:
         ("add", "record"),
         ("update", "record"),
         ("remove", "name"),
-        ("slices", ""),
-        ("resources", "[slice_hrn]"),
+        ("resources", ""),
+        ("describe", "slice_hrn"),
         ("create", "slice_hrn rspec"),
+        ("allocate", "slice_hrn rspec"),
+        ("provison", "slice_hrn"),
+        ("action", "slice_hrn action"), 
         ("delete", "slice_hrn"),
         ("status", "slice_hrn"),
-        ("start", "slice_hrn"),
-        ("stop", "slice_hrn"),
-        ("reset", "slice_hrn"),
         ("renew", "slice_hrn time"),
         ("shutdown", "slice_hrn"),
         ("get_ticket", "slice_hrn rspec"),
@@ -361,8 +361,8 @@ class Sfi:
                                help="set extra/testbed-dependent flags, e.g. --extra enabled=true")
 
         # user specifies remote aggregate/sm/component                          
-        if command in ("resources", "slices", "create", "delete", "start", "stop", 
-                       "restart", "shutdown",  "get_ticket", "renew", "status"):
+        if command in ("resources", "describe", "create", "delete", "allocate", "provision", 
+                       "action", "shutdown",  "get_ticket", "renew", "status"):
             parser.add_option("-d", "--delegate", dest="delegate", default=None, 
                              action="store_true",
                              help="Include a credential delegated to the user's root"+\
@@ -1002,17 +1002,13 @@ or version information about sfi itself
     # show rspec for named slice
     def resources(self, options, args):
         """
-        with no arg, discover available resources, (ListResources)
+        discover available resources
 or with an slice hrn, shows currently provisioned resources
         """
         server = self.sliceapi()
 
         # set creds
-        creds = []
-        if args:
-            creds.append(self.slice_credential_string(args[0]))
-        else:
-            creds.append(self.my_credential_string)
+        creds = [self.my_credential_string]
         if options.delegate:
             creds.append(self.delegate_cred(cred, get_authority(self.authority)))
         if options.show_credential:
@@ -1025,9 +1021,6 @@ or with an slice hrn, shows currently provisioned resources
         api_options ['call_id'] = unique_call_id()
         # ask for cached value if available
         api_options ['cached'] = True
-        if args:
-            hrn = args[0]
-            api_options['geni_slice_urn'] = hrn_to_urn(hrn, 'slice')
         if options.info:
             api_options['info'] = options.info
         if options.list_leases:
@@ -1057,6 +1050,45 @@ or with an slice hrn, shows currently provisioned resources
             display_rspec(value, options.format)
 
         return
+
+    def describe(self, options, args):
+        """
+        Shows currently provisioned resources.
+        """
+        server = self.sliceapi()
+
+        # set creds
+        creds = [self.slice_credential_string(args[0])]
+        if options.delegate:
+            creds.append(self.delegate_cred(cred, get_authority(self.authority)))
+        if options.show_credential:
+            show_credentials(creds)
+
+        api_options = {'call_id': unique_call_id(),
+                       'cached': True,
+                       'info': options.info,
+                       'list_leases': options.list_lease,
+                       'geni_rspec_version': {'type': 'geni', 'version': '3.0'},
+                      }
+        if options.rspec_version:
+            version_manager = VersionManager()
+            server_version = self.get_cached_server_version(server)
+            if 'sfa' in server_version:
+                # just request the version the client wants
+                api_options['geni_rspec_version'] = version_manager.get_version(options.rspec_version).to_dict()
+            else:
+                api_options['geni_rspec_version'] = {'type': 'geni', 'version': '3.0'}
+        urn = Xrn(args[0], type='slice').get_urn()        
+        result = server.Describe([urn], creds, api_options)
+        value = ReturnValue.get_value(result)
+        if self.options.raw:
+            save_raw_to_file(result, self.options.raw, self.options.rawformat, self.options.rawbanner)
+        if options.file is not None:
+            save_rspec_to_file(value, options.file)
+        if (self.options.raw is None) and (options.file is None):
+            display_rspec(value, options.format)
+
+        return 
 
     def create(self, options, args):
         """
@@ -1115,8 +1147,6 @@ or with an slice hrn, shows currently provisioned resources
         # do not append users, keys, or slice tags. Anything
         # not contained in this request will be removed from the slice
 
-        # CreateSliver has supported the options argument for a while now so it should
-        # be safe to assume this server support it
         api_options = {}
         api_options ['append'] = False
         api_options ['call_id'] = unique_call_id()
@@ -1153,14 +1183,108 @@ or with an slice hrn, shows currently provisioned resources
         api_options ['call_id'] = unique_call_id()
         if options.show_credential:
             show_credentials(creds)
-        result = server.DeleteSliver(slice_urn, creds, *self.ois(server, api_options ) )
+        result = server.Delete(slice_urn, creds, *self.ois(server, api_options ) )
         value = ReturnValue.get_value(result)
         if self.options.raw:
             save_raw_to_file(result, self.options.raw, self.options.rawformat, self.options.rawbanner)
         else:
             print value
-        return value 
-  
+        return value
+
+    def allocate(self, options, args):
+        slice_hrn = args[0]
+        slice_urn = Xrn(slice_hrn, type='slice').get_urn()
+
+        # credentials
+        creds = [self.slice_credential_string(slice_hrn)]
+
+        delegated_cred = None
+        server_version = self.get_cached_server_version(server)
+        if server_version.get('interface') == 'slicemgr':
+            # delegate our cred to the slice manager
+            # do not delegate cred to slicemgr...not working at the moment
+            pass
+            #if server_version.get('hrn'):
+            #    delegated_cred = self.delegate_cred(slice_cred, server_version['hrn'])
+            #elif server_version.get('urn'):
+            #    delegated_cred = self.delegate_cred(slice_cred, urn_to_hrn(server_version['urn']))
+
+        if options.show_credential:
+            show_credentials(creds)
+
+        # rspec
+        rspec_file = self.get_rspec_file(args[1])
+        rspec = open(rspec_file).read()
+
+        # users
+        # need to pass along user keys to the aggregate.
+        # users = [
+        #  { urn: urn:publicid:IDN+emulab.net+user+alice
+        #    keys: [<ssh key A>, <ssh key B>]
+        #  }]
+        users = []
+        slice_records = self.registry().Resolve(slice_urn, [self.my_credential_string])
+        if slice_records and 'researcher' in slice_records[0] and slice_records[0]['researcher']!=[]:
+            slice_record = slice_records[0]
+            user_hrns = slice_record['researcher']
+            user_urns = [hrn_to_urn(hrn, 'user') for hrn in user_hrns]
+            user_records = self.registry().Resolve(user_urns, [self.my_credential_string])
+
+            if 'sfa' not in server_version:
+                users = pg_users_arg(user_records)
+                rspec = RSpec(rspec)
+                rspec.filter({'component_manager_id': server_version['urn']})
+                rspec = RSpecConverter.to_pg_rspec(rspec.toxml(), content_type='request')
+            else:
+                users = sfa_users_arg(user_records, slice_record)
+
+        api_options = {}
+        api_options ['call_id'] = unique_call_id()
+        api_options['geni_users'] = users    
+        result = server.Allocate(slice_urn, creds, rspec, api_options)
+        value = ReturnValue.get_value(result)
+        if self.options.raw:
+            save_raw_to_file(result, self.options.raw, self.options.rawformat, self.options.rawbanner)
+        if options.file is not None:
+            save_rspec_to_file (value, options.file)
+        if (self.options.raw is None) and (options.file is None):
+            print value
+
+        return value
+        
+
+    def provision(self, options, args):
+        slice_hrn = args[0]
+        slice_urn = Xrn(slice_hrn, type='slice').get_urn()
+
+        # credentials
+        creds = [self.slice_credential_string(slice_hrn)]
+        delegated_cred = None
+        server_version = self.get_cached_server_version(server)
+        if server_version.get('interface') == 'slicemgr':
+            # delegate our cred to the slice manager
+            # do not delegate cred to slicemgr...not working at the moment
+            pass
+            #if server_version.get('hrn'):
+            #    delegated_cred = self.delegate_cred(slice_cred, server_version['hrn'])
+            #elif server_version.get('urn'):
+            #    delegated_cred = self.delegate_cred(slice_cred, urn_to_hrn(server_version['urn']))
+
+        if options.show_credential:
+            show_credentials(creds)
+
+        api_options = {}
+        api_options ['call_id'] = unique_call_id()
+        result = server.CreateSliver(slice_urn, creds, api_options)
+        value = ReturnValue.get_value(result)
+        if self.options.raw:
+            save_raw_to_file(result, self.options.raw, self.options.rawformat, self.options.rawbanner)
+        if options.file is not None:
+            save_rspec_to_file (value, options.file)
+        if (self.options.raw is None) and (options.file is None):
+            print value
+        return value     
+
     def status(self, options, args):
         """
         retrieve slice status (SliverStatus)
@@ -1183,7 +1307,7 @@ or with an slice hrn, shows currently provisioned resources
         api_options['call_id']=unique_call_id()
         if options.show_credential:
             show_credentials(creds)
-        result = server.SliverStatus(slice_urn, creds, *self.ois(server,api_options))
+        result = server.Status(slice_urn, creds, *self.ois(server,api_options))
         value = ReturnValue.get_value(result)
         if self.options.raw:
             save_raw_to_file(result, self.options.raw, self.options.rawformat, self.options.rawbanner)
@@ -1238,21 +1362,23 @@ or with an slice hrn, shows currently provisioned resources
         return value
     
     # reset named slice
-    def reset(self, options, args):
+    def action(self, options, args):
         """
-        reset named slice (reset_slice)
+        Perform the named operational action on the named slivers
         """
         server = self.sliceapi()
         # slice urn
         slice_hrn = args[0]
-        slice_urn = hrn_to_urn(slice_hrn, 'slice') 
+        action = args[1]
+        slice_urn = Xrn(slice_hrn, type='slice').get_urn() 
         # cred
         slice_cred = self.slice_credential_string(args[0])
         creds = [slice_cred]
         if options.delegate:
             delegated_cred = self.delegate_cred(slice_cred, get_authority(self.authority))
             creds.append(delegated_cred)
-        result = server.reset_slice(creds, slice_urn)
+        
+        result = server.PerformOperationalAction(slice_urn, creds, action )
         value = ReturnValue.get_value(result)
         if self.options.raw:
             save_raw_to_file(result, self.options.raw, self.options.rawformat, self.options.rawbanner)
@@ -1280,10 +1406,10 @@ or with an slice hrn, shows currently provisioned resources
             creds.append(delegated_cred)
         # options and call_id when supported
         api_options = {}
-	api_options['call_id']=unique_call_id()
+        api_options['call_id']=unique_call_id()
         if options.show_credential:
             show_credentials(creds)
-        result =  server.RenewSliver(slice_urn, creds, input_time, *self.ois(server,api_options))
+        result =  server.Renew(slice_urn, creds, input_time, *self.ois(server,api_options))
         value = ReturnValue.get_value(result)
         if self.options.raw:
             save_raw_to_file(result, self.options.raw, self.options.rawformat, self.options.rawbanner)
@@ -1334,7 +1460,7 @@ or with an slice hrn, shows currently provisioned resources
         rspec = open(rspec_file).read()
         # options and call_id when supported
         api_options = {}
-	api_options['call_id']=unique_call_id()
+        api_options['call_id']=unique_call_id()
         # get ticket at the server
         ticket_string = server.GetTicket(slice_urn, creds, rspec, *self.ois(server,api_options))
         # save
