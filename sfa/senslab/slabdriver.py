@@ -67,63 +67,77 @@ class SlabDriver(Driver):
         """
         
         #First get the slice with the slice hrn
-        sl = self.GetSlices(slice_filter = slice_hrn, \
+        slice_list =  self.GetSlices(slice_filter = slice_hrn, \
                                     slice_filter_type = 'slice_hrn')
         
-        if len(sl) is 0:
+        if len(slice_list) is 0:
             raise SliverDoesNotExist("%s  slice_hrn" % (slice_hrn))
         
-        if isinstance(sl,list):
-            sl = sl[0]
-            
-        
-        top_level_status = 'unknown'
-        nodes_in_slice = sl['node_ids']
+        #Slice has the same slice hrn for each slice in the slice/lease list
+        #So fetch the info on the user once 
+        one_slice = slice_list[0] 
         recuser = dbsession.query(RegRecord).filter_by(record_id = \
-                                            sl['record_id_user']).first()
-        sl.update({'user':recuser.hrn})
-        if len(nodes_in_slice) is 0:
-            raise SliverDoesNotExist("No slivers allocated ") 
-        else:
-            top_level_status = 'ready' 
+                                            one_slice['record_id_user']).first()
         
-        logger.debug("Slabdriver - sliver_status Sliver status urn %s hrn %s sl\
+        #Make a list of all the nodes hostnames  in use for this slice
+        slice_nodes_list = []
+        for sl in slice_list:
+            for node in sl['node_ids']:
+                slice_nodes_list.append(node['hostname'])
+            
+        #Get all the corresponding nodes details    
+        nodes_all = self.GetNodes({'hostname':slice_nodes_list},
+                                ['node_id', 'hostname','site','boot_state'])
+        nodeall_byhostname = dict([(n['hostname'], n) for n in nodes_all])  
+          
+          
+          
+        for sl in slice_list:
+
+              #For compatibility
+            top_level_status = 'empty' 
+            result = {}
+            result.fromkeys(['geni_urn','pl_login','geni_status','geni_resources'],None)
+            result['pl_login'] = recuser.hrn
+            logger.debug("Slabdriver - sliver_status Sliver status urn %s hrn %s sl\
                              %s \r\n " %(slice_urn, slice_hrn, sl))
-                             
-        if sl['oar_job_id'] is not []:
+            try:
+                nodes_in_slice = sl['node_ids']
+            except KeyError:
+                #No job in the slice
+                result['geni_status'] = top_level_status
+                result['geni_resources'] = [] 
+                return result
+           
+            top_level_status = 'ready' 
+
             #A job is running on Senslab for this slice
             # report about the local nodes that are in the slice only
-            
-            nodes_all = self.GetNodes({'hostname':nodes_in_slice},
-                            ['node_id', 'hostname','site','boot_state'])
-            nodeall_byhostname = dict([(n['hostname'], n) for n in nodes_all])
-            
-
-            result = {}
+         
             result['geni_urn'] = slice_urn
-            result['pl_login'] = sl['user'] #For compatibility
+            
 
             
             #timestamp = float(sl['startTime']) + float(sl['walltime']) 
             #result['pl_expires'] = strftime(self.time_format, \
                                                     #gmtime(float(timestamp)))
             #result['slab_expires'] = strftime(self.time_format,\
-                                                     #gmtime(float(timestamp)))
+                                                    #gmtime(float(timestamp)))
             
             resources = []
-            for node in nodeall_byhostname:
+            for node in sl['node_ids']:
                 res = {}
                 #res['slab_hostname'] = node['hostname']
                 #res['slab_boot_state'] = node['boot_state']
                 
-                res['pl_hostname'] = nodeall_byhostname[node]['hostname']
-                res['pl_boot_state'] = nodeall_byhostname[node]['boot_state']
+                res['pl_hostname'] = node['hostname']
+                res['pl_boot_state'] = nodeall_byhostname[node['hostname']]['boot_state']
                 #res['pl_last_contact'] = strftime(self.time_format, \
                                                     #gmtime(float(timestamp)))
                 sliver_id = urn_to_sliver_id(slice_urn, sl['record_id_slice'], \
-                                            nodeall_byhostname[node]['node_id']) 
+                                            nodeall_byhostname[node['hostname']]['node_id']) 
                 res['geni_urn'] = sliver_id 
-                if nodeall_byhostname[node]['boot_state'] == 'Alive':
+                if nodeall_byhostname[node['hostname']]['boot_state'] == 'Alive':
 
                     res['geni_status'] = 'ready'
                 else:
@@ -137,9 +151,9 @@ class SlabDriver(Driver):
             result['geni_status'] = top_level_status
             result['geni_resources'] = resources 
             logger.debug("SLABDRIVER \tsliver_statusresources %s res %s "\
-                                                     %(resources,res))
+                                                    %(resources,res))
             return result        
-        
+            
              
     def create_sliver (self, slice_urn, slice_hrn, creds, rspec_string, \
                                                              users, options):
@@ -580,7 +594,7 @@ class SlabDriver(Driver):
         reqdict['method'] = "delete"
         reqdict['strval'] = str(job_id)
        
-        self.db.delete_job(slice_hrn, job_id)
+
         answer = self.oar.POSTRequestToOARRestAPI('DELETE_jobs_id', \
                                                     reqdict,username)
         logger.debug("SLABDRIVER \tDeleteJobs jobid  %s \r\n answer %s \
@@ -843,9 +857,11 @@ class SlabDriver(Driver):
             #One slice can have multiple jobs
             
             leases_list = self.GetReservedNodes(username = login)
+            #If no job is running or no job scheduled            
+            if leases_list == [] :
+                return [fixed_slicerec_dict]
             
             #Several jobs for one slice  
-    
             for lease in leases_list : 
                 slicerec_dict = {} 
                       
@@ -1156,7 +1172,7 @@ class SlabDriver(Driver):
         if jobid :
             logger.debug("SLABDRIVER \tLaunchExperimentOnOAR jobid %s \
                     added_nodes %s slice_user %s" %(jobid, added_nodes, slice_user))
-            self.db.add_job( slice_name, jobid, added_nodes)
+            
         
             __configure_experiment(jobid, added_nodes)
             __launch_senslab_experiment(jobid) 
