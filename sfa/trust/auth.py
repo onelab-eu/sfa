@@ -7,7 +7,7 @@ from sfa.util.faults import InsufficientRights, MissingCallerGID, MissingTrusted
     BadRequestHash, ConnectionKeyGIDMismatch, SfaPermissionDenied
 from sfa.util.sfalogging import logger
 from sfa.util.config import Config
-from sfa.util.xrn import get_authority
+from sfa.util.xrn import Xrn, get_authority
 
 from sfa.trust.gid import GID
 from sfa.trust.rights import Rights
@@ -36,20 +36,24 @@ class Auth:
 
         
         
-    def checkCredentials(self, creds, operation, hrn = None):
+    def checkCredentials(self, creds, operation, xrns=[]):
+        if not isinstance(xrns, list):
+            xrns = [xrns]
+        hrns = [Xrn(xrn).hrn for xrn in xrns] 
         valid = []
         if not isinstance(creds, list):
             creds = [creds]
         logger.debug("Auth.checkCredentials with %d creds"%len(creds))
         for cred in creds:
-            try:
-                self.check(cred, operation, hrn)
-                valid.append(cred)
-            except:
-                cred_obj=Credential(string=cred)
-                logger.debug("failed to validate credential - dump=%s"%cred_obj.dump_string(dump_parents=True))
-                error = sys.exc_info()[:2]
-                continue
+            for hrn in hrns:
+                try:
+                    self.check(cred, operation, hrn)
+                    valid.append(cred)
+                except:
+                    cred_obj=Credential(string=cred)
+                    logger.debug("failed to validate credential - dump=%s"%cred_obj.dump_string(dump_parents=True))
+                    error = sys.exc_info()[:2]
+                    continue
             
         if not len(valid):
             raise InsufficientRights('Access denied: %s -- %s' % (error[0],error[1]))
