@@ -377,7 +377,7 @@ class SlabDriver(Driver):
                 if key not in acceptable_fields:
                     slab_record.pop(key) 
             logger.debug("SLABDRIVER.PY register")
-            slices = self.GetSlices(slice_filter =slab_record['hrn'], \
+            slices = self.GetSlices(slice_filter=slab_record['hrn'], \
                                             slice_filter_type = 'slice_hrn')
             if not slices:
                 pointer = self.AddSlice(slab_record)
@@ -388,6 +388,9 @@ class SlabDriver(Driver):
             persons = self.GetPersons([sfa_record])
             #persons = self.GetPersons([sfa_record['hrn']])
             if not persons:
+                sfa_record['enabled'] = False
+                #For Senslab LDAP, if the user is a new one, disable the 
+                #account so that admins have to acknowledge the user first.
                 pointer = self.AddPerson(dict(sfa_record))
                 #add in LDAP 
             else:
@@ -399,19 +402,11 @@ class SlabDriver(Driver):
                                     #{'enabled': sfa_record['enabled']})
                 
             #TODO register Change this AddPersonToSite stuff 05/07/2012 SA   
-            # add this person to the site only if 
-            # she is being added for the first
-            # time by sfa and doesnt already exist in plc
-            if not persons or not persons[0]['site_ids']:
-                login_base = get_leaf(sfa_record['authority'])
-                self.AddPersonToSite(pointer, login_base)
+            #No site in senslab 28/08/12 SA
+           
     
             # What roles should this user have?
-            #TODO : DElete this AddRoleToPerson 04/07/2012 SA
-            #Function prototype is :
-            #AddRoleToPerson(self, auth, role_id_or_name, person_id_or_email)
-            #what's the pointer doing here?
-            self.AddRoleToPerson('user', pointer)
+            #No user roles in Slab/SFA 28/08/12 SA: roles are handled in LDAP
             # Add the user's key
             if pub_key:
                 self.AddPersonKey(pointer, {'key_type' : 'ssh', \
@@ -1563,8 +1558,9 @@ class SlabDriver(Driver):
         return
     
     #TODO AddPerson 04/07/2012 SA
-    def AddPerson(self, auth, person_fields=None):
-        """Adds a new account. Any fields specified in person_fields are used, 
+    #def AddPerson(self, auth,  person_fields=None): 
+    def AddPerson(self, record):#TODO fixing 28/08//2012 SA
+        """Adds a new account. Any fields specified in records are used, 
         otherwise defaults are used.
         Accounts are disabled by default. To enable an account, 
         use UpdatePerson().
@@ -1572,7 +1568,8 @@ class SlabDriver(Driver):
         FROM PLC API DOC
         
         """
-        logger.warning("SLABDRIVER AddPerson EMPTY - DO NOTHING \r\n ")
+        ret = self.ldap.LdapAddUser(record)
+        logger.warning("SLABDRIVER AddPerson return code %s \r\n ", ret)
         return
     
     #TODO AddPersonToSite 04/07/2012 SA

@@ -78,14 +78,16 @@ class SlabAggregate:
         for sfa_slice in slices:
             try:
                     
-                for node_id in sfa_slice['node_ids']:
+                for node in sfa_slice['node_ids']:
                     #node_id = self.driver.root_auth + '.' + node_id
                     sliver = Sliver({'sliver_id': urn_to_sliver_id(slice_urn, \
-                                    sfa_slice['record_id_slice'], node_id),
+                                    sfa_slice['record_id_slice'], node['hostname']),
                                     'name': sfa_slice['slice_hrn'],
                                     'type': 'slab-node', 
                                     'tags': []})
-                    slivers[node_id] = sliver
+                    logger.log_exc("SLABAGGREGATE \t \
+                                        get_slice_and_slivers node_id %s "%(node))
+                    slivers[node['hostname']] = sliver
             except KeyError:
                 logger.log_exc("SLABAGGREGATE \t \
                                         get_slice_and_slivers KeyError ")
@@ -173,8 +175,8 @@ class SlabAggregate:
         slice_nodes_list = []
         if slices:
             for one_slice in slices:
-                for node_id in one_slice['node_ids']:
-                    slice_nodes_list.append(node_id)
+                for node in one_slice['node_ids']:
+                    slice_nodes_list.append(node['hostname'])
                    
         reserved_nodes = self.driver.GetNodesCurrentlyInUse()
         logger.debug("SLABAGGREGATE api get_rspec slice_nodes_list  %s "\
@@ -349,6 +351,8 @@ class SlabAggregate:
         if lease_option in ['all', 'resources']:
         #if not options.get('list_leases') or options.get('list_leases') and options['list_leases'] != 'leases':
             nodes = self.get_nodes(slices, slivers) 
+            logger.debug("SlabAggregate \tget_rspec **** \
+                        nodes %s \r\n" %(nodes))
             #In case creating a job,  slice_xrn is not set to None
             rspec.version.add_nodes(nodes)
             if slice_xrn :

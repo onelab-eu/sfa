@@ -31,7 +31,7 @@ class Slabv1Node:
         should be used after add_nodes, which creates the network item.
         
         """
-        
+        logger.debug(" add_connection_information xml %s" %(xml))
         #Get network item in the xml
         network_elems = xml.xpath('//network')  
         if len(network_elems) > 0:

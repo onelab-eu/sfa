@@ -328,8 +328,10 @@ class LDAPapi :
         attrs['gidNumber'] = self.ldapUserGidNumber
         attrs['uidNumber'] = self.find_max_uidNumber()
         attrs['mail'] = record['mail'].lower()
-        
-        attrs['sshPublicKey'] = self.get_ssh_pkey(record) 
+        try:
+            attrs['sshPublicKey'] = record['pkey']
+        except KeyError:
+            attrs['sshPublicKey'] = self.get_ssh_pkey(record) 
         
 
         #Password is automatically generated because SFA user don't go 
@@ -357,7 +359,7 @@ class LDAPapi :
 
 
 
-    def LdapAddUser(self, record = None) :
+    def LdapAddUser(self, record) :
         """Add SFA user to LDAP if it is not in LDAP  yet. """
         
         user_ldap_attrs = self.make_ldap_attributes_from_record(record)
