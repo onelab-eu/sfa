@@ -136,6 +136,8 @@ class OSAggregate:
         rspec_node['component_id'] = node_xrn.urn
         rspec_node['component_name'] = node_xrn.name
         rspec_node['component_manager_id'] = Xrn(self.driver.hrn, 'authority+cm').get_urn()
+        if instance.metadata.get('client_id'):
+            rspec_node['client_id'] = instance.metadata.get('client_id')
         flavor = self.driver.shell.nova_manager.flavors.find(id=instance.flavor['id'])
         rspec_node['slivers'] = [self.instance_to_sliver(flavor)]
         image = self.driver.shell.image_manager.get_images(id=instance.image['id'])
@@ -339,6 +341,8 @@ class OSAggregate:
                     metadata['security_groups'] = group_name
                     if node.get('component_id'):
                         metadata['component_id'] = node['component_id']
+                    if node.get('client_id'):
+                        metadata['client_id'] = node['client_id'] 
                     self.driver.shell.nova_manager.servers.create(flavor=flavor_id,
                                                             image=image_id,
                                                             key_name = key_name,
