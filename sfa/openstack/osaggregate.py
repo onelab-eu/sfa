@@ -113,6 +113,8 @@ class OSAggregate:
             flavor = self.driver.shell.nova_manager.flavors.find(id=instance.flavor['id'])
             sliver = instance_to_sliver(flavor)
             rspec_node['slivers'].append(sliver)
+            sliver_xrn = OSXrn(xrn=slice_xrn, type='slice', id=instance.id)
+            rspec_node['sliver_id'] = sliver_xrn.get_urn() 
             image = self.driver.shell.image_manager.get_images(id=instance.image['id'])
             if isinstance(image, list) and len(image) > 0:
                 image = image[0]
