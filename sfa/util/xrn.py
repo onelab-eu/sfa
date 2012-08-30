@@ -251,7 +251,7 @@ class Xrn:
         else:
             urn = "+".join(['',authority_string,self.type,Xrn.unescape(name)])
 
-        if self.id:
+        if hasattr(self, 'id') and self.id:
             urn = "%s:%s" % (urn, self.id)        
 
         self.urn = Xrn.URN_PREFIX + urn
