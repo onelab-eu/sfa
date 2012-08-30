@@ -36,12 +36,7 @@ def pubkeys_to_user_data(pubkeys):
 
 def instance_to_sliver(instance, slice_xrn=None):
     sliver_id = None
-    if slice_xrn:
-        xrn = Xrn(slice_xrn, 'slice')
-        sliver_id = xrn.get_sliver_id(instance.project_id, instance.hostname, instance.id)
-
-    sliver = Sliver({'slice_id': sliver_id,
-                     'name': instance.name,
+    sliver = Sliver({'name': instance.name,
                      'type': instance.name,
                      'cpus': str(instance.vcpus),
                      'memory': str(instance.ram),
