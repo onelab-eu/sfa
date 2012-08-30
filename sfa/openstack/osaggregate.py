@@ -92,7 +92,7 @@ class OSAggregate:
         zones = self.get_availability_zones()
         name = hrn_to_os_slicename(slice_xrn)
         instances = self.driver.shell.nova_manager.servers.findall(name=name)
-        node_dict = {}
+        rspec_nodes = []
         for instance in instances:
             # determine node urn
             node_xrn = instance.metadata.get('component_id')
@@ -101,15 +101,11 @@ class OSAggregate:
             else:
                 node_xrn = OSXrn(xrn=node_xrn, type='node')
 
-            if not node_xrn.urn in node_dict:
-                rspec_node = Node()
-                rspec_node['component_id'] = node_xrn.urn
-                rspec_node['component_name'] = node_xrn.name
-                rspec_node['component_manager_id'] = Xrn(self.driver.hrn, 'authority+cm').get_urn()
-                rspec_node['slivers'] = []
-                node_dict[node_xrn.urn] = rspec_node
-            else:
-                rspec_node = node_dict[node_xrn.urn]
+            rspec_node = Node()
+            rspec_node['component_id'] = node_xrn.urn
+            rspec_node['component_name'] = node_xrn.name
+            rspec_node['component_manager_id'] = Xrn(self.driver.hrn, 'authority+cm').get_urn()
+            rspec_node['slivers'] = []
 
             if instance.metadata.get('client_id'):
                 rspec_node['client_id'] = instance.metadata.get('client_id')
@@ -154,7 +150,7 @@ class OSAggregate:
                 service = Services({'login': login})
                 rspec_node['services'].append(service)
             rspec_nodes.append(rspec_node)
-        return node_dict.values()
+        return rspec_nodes
 
     def get_aggregate_nodes(self):
         zones = self.get_availability_zones()
