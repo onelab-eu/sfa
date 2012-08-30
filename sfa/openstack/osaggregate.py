@@ -21,6 +21,7 @@ from sfa.planetlab.plxrn import PlXrn
 from sfa.openstack.osxrn import OSXrn, hrn_to_os_slicename
 from sfa.rspecs.version_manager import VersionManager
 from sfa.openstack.security_group import SecurityGroup
+from sfa.server.threadmanager import ThreadManager
 from sfa.util.sfalogging import logger
 
 def pubkeys_to_user_data(pubkeys):
@@ -298,19 +299,30 @@ class OSAggregate:
 
 
     def delete_instances(self, instance_name, tenant_name):
-        self.driver.shell.nova_manager.connect(tenant=tenant_name)
-        instances = self.driver.shell.nova_manager.servers.findall(name=instance_name)
-        security_group_manager = SecurityGroup(self.driver)
-        for instance in instances:
-            # deleate this instance's security groups
+
+        def _delete_security_group(instance):
             security_group = instance.metadata.get('security_groups', '')
             if security_group:
-                # dont delete the default security group
-                if security_group != 'default': 
-                    security_group_manager.delete_security_group(security_group)
+                manager = SecurityGroup(self.driver)
+                timeout = 10.0 # wait a maximum of 10 seconds before forcing the security group delete
+                start_time = time.time()
+                instance_deleted = False
+                while instance_deleted == False and (time.time() - start_time) < timeout:
+                    inst = self.driver.shell.nova_manager.servers.findall(id=instance.id)
+                    if not inst:
+                        instance_deleted = True
+                manager.delete_security_group(security_group)
+
+        thread_manager = ThreadManager()
+        self.driver.shell.nova_manager.connect(tenant=tenant_name)
+        instances = self.driver.shell.nova_manager.servers.findall(name=instance_name)
+        for instance in instances:
             # destroy instance
             self.driver.shell.nova_manager.servers.delete(instance)
+            # deleate this instance's security groups
+            thread_manager.run(_delete_security_group, instance)
         return 1
+
 
     def stop_instances(self, instance_name, tenant_name):
         self.driver.shell.nova_manager.connect(tenant=tenant_name)
