@@ -3,7 +3,8 @@ import os
 import socket
 import base64
 import string
-import random    
+import random
+import time    
 from collections import defaultdict
 from nova.exception import ImageNotFound
 from nova.api.ec2.cloud import CloudController
@@ -368,6 +369,7 @@ class OSAggregate:
                     inst = self.driver.shell.nova_manager.servers.findall(id=instance.id)
                     if not inst:
                         instance_deleted = True
+                    time.sleep(.5)
                 manager.delete_security_group(security_group)
 
         thread_manager = ThreadManager() 
