@@ -418,8 +418,7 @@ class NovaDriver(Driver):
             res['plos_created_at'] = datetime_to_string(utcparse(instance.created))    
             res['plos_boot_state'] = instance.status
             res['plos_sliver_type'] = self.shell.nova_manager.flavors.find(id=instance.flavor['id']).name 
-            sliver_id =  Xrn(slice_urn).get_sliver_id(instance.id)
-            res['geni_urn'] = sliver_id
+            res['geni_urn'] =  Xrn(slice_urn, type='slice', id=instance.id).get_urn()
 
             if instance.status.lower() == 'active':
                 res['boot_state'] = 'ready'
