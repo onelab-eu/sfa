@@ -137,6 +137,7 @@ class OSAggregate:
         rspec_node['component_id'] = node_xrn.urn
         rspec_node['component_name'] = node_xrn.name
         rspec_node['component_manager_id'] = Xrn(self.driver.hrn, 'authority+cm').get_urn()
+        rspec_node['sliver_id'] = OSXrn(name=instance.name, type='slice', id=instance.id).get_urn() 
         if instance.metadata.get('client_id'):
             rspec_node['client_id'] = instance.metadata.get('client_id')
         flavor = self.driver.shell.nova_manager.flavors.find(id=instance.flavor['id'])
