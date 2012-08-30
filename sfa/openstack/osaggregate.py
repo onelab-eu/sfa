@@ -141,7 +141,7 @@ class OSAggregate:
                 interface = Interface({'component_id': if_xrn.urn})
                 interface['ips'] =  [{'address': private_ip['addr'],
                                      #'netmask': private_ip['network'],
-                                     'type': private_ip['version']}]
+                                     'type': 'ipv%s' % str(private_ip['version'])}]
                 rspec_node['interfaces'].append(interface) 
             
             # slivers always provide the ssh service
