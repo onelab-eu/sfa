@@ -8,7 +8,7 @@ from sfa.util.faults import MissingSfaInfo, UnknownSfaType, \
 from sfa.util.sfalogging import logger
 from sfa.util.defaultdict import defaultdict
 from sfa.util.sfatime import utcparse, datetime_to_string, datetime_to_epoch
-from sfa.util.xrn import Xrn, hrn_to_urn, get_leaf, urn_to_sliver_id
+from sfa.util.xrn import Xrn, hrn_to_urn, get_leaf
 from sfa.openstack.osxrn import OSXrn, hrn_to_os_slicename, hrn_to_os_tenant_name
 from sfa.util.cache import Cache
 from sfa.trust.credential import Credential
@@ -399,9 +399,7 @@ class NovaDriver(Driver):
             raise SliverDoesNotExist("You have not allocated any slivers here") 
         
         result = {}
-        top_level_status = 'unknown'
-        if instances:
-            top_level_status = 'ready'
+        top_level_status = 'ready'
         result['geni_urn'] = slice_urn
         result['plos_login'] = 'root'
         # do we need real dates here? 
@@ -418,8 +416,7 @@ class NovaDriver(Driver):
             res['plos_created_at'] = datetime_to_string(utcparse(instance.created))    
             res['plos_boot_state'] = instance.status
             res['plos_sliver_type'] = self.shell.nova_manager.flavors.find(id=instance.flavor['id']).name 
-            sliver_id =  Xrn(slice_urn).get_sliver_id(instance.id)
-            res['geni_urn'] = sliver_id
+            res['geni_urn'] =  Xrn(slice_urn, type='slice', id=instance.id).get_urn()
 
             if instance.status.lower() == 'active':
                 res['boot_state'] = 'ready'
@@ -427,6 +424,7 @@ class NovaDriver(Driver):
             else:
                 res['boot_state'] = 'unknown'  
                 res['geni_status'] = 'unknown'
+                top_level_status = 'unknown'
             resources.append(res)
             
         result['geni_status'] = top_level_status

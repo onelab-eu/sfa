@@ -37,12 +37,7 @@ def pubkeys_to_user_data(pubkeys):
 
 def instance_to_sliver(instance, slice_xrn=None):
     sliver_id = None
-    if slice_xrn:
-        xrn = Xrn(slice_xrn, 'slice')
-        sliver_id = xrn.get_sliver_id(instance.project_id, instance.hostname, instance.id)
-
-    sliver = Sliver({'slice_id': sliver_id,
-                     'name': instance.name,
+    sliver = Sliver({'name': instance.name,
                      'type': instance.name,
                      'cpus': str(instance.vcpus),
                      'memory': str(instance.ram),
@@ -114,6 +109,8 @@ class OSAggregate:
             flavor = self.driver.shell.nova_manager.flavors.find(id=instance.flavor['id'])
             sliver = instance_to_sliver(flavor)
             rspec_node['slivers'].append(sliver)
+            sliver_xrn = OSXrn(xrn=slice_xrn, type='slice', id=instance.id)
+            rspec_node['sliver_id'] = sliver_xrn.get_urn() 
             image = self.driver.shell.image_manager.get_images(id=instance.image['id'])
             if isinstance(image, list) and len(image) > 0:
                 image = image[0]
@@ -136,11 +133,13 @@ class OSAggregate:
             
             for private_ip in addresses.get('private', []):
                 if_xrn = PlXrn(auth=self.driver.hrn, 
-                               interface='node%s:eth0' % (instance.hostId)) 
-                interface = Interface({'component_id': if_xrn.urn})
+                               interface='node%s' % (instance.hostId)) 
+                if_client_id = Xrn(if_xrn.urn, type='interface', id="eth%s" %if_index).urn
+                interface = Interface({'component_id': if_xrn.urn,
+                                       'client_id': if_client_id})
                 interface['ips'] =  [{'address': private_ip['addr'],
                                      #'netmask': private_ip['network'],
-                                     'type': private_ip['version']}]
+                                     'type': 'ipv%s' % str(private_ip['version'])}]
                 rspec_node['interfaces'].append(interface) 
             
             # slivers always provide the ssh service
