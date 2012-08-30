@@ -311,6 +311,7 @@ class OSAggregate:
                     inst = self.driver.shell.nova_manager.servers.findall(id=instance.id)
                     if not inst:
                         instance_deleted = True
+                    time.sleep(.5)
                 manager.delete_security_group(security_group)
 
         thread_manager = ThreadManager()
