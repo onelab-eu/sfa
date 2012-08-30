@@ -174,18 +174,9 @@ class Hierarchy:
         """
         Create top level records (includes root and sub authorities (local/remote)
         """
-        if not hrn:
-            hrn = self.config.SFA_INTERFACE_HRN
-        # make sure parent exists
-        parent_hrn = get_authority(hrn)
-        if not parent_hrn:
-            parent_hrn = hrn
-        if not parent_hrn == hrn:
-            self.create_top_level_auth(parent_hrn)
-       
         # create the authority if it doesnt alrady exist
         if not self.auth_exists(hrn):
-            self.create_auth(hrn)
+            self.create_auth(hrn, create_parents=True)
             
         
     def get_interface_auth_info(self, create=True):

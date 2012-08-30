@@ -73,6 +73,10 @@ def verify_callback(conn, x509, err, depth, preverify):
        #print "  X509_V_ERR_CERT_UNTRUSTED"
        return 1
 
+    # ignore X509_V_ERR_CERT_SIGNATURE_FAILURE
+    if err == 7:
+       return 1         
+
     logger.debug("  error %s in verify_callback"%err)
 
     return 0
@@ -143,7 +147,7 @@ class SecureXMLRPCServer(BaseHTTPServer.HTTPServer,SimpleXMLRPCServer.SimpleXMLR
 
         It it very similar to SimpleXMLRPCServer but it uses HTTPS for transporting XML data.
         """
-        logger.debug("SecureXMLRPCServer.__init__, server_address=%s, cert_file=%s"%(server_address,cert_file))
+        logger.debug("SecureXMLRPCServer.__init__, server_address=%s, cert_file=%s, key_file=%s"%(server_address,cert_file,key_file))
         self.logRequests = logRequests
         self.interface = None
         self.key_file = key_file

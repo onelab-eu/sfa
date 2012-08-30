@@ -10,24 +10,22 @@
 
 # source function library
 . /etc/init.d/functions
-
 # Default locations
 PGDATA=/var/lib/pgsql/data
 postgresql_conf=$PGDATA/postgresql.conf
 pghba_conf=$PGDATA/pg_hba.conf
 postgresql_sysconfig=/etc/sysconfig/pgsql
 
-# PLC consolidated (merged) config file
-plc_whole_config=/etc/planetlab/plc_config.xml
 # SFA consolidated (merged) config file
-sfa_whole_config=/etc/sfa/sfa_config.xml
+sfa_whole_config=/etc/sfa/sfa_config
 # SFA default config (read-only template)
 sfa_default_config=/etc/sfa/default_config.xml
 # SFA local (site-dependent) file
-sfa_local_config=/etc/sfa/configs/site.xml
+sfa_local_config=/etc/sfa/configs/site_config
+sfa_local_config_xml=/etc/sfa/configs/site_config.xml
 
 # Source sfa shell config if present 
-[ -f /etc/sfa/sfa_config ] && . /etc/sfa/sfa_config
+[ -f /etc/sfa/sfa_config.sh ] && . /etc/sfa/sfa_config.sh
 
 # Export so that we do not have to specify -p to psql invocations
 export PGPORT=$SFA_DB_PORT
@@ -82,8 +80,8 @@ function reload () {
     files=( $sfa_default_config $sfa_local_config )
     for file in "${files[@]}" ; do
 	if [ -n "$force" -o $file -nt $sfa_whole_config ] ; then
-	    tmp=$(mktemp /tmp/sfa_config.xml.XXXXXX)
-	    plc-config --xml "${files[@]}" >$tmp
+	    tmp=$(mktemp /tmp/sfa_config.XXXXXX)
+	    sfa-config --python "${files[@]}" >$tmp
 	    if [ $? -eq 0 ] ; then
 		mv $tmp $sfa_whole_config
 		chmod 444 $sfa_whole_config
@@ -96,11 +94,15 @@ function reload () {
     done
 
     # Convert configuration to various formats
-    if [ -n "$force" -o $sfa_whole_config -nt /etc/sfa/sfa_config ] ; then
-	plc-config --shell $sfa_whole_config > /etc/sfa/sfa_config
+    if [ -f $sfa_local_config_xml ] ; then
+    sfa-config --python $sfa_local_config_xml > $sfa_local_config 
+    rm $sfa_local_config_xml 
     fi
-    if [ -n "$force" -o $sfa_whole_config -nt /etc/sfa/sfa_config.py ] ; then
-	plc-config --python $sfa_whole_config > /etc/sfa/sfa_config.py
+    if [ -n "$force" -o $sfa_local_config -nt $sfa_whole_config ] ; then
+	sfa-config --python $sfa_default_config $sfa_local_config > $sfa_whole_config
+    fi
+    if [ -n "$force" -o $sfa_whole_config -nt /etc/sfa/sfa_config.sh ] ; then
+	sfa-config --shell $sfa_default_config $sfa_local_config > /etc/sfa/sfa_config.sh
     fi
 #    if [ -n "$force" -o $sfa_whole_config -nt /etc/sfa/php/sfa_config.php ] ; then
 #	mkdir -p /etc/sfa/php
@@ -115,7 +117,7 @@ function reload () {
     #gen-sfa-cm-config.py        
 
     # reload the shell version
-    [ -f /etc/sfa/sfa_config ] && . /etc/sfa/sfa_config
+    [ -f /etc/sfa/sfa_config.sh ] && . /etc/sfa/sfa_config.sh
 
 }
 
@@ -123,7 +125,7 @@ function reload () {
 function db_start () {
     
     # only if enabled
-    [ "$SFA_DB_ENABLED" == 1 ] || return
+    [ "$SFA_DB_ENABLED" == 1 -o "$SFA_DB_ENABLED" == True ] || return
 
     if ! rpm -q myplc >& /dev/null; then
 
@@ -190,7 +192,7 @@ function db_start () {
 	######## compute a password if needed
 	if [ -z "$SFA_DB_PASSWORD" ] ; then
 	    SFA_DB_PASSWORD=$(uuidgen)
-	    plc-config --category=sfa_db --variable=password --value="$SFA_DB_PASSWORD" --save=$sfa_local_config $sfa_local_config >& /dev/null
+	    sfa-config --category=sfa_db --variable=password --value="$SFA_DB_PASSWORD" --save=$sfa_local_config $sfa_local_config >& /dev/null
 	    reload force
 	fi
 
@@ -202,8 +204,8 @@ function db_start () {
 	PLC_DB_USER=$(plc-config --category=plc_db --variable=user)
 	PLC_DB_PASSWORD=$(plc-config --category=plc_db --variable=password)
 	# store this as the SFA user/password 
-	plc-config --category=sfa_db --variable=user --value=$PLC_DB_USER --save=$sfa_local_config $sfa_local_config >& /dev/null
-	plc-config --category=sfa_db --variable=password --value=$PLC_DB_PASSWORD --save=$sfa_local_config $sfa_local_config >& /dev/null
+	sfa-config --category=sfa_db --variable=user --value=$PLC_DB_USER --save=$sfa_local_config $sfa_local_config >& /dev/null
+	sfa-config --category=sfa_db --variable=password --value=$PLC_DB_PASSWORD --save=$sfa_local_config $sfa_local_config >& /dev/null
 	reload force
     fi
 
@@ -231,6 +233,7 @@ function db_start () {
 	check
     fi
     check
+    sfaadmin reg sync_db
 
     MESSAGE=$"SFA: Checking for PostgreSQL server"
     echo -n "$MESSAGE"
@@ -241,7 +244,7 @@ function db_start () {
 function db_stop () {
 
     # only if enabled
-    [ "$SFA_DB_ENABLED" == 1 ] || return
+    [ "$SFA_DB_ENABLED" == 1 -o "$SFA_DB_ENABLED" == True ] || return
 
     # not too nice, but.. when co-located with myplc we'll let it start/stop postgresql
     if ! rpm -q myplc >& /dev/null ; then
@@ -263,11 +266,11 @@ function start() {
     # install peer certs
     action $"SFA: installing peer certs" daemon /usr/bin/sfa-start.py -t -d $OPTIONS 
 
-    [ "$SFA_REGISTRY_ENABLED" == 1 ] && action $"SFA: Registry" daemon /usr/bin/sfa-start.py -r -d $OPTIONS
+    [ "$SFA_REGISTRY_ENABLED" == 1 -o "$SFA_REGISTRY_ENABLED" == True ] && action $"SFA: Registry" daemon /usr/bin/sfa-start.py -r -d $OPTIONS
     
-    [ "$SFA_AGGREGATE_ENABLED" == 1 ] && action $"SFA: Aggregate" daemon /usr/bin/sfa-start.py -a -d $OPTIONS
+    [ "$SFA_AGGREGATE_ENABLED" == 1  -o "$SFA_AGGREGATE_ENABLED" == True ] && action $"SFA: Aggregate" daemon /usr/bin/sfa-start.py -a -d $OPTIONS
         
-    [ "$SFA_SM_ENABLED" == 1 ] && action "SFA: SliceMgr" daemon /usr/bin/sfa-start.py -s -d $OPTIONS
+    [ "$SFA_SM_ENABLED" == 1 -o "$SFA_SM_ENABLED" == True ] && action "SFA: SliceMgr" daemon /usr/bin/sfa-start.py -s -d $OPTIONS
 
     [ "$SFA_FLASHPOLICY_ENABLED" == 1 ] && \
         action "Flash Policy Server" daemon /usr/bin/sfa_flashpolicy.py --file="$SFA_FLASHPOLICY_CONFIG_FILE" --port=$SFA_FLASHPOLICY_PORT -d

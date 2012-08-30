@@ -64,7 +64,7 @@ class XmlElement:
             namespaces = self.namespaces 
         elems = self.element.xpath(xpath, namespaces=namespaces)
         return [XmlElement(elem, namespaces) for elem in elems]
-    
+
     def add_element(self, tagname, **kwds):
         element = etree.SubElement(self.element, tagname, **kwds)
         return XmlElement(element, self.namespaces)
@@ -265,7 +265,7 @@ class XML:
         if not element:
             element = self.root
         element.remove_attribute(name) 
-        
+
     def add_element(self, *args, **kwds):
         """
         Wrapper around etree.SubElement(). Adds an element to 
