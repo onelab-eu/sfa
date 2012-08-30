@@ -399,9 +399,7 @@ class NovaDriver(Driver):
             raise SliverDoesNotExist("You have not allocated any slivers here") 
         
         result = {}
-        top_level_status = 'unknown'
-        if instances:
-            top_level_status = 'ready'
+        top_level_status = 'ready'
         result['geni_urn'] = slice_urn
         result['plos_login'] = 'root'
         # do we need real dates here? 
@@ -426,6 +424,7 @@ class NovaDriver(Driver):
             else:
                 res['boot_state'] = 'unknown'  
                 res['geni_status'] = 'unknown'
+                top_level_status = 'unknown'
             resources.append(res)
             
         result['geni_status'] = top_level_status
