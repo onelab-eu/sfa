@@ -116,7 +116,7 @@ class Xrn:
     # self.type
     # self.path
     # provide either urn, or (hrn + type)
-    def __init__ (self, xrn, type=None, id=None):
+    def __init__ (self, xrn="", type=None, id=None):
         if not xrn: xrn = ""
         # user has specified xrn : guess if urn or hrn
         self.id = id

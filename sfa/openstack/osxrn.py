@@ -19,6 +19,7 @@ class OSXrn(Xrn):
         config = Config()
         self.id = id
         if name is not None:
+            Xrn.__init__(self, **kwds)
             if 'type' in kwds:
                 self.type = kwds['type']
             if auth is not None:
