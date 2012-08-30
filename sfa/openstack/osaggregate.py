@@ -3,11 +3,12 @@ import os
 import socket
 import base64
 import string
-import random    
+import random
+import time
 from collections import defaultdict
 from nova.exception import ImageNotFound
 from nova.api.ec2.cloud import CloudController
-from sfa.util.faults import SfaAPIError
+from sfa.util.faults import SfaAPIError, InvalidRSpec
 from sfa.rspecs.rspec import RSpec
 from sfa.rspecs.elements.hardware_type import HardwareType
 from sfa.rspecs.elements.node import Node
@@ -229,6 +230,11 @@ class OSAggregate:
                                              cidr_ip = rule.get('cidr_ip'), 
                                              port_range = rule.get('port_range'), 
                                              icmp_type_code = rule.get('icmp_type_code'))
+            # Open ICMP by default
+            security_group.add_rule_to_group(group_name,
+                                             protocol = "icmp",
+                                             cidr_ip = "0.0.0.0/0",
+                                             icmp_type_code = "-1:-1")
         return group_name
 
     def add_rule_to_security_group(self, group_name, **kwds):
@@ -274,6 +280,8 @@ class OSAggregate:
                     image = instance.get('disk_image')
                     if image and isinstance(image, list):
                         image = image[0]
+                    else:
+                        raise InvalidRSpec("Must specify a disk_image for each VM")
                     image_id = self.driver.shell.nova_manager.images.find(name=image['name'])
                     fw_rules = instance.get('fw_rules', [])
                     group_name = self.create_security_group(instance_name, fw_rules)
