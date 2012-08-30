@@ -164,8 +164,10 @@ class OSAggregate:
         
         for private_ip in addresses.get('private', []):
             if_xrn = PlXrn(auth=self.driver.hrn, 
-                           interface='node%s:eth0' % (instance.hostId)) 
-            interface = Interface({'component_id': if_xrn.urn})
+                           interface='node%s' % (instance.hostId)) 
+            if_client_id = Xrn(if_xrn.urn, type='interface', id="eth%s" %if_index).urn
+            interface = Interface({'component_id': if_xrn.urn,
+                                   'client_id': if_client_id})
             interface['ips'] =  [{'address': private_ip['addr'],
                                  #'netmask': private_ip['network'],
                                  'type': private_ip['version']}]
