@@ -25,7 +25,6 @@ Summary: the SFA python libraries
 Group: Applications/System
 BuildRequires: make
 
-Requires: myplc-config
 Requires: python >= 2.5
 Requires: pyOpenSSL >= 0.7
 Requires: m2crypto
@@ -168,6 +167,7 @@ rm -rf $RPM_BUILD_ROOT
 %{_bindir}/sfaadmin
 %{_bindir}/keyconvert.py*
 %{_bindir}/sfa-config-tty
+%{_bindir}/sfa-config
 %config /etc/sfa/default_config.xml
 %config (noreplace) /etc/sfa/aggregates.xml
 %config (noreplace) /etc/sfa/registries.xml

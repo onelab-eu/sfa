@@ -22,7 +22,7 @@
 #----------------------------------------------------------------------
 
 import re
-import sys
+
 from sfa.util.faults import SfaAPIError
 
 # for convenience and smoother translation - we should get rid of these functions eventually 
@@ -82,7 +82,7 @@ class Xrn:
     # A better alternative than childHRN.startswith(parentHRN)
     # e.g. hrn_is_auth_for_hrn('a\.b', 'a\.b.c.d') -> True,
     # but hrn_is_auth_for_hrn('a', 'a\.b.c.d') -> False
-    # Also hrn_is_uauth_for_hrn('a\.b.c.d', 'a\.b.c.d') -> True
+    # Also hrn_is_auth_for_hrn('a\.b.c.d', 'a\.b.c.d') -> True
     @staticmethod
     def hrn_is_auth_for_hrn(parenthrn, hrn):
         if parenthrn == hrn:
@@ -121,7 +121,6 @@ class Xrn:
     # provide either urn, or (hrn + type)
     def __init__ (self, xrn, type=None):
         if not xrn: xrn = ""
-       
         # user has specified xrn : guess if urn or hrn
         if Xrn.is_urn(xrn):
             self.hrn=None
@@ -132,6 +131,7 @@ class Xrn:
             self.hrn=xrn
             self.type=type
             self.hrn_to_urn()
+        self._normalize()
 # happens all the time ..
 #        if not type:
 #            debug_logger.debug("type-less Xrn's are not safe")
@@ -155,8 +155,7 @@ class Xrn:
         # self.authority keeps a list
         if not hasattr(self,'authority'): 
             self.authority=Xrn.hrn_auth_list(self.hrn)
-       
-       
+
     def get_leaf(self):
         self._normalize()
         return self.leaf
@@ -168,19 +167,20 @@ class Xrn:
     def get_authority_urn(self): 
         self._normalize()
         return ':'.join( [Xrn.unescape(x) for x in self.authority] )
-   
-    def get_sliver_id(self, slice_id, node_id, index=0, authority=None):
+
+    def get_sliver_id(self, slice_id, node_id=None, index=0, authority=None):
         self._normalize()
         urn = self.get_urn()
         if authority:
             authority_hrn = self.get_authority_hrn()
             if not authority_hrn.startswith(authority):
-                hrn = ".".join([authority,self.get_authority_hrn(), self.get_leaf()])
+                hrn = ".".join([authority,authority_hrn, self.get_leaf()])
             else:
-                hrn = ".".join([self.get_authority_hrn(), self.get_leaf()])
+                hrn = ".".join([authority_hrn, self.get_leaf()])
             urn = Xrn(hrn, self.get_type()).get_urn()
-        return ":".join(map(str, [urn, slice_id, node_id, index])) 
- 
+        parts = [part for part in [urn, slice_id, node_id, index] if part is not None]
+        return ":".join(map(str, [parts]))
+
     def urn_to_hrn(self):
         """
         compute tuple (hrn, type) from urn
@@ -226,7 +226,7 @@ class Xrn:
 
         if self.type and self.type.startswith('authority'):
             self.authority = Xrn.hrn_auth_list(self.hrn)
-            leaf = self.get_leaf() 
+            leaf = self.get_leaf()
             #if not self.authority:
             #    self.authority = [self.hrn]
             type_parts = self.type.split("+")
@@ -234,7 +234,7 @@ class Xrn:
             name = 'sa'
             if len(type_parts) > 1:
                 name = type_parts[1]
-            auth_parts = [part for part in [self.get_authority_urn(), leaf] if part]  
+            auth_parts = [part for part in [self.get_authority_urn(), leaf] if part]
             authority_string = ":".join(auth_parts)
         else:
             self.authority = Xrn.hrn_auth_list(self.hrn)

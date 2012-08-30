@@ -21,6 +21,7 @@ from sfa.planetlab.plxrn import PlXrn
 from sfa.openstack.osxrn import OSXrn, hrn_to_os_slicename
 from sfa.rspecs.version_manager import VersionManager
 from sfa.openstack.security_group import SecurityGroup
+from sfa.server.threadmanager import ThreadManager
 from sfa.util.sfalogging import logger
 
 def pubkeys_to_user_data(pubkeys):
@@ -84,28 +85,38 @@ class OSAggregate:
         return zones
 
     def get_slice_nodes(self, slice_xrn):
+        # update nova connection
+        tenant_name = OSXrn(xrn=slice_xrn, type='slice').get_tenant_name()
+        self.driver.shell.nova_manager.connect(tenant=tenant_name)    
+        
         zones = self.get_availability_zones()
         name = hrn_to_os_slicename(slice_xrn)
         instances = self.driver.shell.nova_manager.servers.findall(name=name)
-        rspec_nodes = []
+        node_dict = {}
         for instance in instances:
-            rspec_node = Node()
-            
-            #TODO: find a way to look up an instances availability zone in essex
-            #if instance.availability_zone:
-            #    node_xrn = OSXrn(instance.availability_zone, 'node')
-            #else:
-            #    node_xrn = OSXrn('cloud', 'node')
-            node_xrn = instance.metatata.get('component_id')
+            # determine node urn
+            node_xrn = instance.metadata.get('component_id')
             if not node_xrn:
-                node_xrn = OSXrn('cloud', 'node') 
+                node_xrn = OSXrn('cloud', type='node')
+            else:
+                node_xrn = OSXrn(xrn=node_xrn, type='node')
 
-            rspec_node['component_id'] = node_xrn.urn
-            rspec_node['component_name'] = node_xrn.name
-            rspec_node['component_manager_id'] = Xrn(self.driver.hrn, 'authority+cm').get_urn()
+            if not node_xrn.urn in node_dict:
+                rspec_node = Node()
+                rspec_node['component_id'] = node_xrn.urn
+                rspec_node['component_name'] = node_xrn.name
+                rspec_node['component_manager_id'] = Xrn(self.driver.hrn, 'authority+cm').get_urn()
+                rspec_node['slivers'] = []
+                node_dict[node_xrn.urn] = rspec_node
+            else:
+                rspec_node = node_dict[node_xrn.urn]
+
+            if instance.metadata.get('client_id'):
+                rspec_node['client_id'] = instance.metadata.get('client_id')
+            
             flavor = self.driver.shell.nova_manager.flavors.find(id=instance.flavor['id'])
             sliver = instance_to_sliver(flavor)
-            rspec_node['slivers'] = [sliver]
+            rspec_node['slivers'].append(sliver)
             image = self.driver.shell.image_manager.get_images(id=instance.image['id'])
             if isinstance(image, list) and len(image) > 0:
                 image = image[0]
@@ -113,8 +124,19 @@ class OSAggregate:
             sliver['disk_image'] = [disk_image]
 
             # build interfaces            
-            interfaces = []
+            rspec_node['services'] = []
+            rspec_node['interfaces'] = []
             addresses = instance.addresses
+            # HACK: public ips are stored in the list of private, but 
+            # this seems wrong. Assume pub ip is the last in the list of 
+            # private ips until openstack bug is fixed.      
+            if addresses.get('private'):
+                login = Login({'authentication': 'ssh-keys',
+                               'hostname': addresses.get('private')[-1]['addr'],
+                               'port':'22', 'username': 'root'})
+                service = Services({'login': login})
+                rspec_node['services'].append(service)    
+            
             for private_ip in addresses.get('private', []):
                 if_xrn = PlXrn(auth=self.driver.hrn, 
                                interface='node%s:eth0' % (instance.hostId)) 
@@ -122,11 +144,9 @@ class OSAggregate:
                 interface['ips'] =  [{'address': private_ip['addr'],
                                      #'netmask': private_ip['network'],
                                      'type': private_ip['version']}]
-                interfaces.append(interface)
-            rspec_node['interfaces'] = interfaces 
+                rspec_node['interfaces'].append(interface) 
             
             # slivers always provide the ssh service
-            rspec_node['services'] = []
             for public_ip in addresses.get('public', []):
                 login = Login({'authentication': 'ssh-keys', 
                                'hostname': public_ip['addr'], 
@@ -134,7 +154,7 @@ class OSAggregate:
                 service = Services({'login': login})
                 rspec_node['services'].append(service)
             rspec_nodes.append(rspec_node)
-        return rspec_nodes
+        return node_dict.values()
 
     def get_aggregate_nodes(self):
         zones = self.get_availability_zones()
@@ -167,8 +187,20 @@ class OSAggregate:
         return rspec_nodes 
 
 
+    def create_tenant(self, tenant_name):
+        tenants = self.driver.shell.auth_manager.tenants.findall(name=tenant_name)
+        if not tenants:
+            self.driver.shell.auth_manager.tenants.create(tenant_name, tenant_name)
+            tenant = self.driver.shell.auth_manager.tenants.find(name=tenant_name)
+        else:
+            tenant = tenants[0]
+        return tenant
+            
+
     def create_instance_key(self, slice_hrn, user):
-        key_name = "%s:%s" (slice_name, Xrn(user['urn']).get_hrn())
+        slice_name = Xrn(slice_hrn).leaf
+        user_name = Xrn(user['urn']).leaf
+        key_name = "%s_%s" % (slice_name, user_name)
         pubkey = user['keys'][0]
         key_found = False
         existing_keys = self.driver.shell.nova_manager.keypairs.findall(name=key_name)
@@ -179,7 +211,7 @@ class OSAggregate:
                 key_found = True
 
         if not key_found:
-            self.driver.shll.nova_manager.keypairs.create(key_name, pubkey)
+            self.driver.shell.nova_manager.keypairs.create(key_name, pubkey)
         return key_name       
         
 
@@ -212,10 +244,23 @@ class OSAggregate:
 
  
 
-    def run_instances(self, slicename, rspec, key_name, pubkeys):
+    def run_instances(self, instance_name, tenant_name, rspec, key_name, pubkeys):
         #logger.debug('Reserving an instance: image: %s, flavor: ' \
         #            '%s, key: %s, name: %s' % \
         #            (image_id, flavor_id, key_name, slicename))
+
+        # make sure a tenant exists for this slice
+        tenant = self.create_tenant(tenant_name)  
+
+        # add the sfa admin user to this tenant and update our nova client connection
+        # to use these credentials for the rest of this session. This emsures that the instances
+        # we create will be assigned to the correct tenant.
+        sfa_admin_user = self.driver.shell.auth_manager.users.find(name=self.driver.shell.auth_manager.opts['OS_USERNAME'])
+        user_role = self.driver.shell.auth_manager.roles.find(name='user')
+        admin_role = self.driver.shell.auth_manager.roles.find(name='admin')
+        self.driver.shell.auth_manager.roles.add_user_role(sfa_admin_user, admin_role, tenant)
+        self.driver.shell.auth_manager.roles.add_user_role(sfa_admin_user, user_role, tenant)
+        self.driver.shell.nova_manager.connect(tenant=tenant.name)  
 
         authorized_keys = "\n".join(pubkeys)
         files = {'/root/.ssh/authorized_keys': authorized_keys}
@@ -227,43 +272,61 @@ class OSAggregate:
             if not instances:
                 continue
             for instance in instances:
-                metadata = {}
-                flavor_id = self.driver.shell.nova_manager.flavors.find(name=instance['name'])
-                image = instance.get('disk_image')
-                if image and isinstance(image, list):
-                    image = image[0]
-                image_id = self.driver.shell.nova_manager.images.find(name=image['name'])
-                fw_rules = instance.get('fw_rules', [])
-                group_name = self.create_security_group(slicename, fw_rules)
-                metadata['security_groups'] = [group_name]
-                metadata['component_id'] = node['component_id']
                 try: 
+                    metadata = {}
+                    flavor_id = self.driver.shell.nova_manager.flavors.find(name=instance['name'])
+                    image = instance.get('disk_image')
+                    if image and isinstance(image, list):
+                        image = image[0]
+                    image_id = self.driver.shell.nova_manager.images.find(name=image['name'])
+                    fw_rules = instance.get('fw_rules', [])
+                    group_name = self.create_security_group(instance_name, fw_rules)
+                    metadata['security_groups'] = group_name
+                    if node.get('component_id'):
+                        metadata['component_id'] = node['component_id']
+                    if node.get('client_id'):
+                        metadata['client_id'] = node['client_id']
                     self.driver.shell.nova_manager.servers.create(flavor=flavor_id,
                                                             image=image_id,
                                                             key_name = key_name,
-                                                            security_group = group_name,
+                                                            security_groups = [group_name],
                                                             files=files,
                                                             meta=metadata, 
-                                                            name=slicename)
+                                                            name=instance_name)
                 except Exception, err:    
                     logger.log_exc(err)                                
                            
 
 
-    def delete_instances(self, instance_name):
+    def delete_instances(self, instance_name, tenant_name):
+
+        def _delete_security_group(instance):
+            security_group = instance.metadata.get('security_groups', '')
+            if security_group:
+                manager = SecurityGroup(self.driver)
+                timeout = 10.0 # wait a maximum of 10 seconds before forcing the security group delete
+                start_time = time.time()
+                instance_deleted = False
+                while instance_deleted == False and (time.time() - start_time) < timeout:
+                    inst = self.driver.shell.nova_manager.servers.findall(id=instance.id)
+                    if not inst:
+                        instance_deleted = True
+                    time.sleep(.5)
+                manager.delete_security_group(security_group)
+
+        thread_manager = ThreadManager()
+        self.driver.shell.nova_manager.connect(tenant=tenant_name)
         instances = self.driver.shell.nova_manager.servers.findall(name=instance_name)
-        security_group_manager = SecurityGroup(self.driver)
         for instance in instances:
-            # deleate this instance's security groups
-            for security_group in instance.metadata.get('security_groups', []):
-                # dont delete the default security group
-                if security_group != 'default': 
-                    security_group_manager.delete_security_group(security_group)
             # destroy instance
             self.driver.shell.nova_manager.servers.delete(instance)
+            # deleate this instance's security groups
+            thread_manager.run(_delete_security_group, instance)
         return 1
 
-    def stop_instances(self, instance_name):
+
+    def stop_instances(self, instance_name, tenant_name):
+        self.driver.shell.nova_manager.connect(tenant=tenant_name)
         instances = self.driver.shell.nova_manager.servers.findall(name=instance_name)
         for instance in instances:
             self.driver.shell.nova_manager.servers.pause(instance)

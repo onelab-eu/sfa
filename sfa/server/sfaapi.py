@@ -37,7 +37,7 @@ class SfaApi (XmlrpcApi):
     """
 
     def __init__ (self, encoding="utf-8", methods='sfa.methods', 
-                  config = "/etc/sfa/sfa_config.py", 
+                  config = "/etc/sfa/sfa_config", 
                   peer_cert = None, interface = None, 
                   key_file = None, cert_file = None, cache = None):
         

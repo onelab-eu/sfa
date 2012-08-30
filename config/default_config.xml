@@ -62,6 +62,13 @@ Thierry Parmentelat
             </description> 
         </variable>
 
+         <variable id="data_dir" type="string">
+            <name>Data Directory </name>
+            <value>/var/lib/sfa/</value>
+            <description>Directory where cached certficiates and other data is stored.
+            </description>
+        </variable>
+
       </variablelist>
     </category>
 

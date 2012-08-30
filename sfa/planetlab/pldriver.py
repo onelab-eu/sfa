@@ -615,6 +615,10 @@ class PlDriver (Driver):
         # Adding the list_leases option to the caching key
         if options.get('list_leases'):
             version_string = version_string + "_"+options.get('list_leases', 'default')
+
+        # Adding geni_available to caching key
+        if options.get('geni_available'):
+            version_string = version_string + "_" + str(options.get('geni_available'))
     
         # look in cache first
         if cached_requested and self.cache and not slice_hrn:
@@ -658,7 +662,7 @@ class PlDriver (Driver):
             persons = self.shell.GetPersons(slice['person_ids'], ['key_ids'])
             key_ids = [key_id for person in persons for key_id in person['key_ids']]
             person_keys = self.shell.GetKeys(key_ids)
-            keys = [key['key'] for key in keys]
+            keys = [key['key'] for key in person_keys]
 
             user.update({'urn': slice_urn,
                          'login': slice['name'],

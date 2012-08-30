@@ -13,10 +13,12 @@ import datetime
 import codecs
 import pickle
 import json
+import shutil
 from lxml import etree
 from StringIO import StringIO
 from optparse import OptionParser
 from pprint import PrettyPrinter
+from tempfile import mkstemp
 
 from sfa.trust.certificate import Keypair, Certificate
 from sfa.trust.gid import GID
@@ -530,16 +532,32 @@ class Sfi:
     ####################
     def read_config(self):
         config_file = os.path.join(self.options.sfi_dir,"sfi_config")
+        shell_config_file  = os.path.join(self.options.sfi_dir,"sfi_config.sh")
         try:
-           config = Config (config_file)
+            if Config.is_ini(config_file):
+                config = Config (config_file)
+            else:
+                # try upgrading from shell config format
+                fp, fn = mkstemp(suffix='sfi_config', text=True)  
+                config = Config(fn)
+                # we need to preload the sections we want parsed 
+                # from the shell config
+                config.add_section('sfi')
+                config.add_section('sface')
+                config.load(config_file)
+                # back up old config
+                shutil.move(config_file, shell_config_file)
+                # write new config
+                config.save(config_file)
+                 
         except:
-           self.logger.critical("Failed to read configuration file %s"%config_file)
-           self.logger.info("Make sure to remove the export clauses and to add quotes")
-           if self.options.verbose==0:
-               self.logger.info("Re-run with -v for more details")
-           else:
-               self.logger.log_exc("Could not read config file %s"%config_file)
-           sys.exit(1)
+            self.logger.critical("Failed to read configuration file %s"%config_file)
+            self.logger.info("Make sure to remove the export clauses and to add quotes")
+            if self.options.verbose==0:
+                self.logger.info("Re-run with -v for more details")
+            else:
+                self.logger.log_exc("Could not read config file %s"%config_file)
+            sys.exit(1)
      
         errors = 0
         # Set SliceMgr URL
@@ -557,7 +575,7 @@ class Sfi:
         elif hasattr(config, "SFI_REGISTRY"):
            self.reg_url = config.SFI_REGISTRY
         else:
-           self.logger.errors("You need to set e.g. SFI_REGISTRY='http://your.registry.url:12345/' in %s" % config_file)
+           self.logger.error("You need to set e.g. SFI_REGISTRY='http://your.registry.url:12345/' in %s" % config_file)
            errors += 1 
 
         # Set user HRN
@@ -566,7 +584,7 @@ class Sfi:
         elif hasattr(config, "SFI_USER"):
            self.user = config.SFI_USER
         else:
-           self.logger.errors("You need to set e.g. SFI_USER='plc.princeton.username' in %s" % config_file)
+           self.logger.error("You need to set e.g. SFI_USER='plc.princeton.username' in %s" % config_file)
            errors += 1 
 
         # Set authority HRN
@@ -619,7 +637,7 @@ class Sfi:
             if not os.path.isfile(client_bootstrap.private_key_filename()):
                 self.logger.info ("private key not found, trying legacy name")
                 try:
-                    legacy_private_key = os.path.join (self.options.sfi_dir, "%s.pkey"%get_leaf(self.user))
+                    legacy_private_key = os.path.join (self.options.sfi_dir, "%s.pkey"%Xrn.unescape(get_leaf(self.user)))
                     self.logger.debug("legacy_private_key=%s"%legacy_private_key)
                     client_bootstrap.init_private_key_if_missing (legacy_private_key)
                     self.logger.info("Copied private key from legacy location %s"%legacy_private_key)

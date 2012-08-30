@@ -12,6 +12,7 @@ from distutils.core import setup
 scripts = glob("clientbin/*.py") + \
     [ 
     'config/sfa-config-tty',
+    'config/sfa-config',
     'config/gen-sfa-cm-config.py',
     'sfa/server/sfa-start.py', 
     'sfa/server/sfa_component_setup.py', 

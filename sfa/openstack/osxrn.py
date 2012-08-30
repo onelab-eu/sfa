@@ -48,8 +48,7 @@ class OSXrn(Xrn):
 
     def get_tenant_name(self):
         self._normalize()
-        tenant_name = self.hrn
-        tenant_name = ".".join(tenant_name.split('.')[1:])
+        tenant_name = self.hrn.replace('\.', '')
         return tenant_name
         
         

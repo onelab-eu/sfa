@@ -10,6 +10,7 @@
 import sys
 import os,os.path
 from datetime import datetime
+from sfa.util.xrn import Xrn
 
 import sfa.util.sfalogging
 # importing sfa.utils.faults does pull a lot of stuff 
@@ -132,7 +133,12 @@ class SfaClientBootstrap:
         self.assert_private_key()
         registry_proxy = SfaServerProxy (self.registry_url, self.private_key_filename(),
                                          certificate_filename)
-        credential_string=registry_proxy.GetSelfCredential (certificate_string, self.hrn, "user")
+        try:
+            credential_string=registry_proxy.GetSelfCredential (certificate_string, self.hrn, "user")
+        except:
+            # some urns hrns may replace non hierarchy delimiters '.' with an '_' instead of escaping the '.'
+            hrn = Xrn(self.hrn).get_hrn().replace('\.', '_') 
+            credential_string=registry_proxy.GetSelfCredential (certificate_string, hrn, "user")
         self.plain_write (output, credential_string)
         self.logger.debug("SfaClientBootstrap: Wrote result of GetSelfCredential in %s"%output)
         return output
@@ -238,7 +244,7 @@ class SfaClientBootstrap:
 
     # the expected filenames for the various pieces
     def private_key_filename (self): 
-        return self.fullpath ("%s.pkey"%self.hrn)
+        return self.fullpath ("%s.pkey" % Xrn.unescape(self.hrn))
     def self_signed_cert_filename (self): 
         return self.fullpath ("%s.sscert"%self.hrn)
     def my_credential_filename (self):

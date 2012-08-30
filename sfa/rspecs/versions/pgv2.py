@@ -173,6 +173,14 @@ class PGv2(RSpecVersion):
     def add_link_requests(self, link_tuples, append=False):
         PGv2Link.add_link_requests(self.xml.root, link_tuples, append)
 
+    # Leases
+
+    def get_leases(self, filter=None):
+        pass
+
+    def add_leases(self, leases, network = None, no_dupes=False):
+        pass
+
     # Utility
 
     def merge(self, in_rspec):

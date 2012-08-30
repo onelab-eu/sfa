@@ -26,7 +26,7 @@
 # Credentials are signed XML files that assign a subject gid privileges to an object gid
 ##
 
-import os,sys
+import os
 from types import StringTypes
 import datetime
 from StringIO import StringIO
@@ -364,8 +364,6 @@ class Credential(object):
         if not self.gidObject:
             self.decode()
         return self.gidObject
-
-
             
     ##
     # Expiration: an absolute UTC time of expiration (as either an int or string or datetime)
@@ -404,8 +402,7 @@ class Credential(object):
         if isinstance(privs, str):
             self.privileges = Rights(string = privs)
         else:
-            self.privileges = privs
-        
+            self.privileges = privs        
 
     ##
     # return the privileges as a Rights object
@@ -589,15 +586,13 @@ class Credential(object):
     
     def updateRefID(self):
         if not self.parent:
-            self.set_refid('ref0') 
+            self.set_refid('ref0')
             return []
         
         refs = []
 
         next_cred = self.parent
-       
         while next_cred:
-          
             refs.append(next_cred.get_refid())
             if next_cred.parent:
                 next_cred = next_cred.parent
@@ -836,7 +831,7 @@ class Credential(object):
             # Verify the gids of this cred and of its parents
             for cur_cred in self.get_credential_list():
                 cur_cred.get_gid_object().verify_chain(trusted_cert_objects)
-                cur_cred.get_gid_caller().verify_chain(trusted_cert_objects)        
+                cur_cred.get_gid_caller().verify_chain(trusted_cert_objects)
 
         refs = []
         refs.append("Sig_%s" % self.get_refid())
@@ -844,6 +839,7 @@ class Credential(object):
         parentRefs = self.updateRefID()
         for ref in parentRefs:
             refs.append("Sig_%s" % ref)
+
         for ref in refs:
             # If caller explicitly passed in None that means skip xmlsec1 validation.
             # Strange and not typical
@@ -864,10 +860,11 @@ class Credential(object):
                     msg = verified[mstart:mend]
                 raise CredentialNotVerifiable("xmlsec1 error verifying cred %s using Signature ID %s: %s %s" % (self.get_summary_tostring(), ref, msg, verified.strip()))
         os.remove(filename)
-        
+
         # Verify the parents (delegation)
         if self.parent:
             self.verify_parent(self.parent)
+
         # Make sure the issuer is the target's authority, and is
         # itself a valid GID
         self.verify_issuer(trusted_cert_objects)

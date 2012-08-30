@@ -51,7 +51,7 @@ from sfa.util.sfalogging import logger
 glo_passphrase_callback = None
 
 ##
-# A global callback msy be implemented for requesting passphrases from the
+# A global callback may be implemented for requesting passphrases from the
 # user. The function will be called with three arguments:
 #
 #    keypair_obj: the keypair object that is calling the passphrase
@@ -89,7 +89,7 @@ def convert_public_key(key):
 
     # we can only convert rsa keys
     if "ssh-dss" in key:
-        raise Exception, "keyconvert: dss keys are not supported"  
+        raise Exception, "keyconvert: dss keys are not supported"
 
     (ssh_f, ssh_fn) = tempfile.mkstemp()
     ssl_fn = tempfile.mktemp()
@@ -103,7 +103,7 @@ def convert_public_key(key):
     # that it can be expected to see why it failed.
     # TODO: for production, cleanup the temporary files
     if not os.path.exists(ssl_fn):
-        raise Exception, "keyconvert: generated certificate not found. keyconvert may have failed." 
+        raise Exception, "keyconvert: generated certificate not found. keyconvert may have failed."
 
     k = Keypair()
     try:
@@ -118,7 +118,6 @@ def convert_public_key(key):
             os.remove(ssh_fn)
         if os.path.exists(ssl_fn):
             os.remove(ssl_fn)
-
 
 ##
 # Public-private key pairs are implemented by the Keypair class.
@@ -715,7 +714,7 @@ class Certificate:
         # if there is no parent, then no way to verify the chain
         if not self.parent:
             logger.debug("verify_chain: NO. %s has no parent and issuer %s is not in %d trusted roots"%(self.get_printable_subject(), self.get_issuer(), len(trusted_certs)))
-            raise CertMissingParent(self.get_printable_subject() + ": Issuer %s not trusted by any of %d trusted roots, and cert has no parent." % (self.get_issuer(), len(trusted_certs)))
+            raise CertMissingParent(self.get_printable_subject() + ": Issuer %s is not one of the %d trusted roots, and cert has no parent." % (self.get_issuer(), len(trusted_certs)))
 
         # if it wasn't signed by the parent...
         if not self.is_signed_by_cert(self.parent):

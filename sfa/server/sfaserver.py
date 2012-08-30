@@ -36,7 +36,7 @@ class SfaServer(threading.Thread):
         self.key = Keypair(filename = key_file)
         self.cert = Certificate(filename = cert_file)
         #self.server = SecureXMLRPCServer((ip, port), SecureXMLRpcRequestHandler, key_file, cert_file)
-        self.server = ThreadedServer((ip, port), SecureXMLRpcRequestHandler, key_file, cert_file)
+        self.server = ThreadedServer((ip, int(port)), SecureXMLRpcRequestHandler, key_file, cert_file)
         self.server.interface=interface
         self.trusted_cert_list = None
         self.register_functions()
