@@ -18,6 +18,7 @@ from sfa.rspecs.elements.login import Login
 from sfa.rspecs.elements.disk_image import DiskImage
 from sfa.rspecs.elements.services import Services
 from sfa.rspecs.elements.interface import Interface
+from sfa.rspecs.elements.fw_rule import FWRule
 from sfa.util.xrn import Xrn
 from sfa.planetlab.plxrn import PlXrn 
 from sfa.openstack.osxrn import OSXrn, hrn_to_os_slicename
@@ -140,15 +141,32 @@ class OSAggregate:
         rspec_node['sliver_id'] = OSXrn(name=instance.name, type='slice', id=instance.id).get_urn() 
         if instance.metadata.get('client_id'):
             rspec_node['client_id'] = instance.metadata.get('client_id')
+
+        # get sliver details
         flavor = self.driver.shell.nova_manager.flavors.find(id=instance.flavor['id'])
-        rspec_node['slivers'] = [self.instance_to_sliver(flavor)]
+        sliver = self.instance_to_sliver(flavor)
+        # get firewall rules
+        fw_rules = []
+        group_name = instance.metadata.get('security_groups')
+        if group_name:
+            group = self.driver.shell.nova_manager.security_groups.find(name=group_name)
+            for rule in group.rules:
+                port_range ="%s:%s" % (rule['from_port'], rule['to_port'])
+                fw_rule = FWRule({'protocol': rule['ip_protocol'],
+                                  'port_range': port_range,
+                                  'cidr_ip': rule['ip_range']['cidr']})
+                fw_rules.append(fw_rule)
+        sliver['fw_rules'] = fw_rules 
+        rspec_node['slivers'] = [sliver]
+
+        # get disk image
         image = self.driver.shell.image_manager.get_images(id=instance.image['id'])
         if isinstance(image, list) and len(image) > 0:
             image = image[0]
         disk_image = image_to_rspec_disk_image(image)
         sliver['disk_image'] = [disk_image]
 
-        # build interfaces            
+        # get interfaces            
         rspec_node['services'] = []
         rspec_node['interfaces'] = []
         addresses = instance.addresses
