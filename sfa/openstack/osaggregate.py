@@ -325,7 +325,7 @@ class OSAggregate:
             self.driver.shell.nova_manager.servers.delete(instance)
             # deleate this instance's security groups
             thread_manager.run(_delete_security_group, instance)
-        return 1
+        return True
 
 
     def stop_instances(self, instance_name, tenant_name):

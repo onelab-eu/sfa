@@ -772,7 +772,7 @@ class PlDriver (Driver):
         slicename = hrn_to_pl_slicename(slice_hrn)
         slices = self.shell.GetSlices({'name': slicename})
         if not slices:
-            return 1
+            return True
         slice = slices[0]
     
         # determine if this is a peer slice
@@ -787,7 +787,7 @@ class PlDriver (Driver):
         finally:
             if peer:
                 self.shell.BindObjectToPeer('slice', slice['slice_id'], peer, slice['peer_slice_id'])
-        return 1
+        return True
     
     def renew_sliver (self, slice_urn, slice_hrn, creds, expiration_time, options):
         slicename = hrn_to_pl_slicename(slice_hrn)
