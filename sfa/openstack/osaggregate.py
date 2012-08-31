@@ -17,6 +17,7 @@ from sfa.rspecs.elements.login import Login
 from sfa.rspecs.elements.disk_image import DiskImage
 from sfa.rspecs.elements.services import Services
 from sfa.rspecs.elements.interface import Interface
+from sfa.rspecs.elements.fw_rule import FWRule
 from sfa.util.xrn import Xrn
 from sfa.planetlab.plxrn import PlXrn 
 from sfa.openstack.osxrn import OSXrn, hrn_to_os_slicename
@@ -101,23 +102,35 @@ class OSAggregate:
             rspec_node['component_id'] = node_xrn.urn
             rspec_node['component_name'] = node_xrn.name
             rspec_node['component_manager_id'] = Xrn(self.driver.hrn, 'authority+cm').get_urn()
-            rspec_node['slivers'] = []
-
             if instance.metadata.get('client_id'):
                 rspec_node['client_id'] = instance.metadata.get('client_id')
-            
+           
+            # get sliver details 
+            sliver_xrn = OSXrn(xrn=slice_xrn, type='slice', id=instance.id)
+            rspec_node['sliver_id'] = sliver_xrn.get_urn() 
             flavor = self.driver.shell.nova_manager.flavors.find(id=instance.flavor['id'])
             sliver = instance_to_sliver(flavor)
-            rspec_node['slivers'].append(sliver)
-            sliver_xrn = OSXrn(xrn=slice_xrn, type='slice', id=instance.id)
-            rspec_node['sliver_id'] = sliver_xrn.get_urn()
+            # get firewall rules
+            fw_rules = []
+            group_name = instance.metadata.get('security_groups')
+            if group_name:
+                group = self.driver.shell.nova_manager.security_groups.find(name=group_name)
+                for rule in group.rules:
+                    port_range ="%s:%s" % (rule['from_port'], rule['to_port'])
+                    fw_rule = FWRule({'protocol': rule['ip_protocol'],
+                                      'port_range': port_range,
+                                      'cidr_ip': rule['ip_range']['cidr']})
+                    fw_rules.append(fw_rule)
+            sliver['fw_rules'] = fw_rules 
+            rspec_node['slivers']= [sliver]
+            # get disk image
             image = self.driver.shell.image_manager.get_images(id=instance.image['id'])
             if isinstance(image, list) and len(image) > 0:
                 image = image[0]
             disk_image = image_to_rspec_disk_image(image)
             sliver['disk_image'] = [disk_image]
 
-            # build interfaces            
+            # get interfaces            
             rspec_node['services'] = []
             rspec_node['interfaces'] = []
             addresses = instance.addresses
@@ -151,6 +164,7 @@ class OSAggregate:
                                'port':'22', 'username': 'root'})
                 service = Services({'login': login})
                 rspec_node['services'].append(service)
+
             rspec_nodes.append(rspec_node)
         return rspec_nodes
 
