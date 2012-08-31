@@ -22,6 +22,9 @@ RSpecElements = Enum(
     SLIVER_TYPE='SLIVER_TYPE', 
     LEASE='LEASE',
     GRANULARITY='GRANULARITY',
+    SPECTRUM='SPECTRUM',
+    CHANNEL='CHANNEL',
+    POSITION_3D ='POSITION_3D', 
 )
 
 class RSpecElement:
