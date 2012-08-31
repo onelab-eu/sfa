@@ -135,8 +135,10 @@ class OSAggregate:
                 if_xrn = PlXrn(auth=self.driver.hrn, 
                                interface='node%s' % (instance.hostId)) 
                 if_client_id = Xrn(if_xrn.urn, type='interface', id="eth%s" %if_index).urn
+                if_sliver_id = Xrn(rspec_node['sliver_id'], type='slice', id="eth%s" %if_index).urn
                 interface = Interface({'component_id': if_xrn.urn,
-                                       'client_id': if_client_id})
+                                       'client_id': if_client_id,
+                                       'sliver_id': if_sliver_id})
                 interface['ips'] =  [{'address': private_ip['addr'],
                                      #'netmask': private_ip['network'],
                                      'type': 'ipv%s' % str(private_ip['version'])}]
