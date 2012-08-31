@@ -327,6 +327,22 @@ Thierry Parmentelat
       </variablelist>
     </category>
 
+    <!-- ======================================== -->
+    <category id="sfa_nitos">
+      <name></name>
+      <description>The settings that tell this SFA instance how to interact with the NITOS testbed.</description>
+
+      <variablelist>
+        <variable id="url" type="string">
+          <name>XMLRPC URL</name>
+          <value>http://195.251.17.239:8080/RPC2</value>
+          <description>URL for the NITOS Scheduler xmlrpc API</description>
+        </variable>
+      </variablelist>
+    </category>
+
+    <!-- ======================================== -->
+
   </variables>
 
   <comps>
