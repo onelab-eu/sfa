@@ -126,7 +126,7 @@ class AggregateManager:
     def Delete(self, api, xrns, creds, options):
         call_id = options.get('call_id')
         if Callids().already_handled(call_id): return True
-        return self.driver.delete_sliver (xrns, options)
+        return self.driver.delete(xrns, options)
 
     def Renew(self, api, xrns, creds, expiration_time, options):
         call_id = options.get('call_id')

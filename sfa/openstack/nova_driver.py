@@ -368,7 +368,7 @@ class NovaDriver(Driver):
             project_name = xrn.get_slicename()
             id = xrn.id
             aggregate.delete_instance(tenant_name, project_name, id)   
-        return 1
+        return True
 
     def renew (self, urns, expiration_time, options={}):
         return True

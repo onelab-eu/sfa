@@ -1,4 +1,3 @@
-import time
 import datetime
 #
 from sfa.util.faults import MissingSfaInfo, UnknownSfaType, \
@@ -735,7 +734,7 @@ class PlDriver (Driver):
         finally:
             if peer:
                 self.shell.BindObjectToPeer('slice', slice['slice_id'], peer, slice['peer_slice_id'])
-        return 1
+        return True
     
     def renew (self, urns, expiration_time, options={}):
         # we can only renew slices, not individual slivers. ignore sliver
