@@ -421,10 +421,14 @@ class NovaDriver(Driver):
             if instance.status.lower() == 'active':
                 res['boot_state'] = 'ready'
                 res['geni_status'] = 'ready'
+            elif instance.status.lower() == 'error':
+                res['boot_state'] = 'failed'
+                res['geni_status'] = 'failed'
+                top_level_status = 'failed'
             else:
-                res['boot_state'] = 'unknown'  
-                res['geni_status'] = 'unknown'
-                top_level_status = 'unknown'
+                res['boot_state'] = 'notready'  
+                res['geni_status'] = 'notready'
+                top_level_status = 'notready'
             resources.append(res)
             
         result['geni_status'] = top_level_status
