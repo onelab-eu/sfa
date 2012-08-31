@@ -8,7 +8,7 @@ class PGv2Interface:
     def add_interfaces(xml, interfaces):
         if isinstance(interfaces, list):
             for interface in interfaces:
-                if_elem = xml.add_instance('interface', interface, ['component_id', 'client_id'])
+                if_elem = xml.add_instance('interface', interface, ['component_id', 'client_id', 'sliver_id'])
                 ips = interface.get('ips', [])
                 for ip in ips:
                     if_elem.add_instance('ip', {'address': ip.get('address'),
