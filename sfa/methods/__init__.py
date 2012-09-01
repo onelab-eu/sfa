@@ -1,29 +1,26 @@
 ## Please use make index to update this file
 all = """
-CreateSliver
+Allocate
 CreateGid
-DeleteSliver
+Delete
+Describe
 GetCredential
 GetGids
 GetSelfCredential
-GetTicket
 GetVersion
 List
 ListResources
 ListSlices
+Provision
 RedeemTicket
 Register
 Remove
-RenewSliver
+Renew
 Resolve
 ResolveGENI
 Shutdown
-SliverStatus
-Start
-Stop
+Status
 Update
-UpdateSliver
 get_key_from_incoming_ip
 get_trusted_certs
-reset_slice
 """.split()
