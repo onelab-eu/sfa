@@ -26,7 +26,7 @@ class Allocate(Method):
     interfaces = ['aggregate', 'slicemgr']
     accepts = [
         Parameter(str, "Slice URN"),
-        Parameter(dict, "List of credentials")),
+        Parameter(dict, "List of credentials"),
         Parameter(str, "RSpec"),
         Parameter(dict, "options"),
         ]
