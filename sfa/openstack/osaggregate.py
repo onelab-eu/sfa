@@ -3,11 +3,12 @@ import os
 import socket
 import base64
 import string
-import random    
+import random
+import time
 from collections import defaultdict
 from nova.exception import ImageNotFound
 from nova.api.ec2.cloud import CloudController
-from sfa.util.faults import SfaAPIError
+from sfa.util.faults import SfaAPIError, InvalidRSpec
 from sfa.rspecs.rspec import RSpec
 from sfa.rspecs.elements.hardware_type import HardwareType
 from sfa.rspecs.elements.node import Node
@@ -16,6 +17,7 @@ from sfa.rspecs.elements.login import Login
 from sfa.rspecs.elements.disk_image import DiskImage
 from sfa.rspecs.elements.services import Services
 from sfa.rspecs.elements.interface import Interface
+from sfa.rspecs.elements.fw_rule import FWRule
 from sfa.util.xrn import Xrn
 from sfa.planetlab.plxrn import PlXrn 
 from sfa.openstack.osxrn import OSXrn, hrn_to_os_slicename
@@ -36,12 +38,7 @@ def pubkeys_to_user_data(pubkeys):
 
 def instance_to_sliver(instance, slice_xrn=None):
     sliver_id = None
-    if slice_xrn:
-        xrn = Xrn(slice_xrn, 'slice')
-        sliver_id = xrn.get_sliver_id(instance.project_id, instance.hostname, instance.id)
-
-    sliver = Sliver({'slice_id': sliver_id,
-                     'name': instance.name,
+    sliver = Sliver({'name': instance.name,
                      'type': instance.name,
                      'cpus': str(instance.vcpus),
                      'memory': str(instance.ram),
@@ -92,7 +89,7 @@ class OSAggregate:
         zones = self.get_availability_zones()
         name = hrn_to_os_slicename(slice_xrn)
         instances = self.driver.shell.nova_manager.servers.findall(name=name)
-        node_dict = {}
+        rspec_nodes = []
         for instance in instances:
             # determine node urn
             node_xrn = instance.metadata.get('component_id')
@@ -101,29 +98,39 @@ class OSAggregate:
             else:
                 node_xrn = OSXrn(xrn=node_xrn, type='node')
 
-            if not node_xrn.urn in node_dict:
-                rspec_node = Node()
-                rspec_node['component_id'] = node_xrn.urn
-                rspec_node['component_name'] = node_xrn.name
-                rspec_node['component_manager_id'] = Xrn(self.driver.hrn, 'authority+cm').get_urn()
-                rspec_node['slivers'] = []
-                node_dict[node_xrn.urn] = rspec_node
-            else:
-                rspec_node = node_dict[node_xrn.urn]
-
+            rspec_node = Node()
+            rspec_node['component_id'] = node_xrn.urn
+            rspec_node['component_name'] = node_xrn.name
+            rspec_node['component_manager_id'] = Xrn(self.driver.hrn, 'authority+cm').get_urn()
             if instance.metadata.get('client_id'):
                 rspec_node['client_id'] = instance.metadata.get('client_id')
-            
+           
+            # get sliver details 
+            sliver_xrn = OSXrn(xrn=slice_xrn, type='slice', id=instance.id)
+            rspec_node['sliver_id'] = sliver_xrn.get_urn() 
             flavor = self.driver.shell.nova_manager.flavors.find(id=instance.flavor['id'])
             sliver = instance_to_sliver(flavor)
-            rspec_node['slivers'].append(sliver)
+            # get firewall rules
+            fw_rules = []
+            group_name = instance.metadata.get('security_groups')
+            if group_name:
+                group = self.driver.shell.nova_manager.security_groups.find(name=group_name)
+                for rule in group.rules:
+                    port_range ="%s:%s" % (rule['from_port'], rule['to_port'])
+                    fw_rule = FWRule({'protocol': rule['ip_protocol'],
+                                      'port_range': port_range,
+                                      'cidr_ip': rule['ip_range']['cidr']})
+                    fw_rules.append(fw_rule)
+            sliver['fw_rules'] = fw_rules 
+            rspec_node['slivers']= [sliver]
+            # get disk image
             image = self.driver.shell.image_manager.get_images(id=instance.image['id'])
             if isinstance(image, list) and len(image) > 0:
                 image = image[0]
             disk_image = image_to_rspec_disk_image(image)
             sliver['disk_image'] = [disk_image]
 
-            # build interfaces            
+            # get interfaces            
             rspec_node['services'] = []
             rspec_node['interfaces'] = []
             addresses = instance.addresses
@@ -139,11 +146,15 @@ class OSAggregate:
             
             for private_ip in addresses.get('private', []):
                 if_xrn = PlXrn(auth=self.driver.hrn, 
-                               interface='node%s:eth0' % (instance.hostId)) 
-                interface = Interface({'component_id': if_xrn.urn})
+                               interface='node%s' % (instance.hostId)) 
+                if_client_id = Xrn(if_xrn.urn, type='interface', id="eth%s" %if_index).urn
+                if_sliver_id = Xrn(rspec_node['sliver_id'], type='slice', id="eth%s" %if_index).urn
+                interface = Interface({'component_id': if_xrn.urn,
+                                       'client_id': if_client_id,
+                                       'sliver_id': if_sliver_id})
                 interface['ips'] =  [{'address': private_ip['addr'],
                                      #'netmask': private_ip['network'],
-                                     'type': private_ip['version']}]
+                                     'type': 'ipv%s' % str(private_ip['version'])}]
                 rspec_node['interfaces'].append(interface) 
             
             # slivers always provide the ssh service
@@ -153,8 +164,9 @@ class OSAggregate:
                                'port':'22', 'username': 'root'})
                 service = Services({'login': login})
                 rspec_node['services'].append(service)
+
             rspec_nodes.append(rspec_node)
-        return node_dict.values()
+        return rspec_nodes
 
     def get_aggregate_nodes(self):
         zones = self.get_availability_zones()
@@ -233,6 +245,11 @@ class OSAggregate:
                                              cidr_ip = rule.get('cidr_ip'), 
                                              port_range = rule.get('port_range'), 
                                              icmp_type_code = rule.get('icmp_type_code'))
+            # Open ICMP by default
+            security_group.add_rule_to_group(group_name,
+                                             protocol = "icmp",
+                                             cidr_ip = "0.0.0.0/0",
+                                             icmp_type_code = "-1:-1")
         return group_name
 
     def add_rule_to_security_group(self, group_name, **kwds):
@@ -278,6 +295,8 @@ class OSAggregate:
                     image = instance.get('disk_image')
                     if image and isinstance(image, list):
                         image = image[0]
+                    else:
+                        raise InvalidRSpec("Must specify a disk_image for each VM")
                     image_id = self.driver.shell.nova_manager.images.find(name=image['name'])
                     fw_rules = instance.get('fw_rules', [])
                     group_name = self.create_security_group(instance_name, fw_rules)
@@ -322,7 +341,7 @@ class OSAggregate:
             self.driver.shell.nova_manager.servers.delete(instance)
             # deleate this instance's security groups
             thread_manager.run(_delete_security_group, instance)
-        return 1
+        return True
 
 
     def stop_instances(self, instance_name, tenant_name):

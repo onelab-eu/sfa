@@ -7,11 +7,12 @@ class PLOSv1FWRule:
         if not rules:
             return 
         for rule in rules:
-            rule_elem = xml.add_element('plos:fw_rule')
+            rule_elem = xml.add_element('{%s}fw_rule' % xml.namespaces['plos'])
             rule_elem.set('protocol', rule.get('protocol'))
             rule_elem.set('port_range', rule.get('port_range'))
             rule_elem.set('cidr_ip', rule.get('cidr_ip'))
-            rule_elem.set('icmp_type_code', rule.get('icmp_type_code'))
+            if rule.get('icmp_type_code'):
+                rule_elem.set('icmp_type_code', rule.get('icmp_type_code'))
               
     @staticmethod
     def get_rules(xml):

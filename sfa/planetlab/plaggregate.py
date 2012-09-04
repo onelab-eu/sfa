@@ -1,5 +1,5 @@
 #!/usr/bin/python
-from sfa.util.xrn import Xrn, hrn_to_urn, urn_to_hrn, urn_to_sliver_id
+from sfa.util.xrn import Xrn, hrn_to_urn, urn_to_hrn
 from sfa.util.sfatime import utcparse, datetime_to_string
 from sfa.util.sfalogging import logger
 
@@ -118,7 +118,7 @@ class PlAggregate:
 
         # sort slivers by node id    
         for node_id in slice['node_ids']:
-            sliver = Sliver({'sliver_id': urn_to_sliver_id(slice_urn, slice['slice_id'], node_id, authority=self.driver.hrn),
+            sliver = Sliver({'sliver_id': Xrn(slice_urn, type='slice', id=node_id, authority=self.driver.hrn).urn,
                              'name': slice['name'],
                              'type': 'plab-vserver', 
                              'tags': []})

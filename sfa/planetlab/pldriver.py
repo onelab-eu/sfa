@@ -7,7 +7,7 @@ from sfa.util.faults import MissingSfaInfo, UnknownSfaType, \
 from sfa.util.sfalogging import logger
 from sfa.util.defaultdict import defaultdict
 from sfa.util.sfatime import utcparse, datetime_to_string, datetime_to_epoch
-from sfa.util.xrn import hrn_to_urn, get_leaf, urn_to_sliver_id
+from sfa.util.xrn import Xrn, hrn_to_urn, get_leaf
 from sfa.util.cache import Cache
 
 # one would think the driver should not need to mess with the SFA db, but..
@@ -691,7 +691,7 @@ class PlDriver (Driver):
             if node['last_contact'] is not None:
                 
                 res['pl_last_contact'] = datetime_to_string(utcparse(node['last_contact']))
-            sliver_id = urn_to_sliver_id(slice_urn, slice['slice_id'], node['node_id'], authority=self.hrn) 
+            sliver_id = Xrn(slice_urn, type='slice', id=node['node_id'], authority=self.hrn).urn
             res['geni_urn'] = sliver_id
             if node['boot_state'] == 'boot':
                 res['geni_status'] = 'ready'
@@ -772,7 +772,7 @@ class PlDriver (Driver):
         slicename = hrn_to_pl_slicename(slice_hrn)
         slices = self.shell.GetSlices({'name': slicename})
         if not slices:
-            return 1
+            return True
         slice = slices[0]
     
         # determine if this is a peer slice
@@ -787,7 +787,7 @@ class PlDriver (Driver):
         finally:
             if peer:
                 self.shell.BindObjectToPeer('slice', slice['slice_id'], peer, slice['peer_slice_id'])
-        return 1
+        return True
     
     def renew_sliver (self, slice_urn, slice_hrn, creds, expiration_time, options):
         slicename = hrn_to_pl_slicename(slice_hrn)
