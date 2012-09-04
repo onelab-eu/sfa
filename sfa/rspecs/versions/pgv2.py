@@ -1,6 +1,6 @@
 from copy import deepcopy
 from StringIO import StringIO
-from sfa.util.xrn import Xrn, urn_to_sliver_id
+from sfa.util.xrn import Xrn
 from sfa.rspecs.version import RSpecVersion
 from sfa.rspecs.elements.versions.pgv2Link import PGv2Link
 from sfa.rspecs.elements.versions.pgv2Node import PGv2Node
@@ -143,7 +143,7 @@ class PGv2(RSpecVersion):
                 # set the sliver id
                 #slice_id = sliver_info.get('slice_id', -1)
                 #node_id = sliver_info.get('node_id', -1)
-                #sliver_id = urn_to_sliver_id(sliver_urn, slice_id, node_id)
+                #sliver_id = Xrn(xrn=sliver_urn, type='slice', id=str(node_id)).get_urn()
                 #node_elem.set('sliver_id', sliver_id)
 
             # add the sliver type elemnt    
