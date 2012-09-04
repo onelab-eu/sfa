@@ -233,7 +233,8 @@ function db_start () {
 	check
     fi
     check
-    sfaadmin reg sync_db
+    # mention sfaadmin.py instead of just sfaadmin for people who do not install through rpm
+    sfaadmin.py reg sync_db
 
     MESSAGE=$"SFA: Checking for PostgreSQL server"
     echo -n "$MESSAGE"
