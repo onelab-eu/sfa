@@ -192,7 +192,7 @@ def TestOAR(job_id = None):
        job_id = job_id[0]
         
     oar = OARrestapi()
-    jobs = oar.parser.SendRequest("GET_reserved_nodes") 
+    jobs = oar.parser.SendRequest("GET_reserved_nodes", username = 'avakian') 
     print "\r\n OAR GET_reserved_nodes ",jobs
     
    
@@ -227,17 +227,25 @@ def TestOAR(job_id = None):
     raw_json = get_stuff(oar,uri)
     print "\r\n OAR  ",uri, raw_json, "\r\n KKK \t",raw_json.keys()
     
-   
+    uri = '/oarapi/jobs.json?user=avakian'      
+    raw_json = get_stuff(oar,uri)
+    print "\r\nOAR ", uri, raw_json, "\r\n KKK \t",raw_json.keys()
     return
     
 def TestSlabDriver(job_id):
     if isinstance(job_id,list) and len(job_id) == 1:
        job_id = job_id[0]
     slabdriver = SlabDriver(Config())
-    l = slabdriver.GetSlices(slice_filter = 'senslab2.avakian_slice', slice_filter_type = 'slice_hrn')
-    print l
+    nodes = slabdriver.GetReservedNodes(username='avakian')
+    print "\r\n \r\n" ,nodes
+    
     l = slabdriver.GetSlices(slice_filter = '29', slice_filter_type = 'record_id_user')
-    print l
+    
+    
+    print "\r\n \r\nGetSlices" ,l
+    
+    persons = slabdriver.GetPersons()
+    print "\r\n \r\n  GetPersons" ,persons
     #slabdriver.DeleteJobs(job_id,'senslab2.avakian_slice')
    
 def RunAll():

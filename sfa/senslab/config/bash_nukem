@@ -60,9 +60,12 @@ sudo python setup.py install
 # and     /etc/sfa/configs/site.xml
 # into    /etc/sfa/sfa_config.xml
 # sudo sfa-config-tty
-sudo cp $git_local_repo/sfa/senslab/config/$vm/sfa_config /etc/sfa/sfa_config
+# 
+#sudo cp $git_local_repo/sfa/senslab/config/$vm/sfa_config /etc/sfa/sfa_config
 sudo cp $git_local_repo/sfa/senslab/config/$vm/sfa_config.xml /etc/sfa/sfa_config.xml
-sudo cp $git_local_repo/sfa/senslab/config/$vm/site.xml  /etc/sfa/site.xml
+sudo cp $git_local_repo/sfa/senslab/config/$vm/default_config.xml /etc/sfa/default_config.xml
+# sudo cp $git_local_repo/sfa/senslab/config/$vm/site.xml  /etc/sfa/site.xml
+sudo cp $git_local_repo/sfa/senslab/config/$vm/site_config  /etc/sfa/configs/site_config
 # sudo ln -s ldap_config.py  /etc/sfa/ldap_config.py
 sudo cp $git_local_repo/sfa/senslab/config/ldap_config.py  /etc/sfa/ldap_config.py 
 sudo service sfa restart

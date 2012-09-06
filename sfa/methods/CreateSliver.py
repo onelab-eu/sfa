@@ -34,7 +34,6 @@ class CreateSliver(Method):
         hrn, type = urn_to_hrn(slice_xrn)
 
         self.api.logger.info("interface: %s\ttarget-hrn: %s\tmethod-name: %s"%(self.api.interface, hrn, self.name))
-        print >>sys.stderr, " \r\n \r\n Createsliver.py call %s\ttarget-hrn: %s\tmethod-name: %s "%(self.api.interface, hrn, self.name)
         # Find the valid credentials
         valid_creds = self.api.auth.checkCredentials(creds, 'createsliver', hrn)
         origin_hrn = Credential(string=valid_creds[0]).get_gid_caller().get_hrn()

@@ -1,9 +1,6 @@
-#import httplib
-#import json
 import time
 
 
-#from sfa.util.config import Config
 from sfa.util.xrn import hrn_to_urn, urn_to_hrn, urn_to_sliver_id
 
 from sfa.rspecs.rspec import RSpec
@@ -17,7 +14,6 @@ from sfa.rspecs.elements.lease import Lease
 from sfa.rspecs.elements.granularity import Granularity
 from sfa.rspecs.version_manager import VersionManager
 
-#from sfa.util.sfatime import datetime_to_epoch
 
 from sfa.rspecs.elements.versions.slabv1Node import SlabNode
 from sfa.util.sfalogging import logger
@@ -77,16 +73,14 @@ class SlabAggregate:
         #and therfore, node allocated to this slice
         for sfa_slice in slices:
             try:
-                    
+                   
                 for node in sfa_slice['node_ids']:
                     #node_id = self.driver.root_auth + '.' + node_id
-                    sliver = Sliver({'sliver_id': urn_to_sliver_id(slice_urn, \
-                                    sfa_slice['record_id_slice'], node['hostname']),
+                    sliver = Sliver({'sliver_id': Xrn(slice_urn, type='slice', id=node['hostname'], authority=self.driver.hrn).urn, 
                                     'name': sfa_slice['slice_hrn'],
                                     'type': 'slab-node', 
                                     'tags': []})
-                    logger.log_exc("SLABAGGREGATE \t \
-                                        get_slice_and_slivers node_id %s "%(node))
+                   
                     slivers[node['hostname']] = sliver
             except KeyError:
                 logger.log_exc("SLABAGGREGATE \t \
@@ -157,9 +151,7 @@ class SlabAggregate:
         #tag_ids = []
         nodes_dict = {}
         for node in nodes:
-            #site_ids.append(node['site_id'])
-            #interface_ids.extend(node['interface_ids'])
-            #tag_ids.extend(node['node_tag_ids'])
+           
             nodes_dict[node['node_id']] = node
         
         # get sites

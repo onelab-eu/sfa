@@ -20,7 +20,7 @@ Thierry Parmentelat
       <variablelist>
         <variable id="generic_flavour" type="string">
           <name>Generic Flavour</name>
-          <value>pl</value>
+          <value>slab</value>
           <description>This string refers to a class located in sfa.generic that describes 
           which specific implementation needs to be used for api, manager and driver objects.
           PlanetLab users do not need to change this setting.
@@ -29,7 +29,7 @@ Thierry Parmentelat
 
         <variable id="interface_hrn" type="string">
           <name>Human readable name</name>
-          <value>plc</value>
+          <value>senslab2</value>
           <description>The human readable name for this interface.</description>
         </variable>
 
@@ -41,7 +41,7 @@ Thierry Parmentelat
 
         <variable id="api_loglevel" type="int">
           <name>Debug</name>
-          <value>0</value>
+          <value>2</value>
           <description>Logging level; 0=minimum, 1=info, 2=debug</description>
         </variable>
     
@@ -60,6 +60,13 @@ Thierry Parmentelat
             key pairs and credentials are generated and stored.
             This functionality is used by the SFA web GUI. 
             </description> 
+        </variable>
+
+         <variable id="data_dir" type="string">
+            <name>Data Directory </name>
+            <value>/var/lib/sfa/</value>
+            <description>Directory where cached certficiates and other data is stored.
+            </description>
         </variable>
 
       </variablelist>
@@ -89,13 +96,13 @@ Thierry Parmentelat
 
 	<variable id="port" type="int">
 	  <name>Port number</name>
-	  <value>12345</value>
+	  <value>52345</value>
 	  <description>The port where the registry is to be found.</description>
 	</variable>
 
 	<variable id="root_auth" type="string">
 	  <name>Root Authority</name>
-	  <value>plc</value>
+	  <value>senslab2</value>
 	  <description>The hrn of the registry's root auth.</description>
 	</variable>
 
@@ -125,7 +132,7 @@ Thierry Parmentelat
 
 	<variable id="port" type="int">
 	  <name>Port number</name>
-	  <value>12347</value>
+	  <value>52347</value>
 	  <description>The port where the slice manager is to be found.</description>
 	</variable>
 
@@ -162,7 +169,7 @@ Thierry Parmentelat
 
 	<variable id="port" type="int">
 	  <name>Port number</name>
-	  <value>12346</value>
+	  <value>52346</value>
 	  <description>The port where the aggregate is to be found.</description>
 	</variable>
 
@@ -203,13 +210,13 @@ Thierry Parmentelat
 
 	<variable id="user" type="string">
 	  <name>Database user</name>
-	  <value>sfadbuser</value>
+	  <value>sfa</value>
 	  <description>When SFA gets co-hosted with a myplc, this should match the PLC config.</description>
 	</variable>
 
 	<variable id="password" type="string">
 	  <name>Database password</name>
-	  <value></value>
+	  <value>sfa</value>
 	  <description>When SFA gets co-hosted with a myplc, this should match the PLC config.</description>
 	</variable>
 
@@ -311,6 +318,11 @@ Thierry Parmentelat
           <name>Nova API Port</name>
           <value>8773</value>
           <description>The Nova/EC2 API port.</description>
+        </variable>
+        <variable id="novarc" type="string">
+          <name>novarc</name>
+          <value>/root/novarc</value>
+          <description>Path to novarc client config file</description>
         </variable>
       </variablelist>
     </category>

@@ -134,8 +134,10 @@ class SlabDriver(Driver):
                 res['pl_boot_state'] = nodeall_byhostname[node['hostname']]['boot_state']
                 #res['pl_last_contact'] = strftime(self.time_format, \
                                                     #gmtime(float(timestamp)))
-                sliver_id = urn_to_sliver_id(slice_urn, sl['record_id_slice'], \
-                                            nodeall_byhostname[node['hostname']]['node_id']) 
+                sliver_id =  Xrn(slice_urn, type='slice', \
+                        id=nodeall_byhostname[node['hostname']]['node_id'], \
+                        authority=self.hrn).urn
+    
                 res['geni_urn'] = sliver_id 
                 if nodeall_byhostname[node['hostname']]['boot_state'] == 'Alive':
 
@@ -364,57 +366,18 @@ class SlabDriver(Driver):
     
         return slice_urns
     
-    #No site or node register supported
+   
     def register (self, sfa_record, hrn, pub_key):
-        record_type = sfa_record['type']
-        slab_record = self.sfa_fields_to_slab_fields(record_type, hrn, \
-                                                            sfa_record)
-    
-
-        if record_type == 'slice':
-            acceptable_fields = ['url', 'instantiation', 'name', 'description']
-            for key in slab_record.keys():
-                if key not in acceptable_fields:
-                    slab_record.pop(key) 
-            logger.debug("SLABDRIVER.PY register")
-            slices = self.GetSlices(slice_filter=slab_record['hrn'], \
-                                            slice_filter_type = 'slice_hrn')
-            if not slices:
-                pointer = self.AddSlice(slab_record)
-            else:
-                pointer = slices[0]['slice_id']
-    
-        elif record_type == 'user':  
-            persons = self.GetPersons([sfa_record])
-            #persons = self.GetPersons([sfa_record['hrn']])
-            if not persons:
-                sfa_record['enabled'] = False
-                #For Senslab LDAP, if the user is a new one, disable the 
-                #account so that admins have to acknowledge the user first.
-                pointer = self.AddPerson(dict(sfa_record))
-                #add in LDAP 
-            else:
-                pointer = persons[0]['person_id']
-                
-            #Does this make sense to senslab ?
-            #if 'enabled' in sfa_record and sfa_record['enabled']:
-                #self.UpdatePerson(pointer, \
-                                    #{'enabled': sfa_record['enabled']})
-                
-            #TODO register Change this AddPersonToSite stuff 05/07/2012 SA   
-            #No site in senslab 28/08/12 SA
-           
-    
-            # What roles should this user have?
-            #No user roles in Slab/SFA 28/08/12 SA: roles are handled in LDAP
-            # Add the user's key
-            if pub_key:
-                self.AddPersonKey(pointer, {'key_type' : 'ssh', \
-                                                'key' : pub_key})
-                
-        #No node adding outside OAR
-
-        return pointer
+        """ 
+        Adding new user, slice, node or site should not be handled
+        by SFA.
+        
+        Adding nodes = OAR
+        Adding users = LDAP Senslab
+        Adding slice = Import from LDAP users
+        Adding site = OAR
+        """
+        return -1
             
     #No site or node record update allowed       
     def update (self, old_sfa_record, new_sfa_record, hrn, new_key):
