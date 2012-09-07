@@ -238,7 +238,8 @@ class PlAggregate:
                 # add sliver info
                 sliver = slivers[node['node_id']]
                 rspec_node['sliver_id'] = sliver['sliver_id']
-                rspec_node['client_id'] = node['hostname']
+                if node.get('client_id'):
+                    rspec_node['client_id'] = node['client_id']
                 rspec_node['slivers'] = [sliver]
                 
                 # slivers always provide the ssh service
