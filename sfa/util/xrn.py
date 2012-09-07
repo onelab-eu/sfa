@@ -124,7 +124,7 @@ class Xrn:
             self.hrn=None
             self.urn=xrn
             if id:
-                self.urn = "%s:%s" % (self.urn, str(id))
+                self.urn = "%s-%s" % (self.urn, str(id))
             self.urn_to_hrn()
         else:
             self.urn=None
@@ -173,11 +173,7 @@ class Xrn:
         update the authority section of an existing urn
         """
         authority_hrn = self.get_authority_hrn()
-        if not authority_hrn.startswith(authority):
-            hrn = ".".join([authority,authority_hrn, self.get_leaf()])
-        else:
-            hrn = ".".join([authority_hrn, self.get_leaf()])
-            
+        hrn = ".".join([authority, self.get_leaf()]) 
         self.hrn = hrn 
         self.hrn_to_urn()
         self._normalize()
