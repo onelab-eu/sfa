@@ -179,7 +179,7 @@ class Xrn:
         authority_hrn = self.get_authority_hrn()
         old_hrn_parts = Xrn.hrn_split(self.hrn)
         old_hrn_parts[0] = authority
-        hrn = ".".join(old_hrn_list) 
+        hrn = ".".join(old_hrn_parts) 
         self.hrn = hrn 
         self.hrn_to_urn()
         self._normalize()
