@@ -118,7 +118,9 @@ class PlAggregate:
 
         # sort slivers by node id    
         for node_id in slice['node_ids']:
-            sliver = Sliver({'sliver_id': Xrn(slice_urn, type='slice', id=node_id, authority=self.driver.hrn).urn,
+            sliver_xrn = Xrn(slice_urn, type='sliver', id=tag['node_id'])
+            sliver_xrn.set_authority(self.driver.hrn)
+            sliver = Sliver({'sliver_id': sliver_xrn.urn,
                              'name': slice['name'],
                              'type': 'plab-vserver', 
                              'tags': []})
@@ -129,7 +131,9 @@ class PlAggregate:
         for tag in tags:
             # most likely a default/global sliver attribute (node_id == None)
             if tag['node_id'] not in slivers:
-                sliver = Sliver({'sliver_id': urn_to_sliver_id(slice_urn, slice['slice_id'], ""),
+                sliver_xrn = Xrn(slice_urn, type='sliver', id=tag['node_id'])
+                sliver_xrn.set_authority(self.driver.hrn)
+                sliver = Sliver({'sliver_id': sliver_xrn.urn,
                                  'name': slice['name'],
                                  'type': 'plab-vserver',
                                  'tags': []})

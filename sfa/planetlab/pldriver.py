@@ -691,7 +691,7 @@ class PlDriver (Driver):
             if node['last_contact'] is not None:
                 
                 res['pl_last_contact'] = datetime_to_string(utcparse(node['last_contact']))
-            sliver_xrn = Xrn(slice_urn, type='slice', id=node['node_id'])
+            sliver_xrn = Xrn(slice_urn, type='sliver', id=node['node_id'])
             sliver_xrn.set_authority(self.hrn)
              
             res['geni_urn'] = sliver_xrn.urn
