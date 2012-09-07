@@ -3,6 +3,7 @@ from sfa.rspecs.elements.element import Element
 class Node(Element):
     
     fields = [
+        'client_id',
         'component_id',
         'component_name',
         'component_manager_id',
