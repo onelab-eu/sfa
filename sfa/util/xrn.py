@@ -123,16 +123,18 @@ class Xrn:
         if Xrn.is_urn(xrn):
             self.hrn=None
             self.urn=xrn
-            if type:
-                self.type=type 
             if id:
                 self.urn = "%s-%s" % (self.urn, str(id))
             self.urn_to_hrn()
+            if type:
+                self.type=type
+                self.hrn_to_urn()
         else:
             self.urn=None
             self.hrn=xrn
             self.type=type
             self.hrn_to_urn()
+
         self._normalize()
 # happens all the time ..
 #        if not type:
