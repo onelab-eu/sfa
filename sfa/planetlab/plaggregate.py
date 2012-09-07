@@ -118,7 +118,7 @@ class PlAggregate:
 
         # sort slivers by node id    
         for node_id in slice['node_ids']:
-            sliver_xrn = Xrn(slice_urn, type='sliver', id=tag['node_id'])
+            sliver_xrn = Xrn(slice_urn, type='sliver', id=node_id)
             sliver_xrn.set_authority(self.driver.hrn)
             sliver = Sliver({'sliver_id': sliver_xrn.urn,
                              'name': slice['name'],
