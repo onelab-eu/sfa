@@ -123,6 +123,8 @@ class Xrn:
         if Xrn.is_urn(xrn):
             self.hrn=None
             self.urn=xrn
+            if type:
+                self.type=type 
             if id:
                 self.urn = "%s-%s" % (self.urn, str(id))
             self.urn_to_hrn()
