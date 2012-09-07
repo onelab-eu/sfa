@@ -244,6 +244,9 @@ class Xrn:
         else:
             self.authority = Xrn.hrn_auth_list(self.hrn)
             name = Xrn.hrn_leaf(self.hrn)
+            # separate name from id
+            name_parts = name.split("-")
+            name = name_parts[0]
             authority_string = self.get_authority_urn()
 
         if self.type == None:
@@ -252,7 +255,7 @@ class Xrn:
             urn = "+".join(['',authority_string,self.type,Xrn.unescape(name)])
 
         if hasattr(self, 'id') and self.id:
-            urn = "%s:%s" % (urn, self.id)        
+            urn = "%s-%s" % (urn, self.id)        
 
         self.urn = Xrn.URN_PREFIX + urn
 
