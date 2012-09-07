@@ -283,7 +283,7 @@ class PlAggregate:
         return rspec_leases
 
     
-    def get_rspec(self, slice_xrn=None, version = None, options={}):
+    def get_rspec(self, slice_xrn=None, version = None, options={}, requested_slivers={}):
 
         version_manager = VersionManager()
         version = version_manager.get_version(version)
@@ -298,16 +298,21 @@ class PlAggregate:
             rspec.xml.set('expires',  datetime_to_string(utcparse(slice['expires'])))
 
         if not options.get('list_leases') or options.get('list_leases') and options['list_leases'] != 'leases':
-           nodes, links = self.get_nodes_and_links(slice_xrn, slice, slivers, options)
-           rspec.version.add_nodes(nodes)
-           rspec.version.add_links(links)
-           # add sliver defaults
-           default_sliver = slivers.get(None, [])
-           if default_sliver:
-              default_sliver_attribs = default_sliver.get('tags', [])
-              for attrib in default_sliver_attribs:
-                  logger.info(attrib)
-                  rspec.version.add_default_sliver_attribute(attrib['tagname'], attrib['value'])
+            nodes, links = self.get_nodes_and_links(slice_xrn, slice, slivers, options)
+            # preserve client ids from request            
+            if requested_slivers:
+                for node in nodes:
+                    if node['component_name'] in requested_slivers:
+                        node['client_id'] = requested_slivers[node['component_name']] 
+            rspec.version.add_nodes(nodes)
+            rspec.version.add_links(links)
+            # add sliver defaults
+            default_sliver = slivers.get(None, [])
+            if default_sliver:
+                default_sliver_attribs = default_sliver.get('tags', [])
+                for attrib in default_sliver_attribs:
+                    logger.info(attrib)
+                    rspec.version.add_default_sliver_attribute(attrib['tagname'], attrib['value'])
         
         if not options.get('list_leases') or options.get('list_leases') and options['list_leases'] != 'resources':
            leases = self.get_leases(slice)
