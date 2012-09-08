@@ -142,7 +142,7 @@ class PlAggregate:
         
         return (slice, slivers)
 
-    def get_nodes_and_links(self, slice_xrn, slice=None,slivers=[], options={}):
+    def get_nodes_and_links(self, slice_xrn, slice=None,slivers=[], options={}, requested_slivers={}):
         # if we are dealing with a slice that has no node just return 
         # and empty list    
         if slice_xrn:
@@ -200,6 +200,10 @@ class PlAggregate:
             rspec_node['component_name'] = node['hostname']
             rspec_node['component_manager_id'] = Xrn(self.driver.hrn, 'authority+cm').get_urn()
             rspec_node['authority_id'] = hrn_to_urn(PlXrn.site_hrn(self.driver.hrn, site['login_base']), 'authority+sa')
+            if requested_slivers and node['hostname'] in requested_slivers:
+                requested_sliver = requested_slivers[node['hostname']]
+                if requested_sliver.get('client_id'):
+                    rspec_node['client_id'] = requested_sliver['client_id']
             # do not include boot state (<available> element) in the manifest rspec
             if not slice:     
                 rspec_node['boot_state'] = node['boot_state']
@@ -238,8 +242,6 @@ class PlAggregate:
                 # add sliver info
                 sliver = slivers[node['node_id']]
                 rspec_node['sliver_id'] = sliver['sliver_id']
-                if node.get('client_id'):
-                    rspec_node['client_id'] = node['client_id']
                 rspec_node['slivers'] = [sliver]
                 
                 # slivers always provide the ssh service
@@ -303,12 +305,8 @@ class PlAggregate:
             rspec.xml.set('expires',  datetime_to_string(utcparse(slice['expires'])))
 
         if not options.get('list_leases') or options.get('list_leases') and options['list_leases'] != 'leases':
-            nodes, links = self.get_nodes_and_links(slice_xrn, slice, slivers, options)
-            # preserve client ids from request            
-            if requested_slivers:
-                for node in nodes:
-                    if node['component_name'] in requested_slivers:
-                        node['client_id'] = requested_slivers[node['component_name']] 
+            nodes, links = self.get_nodes_and_links(slice_xrn, slice, slivers, options, 
+                                                    requested_slivers=requested_slivers)
             rspec.version.add_nodes(nodes)
             rspec.version.add_links(links)
             # add sliver defaults
