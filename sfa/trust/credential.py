@@ -276,7 +276,7 @@ class Credential(object):
     def get_subject(self):
         if not self.gidObject:
             self.decode()
-        return self.gidObject.get_printable_subject()
+        return self.gidObject.get_subject()
 
     # sounds like this should be __repr__ instead ??
     def get_summary_tostring(self):
