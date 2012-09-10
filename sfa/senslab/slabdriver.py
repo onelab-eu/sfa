@@ -16,7 +16,7 @@ from sfa.managers.driver import Driver
 from sfa.rspecs.version_manager import VersionManager
 from sfa.rspecs.rspec import RSpec
 
-from sfa.util.xrn import hrn_to_urn, urn_to_sliver_id, get_leaf
+from sfa.util.xrn import hrn_to_urn, get_leaf
 
 
 ## thierry: everything that is API-related (i.e. handling incoming requests) 
