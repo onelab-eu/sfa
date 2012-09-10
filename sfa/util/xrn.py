@@ -120,14 +120,13 @@ class Xrn:
         if not xrn: xrn = ""
         # user has specified xrn : guess if urn or hrn
         self.id = id
+        self.type = type
+
         if Xrn.is_urn(xrn):
             self.hrn=None
             self.urn=xrn
-            if id:
-                self.urn = "%s-%s" % (self.urn, str(id))
             self.urn_to_hrn()
-            if type:
-                self.type=type
+            if id:
                 self.hrn_to_urn()
         else:
             self.urn=None
@@ -245,8 +244,6 @@ class Xrn:
             self.authority = Xrn.hrn_auth_list(self.hrn)
             name = Xrn.hrn_leaf(self.hrn)
             # separate name from id
-            name_parts = name.split("-")
-            name = name_parts[0]
             authority_string = self.get_authority_urn()
 
         if self.type == None:
