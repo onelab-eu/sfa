@@ -124,13 +124,17 @@ class Xrn:
             self.hrn=None
             self.urn=xrn
             if id:
-                self.urn = "%s:%s" % (self.urn, str(id))
+                self.urn = "%s-%s" % (self.urn, str(id))
             self.urn_to_hrn()
+            if type:
+                self.type=type
+                self.hrn_to_urn()
         else:
             self.urn=None
             self.hrn=xrn
             self.type=type
             self.hrn_to_urn()
+
         self._normalize()
 # happens all the time ..
 #        if not type:
@@ -173,11 +177,9 @@ class Xrn:
         update the authority section of an existing urn
         """
         authority_hrn = self.get_authority_hrn()
-        if not authority_hrn.startswith(authority):
-            hrn = ".".join([authority,authority_hrn, self.get_leaf()])
-        else:
-            hrn = ".".join([authority_hrn, self.get_leaf()])
-            
+        old_hrn_parts = Xrn.hrn_split(self.hrn)
+        old_hrn_parts[0] = authority
+        hrn = ".".join(old_hrn_parts) 
         self.hrn = hrn 
         self.hrn_to_urn()
         self._normalize()
@@ -244,6 +246,9 @@ class Xrn:
         else:
             self.authority = Xrn.hrn_auth_list(self.hrn)
             name = Xrn.hrn_leaf(self.hrn)
+            # separate name from id
+            name_parts = name.split("-")
+            name = name_parts[0]
             authority_string = self.get_authority_urn()
 
         if self.type == None:
@@ -252,7 +257,7 @@ class Xrn:
             urn = "+".join(['',authority_string,self.type,Xrn.unescape(name)])
 
         if hasattr(self, 'id') and self.id:
-            urn = "%s:%s" % (urn, self.id)        
+            urn = "%s-%s" % (urn, self.id)        
 
         self.urn = Xrn.URN_PREFIX + urn
 

@@ -436,7 +436,7 @@ class NovaDriver(Driver):
         return result
 
     def create_sliver (self, slice_urn, slice_hrn, creds, rspec_string, users, options):
-
+   
         aggregate = OSAggregate(self)
 
         # assume first user is the caller and use their context
@@ -454,9 +454,16 @@ class NovaDriver(Driver):
         rspec = RSpec(rspec_string)
         instance_name = hrn_to_os_slicename(slice_hrn)
         tenant_name = OSXrn(xrn=slice_hrn, type='slice').get_tenant_name()
-        aggregate.run_instances(instance_name, tenant_name, rspec_string, key_name, pubkeys)    
-   
-        return aggregate.get_rspec(slice_xrn=slice_urn, version=rspec.version)
+        instances = aggregate.run_instances(instance_name, tenant_name, rspec_string, key_name, pubkeys)
+        rspec_nodes = []
+        for instance in instances:
+            rspec_nodes.append(aggregate.instance_to_rspec_node(slice_urn, instance))    
+        version_manager = VersionManager()
+        manifest_version = version_manager._get_version(rspec.version.type, rspec.version.version, 'manifest')
+        manifest_rspec = RSpec(version=manifest_version, user_options=options)
+        manifest_rspec.version.add_nodes(rspec_nodes) 
+         
+        return manifest_rspec.toxml()
 
     def delete_sliver (self, slice_urn, slice_hrn, creds, options):
         aggregate = OSAggregate(self)

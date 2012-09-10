@@ -81,6 +81,82 @@ class OSAggregate:
             zones = [zone.name for zone in zones]
         return zones
 
+    def instance_to_rspec_node(self, slice_xrn, instance):
+        # determine node urn
+        node_xrn = instance.metadata.get('component_id')
+        if not node_xrn:
+            node_xrn = OSXrn('cloud', type='node')
+        else:
+            node_xrn = OSXrn(xrn=node_xrn, type='node')
+
+        rspec_node = Node()
+        rspec_node['component_id'] = node_xrn.urn
+        rspec_node['component_name'] = node_xrn.name
+        rspec_node['component_manager_id'] = Xrn(self.driver.hrn, 'authority+cm').get_urn()
+        if instance.metadata.get('client_id'):
+            rspec_node['client_id'] = instance.metadata.get('client_id')
+
+        # get sliver details
+        sliver_xrn = OSXrn(xrn=slice_xrn, type='slice', id=instance.id)
+        rspec_node['sliver_id'] = sliver_xrn.get_urn()
+        flavor = self.driver.shell.nova_manager.flavors.find(id=instance.flavor['id'])
+        sliver = instance_to_sliver(flavor)
+        # get firewall rules
+        fw_rules = []
+        group_name = instance.metadata.get('security_groups')
+        if group_name:
+            group = self.driver.shell.nova_manager.security_groups.find(name=group_name)
+            for rule in group.rules:
+                port_range ="%s:%s" % (rule['from_port'], rule['to_port'])
+                fw_rule = FWRule({'protocol': rule['ip_protocol'],
+                                  'port_range': port_range,
+                                  'cidr_ip': rule['ip_range']['cidr']})
+                fw_rules.append(fw_rule)
+        sliver['fw_rules'] = fw_rules
+        rspec_node['slivers']= [sliver]
+        # get disk image
+        image = self.driver.shell.image_manager.get_images(id=instance.image['id'])
+        if isinstance(image, list) and len(image) > 0:
+            image = image[0]
+        disk_image = image_to_rspec_disk_image(image)
+        sliver['disk_image'] = [disk_image]
+
+        # get interfaces
+        rspec_node['services'] = []
+        rspec_node['interfaces'] = []
+        addresses = instance.addresses
+        # HACK: public ips are stored in the list of private, but
+        # this seems wrong. Assume pub ip is the last in the list of
+        # private ips until openstack bug is fixed.
+        if addresses.get('private'):
+            login = Login({'authentication': 'ssh-keys',
+                           'hostname': addresses.get('private')[-1]['addr'],
+                           'port':'22', 'username': 'root'})
+            service = Services({'login': login})
+            rspec_node['services'].append(service)
+
+        for private_ip in addresses.get('private', []):
+            if_xrn = PlXrn(auth=self.driver.hrn,
+                           interface='node%s' % (instance.hostId))
+            if_client_id = Xrn(if_xrn.urn, type='interface', id="eth%s" %if_index).urn
+            if_sliver_id = Xrn(rspec_node['sliver_id'], type='slice', id="eth%s" %if_index).urn
+            interface = Interface({'component_id': if_xrn.urn,
+                                   'client_id': if_client_id,
+                                   'sliver_id': if_sliver_id})
+            interface['ips'] =  [{'address': private_ip['addr'],
+                                 #'netmask': private_ip['network'],
+                                 'type': 'ipv%s' % str(private_ip['version'])}]
+            rspec_node['interfaces'].append(interface)
+
+        # slivers always provide the ssh service
+        for public_ip in addresses.get('public', []):
+            login = Login({'authentication': 'ssh-keys',
+                           'hostname': public_ip['addr'],
+                           'port':'22', 'username': 'root'})
+            service = Services({'login': login})
+            rspec_node['services'].append(service)
+        return rspec_node 
+
     def get_slice_nodes(self, slice_xrn):
         # update nova connection
         tenant_name = OSXrn(xrn=slice_xrn, type='slice').get_tenant_name()
@@ -91,81 +167,7 @@ class OSAggregate:
         instances = self.driver.shell.nova_manager.servers.findall(name=name)
         rspec_nodes = []
         for instance in instances:
-            # determine node urn
-            node_xrn = instance.metadata.get('component_id')
-            if not node_xrn:
-                node_xrn = OSXrn('cloud', type='node')
-            else:
-                node_xrn = OSXrn(xrn=node_xrn, type='node')
-
-            rspec_node = Node()
-            rspec_node['component_id'] = node_xrn.urn
-            rspec_node['component_name'] = node_xrn.name
-            rspec_node['component_manager_id'] = Xrn(self.driver.hrn, 'authority+cm').get_urn()
-            if instance.metadata.get('client_id'):
-                rspec_node['client_id'] = instance.metadata.get('client_id')
-           
-            # get sliver details 
-            sliver_xrn = OSXrn(xrn=slice_xrn, type='slice', id=instance.id)
-            rspec_node['sliver_id'] = sliver_xrn.get_urn() 
-            flavor = self.driver.shell.nova_manager.flavors.find(id=instance.flavor['id'])
-            sliver = instance_to_sliver(flavor)
-            # get firewall rules
-            fw_rules = []
-            group_name = instance.metadata.get('security_groups')
-            if group_name:
-                group = self.driver.shell.nova_manager.security_groups.find(name=group_name)
-                for rule in group.rules:
-                    port_range ="%s:%s" % (rule['from_port'], rule['to_port'])
-                    fw_rule = FWRule({'protocol': rule['ip_protocol'],
-                                      'port_range': port_range,
-                                      'cidr_ip': rule['ip_range']['cidr']})
-                    fw_rules.append(fw_rule)
-            sliver['fw_rules'] = fw_rules 
-            rspec_node['slivers']= [sliver]
-            # get disk image
-            image = self.driver.shell.image_manager.get_images(id=instance.image['id'])
-            if isinstance(image, list) and len(image) > 0:
-                image = image[0]
-            disk_image = image_to_rspec_disk_image(image)
-            sliver['disk_image'] = [disk_image]
-
-            # get interfaces            
-            rspec_node['services'] = []
-            rspec_node['interfaces'] = []
-            addresses = instance.addresses
-            # HACK: public ips are stored in the list of private, but 
-            # this seems wrong. Assume pub ip is the last in the list of 
-            # private ips until openstack bug is fixed.      
-            if addresses.get('private'):
-                login = Login({'authentication': 'ssh-keys',
-                               'hostname': addresses.get('private')[-1]['addr'],
-                               'port':'22', 'username': 'root'})
-                service = Services({'login': login})
-                rspec_node['services'].append(service)    
-            
-            for private_ip in addresses.get('private', []):
-                if_xrn = PlXrn(auth=self.driver.hrn, 
-                               interface='node%s' % (instance.hostId)) 
-                if_client_id = Xrn(if_xrn.urn, type='interface', id="eth%s" %if_index).urn
-                if_sliver_id = Xrn(rspec_node['sliver_id'], type='slice', id="eth%s" %if_index).urn
-                interface = Interface({'component_id': if_xrn.urn,
-                                       'client_id': if_client_id,
-                                       'sliver_id': if_sliver_id})
-                interface['ips'] =  [{'address': private_ip['addr'],
-                                     #'netmask': private_ip['network'],
-                                     'type': 'ipv%s' % str(private_ip['version'])}]
-                rspec_node['interfaces'].append(interface) 
-            
-            # slivers always provide the ssh service
-            for public_ip in addresses.get('public', []):
-                login = Login({'authentication': 'ssh-keys', 
-                               'hostname': public_ip['addr'], 
-                               'port':'22', 'username': 'root'})
-                service = Services({'login': login})
-                rspec_node['services'].append(service)
-
-            rspec_nodes.append(rspec_node)
+            rspec_nodes.append(self.instance_to_rspec_node(slice_xrn, instance))
         return rspec_nodes
 
     def get_aggregate_nodes(self):
@@ -283,7 +285,9 @@ class OSAggregate:
         files = {'/root/.ssh/authorized_keys': authorized_keys}
         rspec = RSpec(rspec)
         requested_instances = defaultdict(list)
+        
         # iterate over clouds/zones/nodes
+        created_instances = []
         for node in rspec.version.get_nodes_with_slivers():
             instances = node.get('slivers', [])
             if not instances:
@@ -303,18 +307,21 @@ class OSAggregate:
                     metadata['security_groups'] = group_name
                     if node.get('component_id'):
                         metadata['component_id'] = node['component_id']
-                    if node.get('client_id'):
-                        metadata['client_id'] = node['client_id']
-                    self.driver.shell.nova_manager.servers.create(flavor=flavor_id,
+                    server = self.driver.shell.nova_manager.servers.create(flavor=flavor_id,
                                                             image=image_id,
                                                             key_name = key_name,
                                                             security_groups = [group_name],
                                                             files=files,
                                                             meta=metadata, 
                                                             name=instance_name)
+                    if node.get('client_id'):
+                        server.metadata['client_id'] = node['client_id']
+                    created_instances.append(server)
+                    
                 except Exception, err:    
                     logger.log_exc(err)                                
                            
+        return created_instances
 
 
     def delete_instances(self, instance_name, tenant_name):
@@ -330,7 +337,7 @@ class OSAggregate:
                     inst = self.driver.shell.nova_manager.servers.findall(id=instance.id)
                     if not inst:
                         instance_deleted = True
-                    time.sleep(.5)
+                    time.sleep(1)
                 manager.delete_security_group(security_group)
 
         thread_manager = ThreadManager()

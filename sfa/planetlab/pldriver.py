@@ -691,8 +691,10 @@ class PlDriver (Driver):
             if node['last_contact'] is not None:
                 
                 res['pl_last_contact'] = datetime_to_string(utcparse(node['last_contact']))
-            sliver_id = Xrn(slice_urn, type='slice', id=node['node_id'], authority=self.hrn).urn
-            res['geni_urn'] = sliver_id
+            sliver_xrn = Xrn(slice_urn, type='sliver', id=node['node_id'])
+            sliver_xrn.set_authority(self.hrn)
+             
+            res['geni_urn'] = sliver_xrn.urn
             if node['boot_state'] == 'boot':
                 res['geni_status'] = 'ready'
             else:
@@ -732,16 +734,17 @@ class PlDriver (Driver):
         slices.verify_slice_attributes(slice, requested_attributes, options=options)
         
         # add/remove slice from nodes
-        requested_slivers = []
-        for node in rspec.version.get_nodes_with_slivers():
+        requested_slivers = {}
+        slivers = rspec.version.get_nodes_with_slivers() 
+        for node in slivers:
             hostname = None
             if node.get('component_name'):
                 hostname = node.get('component_name').strip()
             elif node.get('component_id'):
                 hostname = xrn_to_hostname(node.get('component_id').strip())
             if hostname:
-                requested_slivers.append(hostname)
-        nodes = slices.verify_slice_nodes(slice, requested_slivers, peer) 
+                requested_slivers[hostname] = node
+        nodes = slices.verify_slice_nodes(slice, requested_slivers.keys(), peer) 
    
         # add/remove links links 
         slices.verify_slice_links(slice, rspec.version.get_link_requests(), nodes)
@@ -766,7 +769,9 @@ class PlDriver (Driver):
         # only used by plc and ple.
         slices.handle_peer(site, slice, persons, peer)
         
-        return aggregate.get_rspec(slice_xrn=slice_urn, version=rspec.version)
+        return aggregate.get_rspec(slice_xrn=slice_urn, 
+                                   version=rspec.version, 
+                                   requested_slivers = requested_slivers)
 
     def delete_sliver (self, slice_urn, slice_hrn, creds, options):
         slicename = hrn_to_pl_slicename(slice_hrn)
