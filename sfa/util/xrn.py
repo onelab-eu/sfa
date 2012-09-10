@@ -177,11 +177,9 @@ class Xrn:
         update the authority section of an existing urn
         """
         authority_hrn = self.get_authority_hrn()
-        old_hrn_parts = Xrn.hrn_split(self.hrn)
-        old_hrn_parts[0] = authority
-        hrn = ".".join(old_hrn_parts) 
-        self.hrn = hrn 
-        self.hrn_to_urn()
+        if not authority_hrn.startswith(authority+"."):
+            self.hrn = authority + "." + self.hrn
+            self.hrn_to_urn()
         self._normalize()
         
     def urn_to_hrn(self):
