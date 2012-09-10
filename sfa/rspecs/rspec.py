@@ -29,7 +29,7 @@ class RSpec:
         """
         self.version = self.version_manager.get_version(version)
         self.namespaces = self.version.namespaces
-        self.parse_xml(self.version.template) 
+        self.parse_xml(self.version.template, self.version) 
         # eg. 2011-03-23T19:53:28Z 
         date_format = '%Y-%m-%dT%H:%M:%SZ'
         now = datetime.utcnow()
@@ -39,16 +39,16 @@ class RSpec:
         self.xml.set('generated', generated_ts)
 
 
-    def parse_xml(self, xml):
+    def parse_xml(self, xml, version=None):
         self.xml.parse_xml(xml)
-        self.version = None
-        if self.xml.schema:
-            self.version = self.version_manager.get_version_by_schema(self.xml.schema)
-        else:
-            #raise InvalidRSpec('unknown rspec schema: %s' % schema)
-            # TODO: Should start raising an exception once SFA defines a schema.
-            # for now we just  default to sfa 
-            self.version = self.version_manager.get_version({'type':'sfa','version': '1'})
+        if not version:
+            if self.xml.schema:
+                self.version = self.version_manager.get_version_by_schema(self.xml.schema)
+            else:
+                #raise InvalidRSpec('unknown rspec schema: %s' % schema)
+                # TODO: Should start raising an exception once SFA defines a schema.
+                # for now we just  default to sfa 
+                self.version = self.version_manager.get_version({'type':'sfa','version': '1'})
         self.version.xml = self.xml    
         self.namespaces = self.xml.namespaces
     
