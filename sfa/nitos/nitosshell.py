@@ -14,6 +14,12 @@ class NitosShell:
     
     direct_calls = ['getNodes','getChannels','getSlices','getUsers','getReservedNodes',
                     'getReservedChannels','getTestbedInfo'
+                    'reserveNodes','reserveChannels','addSlice','addUser','addUserToSlice',
+                    'addUserKey','addNode', 'addChannel',
+                    'updateReservedNodes','updateReservedChannels','updateSlice','updateUser',
+                    'updateNode', 'updateChannel',
+                    'deleteNode','deleteChannel','deleteSlice','deleteUser', 'deleteUserFromSLice',
+                    'deleteKey', 'releaseNodes', 'releaseChannels'
                     ]
 
 

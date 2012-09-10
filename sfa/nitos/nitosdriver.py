@@ -7,7 +7,7 @@ from sfa.util.faults import MissingSfaInfo, UnknownSfaType, \
 from sfa.util.sfalogging import logger
 from sfa.util.defaultdict import defaultdict
 from sfa.util.sfatime import utcparse, datetime_to_string, datetime_to_epoch
-from sfa.util.xrn import hrn_to_urn, get_leaf, urn_to_sliver_id
+from sfa.util.xrn import hrn_to_urn, get_leaf
 from sfa.util.cache import Cache
 
 # one would think the driver should not need to mess with the SFA db, but..
@@ -565,7 +565,7 @@ class NitosDriver (Driver):
                 return slices
 
         # get data from db 
-        slices = self.shell.getSlices()
+        slices = self.shell.getSlices({}, [])
         # get site name
         #site_name = self.shell.getTestbedInfo()['site_name']
         site_name = "nitos"
@@ -623,7 +623,7 @@ class NitosDriver (Driver):
         # find out where this slice is currently running
         slicename = hrn_to_nitos_slicename(slice_hrn)
         
-        slices = self.shell.getSlices()
+        slices = self.shell.getSlices({}, [])
         # filter slicename
         if len(slices) == 0:        
             raise SliverDoesNotExist("%s (used %s as slicename internally)" % (slice_hrn, slicename))
@@ -689,7 +689,7 @@ class NitosDriver (Driver):
             if node['last_contact'] is not None:
                 
                 res['pl_last_contact'] = datetime_to_string(utcparse(node['last_contact']))
-            sliver_id = urn_to_sliver_id(slice_urn, slice['slice_id'], node['node_id'], authority=self.hrn) 
+            sliver_id = Xrn(slice_urn, type='slice', id=node['node_id'], authority=self.hrn).urn
             res['geni_urn'] = sliver_id
             if node['boot_state'] == 'boot':
                 res['geni_status'] = 'ready'

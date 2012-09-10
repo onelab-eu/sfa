@@ -120,11 +120,11 @@ class NitosImporter:
         # create a dict user_id -> [ (nitos)keys ]
         keys_by_user_id = dict ( [ ( user['user_id'], user['keys']) for user in users ] ) 
         # Get all nitos nodes  
-        nodes = shell.getNodes()
+        nodes = shell.getNodes({}, [])
         # create hash by node_id
-        nodes_by_id = dict ( [ (node['node_id'], node) for node in nodes ] )
+        nodes_by_id = dict ( [ (node['id'], node) for node in nodes ] )
         # Get all nitos slices
-        slices = shell.getSlices()
+        slices = shell.getSlices({}, [])
         # create hash by slice_id
         slices_by_id = dict ( [ (slice['slice_id'], slice) for slice in slices ] )
 
@@ -174,7 +174,7 @@ class NitosImporter:
                         urn = hrn_to_urn(node_hrn, 'node')
                         node_gid = self.auth_hierarchy.create_gid(urn, create_uuid(), pkey)
                         node_record = RegNode (hrn=node_hrn, gid=node_gid, 
-                                               pointer =node['node_id'],
+                                               pointer =node['id'],
                                                authority=get_authority(node_hrn))
                         node_record.just_created()
                         dbsession.add(node_record)
@@ -186,6 +186,7 @@ class NitosImporter:
                 else:
                     # xxx update the record ...
                     pass
+                
                 node_record.stale=False
 
 

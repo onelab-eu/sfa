@@ -1,5 +1,5 @@
 #!/usr/bin/python
-from sfa.util.xrn import Xrn, hrn_to_urn, urn_to_hrn, urn_to_sliver_id
+from sfa.util.xrn import Xrn, hrn_to_urn, urn_to_hrn
 from sfa.util.sfatime import utcparse, datetime_to_string
 from sfa.util.sfalogging import logger
 
@@ -113,21 +113,20 @@ class NitosAggregate:
         slice_urn = hrn_to_urn(slice_xrn, 'slice')
         slice_hrn, _ = urn_to_hrn(slice_xrn)
         slice_name = hrn_to_nitos_slicename(slice_hrn)
-        slices = self.driver.shell.getSlices()
+        slices = self.driver.shell.getSlices({'slice_name': slice_name}, [])
         # filter results
-        for slc in slices:
-             if slc['slice_name'] == slice_name:
-                 slice = slc
-                 break
+        #for slc in slices:
+        #     if slc['slice_name'] == slice_name:
+        #         slice = slc
+        #          break
 
         if not slice:
             return (slice, slivers)
       
-        reserved_nodes = self.driver.shell.getReservedNodes()
-        # filter results
+        reserved_nodes = self.driver.shell.getReservedNodes({'slice_id': slice['slice_id']}, [])
+       
         for node in reserved_nodes:
-             if node['slice_id'] == slice['slice_id']:
-                 slivers[node[node_id]] = node
+             slivers[node['id']] = node
 
         return (slice, slivers)
        
@@ -142,7 +141,7 @@ class NitosAggregate:
             else:
                 nodes = [slivers[sliver] for sliver in slivers]
         else:
-            nodes = self.driver.shell.getNodes()
+            nodes = self.driver.shell.getNodes({}, [])
         
         # get the granularity in second for the reservation system
         grain = self.driver.testbedInfo['grain']
@@ -169,7 +168,7 @@ class NitosAggregate:
                 location = Location({'longitude': longitude, 'latitude': latitude, 'country': 'unknown'})
                 rspec_node['location'] = location
             # 3D position
-            position_3d = Position3D({'x': node['position']['X'], 'y': node['position']['Y'], 'z': node['position']['Z']})
+            position_3d = Position3D({'x': node['X'], 'y': node['Y'], 'z': node['Z']})
             #position_3d = Position3D({'x': 1, 'y': 2, 'z': 3})
             rspec_node['position_3d'] = position_3d 
             # Granularity
@@ -177,7 +176,7 @@ class NitosAggregate:
             rspec_node['granularity'] = granularity
 
             # HardwareType
-            rspec_node['hardware_type'] = node['node_type']
+            rspec_node['hardware_type'] = node['type']
             #rspec_node['hardware_type'] = "orbit"
 
                 
@@ -186,10 +185,10 @@ class NitosAggregate:
 
     def get_leases_and_channels(self, slice=None, options={}):
         
-        slices = self.driver.shell.getSlices()
-        nodes = self.driver.shell.getNodes()
-        leases = self.driver.shell.getReservedNodes()
-        channels = self.driver.shell.getChannels()
+        slices = self.driver.shell.getSlices({}, [])
+        nodes = self.driver.shell.getNodes({}, [])
+        leases = self.driver.shell.getReservedNodes({}, [])
+        channels = self.driver.shell.getChannels({}, [])
         reserved_channels = self.driver.shell.getReservedChannels()
         grain = self.driver.testbedInfo['grain']
 
@@ -235,7 +234,7 @@ class NitosAggregate:
             rspec_lease['lease_id'] = lease['reservation_id']
             # retreive node name
             for node in nodes:
-                 if node['node_id'] == lease['node_id']:
+                 if node['id'] == lease['node_id']:
                      nodename = node['name']
                      break
            
@@ -259,7 +258,7 @@ class NitosAggregate:
     def get_channels(self, options={}):
         
         filter = {}
-        channels = self.driver.shell.getChannels()
+        channels = self.driver.shell.getChannels({}, [])
         rspec_channels = []
         for channel in channels:
             rspec_channel = Channel()
