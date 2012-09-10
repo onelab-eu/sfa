@@ -261,6 +261,7 @@ supported_options = {
         
 def main():
     opts = parse_options()
+    print opts
     for opt in opts:
         supported_options[opt](opts[opt])
         
