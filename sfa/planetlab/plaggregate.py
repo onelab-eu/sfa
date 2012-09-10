@@ -118,7 +118,9 @@ class PlAggregate:
 
         # sort slivers by node id    
         for node_id in slice['node_ids']:
-            sliver = Sliver({'sliver_id': Xrn(slice_urn, type='slice', id=node_id, authority=self.driver.hrn).urn,
+            sliver_xrn = Xrn(slice_urn, type='sliver', id=node_id)
+            sliver_xrn.set_authority(self.driver.hrn)
+            sliver = Sliver({'sliver_id': sliver_xrn.urn,
                              'name': slice['name'],
                              'type': 'plab-vserver', 
                              'tags': []})
@@ -129,7 +131,9 @@ class PlAggregate:
         for tag in tags:
             # most likely a default/global sliver attribute (node_id == None)
             if tag['node_id'] not in slivers:
-                sliver = Sliver({'sliver_id': urn_to_sliver_id(slice_urn, slice['slice_id'], ""),
+                sliver_xrn = Xrn(slice_urn, type='sliver', id=tag['node_id'])
+                sliver_xrn.set_authority(self.driver.hrn)
+                sliver = Sliver({'sliver_id': sliver_xrn.urn,
                                  'name': slice['name'],
                                  'type': 'plab-vserver',
                                  'tags': []})
@@ -138,7 +142,7 @@ class PlAggregate:
         
         return (slice, slivers)
 
-    def get_nodes_and_links(self, slice_xrn, slice=None,slivers=[], options={}):
+    def get_nodes_and_links(self, slice_xrn, slice=None,slivers=[], options={}, requested_slivers={}):
         # if we are dealing with a slice that has no node just return 
         # and empty list    
         if slice_xrn:
@@ -196,6 +200,10 @@ class PlAggregate:
             rspec_node['component_name'] = node['hostname']
             rspec_node['component_manager_id'] = Xrn(self.driver.hrn, 'authority+cm').get_urn()
             rspec_node['authority_id'] = hrn_to_urn(PlXrn.site_hrn(self.driver.hrn, site['login_base']), 'authority+sa')
+            if requested_slivers and node['hostname'] in requested_slivers:
+                requested_sliver = requested_slivers[node['hostname']]
+                if requested_sliver.get('client_id'):
+                    rspec_node['client_id'] = requested_sliver['client_id']
             # do not include boot state (<available> element) in the manifest rspec
             if not slice:     
                 rspec_node['boot_state'] = node['boot_state']
@@ -234,7 +242,6 @@ class PlAggregate:
                 # add sliver info
                 sliver = slivers[node['node_id']]
                 rspec_node['sliver_id'] = sliver['sliver_id']
-                rspec_node['client_id'] = node['hostname']
                 rspec_node['slivers'] = [sliver]
                 
                 # slivers always provide the ssh service
@@ -283,7 +290,7 @@ class PlAggregate:
         return rspec_leases
 
     
-    def get_rspec(self, slice_xrn=None, version = None, options={}):
+    def get_rspec(self, slice_xrn=None, version = None, options={}, requested_slivers={}):
 
         version_manager = VersionManager()
         version = version_manager.get_version(version)
@@ -298,16 +305,17 @@ class PlAggregate:
             rspec.xml.set('expires',  datetime_to_string(utcparse(slice['expires'])))
 
         if not options.get('list_leases') or options.get('list_leases') and options['list_leases'] != 'leases':
-           nodes, links = self.get_nodes_and_links(slice_xrn, slice, slivers, options)
-           rspec.version.add_nodes(nodes)
-           rspec.version.add_links(links)
-           # add sliver defaults
-           default_sliver = slivers.get(None, [])
-           if default_sliver:
-              default_sliver_attribs = default_sliver.get('tags', [])
-              for attrib in default_sliver_attribs:
-                  logger.info(attrib)
-                  rspec.version.add_default_sliver_attribute(attrib['tagname'], attrib['value'])
+            nodes, links = self.get_nodes_and_links(slice_xrn, slice, slivers, options, 
+                                                    requested_slivers=requested_slivers)
+            rspec.version.add_nodes(nodes)
+            rspec.version.add_links(links)
+            # add sliver defaults
+            default_sliver = slivers.get(None, [])
+            if default_sliver:
+                default_sliver_attribs = default_sliver.get('tags', [])
+                for attrib in default_sliver_attribs:
+                    logger.info(attrib)
+                    rspec.version.add_default_sliver_attribute(attrib['tagname'], attrib['value'])
         
         if not options.get('list_leases') or options.get('list_leases') and options['list_leases'] != 'resources':
            leases = self.get_leases(slice)
