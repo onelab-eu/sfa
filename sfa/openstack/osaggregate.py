@@ -307,6 +307,8 @@ class OSAggregate:
                     metadata['security_groups'] = group_name
                     if node.get('component_id'):
                         metadata['component_id'] = node['component_id']
+                    if node.get('client_id'):
+                        metadata['client_id'] = node['client_id']
                     server = self.driver.shell.nova_manager.servers.create(flavor=flavor_id,
                                                             image=image_id,
                                                             key_name = key_name,
@@ -314,8 +316,6 @@ class OSAggregate:
                                                             files=files,
                                                             meta=metadata, 
                                                             name=instance_name)
-                    if node.get('client_id'):
-                        server.metadata['client_id'] = node['client_id']
                     created_instances.append(server)
                     
                 except Exception, err:    
