@@ -142,7 +142,7 @@ class PlAggregate:
         
         return (slice, slivers)
 
-    def get_nodes_and_links(self, slice_xrn, slice=None,slivers=[], options={}, requested_slivers={}):
+    def get_nodes_and_links(self, slice_xrn, slice=None,slivers=[], options={}):
         # if we are dealing with a slice that has no node just return 
         # and empty list    
         if slice_xrn:
@@ -200,10 +200,6 @@ class PlAggregate:
             rspec_node['component_name'] = node['hostname']
             rspec_node['component_manager_id'] = Xrn(self.driver.hrn, 'authority+cm').get_urn()
             rspec_node['authority_id'] = hrn_to_urn(PlXrn.site_hrn(self.driver.hrn, site['login_base']), 'authority+sa')
-            if requested_slivers and node['hostname'] in requested_slivers:
-                requested_sliver = requested_slivers[node['hostname']]
-                if requested_sliver.get('client_id'):
-                    rspec_node['client_id'] = requested_sliver['client_id']
             # do not include boot state (<available> element) in the manifest rspec
             if not slice:     
                 rspec_node['boot_state'] = node['boot_state']
@@ -243,6 +239,9 @@ class PlAggregate:
                 sliver = slivers[node['node_id']]
                 rspec_node['sliver_id'] = sliver['sliver_id']
                 rspec_node['slivers'] = [sliver]
+                for tag in sliver['tags']:
+                    if tag['tagname'] == 'client_id':
+                         rspec_node['client_id'] = tag['value']
                 
                 # slivers always provide the ssh service
                 login = Login({'authentication': 'ssh-keys', 'hostname': node['hostname'], 'port':'22', 'username': sliver['name']})
@@ -290,7 +289,7 @@ class PlAggregate:
         return rspec_leases
 
     
-    def get_rspec(self, slice_xrn=None, version = None, options={}, requested_slivers={}):
+    def get_rspec(self, slice_xrn=None, version = None, options={}):
 
         version_manager = VersionManager()
         version = version_manager.get_version(version)
@@ -305,8 +304,7 @@ class PlAggregate:
             rspec.xml.set('expires',  datetime_to_string(utcparse(slice['expires'])))
 
         if not options.get('list_leases') or options.get('list_leases') and options['list_leases'] != 'leases':
-            nodes, links = self.get_nodes_and_links(slice_xrn, slice, slivers, options, 
-                                                    requested_slivers=requested_slivers)
+            nodes, links = self.get_nodes_and_links(slice_xrn, slice, slivers, options)
             rspec.version.add_nodes(nodes)
             rspec.version.add_links(links)
             # add sliver defaults
