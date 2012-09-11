@@ -135,6 +135,7 @@ class OSAggregate:
             service = Services({'login': login})
             rspec_node['services'].append(service)
 
+        if_index = 0
         for private_ip in addresses.get('private', []):
             if_xrn = PlXrn(auth=self.driver.hrn,
                            interface='node%s' % (instance.hostId))
@@ -147,6 +148,7 @@ class OSAggregate:
                                  #'netmask': private_ip['network'],
                                  'type': 'ipv%s' % str(private_ip['version'])}]
             rspec_node['interfaces'].append(interface)
+            if_index += 1
 
         # slivers always provide the ssh service
         for public_ip in addresses.get('public', []):
