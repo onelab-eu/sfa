@@ -1,7 +1,6 @@
 import subprocess
 
 from datetime import datetime
-from time import gmtime
 
 from sfa.util.faults import SliverDoesNotExist, UnknownSfaType
 from sfa.util.sfalogging import logger
@@ -16,7 +15,7 @@ from sfa.managers.driver import Driver
 from sfa.rspecs.version_manager import VersionManager
 from sfa.rspecs.rspec import RSpec
 
-from sfa.util.xrn import hrn_to_urn, get_leaf
+from sfa.util.xrn import hrn_to_urn
 
 
 ## thierry: everything that is API-related (i.e. handling incoming requests) 
@@ -42,18 +41,20 @@ from sfa.senslab.slabslices import SlabSlices
 # GetNodes or GetSites sorts of calls directly
 # and thus minimize the differences in the managers with the pl version
 class SlabDriver(Driver):
-
+    """ Senslab Driver class inherited from Driver generic class.
+    
+    Contains methods compliant with the SFA standard and the testbed
+    infrastructure (calls to LDAP and OAR).
+    """
     def __init__(self, config):
         Driver.__init__ (self, config)
         self.config = config
         self.hrn = config.SFA_INTERFACE_HRN
-
         self.root_auth = config.SFA_REGISTRY_ROOT_AUTH
-
         self.oar = OARrestapi()
         self.ldap = LDAPapi()
         self.time_format = "%Y-%m-%d %H:%M:%S"
-        self.db = SlabDB(config,debug = True)
+        self.db = SlabDB(config, debug = True)
         self.cache = None
         
     
