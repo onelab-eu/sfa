@@ -56,7 +56,7 @@ def parse_options():
 
     return valid_options_dict     
     
-def TestLdap():
+def TestLdap(job_id = None):
     logger.setLevelDebug()
 
     ldap = LDAPapi()
@@ -94,6 +94,29 @@ def TestLdap():
     record['first_name']="Tim"
     record['mail'] = "robin@arkham.fr"
     
+    
+    
+    #login = ldap.generate_login(data)
+    #print "\r\n Robin \tgenerate_login  ", ret 
+    
+    #ret = ldap.LdapAddUser(data)
+    #print "\r\n Robin  \tLdapAddUser ", ret 
+
+    #req_ldap = '(uid=' + login + ')'
+    #ret = ldap.LdapSearch(req_ldap, [])
+    #print "\r\n Robin \tldap.LdapSearch ids = %s %s"%(login,ret )
+    
+    #password = "Thridrobin"
+    #enc = ldap.encrypt_password(password)
+    #print "\r\n Robin \tencrypt_password ", enc
+    
+    #ret = ldap.LdapModifyUser(record, {'userPassword':enc})
+    #print "\r\n Robin \tChange password LdapModifyUser ", ret 
+    
+    #dn = 'uid=' + login + ',' + ldap.baseDN
+    #ret = ldap.LdapDelete(dn)
+    #print "\r\n Robin  \tLdapDelete ", ret 
+    
     datanight = {}
     datanight['last_name'] = "Grayson"
     datanight['first_name']="Dick"
@@ -106,27 +129,6 @@ def TestLdap():
     record_night['last_name'] = datanight['last_name']
     record_night['first_name'] = datanight['first_name']
     record_night['mail'] = datanight['mail']
-    
-    login = ldap.generate_login(data)
-    print "\r\n Robin \tgenerate_login  ", ret 
-    
-    ret = ldap.LdapAddUser(data)
-    print "\r\n Robin  \tLdapAddUser ", ret 
-
-    req_ldap = '(uid=' + login + ')'
-    ret = ldap.LdapSearch(req_ldap, [])
-    print "\r\n Robin \tldap.LdapSearch ids = %s %s"%(login,ret )
-    
-    password = "Thridrobin"
-    enc = ldap.encrypt_password(password)
-    print "\r\n Robin \tencrypt_password ", enc
-    
-    ret = ldap.LdapModifyUser(record, {'userPassword':enc})
-    print "\r\n Robin \tChange password LdapModifyUser ", ret 
-    
-    dn = 'uid=' + login + ',' + ldap.baseDN
-    ret = ldap.LdapDelete(dn)
-    print "\r\n Robin  \tLdapDelete ", ret 
     
     ret = ldap.LdapFindUser(record_night)
     print "\r\n Nightwing \tldap.LdapFindHrn %s : %s"%(record_night,ret)
@@ -145,10 +147,12 @@ def TestLdap():
     
     
     record_avakian = {}
+    record_avakian['hrn']= 'senslab2.avakian'
     record_avakian['last_name'] = 'avakian'
     record_avakian['first_name'] = 'sandrine'
-    record_avakian['email'] = 'sandrine.avakian@inria.fr'
+    record_avakian['mail'] = 'sandrine.avakian@inria.fr'
     pubkey = "ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEAwSUkJ+cr3xM47h8lFkIXJoJhg4wHakTaLJmgTXkzvUmQsQeFB2MjUZ6WAelMXj/EFz2+XkK+bcWNXwfbrLptJQ+XwGpPZlu9YV/kzO63ghVrAyEg0+p7Pn1TO9f1ZYg4R6JfP/3qwH1AsE+X3PNpIewsuEIKwd2wUCJDf5RXJTpl39GizcBFemrRqgs0bdqAN/vUT9YvtWn8fCYR5EfJHVXOK8P1KmnbuGZpk7ryz21pDMlgw13+8aYB+LPkxdv5zG54A5c6o9N3zOCblvRFWaNBqathS8y04cOYWPmyu+Q0Xccwi7vM3Ktm8RoJw+raQNwsmneJOm6KXKnjoOQeiQ== savakian@sfa2.grenoble.senslab.info"
+
     
     ret = ldap.LdapModifyUser(record_avakian, {'sshPublicKey':pubkey})
     print "\r\n Sandrine \tChange pubkey LdapModifyUser ", ret 
@@ -186,7 +190,7 @@ def get_stuff(oar, uri):
 
 
   
-def TestOAR(job_id = 1):
+def TestOAR(job_id = '1'):
     
     if isinstance(job_id,list) and len(job_id) == 1:
        job_id = job_id[0]
@@ -232,7 +236,7 @@ def TestOAR(job_id = 1):
     print "\r\nOAR ", uri, raw_json, "\r\n KKK \t",raw_json.keys()
     return
     
-def TestSlabDriver(job_id = 1):
+def TestSlabDriver(job_id = '1'):
     if isinstance(job_id,list) and len(job_id) == 1:
        job_id = job_id[0]
     slabdriver = SlabDriver(Config())
