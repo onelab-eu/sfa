@@ -12,31 +12,32 @@ import os.path
 #API for OpenLDAP
 
 
-class ldap_config():
+class LdapConfig():
     def __init__(self, config_file =  '/etc/sfa/ldap_config.py'):
-        self.load(config_file)
-
-    def load(self, config_file):
         try:
             execfile(config_file, self.__dict__)
+       
             self.config_file = config_file
             # path to configuration data
             self.config_path = os.path.dirname(config_file)
-        except IOError, error:
-            raise IOError, "Could not find or load the configuration file: %s" % config_file
+        except IOError:
+            raise IOError, "Could not find or load the configuration file: %s" \
+                            % config_file
+  
         
 class ldap_co:
     """ Set admin login and server configuration variables."""
     
     def __init__(self):
-        #Senslab PROD LDAP parameters 
-        LdapConfig = ldap_config()
-        self.config = LdapConfig
-        self.ldapHost = LdapConfig.LDAP_IP_ADDRESS 
-        self.ldapPeopleDN = LdapConfig.LDAP_PEOPLE_DN
-        self.ldapGroupDN = LdapConfig.LDAP_GROUP_DN
-        self.ldapAdminDN = LdapConfig.LDAP_WEB_DN
-        self.ldapAdminPassword = LdapConfig.LDAP_WEB_PASSWORD
+        #Senslab PROD LDAP parameters
+        self.ldapserv = None
+        ldap_config = LdapConfig()
+        self.config = ldap_config
+        self.ldapHost = ldap_config.LDAP_IP_ADDRESS 
+        self.ldapPeopleDN = ldap_config.LDAP_PEOPLE_DN
+        self.ldapGroupDN = ldap_config.LDAP_GROUP_DN
+        self.ldapAdminDN = ldap_config.LDAP_WEB_DN
+        self.ldapAdminPassword = ldap_config.LDAP_WEB_PASSWORD
 
 
         self.ldapPort = ldap.PORT
@@ -69,8 +70,10 @@ class ldap_co:
             # Opens a connection after a call to ldap.open in connect:
             self.ldapserv = ldap.initialize("ldap://" + self.ldapHost)
                 
-            # Bind/authenticate with a user with apropriate rights to add objects
-            self.ldapserv.simple_bind_s(self.ldapAdminDN, self.ldapAdminPassword)
+            # Bind/authenticate with a user with apropriate 
+            #rights to add objects
+            self.ldapserv.simple_bind_s(self.ldapAdminDN, \
+                                    self.ldapAdminPassword)
 
         except ldap.LDAPError, error:
             return {'bool' : False, 'message' : error }
@@ -105,13 +108,13 @@ class LDAPapi :
         #authinfo=self.senslabauth.get_auth_info(self.authname)
         
         
-        self.charsPassword = [ '!','$','(',')','*','+',',','-','.',\
-                                '0','1','2','3','4','5','6','7','8','9',\
-                                'A','B','C','D','E','F','G','H','I','J',\
-                                'K','L','M','N','O','P','Q','R','S','T',\
-                                'U','V','W','X','Y','Z','_','a','b','c',\
-                                'd','e','f','g','h','i','j','k','l','m',\
-                                'n','o','p','q','r','s','t','u','v','w',\
+        self.charsPassword = [ '!','$','(',')','*','+',',','-','.', \
+                                '0','1','2','3','4','5','6','7','8','9', \
+                                'A','B','C','D','E','F','G','H','I','J', \
+                                'K','L','M','N','O','P','Q','R','S','T', \
+                                'U','V','W','X','Y','Z','_','a','b','c', \
+                                'd','e','f','g','h','i','j','k','l','m', \
+                                'n','o','p','q','r','s','t','u','v','w', \
                                 'x','y','z','\'']
         
         self.ldapShell = '/bin/bash'
@@ -140,20 +143,20 @@ class LDAPapi :
         if length_last_name >= login_max_length :
             login = lower_last_name[0:login_max_length]
             index = 0
-            logger.debug("login : %s index : %s" %(login,index))
+            logger.debug("login : %s index : %s" %(login, index))
         elif length_last_name >= 4 :
             login = lower_last_name
             index = 0
-            logger.debug("login : %s index : %s" %(login,index))
+            logger.debug("login : %s index : %s" %(login, index))
         elif length_last_name == 3 :
             login = lower_first_name[0:1] + lower_last_name
             index = 1
-            logger.debug("login : %s index : %s" %(login,index))
+            logger.debug("login : %s index : %s" %(login, index))
         elif length_last_name == 2:
             if len ( lower_first_name) >=2:
                 login = lower_first_name[0:2] + lower_last_name
                 index = 2
-                logger.debug("login : %s index : %s" %(login,index))
+                logger.debug("login : %s index : %s" %(login, index))
             else:
                 logger.error("LoginException : \
                             Generation login error with \
@@ -186,7 +189,7 @@ class LDAPapi :
             logger.debug("LDAP.API \t generate_login login %s" %(login))
             return login
                     
-        except  ldap.LDAPError,error :
+        except  ldap.LDAPError, error :
             logger.log_exc("LDAP generate_login Error %s" %error)
             return None
 
@@ -201,7 +204,7 @@ class LDAPapi :
         password = str()
         length = len(self.charsPassword)
         for index in range(self.lengthPassword):
-            char_index = random.randint(0,length-1)
+            char_index = random.randint(0, length-1)
             password += self.charsPassword[char_index]
 
         return password
@@ -311,9 +314,9 @@ class LDAPapi :
         """
 
         attrs = {}
-        attrs['objectClass'] = ["top", "person", "inetOrgPerson",\
-                                    "organizationalPerson", "posixAccount",\
-                                    "shadowAccount", "systemQuotas",\
+        attrs['objectClass'] = ["top", "person", "inetOrgPerson", \
+                                    "organizationalPerson", "posixAccount", \
+                                    "shadowAccount", "systemQuotas", \
                                     "ldapPublicKey"]
         
         attrs['givenName'] = str(record['first_name']).lower().capitalize()
@@ -369,8 +372,9 @@ class LDAPapi :
         filter_by = self.make_ldap_filters_from_record(user_ldap_attrs)
         user_exist = self.LdapSearch(filter_by)
         if user_exist:
-            logger.warning(" \r\n \t LDAP LdapAddUser user %s %s already exists" \
-                            %(user_ldap_attrs['sn'],user_ldap_attrs['mail'])) 
+            logger.warning(" \r\n \t LDAP LdapAddUser user %s %s \
+                        already exists" %(user_ldap_attrs['sn'], \
+                        user_ldap_attrs['mail'])) 
             return {'bool': False}
         
         #Bind to the server
@@ -471,7 +475,8 @@ class LDAPapi :
         #person = self.LdapFindUser(record_filter,[])
         req_ldap = self.make_ldap_filters_from_record(user_record)
         person_list = self.LdapSearch(req_ldap,[])
-        logger.debug("LDAPapi.py \t LdapModifyUser person_list : %s" %(person_list))
+        logger.debug("LDAPapi.py \t LdapModifyUser person_list : %s" \
+                                                        %(person_list))
         if person_list and len(person_list) > 1 :
             logger.error("LDAP \t LdapModifyUser Too many users returned")
             return {'bool': False}
@@ -682,7 +687,8 @@ class LDAPapi :
                             'hrn': hrn,
                             } ) 
                 except KeyError,error:
-                    logger.log_exc("LDAPapi.PY \t LdapFindUser EXCEPTION %s" %(error))
+                    logger.log_exc("LDAPapi.PY \t LdapFindUser EXCEPTION %s" \
+                                                %(error))
                     return
         return results   
             
