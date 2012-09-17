@@ -88,6 +88,11 @@ Summary: the SFA layer around Federica
 Group: Applications/System
 Requires: sfa
 
+%package nitos
+Summary: the SFA layer around NITOS
+Group: Applications/System
+Requires: sfa
+
 %package sfatables
 Summary: sfatables policy tool for SFA
 Group: Applications/System
@@ -123,6 +128,9 @@ between the existing PlanetLab NodeManager interfaces and the SFA API.
 
 %description federica
 The SFA driver for FEDERICA.
+
+%description nitos
+The SFA driver for NITOS.
 
 %description sfatables
 sfatables is a tool for defining access and admission control policies
@@ -210,6 +218,9 @@ rm -rf $RPM_BUILD_ROOT
 %files federica
 %{python_sitelib}/sfa/federica
 
+%files nitos
+%{python_sitelib}/sfa/nitos
+
 %files sfatables
 /etc/sfatables/*
 %{_bindir}/sfatables
@@ -255,6 +266,7 @@ fi
 - fix for PL importing in presence of gpg keys
 - DeleteSliver returns True instead of 1 in case of success
 - Various improvements on the openstack/nova side
+- new package sfa-nitos
 
 * Wed Jul 11 2012 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-2.1-13
 - bugfix that prevented to call 'sfi create' - (was broken in sfa-2.1-12)
