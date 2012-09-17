@@ -550,11 +550,11 @@ class NitosDriver (Driver):
         # get login info
         user = {}
         keys = []
-        if slice['user_id']:
+        if slice['user_ids']:
             users = self.shell.getUsers()
             # filter users on slice['user_ids']
             for usr in users:
-                 if usr['user_id'] in slice['user_id']:
+                 if usr['user_id'] in slice['user_ids']:
                      keys.extend(usr['keys'])
                      
 
@@ -608,25 +608,9 @@ class NitosDriver (Driver):
         # ensure user records exists
         #users = slices.verify_users(slice_hrn, slice, users, sfa_peer, options=options)
         
-        # add/remove slice from nodes
-        #requested_slivers = []
-        #for node in rspec.version.get_nodes_with_slivers():
-        #    hostname = None
-        #    if node.get('component_name'):
-        #        hostname = node.get('component_name').strip()
-        #    elif node.get('component_id'):
-        #        hostname = xrn_to_hostname(node.get('component_id').strip())
-        #    if hostname:
-        #        requested_slivers.append(hostname)
-        #nodes = slices.verify_slice_nodes(slice, requested_slivers, peer) 
-   
-        # add/remove channels
-
-
-        # add/remove leases
+        # add/remove leases (nodes and channels)
         # a lease in Nitos RSpec case is a reservation of nodes and channels grouped by (slice,timeslot)
         rspec_requested_nodes, rspec_requested_channels = rspec.version.get_leases()
-        print rspec_requested_nodes, rspec_requested_channels
   
         nodes = slices.verify_slice_leases_nodes(slice, rspec_requested_nodes)
         channels = slices.verify_slice_leases_channels(slice, rspec_requested_channels)
@@ -639,7 +623,7 @@ class NitosDriver (Driver):
         if not slices:
             return 1
         slice = slices[0]
-    
+
         try:
             pass
             #self.shell.DeleteSliceFromNodes({'slice_name': slicename, slice['node_ids']})
@@ -647,7 +631,7 @@ class NitosDriver (Driver):
             if peer:
                 self.shell.BindObjectToPeer('slice', slice['slice_id'], peer, slice['peer_slice_id'])
         return 1
-    
+
     def renew_sliver (self, slice_urn, slice_hrn, creds, expiration_time, options):
         slicename = hrn_to_nitos_slicename(slice_hrn)
         slices = self.shell.GetSlices({'slicename': slicename}, ['slice_id'])
