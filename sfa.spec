@@ -1,6 +1,6 @@
 %define name sfa
 %define version 2.1
-%define taglevel 13
+%define taglevel 14
 
 %define release %{taglevel}%{?pldistro:.%{pldistro}}%{?date:.%{date}}
 %global python_sitearch	%( python -c "from distutils.sysconfig import get_python_lib; print get_python_lib(1)" )
@@ -248,6 +248,14 @@ fi
 [ "$1" -ge "1" ] && service sfa-cm restart || :
 
 %changelog
+* Mon Sep 17 2012 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-2.1-14
+- configurable data-dir (/var/lib/sfa)
+- no more dependent on myplc-config
+- some support for hrns with _ instead of \.
+- fix for PL importing in presence of gpg keys
+- DeleteSliver returns True instead of 1 in case of success
+- Various improvements on the openstack/nova side
+
 * Wed Jul 11 2012 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-2.1-13
 - bugfix that prevented to call 'sfi create' - (was broken in sfa-2.1-12)
 - sfi to remove expired credentials
