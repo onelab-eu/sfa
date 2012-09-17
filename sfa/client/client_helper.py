@@ -14,7 +14,8 @@ def sfa_users_arg(records, slice_record):
     for record in records:
         if record['type'] != 'user': 
             continue
-        user = {'urn': record['geni_urn'], #
+        try:
+            user = {'urn': record['geni_urn'], #
                 'keys': record['keys'],
                 'email': record['email'], # needed for MyPLC
                 'person_id': record['person_id'], # needed for MyPLC
@@ -22,8 +23,18 @@ def sfa_users_arg(records, slice_record):
                 'last_name': record['last_name'], # needed for MyPLC
                 'slice_record': slice_record, # needed for legacy refresh peer
                 'key_ids': record['key_ids'] # needed for legacy refresh peer
-                }         
+                }
+        except:
+            # handle NITOS user args
+            user = {'urn': record['geni_urn'], 
+                'keys': record['keys'],
+                'email': record['email'], 
+                'user_id': record['user_id'], 
+                'slice_record': slice_record,
+                }
+        
         users.append(user)
+
     return users        
 
 def sfa_to_pg_users_arg(users):
