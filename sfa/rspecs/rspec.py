@@ -18,7 +18,11 @@ class RSpec:
         self.user_options = user_options
         self.elements = {}
         if rspec:
-            self.parse_xml(rspec)
+            if version:
+                self.version = self.version_manager.get_version(version)
+                self.parse_xml(rspec, version)
+            else:
+                self.parse_xml(rspec)
         elif version:
             self.create(version)
         else:
