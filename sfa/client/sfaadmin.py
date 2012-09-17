@@ -179,7 +179,7 @@ class RegistryCommands(Commands):
         importer.run()
 
     def sync_db(self):
-        """Initiailize or upgrade the db"""
+        """Initialize or upgrade the db"""
         from sfa.storage.dbschema import DBSchema
         dbschema=DBSchema()
         dbschema.init_or_upgrade
