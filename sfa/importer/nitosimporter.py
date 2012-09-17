@@ -122,7 +122,7 @@ class NitosImporter:
         # Get all nitos nodes  
         nodes = shell.getNodes({}, [])
         # create hash by node_id
-        nodes_by_id = dict ( [ (node['id'], node) for node in nodes ] )
+        nodes_by_id = dict ( [ (node['node_id'], node) for node in nodes ] )
         # Get all nitos slices
         slices = shell.getSlices({}, [])
         # create hash by slice_id
@@ -164,7 +164,7 @@ class NitosImporter:
             for node in nodes:
                 site_auth = get_authority(site_hrn)
                 site_name = site['name']
-                node_hrn =  hostname_to_hrn(site_auth, site_name, node['name'])
+                node_hrn =  hostname_to_hrn(site_auth, site_name, node['hostname'])
                 # xxx this sounds suspicious
                 if len(node_hrn) > 64: node_hrn = node_hrn[:64]
                 node_record = self.locate_by_type_hrn ( 'node', node_hrn )
@@ -174,7 +174,7 @@ class NitosImporter:
                         urn = hrn_to_urn(node_hrn, 'node')
                         node_gid = self.auth_hierarchy.create_gid(urn, create_uuid(), pkey)
                         node_record = RegNode (hrn=node_hrn, gid=node_gid, 
-                                               pointer =node['id'],
+                                               pointer =node['node_id'],
                                                authority=get_authority(node_hrn))
                         node_record.just_created()
                         dbsession.add(node_record)
@@ -294,7 +294,7 @@ class NitosImporter:
                     pass
                 # record current users affiliated with the slice
                 slice_record.reg_researchers = \
-                      [ self.locate_by_type_pointer ('user',int(user_id)) for user_id in slice['user_id'] ]
+                      [ self.locate_by_type_pointer ('user',int(user_id)) for user_id in slice['user_ids'] ]
                 dbsession.commit()
                 slice_record.stale=False
 

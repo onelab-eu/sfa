@@ -29,77 +29,6 @@ class NitosAggregate:
 
     def __init__(self, driver):
         self.driver = driver
- 
-    def get_sites(self, filter={}):
-        sites = {}
-        for site in self.driver.shell.GetSites(filter):
-            sites[site['site_id']] = site
-        return sites
-
-    def get_interfaces(self, filter={}):
-        interfaces = {}
-        for interface in self.driver.shell.GetInterfaces(filter):
-            iface = Interface()
-            if interface['bwlimit']:
-                interface['bwlimit'] = str(int(interface['bwlimit'])/1000)
-            interfaces[interface['interface_id']] = interface
-        return interfaces
-
-    def get_links(self, sites, nodes, interfaces):
-        
-        topology = Topology() 
-        links = []
-        for (site_id1, site_id2) in topology:
-            site_id1 = int(site_id1)
-            site_id2 = int(site_id2)
-            link = Link()
-            if not site_id1 in sites or site_id2 not in sites:
-                continue
-            site1 = sites[site_id1]
-            site2 = sites[site_id2]
-            # get hrns
-            site1_hrn = self.driver.hrn + '.' + site1['login_base']
-            site2_hrn = self.driver.hrn + '.' + site2['login_base']
-
-            for s1_node_id in site1['node_ids']:
-                for s2_node_id in site2['node_ids']:
-                    if s1_node_id not in nodes or s2_node_id not in nodes:
-                        continue
-                    node1 = nodes[s1_node_id]
-                    node2 = nodes[s2_node_id]
-                    # set interfaces
-                    # just get first interface of the first node
-                    if1_xrn = PlXrn(auth=self.driver.hrn, interface='node%s:eth0' % (node1['node_id']))
-                    if1_ipv4 = interfaces[node1['interface_ids'][0]]['ip']
-                    if2_xrn = PlXrn(auth=self.driver.hrn, interface='node%s:eth0' % (node2['node_id']))
-                    if2_ipv4 = interfaces[node2['interface_ids'][0]]['ip']
-
-                    if1 = Interface({'component_id': if1_xrn.urn, 'ipv4': if1_ipv4} )
-                    if2 = Interface({'component_id': if2_xrn.urn, 'ipv4': if2_ipv4} )
-
-                    # set link
-                    link = Link({'capacity': '1000000', 'latency': '0', 'packet_loss': '0', 'type': 'ipv4'})
-                    link['interface1'] = if1
-                    link['interface2'] = if2
-                    link['component_name'] = "%s:%s" % (site1['login_base'], site2['login_base'])
-                    link['component_id'] = PlXrn(auth=self.driver.hrn, interface=link['component_name']).get_urn()
-                    link['component_manager_id'] =  hrn_to_urn(self.driver.hrn, 'authority+am')
-                    links.append(link)
-
-        return links
-
-    def get_node_tags(self, filter={}):
-        node_tags = {}
-        for node_tag in self.driver.shell.GetNodeTags(filter):
-            node_tags[node_tag['node_tag_id']] = node_tag
-        return node_tags
-
-    def get_pl_initscripts(self, filter={}):
-        pl_initscripts = {}
-        filter.update({'enabled': True})
-        for initscript in self.driver.shell.GetInitScripts(filter):
-            pl_initscripts[initscript['initscript_id']] = initscript
-        return pl_initscripts
 
 
     def get_slice_and_slivers(self, slice_xrn):
@@ -114,30 +43,38 @@ class NitosAggregate:
         slice_hrn, _ = urn_to_hrn(slice_xrn)
         slice_name = hrn_to_nitos_slicename(slice_hrn)
         slices = self.driver.shell.getSlices({'slice_name': slice_name}, [])
-        # filter results
-        #for slc in slices:
-        #     if slc['slice_name'] == slice_name:
-        #         slice = slc
-        #          break
+        #filter results
+        for slc in slices:
+             if slc['slice_name'] == slice_name:
+                 slice = slc
+                 break
 
         if not slice:
             return (slice, slivers)
       
         reserved_nodes = self.driver.shell.getReservedNodes({'slice_id': slice['slice_id']}, [])
-       
+        reserved_node_ids = []
+        # filter on the slice
         for node in reserved_nodes:
-             slivers[node['id']] = node
-
+             if node['slice_id'] == slice['slice_id']:
+                 reserved_node_ids.append(node['node_id'])
+        #get all the nodes
+        all_nodes = self.driver.shell.getNodes({}, [])
+       
+        for node in all_nodes:
+             if node['node_id'] in reserved_node_ids:
+                 slivers[node['node_id']] = node
+        
         return (slice, slivers)
        
 
 
-    def get_nodes_and_links(self, slice_xrn, slice=None,slivers={}, options={}):
+    def get_nodes(self, slice_xrn, slice=None,slivers={}, options={}):
         # if we are dealing with a slice that has no node just return 
         # and empty list    
         if slice_xrn:
             if not slice or not slivers:
-                return ([],[])
+                return []
             else:
                 nodes = [slivers[sliver] for sliver in slivers]
         else:
@@ -147,14 +84,13 @@ class NitosAggregate:
         grain = self.driver.testbedInfo['grain']
         #grain = 1800
        
- 
 
         rspec_nodes = []
         for node in nodes:
             rspec_node = Node()
             site_name = self.driver.testbedInfo['name']
-            rspec_node['component_id'] = hostname_to_urn(self.driver.hrn, site_name, node['name'])
-            rspec_node['component_name'] = node['name']
+            rspec_node['component_id'] = hostname_to_urn(self.driver.hrn, site_name, node['hostname'])
+            rspec_node['component_name'] = node['hostname']
             rspec_node['component_manager_id'] = Xrn(self.driver.hrn, 'authority+cm').get_urn()
             rspec_node['authority_id'] = hrn_to_urn(NitosXrn.site_hrn(self.driver.hrn, site_name), 'authority+sa')
             # do not include boot state (<available> element) in the manifest rspec
@@ -168,7 +104,7 @@ class NitosAggregate:
                 location = Location({'longitude': longitude, 'latitude': latitude, 'country': 'unknown'})
                 rspec_node['location'] = location
             # 3D position
-            position_3d = Position3D({'x': node['X'], 'y': node['Y'], 'z': node['Z']})
+            position_3d = Position3D({'x': node['position']['X'], 'y': node['position']['Y'], 'z': node['position']['Z']})
             #position_3d = Position3D({'x': 1, 'y': 2, 'z': 3})
             rspec_node['position_3d'] = position_3d 
             # Granularity
@@ -176,12 +112,20 @@ class NitosAggregate:
             rspec_node['granularity'] = granularity
 
             # HardwareType
-            rspec_node['hardware_type'] = node['type']
+            rspec_node['hardware_type'] = node['node_type']
             #rspec_node['hardware_type'] = "orbit"
+            
+            #slivers
+            if node['node_id'] in slivers:
+                # add sliver info
+                sliver = slivers[node['node_id']]
+                rspec_node['sliver_id'] = sliver['node_id']
+                rspec_node['client_id'] = node['hostname']
+                rspec_node['slivers'] = [sliver]
 
                 
             rspec_nodes.append(rspec_node)
-        return (rspec_nodes, []) 
+        return rspec_nodes 
 
     def get_leases_and_channels(self, slice=None, options={}):
         
@@ -193,10 +137,14 @@ class NitosAggregate:
         grain = self.driver.testbedInfo['grain']
 
         if slice:
-            for lease in leases:
+            all_leases = []
+            all_leases.extend(leases)
+            all_reserved_channels = []
+            all_reserved_channels.extend(reserved_channels)
+            for lease in all_leases:
                  if lease['slice_id'] != slice['slice_id']:
                      leases.remove(lease)
-            for channel in reserved_channels:
+            for channel in all_reserved_channels:
                  if channel['slice_id'] != slice['slice_id']:
                      reserved_channels.remove(channel)
 
@@ -234,8 +182,8 @@ class NitosAggregate:
             rspec_lease['lease_id'] = lease['reservation_id']
             # retreive node name
             for node in nodes:
-                 if node['id'] == lease['node_id']:
-                     nodename = node['name']
+                 if node['node_id'] == lease['node_id']:
+                     nodename = node['hostname']
                      break
            
             rspec_lease['component_id'] = hostname_to_urn(self.driver.hrn, self.driver.testbedInfo['name'], nodename)
@@ -255,10 +203,23 @@ class NitosAggregate:
         return (rspec_leases, rspec_channels)
 
 
-    def get_channels(self, options={}):
-        
-        filter = {}
-        channels = self.driver.shell.getChannels({}, [])
+    def get_channels(self, slice=None, options={}):
+ 
+        all_channels = self.driver.shell.getChannels({}, [])
+        channels = []
+        if slice:
+            reserved_channels = self.driver.shell.getReservedChannels()
+            reserved_channel_ids = []
+            for channel in reserved_channels:
+                 if channel['slice_id'] == slice['slice_id']:
+                     reserved_channel_ids.append(channel['channel_id'])
+
+            for channel in all_channels:
+                 if channel['channel_id'] in reserved_channel_ids:
+                     channels.append(channel)
+        else:
+            channels = all_channels
+
         rspec_channels = []
         for channel in channels:
             rspec_channel = Channel()
@@ -288,9 +249,8 @@ class NitosAggregate:
             rspec.xml.set('expires',  datetime_to_string(utcparse(slice['expires'])))
 
         if not options.get('list_leases') or options.get('list_leases') and options['list_leases'] != 'leases':
-           nodes, links = self.get_nodes_and_links(slice_xrn, slice, slivers, options)
+           nodes = self.get_nodes(slice_xrn, slice, slivers, options)
            rspec.version.add_nodes(nodes)
-           rspec.version.add_links(links)
            # add sliver defaults
            default_sliver = slivers.get(None, [])
            if default_sliver:
@@ -299,7 +259,7 @@ class NitosAggregate:
                   logger.info(attrib)
                   rspec.version.add_default_sliver_attribute(attrib['tagname'], attrib['value'])
            # add wifi channels
-           channels = self.get_channels()
+           channels = self.get_channels(slice, options)
            rspec.version.add_channels(channels)
 
         if not options.get('list_leases') or options.get('list_leases') and options['list_leases'] != 'resources':

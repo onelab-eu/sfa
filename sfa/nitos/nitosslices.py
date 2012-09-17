@@ -7,37 +7,15 @@ from sfa.util.xrn import Xrn, get_leaf, get_authority, urn_to_hrn
 
 from sfa.rspecs.rspec import RSpec
 
-from sfa.planetlab.vlink import VLink
-from sfa.planetlab.plxrn import PlXrn, hrn_to_pl_slicename
+from sfa.nitos.nitosxrn import NitosXrn, hrn_to_nitos_slicename, xrn_to_hostname
 
 MAXINT =  2L**31-1
 
 class NitosSlices:
 
-    rspec_to_slice_tag = {'max_rate':'net_max_rate'}
-
     def __init__(self, driver):
         self.driver = driver
 
-    def get_peer(self, xrn):
-        hrn, type = urn_to_hrn(xrn)
-        #Does this slice belong to a local site or a peer NITOS site?
-        peer = None
-
-        # get this slice's authority (site)
-        slice_authority = get_authority(hrn)
-
-        # get this site's authority (sfa root authority or sub authority)
-        site_authority = get_authority(slice_authority).lower()
-
-        # check if we are already peered with this site_authority, if so
-        peers = self.driver.shell.GetPeers({}, ['peer_id', 'peername', 'shortname', 'hrn_root'])
-        for peer_record in peers:
-            names = [name.lower() for name in peer_record.values() if isinstance(name, StringTypes)]
-            if site_authority in names:
-                peer = peer_record
-
-        return peer
 
     def get_sfa_peer(self, xrn):
         hrn, type = urn_to_hrn(xrn)
@@ -52,9 +30,114 @@ class NitosSlices:
 
         return sfa_peer
 
-    def verify_slice_leases(self, slice, requested_leases, kept_leases, peer):
+    def verify_slice_leases_nodes(self, slice, rspec_requested_nodes):
+        nodes = self.driver.shell.getNodes({}, [])
+  
+        requested_nodes = []
+        for node in rspec_requested_nodes:
+             requested_node = {}
+             nitos_nodes = []
+             nitos_nodes.extend(nodes)
+             slice_name = hrn_to_nitos_slicename(node['slice_id'])
+             if slice_name != slice['slice_name']:
+                 continue
+             hostname = xrn_to_hostname(node['component_id'])
+             nitos_node = self.driver.filter_nitos_results(nitos_nodes, {'hostname': hostname})[0]
+             # fill the requested node with nitos ids
+             requested_node['slice_id'] = slice['slice_id']
+             requested_node['node_id'] = nitos_node['node_id']
+             requested_node['start_time'] = node['start_time']
+             requested_node['end_time'] = str(int(node['duration']) * int(self.driver.testbedInfo['grain']) + int(node['start_time']))
+             requested_nodes.append(requested_node)
+
+        # get actual nodes reservation data for the slice
+        reserved_nodes = self.driver.filter_nitos_results(self.driver.shell.getReservedNodes({}, []), {'slice_id': slice['slice_id']})
+         
+        reserved_nodes_by_id = {}
+        for node in reserved_nodes:
+             reserved_nodes_by_id[node['reservation_id']] = {'slice_id': node['slice_id'], \
+                                      'node_id': node['node_id'], 'start_time': node['start_time'], \
+                                      'end_time': node['end_time']}
+
+        added_nodes = []
+        kept_nodes_id = []
+        deleted_nodes_id = []
+        for reservation_id in reserved_nodes_by_id:
+             if reserved_nodes_by_id[reservation_id] not in requested_nodes:
+                 deleted_nodes_id.append(reservation_id)
+             else:
+                 kept_nodes_id.append(reservation_id)
+                 requested_nodes.remove(reserved_nodes_by_id[reservation_id])
+        added_nodes = requested_nodes
+
+        print "NODES: \nAdded: %s \nDeleted: %s\nKept: %s" %(added_nodes,deleted_nodes_id,kept_nodes_id)
+
+        try:
+            deleted=self.driver.shell.releaseNodes({'reservation_id': deleted_nodes_id})
+            for node in added_nodes:
+                added=self.driver.shell.reserveNodes({'slice_id': slice['slice_id'], 'start_time': node['start_time'], 'end_time': node['end_time'], 'node_id': [node['node_id']]})
+
+        except:
+            logger.log_exc('Failed to add/remove slice leases nodes')
+
+        return added_nodes
+
         
-        leases = self.driver.shell.GetLeases({'name':slice['name']}, ['lease_id'])
+    def verify_slice_leases_channels(self, slice, rspec_requested_channels):
+        channels = self.driver.shell.getChannels({}, [])
+
+        requested_channels = []
+        for channel in rspec_requested_channels:
+             requested_channel = {}
+             nitos_channels = []
+             nitos_channels.extend(channels)
+             slice_name = hrn_to_nitos_slicename(channel['slice_id'])
+             if slice_name != slice['slice_name']:
+                 continue
+             channel_num = channel['channel_num']
+             nitos_channel = self.driver.filter_nitos_results(nitos_channels, {'channel': channel_num})[0]
+             # fill the requested channel with nitos ids
+             requested_channel['slice_id'] = slice['slice_id']
+             requested_channel['channel_id'] = nitos_channel['channel_id']
+             requested_channel['start_time'] = channel['start_time']
+             requested_channel['end_time'] = str(int(channel['duration']) * int(self.driver.testbedInfo['grain']) + int(channel['start_time']))
+             requested_channels.append(requested_channel)
+
+        # get actual channel reservation data for the slice
+        reserved_channels = self.driver.filter_nitos_results(self.driver.shell.getReservedChannels(), {'slice_id': slice['slice_id']})
+        
+        reserved_channels_by_id = {}
+        for channel in reserved_channels:
+             reserved_channels_by_id[channel['reservation_id']] = {'slice_id': channel['slice_id'], \
+                                      'channel_id': channel['channel_id'], 'start_time': channel['start_time'], \
+                                      'end_time': channel['end_time']}
+
+        added_channels = []
+        kept_channels_id = []
+        deleted_channels_id = []
+        for reservation_id in reserved_channels_by_id:
+             if reserved_channels_by_id[reservation_id] not in requested_channels:
+                 deleted_channels_id.append(reservation_id)
+             else:
+                 kept_channels_id.append(reservation_id)
+                 requested_channels.remove(reserved_channels_by_id[reservation_id])
+        added_channels = requested_channels
+
+        print "CHANNELS: \nAdded: %s \nDeleted: %s\nKept: %s" %(added_channels,deleted_channels_id,kept_channels_id)
+        
+        try:
+            deleted=self.driver.shell.releaseChannels({'reservation_id': deleted_channels_id})
+            for channel in added_channels:
+                added=self.driver.shell.reserveChannels({'slice_id': slice['slice_id'], 'start_time': channel['start_time'], 'end_time': channel['end_time'], 'channel_id': [channel['channel_id']]})
+
+        except:
+            logger.log_exc('Failed to add/remove slice leases channels')
+         
+        return added_channels
+
+    def verify_slice_leases(self, slice, requested_leases, kept_leases):
+        
+        leases = self.driver.shell.getLeases({'name':slice['name']}, ['lease_id'])
         grain = self.driver.shell.GetLeaseGranularity()
         current_leases = [lease['lease_id'] for lease in leases]
         deleted_leases = list(set(current_leases).difference(kept_leases))
@@ -72,7 +155,7 @@ class NitosSlices:
         return leases
 
 
-    def verify_slice_nodes(self, slice, requested_slivers, peer):
+    def verify_slice_nodes(self, slice, requested_slivers):
         
         nodes = self.driver.shell.GetNodes(slice['node_ids'], ['node_id', 'hostname', 'interface_ids'])
         current_slivers = [node['hostname'] for node in nodes]
@@ -107,163 +190,36 @@ class NitosSlices:
 
         return str(key)
 
-    def verify_slice_links(self, slice, requested_links, nodes):
-        # nodes is undefined here
-        if not requested_links:
-            return
-   
-        # build dict of nodes 
-        nodes_dict = {}
-        interface_ids = []
-        for node in nodes:
-            nodes_dict[node['node_id']] = node
-            interface_ids.extend(node['interface_ids'])
-        # build dict of interfaces
-        interfaces = self.driver.shell.GetInterfaces(interface_ids)
-        interfaces_dict = {}
-        for interface in interfaces:
-            interfaces_dict[interface['interface_id']] = interface 
-
-        slice_tags = []
-        
-        # set egre key
-        slice_tags.append({'name': 'egre_key', 'value': self.free_egre_key()})
-    
-        # set netns
-        slice_tags.append({'name': 'netns', 'value': '1'})
-
-        # set cap_net_admin 
-        # need to update the attribute string?
-        slice_tags.append({'name': 'capabilities', 'value': 'CAP_NET_ADMIN'}) 
-        
-        for link in requested_links:
-            # get the ip address of the first node in the link
-            ifname1 = Xrn(link['interface1']['component_id']).get_leaf()
-            (node_raw, device) = ifname1.split(':')
-            node_id = int(node_raw.replace('node', ''))
-            node = nodes_dict[node_id]
-            if1 = interfaces_dict[node['interface_ids'][0]]
-            ipaddr = if1['ip']
-            topo_rspec = VLink.get_topo_rspec(link, ipaddr)
-            # set topo_rspec tag
-            slice_tags.append({'name': 'topo_rspec', 'value': str([topo_rspec]), 'node_id': node_id})
-            # set vini_topo tag
-            slice_tags.append({'name': 'vini_topo', 'value': 'manual', 'node_id': node_id})
-            #self.driver.shell.AddSliceTag(slice['name'], 'topo_rspec', str([topo_rspec]), node_id) 
-
-        self.verify_slice_attributes(slice, slice_tags, {'append': True}, admin=True)
                         
         
-
-    def handle_peer(self, site, slice, persons, peer):
-        if peer:
-            # bind site
-            try:
-                if site:
-                    self.driver.shell.BindObjectToPeer('site', site['site_id'], peer['shortname'], slice['site_id'])
-            except Exception,e:
-                self.driver.shell.DeleteSite(site['site_id'])
-                raise e
-            
-            # bind slice
-            try:
-                if slice:
-                    self.driver.shell.BindObjectToPeer('slice', slice['slice_id'], peer['shortname'], slice['slice_id'])
-            except Exception,e:
-                self.driver.shell.DeleteSlice(slice['slice_id'])
-                raise e 
-
-            # bind persons
-            for person in persons:
-                try:
-                    self.driver.shell.BindObjectToPeer('person', 
-                                                     person['person_id'], peer['shortname'], person['peer_person_id'])
-
-                    for (key, remote_key_id) in zip(person['keys'], person['key_ids']):
-                        try:
-                            self.driver.shell.BindObjectToPeer( 'key', key['key_id'], peer['shortname'], remote_key_id)
-                        except:
-                            self.driver.shell.DeleteKey(key['key_id'])
-                            logger("failed to bind key: %s to peer: %s " % (key['key_id'], peer['shortname']))
-                except Exception,e:
-                    self.driver.shell.DeletePerson(person['person_id'])
-                    raise e       
-
-        return slice
-
-    def verify_site(self, slice_xrn, slice_record={}, peer=None, sfa_peer=None, options={}):
-        (slice_hrn, type) = urn_to_hrn(slice_xrn)
-        site_hrn = get_authority(slice_hrn)
-        # login base can't be longer than 20 characters
-        slicename = hrn_to_pl_slicename(slice_hrn)
-        authority_name = slicename.split('_')[0]
-        login_base = authority_name[:20]
-        sites = self.driver.shell.GetSites(login_base)
-        if not sites:
-            # create new site record
-            site = {'name': 'geni.%s' % authority_name,
-                    'abbreviated_name': authority_name,
-                    'login_base': login_base,
-                    'max_slices': 100,
-                    'max_slivers': 1000,
-                    'enabled': True,
-                    'peer_site_id': None}
-            if peer:
-                site['peer_site_id'] = slice_record.get('site_id', None)
-            site['site_id'] = self.driver.shell.AddSite(site)
-            # exempt federated sites from monitor policies
-            self.driver.shell.AddSiteTag(site['site_id'], 'exempt_site_until', "20200101")
-            
-#            # is this still necessary?
-#            # add record to the local registry 
-#            if sfa_peer and slice_record:
-#                peer_dict = {'type': 'authority', 'hrn': site_hrn, \
-#                             'peer_authority': sfa_peer, 'pointer': site['site_id']}
-#                self.registry.register_peer_object(self.credential, peer_dict)
-        else:
-            site =  sites[0]
-            if peer:
-                # unbind from peer so we can modify if necessary. Will bind back later
-                self.driver.shell.UnBindObjectFromPeer('site', site['site_id'], peer['shortname']) 
-        
-        return site        
-
-    def verify_slice(self, slice_hrn, slice_record, peer, sfa_peer, options={}):
-        slicename = hrn_to_pl_slicename(slice_hrn)
-        parts = slicename.split("_")
-        login_base = parts[0]
-        slices = self.driver.shell.GetSlices([slicename]) 
+    def verify_slice(self, slice_hrn, slice_record, sfa_peer, options={}):
+        slicename = hrn_to_nitos_slicename(slice_hrn)
+        slices = self.driver.shell.getSlices({}, []) 
+        slices = self.driver.filter_nitos_results(slices, {'slice_name': slicename})
         if not slices:
-            slice = {'name': slicename,
-                     'url': slice_record.get('url', slice_hrn), 
-                     'description': slice_record.get('description', slice_hrn)}
+            slice = {'name': slicename}
             # add the slice                          
-            slice['slice_id'] = self.driver.shell.AddSlice(slice)
+            slice['slice_id'] = self.driver.shell.addSlice(slice)
             slice['node_ids'] = []
-            slice['person_ids'] = []
-            if peer:
-                slice['peer_slice_id'] = slice_record.get('slice_id', None) 
-            # mark this slice as an sfa peer record
-#            if sfa_peer:
-#                peer_dict = {'type': 'slice', 'hrn': slice_hrn, 
-#                             'peer_authority': sfa_peer, 'pointer': slice['slice_id']}
-#                self.registry.register_peer_object(self.credential, peer_dict)
+            slice['user_ids'] = []
         else:
             slice = slices[0]
-            if peer:
-                slice['peer_slice_id'] = slice_record.get('slice_id', None)
-                # unbind from peer so we can modify if necessary. Will bind back later
-                self.driver.shell.UnBindObjectFromPeer('slice', slice['slice_id'], peer['shortname'])
-	        #Update existing record (e.g. expires field) it with the latest info.
-            if slice_record.get('expires'):
-                requested_expires = int(datetime_to_epoch(utcparse(slice_record['expires'])))
-                if requested_expires and slice['expires'] != requested_expires:
-                    self.driver.shell.UpdateSlice( slice['slice_id'], {'expires' : requested_expires})
        
         return slice
 
     #def get_existing_persons(self, users):
-    def verify_persons(self, slice_hrn, slice_record, users, peer, sfa_peer, options={}):
+    def verify_users(self, slice_hrn, slice_record, users, sfa_peer, options={}):
+        
+        slice_user_ids = slice_record['user_ids']
+        all_users = self.driver.shell.getUsers()
+        # filter slice users 
+        slice_users = [user for user in all_users if user['user_id'] in slice_user_ids]
+
+        slicename = hrn_to_nitos_slicename(slice_hrn)
+        slices = self.driver.shell.getSlices({}, [])
+        slices = self.driver.filter_nitos_results(slices, {'slice_name': slicename})
+       
+        slice_user 
         users_by_email = {}
         users_by_site = defaultdict(list)
         users_dict = {} 
@@ -405,7 +361,7 @@ class NitosSlices:
         return added_persons
             
 
-    def verify_keys(self, persons, users, peer, options={}):
+    def verify_keys(self, persons, users, options={}):
         # existing keys 
         key_ids = []
         for person in persons:
@@ -456,67 +412,4 @@ class NitosSlices:
                     except:
                         pass   
 
-    def verify_slice_attributes(self, slice, requested_slice_attributes, options={}, admin=False):
-        append = options.get('append', True)
-        # get list of attributes users ar able to manage
-        filter = {'category': '*slice*'}
-        if not admin:
-            filter['|roles'] = ['user']
-        slice_attributes = self.driver.shell.GetTagTypes(filter)
-        valid_slice_attribute_names = [attribute['tagname'] for attribute in slice_attributes]
-
-        # get sliver attributes
-        added_slice_attributes = []
-        removed_slice_attributes = []
-        ignored_slice_attribute_names = []
-        existing_slice_attributes = self.driver.shell.GetSliceTags({'slice_id': slice['slice_id']})
-        
-        # get attributes that should be removed
-        for slice_tag in existing_slice_attributes:
-            if slice_tag['tagname'] in ignored_slice_attribute_names:
-                # If a slice already has a admin only role it was probably given to them by an
-                # admin, so we should ignore it.
-                ignored_slice_attribute_names.append(slice_tag['tagname'])
-            else:
-                # If an existing slice attribute was not found in the request it should
-                # be removed
-                attribute_found=False
-                for requested_attribute in requested_slice_attributes:
-                    if requested_attribute['name'] == slice_tag['tagname'] and \
-                       requested_attribute['value'] == slice_tag['value']:
-                        attribute_found=True
-                        break
-
-            if not attribute_found and not append:
-                removed_slice_attributes.append(slice_tag)
-        
-        # get attributes that should be added:
-        for requested_attribute in requested_slice_attributes:
-            # if the requested attribute wasn't found  we should add it
-            if requested_attribute['name'] in valid_slice_attribute_names:
-                attribute_found = False
-                for existing_attribute in existing_slice_attributes:
-                    if requested_attribute['name'] == existing_attribute['tagname'] and \
-                       requested_attribute['value'] == existing_attribute['value']:
-                        attribute_found=True
-                        break
-                if not attribute_found:
-                    added_slice_attributes.append(requested_attribute)
-
-
-        # remove stale attributes
-        for attribute in removed_slice_attributes:
-            try:
-                self.driver.shell.DeleteSliceTag(attribute['slice_tag_id'])
-            except Exception, e:
-                logger.warn('Failed to remove sliver attribute. name: %s, value: %s, node_id: %s\nCause:%s'\
-                                % (slice['name'], attribute['value'],  attribute.get('node_id'), str(e)))
-
-        # add requested_attributes
-        for attribute in added_slice_attributes:
-            try:
-                self.driver.shell.AddSliceTag(slice['name'], attribute['name'], attribute['value'], attribute.get('node_id', None))
-            except Exception, e:
-                logger.warn('Failed to add sliver attribute. name: %s, value: %s, node_id: %s\nCause:%s'\
-                                % (slice['name'], attribute['value'],  attribute.get('node_id'), str(e)))
 

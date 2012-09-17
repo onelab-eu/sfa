@@ -15,6 +15,8 @@ from sfa.rspecs.elements.versions.nitosv1Sliver import NITOSv1Sliver
 from sfa.rspecs.elements.versions.nitosv1PLTag import NITOSv1PLTag
 from sfa.rspecs.elements.versions.pgv2Services import PGv2Services
 from sfa.rspecs.elements.lease import Lease
+from sfa.rspecs.elements.channel import Channel
+
 
 from sfa.nitos.nitosxrn import xrn_to_hostname
 
@@ -77,15 +79,26 @@ class NITOSv1Lease:
     @staticmethod
     def get_lease_objs(lease_elems):
         leases = []    
+        channels = []
         for lease_elem in lease_elems:
-            lease = Lease(lease_elem.attrib, lease_elem)
-            if lease.get('lease_id'):
-               lease['lease_id'] = lease_elem.attrib['lease_id']
-            lease['component_id'] = lease_elem.attrib['component_id']
-            lease['slice_id'] = lease_elem.attrib['slice_id']
-            lease['start_time'] = lease_elem.attrib['start_time']
-            lease['duration'] = lease_elem.attrib['duration']
+            #get nodes
+            node_elems = lease_elem.xpath('./default:node | ./node')
+            for node_elem in node_elems:
+                 lease = Lease(lease_elem.attrib, lease_elem)
+                 lease['slice_id'] = lease_elem.attrib['slice_id']
+                 lease['start_time'] = lease_elem.attrib['start_time']
+                 lease['duration'] = lease_elem.attrib['duration']
+                 lease['component_id'] = node_elem.attrib['component_id']
+                 leases.append(lease)
+            #get channels
+            channel_elems = lease_elem.xpath('./default:channel | ./channel')
+            for channel_elem in channel_elems:
+                 channel = Channel(channel_elem.attrib, channel_elem)
+                 channel['slice_id'] = lease_elem.attrib['slice_id']
+                 channel['start_time'] = lease_elem.attrib['start_time']
+                 channel['duration'] = lease_elem.attrib['duration']
+                 channel['channel_num'] = channel_elem.attrib['channel_num']
+                 channels.append(channel)
 
-            leases.append(lease)
-        return leases            
+        return (leases, channels)            
 
