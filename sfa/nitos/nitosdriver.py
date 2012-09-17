@@ -619,17 +619,24 @@ class NitosDriver (Driver):
 
     def delete_sliver (self, slice_urn, slice_hrn, creds, options):
         slicename = hrn_to_nitos_slicename(slice_hrn)
-        slices = self.shell.getSlices({'slice_name': slicename})
+        slices = self.filter_nitos_results(self.shell.getSlices({}, []), {'slice_name': slicename})
         if not slices:
             return 1
         slice = slices[0]
 
+        slice_reserved_nodes = self.filter_nitos_results(self.shell.getReservedNodes({}, []), {'slice_id': slice['slice_id'] })
+        slice_reserved_channels = self.filter_nitos_results(self.shell.getReservedChannels(), {'slice_id': slice['slice_id'] })
+
+        slice_reserved_nodes_ids = [node['reservation_id'] for node in slice_reserved_nodes]
+        slice_reserved_channels_ids = [channel['reservation_id'] for channel in slice_reserved_channels]
+
+        # release all reserved nodes and channels for that slice
         try:
+            print "Nodes: %s\nChannels: %s" %(slice_reserved_nodes_ids, slice_reserved_channels_ids)
+            released_nodes = self.shell.releaseNodes({'reservation_id': slice_reserved_nodes_ids})
+            released_channels = self.shell.releaseChannels({'reservation_id': slice_reserved_channels_ids})
+        except:
             pass
-            #self.shell.DeleteSliceFromNodes({'slice_name': slicename, slice['node_ids']})
-        finally:
-            if peer:
-                self.shell.BindObjectToPeer('slice', slice['slice_id'], peer, slice['peer_slice_id'])
         return 1
 
     def renew_sliver (self, slice_urn, slice_hrn, creds, expiration_time, options):
