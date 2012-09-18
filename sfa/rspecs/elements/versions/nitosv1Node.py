@@ -16,7 +16,6 @@ from sfa.rspecs.elements.versions.nitosv1Sliver import NITOSv1Sliver
 from sfa.rspecs.elements.versions.nitosv1PLTag import NITOSv1PLTag
 from sfa.rspecs.elements.versions.pgv2Services import PGv2Services
 
-from sfa.nitos.nitosxrn import xrn_to_hostname
 
 class NITOSv1Node:
 
@@ -44,7 +43,7 @@ class NITOSv1Node:
 
             # set component_name attribute and  hostname element
             if 'component_id' in node and node['component_id']:
-                component_name = xrn_to_hostname(node['component_id'])
+                component_name = Xrn(xrn=node['component_id']).get_leaf()
                 node_elem.set('component_name', component_name)
                 hostname_elem = node_elem.add_element('hostname')
                 hostname_elem.set_text(component_name)

@@ -18,7 +18,6 @@ from sfa.rspecs.elements.lease import Lease
 from sfa.rspecs.elements.spectrum import Spectrum
 from sfa.rspecs.elements.channel import Channel
 
-from sfa.planetlab.plxrn import xrn_to_hostname
 
 class NITOSv1Channel:
 
