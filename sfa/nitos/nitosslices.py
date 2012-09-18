@@ -73,9 +73,9 @@ class NitosSlices:
         print "NODES: \nAdded: %s \nDeleted: %s\nKept: %s" %(added_nodes,deleted_nodes_id,kept_nodes_id)
 
         try:
-            deleted=self.driver.shell.releaseNodes({'reservation_id': deleted_nodes_id})
+            deleted=self.driver.shell.releaseNodes({'reservation_ids': deleted_nodes_id})
             for node in added_nodes:
-                added=self.driver.shell.reserveNodes({'slice_id': slice['slice_id'], 'start_time': node['start_time'], 'end_time': node['end_time'], 'node_id': [node['node_id']]})
+                added=self.driver.shell.reserveNodes({'slice_id': slice['slice_id'], 'start_time': node['start_time'], 'end_time': node['end_time'], 'nodes': [node['node_id']]})
 
         except:
             logger.log_exc('Failed to add/remove slice leases nodes')
@@ -126,9 +126,9 @@ class NitosSlices:
         print "CHANNELS: \nAdded: %s \nDeleted: %s\nKept: %s" %(added_channels,deleted_channels_id,kept_channels_id)
         
         try:
-            deleted=self.driver.shell.releaseChannels({'reservation_id': deleted_channels_id})
+            deleted=self.driver.shell.releaseChannels({'reservation_ids': deleted_channels_id})
             for channel in added_channels:
-                added=self.driver.shell.reserveChannels({'slice_id': slice['slice_id'], 'start_time': channel['start_time'], 'end_time': channel['end_time'], 'channel_id': [channel['channel_id']]})
+                added=self.driver.shell.reserveChannels({'slice_id': slice['slice_id'], 'start_time': channel['start_time'], 'end_time': channel['end_time'], 'channels': [channel['channel_id']]})
 
         except:
             logger.log_exc('Failed to add/remove slice leases channels')

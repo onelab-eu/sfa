@@ -633,8 +633,8 @@ class NitosDriver (Driver):
         # release all reserved nodes and channels for that slice
         try:
             print "Nodes: %s\nChannels: %s" %(slice_reserved_nodes_ids, slice_reserved_channels_ids)
-            released_nodes = self.shell.releaseNodes({'reservation_id': slice_reserved_nodes_ids})
-            released_channels = self.shell.releaseChannels({'reservation_id': slice_reserved_channels_ids})
+            released_nodes = self.shell.releaseNodes({'reservation_ids': slice_reserved_nodes_ids})
+            released_channels = self.shell.releaseChannels({'reservation_ids': slice_reserved_channels_ids})
         except:
             pass
         return 1
