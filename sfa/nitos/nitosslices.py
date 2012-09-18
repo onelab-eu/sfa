@@ -135,46 +135,6 @@ class NitosSlices:
          
         return added_channels
 
-    def verify_slice_leases(self, slice, requested_leases, kept_leases):
-        
-        leases = self.driver.shell.getLeases({'name':slice['name']}, ['lease_id'])
-        grain = self.driver.shell.GetLeaseGranularity()
-        current_leases = [lease['lease_id'] for lease in leases]
-        deleted_leases = list(set(current_leases).difference(kept_leases))
-
-        try:
-            if peer:
-                self.driver.shell.UnBindObjectFromPeer('slice', slice['slice_id'], peer['shortname'])
-            deleted=self.driver.shell.DeleteLeases(deleted_leases)
-            for lease in requested_leases:
-                added=self.driver.shell.AddLeases(lease['hostname'], slice['name'], int(lease['start_time']), int(lease['duration']) * grain + int(lease['start_time']))
-
-        except: 
-            logger.log_exc('Failed to add/remove slice leases')
-
-        return leases
-
-
-    def verify_slice_nodes(self, slice, requested_slivers):
-        
-        nodes = self.driver.shell.GetNodes(slice['node_ids'], ['node_id', 'hostname', 'interface_ids'])
-        current_slivers = [node['hostname'] for node in nodes]
-
-        # remove nodes not in rspec
-        deleted_nodes = list(set(current_slivers).difference(requested_slivers))
-
-        # add nodes from rspec
-        added_nodes = list(set(requested_slivers).difference(current_slivers))        
-
-        try:
-            if peer:
-                self.driver.shell.UnBindObjectFromPeer('slice', slice['slice_id'], peer['shortname'])
-            self.driver.shell.AddSliceToNodes(slice['name'], added_nodes)
-            self.driver.shell.DeleteSliceFromNodes(slice['name'], deleted_nodes)
-
-        except: 
-            logger.log_exc('Failed to add/remove slice from nodes')
-        return nodes
 
     def free_egre_key(self):
         used = set()
