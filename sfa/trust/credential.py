@@ -1037,7 +1037,7 @@ class Credential(object):
         print self.dump_string(*args, **kwargs)
 
 
-    def dump_string(self, dump_parents=False):
+    def dump_string(self, dump_parents=False, show_xml=False):
         result=""
         result += "CREDENTIAL %s\n" % self.get_subject()
         filename=self.get_filename()
@@ -1060,5 +1060,17 @@ class Credential(object):
         if self.parent and dump_parents:
             result += "\nPARENT"
             result += self.parent.dump_string(True)
+
+        if show_xml:
+            try:
+                tree = etree.parse(StringIO(self.xml))
+                aside = etree.tostring(tree, pretty_print=True)
+                result += "\nXML\n"
+                result += aside
+                result += "\nEnd XML\n"
+            except:
+                import traceback
+                print "exc. Credential.dump_string / XML"
+                traceback.print_exc()
 
         return result
