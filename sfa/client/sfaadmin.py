@@ -69,7 +69,7 @@ class RegistryCommands(Commands):
           choices=('text', 'xml', 'simple'), help='display record in different formats') 
     def show(self, xrn, type=None, format=None, outfile=None):
         """Display details for a registered object"""
-        records = self.api.manager.Resolve(self.api, xrn, type, True)
+        records = self.api.manager.Resolve(self.api, xrn, type, details=True)
         for record in records:
             sfa_record = Record(dict=record)
             sfa_record.dump(format) 

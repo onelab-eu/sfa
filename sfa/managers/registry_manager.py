@@ -104,7 +104,8 @@ class RegistryManager:
         return new_cred.save_to_string(save_parents=True)
     
     
-    def Resolve(self, api, xrns, type=None, full=True):
+    # the default for full, which means 'dig into the testbed as well', should be false
+    def Resolve(self, api, xrns, type=None, details=False):
     
         if not isinstance(xrns, types.ListType):
             # try to infer type if not set and we get a single input
@@ -142,6 +143,8 @@ class RegistryManager:
                 credential = api.getCredential()
                 interface = api.registries[registry_hrn]
                 server_proxy = api.server_proxy(interface, credential)
+                # should propagate the details flag but that's not supported in the xmlrpc interface yet
+                #peer_records = server_proxy.Resolve(xrns, credential,type, details=details)
                 peer_records = server_proxy.Resolve(xrns, credential,type)
                 # pass foreign records as-is
                 # previous code used to read
@@ -156,11 +159,11 @@ class RegistryManager:
         if type:
             local_records = local_records.filter_by(type=type)
         local_records=local_records.all()
-        logger.info("Resolve: local_records=%s (type=%s)"%(local_records,type))
+        logger.info("Resolve details=%s: local_records=%s (type=%s)"%(details,local_records,type))
         local_dicts = [ record.__dict__ for record in local_records ]
         
-        if full:
-            # in full mode we get as much info as we can, which involves contacting the 
+        if details:
+            # in details mode we get as much info as we can, which involves contacting the 
             # testbed for getting implementation details about the record
             self.driver.augment_records_with_testbed_info(local_dicts)
             # also we fill the 'url' field for known authorities

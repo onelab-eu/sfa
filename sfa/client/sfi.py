@@ -872,6 +872,8 @@ or version information about sfi itself
             self.print_help()
             sys.exit(1)
         hrn = args[0]
+        # xxx should set details=True here but that's not in the xmlrpc interface ...
+        # record_dicts = self.registry().Resolve(hrn, self.my_credential_string, details=True)
         record_dicts = self.registry().Resolve(hrn, self.my_credential_string)
         record_dicts = filter_records(options.type, record_dicts)
         if not record_dicts:

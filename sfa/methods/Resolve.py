@@ -18,6 +18,7 @@ class Resolve(Method):
 
     interfaces = ['registry']
     
+    # should we not accept an optional 'details' argument ?
     accepts = [
         Mixed(Parameter(str, "Human readable name (hrn or urn)"),
               Parameter(list, "List of Human readable names ([hrn])")),
@@ -29,6 +30,8 @@ class Resolve(Method):
     returns = [Parameter(dict, "registry record")]
     
     def call(self, xrns, creds):
+        # xxx should be ar arg
+        details=False
         type = None
         if not isinstance(xrns, types.ListType):
             type = Xrn(xrns).get_type()
@@ -42,5 +45,5 @@ class Resolve(Method):
         self.api.logger.info("interface: %s\tcaller-hrn: %s\ttarget-hrn: %s\tmethod-name: %s"%(self.api.interface, origin_hrn, hrns, self.name))
  
         # send the call to the right manager
-        return self.api.manager.Resolve(self.api, xrns, type)
+        return self.api.manager.Resolve(self.api, xrns, type, details=details)
             
