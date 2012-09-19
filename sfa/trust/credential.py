@@ -272,6 +272,8 @@ class Credential(object):
             if os.path.isfile(path + '/' + 'xmlsec1'):
                 self.xmlsec_path = path + '/' + 'xmlsec1'
                 break
+        if not self.xmlsec_path:
+            logger.warn("Could not locate binary for xmlsec1 - SFA will be unable to sign stuff !!")
 
     def get_subject(self):
         if not self.gidObject:
