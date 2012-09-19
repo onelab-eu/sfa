@@ -628,7 +628,11 @@ class Credential(object):
     # you have loaded an existing signed credential, do not call encode() or sign() on it.
 
     def sign(self):
-        if not self.issuer_privkey or not self.issuer_gid:
+        if not self.issuer_privkey:
+            logger.warn("Cannot sign credential (no private key)")
+            return
+        if not self.issuer_gid:
+            logger.warn("Cannot sign credential (no issuer gid)")
             return
         doc = parseString(self.get_xml())
         sigs = doc.getElementsByTagName("signatures")[0]
