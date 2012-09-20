@@ -30,6 +30,9 @@ class NITOSv1Node:
         else:
             network_elem = xml
 
+        # needs to be improuved to retreive the gateway addr dynamically.
+        gateway_addr = 'nitlab.inf.uth.gr'
+
         node_elems = []       
         for node in nodes:
             node_fields = ['component_manager_id', 'component_id', 'boot_state']
@@ -65,6 +68,11 @@ class NITOSv1Node:
             # all nitos nodes are exculsive
             exclusive_elem = node_elem.add_element('exclusive')
             exclusive_elem.set_text('TRUE')
+ 
+            # In order to access nitos nodes, one need to pass through the nitos gateway
+            # here we advertise Nitos access gateway address
+            gateway_elem = node_elem.add_element('gateway')
+            gateway_elem.set_text(gateway_addr)
 
             # add granularity of the reservation system
             granularity = node.get('granularity')['grain']
