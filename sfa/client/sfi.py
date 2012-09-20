@@ -197,6 +197,39 @@ def save_record_to_file(filename, record_dict):
     f.close()
     return
 
+# used in sfi list
+def terminal_render (records,options):
+    # sort records by type
+    grouped_by_type={}
+    for record in records:
+        type=record['type']
+        if type not in grouped_by_type: grouped_by_type[type]=[]
+        grouped_by_type[type].append(record)
+    for (type, list) in grouped_by_type.items():
+#        print 20 * '-', type
+        try:    renderer=eval('terminal_render_'+type)
+        except: renderer=terminal_render_default
+        for record in list: renderer(record,options)
+
+def terminal_render_default (record,options):
+    print "%s (%s)" % (record['hrn'], record['type'])
+def terminal_render_user (record, options):
+    print "%s (User)"%record['hrn'],
+    if record.get('reg-pi-authorities',None): print " [PI at %s]"%(" and ".join(record['reg-pi-authorities'])),
+    if record.get('reg-slices',None): print " [IN slices %s]"%(" and ".join(record['reg-slices'])),
+    print ""
+def terminal_render_slice (record, options):
+    print "%s (Slice)"%record['hrn'],
+    if record.get('reg-researchers',None): print " [USERS %s]"%(" and ".join(record['reg-researchers'])),
+    print record.keys()
+    print ""
+def terminal_render_authority (record, options):
+    print "%s (Authority)"%record['hrn'],
+    if record.get('reg-pis',None): print " [PIS %s]"%(" and ".join(record['reg-pis'])),
+    print ""
+def terminal_render_node (record, options):
+    print "%s (Node)"%record['hrn']
+
 # minimally check a key argument
 def check_ssh_key (key):
     good_ssh_key = r'^.*(?:ssh-dss|ssh-rsa)[ ]+[A-Za-z0-9+/=]+(?: .*)?$'
@@ -856,10 +889,9 @@ or version information about sfi itself
             raise Exception, "Not enough parameters for the 'list' command"
 
         # filter on person, slice, site, node, etc.
-        # THis really should be in the self.filter_records funct def comment...
+        # This really should be in the self.filter_records funct def comment...
         list = filter_records(options.type, list)
-        for record in list:
-            print "%s (%s)" % (record['hrn'], record['type'])
+        terminal_render (list, options)
         if options.file:
             save_records_to_file(options.file, list, options.fileformat)
         return

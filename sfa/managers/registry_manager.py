@@ -226,7 +226,8 @@ class RegistryManager:
                 records = dbsession.query(RegRecord).filter(RegRecord.hrn.startswith(hrn))
             else:
                 records = dbsession.query(RegRecord).filter_by(authority=hrn)
-            record_dicts=[ record.todict() for record in records ]
+            for record in records: augment_with_related_hrns (record)
+            record_dicts=[ record.todict(exclude_type=RegRecord) for record in records ]
     
         return record_dicts
     
