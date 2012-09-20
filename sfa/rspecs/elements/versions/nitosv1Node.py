@@ -62,6 +62,9 @@ class NITOSv1Node:
             if position_3d:
                 node_elem.add_instance('position_3d', position_3d, Position3D.fields)
 
+            # all nitos nodes are exculsive
+            exclusive_elem = node_elem.add_element('exclusive')
+            exclusive_elem.set_text('TRUE')
 
             # add granularity of the reservation system
             granularity = node.get('granularity')['grain']
