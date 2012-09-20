@@ -17,7 +17,8 @@ from sfa.trust.credential import Credential
 from sfa.trust.certificate import Certificate, Keypair, convert_public_key
 from sfa.trust.gid import create_uuid
 
-from sfa.storage.model import make_record, RegRecord, RegAuthority, RegUser, RegSlice, RegKey
+from sfa.storage.model import make_record, RegRecord, RegAuthority, RegUser, RegSlice, RegKey, \
+    augment_with_related_hrns
 from sfa.storage.alchemy import dbsession
 
 class RegistryManager:
@@ -53,13 +54,6 @@ class RegistryManager:
         if not record:
             raise RecordNotFound("hrn=%s, type=%s"%(hrn,type))
 
-        # xxx for the record only
-        # used to call this, which was wrong, now all needed data is natively is our DB
-        # self.driver.augment_records_with_testbed_info (record.__dict__)
-        # likewise, we deprecate is_enabled which was not really useful
-        # if not self.driver.is_enabled (record.__dict__): ...
-        # xxx for the record only
-    
         # get the callers gid
         # if caller_xrn is not specified assume the caller is the record
         # object itself.
@@ -159,7 +153,11 @@ class RegistryManager:
         if type:
             local_records = local_records.filter_by(type=type)
         local_records=local_records.all()
-        logger.info("Resolve details=%s: local_records=%s (type=%s)"%(details,local_records,type))
+        
+        for local_record in local_records:
+            augment_with_related_hrns (local_record)
+
+        logger.info("Resolve, (details=%s,type=%s) local_records=%s "%(details,type,local_records))
         local_dicts = [ record.__dict__ for record in local_records ]
         
         if details:
@@ -181,7 +179,8 @@ class RegistryManager:
         # xxx somehow here calling dict(record) issues a weird error
         # however record.todict() seems to work fine
         # records.extend( [ dict(record) for record in local_records ] )
-        records.extend( [ record.todict() for record in local_records ] )    
+        records.extend( [ record.todict(exclude_type=RegRecord) for record in local_records ] )
+
         if not records:
             raise RecordNotFound(str(hrns))
     
@@ -246,12 +245,10 @@ class RegistryManager:
     
     ####################
     # utility for handling relationships among the SFA objects 
-    # given that the SFA db does not handle this sort of relationsships
-    # it will rely on side-effects in the testbed to keep this persistent
     
     # subject_record describes the subject of the relationships
     # ref_record contains the target values for the various relationships we need to manage
-    # (to begin with, this is just the slice x person relationship)
+    # (to begin with, this is just the slice x person (researcher) and authority x person (pi) relationships)
     def update_driver_relations (self, subject_obj, ref_obj):
         type=subject_obj.type
         #for (k,v) in subject_obj.__dict__.items(): print k,'=',v
