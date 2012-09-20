@@ -221,7 +221,7 @@ def terminal_render_user (record, options):
 def terminal_render_slice (record, options):
     print "%s (Slice)"%record['hrn'],
     if record.get('reg-researchers',None): print " [USERS %s]"%(" and ".join(record['reg-researchers'])),
-    print record.keys()
+#    print record.keys()
     print ""
 def terminal_render_authority (record, options):
     print "%s (Authority)"%record['hrn'],
@@ -521,7 +521,11 @@ class Sfi:
     # Main: parse arguments and dispatch to command
     #
     def dispatch(self, command, command_options, command_args):
-        return getattr(self, command)(command_options, command_args)
+        method=getattr(self, command,None)
+        if not method:
+            print "Unknown command %s"%command
+            return
+        return method(command_options, command_args)
 
     def main(self):
         self.sfi_parser = self.create_parser()
@@ -556,8 +560,8 @@ class Sfi:
 
         try:
             self.dispatch(command, command_options, command_args)
-        except KeyError:
-            self.logger.critical ("Unknown command %s"%command)
+        except:
+            self.logger.log_exc ("sfi command %s failed"%command)
             sys.exit(1)
 
         return
@@ -904,9 +908,8 @@ or version information about sfi itself
             self.print_help()
             sys.exit(1)
         hrn = args[0]
-        # xxx should set details=True here but that's not in the xmlrpc interface ...
-        # record_dicts = self.registry().Resolve(hrn, self.my_credential_string, details=True)
-        record_dicts = self.registry().Resolve(hrn, self.my_credential_string)
+        # explicitly require Resolve to run in details mode
+        record_dicts = self.registry().Resolve(hrn, self.my_credential_string, {'details':True})
         record_dicts = filter_records(options.type, record_dicts)
         if not record_dicts:
             self.logger.error("No record of type %s"% options.type)

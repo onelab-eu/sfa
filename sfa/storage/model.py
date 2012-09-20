@@ -374,7 +374,10 @@ augment_map={'authority': {'reg-pis':'reg_pis',},
                       'reg-slices':'reg_slices_as_researcher',},
              }
 
-def augment_with_related_hrns (local_record):
+def augment_with_urn_and_related_hrns (local_record):
+    # don't ruin the import of that file in a client world
+    from sfa.util.xrn import Xrn
+    local_record.urn=Xrn(xrn=local_record.hrn,type=local_record.type).urn
     # search in map according to record type
     type_map=augment_map.get(local_record.type,{})
     # use type-dep. map to do the job

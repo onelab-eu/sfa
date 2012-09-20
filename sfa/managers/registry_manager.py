@@ -18,7 +18,7 @@ from sfa.trust.certificate import Certificate, Keypair, convert_public_key
 from sfa.trust.gid import create_uuid
 
 from sfa.storage.model import make_record, RegRecord, RegAuthority, RegUser, RegSlice, RegKey, \
-    augment_with_related_hrns
+    augment_with_urn_and_related_hrns
 from sfa.storage.alchemy import dbsession
 
 class RegistryManager:
@@ -155,7 +155,7 @@ class RegistryManager:
         local_records=local_records.all()
         
         for local_record in local_records:
-            augment_with_related_hrns (local_record)
+            augment_with_urn_and_related_hrns (local_record)
 
         logger.info("Resolve, (details=%s,type=%s) local_records=%s "%(details,type,local_records))
         local_dicts = [ record.__dict__ for record in local_records ]
@@ -226,7 +226,7 @@ class RegistryManager:
                 records = dbsession.query(RegRecord).filter(RegRecord.hrn.startswith(hrn))
             else:
                 records = dbsession.query(RegRecord).filter_by(authority=hrn)
-            for record in records: augment_with_related_hrns (record)
+            for record in records: augment_with_urn_and_related_hrns (record)
             record_dicts=[ record.todict(exclude_type=RegRecord) for record in records ]
     
         return record_dicts
