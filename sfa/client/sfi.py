@@ -1100,9 +1100,9 @@ or with an slice hrn, shows currently provisioned resources
         #  }]
         users = []
         slice_records = self.registry().Resolve(slice_urn, [self.my_credential_string])
-        if slice_records and 'researcher' in slice_records[0] and slice_records[0]['researcher']!=[]:
+        if slice_records and 'reg-researchers' in slice_records[0] and slice_records[0]['reg-researchers']:
             slice_record = slice_records[0]
-            user_hrns = slice_record['researcher']
+            user_hrns = slice_record['reg-researchers']
             user_urns = [hrn_to_urn(hrn, 'user') for hrn in user_hrns]
             user_records = self.registry().Resolve(user_urns, [self.my_credential_string])
 
