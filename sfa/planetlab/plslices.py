@@ -179,11 +179,27 @@ class PlSlices:
         return leases
 
 
-    def verify_slice_nodes(self, slice, requested_slivers, peer):
+    def verify_slice_nodes(self, slice, slivers, peer):
         
         nodes = self.driver.shell.GetNodes(slice['node_ids'], ['node_id', 'hostname', 'interface_ids'])
         current_slivers = [node['hostname'] for node in nodes]
 
+        requested_slivers = []
+        tags = []
+        for node in slivers:
+            hostname = None
+            if node.get('component_name'):
+                hostname = node.get('component_name').strip()
+            elif node.get('component_id'):
+                hostname = xrn_to_hostname(node.get('component_id').strip())
+            if node.get('client_id'):
+                tags.append({'slicename': slice['name'], 
+                             'tagname': 'client_id',
+                             'value': node['client_id'],
+                             'node': hostname})
+            if hostname:
+                requested_slivers.append(hostname)
+        
         # remove nodes not in rspec
         deleted_nodes = list(set(current_slivers).difference(requested_slivers))
 
@@ -195,9 +211,16 @@ class PlSlices:
                 self.driver.shell.UnBindObjectFromPeer('slice', slice['slice_id'], peer['shortname'])
             self.driver.shell.AddSliceToNodes(slice['name'], added_nodes)
             self.driver.shell.DeleteSliceFromNodes(slice['name'], deleted_nodes)
-
+            
         except: 
             logger.log_exc('Failed to add/remove slice from nodes')
+
+        # add tags
+        for tag in tags:
+            try:
+                self.driver.shell.AddSliceTag(tag['slicename'], tag['tagname'], tag['value'], tag['node']) 
+            except:
+                logger.log_exc('Failed to add slice tag')
         return nodes
 
     def free_egre_key(self):

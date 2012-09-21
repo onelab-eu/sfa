@@ -736,15 +736,7 @@ class PlDriver (Driver):
         # add/remove slice from nodes
         requested_slivers = {}
         slivers = rspec.version.get_nodes_with_slivers() 
-        for node in slivers:
-            hostname = None
-            if node.get('component_name'):
-                hostname = node.get('component_name').strip()
-            elif node.get('component_id'):
-                hostname = xrn_to_hostname(node.get('component_id').strip())
-            if hostname:
-                requested_slivers[hostname] = node
-        nodes = slices.verify_slice_nodes(slice, requested_slivers.keys(), peer) 
+        nodes = slices.verify_slice_nodes(slice, slivers, peer) 
    
         # add/remove links links 
         slices.verify_slice_links(slice, rspec.version.get_link_requests(), nodes)
@@ -770,8 +762,7 @@ class PlDriver (Driver):
         slices.handle_peer(site, slice, persons, peer)
         
         return aggregate.get_rspec(slice_xrn=slice_urn, 
-                                   version=rspec.version, 
-                                   requested_slivers = requested_slivers)
+                                   version=rspec.version)
 
     def delete_sliver (self, slice_urn, slice_hrn, creds, options):
         slicename = hrn_to_pl_slicename(slice_hrn)
