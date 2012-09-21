@@ -1134,7 +1134,10 @@ or with an slice hrn, shows currently provisioned resources
         #    keys: [<ssh key A>, <ssh key B>]
         #  }]
         users = []
-        slice_records = self.registry().Resolve(slice_urn, [self.my_credential_string])
+        # xxx Thierry 2012 sept. 21
+        # contrary to what I was first thinking, calling Resolve with details=False does not yet work properly here
+        # I am turning details=True on again on a - hopefully - temporary basis, just to get this whole thing to work again
+        slice_records = self.registry().Resolve(slice_urn, [self.my_credential_string], {'details':True})
         if slice_records and 'reg-researchers' in slice_records[0] and slice_records[0]['reg-researchers']:
             slice_record = slice_records[0]
             user_hrns = slice_record['reg-researchers']
