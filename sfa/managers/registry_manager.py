@@ -18,7 +18,7 @@ from sfa.trust.certificate import Certificate, Keypair, convert_public_key
 from sfa.trust.gid import create_uuid
 
 from sfa.storage.model import make_record, RegRecord, RegAuthority, RegUser, RegSlice, RegKey, \
-    augment_with_urn_and_related_hrns
+    augment_with_sfa_builtins
 from sfa.storage.alchemy import dbsession
 
 class RegistryManager:
@@ -155,7 +155,7 @@ class RegistryManager:
         local_records=local_records.all()
         
         for local_record in local_records:
-            augment_with_urn_and_related_hrns (local_record)
+            augment_with_sfa_builtins (local_record)
 
         logger.info("Resolve, (details=%s,type=%s) local_records=%s "%(details,type,local_records))
         local_dicts = [ record.__dict__ for record in local_records ]
@@ -179,7 +179,7 @@ class RegistryManager:
         # xxx somehow here calling dict(record) issues a weird error
         # however record.todict() seems to work fine
         # records.extend( [ dict(record) for record in local_records ] )
-        records.extend( [ record.todict(exclude_type=RegRecord) for record in local_records ] )
+        records.extend( [ record.todict(exclude_types=[RegRecord,RegKey]) for record in local_records ] )
 
         if not records:
             raise RecordNotFound(str(hrns))
@@ -226,8 +226,9 @@ class RegistryManager:
                 records = dbsession.query(RegRecord).filter(RegRecord.hrn.startswith(hrn))
             else:
                 records = dbsession.query(RegRecord).filter_by(authority=hrn)
-            for record in records: augment_with_urn_and_related_hrns (record)
-            record_dicts=[ record.todict(exclude_type=RegRecord) for record in records ]
+            # so that sfi list can show more than plain names...
+            for record in records: augment_with_sfa_builtins (record)
+            record_dicts=[ record.todict(exclude_types=[RegRecord,RegKey]) for record in records ]
     
         return record_dicts
     

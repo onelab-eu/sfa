@@ -34,13 +34,14 @@ class Record:
         return "** undef_datetime **"
     
     # it may be important to exclude relationships
-    def todict (self, exclude_type=None):
+    def todict (self, exclude_types=[]):
         d=self.__dict__
         def exclude (k,v):
             if k.startswith('_'): return True
-            if exclude_type:
-                if isinstance (v,exclude_type): return True
-                if isinstance (v,list) and v and isinstance (v[0],exclude_type) : return True
+            if exclude_types:
+                for exclude_type in exclude_types:
+                    if isinstance (v,exclude_type): return True
+                    if isinstance (v,list) and v and isinstance (v[0],exclude_type) : return True
             return False
         keys=[k for (k,v) in d.items() if not exclude(k,v)]
         return dict ( [ (k,d[k]) for k in keys ] )

@@ -374,10 +374,15 @@ augment_map={'authority': {'reg-pis':'reg_pis',},
                       'reg-slices':'reg_slices_as_researcher',},
              }
 
-def augment_with_urn_and_related_hrns (local_record):
+def augment_with_sfa_builtins (local_record):
     # don't ruin the import of that file in a client world
     from sfa.util.xrn import Xrn
-    local_record.urn=Xrn(xrn=local_record.hrn,type=local_record.type).urn
+    # add a 'urn' field
+    setattr(local_record,'reg-urn',Xrn(xrn=local_record.hrn,type=local_record.type).urn)
+    # users have keys and this is needed to synthesize 'users' sent over to CreateSliver
+    if local_record.type=='user':
+        user_keys = [ key.key for key in local_record.reg_keys ]
+        setattr(local_record, 'reg-keys', user_keys)
     # search in map according to record type
     type_map=augment_map.get(local_record.type,{})
     # use type-dep. map to do the job
