@@ -16,7 +16,7 @@ class Delete(Method):
     interfaces = ['aggregate', 'slicemgr', 'component']
     
     accepts = [
-        Parameter([str], "Human readable name of slice to delete (hrn or urn)"),
+        Parameter(type([str]), "Human readable name of slice to delete (hrn or urn)"),
         Parameter(dict, "Credentials"),
         Parameter(dict, "options"),
         ]
