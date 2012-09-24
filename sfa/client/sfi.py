@@ -228,8 +228,7 @@ def terminal_render_user (record, options):
     if record.get('reg-slices',None): print " [IN slices %s]"%(" and ".join(record['reg-slices'])),
     user_keys=record.get('reg-keys',[])
     if not options.verbose:
-        print " [has %s]"%(render_plural(len(user_keys),"name"))
-        print ""
+        print " [has %s]"%(render_plural(len(user_keys),"key"))
     else:
         print ""
         for key in user_keys: print 8*' ',key.strip("\n")
@@ -468,7 +467,7 @@ class Sfi:
            parser.add_option("-r", "--recursive", dest="recursive", action='store_true',
                              help="list all child records", default=False)
            parser.add_option("-v", "--verbose", dest="verbose", action='store_true',
-                             help="more verbose", default=False)
+                             help="gives details, like user keys", default=False)
         if command in ("delegate"):
            parser.add_option("-u", "--user",
                             action="store_true", dest="delegate_user", default=False,
