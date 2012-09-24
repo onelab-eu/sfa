@@ -205,11 +205,20 @@ def terminal_render (records,options):
         type=record['type']
         if type not in grouped_by_type: grouped_by_type[type]=[]
         grouped_by_type[type].append(record)
-    for (type, list) in grouped_by_type.items():
+    group_types=grouped_by_type.keys()
+    group_types.sort()
+    for type in group_types:
+        group=grouped_by_type[type]
 #        print 20 * '-', type
         try:    renderer=eval('terminal_render_'+type)
         except: renderer=terminal_render_default
-        for record in list: renderer(record,options)
+        for record in group: renderer(record,options)
+
+def render_plural (how_many, name,names=None):
+    if not names: names="%ss"%name
+    if how_many<=0: return "No %s"%name
+    elif how_many==1: return "1 %s"%name
+    else return "%d %s"%(how_many,names)
 
 def terminal_render_default (record,options):
     print "%s (%s)" % (record['hrn'], record['type'])
@@ -217,7 +226,14 @@ def terminal_render_user (record, options):
     print "%s (User)"%record['hrn'],
     if record.get('reg-pi-authorities',None): print " [PI at %s]"%(" and ".join(record['reg-pi-authorities'])),
     if record.get('reg-slices',None): print " [IN slices %s]"%(" and ".join(record['reg-slices'])),
-    print ""
+    user_keys=record.get('reg-keys',[])
+    if not options.verbose:
+        print " [has %s]"%(render_plural(len(user_keys),"name"))
+        print ""
+    else:
+        print ""
+        for key in user_keys: print 8*' ',key.strip("\n")
+        
 def terminal_render_slice (record, options):
     print "%s (Slice)"%record['hrn'],
     if record.get('reg-researchers',None): print " [USERS %s]"%(" and ".join(record['reg-researchers'])),
@@ -451,6 +467,8 @@ class Sfi:
         if command == 'list':
            parser.add_option("-r", "--recursive", dest="recursive", action='store_true',
                              help="list all child records", default=False)
+           parser.add_option("-v", "--verbose", dest="verbose", action='store_true',
+                             help="more verbose", default=False)
         if command in ("delegate"):
            parser.add_option("-u", "--user",
                             action="store_true", dest="delegate_user", default=False,
