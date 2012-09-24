@@ -218,7 +218,7 @@ def render_plural (how_many, name,names=None):
     if not names: names="%ss"%name
     if how_many<=0: return "No %s"%name
     elif how_many==1: return "1 %s"%name
-    else return "%d %s"%(how_many,names)
+    else: return "%d %s"%(how_many,names)
 
 def terminal_render_default (record,options):
     print "%s (%s)" % (record['hrn'], record['type'])
