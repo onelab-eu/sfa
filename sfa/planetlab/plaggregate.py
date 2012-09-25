@@ -176,7 +176,7 @@ class PlAggregate:
         # get the granularity in second for the reservation system
         grain = self.driver.shell.GetLeaseGranularity()
         if sliver['slice_ids_whitelist'] and sliver['slice_id'] not in sliver['slice_ids_whitelist']:
-            continue
+            return # (was: continue)
         rspec_node = self.get_rspec_node(node, sites_dict, interfaces, node_tags, pl_initscripts, grain)
         # xxx how to retrieve site['login_base']
         rspec_node['expires'] = datetime_to_string(utcparse(slice[0]['expires']))
