@@ -147,7 +147,7 @@ class PlAggregate:
         # only doing this because protogeni rspec needs
         # to advertise available initscripts
         rspec_node['pl_initscripts'] = pl_initscripts.values()
-         # add site/interface info to nodes.
+        # add site/interface info to nodes.
         # assumes that sites, interfaces and tags have already been prepared.
         if site['longitude'] and site['latitude']:
             location = Location({'longitude': site['longitude'], 'latitude': site['latitude'], 'country': 'unknown'})
@@ -358,25 +358,25 @@ class PlAggregate:
                 geni_sliver = self.rspec_node_to_geni_sliver(rspec_node)
                 rspec_nodes.append(rspec_node) 
                 geni_slivers.append(geni_sliver)
-           rspec.version.add_nodes(rspec_nodes)
+            rspec.version.add_nodes(rspec_nodes)
 
-           # add sliver defaults
-           default_sliver = slivers.get(None, [])
-           if default_sliver:
-              default_sliver_attribs = default_sliver.get('tags', [])
-              for attrib in default_sliver_attribs:
-                  rspec.version.add_default_sliver_attribute(attrib['tagname'], attrib['value'])
+            # add sliver defaults
+            default_sliver = slivers.get(None, [])
+            if default_sliver:
+                default_sliver_attribs = default_sliver.get('tags', [])
+                for attrib in default_sliver_attribs:
+                    rspec.version.add_default_sliver_attribute(attrib['tagname'], attrib['value'])
 
             # add links 
             links = self.get_links(sites_dict, nodes_dict, interfaces)        
             rspec.version.add_links(links)
 
         if not options.get('list_leases') or options['list_leases'] != 'resources':
-           leases = self.get_leases(slivers[0])
-           rspec.version.add_leases(leases)
+            leases = self.get_leases(slivers[0])
+            rspec.version.add_leases(leases)
 
                
-        return = {'geni_urn': urns[0], 
-                  'geni_rspec': rspec.toxml(),
-                  'geni_slivers': geni_slivers}
+        return  {'geni_urn': urns[0],
+                 'geni_rspec': rspec.toxml(),
+                 'geni_slivers': geni_slivers}
 
