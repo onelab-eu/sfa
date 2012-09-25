@@ -20,6 +20,9 @@ from sfa.trust.gid import create_uuid
 from sfa.storage.model import make_record, RegRecord, RegAuthority, RegUser, RegSlice, RegKey, \
     augment_with_sfa_builtins
 from sfa.storage.alchemy import dbsession
+### the types that we need to exclude from sqlobjects before being able to dump
+# them on the xmlrpc wire
+from sqlalchemy.orm.collections import InstrumentedList
 
 class RegistryManager:
 
@@ -179,7 +182,7 @@ class RegistryManager:
         # xxx somehow here calling dict(record) issues a weird error
         # however record.todict() seems to work fine
         # records.extend( [ dict(record) for record in local_records ] )
-        records.extend( [ record.todict(exclude_types=[RegRecord,RegKey]) for record in local_records ] )
+        records.extend( [ record.todict(exclude_types=[InstrumentedList]) for record in local_records ] )
 
         if not records:
             raise RecordNotFound(str(hrns))
@@ -228,7 +231,7 @@ class RegistryManager:
                 records = dbsession.query(RegRecord).filter_by(authority=hrn)
             # so that sfi list can show more than plain names...
             for record in records: augment_with_sfa_builtins (record)
-            record_dicts=[ record.todict(exclude_types=[RegRecord,RegKey]) for record in records ]
+            record_dicts=[ record.todict(exclude_types=[InstrumentedList]) for record in records ]
     
         return record_dicts
     
