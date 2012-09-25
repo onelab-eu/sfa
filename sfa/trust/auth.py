@@ -44,6 +44,7 @@ class Auth:
         if not isinstance(creds, list):
             creds = [creds]
         logger.debug("Auth.checkCredentials with %d creds"%len(creds))
+        error=[ "no credential","was given"]
         for cred in creds:
             for hrn in hrns:
                 try:
