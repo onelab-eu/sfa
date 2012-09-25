@@ -121,7 +121,7 @@ class PlAggregate:
         slices = self.driver.shell.GetSlices(names)
         # filter on id
         if ids:
-            slices = [slice in slices if slice['slice_id'] in ids]
+            slices = [slice for slice in slices if slice['slice_id'] in ids]
 
         tags_dict = self.get_slice_tags(slices)
         nodes_dict = self.get_slice_nodes(slices, options)
