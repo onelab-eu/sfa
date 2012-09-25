@@ -158,18 +158,18 @@ class PlAggregate:
         rspec_node['interfaces'] = []
         if_count=0
         for if_id in node['interface_ids']:
-                interface = Interface(interfaces[if_id])
-                interface['ipv4'] = interface['ip']
-                interface['component_id'] = PlXrn(auth=self.driver.hrn,
-                                                  interface='node%s:eth%s' % (node['node_id'], if_count)).get_urn()
-                # interfaces in the manifest need a client id
-                if slice:
-                    interface['client_id'] = "%s:%s" % (node['node_id'], if_id)
-                rspec_node['interfaces'].append(interface)
-                if_count+=1
+            interface = Interface(interfaces[if_id])
+            interface['ipv4'] = interface['ip']
+            interface['component_id'] = PlXrn(auth=self.driver.hrn,
+                                              interface='node%s:eth%s' % (node['node_id'], if_count)).get_urn()
+            # interfaces in the manifest need a client id
+            if slice:
+                interface['client_id'] = "%s:%s" % (node['node_id'], if_id)
+            rspec_node['interfaces'].append(interface)
+            if_count+=1
 
-            tags = [PLTag(node_tags[tag_id]) for tag_id in node['node_tag_ids']]
-            rspec_node['tags'] = tags
+        tags = [PLTag(node_tags[tag_id]) for tag_id in node['node_tag_ids']]
+        rspec_node['tags'] = tags
         return rspec_node
 
     def sliver_to_rspec_node(self, sliver):
