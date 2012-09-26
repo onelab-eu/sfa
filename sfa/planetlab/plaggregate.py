@@ -203,7 +203,13 @@ class PlAggregate:
             # do not include boot state (<available> element) in the manifest rspec
             if not slice:     
                 rspec_node['boot_state'] = node['boot_state']
-            rspec_node['exclusive'] = 'false'
+
+            #add the exclusive tag to distinguish between Shared and Reservable nodes
+            if node['node_type'] == 'reservable':
+                rspec_node['exclusive'] = 'true'
+            else:
+                rspec_node['exclusive'] = 'false'
+
             rspec_node['hardware_types'] = [HardwareType({'name': 'plab-pc'}),
                                             HardwareType({'name': 'pc'})]
             # only doing this because protogeni rspec needs
