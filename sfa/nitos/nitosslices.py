@@ -42,7 +42,10 @@ class NitosSlices:
              if slice_name != slice['slice_name']:
                  continue
              hostname = xrn_to_hostname(node['component_id'])
-             nitos_node = self.driver.filter_nitos_results(nitos_nodes, {'hostname': hostname})[0]
+             nitos_node = self.driver.filter_nitos_results(nitos_nodes, {'hostname': hostname})
+             if not nitos_node:
+                 continue
+             nitos_node = nitos_node[0]
              # fill the requested node with nitos ids
              requested_node['slice_id'] = slice['slice_id']
              requested_node['node_id'] = nitos_node['node_id']
