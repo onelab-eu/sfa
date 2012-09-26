@@ -278,7 +278,7 @@ class PlAggregate:
             site_id=lease['site_id']
             site=sites_dict[site_id]
 
-            rspec_lease['lease_id'] = lease['lease_id']
+            #rspec_lease['lease_id'] = lease['lease_id']
             rspec_lease['component_id'] = hostname_to_urn(self.driver.hrn, site['login_base'], lease['hostname'])
             slice_hrn = slicename_to_hrn(self.driver.hrn, lease['name'])
             slice_urn = hrn_to_urn(slice_hrn, 'slice')

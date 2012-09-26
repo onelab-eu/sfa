@@ -742,20 +742,22 @@ class PlDriver (Driver):
         slices.verify_slice_links(slice, rspec.version.get_link_requests(), nodes)
 
         # add/remove leases
-        requested_leases = []
-        kept_leases = []
-        for lease in rspec.version.get_leases():
-            requested_lease = {}
-            if not lease.get('lease_id'):
-               requested_lease['hostname'] = xrn_to_hostname(lease.get('component_id').strip())
-               requested_lease['start_time'] = lease.get('start_time')
-               requested_lease['duration'] = lease.get('duration')
-            else:
-               kept_leases.append(int(lease['lease_id']))
-            if requested_lease.get('hostname'):
-                requested_leases.append(requested_lease)
+        rspec_requested_leases = rspec.version.get_leases()
+        leases = slices.verify_slice_leases(slice, rspec_requested_leases, peer)
+        #requested_leases = []
+        #kept_leases = []
+        #for lease in rspec.version.get_leases():
+        #    requested_lease = {}
+        #    if not lease.get('lease_id'):
+        #       requested_lease['hostname'] = xrn_to_hostname(lease.get('component_id').strip())
+        #       requested_lease['start_time'] = lease.get('start_time')
+        #       requested_lease['duration'] = lease.get('duration')
+        #    else:
+        #       kept_leases.append(int(lease['lease_id']))
+        #    if requested_lease.get('hostname'):
+        #        requested_leases.append(requested_lease)
 
-        leases = slices.verify_slice_leases(slice, requested_leases, kept_leases, peer)
+        #leases = slices.verify_slice_leases(slice, requested_leases, kept_leases, peer)
     
         # handle MyPLC peer association.
         # only used by plc and ple.
