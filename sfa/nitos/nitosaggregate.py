@@ -127,7 +127,7 @@ class NitosAggregate:
             rspec_nodes.append(rspec_node)
         return rspec_nodes 
 
-    def get_leases_and_channels(self, slice=None, options={}):
+    def get_leases_and_channels(self, slice=None, slice_xrn=None,  options={}):
         
         slices = self.driver.shell.getSlices({}, [])
         nodes = self.driver.shell.getNodes({}, [])
@@ -135,6 +135,9 @@ class NitosAggregate:
         channels = self.driver.shell.getChannels({}, [])
         reserved_channels = self.driver.shell.getReservedChannels()
         grain = self.driver.testbedInfo['grain']
+
+        if slice_xrn and not slice:
+            return ([], [])
 
         if slice:
             all_leases = []
@@ -263,7 +266,7 @@ class NitosAggregate:
            rspec.version.add_channels(channels)
 
         if not options.get('list_leases') or options.get('list_leases') and options['list_leases'] != 'resources':
-           leases, channels = self.get_leases_and_channels(slice)
+           leases, channels = self.get_leases_and_channels(slice, slice_xrn)
            rspec.version.add_leases(leases, channels)
 
         return rspec.toxml()
