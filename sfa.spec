@@ -1,6 +1,6 @@
 %define name sfa
 %define version 2.1
-%define taglevel 14
+%define taglevel 15
 
 %define release %{taglevel}%{?pldistro:.%{pldistro}}%{?date:.%{date}}
 %global python_sitearch	%( python -c "from distutils.sysconfig import get_python_lib; print get_python_lib(1)" )
@@ -259,6 +259,15 @@ fi
 [ "$1" -ge "1" ] && service sfa-cm restart || :
 
 %changelog
+* Wed Sep 26 2012 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-2.1-15
+- first stab at a driver for the NITOS/OMF testbed (sep. pkg)
+- deeper cleanup of the data-dependencies between SFA and the testbed
+- in particular, sfi create issues Resolve(details=False)
+- for that purpose, Resolve exposes reg-* keys for SFA builtins
+- which in turn allows sfi list to show PIs, slice members and keys
+- NOTE: sfa-config-tty is known to be broken w/ less frequently used func's
+- Shows stacktrace when startup fails (DB conn, wrong flavour, etc..)
+
 * Mon Sep 17 2012 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-2.1-14
 - configurable data-dir (/var/lib/sfa)
 - no more dependent on myplc-config
