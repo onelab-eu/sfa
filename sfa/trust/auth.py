@@ -35,7 +35,6 @@ class Auth:
         self.trusted_cert_file_list = TrustedRoots(self.config.get_trustedroots_dir()).get_file_list()
 
         
-        
     def checkCredentials(self, creds, operation, xrns=[]):
         if not isinstance(xrns, list):
             xrns = [xrns]
@@ -43,8 +42,10 @@ class Auth:
         valid = []
         if not isinstance(creds, list):
             creds = [creds]
-        logger.debug("Auth.checkCredentials with %d creds"%len(creds))
-        error=[ "no credential","was given"]
+        logger.debug("Auth.checkCredentials with %d creds on hrns=%s"%(len(creds),hrns))
+        # won't work if either creds or hrns is empty - let's make it more explicit
+        if not creds: raise InsufficientRights("Access denied - no credential provided")
+        if not hrns: raise InsufficientRights("Access denied - no subject xrn provided")
         for cred in creds:
             for hrn in hrns:
                 try:
