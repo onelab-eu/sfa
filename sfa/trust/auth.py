@@ -71,6 +71,8 @@ class Auth:
         the specified operation.    
         """
         self.client_cred = Credential(string = cred)
+        logger.debug("Auth.check: handling hrn=%s and credential=%s"%\
+                         (hrn,cred.get_summary_tostring()))
         self.client_gid = self.client_cred.get_gid_caller()
         self.object_gid = self.client_cred.get_gid_object()
         
