@@ -477,7 +477,9 @@ class NitosDriver (Driver):
         cached_requested = options.get('cached', True) 
         version_manager = VersionManager()
         # get the rspec's return format from options
-        rspec_version = version_manager.get_version(options.get('geni_rspec_version'))
+        #rspec_version = version_manager.get_version(options.get('geni_rspec_version'))
+        # rspec's return format for nitos aggregate is version  NITOS 1
+        rspec_version = version_manager.get_version('NITOS 1')
         version_string = "rspec_%s" % (rspec_version)
  
         #panos adding the info option to the caching key (can be improved)
