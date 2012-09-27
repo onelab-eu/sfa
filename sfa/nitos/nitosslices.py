@@ -160,7 +160,7 @@ class NitosSlices:
         slices = self.driver.shell.getSlices({}, []) 
         slices = self.driver.filter_nitos_results(slices, {'slice_name': slicename})
         if not slices:
-            slice = {'name': slicename}
+            slice = {'slice_name': slicename}
             # add the slice                          
             slice['slice_id'] = self.driver.shell.addSlice(slice)
             slice['node_ids'] = []
