@@ -259,6 +259,9 @@ class PlAggregate:
 
     def get_leases(self, slice_xrn=None, slice=None, options={}):
         
+        if slice_xrn and not slice:
+            return []
+
         now = int(time.time())
         filter={}
         filter.update({'clip':now})
