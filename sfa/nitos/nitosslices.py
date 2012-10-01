@@ -73,7 +73,6 @@ class NitosSlices:
                  requested_nodes.remove(reserved_nodes_by_id[reservation_id])
         added_nodes = requested_nodes
 
-        print "NODES: \nAdded: %s \nDeleted: %s\nKept: %s" %(added_nodes,deleted_nodes_id,kept_nodes_id)
 
         try:
             deleted=self.driver.shell.releaseNodes({'reservation_ids': deleted_nodes_id})
@@ -126,7 +125,6 @@ class NitosSlices:
                  requested_channels.remove(reserved_channels_by_id[reservation_id])
         added_channels = requested_channels
 
-        print "CHANNELS: \nAdded: %s \nDeleted: %s\nKept: %s" %(added_channels,deleted_channels_id,kept_channels_id)
         
         try:
             deleted=self.driver.shell.releaseChannels({'reservation_ids': deleted_channels_id})
@@ -175,7 +173,6 @@ class NitosSlices:
         slicename = hrn_to_nitos_slicename(slice_hrn)
         slices = self.driver.shell.getSlices({}, [])
         slice = self.driver.filter_nitos_results(slices, {'slice_name': slicename})[0]
-        print slices
 
         #get users info
         users_info = []
