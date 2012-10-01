@@ -257,7 +257,7 @@ class PlAggregate:
         return (rspec_nodes, links)
              
 
-    def get_leases(self, slice=None, options={}):
+    def get_leases(self, slice_xrn=None, slice=None, options={}):
         
         now = int(time.time())
         filter={}
@@ -286,8 +286,12 @@ class PlAggregate:
 
             #rspec_lease['lease_id'] = lease['lease_id']
             rspec_lease['component_id'] = hostname_to_urn(self.driver.hrn, site['login_base'], lease['hostname'])
-            slice_hrn = slicename_to_hrn(self.driver.hrn, lease['name'])
-            slice_urn = hrn_to_urn(slice_hrn, 'slice')
+            if slice_xrn:
+                slice_urn = slice_xrn
+                slice_hrn = urn_to_hrn(slice_urn)
+            else:
+                slice_hrn = slicename_to_hrn(self.driver.hrn, lease['name'])
+                slice_urn = hrn_to_urn(slice_hrn, 'slice')
             rspec_lease['slice_id'] = slice_urn
             rspec_lease['start_time'] = lease['t_from']
             rspec_lease['duration'] = (lease['t_until'] - lease['t_from']) / grain
@@ -325,7 +329,7 @@ class PlAggregate:
                     rspec.version.add_default_sliver_attribute(attrib['tagname'], attrib['value'])
         
         if not options.get('list_leases') or options.get('list_leases') and options['list_leases'] != 'resources':
-           leases = self.get_leases(slice)
+           leases = self.get_leases(slice_xrn, slice)
            rspec.version.add_leases(leases)
 
         return rspec.toxml()
