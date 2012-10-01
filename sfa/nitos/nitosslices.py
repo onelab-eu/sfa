@@ -173,7 +173,7 @@ class NitosSlices:
         slicename = hrn_to_nitos_slicename(slice_hrn)
         slices = self.driver.shell.getSlices({}, [])
         slice = self.driver.filter_nitos_results(slices, {'slice_name': slicename})[0]
-
+        added_users = []
         #get users info
         users_info = []
         for user in users:
@@ -188,7 +188,6 @@ class NitosSlices:
 
              if not nitos_users:
                  # create the user
-                 added_users = []
                  user_id = self.driver.shell.addUsers({'username': email.split('@')[0], 'email': email})
                  added_users.append(user_id)
                  # add user keys
