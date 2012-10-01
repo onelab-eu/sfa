@@ -608,7 +608,7 @@ class NitosDriver (Driver):
         # ensure slice record exists
         slice = slices.verify_slice(slice_hrn, slice_record, sfa_peer, options=options)
         # ensure user records exists
-        #users = slices.verify_users(slice_hrn, slice, users, sfa_peer, options=options)
+        users = slices.verify_users(slice_hrn, slice, users, sfa_peer, options=options)
         
         # add/remove leases (nodes and channels)
         # a lease in Nitos RSpec case is a reservation of nodes and channels grouped by (slice,timeslot)
