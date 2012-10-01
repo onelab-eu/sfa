@@ -172,6 +172,9 @@ class PlSlices:
              slice_name = hrn_to_pl_slicename(lease['slice_id'])
              if slice_name != slice['name']:
                  continue
+             elif Xrn(lease['component_id']).get_authority_urn().split(':')[0] != self.driver.hrn:
+                 continue
+
              hostname = xrn_to_hostname(lease['component_id'])
              # fill the requested node with nitos ids
              requested_lease['name'] = slice['name']
