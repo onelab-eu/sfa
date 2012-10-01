@@ -1,6 +1,6 @@
 %define name sfa
 %define version 2.1
-%define taglevel 15
+%define taglevel 16
 
 %define release %{taglevel}%{?pldistro:.%{pldistro}}%{?date:.%{date}}
 %global python_sitearch	%( python -c "from distutils.sysconfig import get_python_lib; print get_python_lib(1)" )
@@ -259,6 +259,9 @@ fi
 [ "$1" -ge "1" ] && service sfa-cm restart || :
 
 %changelog
+* Mon Oct 01 2012 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-2.1-16
+- various tweaks for the nitos driver
+
 * Wed Sep 26 2012 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-2.1-15
 - first stab at a driver for the NITOS/OMF testbed (sep. pkg)
 - deeper cleanup of the data-dependencies between SFA and the testbed
