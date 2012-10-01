@@ -171,8 +171,13 @@ class NitosAggregate:
                      slicename = slc['slice_name']
                      break
 
-            slice_hrn = slicename_to_hrn(self.driver.hrn, self.driver.testbedInfo['name'], slicename)
-            slice_urn = hrn_to_urn(slice_hrn, 'slice')
+            if slice_xrn:
+                slice_urn = slice_xrn
+                slice_hrn = urn_to_hrn(slice_urn)
+            else:
+                slice_hrn = slicename_to_hrn(self.driver.hrn, self.driver.testbedInfo['name'], slicename)
+                slice_urn = hrn_to_urn(slice_hrn, 'slice')
+
             rspec_channel['slice_id'] = slice_urn
             rspec_channels.append(rspec_channel)
 
@@ -196,8 +201,13 @@ class NitosAggregate:
                      slicename = slc['slice_name']
                      break
             
-            slice_hrn = slicename_to_hrn(self.driver.hrn, self.driver.testbedInfo['name'], slicename)
-            slice_urn = hrn_to_urn(slice_hrn, 'slice')
+            if slice_xrn:
+                slice_urn = slice_xrn
+                slice_hrn = urn_to_hrn(slice_urn)
+            else:
+                slice_hrn = slicename_to_hrn(self.driver.hrn, self.driver.testbedInfo['name'], slicename)
+                slice_urn = hrn_to_urn(slice_hrn, 'slice')
+
             rspec_lease['slice_id'] = slice_urn
             rspec_lease['start_time'] = lease['start_time']
             rspec_lease['duration'] = (int(lease['end_time']) - int(lease['start_time'])) / int(grain)
