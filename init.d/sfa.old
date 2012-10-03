@@ -10,31 +10,8 @@
 
 # source function library
 . /etc/init.d/functions
-
-# <jordan>
-
-# borrowed from postgresql
-versions=()
-for v in `ls /usr/lib/postgresql/ 2>/dev/null`; do
-    if [ -x /usr/lib/postgresql/$v/bin/pg_ctl ] && [ ! -x /etc/init.d/postgresql-$v ]; then
-        versions+=($v)
-    fi
-done
-if [[ ${#versions[*]} == "0" ]]; then 
-    echo "E: Missing postgresql installation. Aborting."
-    exit
-fi
-if [[ ${#versions[*]} != "1" ]]; then 
-    echo "E: Too many postgresql versions installed. Aborting."
-    exit
-fi
-pgver=${versions[0]}
-
-LOCKFILE=/var/run/sfa-start.py
-# </jordan>
-
 # Default locations
-PGDATA=/etc/postgresql/$pgver/main/
+PGDATA=/var/lib/pgsql/data
 postgresql_conf=$PGDATA/postgresql.conf
 pghba_conf=$PGDATA/pg_hba.conf
 postgresql_sysconfig=/etc/sysconfig/pgsql
@@ -67,7 +44,7 @@ check ()
 function postgresql_check () {
 
     # wait until postmaster is up and running - or 10s max
-    if status postgres >& /dev/null && [ -f /var/run/postgresql/$pgver-main.pid ] ; then
+    if status postmaster >& /dev/null && [ -f /var/lock/subsys/postgresql ] ; then
 	# The only way we can be sure is if we can access it
 	for i in $(seq 1 10) ; do
 	    # Must do this as the postgres user initially (before we
@@ -299,7 +276,7 @@ function start() {
     [ "$SFA_FLASHPOLICY_ENABLED" == 1 ] && \
         action "Flash Policy Server" daemon /usr/bin/sfa_flashpolicy.py --file="$SFA_FLASHPOLICY_CONFIG_FILE" --port=$SFA_FLASHPOLICY_PORT -d
 
-    touch $LOCKFILE
+    touch /var/lock/subsys/sfa-start.py
 
 }
 
@@ -308,7 +285,7 @@ function stop() {
 
     db_stop
 
-    rm -f $LOCKFILE
+    rm -f /var/lock/subsys/sfa-start.py
 }
 
 
@@ -318,7 +295,7 @@ case "$1" in
     reload) reload force ;;
     restart) stop; start ;;
     condrestart)
-	if [ -f $LOCKFILE ]; then
+	if [ -f /var/lock/subsys/sfa-start.py ]; then
             stop
             start
 	fi

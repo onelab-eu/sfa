@@ -45,7 +45,7 @@ packages = [
     'sfatables/processors',
     ]
 
-initscripts = [ 'sfa', 'sfa-cm' ]
+initscripts = [ 'functions', 'sfa', 'sfa-cm' ]
 
 data_files = [ ('/etc/sfa/', [ 'config/aggregates.xml',
                               'config/registries.xml',
