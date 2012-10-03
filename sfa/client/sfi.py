@@ -1394,7 +1394,8 @@ or with an slice hrn, shows currently provisioned resources
             self.print_help()
             sys.exit(1)
         target_hrn = args[0]
-        gid = self.registry().CreateGid(self.my_credential_string, target_hrn, self.client_bootstrap.my_gid_string())
+        my_gid_string = open(self.client_bootstrap.my_gid()).read() 
+        gid = self.registry().CreateGid(self.my_credential_string, target_hrn, my_gid_string)
         if options.file:
             filename = options.file
         else:
