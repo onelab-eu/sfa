@@ -110,5 +110,7 @@ class AggregateManager:
         slice_urn=xrn.get_urn()
         slice_hrn=xrn.get_hrn()
 
+        # xxx sounds like GetTicket is dead, but if that gets resurrected we might wish
+        # to pass 'users' over to the driver as well
         return self.driver.get_ticket (slice_urn, slice_hrn, creds, rspec, options)
 

@@ -127,7 +127,7 @@ class NitosAggregate:
             rspec_nodes.append(rspec_node)
         return rspec_nodes 
 
-    def get_leases_and_channels(self, slice=None, options={}):
+    def get_leases_and_channels(self, slice=None, slice_xrn=None,  options={}):
         
         slices = self.driver.shell.getSlices({}, [])
         nodes = self.driver.shell.getNodes({}, [])
@@ -135,6 +135,9 @@ class NitosAggregate:
         channels = self.driver.shell.getChannels({}, [])
         reserved_channels = self.driver.shell.getReservedChannels()
         grain = self.driver.testbedInfo['grain']
+
+        if slice_xrn and not slice:
+            return ([], [])
 
         if slice:
             all_leases = []
@@ -168,8 +171,13 @@ class NitosAggregate:
                      slicename = slc['slice_name']
                      break
 
-            slice_hrn = slicename_to_hrn(self.driver.hrn, self.driver.testbedInfo['name'], slicename)
-            slice_urn = hrn_to_urn(slice_hrn, 'slice')
+            if slice_xrn:
+                slice_urn = slice_xrn
+                slice_hrn = urn_to_hrn(slice_urn)
+            else:
+                slice_hrn = slicename_to_hrn(self.driver.hrn, self.driver.testbedInfo['name'], slicename)
+                slice_urn = hrn_to_urn(slice_hrn, 'slice')
+
             rspec_channel['slice_id'] = slice_urn
             rspec_channels.append(rspec_channel)
 
@@ -193,8 +201,13 @@ class NitosAggregate:
                      slicename = slc['slice_name']
                      break
             
-            slice_hrn = slicename_to_hrn(self.driver.hrn, self.driver.testbedInfo['name'], slicename)
-            slice_urn = hrn_to_urn(slice_hrn, 'slice')
+            if slice_xrn:
+                slice_urn = slice_xrn
+                slice_hrn = urn_to_hrn(slice_urn)
+            else:
+                slice_hrn = slicename_to_hrn(self.driver.hrn, self.driver.testbedInfo['name'], slicename)
+                slice_urn = hrn_to_urn(slice_hrn, 'slice')
+
             rspec_lease['slice_id'] = slice_urn
             rspec_lease['start_time'] = lease['start_time']
             rspec_lease['duration'] = (int(lease['end_time']) - int(lease['start_time'])) / int(grain)
@@ -263,7 +276,7 @@ class NitosAggregate:
            rspec.version.add_channels(channels)
 
         if not options.get('list_leases') or options.get('list_leases') and options['list_leases'] != 'resources':
-           leases, channels = self.get_leases_and_channels(slice)
+           leases, channels = self.get_leases_and_channels(slice, slice_xrn)
            rspec.version.add_leases(leases, channels)
 
         return rspec.toxml()

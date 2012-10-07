@@ -8,7 +8,9 @@ from sfa.util.xrn import Xrn, get_leaf, get_authority, urn_to_hrn
 from sfa.rspecs.rspec import RSpec
 
 from sfa.planetlab.vlink import VLink
-from sfa.planetlab.plxrn import PlXrn, hrn_to_pl_slicename
+from sfa.planetlab.plxrn import PlXrn, hrn_to_pl_slicename, xrn_to_hostname
+
+import time
 
 MAXINT =  2L**31-1
 
@@ -159,19 +161,54 @@ class PlSlices:
 
         return sfa_peer
 
-    def verify_slice_leases(self, slice, requested_leases, kept_leases, peer):
-        
-        leases = self.driver.shell.GetLeases({'name':slice['name']}, ['lease_id'])
+    def verify_slice_leases(self, slice, rspec_requested_leases, peer):
+
+        leases = self.driver.shell.GetLeases({'name':slice['name'], 'clip':int(time.time())}, ['lease_id','name', 'hostname', 't_from', 't_until'])
         grain = self.driver.shell.GetLeaseGranularity()
-        current_leases = [lease['lease_id'] for lease in leases]
-        deleted_leases = list(set(current_leases).difference(kept_leases))
+
+        requested_leases = []
+        for lease in rspec_requested_leases:
+             requested_lease = {}
+             slice_name = hrn_to_pl_slicename(lease['slice_id'])
+             if slice_name != slice['name']:
+                 continue
+             elif Xrn(lease['component_id']).get_authority_urn().split(':')[0] != self.driver.hrn:
+                 continue
+
+             hostname = xrn_to_hostname(lease['component_id'])
+             # fill the requested node with nitos ids
+             requested_lease['name'] = slice['name']
+             requested_lease['hostname'] = hostname
+             requested_lease['t_from'] = int(lease['start_time'])
+             requested_lease['t_until'] = int(lease['duration']) * grain + int(lease['start_time'])
+             requested_leases.append(requested_lease)
+
+
+
+        # prepare actual slice leases by lease_id  
+        leases_by_id = {}
+        for lease in leases:
+             leases_by_id[lease['lease_id']] = {'name': lease['name'], 'hostname': lease['hostname'], \
+                                                't_from': lease['t_from'], 't_until': lease['t_until']}
+        
+        added_leases = []
+        kept_leases_id = []
+        deleted_leases_id = []
+        for lease_id in leases_by_id:
+             if leases_by_id[lease_id] not in requested_leases:
+                 deleted_leases_id.append(lease_id)
+             else:
+                 kept_leases_id.append(lease_id)
+                 requested_leases.remove(leases_by_id[lease_id])
+        added_leases = requested_leases
+   
 
         try:
             if peer:
                 self.driver.shell.UnBindObjectFromPeer('slice', slice['slice_id'], peer['shortname'])
-            deleted=self.driver.shell.DeleteLeases(deleted_leases)
-            for lease in requested_leases:
-                added=self.driver.shell.AddLeases(lease['hostname'], slice['name'], int(lease['start_time']), int(lease['duration']) * grain + int(lease['start_time']))
+            self.driver.shell.DeleteLeases(deleted_leases_id)
+            for lease in added_leases:
+                self.driver.shell.AddLeases(lease['hostname'], slice['name'], lease['t_from'], lease['t_until'])
 
         except: 
             logger.log_exc('Failed to add/remove slice leases')
@@ -179,11 +216,27 @@ class PlSlices:
         return leases
 
 
-    def verify_slice_nodes(self, slice, requested_slivers, peer):
+    def verify_slice_nodes(self, slice, slivers, peer):
         
         nodes = self.driver.shell.GetNodes(slice['node_ids'], ['node_id', 'hostname', 'interface_ids'])
         current_slivers = [node['hostname'] for node in nodes]
 
+        requested_slivers = []
+        tags = []
+        for node in slivers:
+            hostname = None
+            if node.get('component_name'):
+                hostname = node.get('component_name').strip()
+            elif node.get('component_id'):
+                hostname = xrn_to_hostname(node.get('component_id').strip())
+            if node.get('client_id'):
+                tags.append({'slicename': slice['name'], 
+                             'tagname': 'client_id',
+                             'value': node['client_id'],
+                             'node': hostname})
+            if hostname:
+                requested_slivers.append(hostname)
+        
         # remove nodes not in rspec
         deleted_nodes = list(set(current_slivers).difference(requested_slivers))
 
@@ -195,9 +248,16 @@ class PlSlices:
                 self.driver.shell.UnBindObjectFromPeer('slice', slice['slice_id'], peer['shortname'])
             self.driver.shell.AddSliceToNodes(slice['name'], added_nodes)
             self.driver.shell.DeleteSliceFromNodes(slice['name'], deleted_nodes)
-
+            
         except: 
             logger.log_exc('Failed to add/remove slice from nodes')
+
+        # add tags
+        for tag in tags:
+            try:
+                self.driver.shell.AddSliceTag(tag['slicename'], tag['tagname'], tag['value'], tag['node']) 
+            except:
+                logger.log_exc('Failed to add slice tag')
         return nodes
 
     def free_egre_key(self):

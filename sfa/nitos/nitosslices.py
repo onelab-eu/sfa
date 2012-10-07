@@ -42,7 +42,10 @@ class NitosSlices:
              if slice_name != slice['slice_name']:
                  continue
              hostname = xrn_to_hostname(node['component_id'])
-             nitos_node = self.driver.filter_nitos_results(nitos_nodes, {'hostname': hostname})[0]
+             nitos_node = self.driver.filter_nitos_results(nitos_nodes, {'hostname': hostname})
+             if not nitos_node:
+                 continue
+             nitos_node = nitos_node[0]
              # fill the requested node with nitos ids
              requested_node['slice_id'] = slice['slice_id']
              requested_node['node_id'] = nitos_node['node_id']
@@ -70,7 +73,6 @@ class NitosSlices:
                  requested_nodes.remove(reserved_nodes_by_id[reservation_id])
         added_nodes = requested_nodes
 
-        print "NODES: \nAdded: %s \nDeleted: %s\nKept: %s" %(added_nodes,deleted_nodes_id,kept_nodes_id)
 
         try:
             deleted=self.driver.shell.releaseNodes({'reservation_ids': deleted_nodes_id})
@@ -123,7 +125,6 @@ class NitosSlices:
                  requested_channels.remove(reserved_channels_by_id[reservation_id])
         added_channels = requested_channels
 
-        print "CHANNELS: \nAdded: %s \nDeleted: %s\nKept: %s" %(added_channels,deleted_channels_id,kept_channels_id)
         
         try:
             deleted=self.driver.shell.releaseChannels({'reservation_ids': deleted_channels_id})
@@ -157,7 +158,7 @@ class NitosSlices:
         slices = self.driver.shell.getSlices({}, []) 
         slices = self.driver.filter_nitos_results(slices, {'slice_name': slicename})
         if not slices:
-            slice = {'name': slicename}
+            slice = {'slice_name': slicename}
             # add the slice                          
             slice['slice_id'] = self.driver.shell.addSlice(slice)
             slice['node_ids'] = []
@@ -167,159 +168,41 @@ class NitosSlices:
        
         return slice
 
-    #def get_existing_persons(self, users):
     def verify_users(self, slice_hrn, slice_record, users, sfa_peer, options={}):
-        
-        slice_user_ids = slice_record['user_ids']
-        all_users = self.driver.shell.getUsers()
-        # filter slice users 
-        slice_users = [user for user in all_users if user['user_id'] in slice_user_ids]
-
+        # get slice info
         slicename = hrn_to_nitos_slicename(slice_hrn)
         slices = self.driver.shell.getSlices({}, [])
-        slices = self.driver.filter_nitos_results(slices, {'slice_name': slicename})
-       
-        slice_user 
-        users_by_email = {}
-        users_by_site = defaultdict(list)
-        users_dict = {} 
+        slice = self.driver.filter_nitos_results(slices, {'slice_name': slicename})[0]
+        added_users = []
+        #get users info
+        users_info = []
         for user in users:
-            user['urn'] = user['urn'].lower()
-            hrn, type = urn_to_hrn(user['urn'])
-            username = get_leaf(hrn)
-            login_base = PlXrn(xrn=user['urn']).pl_login_base()
-            user['username'] = username
-            user['site'] = login_base
+             user_urn = user['urn']
+             user_hrn, type = urn_to_hrn(user_urn)
+             username = str(user_hrn).split('.')[-1]
+             email = user['email']
+             # look for the user according to his username, email...
+             nitos_users = self.driver.filter_nitos_results(self.driver.shell.getUsers(), {'username': username})
+             if not nitos_users:
+                 nitos_users = self.driver.filter_nitos_results(self.driver.shell.getUsers(), {'email': email})
 
-            if 'email' in user:
-                user['email'] = user['email'].lower() 
-                users_by_email[user['email']] = user
-                users_dict[user['email']] = user
-            else:
-                users_by_site[user['site']].append(user)
+             if not nitos_users:
+                 # create the user
+                 user_id = self.driver.shell.addUsers({'username': email.split('@')[0], 'email': email})
+                 added_users.append(user_id)
+                 # add user keys
+                 for key in user['keys']:
+                      self.driver.shell.addUserKey({'user_id': user_id, 'key': key})
+                 # add the user to the slice
+                 self.driver.shell.addUserToSlice({'slice_id': slice['slice_id'], 'user_id': user_id})
+             else:
+                 # check if the users are in the slice
+                 for user in nitos_users:
+                      if not user['user_id'] in slice['user_ids']:
+                          self.driver.shell.addUserToSlice({'slice_id': slice['slice_id'], 'user_id': user['user_id']})
 
-        # start building a list of existing users
-        existing_user_ids = []
-        existing_user_ids_filter = []
-        if users_by_email:
-            existing_user_ids_filter.extend(users_by_email.keys())
-        if users_by_site:
-            for login_base in users_by_site:
-                users = users_by_site[login_base]
-                for user in users:	
-                    existing_user_ids_filter.append(user['username']+'@geni.net')		
-        if existing_user_ids_filter:			
-            # get existing users by email 
-            existing_users = self.driver.shell.GetPersons({'email': existing_user_ids_filter}, 
-                                                        ['person_id', 'key_ids', 'email'])
-            existing_user_ids.extend([user['email'] for user in existing_users])
-	
-        if users_by_site:
-            # get a list of user sites (based on requeste user urns
-            site_list = self.driver.shell.GetSites(users_by_site.keys(), \
-                ['site_id', 'login_base', 'person_ids'])
-            # get all existing users at these sites
-            sites = {}
-            site_user_ids = []
-            for site in site_list:
-                sites[site['site_id']] = site
-                site_user_ids.extend(site['person_ids'])
+        return added_users
 
-            existing_site_persons_list = self.driver.shell.GetPersons(site_user_ids,  
-                                                                    ['person_id', 'key_ids', 'email', 'site_ids'])
-
-            # all requested users are either existing users or new (added) users      
-            for login_base in users_by_site:
-                requested_site_users = users_by_site[login_base]
-                for requested_user in requested_site_users:
-                    user_found = False
-                    for existing_user in existing_site_persons_list:
-                        for site_id in existing_user['site_ids']:
-                            if site_id in sites:
-                                site = sites[site_id]
-                                if login_base == site['login_base'] and \
-                                   existing_user['email'].startswith(requested_user['username']+'@'):
-                                    existing_user_ids.append(existing_user['email'])
-                                    requested_user['email'] = existing_user['email']
-                                    users_dict[existing_user['email']] = requested_user
-                                    user_found = True
-                                    break
-                        if user_found:
-                            break
-      
-                    if user_found == False:
-                        fake_email = requested_user['username'] + '@geni.net'
-                        requested_user['email'] = fake_email
-                        users_dict[fake_email] = requested_user
-                
-        # requested slice users        
-        requested_user_ids = users_dict.keys()
-        # existing slice users
-        existing_slice_users_filter = {'person_id': slice_record.get('person_ids', [])}
-        existing_slice_users = self.driver.shell.GetPersons(existing_slice_users_filter,
-                                                          ['person_id', 'key_ids', 'email'])
-        existing_slice_user_ids = [user['email'] for user in existing_slice_users]
-        
-        # users to be added, removed or updated
-        added_user_ids = set(requested_user_ids).difference(existing_user_ids)
-        added_slice_user_ids = set(requested_user_ids).difference(existing_slice_user_ids)
-        removed_user_ids = set(existing_slice_user_ids).difference(requested_user_ids)
-        updated_user_ids = set(existing_slice_user_ids).intersection(requested_user_ids)
-
-        # Remove stale users (only if we are not appending).
-        # Append by default.
-        append = options.get('append', True)
-        if append == False:
-            for removed_user_id in removed_user_ids:
-                self.driver.shell.DeletePersonFromSlice(removed_user_id, slice_record['name'])
-        # update_existing users
-        updated_users_list = [user for user in users_dict.values() if user['email'] in \
-          updated_user_ids]
-        self.verify_keys(existing_slice_users, updated_users_list, peer, options)
-
-        added_persons = []
-        # add new users
-        for added_user_id in added_user_ids:
-            added_user = users_dict[added_user_id]
-            hrn, type = urn_to_hrn(added_user['urn'])  
-            person = {
-                'first_name': added_user.get('first_name', hrn),
-                'last_name': added_user.get('last_name', hrn),
-                'email': added_user_id,
-                'peer_person_id': None,
-                'keys': [],
-                'key_ids': added_user.get('key_ids', []),
-            }
-            person['person_id'] = self.driver.shell.AddPerson(person)
-            if peer:
-                person['peer_person_id'] = added_user['person_id']
-            added_persons.append(person)
-           
-            # enable the account 
-            self.driver.shell.UpdatePerson(person['person_id'], {'enabled': True})
-            
-            # add person to site
-            self.driver.shell.AddPersonToSite(added_user_id, added_user['site'])
-
-            for key_string in added_user.get('keys', []):
-                key = {'key':key_string, 'key_type':'ssh'}
-                key['key_id'] = self.driver.shell.AddPersonKey(person['person_id'], key)
-                person['keys'].append(key)
-
-            # add the registry record
-#            if sfa_peer:
-#                peer_dict = {'type': 'user', 'hrn': hrn, 'peer_authority': sfa_peer, \
-#                    'pointer': person['person_id']}
-#                self.registry.register_peer_object(self.credential, peer_dict)
-    
-        for added_slice_user_id in added_slice_user_ids.union(added_user_ids):
-            # add person to the slice 
-            self.driver.shell.AddPersonToSlice(added_slice_user_id, slice_record['name'])
-            # if this is a peer record then it should already be bound to a peer.
-            # no need to return worry about it getting bound later 
-
-        return added_persons
-            
 
     def verify_keys(self, persons, users, options={}):
         # existing keys 

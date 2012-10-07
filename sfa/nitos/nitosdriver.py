@@ -477,7 +477,9 @@ class NitosDriver (Driver):
         cached_requested = options.get('cached', True) 
         version_manager = VersionManager()
         # get the rspec's return format from options
-        rspec_version = version_manager.get_version(options.get('geni_rspec_version'))
+        #rspec_version = version_manager.get_version(options.get('geni_rspec_version'))
+        # rspec's return format for nitos aggregate is version  NITOS 1
+        rspec_version = version_manager.get_version('NITOS 1')
         version_string = "rspec_%s" % (rspec_version)
  
         #panos adding the info option to the caching key (can be improved)
@@ -606,7 +608,7 @@ class NitosDriver (Driver):
         # ensure slice record exists
         slice = slices.verify_slice(slice_hrn, slice_record, sfa_peer, options=options)
         # ensure user records exists
-        #users = slices.verify_users(slice_hrn, slice, users, sfa_peer, options=options)
+        users = slices.verify_users(slice_hrn, slice, users, sfa_peer, options=options)
         
         # add/remove leases (nodes and channels)
         # a lease in Nitos RSpec case is a reservation of nodes and channels grouped by (slice,timeslot)
@@ -632,7 +634,6 @@ class NitosDriver (Driver):
 
         # release all reserved nodes and channels for that slice
         try:
-            print "Nodes: %s\nChannels: %s" %(slice_reserved_nodes_ids, slice_reserved_channels_ids)
             released_nodes = self.shell.releaseNodes({'reservation_ids': slice_reserved_nodes_ids})
             released_channels = self.shell.releaseChannels({'reservation_ids': slice_reserved_channels_ids})
         except:

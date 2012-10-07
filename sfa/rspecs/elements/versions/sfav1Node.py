@@ -57,10 +57,16 @@ class SFAv1Node:
             if location:
                 node_elem.add_instance('location', location, Location.fields)
 
-            # add granularity of the reservation system
-            granularity = node.get('granularity')
-            if granularity:
-                node_elem.add_instance('granularity', granularity, granularity.fields)
+            # add exclusive tag to distinguish between Reservable and Shared nodes
+            exclusive_elem = node_elem.add_element('exclusive')
+            if node.get('exclusive') and node.get('exclusive') == 'true':
+                exclusive_elem.set_text('TRUE')
+                # add granularity of the reservation system
+                granularity = node.get('granularity')
+                if granularity:
+                    node_elem.add_instance('granularity', granularity, granularity.fields)
+            else:
+                exclusive_elem.set_text('FALSE')
 
 
             if isinstance(node.get('interfaces'), list):

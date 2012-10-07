@@ -28,8 +28,8 @@ class NITOSv1Channel:
         if len(network_elems) > 0:
             network_elem = network_elems[0]
         elif len(channels) > 0:
-            #network_urn = Xrn(leases[0]['component_id']).get_authority_urn().split(':')[0]
-            network_urn = "pla"
+            # dirty hack that handles no resource manifest rspec 
+            network_urn = "omf"
             network_elem = xml.add_element('network', name = network_urn)
         else:
             network_elem = xml

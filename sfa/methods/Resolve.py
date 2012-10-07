@@ -23,15 +23,18 @@ class Resolve(Method):
         Mixed(Parameter(str, "Human readable name (hrn or urn)"),
               Parameter(list, "List of Human readable names ([hrn])")),
         Mixed(Parameter(str, "Credential string"),
-              Parameter(list, "List of credentials)"))  
+              Parameter(list, "List of credentials)")),
+        Parameter(dict, "options"),
         ]
 
     # xxx used to be [SfaRecord]
     returns = [Parameter(dict, "registry record")]
     
-    def call(self, xrns, creds):
-        # xxx should be ar arg
-        details=False
+    def call(self, xrns, creds, options={}):
+        # use details=False by default, only when explicitly specified do we want 
+        # to mess with the testbed details
+        if 'details' in options: details=options['details']
+        else:                    details=False
         type = None
         if not isinstance(xrns, types.ListType):
             type = Xrn(xrns).get_type()

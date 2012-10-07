@@ -197,6 +197,54 @@ def save_record_to_file(filename, record_dict):
     f.close()
     return
 
+# used in sfi list
+def terminal_render (records,options):
+    # sort records by type
+    grouped_by_type={}
+    for record in records:
+        type=record['type']
+        if type not in grouped_by_type: grouped_by_type[type]=[]
+        grouped_by_type[type].append(record)
+    group_types=grouped_by_type.keys()
+    group_types.sort()
+    for type in group_types:
+        group=grouped_by_type[type]
+#        print 20 * '-', type
+        try:    renderer=eval('terminal_render_'+type)
+        except: renderer=terminal_render_default
+        for record in group: renderer(record,options)
+
+def render_plural (how_many, name,names=None):
+    if not names: names="%ss"%name
+    if how_many<=0: return "No %s"%name
+    elif how_many==1: return "1 %s"%name
+    else: return "%d %s"%(how_many,names)
+
+def terminal_render_default (record,options):
+    print "%s (%s)" % (record['hrn'], record['type'])
+def terminal_render_user (record, options):
+    print "%s (User)"%record['hrn'],
+    if record.get('reg-pi-authorities',None): print " [PI at %s]"%(" and ".join(record['reg-pi-authorities'])),
+    if record.get('reg-slices',None): print " [IN slices %s]"%(" and ".join(record['reg-slices'])),
+    user_keys=record.get('reg-keys',[])
+    if not options.verbose:
+        print " [has %s]"%(render_plural(len(user_keys),"key"))
+    else:
+        print ""
+        for key in user_keys: print 8*' ',key.strip("\n")
+        
+def terminal_render_slice (record, options):
+    print "%s (Slice)"%record['hrn'],
+    if record.get('reg-researchers',None): print " [USERS %s]"%(" and ".join(record['reg-researchers'])),
+#    print record.keys()
+    print ""
+def terminal_render_authority (record, options):
+    print "%s (Authority)"%record['hrn'],
+    if record.get('reg-pis',None): print " [PIS %s]"%(" and ".join(record['reg-pis'])),
+    print ""
+def terminal_render_node (record, options):
+    print "%s (Node)"%record['hrn']
+
 # minimally check a key argument
 def check_ssh_key (key):
     good_ssh_key = r'^.*(?:ssh-dss|ssh-rsa)[ ]+[A-Za-z0-9+/=]+(?: .*)?$'
@@ -418,6 +466,8 @@ class Sfi:
         if command == 'list':
            parser.add_option("-r", "--recursive", dest="recursive", action='store_true',
                              help="list all child records", default=False)
+           parser.add_option("-v", "--verbose", dest="verbose", action='store_true',
+                             help="gives details, like user keys", default=False)
         if command in ("delegate"):
            parser.add_option("-u", "--user",
                             action="store_true", dest="delegate_user", default=False,
@@ -488,7 +538,11 @@ class Sfi:
     # Main: parse arguments and dispatch to command
     #
     def dispatch(self, command, command_options, command_args):
-        return getattr(self, command)(command_options, command_args)
+        method=getattr(self, command,None)
+        if not method:
+            print "Unknown command %s"%command
+            return
+        return method(command_options, command_args)
 
     def main(self):
         self.sfi_parser = self.create_parser()
@@ -523,8 +577,8 @@ class Sfi:
 
         try:
             self.dispatch(command, command_options, command_args)
-        except KeyError:
-            self.logger.critical ("Unknown command %s"%command)
+        except:
+            self.logger.log_exc ("sfi command %s failed"%command)
             sys.exit(1)
 
         return
@@ -856,10 +910,9 @@ or version information about sfi itself
             raise Exception, "Not enough parameters for the 'list' command"
 
         # filter on person, slice, site, node, etc.
-        # THis really should be in the self.filter_records funct def comment...
+        # This really should be in the self.filter_records funct def comment...
         list = filter_records(options.type, list)
-        for record in list:
-            print "%s (%s)" % (record['hrn'], record['type'])
+        terminal_render (list, options)
         if options.file:
             save_records_to_file(options.file, list, options.fileformat)
         return
@@ -872,9 +925,8 @@ or version information about sfi itself
             self.print_help()
             sys.exit(1)
         hrn = args[0]
-        # xxx should set details=True here but that's not in the xmlrpc interface ...
-        # record_dicts = self.registry().Resolve(hrn, self.my_credential_string, details=True)
-        record_dicts = self.registry().Resolve(hrn, self.my_credential_string)
+        # explicitly require Resolve to run in details mode
+        record_dicts = self.registry().Resolve(hrn, self.my_credential_string, {'details':True})
         record_dicts = filter_records(options.type, record_dicts)
         if not record_dicts:
             self.logger.error("No record of type %s"% options.type)
@@ -1099,10 +1151,14 @@ or with an slice hrn, shows currently provisioned resources
         #    keys: [<ssh key A>, <ssh key B>]
         #  }]
         users = []
+        # xxx Thierry 2012 sept. 21
+        # contrary to what I was first thinking, calling Resolve with details=False does not yet work properly here
+        # I am turning details=True on again on a - hopefully - temporary basis, just to get this whole thing to work again
         slice_records = self.registry().Resolve(slice_urn, [self.my_credential_string])
-        if slice_records and 'researcher' in slice_records[0] and slice_records[0]['researcher']!=[]:
+        # slice_records = self.registry().Resolve(slice_urn, [self.my_credential_string], {'details':True})
+        if slice_records and 'reg-researchers' in slice_records[0] and slice_records[0]['reg-researchers']:
             slice_record = slice_records[0]
-            user_hrns = slice_record['researcher']
+            user_hrns = slice_record['reg-researchers']
             user_urns = [hrn_to_urn(hrn, 'user') for hrn in user_hrns]
             user_records = self.registry().Resolve(user_urns, [self.my_credential_string])
 
