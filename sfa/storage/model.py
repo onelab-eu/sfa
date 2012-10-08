@@ -361,3 +361,35 @@ def make_record_xml (xml):
     logger.info("load from xml, keys=%s"%xml_dict.keys())
     return make_record_dict (xml_dict)
 
+####################
+# augment local records with data from builtin relationships
+# expose related objects as a list of hrns
+# we pick names that clearly won't conflict with the ones used in the old approach,
+# were the relationships data came from the testbed side
+# for each type, a dict of the form {<field-name-exposed-in-record>:<alchemy_accessor_name>}
+# so after that, an 'authority' record will e.g. have a 'reg-pis' field with the hrns of its pi-users
+augment_map={'authority': {'reg-pis':'reg_pis',},
+             'slice': {'reg-researchers':'reg_researchers',},
+             'user': {'reg-pi-authorities':'reg_authorities_as_pi',
+                      'reg-slices':'reg_slices_as_researcher',},
+             }
+
+def augment_with_sfa_builtins (local_record):
+    # don't ruin the import of that file in a client world
+    from sfa.util.xrn import Xrn
+    # add a 'urn' field
+    setattr(local_record,'reg-urn',Xrn(xrn=local_record.hrn,type=local_record.type).urn)
+    # users have keys and this is needed to synthesize 'users' sent over to CreateSliver
+    if local_record.type=='user':
+        user_keys = [ key.key for key in local_record.reg_keys ]
+        setattr(local_record, 'reg-keys', user_keys)
+    # search in map according to record type
+    type_map=augment_map.get(local_record.type,{})
+    # use type-dep. map to do the job
+    for (field_name,attribute) in type_map.items():
+        # get related objects
+        related_records = getattr(local_record,attribute,[])
+        hrns = [ r.hrn for r in related_records ]
+        setattr (local_record, field_name, hrns)
+    
+

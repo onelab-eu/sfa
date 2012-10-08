@@ -142,7 +142,7 @@ class PlAggregate:
         
         return (slice, slivers)
 
-    def get_nodes_and_links(self, slice_xrn, slice=None,slivers=[], options={}, requested_slivers={}):
+    def get_nodes_and_links(self, slice_xrn, slice=None,slivers=[], options={}):
         # if we are dealing with a slice that has no node just return 
         # and empty list    
         if slice_xrn:
@@ -200,14 +200,16 @@ class PlAggregate:
             rspec_node['component_name'] = node['hostname']
             rspec_node['component_manager_id'] = Xrn(self.driver.hrn, 'authority+cm').get_urn()
             rspec_node['authority_id'] = hrn_to_urn(PlXrn.site_hrn(self.driver.hrn, site['login_base']), 'authority+sa')
-            if requested_slivers and node['hostname'] in requested_slivers:
-                requested_sliver = requested_slivers[node['hostname']]
-                if requested_sliver.get('client_id'):
-                    rspec_node['client_id'] = requested_sliver['client_id']
             # do not include boot state (<available> element) in the manifest rspec
             if not slice:     
                 rspec_node['boot_state'] = node['boot_state']
-            rspec_node['exclusive'] = 'false'
+
+            #add the exclusive tag to distinguish between Shared and Reservable nodes
+            if node['node_type'] == 'reservable':
+                rspec_node['exclusive'] = 'true'
+            else:
+                rspec_node['exclusive'] = 'false'
+
             rspec_node['hardware_types'] = [HardwareType({'name': 'plab-pc'}),
                                             HardwareType({'name': 'pc'})]
             # only doing this because protogeni rspec needs
@@ -243,6 +245,9 @@ class PlAggregate:
                 sliver = slivers[node['node_id']]
                 rspec_node['sliver_id'] = sliver['sliver_id']
                 rspec_node['slivers'] = [sliver]
+                for tag in sliver['tags']:
+                    if tag['tagname'] == 'client_id':
+                         rspec_node['client_id'] = tag['value']
                 
                 # slivers always provide the ssh service
                 login = Login({'authentication': 'ssh-keys', 'hostname': node['hostname'], 'port':'22', 'username': sliver['name']})
@@ -252,8 +257,11 @@ class PlAggregate:
         return (rspec_nodes, links)
              
 
-    def get_leases(self, slice=None, options={}):
+    def get_leases(self, slice_xrn=None, slice=None, options={}):
         
+        if slice_xrn and not slice:
+            return []
+
         now = int(time.time())
         filter={}
         filter.update({'clip':now})
@@ -279,10 +287,14 @@ class PlAggregate:
             site_id=lease['site_id']
             site=sites_dict[site_id]
 
-            rspec_lease['lease_id'] = lease['lease_id']
+            #rspec_lease['lease_id'] = lease['lease_id']
             rspec_lease['component_id'] = hostname_to_urn(self.driver.hrn, site['login_base'], lease['hostname'])
-            slice_hrn = slicename_to_hrn(self.driver.hrn, lease['name'])
-            slice_urn = hrn_to_urn(slice_hrn, 'slice')
+            if slice_xrn:
+                slice_urn = slice_xrn
+                slice_hrn = urn_to_hrn(slice_urn)
+            else:
+                slice_hrn = slicename_to_hrn(self.driver.hrn, lease['name'])
+                slice_urn = hrn_to_urn(slice_hrn, 'slice')
             rspec_lease['slice_id'] = slice_urn
             rspec_lease['start_time'] = lease['t_from']
             rspec_lease['duration'] = (lease['t_until'] - lease['t_from']) / grain
@@ -290,7 +302,7 @@ class PlAggregate:
         return rspec_leases
 
     
-    def get_rspec(self, slice_xrn=None, version = None, options={}, requested_slivers={}):
+    def get_rspec(self, slice_xrn=None, version = None, options={}):
 
         version_manager = VersionManager()
         version = version_manager.get_version(version)
@@ -305,8 +317,10 @@ class PlAggregate:
             rspec.xml.set('expires',  datetime_to_string(utcparse(slice['expires'])))
 
         if not options.get('list_leases') or options.get('list_leases') and options['list_leases'] != 'leases':
-            nodes, links = self.get_nodes_and_links(slice_xrn, slice, slivers, options, 
-                                                    requested_slivers=requested_slivers)
+            if slice_xrn and not slivers:
+                nodes, links = [], []
+            else:
+                nodes, links = self.get_nodes_and_links(slice_xrn, slice, slivers, options)
             rspec.version.add_nodes(nodes)
             rspec.version.add_links(links)
             # add sliver defaults
@@ -318,7 +332,7 @@ class PlAggregate:
                     rspec.version.add_default_sliver_attribute(attrib['tagname'], attrib['value'])
         
         if not options.get('list_leases') or options.get('list_leases') and options['list_leases'] != 'resources':
-           leases = self.get_leases(slice)
+           leases = self.get_leases(slice_xrn, slice)
            rspec.version.add_leases(leases)
 
         return rspec.toxml()

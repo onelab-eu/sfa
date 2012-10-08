@@ -29,11 +29,14 @@ usual_variables = [
     "SFA_AGGREGATE_HOST",
     "SFA_SM_HOST",
     "SFA_DB_HOST",
-    "SFA_PLC_URL",
-    "SFA_PLC_USER",
-    "SFA_PLC_PASSWORD",
     ]
 
+flavour_xml_section_hash = { \
+    'pl':'sfa_plc',
+    'openstack':'sfa_nova',
+    'fd':'sfa_federica',
+    'nitos':'sfa_nitos'
+    }
 configuration={ \
     'name':'sfa',
     'service':"sfa",
@@ -401,11 +404,23 @@ def mainloop (cdef, cread, cwrite, default_config, site_config, consolidated_con
                    (service,service))
         elif command in "uU":
             global usual_variables
+            global flavour_xml_section_hash
             try:
                 for varname in usual_variables:
                     (category,variable) = cdef.locate_varname(varname)
                     if not (category is None and variable is None):
                         prompt_variable(cdef, cread, cwrite, category, variable, False)
+                
+                # set the driver variable according to the already set flavour 
+                generic_flavour = cwrite.items('sfa')[0][1]
+                for section in cdef.sections():
+                     if generic_flavour in flavour_xml_section_hash and flavour_xml_section_hash[generic_flavour] == section:
+                         for item in cdef.items(section):
+                              category = section
+                              variable = item[0]
+                              prompt_variable(cdef, cread, cwrite, category, variable, False)
+                         break
+
             except Exception, inst:
                 if (str(inst) != 'BailOut'):
                     raise

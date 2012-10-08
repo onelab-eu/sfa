@@ -736,42 +736,35 @@ class PlDriver (Driver):
         # add/remove slice from nodes
         requested_slivers = {}
         slivers = rspec.version.get_nodes_with_slivers() 
-        for node in slivers:
-            hostname = None
-            if node.get('component_name'):
-                hostname = node.get('component_name').strip()
-            elif node.get('component_id'):
-                hostname = xrn_to_hostname(node.get('component_id').strip())
-            if hostname:
-                requested_slivers[hostname] = node
-        nodes = slices.verify_slice_nodes(slice, requested_slivers.keys(), peer) 
+        nodes = slices.verify_slice_nodes(slice, slivers, peer) 
    
         # add/remove links links 
         slices.verify_slice_links(slice, rspec.version.get_link_requests(), nodes)
 
         # add/remove leases
-        requested_leases = []
-        kept_leases = []
-        for lease in rspec.version.get_leases():
-            requested_lease = {}
-            if not lease.get('lease_id'):
-               requested_lease['hostname'] = xrn_to_hostname(lease.get('component_id').strip())
-               requested_lease['start_time'] = lease.get('start_time')
-               requested_lease['duration'] = lease.get('duration')
-            else:
-               kept_leases.append(int(lease['lease_id']))
-            if requested_lease.get('hostname'):
-                requested_leases.append(requested_lease)
+        rspec_requested_leases = rspec.version.get_leases()
+        leases = slices.verify_slice_leases(slice, rspec_requested_leases, peer)
+        #requested_leases = []
+        #kept_leases = []
+        #for lease in rspec.version.get_leases():
+        #    requested_lease = {}
+        #    if not lease.get('lease_id'):
+        #       requested_lease['hostname'] = xrn_to_hostname(lease.get('component_id').strip())
+        #       requested_lease['start_time'] = lease.get('start_time')
+        #       requested_lease['duration'] = lease.get('duration')
+        #    else:
+        #       kept_leases.append(int(lease['lease_id']))
+        #    if requested_lease.get('hostname'):
+        #        requested_leases.append(requested_lease)
 
-        leases = slices.verify_slice_leases(slice, requested_leases, kept_leases, peer)
+        #leases = slices.verify_slice_leases(slice, requested_leases, kept_leases, peer)
     
         # handle MyPLC peer association.
         # only used by plc and ple.
         slices.handle_peer(site, slice, persons, peer)
         
         return aggregate.get_rspec(slice_xrn=slice_urn, 
-                                   version=rspec.version, 
-                                   requested_slivers = requested_slivers)
+                                   version=rspec.version)
 
     def delete_sliver (self, slice_urn, slice_hrn, creds, options):
         slicename = hrn_to_pl_slicename(slice_hrn)

@@ -1,6 +1,6 @@
 %define name sfa
 %define version 2.1
-%define taglevel 13
+%define taglevel 16
 
 %define release %{taglevel}%{?pldistro:.%{pldistro}}%{?date:.%{date}}
 %global python_sitearch	%( python -c "from distutils.sysconfig import get_python_lib; print get_python_lib(1)" )
@@ -88,6 +88,11 @@ Summary: the SFA layer around Federica
 Group: Applications/System
 Requires: sfa
 
+%package nitos
+Summary: the SFA layer around NITOS
+Group: Applications/System
+Requires: sfa
+
 %package sfatables
 Summary: sfatables policy tool for SFA
 Group: Applications/System
@@ -123,6 +128,9 @@ between the existing PlanetLab NodeManager interfaces and the SFA API.
 
 %description federica
 The SFA driver for FEDERICA.
+
+%description nitos
+The SFA driver for NITOS.
 
 %description sfatables
 sfatables is a tool for defining access and admission control policies
@@ -210,6 +218,9 @@ rm -rf $RPM_BUILD_ROOT
 %files federica
 %{python_sitelib}/sfa/federica
 
+%files nitos
+%{python_sitelib}/sfa/nitos
+
 %files sfatables
 /etc/sfatables/*
 %{_bindir}/sfatables
@@ -248,6 +259,27 @@ fi
 [ "$1" -ge "1" ] && service sfa-cm restart || :
 
 %changelog
+* Mon Oct 01 2012 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-2.1-16
+- various tweaks for the nitos driver
+
+* Wed Sep 26 2012 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-2.1-15
+- first stab at a driver for the NITOS/OMF testbed (sep. pkg)
+- deeper cleanup of the data-dependencies between SFA and the testbed
+- in particular, sfi create issues Resolve(details=False)
+- for that purpose, Resolve exposes reg-* keys for SFA builtins
+- which in turn allows sfi list to show PIs, slice members and keys
+- NOTE: sfa-config-tty is known to be broken w/ less frequently used func's
+- Shows stacktrace when startup fails (DB conn, wrong flavour, etc..)
+
+* Mon Sep 17 2012 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-2.1-14
+- configurable data-dir (/var/lib/sfa)
+- no more dependent on myplc-config
+- some support for hrns with _ instead of \.
+- fix for PL importing in presence of gpg keys
+- DeleteSliver returns True instead of 1 in case of success
+- Various improvements on the openstack/nova side
+- new package sfa-nitos
+
 * Wed Jul 11 2012 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-2.1-13
 - bugfix that prevented to call 'sfi create' - (was broken in sfa-2.1-12)
 - sfi to remove expired credentials
