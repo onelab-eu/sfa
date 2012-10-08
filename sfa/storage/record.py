@@ -33,9 +33,17 @@ class Record:
         # fallback
         return "** undef_datetime **"
     
-    def todict (self):
+    # it may be important to exclude relationships, which fortunately
+    # 
+    def todict (self, exclude_types=[]):
         d=self.__dict__
-        keys=[k for k in d.keys() if not k.startswith('_')]
+        def exclude (k,v):
+            if k.startswith('_'): return True
+            if exclude_types:
+                for exclude_type in exclude_types:
+                    if isinstance (v,exclude_type): return True
+            return False
+        keys=[k for (k,v) in d.items() if not exclude(k,v)]
         return dict ( [ (k,d[k]) for k in keys ] )
     
     def toxml(self):

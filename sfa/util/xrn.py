@@ -120,14 +120,13 @@ class Xrn:
         if not xrn: xrn = ""
         # user has specified xrn : guess if urn or hrn
         self.id = id
+        self.type = type
+
         if Xrn.is_urn(xrn):
             self.hrn=None
             self.urn=xrn
-            if id:
-                self.urn = "%s-%s" % (self.urn, str(id))
             self.urn_to_hrn()
-            if type:
-                self.type=type
+            if id:
                 self.hrn_to_urn()
         else:
             self.urn=None
@@ -177,11 +176,9 @@ class Xrn:
         update the authority section of an existing urn
         """
         authority_hrn = self.get_authority_hrn()
-        old_hrn_parts = Xrn.hrn_split(self.hrn)
-        old_hrn_parts[0] = authority
-        hrn = ".".join(old_hrn_parts) 
-        self.hrn = hrn 
-        self.hrn_to_urn()
+        if not authority_hrn.startswith(authority+"."):
+            self.hrn = authority + "." + self.hrn
+            self.hrn_to_urn()
         self._normalize()
         
     def urn_to_hrn(self):
@@ -247,8 +244,6 @@ class Xrn:
             self.authority = Xrn.hrn_auth_list(self.hrn)
             name = Xrn.hrn_leaf(self.hrn)
             # separate name from id
-            name_parts = name.split("-")
-            name = name_parts[0]
             authority_string = self.get_authority_urn()
 
         if self.type == None:

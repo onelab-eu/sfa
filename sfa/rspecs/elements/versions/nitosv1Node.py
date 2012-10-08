@@ -6,18 +6,18 @@ from sfa.rspecs.elements.element import Element
 from sfa.rspecs.elements.node import Node
 from sfa.rspecs.elements.sliver import Sliver
 from sfa.rspecs.elements.location import Location
+from sfa.rspecs.elements.position_3d import Position3D
 from sfa.rspecs.elements.hardware_type import HardwareType
 from sfa.rspecs.elements.disk_image import DiskImage
 from sfa.rspecs.elements.interface import Interface
 from sfa.rspecs.elements.bwlimit import BWlimit
 from sfa.rspecs.elements.pltag import PLTag
-from sfa.rspecs.elements.versions.sfav1Sliver import SFAv1Sliver
-from sfa.rspecs.elements.versions.sfav1PLTag import SFAv1PLTag
+from sfa.rspecs.elements.versions.nitosv1Sliver import NITOSv1Sliver
+from sfa.rspecs.elements.versions.nitosv1PLTag import NITOSv1PLTag
 from sfa.rspecs.elements.versions.pgv2Services import PGv2Services
 
-from sfa.planetlab.plxrn import xrn_to_hostname
 
-class SFAv1Node:
+class NITOSv1Node:
 
     @staticmethod
     def add_nodes(xml, nodes):
@@ -29,6 +29,9 @@ class SFAv1Node:
             network_elem = xml.add_element('network', name = Xrn(network_urn).get_hrn())
         else:
             network_elem = xml
+
+        # needs to be improuved to retreive the gateway addr dynamically.
+        gateway_addr = 'nitlab.inf.uth.gr'
 
         node_elems = []       
         for node in nodes:
@@ -43,7 +46,7 @@ class SFAv1Node:
 
             # set component_name attribute and  hostname element
             if 'component_id' in node and node['component_id']:
-                component_name = xrn_to_hostname(node['component_id'])
+                component_name = Xrn(xrn=node['component_id']).get_leaf()
                 node_elem.set('component_name', component_name)
                 hostname_elem = node_elem.add_element('hostname')
                 hostname_elem.set_text(component_name)
@@ -57,16 +60,32 @@ class SFAv1Node:
             if location:
                 node_elem.add_instance('location', location, Location.fields)
 
-            # add exclusive tag to distinguish between Reservable and Shared nodes
+            # add 3D Position of the node
+            position_3d = node.get('position_3d')
+            if position_3d:
+                node_elem.add_instance('position_3d', position_3d, Position3D.fields)
+
+            # all nitos nodes are exculsive
             exclusive_elem = node_elem.add_element('exclusive')
-            if node.get('exclusive') and node.get('exclusive') == 'true':
-                exclusive_elem.set_text('TRUE')
-                # add granularity of the reservation system
-                granularity = node.get('granularity')
-                if granularity:
-                    node_elem.add_instance('granularity', granularity, granularity.fields)
-            else:
-                exclusive_elem.set_text('FALSE')
+            exclusive_elem.set_text('TRUE')
+ 
+            # In order to access nitos nodes, one need to pass through the nitos gateway
+            # here we advertise Nitos access gateway address
+            gateway_elem = node_elem.add_element('gateway')
+            gateway_elem.set_text(gateway_addr)
+
+            # add granularity of the reservation system
+            granularity = node.get('granularity')['grain']
+            if granularity:
+                #node_elem.add_instance('granularity', granularity, granularity.fields)
+                granularity_elem = node_elem.add_element('granularity')
+                granularity_elem.set_text(str(granularity))
+            # add hardware type
+            #hardware_type = node.get('hardware_type')
+            #if hardware_type:
+            #    node_elem.add_instance('hardware_type', hardware_type)
+            hardware_type_elem = node_elem.add_element('hardware_type')
+            hardware_type_elem.set_text(node.get('hardware_type'))
 
 
             if isinstance(node.get('interfaces'), list):
@@ -82,7 +101,7 @@ class SFAv1Node:
                 for tag in tags:
                     tag_elem = node_elem.add_element(tag['tagname'])
                     tag_elem.set_text(tag['value'])
-            SFAv1Sliver.add_slivers(node_elem, node.get('slivers', []))
+            NITOSv1Sliver.add_slivers(node_elem, node.get('slivers', []))
 
     @staticmethod 
     def add_slivers(xml, slivers):
@@ -96,18 +115,18 @@ class SFAv1Node:
                 filter['component_id'] = '*%s*' % sliver['component_id']
             if not filter:
                 continue 
-            nodes = SFAv1Node.get_nodes(xml, filter)
+            nodes = NITOSv1Node.get_nodes(xml, filter)
             if not nodes:
                 continue
             node = nodes[0]
-            SFAv1Sliver.add_slivers(node, sliver)
+            NITOSv1Sliver.add_slivers(node, sliver)
 
     @staticmethod
     def remove_slivers(xml, hostnames):
         for hostname in hostnames:
-            nodes = SFAv1Node.get_nodes(xml, {'component_id': '*%s*' % hostname})
+            nodes = NITOSv1Node.get_nodes(xml, {'component_id': '*%s*' % hostname})
             for node in nodes:
-                slivers = SFAv1Sliver.get_slivers(node.element)
+                slivers = NITOSv1Sliver.get_slivers(node.element)
                 for sliver in slivers:
                     node.element.remove(sliver.element)
         
@@ -115,13 +134,13 @@ class SFAv1Node:
     def get_nodes(xml, filter={}):
         xpath = '//node%s | //default:node%s' % (XpathFilter.xpath(filter), XpathFilter.xpath(filter))
         node_elems = xml.xpath(xpath)
-        return SFAv1Node.get_node_objs(node_elems)
+        return NITOSv1Node.get_node_objs(node_elems)
 
     @staticmethod
     def get_nodes_with_slivers(xml):
         xpath = '//node[count(sliver)>0] | //default:node[count(default:sliver)>0]' 
         node_elems = xml.xpath(xpath)
-        return SFAv1Node.get_node_objs(node_elems)
+        return NITOSv1Node.get_node_objs(node_elems)
 
 
     @staticmethod
@@ -148,9 +167,9 @@ class SFAv1Node:
             # get services
             node['services'] = PGv2Services.get_services(node_elem) 
             # get slivers
-            node['slivers'] = SFAv1Sliver.get_slivers(node_elem)
+            node['slivers'] = NITOSv1Sliver.get_slivers(node_elem)
             # get tags
-            node['tags'] =  SFAv1PLTag.get_pl_tags(node_elem, ignore=Node.fields+["hardware_type"])
+            node['tags'] =  NITOSv1PLTag.get_pl_tags(node_elem, ignore=Node.fields+["hardware_type"])
             # get hardware types
             hardware_type_elems = node_elem.xpath('./default:hardware_type | ./hardware_type')
             node['hardware_types'] = [hw_type.get_instance(HardwareType) for hw_type in hardware_type_elems]

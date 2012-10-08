@@ -135,6 +135,7 @@ class OSAggregate:
             service = Services({'login': login})
             rspec_node['services'].append(service)
 
+        if_index = 0
         for private_ip in addresses.get('private', []):
             if_xrn = PlXrn(auth=self.driver.hrn,
                            interface='node%s' % (instance.hostId))
@@ -147,6 +148,7 @@ class OSAggregate:
                                  #'netmask': private_ip['network'],
                                  'type': 'ipv%s' % str(private_ip['version'])}]
             rspec_node['interfaces'].append(interface)
+            if_index += 1
 
         # slivers always provide the ssh service
         for public_ip in addresses.get('public', []):
@@ -307,6 +309,8 @@ class OSAggregate:
                     metadata['security_groups'] = group_name
                     if node.get('component_id'):
                         metadata['component_id'] = node['component_id']
+                    if node.get('client_id'):
+                        metadata['client_id'] = node['client_id']
                     server = self.driver.shell.nova_manager.servers.create(flavor=flavor_id,
                                                             image=image_id,
                                                             key_name = key_name,
@@ -314,8 +318,6 @@ class OSAggregate:
                                                             files=files,
                                                             meta=metadata, 
                                                             name=instance_name)
-                    if node.get('client_id'):
-                        server.metadata['client_id'] = node['client_id']
                     created_instances.append(server)
                     
                 except Exception, err:    

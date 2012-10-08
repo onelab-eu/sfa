@@ -63,7 +63,7 @@ class GetSelfCredential(Method):
         # another registry if needed
         # I wonder if this is truly the intention, or shouldn't we instead 
         # only look in the local db ?
-        records = self.api.manager.Resolve(self.api, xrn, type)
+        records = self.api.manager.Resolve(self.api, xrn, type, details=False)
         if not records:
             raise RecordNotFound(hrn)
 

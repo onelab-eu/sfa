@@ -33,7 +33,7 @@ class GetGids(Method):
         origin_hrn = Credential(string=valid_creds[0]).get_gid_caller().get_hrn()
         
         # resolve the record
-        records = self.api.manager.Resolve(self.api, xrns, full = False)
+        records = self.api.manager.Resolve(self.api, xrns, details = False)
         if not records:
             raise RecordNotFound(xrns)
 

@@ -11,18 +11,19 @@ from sfa.rspecs.elements.disk_image import DiskImage
 from sfa.rspecs.elements.interface import Interface
 from sfa.rspecs.elements.bwlimit import BWlimit
 from sfa.rspecs.elements.pltag import PLTag
-from sfa.rspecs.elements.versions.sfav1Sliver import SFAv1Sliver
-from sfa.rspecs.elements.versions.sfav1PLTag import SFAv1PLTag
+from sfa.rspecs.elements.versions.nitosv1Sliver import NITOSv1Sliver
+from sfa.rspecs.elements.versions.nitosv1PLTag import NITOSv1PLTag
 from sfa.rspecs.elements.versions.pgv2Services import PGv2Services
 from sfa.rspecs.elements.lease import Lease
+from sfa.rspecs.elements.channel import Channel
 
-from sfa.planetlab.plxrn import xrn_to_hostname
 
-class SFAv1Lease:
+
+class NITOSv1Lease:
 
     @staticmethod
-    def add_leases(xml, leases):
-        logger.debug("SFAV1LEASE \t add_lease ")
+    def add_leases(xml, leases, channels):
+        
         network_elems = xml.xpath('//network')
         if len(network_elems) > 0:
             network_elem = network_elems[0]
@@ -31,7 +32,7 @@ class SFAv1Lease:
             network_elem = xml.add_element('network', name = network_urn)
         else:
             network_elem = xml
-         
+        
         # group the leases by slice and timeslots
         grouped_leases = []
 
@@ -40,7 +41,7 @@ class SFAv1Lease:
              start_time = leases[0]['start_time']
              duration = leases[0]['duration']
              group = []
-
+             
              for lease in leases:
                   if slice_id == lease['slice_id'] and start_time == lease['start_time'] and duration == lease['duration']:
                       group.append(lease)
@@ -49,37 +50,35 @@ class SFAv1Lease:
 
              for lease1 in group:
                   leases.remove(lease1)
-
-        lease_elems = []
+         
+        lease_elems = []       
         for lease in grouped_leases:
             #lease_fields = ['lease_id', 'component_id', 'slice_id', 'start_time', 'duration']
             lease_fields = ['slice_id', 'start_time', 'duration']
             lease_elem = network_elem.add_instance('lease', lease[0], lease_fields)
             lease_elems.append(lease_elem)
-            logger.debug("SFAV1LEASE \t add_lease lease %s" %(lease))
 
             # add nodes of this lease
             for node in lease:
                  lease_elem.add_instance('node', node, ['component_id'])
 
-
-
-#        lease_elems = []       
-#        for lease in leases:
-#            lease_fields = ['lease_id', 'component_id', 'slice_id', 'start_time', 'duration']
-#            lease_elem = network_elem.add_instance('lease', lease, lease_fields)
-#            lease_elems.append(lease_elem)
-
+            # add reserved channels of this lease
+            #channels = [{'channel_id': 1}, {'channel_id': 2}]
+            for channel in channels:
+                 if channel['slice_id'] == lease[0]['slice_id'] and channel['start_time'] == lease[0]['start_time'] and channel['duration'] == lease[0]['duration']:
+                     lease_elem.add_instance('channel', channel, ['channel_num'])
+            
 
     @staticmethod
     def get_leases(xml, filter={}):
         xpath = '//lease%s | //default:lease%s' % (XpathFilter.xpath(filter), XpathFilter.xpath(filter))
         lease_elems = xml.xpath(xpath)
-        return SFAv1Lease.get_lease_objs(lease_elems)
+        return NITOSv1Lease.get_lease_objs(lease_elems)
 
     @staticmethod
     def get_lease_objs(lease_elems):
-        leases = []
+        leases = []    
+        channels = []
         for lease_elem in lease_elems:
             #get nodes
             node_elems = lease_elem.xpath('./default:node | ./node')
@@ -90,23 +89,15 @@ class SFAv1Lease:
                  lease['duration'] = lease_elem.attrib['duration']
                  lease['component_id'] = node_elem.attrib['component_id']
                  leases.append(lease)
+            #get channels
+            channel_elems = lease_elem.xpath('./default:channel | ./channel')
+            for channel_elem in channel_elems:
+                 channel = Channel(channel_elem.attrib, channel_elem)
+                 channel['slice_id'] = lease_elem.attrib['slice_id']
+                 channel['start_time'] = lease_elem.attrib['start_time']
+                 channel['duration'] = lease_elem.attrib['duration']
+                 channel['channel_num'] = channel_elem.attrib['channel_num']
+                 channels.append(channel)
 
-        return leases
-
-
-
-
-
-#        leases = []    
-#        for lease_elem in lease_elems:
-#            lease = Lease(lease_elem.attrib, lease_elem)
-#            if lease.get('lease_id'):
-#               lease['lease_id'] = lease_elem.attrib['lease_id']
-#            lease['component_id'] = lease_elem.attrib['component_id']
-#            lease['slice_id'] = lease_elem.attrib['slice_id']
-#            lease['start_time'] = lease_elem.attrib['start_time']
-#            lease['duration'] = lease_elem.attrib['duration']
-
-#            leases.append(lease)
-#        return leases            
+        return (leases, channels)            
 

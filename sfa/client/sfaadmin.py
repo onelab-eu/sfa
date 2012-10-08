@@ -69,7 +69,7 @@ class RegistryCommands(Commands):
           choices=('text', 'xml', 'simple'), help='display record in different formats') 
     def show(self, xrn, type=None, format=None, outfile=None):
         """Display details for a registered object"""
-        records = self.api.manager.Resolve(self.api, xrn, type, True)
+        records = self.api.manager.Resolve(self.api, xrn, type, details=True)
         for record in records:
             sfa_record = Record(dict=record)
             sfa_record.dump(format) 
@@ -179,7 +179,7 @@ class RegistryCommands(Commands):
         importer.run()
 
     def sync_db(self):
-        """Initiailize or upgrade the db"""
+        """Initialize or upgrade the db"""
         from sfa.storage.dbschema import DBSchema
         dbschema=DBSchema()
         dbschema.init_or_upgrade
