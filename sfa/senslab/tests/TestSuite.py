@@ -251,7 +251,44 @@ def TestSlabDriver(job_id = '1'):
     persons = slabdriver.GetPersons()
     print "\r\n \r\n  GetPersons" ,persons
     #slabdriver.DeleteJobs(job_id,'senslab2.avakian_slice')
+  
+  
+def  TestSfi(arg = None):
+    import os
+    
+    listing = os.system("sfi.py list senslab2")
    
+    resources = os.system("sfi.py resources")
+
+    slab = os.system("sfi.py resources -r slab")
+
+    resourcesall = os.system("sfi.py resources -l all")
+
+    slaball = os.system("sfi.py resources -r slab -l all")
+    filename = "home/savakian/flab-sfa/avakian_adv.rspec"
+    rspecfile = open(filename,"w")
+    r = os.popen("sfi.py resources -l all") 
+    for i in r.readlines():
+        rspecfile.write(i)
+    rspecfile.close()
+    
+
+    slices_rec = os.system("sfi.py resources senslab2.avakian_slice")
+    show_slice = os.system("sfi.py show senslab2.avakian_slice")
+
+    show = os.system("sfi.py show senslab2.avakian")
+
+
+    show_node  = os.system("sfi.py show senslab2.node7.devlille.senslab.info")
+
+
+    slices = os.system("sfi.py slices")
+
+    status_slice = os.system("sfi.py status senslab2.avakian_slice")
+
+    create = os.system("sfi.py create senslab2.avakian_slice /home/savakian/flab-sfa/avakian_adv.rspec")
+      
+      
 def RunAll():
     TestLdap()
     TestOAR()
@@ -261,6 +298,7 @@ supported_options = {
         'OAR' : TestOAR,
         'LDAP': TestLdap,
         'driver': TestSlabDriver,
+        'sfi':TestSfi,
         'all' : RunAll }
         
 def main():

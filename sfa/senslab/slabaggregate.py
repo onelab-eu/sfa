@@ -208,7 +208,7 @@ class SlabAggregate:
                 rspec_node['boot_state'] = node['boot_state']
                 if node['hostname'] in reserved_nodes:
                     rspec_node['boot_state'] = "Reserved"
-                rspec_node['exclusive'] = 'True'
+                rspec_node['exclusive'] = 'true'
                 rspec_node['hardware_types'] = [HardwareType({'name': 'slab-node'})]
     
                 # only doing this because protogeni rspec needs
