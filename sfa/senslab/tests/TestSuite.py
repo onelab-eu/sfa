@@ -255,15 +255,20 @@ def TestSlabDriver(job_id = '1'):
   
 def  TestSfi(arg = None):
     import os
-    
+    print " =================    SFI.PY RESOURCES            ============="
     listing = os.system("sfi.py list senslab2")
-   
+    
+    print 
     resources = os.system("sfi.py resources")
 
+    print
     slab = os.system("sfi.py resources -r slab")
 
+    print
     resourcesall = os.system("sfi.py resources -l all")
-
+    
+    
+    print "================= SFI.PY RESOURCES -R SLAB -L ALL ============="
     slaball = os.system("sfi.py resources -r slab -l all")
     filename = "home/savakian/flab-sfa/avakian_adv.rspec"
     rspecfile = open(filename,"w")
@@ -272,20 +277,25 @@ def  TestSfi(arg = None):
         rspecfile.write(i)
     rspecfile.close()
     
-
+    print " =================    SFI.PY SHOW SLICE   ============="
     slices_rec = os.system("sfi.py resources senslab2.avakian_slice")
+    
+    print  " =================    SFI.PY SHOW USER   ============="
     show_slice = os.system("sfi.py show senslab2.avakian_slice")
 
+    print " =================    SFI.PY SHOW NODE   ============="
     show = os.system("sfi.py show senslab2.avakian")
 
-
+    print " =================    SFI.PY SLICES       ============="
     show_node  = os.system("sfi.py show senslab2.node7.devlille.senslab.info")
 
-
+    print " =================    SFI.PY LIST SLICE   ============="
     slices = os.system("sfi.py slices")
 
+    print " =================    SFI.PY STATUS SLICE   ============="
     status_slice = os.system("sfi.py status senslab2.avakian_slice")
 
+    print " =================    SFI.PY CREATE SLICE   ============="
     create = os.system("sfi.py create senslab2.avakian_slice /home/savakian/flab-sfa/avakian_adv.rspec")
       
       
