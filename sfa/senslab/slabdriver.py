@@ -177,8 +177,7 @@ class SlabDriver(Driver):
         rspec = RSpec(rspec_string)
         logger.debug("SLABDRIVER.PY \t create_sliver \tr spec.version %s slice_record %s " \
                                                             %(rspec.version,slice_record))
-        
-        #self.synchronize_oar_and_slice_table(slice_hrn)
+
         # ensure site record exists?
         # ensure slice record exists
         #Removed options to verify_slice SA 14/08/12

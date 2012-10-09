@@ -7,18 +7,8 @@ MAXINT =  2L**31-1
 class SlabSlices:
 
     rspec_to_slice_tag = {'max_rate':'net_max_rate'}
-
-    #def __init__(self, api, ttl = .5, origin_hrn=None):
-        #self.api = api
-        ##filepath = path + os.sep + filename
-        #self.policy = Policy(self.api)    
-        #self.origin_hrn = origin_hrn
-        #self.registry = api.registries[api.hrn]
-        #self.credential = api.getCredential()
-        #self.nodes = []
-        #self.persons = []
-
-
+    
+    
     def __init__(self, driver):
         self.driver = driver
         
@@ -148,7 +138,8 @@ class SlabSlices:
        
         #First get the list of current leases from OAR          
         leases = self.driver.GetLeases({'name':sfa_slice['name']})
-        #leases = self.driver.GetLeases({'name':sfa_slice['name']}, ['lease_id'])
+        #leases = self.driver.GetLeases({'name':sfa_slice['name']},\
+                                     #['lease_id'])
         if leases : 
             current_leases = [lease['lease_id'] for lease in leases]
             #Deleted leases are the ones with lease id not declared in the Rspec
@@ -157,16 +148,19 @@ class SlabSlices:
             try:
                 if peer:
                     #peer = RegAuyhority object is unsubscriptable
-                    #TODO :UnBindObjectFromPeer Quick and dirty auth='senslab2 SA 27/07/12
-                    self.driver.UnBindObjectFromPeer('senslab2', 'slice', \
-                                    sfa_slice['record_id_slice'], peer.hrn)
+                    #TODO :UnBindObjectFromPeer Quick and dirty 
+                    #auth='senslab2 SA 27/07/12
+                    
+                    #Commented out UnBindObjectFromPeer SA 09/10/12
+                    #self.driver.UnBindObjectFromPeer('senslab2', 'slice', \
+                                    #sfa_slice['record_id_slice'], peer.hrn)
                 
                 self.driver.DeleteLeases(deleted_leases, \
                                         sfa_slice['name'])
                
-            #TODO : catch other exception?
+            #TODO verify_slice_leases: catch other exception?
             except KeyError: 
-                logger.log_exc('Failed to add/remove slice leases')
+                logger.log_exc('Failed to remove slice leases')
                 
         #Add new leases        
         for start_time in requested_jobs_dict:
@@ -189,7 +183,8 @@ class SlabSlices:
             deleted_nodes = list(set(current_slivers).\
                                                 difference(requested_slivers))
             # add nodes from rspec
-            #added_nodes = list(set(requested_slivers).difference(current_slivers))
+            #added_nodes = list(set(requested_slivers).\
+                                        #difference(current_slivers))
 
             #Update the table with the nodes that populate the slice
             logger.debug("SLABSLICES \tverify_slice_nodes slice %s\
@@ -322,7 +317,8 @@ class SlabSlices:
             for sl in slices_list:
             
                 logger.debug("SLABSLICE \tverify_slice slicename %s sl %s \
-                                    slice_record %s"%(slicename, sl, slice_record))
+                                    slice_record %s"%(slicename, sl, \
+                                                            slice_record))
                 sfa_slice = sl
                 sfa_slice.update(slice_record)
                 #del slice['last_updated']
@@ -331,8 +327,9 @@ class SlabSlices:
                     #slice['peer_slice_id'] = slice_record.get('slice_id', None)
                     ## unbind from peer so we can modify if necessary. 
                     ## Will bind back later
-                    #self.driver.UnBindObjectFromPeer('slice', slice['slice_id'], \
-                                                                #peer['shortname'])
+                    #self.driver.UnBindObjectFromPeer('slice', \
+                                                        #slice['slice_id'], \
+                                                            #peer['shortname'])
                 #Update existing record (e.g. expires field) 
                     #it with the latest info.
                 ##if slice_record and slice['expires'] != slice_record['expires']:
@@ -450,15 +447,16 @@ class SlabSlices:
                 ldap_reslt = self.driver.ldap.LdapSearch(req)
                 if ldap_reslt:
                     logger.debug(" SLABSLICE.PY \tverify_person users \
-                                USER already in Senslab \t ldap_reslt %s "%( ldap_reslt)) 
+                                USER already in Senslab \t ldap_reslt %s \
+                                "%( ldap_reslt)) 
                     existing_users.append(ldap_reslt[1])
                  
                 else:
                     #User not existing in LDAP
-                    #TODO SA 21/08/12 raise something to add user or add it auto ?
+                    #TODO SA 21/08/12 raise smthg to add user or add it auto ?
                     logger.debug(" SLABSLICE.PY \tverify_person users \
-                                not in ldap ...NEW ACCOUNT NEEDED %s \r\n \t ldap_reslt %s "  \
-                                                %(users, ldap_reslt))
+                                not in ldap ...NEW ACCOUNT NEEDED %s \r\n \t \
+                                ldap_reslt %s "  %(users, ldap_reslt))
    
         requested_user_ids = users_by_id.keys() 
         requested_user_hrns = users_by_hrn.keys()
