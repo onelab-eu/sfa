@@ -1262,13 +1262,18 @@ class SlabDriver(Driver):
                     record.update({'PI':[recuser.hrn],
                                 'researcher': [recuser.hrn],
                                 'name':record['hrn'], 
-                                'oar_job_id':[rec['oar_job_id'] for rec in recslice_list],
+                                'oar_job_id':[],
                                 'node_ids': [],
                                 'person_ids':[recslice_list[0]['record_id_user']],
                                 'geni_urn':'',  #For client_helper.py compatibility
                                 'keys':'',  #For client_helper.py compatibility
                                 'key_ids':''})  #For client_helper.py compatibility
-
+                    
+                    try:
+                        for rec in recslice_list:
+                            recslice['oar_job_id'].append(rec['oar_job_id'])
+                    except KeyError:
+                        pass
                     #for rec in recslice_list:
                         #record['oar_job_id'].append(rec['oar_job_id'])
                     logger.debug( "SLABDRIVER.PY \t fill_record_info SLICE \
