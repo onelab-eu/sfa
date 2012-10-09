@@ -1271,11 +1271,10 @@ class SlabDriver(Driver):
                     
                     try:
                         for rec in recslice_list:
-                            recslice['oar_job_id'].append(rec['oar_job_id'])
+                            record['oar_job_id'].append(rec['oar_job_id'])
                     except KeyError:
                         pass
-                    #for rec in recslice_list:
-                        #record['oar_job_id'].append(rec['oar_job_id'])
+
                     logger.debug( "SLABDRIVER.PY \t fill_record_info SLICE \
                                                     recslice_list  %s \r\n \t RECORD %s \r\n \r\n" %(recslice_list,record)) 
                 if str(record['type']) == 'user':
