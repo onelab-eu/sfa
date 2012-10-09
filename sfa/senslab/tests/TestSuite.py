@@ -270,7 +270,7 @@ def  TestSfi(arg = None):
     
     print "================= SFI.PY RESOURCES -R SLAB -L ALL ============="
     slaball = os.system("sfi.py resources -r slab -l all")
-    filename = "home/savakian/flab-sfa/avakian_adv.rspec"
+    filename = "/home/savakian/flab-sfa/avakian_adv.rspec"
     rspecfile = open(filename,"w")
     r = os.popen("sfi.py resources -l all") 
     for i in r.readlines():
