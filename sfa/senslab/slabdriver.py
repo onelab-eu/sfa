@@ -1298,11 +1298,11 @@ class SlabDriver(Driver):
                         'node_ids': [],
                         'oar_job_id': [],
                         'person_ids':[recslice_list[0]['record_id_user']]}) 
-                        try:
-                            for rec in recslice_list:
-                                 recslice['oar_job_id'].append(rec['oar_job_id'])
-                        except KeyError:
-                            pass
+                    try:
+                        for rec in recslice_list:
+                            recslice['oar_job_id'].append(rec['oar_job_id'])
+                    except KeyError:
+                        pass
                             
                     recslice.update({'type':'slice', \
                                                 'hrn':recslice_list[0]['slice_hrn']})
