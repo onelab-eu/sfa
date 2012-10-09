@@ -146,7 +146,7 @@ class SlabSlices:
             deleted_leases = list(set(current_leases).difference(kept_leases))
     
             try:
-                if peer:
+                #if peer:
                     #peer = RegAuyhority object is unsubscriptable
                     #TODO :UnBindObjectFromPeer Quick and dirty 
                     #auth='senslab2 SA 27/07/12
