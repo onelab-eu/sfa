@@ -1,0 +1,54 @@
+[sfa_federica]
+url = https://root:password@federica.sfa.wrapper.com:8443/fedewrapper/xmlrpc/
+
+[sfa_aggregate]
+caching = true
+host = localhost
+enabled = true
+port = 12346
+
+[sfa_db]
+name = sfa
+enabled = true
+host = localhost
+user = sfa
+password = sfa
+port = 5432
+
+[sfa_flashpolicy]
+config_file = /etc/sfa/sfa_flashpolicy_config.xml
+enabled = false
+port = 843
+
+[sfa_nova]
+api_url = 127.0.0.1
+api_port = 8773
+user = novaadmin
+novarc = /root/novarc
+
+[sfa_plc]
+url = https://localhost:443/PLCAPI/
+password = root
+user = root@localhost.localdomain
+
+[sfa_registry]
+host = localhost
+enabled = true
+port = 12345
+root_auth = senslab
+
+[sfa_sm]
+caching = false
+host = localhost
+enabled = true
+port = 12347
+
+[sfa]
+interface_hrn = senslab
+data_dir = /var/lib/sfa/
+generic_flavour = slab
+credential_schema = /etc/sfa/credential.xsd
+api_loglevel = 2
+session_key_path = /var/lib/sfa/session_keys
+max_slice_renew = 60
+
