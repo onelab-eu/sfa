@@ -152,26 +152,26 @@ def TestLdap(job_id = None):
     record_avakian['first_name'] = 'sandrine'
     record_avakian['mail'] = 'sandrine.avakian@inria.fr'
     pubkey = "ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEAwSUkJ+cr3xM47h8lFkIXJoJhg4wHakTaLJmgTXkzvUmQsQeFB2MjUZ6WAelMXj/EFz2+XkK+bcWNXwfbrLptJQ+XwGpPZlu9YV/kzO63ghVrAyEg0+p7Pn1TO9f1ZYg4R6JfP/3qwH1AsE+X3PNpIewsuEIKwd2wUCJDf5RXJTpl39GizcBFemrRqgs0bdqAN/vUT9YvtWn8fCYR5EfJHVXOK8P1KmnbuGZpk7ryz21pDMlgw13+8aYB+LPkxdv5zG54A5c6o9N3zOCblvRFWaNBqathS8y04cOYWPmyu+Q0Xccwi7vM3Ktm8RoJw+raQNwsmneJOm6KXKnjoOQeiQ== savakian@sfa2.grenoble.senslab.info"
-
-    record_myslice = {}
-    record_myslice['hrn']= 'senslab2.myslice'
-    record_myslice['last_name'] = 'myslice'
-    record_myslice['first_name'] = 'myslice'
-    record_myslice['mail'] = 'nturro@inria.fr'
-    pubkeymyslice = "ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEAuyRPwn8PZxjdhu+ciRuPyM0eVBn7XS7i3tym9F30UVhaCd09a/UEmGn7WJZdfsxV3hXqG1Wc766FEst97NuzHzELSuvy/rT96J0UHG4wae4pnzOLd6NwFdZh7pkPsgHMHxK9ALVE68Puu+EDSOB5bBZ9Q624wCIGxEpmuS/+X+dDBTKgG5Hi0WA1uKJwhLSbbXb38auh4FlYgXPsdpljTIJatt+zGL0Zsy6fdrsVRc5W8kr3/SmE4OMNyabKBNyxioSEuYhRSjoQAHnYoevEjZniP8IzscKK7qwelzGUfnJEzexikhsQamhAFti2ReiFfoHBRZxnSc49ioH7Kaci5w== root@rhoecos3.ipv6.lip6.fr"
-    
-    pubkeytestuser = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDYS8tzufciTm6GdNUGHQc64OfTxFebMYUwh/Jl04IPTvjjr26uakbM0M2v33HxZ5Q7PnmPN9pB/w+a+f7a7J4cNs/tApOMg2hb6UrLaOrdnDMOs4KZlfElyDsF3Zx5QwxPYvzsKADAbDVoX4NF9PttuDLdm2l3nLSvm89jfla00GBg+K8grdOCHyYZVX/Wt7kxhXDK3AidQhKJgn+iD5GxvtWMBE+7S5kJGdRW1W10lSLBW3+VNsCrKJB2s8L55Xz/l2HNBScU7T0VcMQJrFxEXKzLPagZsMz0lfLzHESoGHIZ3Tz85DfECbTtMxLts/4KoAEc3EE+PYr2VDeAggDx testuser@myslice"
     ret = ldap.LdapModifyUser(record_avakian, {'sshPublicKey':pubkey})
-    
-    
     print "\r\n Sandrine \tChange pubkey LdapModifyUser ", ret 
     
-    password = "ReptileFight"
-    enc = ldap.encrypt_password(password)
-    print "\r\n sandrine \tencrypt_password ", enc
+    #record_myslice = {}
+    #record_myslice['hrn']= 'senslab2.myslice'
+    #record_myslice['last_name'] = 'myslice'
+    #record_myslice['first_name'] = 'myslice'
+    #record_myslice['mail'] = 'nturro@inria.fr'
+    #pubkeymyslice = "ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEAuyRPwn8PZxjdhu+ciRuPyM0eVBn7XS7i3tym9F30UVhaCd09a/UEmGn7WJZdfsxV3hXqG1Wc766FEst97NuzHzELSuvy/rT96J0UHG4wae4pnzOLd6NwFdZh7pkPsgHMHxK9ALVE68Puu+EDSOB5bBZ9Q624wCIGxEpmuS/+X+dDBTKgG5Hi0WA1uKJwhLSbbXb38auh4FlYgXPsdpljTIJatt+zGL0Zsy6fdrsVRc5W8kr3/SmE4OMNyabKBNyxioSEuYhRSjoQAHnYoevEjZniP8IzscKK7qwelzGUfnJEzexikhsQamhAFti2ReiFfoHBRZxnSc49ioH7Kaci5w== root@rhoecos3.ipv6.lip6.fr"
     
-    ret = ldap.LdapModifyUser(record_avakian, {'userPassword':enc})
-    print "\r\n sandrine \tChange password LdapModifyUser ", ret 
+    #pubkeytestuser = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDYS8tzufciTm6GdNUGHQc64OfTxFebMYUwh/Jl04IPTvjjr26uakbM0M2v33HxZ5Q7PnmPN9pB/w+a+f7a7J4cNs/tApOMg2hb6UrLaOrdnDMOs4KZlfElyDsF3Zx5QwxPYvzsKADAbDVoX4NF9PttuDLdm2l3nLSvm89jfla00GBg+K8grdOCHyYZVX/Wt7kxhXDK3AidQhKJgn+iD5GxvtWMBE+7S5kJGdRW1W10lSLBW3+VNsCrKJB2s8L55Xz/l2HNBScU7T0VcMQJrFxEXKzLPagZsMz0lfLzHESoGHIZ3Tz85DfECbTtMxLts/4KoAEc3EE+PYr2VDeAggDx testuser@myslice"
+    
+
+    
+    #password = "ReptileFight"
+    #enc = ldap.encrypt_password(password)
+    #print "\r\n sandrine \tencrypt_password ", enc
+    
+    #ret = ldap.LdapModifyUser(record_avakian, {'userPassword':enc})
+    #print "\r\n sandrine \tChange password LdapModifyUser ", ret 
     return
 
 
