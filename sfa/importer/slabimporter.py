@@ -163,7 +163,8 @@ class SlabImporter:
                     
             # import persons
             for person in ldap_person_listdict : 
-            
+                if 'ssh-rsa' not in person['pkey']:
+                    continue
                 person_hrn = person['hrn']
                 slice_hrn = self.slicename_to_hrn(person['hrn'])
                
@@ -177,7 +178,7 @@ class SlabImporter:
                 # return a tuple pubkey (a plc key object) and pkey (a Keypair object)
                 def init_person_key (person, slab_key):
                     pubkey = None
-                    if  person['pkey'] and 'ssh-rsa' in person['pkey']:
+                    if  person['pkey']:
                         # randomly pick first key in set
                         pubkey = slab_key
                         
@@ -192,12 +193,8 @@ class SlabImporter:
                        
                     else:
                         # the user has no keys. Creating a random keypair for the user's gid
-                        #self.logger.warn("SlabImporter: person %s does not have a PL public key"%person_hrn)
-                        #pkey = Keypair(create=True) commented out SA 10/10/12 
-                        #TODO SA 10/10/12 If no valid key in ldap,user and slice 
-                        #not imported
-                        pubkey = None
-                        pkey = None
+                        self.logger.warn("SlabImporter: person %s does not have a PL public key"%person_hrn)
+                        pkey = Keypair(create=True) 
                     return (pubkey, pkey)
                                 
                  
@@ -259,7 +256,7 @@ class SlabImporter:
                 except:
                     self.logger.warning ("SlabImporter: cannot locate slices_by_userid[user_record.record_id] %s - ignored"%user_record)  
                       
-                if not slice_record and user_record:
+                if not slice_record :
                     try:
                         pkey = Keypair(create=True)
                         urn = hrn_to_urn(slice_hrn, 'slice')
@@ -282,9 +279,7 @@ class SlabImporter:
                         slab_dbsession.commit()
                         self.logger.info("SlabImporter: imported slice: %s" % slice_record)  
                         self.update_just_added_records_dict ( slice_record )
-                        slice_record.reg_researchers =  [user_record]
-                        dbsession.commit()
-                        slice_record.stale=False 
+
                     except:
                         self.logger.log_exc("SlabImporter: failed to import slice")
                         
@@ -295,11 +290,10 @@ class SlabImporter:
                     pass
                 # record current users affiliated with the slice
 
-                #TODO SA 10/10/12 commented out No slice if user does not have
-                #valide ssh key
-                #slice_record.reg_researchers =  [user_record]
-                #dbsession.commit()
-                #slice_record.stale=False 
+
+                slice_record.reg_researchers =  [user_record]
+                dbsession.commit()
+                slice_record.stale=False 
                        
   
                  
