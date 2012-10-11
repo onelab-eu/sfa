@@ -192,7 +192,7 @@ class NitosSlices:
                  added_users.append(user_id)
                  # add user keys
                  for key in user['keys']:
-                      self.driver.shell.addUserKey({'user_id': user_id, 'key': key})
+                      self.driver.shell.addUserKey({'user_id': user_id, 'key': key, 'slice_id': slice['slice_id']})
                  # add the user to the slice
                  self.driver.shell.addUserToSlice({'slice_id': slice['slice_id'], 'user_id': user_id})
              else:
