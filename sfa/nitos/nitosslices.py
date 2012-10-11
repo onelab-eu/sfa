@@ -188,7 +188,7 @@ class NitosSlices:
 
              if not nitos_users:
                  # create the user
-                 user_id = self.driver.shell.addUsers({'username': email.split('@')[0], 'email': email})
+                 user_id = self.driver.shell.addUser({'username': email.split('@')[0], 'email': email})
                  added_users.append(user_id)
                  # add user keys
                  for key in user['keys']:
