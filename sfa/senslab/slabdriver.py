@@ -212,6 +212,7 @@ class SlabDriver(Driver):
         # add/remove leases
         requested_lease_list = []
         kept_leases = []
+        logger.debug("SLABDRIVER.PY \tcreate_sliver AVANTLEASE " )
         for lease in rspec.version.get_leases():
             single_requested_lease = {}
             logger.debug("SLABDRIVER.PY \tcreate_sliver lease %s " %(lease))
@@ -225,6 +226,7 @@ class SlabDriver(Driver):
             if single_requested_lease.get('hostname'):
                 requested_lease_list.append(single_requested_lease)
                 
+        logger.debug("SLABDRIVER.PY \tcreate_sliver APRESLEASE" )       
         #dCreate dict of leases by start_time, regrouping nodes reserved
         #at the same
         #time, for the same amount of time = one job on OAR
@@ -661,16 +663,15 @@ class SlabDriver(Driver):
         for node in full_nodes_dict_list:
             oar_id_node_dict[node['oar_id']] = node
             
-        logger.debug("SLABDRIVER \t  __get_hostnames_from_oar_node_ids\
-                        oar_id_node_dict %s" %(oar_id_node_dict))
+        #logger.debug("SLABDRIVER \t  __get_hostnames_from_oar_node_ids\
+                        #oar_id_node_dict %s" %(oar_id_node_dict))
 
         hostname_dict_list = [] 
         for resource_id in resource_id_list:
             #Because jobs requested "asap" do not have defined resources
             if resource_id is not "Undefined":
-                hostname_dict_list.append({'hostname' : \
-                        oar_id_node_dict[resource_id]['hostname'], 
-                        'site_id' :  oar_id_node_dict[resource_id]['site']})
+                hostname_dict_list.append(\
+                        oar_id_node_dict[resource_id]['hostname'])
                 
             #hostname_list.append(oar_id_node_dict[resource_id]['hostname'])
         return hostname_dict_list 
@@ -697,7 +698,7 @@ class SlabDriver(Driver):
         """
         node_dict_by_id = self.oar.parser.SendRequest("GET_resources_full")
         node_dict_list = node_dict_by_id.values()
-        
+        logger.debug (" SLABDRIVER GetNodes  node_filter_dict %s return_fields_list %s "%(node_filter_dict,return_fields_list))
         #No  filtering needed return the list directly
         if not (node_filter_dict or return_fields_list):
             return node_dict_list
@@ -828,8 +829,14 @@ class SlabDriver(Driver):
                 #the slice record 
                 
             
-            
+                
                 slicerec_dict['oar_job_id'] = lease['lease_id']
+                #reserved_list = []
+                #for reserved_node in lease['reserved_nodes']:
+                    #reserved_list.append(reserved_node['hostname'])
+                reserved_list = lease['reserved_nodes']
+                #slicerec_dict.update({'node_ids':[lease['reserved_nodes'][n]['hostname'] for n in lease['reserved_nodes']]})
+                slicerec_dict.update({'list_node_ids':{'hostname':reserved_list}})   
                 slicerec_dict.update({'node_ids':lease['reserved_nodes']})
                 slicerec_dict.update(fixed_slicerec_dict)
                 slicerec_dict.update({'hrn':\
@@ -837,7 +844,7 @@ class SlabDriver(Driver):
                     
     
                 slicerec_dictlist.append(slicerec_dict)
-                logger.debug("SLABDRIVER.PY  \tGetSlices  slicerec_dict %s slicerec_dictlist %s" %(slicerec_dict, slicerec_dictlist))
+                logger.debug("SLABDRIVER.PY  \tGetSlices  slicerec_dict %s slicerec_dictlist %s lease['reserved_nodes'] %s" %(slicerec_dict, slicerec_dictlist,lease['reserved_nodes'] ))
                 
             logger.debug("SLABDRIVER.PY  \tGetSlices  RETURN slicerec_dictlist  %s"\
                                                         %(slicerec_dictlist))
@@ -862,7 +869,13 @@ class SlabDriver(Driver):
                 for lease in leases_list:   
                     if owner == lease['user']:
                         slicerec_dict['oar_job_id'] = lease['lease_id']
+                        reserved_list = []
+                        for reserved_node in lease['reserved_nodes']:
+                            reserved_list.append(reserved_node['hostname'])
+                        #slicerec_dict.update({'node_ids':{'hostname':reserved_list}})    
+                        #slicerec_dict.update({'node_ids':[lease['reserved_nodes'][n]['hostname'] for n in lease['reserved_nodes']]})
                         slicerec_dict.update({'node_ids':lease['reserved_nodes']})
+                        slicerec_dict.update({'list_node_ids':{'hostname':reserved_list}}) 
                         slicerec_dict.update(fixed_slicerec_dict)
                         slicerec_dict.update({'hrn':\
                                     str(fixed_slicerec_dict['slice_hrn'])})
@@ -1143,9 +1156,9 @@ class SlabDriver(Driver):
                  %( hostname_list, slice_record , lease_start_time, \
                  lease_duration))
 
-        tmp = slice_record['PI'][0].split(".")
+        tmp = slice_record['reg-researchers'][0].split(".")
         username = tmp[(len(tmp)-1)]
-        self.LaunchExperimentOnOAR(hostname_list, slice_record['name'], lease_start_time, lease_duration, username)
+        self.LaunchExperimentOnOAR(hostname_list, slice_record['slice_hrn'], lease_start_time, lease_duration, username)
         start_time = datetime.fromtimestamp(int(lease_start_time)).strftime(self.time_format)
         logger.debug("SLABDRIVER \t AddLeases hostname_list start_time %s " %(start_time))
         
@@ -1213,7 +1226,7 @@ class SlabDriver(Driver):
             for node in resa['reserved_nodes']:
                 #resa['component_id_list'].append(hostname_to_urn(self.hrn, \
                          #self.root_auth, node['hostname']))
-                slab_xrn = slab_xrn_object(self.root_auth, node['hostname'])
+                slab_xrn = slab_xrn_object(self.root_auth, node)
                 resa['component_id_list'].append(slab_xrn.urn)
         
         #Filter the reservation list if necessary

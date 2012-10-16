@@ -187,6 +187,9 @@ class Slabv1Node:
                     node['boot_state'] = 'boot'
                 else: 
                     node['boot_state'] = 'disabled' 
+                    
+        logger.debug("SLABV1NODE \tget_nodes_objs  \
+                                #nodes %s"%(nodes))
         return nodes
 
 

@@ -60,8 +60,8 @@ class SlabAggregate:
 
         slices = self.driver.GetSlices(slice_filter= str(slice_name), \
                                                 slice_filter_type = 'slice_hrn')
-        logger.debug("Slabaggregate api \tget_slice_and_slivers  slices %s " \
-                                                                    %(slices))
+        logger.debug("Slabaggregate api \tget_slice_and_slivers  slices %s self.driver.hrn %s" \
+                                                                    %(slices, self.driver.hrn))
         if not slices:
             return (sfa_slice, slivers)
         #if isinstance(sfa_slice, list):
@@ -75,13 +75,15 @@ class SlabAggregate:
             try:
                    
                 for node in sfa_slice['node_ids']:
+                    sliver_xrn = Xrn(slice_urn, type='sliver', id=node)
+                    sliver_xrn.set_authority(self.driver.hrn)
                     #node_id = self.driver.root_auth + '.' + node_id
-                    sliver = Sliver({'sliver_id': Xrn(slice_urn, type='slice', id=node['hostname'], authority=self.driver.hrn).urn, 
+                    sliver = Sliver({'sliver_id':sliver_xrn.urn, 
                                     'name': sfa_slice['slice_hrn'],
                                     'type': 'slab-node', 
                                     'tags': []})
                    
-                    slivers[node['hostname']] = sliver
+                    slivers[node] = sliver
             except KeyError:
                 logger.log_exc("SLABAGGREGATE \t \
                                         get_slice_and_slivers KeyError ")
@@ -165,10 +167,13 @@ class SlabAggregate:
         # Make a list of all the nodes in the slice before getting their attributes
         rspec_nodes = []
         slice_nodes_list = []
+        logger.debug("SLABAGGREGATE api get_rspec slice_nodes_list  %s "\
+                                                             %(slices )) 
         if slices:
             for one_slice in slices:
-                for node in one_slice['node_ids']:
-                    slice_nodes_list.append(node['hostname'])
+                slice_nodes_list = one_slice['node_ids']
+                #for node in one_slice['node_ids']:
+                    #slice_nodes_list.append(node)
                    
         reserved_nodes = self.driver.GetNodesCurrentlyInUse()
         logger.debug("SLABAGGREGATE api get_rspec slice_nodes_list  %s "\
@@ -271,8 +276,8 @@ class SlabAggregate:
             for node in lease['reserved_nodes']: 
                 rspec_lease = Lease()
                 rspec_lease['lease_id'] = lease['lease_id']
-                site = node['site_id']
-                slab_xrn = slab_xrn_object(self.driver.root_auth, node['hostname'])
+                #site = node['site_id']
+                slab_xrn = slab_xrn_object(self.driver.root_auth, node)
                 rspec_lease['component_id'] = slab_xrn.urn
                 #rspec_lease['component_id'] = hostname_to_urn(self.driver.hrn, \
                                         #site, node['hostname'])

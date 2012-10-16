@@ -137,11 +137,14 @@ class SlabSlices:
 
        
         #First get the list of current leases from OAR          
-        leases = self.driver.GetLeases({'name':sfa_slice['name']})
+        leases = self.driver.GetLeases({'name':sfa_slice['slice_hrn']})
+        logger.debug("SLABSLICES  verify_slice_leases requested_jobs_dict %s leases %s "%(requested_jobs_dict, leases ))
         #leases = self.driver.GetLeases({'name':sfa_slice['name']},\
                                      #['lease_id'])
         if leases : 
             current_leases = [lease['lease_id'] for lease in leases]
+            logger.debug("SLABSLICES  verify_slice_leases  current_leases %s kept_leases %s requested_jobs_dict %s"\
+                                        %(current_leases,kept_leases,requested_jobs_dict))
             #Deleted leases are the ones with lease id not declared in the Rspec
             deleted_leases = list(set(current_leases).difference(kept_leases))
     
@@ -154,9 +157,12 @@ class SlabSlices:
                     #Commented out UnBindObjectFromPeer SA 09/10/12
                     #self.driver.UnBindObjectFromPeer('senslab2', 'slice', \
                                     #sfa_slice['record_id_slice'], peer.hrn)
-                
+                logger.debug("SLABSLICES  verify_slice_leases slice %s deleted_leases %s"\
+                                        %(sfa_slice, deleted_leases))
                 self.driver.DeleteLeases(deleted_leases, \
                                         sfa_slice['name'])
+                #self.driver.DeleteLeases(deleted_leases, \
+                                        #sfa_slice['name'])
                
             #TODO verify_slice_leases: catch other exception?
             except KeyError: 
@@ -174,9 +180,9 @@ class SlabSlices:
     def verify_slice_nodes(self, sfa_slice, requested_slivers, peer):
         current_slivers = []
         deleted_nodes = []
-        
-        if sfa_slice['node_ids']:
-            nodes = self.driver.GetNodes(sfa_slice['node_ids'], ['hostname'])
+
+        if 'node_ids' in sfa_slice:
+            nodes = self.driver.GetNodes(sfa_slice['list_node_ids'], ['hostname'])
             current_slivers = [node['hostname'] for node in nodes]
     
             # remove nodes not in rspec
@@ -192,8 +198,10 @@ class SlabSlices:
                                         %(sfa_slice,deleted_nodes))
 
             if deleted_nodes:
-                self.driver.DeleteSliceFromNodes(sfa_slice['name'], \
-                                                                deleted_nodes)
+                #Delete the entire experience
+                self.driver.DeleteSliceFromNodes(sfa_slice)
+                #self.driver.DeleteSliceFromNodes(sfa_slice['slice_hrn'], \
+                                                                #deleted_nodes)
             return nodes
 
             
