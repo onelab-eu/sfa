@@ -1,6 +1,6 @@
 %define name sfa
 %define version 2.1
-%define taglevel 16
+%define taglevel 17
 
 %define release %{taglevel}%{?pldistro:.%{pldistro}}%{?date:.%{date}}
 %global python_sitearch	%( python -c "from distutils.sysconfig import get_python_lib; print get_python_lib(1)" )
@@ -259,6 +259,10 @@ fi
 [ "$1" -ge "1" ] && service sfa-cm restart || :
 
 %changelog
+* Tue Oct 16 2012 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-2.1-17
+- bugfix in forwarding Resolve requests
+- various fixes in the nitos driver wrt keys and users
+
 * Mon Oct 01 2012 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-2.1-16
 - various tweaks for the nitos driver
 
