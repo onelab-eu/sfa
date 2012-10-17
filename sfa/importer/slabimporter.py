@@ -145,9 +145,12 @@ class SlabImporter:
                         pkey = Keypair(create=True)
                         urn = hrn_to_urn(escaped_hrn, 'node') 
                         node_gid = self.auth_hierarchy.create_gid(urn, create_uuid(), pkey)
+                        def slab_get_authority(hrn):
+                            return hrn.split(".")[0]
+                            
                         node_record = RegNode (hrn=hrn, gid=node_gid, 
                                                 pointer = '-1',
-                                                authority=get_authority(hrn)) 
+                                                authority=slab_get_authority(hrn)) 
                         node_record.just_created()
                         dbsession.add(node_record)
                         dbsession.commit()

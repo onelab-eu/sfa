@@ -28,6 +28,9 @@ else
     exit 
 fi
 
+# First restart sfa (prevents stalling when connecting
+# to the DB and dropping tables)
+sudo service sfa restart
 # Nuke the database 
 sudo sfaadmin.py registry nuke
 
