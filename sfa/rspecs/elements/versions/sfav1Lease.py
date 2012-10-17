@@ -75,13 +75,11 @@ class SFAv1Lease:
     def get_leases(xml, filter={}):
         xpath = '//lease%s | //default:lease%s' % (XpathFilter.xpath(filter), XpathFilter.xpath(filter))
         lease_elems = xml.xpath(xpath)
-        logger.debug("SFAV1LEASE \t  get_leases lease_elems %s" %(lease_elems))
         return SFAv1Lease.get_lease_objs(lease_elems)
 
     @staticmethod
     def get_lease_objs(lease_elems):
         leases = []
-        logger.debug("SFAV1LEASE \t  get_lease_objs OHGET_LEAQSE_OBJS lease_elems %s "%(lease_elems))
         for lease_elem in lease_elems:
             #get nodes
             node_elems = lease_elem.xpath('./default:node | ./node')
@@ -91,7 +89,6 @@ class SFAv1Lease:
                  lease['start_time'] = lease_elem.attrib['start_time']
                  lease['duration'] = lease_elem.attrib['duration']
                  lease['component_id'] = node_elem.attrib['component_id']
-                 logger.debug("SFAV1LEASE \t  get_lease_objs lease %s" %(lease))
                  leases.append(lease)
 
         return leases
