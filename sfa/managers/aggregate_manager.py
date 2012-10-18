@@ -1,4 +1,4 @@
-import soctet
+import socket
 from sfa.rspecs.version_manager import VersionManager
 from sfa.util.version import version_core
 from sfa.util.xrn import Xrn
@@ -12,7 +12,7 @@ class AggregateManager:
     # essentially a union of the core version, the generic version (this code) and
     # whatever the driver needs to expose
 
-    def _rspec_versions(self):
+    def rspec_versions(self):
         version_manager = VersionManager()
         ad_rspec_versions = []
         request_rspec_versions = []
@@ -22,7 +22,6 @@ class AggregateManager:
             if rspec_version.content_type in ['*', 'request']:
                 request_rspec_versions.append(rspec_version.to_dict())
         return {
-            'testbed':self.testbed_name(),
             'geni_request_rspec_versions': request_rspec_versions,
             'geni_ad_rspec_versions': ad_rspec_versions,
             }
@@ -63,6 +62,7 @@ class AggregateManager:
             }],
         }
         version.update(version_generic)
+        version.update(self.rspec_versions())
         testbed_version = self.driver.aggregate_version()
         version.update(testbed_version)
         return version

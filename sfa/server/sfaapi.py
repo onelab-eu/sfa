@@ -234,7 +234,7 @@ class SfaApi (XmlrpcApi):
     def prepare_response_am(self, result):
         version = version_core() 
         response = {
-            'geni_api': version['geni_api'],             
+            'geni_api': 3,              
             'code': self.get_geni_code(result),
             'value': self.get_geni_value(result),
             'output': self.get_geni_output(result),
