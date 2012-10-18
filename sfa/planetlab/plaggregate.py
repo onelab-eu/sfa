@@ -372,13 +372,6 @@ class PlAggregate:
             rspec.version.add_leases(leases)
 
                
-<<<<<<< HEAD:sfa/planetlab/plaggregate.py
         return {'geni_urn': urns[0], 
                 'geni_rspec': rspec.toxml(),
                 'geni_slivers': geni_slivers}
-=======
-        return  {'geni_urn': urns[0],
-                 'geni_rspec': rspec.toxml(),
-                 'geni_slivers': geni_slivers}
->>>>>>> 3acb26e0ac5bc5de68effe62d0878ba674e40369:sfa/planetlab/plaggregate.py
-
