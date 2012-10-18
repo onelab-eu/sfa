@@ -45,7 +45,7 @@ class Auth:
         logger.debug("Auth.checkCredentials with %d creds on hrns=%s"%(len(creds),hrns))
         # won't work if either creds or hrns is empty - let's make it more explicit
         if not creds: raise InsufficientRights("Access denied - no credential provided")
-        if not hrns: raise InsufficientRights("Access denied - no subject xrn provided")
+        if not hrns: hrns = [None]
         for cred in creds:
             for hrn in hrns:
                 try:
@@ -63,7 +63,7 @@ class Auth:
         return valid
         
         
-    def check(self, cred, operation, hrn = None):
+    def check(self, cred_string, operation, hrn = None):
         """
         Check the credential against the peer cert (callerGID included 
         in the credential matches the caller that is connected to the 
@@ -71,7 +71,8 @@ class Auth:
         trusted cert and check if the credential is allowed to perform 
         the specified operation.    
         """
-        self.client_cred = Credential(string = cred)
+        cred = Credential(string = cred_string)    
+        self.client_cred = cred
         logger.debug("Auth.check: handling hrn=%s and credential=%s"%\
                          (hrn,cred.get_summary_tostring()))
         self.client_gid = self.client_cred.get_gid_caller()

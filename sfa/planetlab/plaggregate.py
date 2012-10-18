@@ -131,10 +131,10 @@ class PlAggregate:
             sliver['tags'] = tags_dict[node['node_id']]
         return slivers
 
-    def node_to_rspec_node(self, sites, interfaces, tags, pl_initscripts=[], grain=None, options={}):
+    def node_to_rspec_node(self, node, sites, interfaces, node_tags, pl_initscripts=[], grain=None, options={}):
         rspec_node = Node()
         # xxx how to retrieve site['login_base']
-        site=sites_dict[node['site_id']]
+        site=sites[node['site_id']]
         rspec_node['component_id'] = hostname_to_urn(self.driver.hrn, site['login_base'], node['hostname'])
         rspec_node['component_name'] = node['hostname']
         rspec_node['component_manager_id'] = Xrn(self.driver.hrn, 'authority+cm').get_urn()
@@ -293,14 +293,14 @@ class PlAggregate:
             interface_ids = []
             tag_ids = []
             nodes_dict = {}
-            for sliver in slivers:
-                site_ids.append(sliver['site_id'])
-                interface_ids.extend(sliver['interface_ids'])
-                tag_ids.extend(sliver['node_tag_ids'])
-                nodes_dict[sliver['node_id']] = sliver
+            for node in nodes:
+                site_ids.append(node['site_id'])
+                interface_ids.extend(node['interface_ids'])
+                tag_ids.extend(node['node_tag_ids'])
+                nodes_dict[node['node_id']] = node
             sites = self.get_sites({'site_id': site_ids})
             interfaces = self.get_interfaces({'interface_id':interface_ids})
-            node_tags = self.get_node_tags(tags_filter)
+            node_tags = self.get_node_tags({'node_tag_id': tag_ids})
             pl_initscripts = self.get_pl_initscripts()
             # convert nodes to rspec nodes
             rspec_nodes = []
@@ -310,7 +310,7 @@ class PlAggregate:
             rspec.version.add_nodes(rspec_nodes)
 
             # add links
-            links = self.get_links(sites_dict, nodes_dict, interfaces)        
+            links = self.get_links(sites, nodes_dict, interfaces)        
             rspec.version.add_links(links)
         return rspec.toxml()
 

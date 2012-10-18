@@ -78,13 +78,13 @@ class AggregateManager:
 
         # look in cache first
         cached_requested = options.get('cached', True)
-        if cached_requested and self.driver.cache and not slice_hrn:
+        if cached_requested and self.driver.cache:
             rspec = self.driver.cache.get(version_string)
             if rspec:
                 logger.debug("%s.ListResources returning cached advertisement" % (self.driver.__module__))
                 return rspec
        
-        rspec = self.driver.list_resources (version, options) 
+        rspec = self.driver.list_resources (rspec_version, options) 
         if self.driver.cache:
             logger.debug("%s.ListResources stores advertisement in cache" % (self.driver.__module__))
             self.driver.cache.add(version_string, rspec)    
