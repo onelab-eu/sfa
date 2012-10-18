@@ -142,7 +142,7 @@ class RegistryManager:
                 server_proxy = api.server_proxy(interface, credential)
                 # should propagate the details flag but that's not supported in the xmlrpc interface yet
                 #peer_records = server_proxy.Resolve(xrns, credential,type, details=details)
-                peer_records = server_proxy.Resolve(xrns, credential,type)
+                peer_records = server_proxy.Resolve(xrns, credential)
                 # pass foreign records as-is
                 # previous code used to read
                 # records.extend([SfaRecord(dict=record).as_dict() for record in peer_records])
