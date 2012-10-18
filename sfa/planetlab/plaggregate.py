@@ -147,7 +147,7 @@ class PlAggregate:
         # only doing this because protogeni rspec needs
         # to advertise available initscripts
         rspec_node['pl_initscripts'] = pl_initscripts.values()
-         # add site/interface info to nodes.
+        # add site/interface info to nodes.
         # assumes that sites, interfaces and tags have already been prepared.
         if site['longitude'] and site['latitude']:
             location = Location({'longitude': site['longitude'], 'latitude': site['latitude'], 'country': 'unknown'})
@@ -372,7 +372,13 @@ class PlAggregate:
             rspec.version.add_leases(leases)
 
                
+<<<<<<< HEAD:sfa/planetlab/plaggregate.py
         return {'geni_urn': urns[0], 
                 'geni_rspec': rspec.toxml(),
                 'geni_slivers': geni_slivers}
+=======
+        return  {'geni_urn': urns[0],
+                 'geni_rspec': rspec.toxml(),
+                 'geni_slivers': geni_slivers}
+>>>>>>> 3acb26e0ac5bc5de68effe62d0878ba674e40369:sfa/planetlab/plaggregate.py
 

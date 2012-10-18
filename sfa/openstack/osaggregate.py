@@ -122,7 +122,7 @@ class OSAggregate:
 
         # filter on id
         if ids:
-            instances = [server in servers if server.id in ids]
+            instances = [server for server in servers if server.id in ids]
 
         return instances
 

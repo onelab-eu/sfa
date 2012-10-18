@@ -13,7 +13,7 @@ from sfa.trust.certificate import Certificate
 from sfa.trust.credential import Credential
 from sfa.trust.gid import GID
 
-from sfa.storage.record import SfaRecord
+from sfa.storage.record import Record
 
 def determine_sfa_filekind(fn):
 
