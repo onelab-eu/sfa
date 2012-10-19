@@ -20,6 +20,7 @@ class Describe(Method):
     """
     interfaces = ['aggregate', 'slicemgr']
     accepts = [
+        Parameter(type([str]), "List of URNs"),
         Mixed(Parameter(str, "Credential string"), 
               Parameter(type([str]), "List of credentials")),
         Parameter(dict, "Options")

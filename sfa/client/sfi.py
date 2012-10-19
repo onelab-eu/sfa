@@ -369,7 +369,7 @@ class Sfi:
                                   "authority in set of credentials for this call")
 
         # show_credential option
-        if command in ("list","resources","create","add","update","remove","slices","delete","status","renew"):
+        if command in ("list","resources", "describe", "create","add","update","remove","slices","delete","status","renew"):
             parser.add_option("-C","--credential",dest='show_credential',action='store_true',default=False,
                               help="show credential(s) used in human-readable form")
         # registy filter option
@@ -381,7 +381,7 @@ class Sfi:
         if command in ("show"):
             parser.add_option("-k","--key",dest="keys",action="append",default=[],
                               help="specify specific keys to be displayed from record")
-        if command in ("resources"):
+        if command in ("resources", "describe"):
             # rspec version
             parser.add_option("-r", "--rspec-version", dest="rspec_version", default="SFA 1",
                               help="schema type and version of resulting RSpec")
@@ -403,7 +403,7 @@ class Sfi:
 
 
         # 'create' does return the new rspec, makes sense to save that too
-        if command in ("resources", "show", "list", "gid", 'create'):
+        if command in ("resources", "describe", "show", "list", "gid", 'create'):
            parser.add_option("-o", "--output", dest="file",
                             help="output XML to file", metavar="FILE", default=None)
 
@@ -1067,7 +1067,7 @@ or with an slice hrn, shows currently provisioned resources
         api_options = {'call_id': unique_call_id(),
                        'cached': True,
                        'info': options.info,
-                       'list_leases': options.list_lease,
+                       'list_leases': options.list_leases,
                        'geni_rspec_version': {'type': 'geni', 'version': '3.0'},
                       }
         if options.rspec_version:
