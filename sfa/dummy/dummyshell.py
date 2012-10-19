@@ -15,7 +15,7 @@ class DummyShell:
                     'GetTestbedInfo', 'GetNodes', 'GetSlices', 'GetUsers',
                     'DeleteNode', 'DeleteSlice', 'DeleteUser', 'DeleteKey', 'DeleteUserFromSlice', 
                     'DeleteSliceFromNodes',
-                    'UpdateNode', 'UpdateSlice', 'UpdateUser'
+                    'UpdateNode', 'UpdateSlice', 'UpdateUser',
                    ]
 
 
@@ -25,9 +25,9 @@ class DummyShell:
 
     def __getattr__(self, name):
         def func(*args, **kwds):
-            if not name in direct_calls:
+            if not name in DummyShell.direct_calls:
                 raise Exception, "Illegal method call %s for DUMMY driver"%(name)
-            result=getattr(self.proxy, actual_name)(*args, **kwds)
+            result=getattr(self.proxy, name)(*args, **kwds)
             logger.debug('DummyShell %s returned ... '%(name))
             return result
         return func

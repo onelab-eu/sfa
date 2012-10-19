@@ -93,6 +93,11 @@ Summary: the SFA layer around NITOS
 Group: Applications/System
 Requires: sfa
 
+%package dummy
+Summary: the SFA layer around a Dummy Testbed 
+Group: Applications/System
+Requires: sfa
+
 %package sfatables
 Summary: sfatables policy tool for SFA
 Group: Applications/System
@@ -220,6 +225,9 @@ rm -rf $RPM_BUILD_ROOT
 
 %files nitos
 %{python_sitelib}/sfa/nitos
+
+%files dummy
+%{python_sitelib}/sfa/dummy
 
 %files sfatables
 /etc/sfatables/*

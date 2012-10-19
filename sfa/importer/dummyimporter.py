@@ -26,7 +26,7 @@ from sfa.trust.certificate import convert_public_key, Keypair
 from sfa.storage.alchemy import dbsession
 from sfa.storage.model import RegRecord, RegAuthority, RegSlice, RegNode, RegUser, RegKey
 
-from sfa.dummy.dummyshell import PlShell    
+from sfa.dummy.dummyshell import DummyShell    
 from sfa.dummy.dummyxrn import hostname_to_hrn, slicename_to_hrn, email_to_hrn, hrn_to_dummy_slicename
 
 def _get_site_hrn(interface_hrn, site):
@@ -126,11 +126,13 @@ class DummyImporter:
         # Get all dummy TB public keys
         keys = []
         for user in users:
-            keys.extend(user['keys'])
+            if 'keys' in user:
+                keys.extend(user['keys'])
         # create a dict user_id -> [ keys ]
         keys_by_person_id = {} 
         for user in users:
-              keys_by_person_id[user['user_id']] = user['keys']
+             if 'keys' in user:
+                 keys_by_person_id[user['user_id']] = user['keys']
         # Get all dummy TB nodes  
         nodes = shell.GetNodes()
         # create hash by node_id
@@ -204,7 +206,7 @@ class DummyImporter:
             for user in users:
                 user_hrn = email_to_hrn(site_hrn, user['email'])
                 # xxx suspicious again
-                if len(person_hrn) > 64: person_hrn = person_hrn[:64]
+                if len(user_hrn) > 64: user_hrn = user_hrn[:64]
                 user_urn = hrn_to_urn(user_hrn, 'user')
 
                 user_record = self.locate_by_type_hrn ( 'user', user_hrn)
@@ -274,7 +276,7 @@ class DummyImporter:
                             else:
                                 user_record.reg_keys=[ RegKey (pubkey)]
                             self.logger.info("DummyImporter: updated person: %s" % user_record)
-                    user_record.email = person['email']
+                    user_record.email = user['email']
                     dbsession.commit()
                     user_record.stale=False
                 except:
@@ -283,7 +285,7 @@ class DummyImporter:
 
             # import slices
             for slice in slices:
-                slice_hrn = slicename_to_hrn(interface_hrn, slice['slice_ame'])
+                slice_hrn = slicename_to_hrn(site_hrn, slice['slice_name'])
                 slice_record = self.locate_by_type_hrn ('slice', slice_hrn)
                 if not slice_record:
                     try:

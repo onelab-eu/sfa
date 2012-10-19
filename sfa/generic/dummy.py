@@ -5,7 +5,7 @@ class dummy (Generic):
     # the importer class
     def importer_class (self): 
         import sfa.importer.dummyimporter
-        return sfa.importer.dummyimporter.PlImporter
+        return sfa.importer.dummyimporter.DummyImporter
         
     # use the standard api class
     def api_class (self):

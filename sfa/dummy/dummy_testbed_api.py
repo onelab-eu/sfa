@@ -38,7 +38,7 @@ def FilterList(myfilter, mylist):
 # RPC functions definition
 #GET
 def GetTestbedInfo():
-    return {'name': 'Dummy', 'longitude': 123456, 'latitude': 654321, 'domain':'dummy-testbed.org'}
+    return {'name': 'dummy', 'longitude': 123456, 'latitude': 654321, 'domain':'dummy-testbed.org'}
 
 def GetNodes(filter={}):
     global DB

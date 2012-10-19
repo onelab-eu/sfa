@@ -126,11 +126,11 @@ class DummyDriver (Driver):
         type=sfa_record['type']
         pointer=sfa_record['pointer']
         if type == 'user':
-            self.shell.DeleteUser{'user_id': pointer})
+            self.shell.DeleteUser({'user_id': pointer})
         elif type == 'slice':
-            self.shell.DeleteSlice('slice_id': pointer)
+            self.shell.DeleteSlice({'slice_id': pointer})
         elif type == 'node':
-            self.shell.DeleteNode('node_id': pointer)
+            self.shell.DeleteNode({'node_id': pointer})
 
         return True
 
@@ -513,7 +513,7 @@ class DummyDriver (Driver):
         slice = slices[0]
         
         try:
-            self.shell.DeleteSliceFromNodes({'slice_id': slice['slice_id'], 'node_ids': slice['node_ids'])
+            self.shell.DeleteSliceFromNodes({'slice_id': slice['slice_id'], 'node_ids': slice['node_ids']})
             return True
         except:
             return False

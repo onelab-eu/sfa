@@ -70,7 +70,7 @@ class DummyAggregate:
             rspec_node['component_id'] = hostname_to_urn(self.driver.hrn, site['name'], node['hostname'])
             rspec_node['component_name'] = node['hostname']
             rspec_node['component_manager_id'] = Xrn(self.driver.hrn, 'authority+cm').get_urn()
-            rspec_node['authority_id'] = hrn_to_urn(PlXrn.site_hrn(self.driver.hrn, site['name']), 'authority+sa')
+            rspec_node['authority_id'] = hrn_to_urn(DummyXrn.site_hrn(self.driver.hrn, site['name']), 'authority+sa')
             rspec_node['exclusive'] = 'false'
             rspec_node['hardware_types'] = [HardwareType({'name': 'plab-pc'}),
                                             HardwareType({'name': 'pc'})]
@@ -111,7 +111,6 @@ class DummyAggregate:
 
         nodes = self.get_nodes(slice_xrn, slice, slivers, options)
         rspec.version.add_nodes(nodes)
-        rspec.version.add_links(links)
         # add sliver defaults
         default_sliver = slivers.get(None, [])
         if default_sliver:
