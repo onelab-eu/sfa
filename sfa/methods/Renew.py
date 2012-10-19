@@ -21,7 +21,7 @@ class Renew(Method):
     """
     interfaces = ['aggregate', 'slicemgr']
     accepts = [
-        Parameter(str, "Slice URN"),
+        Parameter(type([str]), "Slice URN"),
         Parameter(type([str]), "List of credentials"),
         Parameter(str, "Expiration time in RFC 3339 format"),
         Parameter(dict, "Options"),

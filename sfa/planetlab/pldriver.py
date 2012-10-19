@@ -741,7 +741,7 @@ class PlDriver (Driver):
         # ids in the urn 
         names = []
         for urn in urns:
-            xrn = PlXrn(urn=urn, type='slice')
+            xrn = PlXrn(xrn=urn, type='slice')
             names.append(xrn.pl_slicename())
         slices = self.shell.GetSlices(names, ['slice_id'])
         if not slices:

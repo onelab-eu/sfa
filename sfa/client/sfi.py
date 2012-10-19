@@ -1409,7 +1409,7 @@ or with an slice hrn, shows currently provisioned resources
         api_options['call_id']=unique_call_id()
         if options.show_credential:
             show_credentials(creds)
-        result =  server.Renew(slice_urn, creds, input_time, *self.ois(server,api_options))
+        result =  server.Renew([slice_urn], creds, input_time, *self.ois(server,api_options))
         value = ReturnValue.get_value(result)
         if self.options.raw:
             save_raw_to_file(result, self.options.raw, self.options.rawformat, self.options.rawbanner)
