@@ -252,7 +252,7 @@ def TestSlabDriver(job_id = '1'):
     nodes = slabdriver.GetReservedNodes(username='avakian')
     print "\r\n \r\n" ,nodes
     
-    l = slabdriver.GetSlices(slice_filter = '29', slice_filter_type = 'record_id_user')
+    l = slabdriver.GetSlices(slice_filter = '269', slice_filter_type = 'record_id_user')
     
     
     print "\r\n \r\nGetSlices" ,l
@@ -296,7 +296,7 @@ def  TestSfi(arg = None):
     show = os.system("sfi.py show senslab2.avakian")
 
     print " =================    SFI.PY SLICES       ============="
-    show_node  = os.system("sfi.py show senslab2.node7.grenoble.senslab.info")
+    show_node  = os.system("sfi.py show senslab2.node67.grenoble.senslab.info")
 
     print " =================    SFI.PY LIST SLICE   ============="
     slices = os.system("sfi.py slices")

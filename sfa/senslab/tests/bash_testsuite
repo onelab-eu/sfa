@@ -34,7 +34,7 @@ echo " =================    SFI.PY SHOW USER   ============="
 sfi.py show senslab2.avakian
 
 echo " =================    SFI.PY SHOW NODE   ============="
-sfi.py show senslab2.node7.devlille.senslab.info
+sfi.py show senslab2.node67.grenoble.senslab.info
 
 echo " =================    SFI.PY SLICES       ============="
 sfi.py slices
