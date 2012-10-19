@@ -220,9 +220,7 @@ class SlabSlices:
 
                 else: 
                         #New lease 
-                        logger.debug("SLABSLICES verify_slice_leases NEW LEASE")
                         job = requested_jobs_dict[str(start_time)]
-                        
                         self.driver.AddLeases(job['hostname'], \
                                 sfa_slice, int(job['start_time']), \
                                 int(job['duration']))
