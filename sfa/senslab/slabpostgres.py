@@ -76,7 +76,7 @@ class SliceSenslab (SlabBase):
         'record_id':self.record_id_slice, 
         'record_id_user':self.record_id_user,
         'record_id_slice':self.record_id_slice, }
-        return dict 
+        return dump_dict 
           
           
 class SlabDB:
