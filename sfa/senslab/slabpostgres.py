@@ -60,7 +60,7 @@ class SliceSenslab (SlabBase):
         """Prints the SQLAlchemy record to the format defined
         by the function.
         """
-        result="<Record id user =%s, slice hrn=%s, Record id slice =%s , \
+        result = "<Record id user =%s, slice hrn=%s, Record id slice =%s , \
                 peer_authority =%s"% (self.record_id_user, self.slice_hrn, \
                 self.record_id_slice, self.peer_authority)
         result += ">"
@@ -71,7 +71,7 @@ class SliceSenslab (SlabBase):
         Returns the dictionary.
         """
         
-        dict = {'slice_hrn':self.slice_hrn,
+        dump_dict = {'slice_hrn':self.slice_hrn,
         'peer_authority':self.peer_authority,
         'record_id':self.record_id_slice, 
         'record_id_user':self.record_id_user,
@@ -80,15 +80,15 @@ class SliceSenslab (SlabBase):
           
           
 class SlabDB:
-    """ SQL Aclehmy connection class.
+    """ SQL Alchemy connection class.
     From alchemy.py
     """
-    def __init__(self,config, debug = False):
+    def __init__(self, config, debug = False):
         self.sl_base = SlabBase
         dbname = "slab_sfa"
         if debug == True :
             l_echo_pool = True
-            l_echo=True 
+            l_echo = True 
         else :
             l_echo_pool = False
             l_echo = False 
@@ -102,12 +102,12 @@ class SlabDB:
         # we indeed have /var/lib/pgsql/data/postgresql.conf where
         # this setting is unset, it might be an angle to tweak that if need be
         # try a unix socket first - omitting the hostname does the trick
-        unix_url = "postgresql+psycopg2://%s:%s@:%s/%s"%\
+        unix_url = "postgresql+psycopg2://%s:%s@:%s/%s"% \
             (config.SFA_DB_USER, config.SFA_DB_PASSWORD, \
                                     config.SFA_DB_PORT, dbname)
 
         # the TCP fallback method
-        tcp_url = "postgresql+psycopg2://%s:%s@%s:%s/%s"%\
+        tcp_url = "postgresql+psycopg2://%s:%s@%s:%s/%s"% \
             (config.SFA_DB_USER, config.SFA_DB_PASSWORD, config.SFA_DB_HOST, \
                                     config.SFA_DB_PORT, dbname)
         for url in [ unix_url, tcp_url ] :
@@ -144,16 +144,15 @@ class SlabDB:
             self.slab_session = Session(bind = self.slab_engine)
         return self.slab_session
         
-       
-    def close(self):
+    def close_session(self): 
         """
         Closes connection to database. 
         
         """
-        if self.connection is not None:
-            self.connection.close()
-            self.connection = None
-            
+        if self.slab_session is None: return
+        self.slab_session.close()
+        self.slab_session = None   
+        
 
     def exists(self, tablename):
         """
@@ -172,10 +171,10 @@ class SlabDB:
             return False
        
     
-    def createtable(self, tablename ):
+    def createtable(self):
         """
-        Creates the specifed table. Uses the global dictionnary holding the 
-        tablenames and the table schema.
+        Creates all the table sof the engine.  
+        Uses the global dictionnary holding the tablenames and the table schema.
     
         """
 
@@ -185,7 +184,6 @@ class SlabDB:
         return
     
 
-from sfa.util.config import Config
 
 slab_alchemy = SlabDB(Config())
 slab_engine = slab_alchemy.slab_engine

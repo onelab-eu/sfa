@@ -64,7 +64,7 @@ class SlabImporter:
         #Create special slice table for senslab 
         
         if not slabdriver.db.exists('slice_senslab'):
-            slabdriver.db.createtable('slice_senslab')
+            slabdriver.db.createtable()
             self.logger.info ("SlabImporter.run:  slice_senslab table created ")
 
         #retrieve all existing SFA objects
