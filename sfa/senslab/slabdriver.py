@@ -1174,6 +1174,7 @@ class SlabDriver(Driver):
  
     def GetLeaseGranularity(self):
         """ Returns the granularity of Senslab testbed.
+        OAR returns seconds for experiments duration.
         Defined in seconds. """
         
         grain = 60 
