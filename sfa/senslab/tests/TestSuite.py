@@ -305,7 +305,7 @@ def  TestSfi(arg = None):
     status_slice = os.system("sfi.py status senslab2.avakian_slice")
 
     print " =================    SFI.PY CREATE SLICE   ============="
-    create = os.system("sfi.py create senslab2.avakian_slice /home/savakian/flab-sfa/avakian_adv.rspec")
+    create = os.system("sfi.py create senslab2.avakian_slice /home/savakian/flab-sfa/rspec_sfa.rspec")
       
       
 def RunAll():
