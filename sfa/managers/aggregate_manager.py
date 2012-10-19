@@ -44,8 +44,9 @@ class AggregateManager:
         return version_string
 
     def GetVersion(self, api, options):
-        xrn=Xrn(api.hrn)
+        xrn=Xrn(api.hrn, type='authority')
         version = version_core()
+        cred_types = [{'geni_type': 'geni_sfa', 'geni_version': str(i)} for i in range(4)[-2:]]
         version_generic = {
             'testbed': self.driver.testbed_name(),
             'interface':'aggregate',
@@ -56,10 +57,7 @@ class AggregateManager:
             'geni_single_allocation': 0, # Accept operations that act on as subset of slivers in a given state.
             'geni_allocate': 'geni_many',# Multiple slivers can exist and be incrementally added, including those which connect or overlap in some way.
             'geni_best_effort': 'true',
-            'geni_credential_types': [{
-                'geni_type': 'geni_sfa',
-                'geni_version': 3,
-            }],
+            'geni_credential_types': cred_types,
         }
         version.update(version_generic)
         version.update(self.rspec_versions())

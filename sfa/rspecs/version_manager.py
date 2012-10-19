@@ -55,6 +55,8 @@ class VersionManager:
             retval = self._get_version(type, version_num, content_type) 
         elif isinstance(version, RSpecVersion):
             retval = version
+        elif not version:
+            retval = self.versions[0]
         else:
             raise UnsupportedRSpecVersion("No such version: %s "% str(version))
  

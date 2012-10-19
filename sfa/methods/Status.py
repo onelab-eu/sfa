@@ -13,7 +13,7 @@ class Status(Method):
     interfaces = ['aggregate', 'slicemgr', 'component']
     accepts = [
         Parameter(type([str]), "Slice or sliver URNs"),
-        Parameter(dict, "credentials"),
+        Parameter(type([dict]), "credentials"),
         Parameter(dict, "Options")
         ]
     returns = Parameter(dict, "Status details")
