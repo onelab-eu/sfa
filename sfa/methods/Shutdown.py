@@ -13,7 +13,7 @@ class Shutdown(Method):
     interfaces = ['aggregate', 'slicemgr']
     accepts = [
         Parameter(str, "Slice URN"),
-        Parameter(dict, "Credentials"),
+        Parameter(type([dict]), "Credentials"),
         ]
     returns = Parameter(bool, "Success or Failure")
 
