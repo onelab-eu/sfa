@@ -17,7 +17,7 @@ class Delete(Method):
     
     accepts = [
         Parameter(type([str]), "Human readable name of slice to delete (hrn or urn)"),
-        Parameter(dict, "Credentials"),
+        Parameter(type([dict]), "Credentials"),
         Parameter(dict, "options"),
         ]
 

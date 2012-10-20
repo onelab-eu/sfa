@@ -721,7 +721,7 @@ class PlDriver (Driver):
             node_ids = ids
         else:
             node_ids = slice['node_ids']
-     
+        slice_hrn = PlXrn(auth=self.hrn, slicename=slice['name']).get_hrn()     
         # determine if this is a peer slice
         # xxx I wonder if this would not need to use PlSlices.get_peer instead 
         # in which case plc.peers could be deprecated as this here
