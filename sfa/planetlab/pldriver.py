@@ -703,7 +703,7 @@ class PlDriver (Driver):
         return aggregate.describe(slice_xrn=xrn.get_urn(), version=rspec.version)
 
     def provision(self, urns, options={}):
-        return self.describe(urns, options=options)
+        return self.describe(urns, None, options=options)
 
     def delete(self, urns, options={}):
         names = []

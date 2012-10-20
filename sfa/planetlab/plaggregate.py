@@ -3,7 +3,7 @@ from collections import defaultdict
 from sfa.util.xrn import Xrn, hrn_to_urn, urn_to_hrn
 from sfa.util.sfatime import utcparse, datetime_to_string
 from sfa.util.sfalogging import logger
-
+from sfa.util.faults import SliverDoesNotExist
 from sfa.rspecs.rspec import RSpec
 from sfa.rspecs.elements.hardware_type import HardwareType
 from sfa.rspecs.elements.node import Node

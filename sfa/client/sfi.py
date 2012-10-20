@@ -287,7 +287,7 @@ class Sfi:
         ("describe", "slice_hrn"),
         ("create", "slice_hrn rspec"),
         ("allocate", "slice_hrn rspec"),
-        ("provison", "slice_hrn"),
+        ("provision", "slice_hrn"),
         ("action", "slice_hrn action"), 
         ("delete", "slice_hrn"),
         ("status", "slice_hrn"),
@@ -361,7 +361,7 @@ class Sfi:
                                help="set extra/testbed-dependent flags, e.g. --extra enabled=true")
 
         # user specifies remote aggregate/sm/component                          
-        if command in ("resources", "describe", "create", "delete", "allocate", "provision", 
+        if command in ("resources", "describe", "allocate", "provision", "create", "delete", "allocate", "provision", 
                        "action", "shutdown",  "get_ticket", "renew", "status"):
             parser.add_option("-d", "--delegate", dest="delegate", default=None, 
                              action="store_true",
@@ -369,7 +369,7 @@ class Sfi:
                                   "authority in set of credentials for this call")
 
         # show_credential option
-        if command in ("list","resources", "describe", "create","add","update","remove","slices","delete","status","renew"):
+        if command in ("list","resources", "describe", "provision", "allocate", "create","add","update","remove","slices","delete","status","renew"):
             parser.add_option("-C","--credential",dest='show_credential',action='store_true',default=False,
                               help="show credential(s) used in human-readable form")
         # registy filter option
@@ -403,7 +403,7 @@ class Sfi:
 
 
         # 'create' does return the new rspec, makes sense to save that too
-        if command in ("resources", "describe", "show", "list", "gid", 'create'):
+        if command in ("resources", "describe", "allocate", "provision", "show", "list", "gid", 'create'):
            parser.add_option("-o", "--output", dest="file",
                             help="output XML to file", metavar="FILE", default=None)
 
@@ -1192,6 +1192,8 @@ or with an slice hrn, shows currently provisioned resources
         return value
 
     def allocate(self, options, args):
+        server = self.sliceapi()
+        server_version = self.get_cached_server_version(server)
         slice_hrn = args[0]
         slice_urn = Xrn(slice_hrn, type='slice').get_urn()
 
@@ -1199,7 +1201,6 @@ or with an slice hrn, shows currently provisioned resources
         creds = [self.slice_credential_string(slice_hrn)]
 
         delegated_cred = None
-        server_version = self.get_cached_server_version(server)
         if server_version.get('interface') == 'slicemgr':
             # delegate our cred to the slice manager
             # do not delegate cred to slicemgr...not working at the moment
@@ -1254,13 +1255,14 @@ or with an slice hrn, shows currently provisioned resources
         
 
     def provision(self, options, args):
+        server = self.sliceapi()
+        server_version = self.get_cached_server_version(server)
         slice_hrn = args[0]
         slice_urn = Xrn(slice_hrn, type='slice').get_urn()
 
         # credentials
         creds = [self.slice_credential_string(slice_hrn)]
         delegated_cred = None
-        server_version = self.get_cached_server_version(server)
         if server_version.get('interface') == 'slicemgr':
             # delegate our cred to the slice manager
             # do not delegate cred to slicemgr...not working at the moment
@@ -1275,7 +1277,7 @@ or with an slice hrn, shows currently provisioned resources
 
         api_options = {}
         api_options ['call_id'] = unique_call_id()
-        result = server.CreateSliver(slice_urn, creds, api_options)
+        result = server.Provision([slice_urn], creds, api_options)
         value = ReturnValue.get_value(result)
         if self.options.raw:
             save_raw_to_file(result, self.options.raw, self.options.rawformat, self.options.rawbanner)

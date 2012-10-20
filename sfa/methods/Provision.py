@@ -23,7 +23,7 @@ class Provision(Method):
     interfaces = ['aggregate', 'slicemgr']
     accepts = [
         Parameter(type([str]), "URNs"),
-        Parameter(dict, "Credentials"),
+        Parameter(type([dict]), "Credentials"),
         Parameter(dict, "options"),
         ]
     returns = Parameter(dict, "Provisioned Resources")
