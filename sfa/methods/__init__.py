@@ -11,6 +11,7 @@ GetVersion
 List
 ListResources
 ListSlices
+PerformOperationalAction
 Provision
 RedeemTicket
 Register

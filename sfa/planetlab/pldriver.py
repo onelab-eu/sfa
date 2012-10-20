@@ -763,7 +763,7 @@ class PlDriver (Driver):
             pass
         else:
             raise UnsupportedOperation(action)
-        description = self.describe(urns)
+        description = self.describe(urns, None, options)
         return description['geni_slivers']
 
     # set the 'enabled' tag to 0

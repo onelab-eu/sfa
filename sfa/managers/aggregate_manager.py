@@ -134,7 +134,7 @@ class AggregateManager:
     def PerformOperationalAction(self, api, xrns, creds, action, options={}):
         call_id = options.get('call_id')
         if Callids().already_handled(call_id): return True
-        return self.driver.performOperationalAction(xrns, action, options) 
+        return self.driver.perform_operational_action(xrns, action, options) 
 
     def Shutdown(self, api, xrn, creds, options={}):
         call_id = options.get('call_id')

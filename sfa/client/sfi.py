@@ -1371,6 +1371,7 @@ or with an slice hrn, shows currently provisioned resources
         Perform the named operational action on the named slivers
         """
         server = self.sliceapi()
+        api_options = {}
         # slice urn
         slice_hrn = args[0]
         action = args[1]
@@ -1382,7 +1383,7 @@ or with an slice hrn, shows currently provisioned resources
             delegated_cred = self.delegate_cred(slice_cred, get_authority(self.authority))
             creds.append(delegated_cred)
         
-        result = server.PerformOperationalAction(slice_urn, creds, action )
+        result = server.PerformOperationalAction([slice_urn], creds, action , api_options)
         value = ReturnValue.get_value(result)
         if self.options.raw:
             save_raw_to_file(result, self.options.raw, self.options.rawformat, self.options.rawbanner)
