@@ -175,10 +175,10 @@ class PGv2(RSpecVersion):
     # Leases
 
     def get_leases(self, filter=None):
-        pass
+        return []
 
     def add_leases(self, leases, network = None, no_dupes=False):
-        pass
+        return None
 
     # Utility
 

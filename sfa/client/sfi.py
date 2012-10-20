@@ -1234,7 +1234,9 @@ or with an slice hrn, shows currently provisioned resources
             if 'sfa' not in server_version:
                 users = pg_users_arg(user_records)
                 rspec = RSpec(rspec)
-                rspec.filter({'component_manager_id': server_version['urn']})
+                cm_hrn = Xrn(xrn=server_version['urn']).get_hrn()
+                cm_urn = Xrn(cm_hrn, type='authority+cm').get_urn()
+                rspec.filter({'component_manager_id': cm_urn})
                 rspec = RSpecConverter.to_pg_rspec(rspec.toxml(), content_type='request')
             else:
                 users = sfa_users_arg(user_records, slice_record)

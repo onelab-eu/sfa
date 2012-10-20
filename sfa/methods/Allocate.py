@@ -1,10 +1,11 @@
 from sfa.util.faults import SfaInvalidArgument, InvalidRSpec, SfatablesRejected
-from sfa.util.xrn import urn_to_hrn
+from sfa.util.xrn import Xrn
 from sfa.util.method import Method
 from sfa.util.sfatablesRuntime import run_sfatables
 from sfa.trust.credential import Credential
 from sfa.storage.parameter import Parameter, Mixed
 from sfa.rspecs.rspec import RSpec
+from sfa.util.sfalogging import logger
 
 class Allocate(Method):
     """
@@ -26,7 +27,7 @@ class Allocate(Method):
     interfaces = ['aggregate', 'slicemgr']
     accepts = [
         Parameter(str, "Slice URN"),
-        Parameter(dict, "List of credentials"),
+        Parameter(type([dict]), "List of credentials"),
         Parameter(str, "RSpec"),
         Parameter(dict, "options"),
         ]

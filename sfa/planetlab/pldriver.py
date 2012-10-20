@@ -5,7 +5,7 @@ from sfa.util.faults import MissingSfaInfo, UnknownSfaType, \
 from sfa.util.sfalogging import logger
 from sfa.util.defaultdict import defaultdict
 from sfa.util.sfatime import utcparse, datetime_to_string, datetime_to_epoch
-from sfa.util.xrn import hrn_to_urn, get_leaf
+from sfa.util.xrn import Xrn, hrn_to_urn, get_leaf
 from sfa.util.cache import Cache
 
 # one would think the driver should not need to mess with the SFA db, but..
@@ -700,7 +700,7 @@ class PlDriver (Driver):
         # only used by plc and ple.
         slices.handle_peer(site, slice, persons, peer)
         
-        return aggregate.describe(slice_xrn=xrn.get_urn(), version=rspec.version)
+        return aggregate.describe([xrn.get_urn()], version=rspec.version)
 
     def provision(self, urns, options={}):
         return self.describe(urns, None, options=options)
