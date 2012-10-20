@@ -43,7 +43,7 @@ class Describe(Method):
         # get hrn of the original caller 
         origin_hrn = options.get('origin_hrn', None)
         if not origin_hrn:
-            origin_hrn = Credential(string=valid_creds[0]).get_gid_caller().get_hrn()
+            origin_hrn = Credential(cred=valid_creds[0]).get_gid_caller().get_hrn()
         desc = self.api.manager.Describe(self.api, creds, urns, options)
 
         # filter rspec through sfatables 

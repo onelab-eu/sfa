@@ -237,7 +237,7 @@ class Credential(object):
     # @param string If string!=None, load the credential from the string
     # @param filename If filename!=None, load the credential from the file
     # FIXME: create and subject are ignored!
-    def __init__(self, create=False, subject=None, string=None, filename=None):
+    def __init__(self, create=False, subject=None, string=None, filename=None, cred=None):
         self.gidCaller = None
         self.gidObject = None
         self.expiration = None
@@ -250,6 +250,17 @@ class Credential(object):
         self.xml = None
         self.refid = None
         self.legacy = None
+        self.type = None
+        self.version = None
+
+        if cred:
+            if isinstance(cred, StringTypes):
+                string = cred
+            elif isinstance(cred, dict):
+                string = cred['geni_value']
+                self.type = cred['geni_type']
+                self.version = cred['geni_version']
+                
 
         # Check if this is a legacy credential, translate it if so
         if string or filename:

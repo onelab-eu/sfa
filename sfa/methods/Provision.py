@@ -33,6 +33,7 @@ class Provision(Method):
 
         # Find the valid credentials
         valid_creds = self.api.auth.checkCredentials(creds, 'createsliver', xrns) 
-        origin_hrn = Credential(string=valid_creds[0]).get_gid_caller().get_hrn()
+        origin_hrn = Credential(cred=valid_creds[0]).get_gid_caller().get_hrn()
+        self.api.logger.info("interface: %s\tcaller-hrn: %s\ttarget-hrn: %s\tmethod-name: %s"%(self.api.interface, origin_hrn, xrns, self.name))
         result = self.api.manager.Provision(self.api, xrns, creds, options)
         return result

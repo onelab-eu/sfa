@@ -52,7 +52,7 @@ class Auth:
                     self.check(cred, operation, hrn)
                     valid.append(cred)
                 except:
-                    cred_obj=Credential(string=cred)
+                    cred_obj=Credential(cred=cred)
                     logger.debug("failed to validate credential - dump=%s"%cred_obj.dump_string(dump_parents=True))
                     error = sys.exc_info()[:2]
                     continue
@@ -63,7 +63,7 @@ class Auth:
         return valid
         
         
-    def check(self, cred_string, operation, hrn = None):
+    def check(self, credential, operation, hrn = None):
         """
         Check the credential against the peer cert (callerGID included 
         in the credential matches the caller that is connected to the 
@@ -71,7 +71,7 @@ class Auth:
         trusted cert and check if the credential is allowed to perform 
         the specified operation.    
         """
-        cred = Credential(string = cred_string)    
+        cred = Credential(cred=credential)    
         self.client_cred = cred
         logger.debug("Auth.check: handling hrn=%s and credential=%s"%\
                          (hrn,cred.get_summary_tostring()))

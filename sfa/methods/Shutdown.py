@@ -21,7 +21,7 @@ class Shutdown(Method):
 
         valid_creds = self.api.auth.checkCredentials(creds, 'stopslice', xrn)
         #log the call
-        origin_hrn = Credential(string=valid_creds[0]).get_gid_caller().get_hrn()
+        origin_hrn = Credential(cred=valid_creds[0]).get_gid_caller().get_hrn()
         self.api.logger.info("interface: %s\tcaller-hrn: %s\ttarget-hrn: %s\tmethod-name: %s"%(self.api.interface, origin_hrn, xrn, self.name))
 
         return self.api.manager.Shutdown(self.api, xrn, creds)

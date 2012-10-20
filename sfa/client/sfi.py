@@ -115,14 +115,15 @@ def filter_records(type, records):
     return filtered_records
 
 
-def credential_printable (credential_string):
-    credential=Credential(string=credential_string)
+def credential_printable (cred):
+    credential=Credential(cred=cred)
     result=""
     result += credential.get_summary_tostring()
     result += "\n"
     rights = credential.get_privileges()
-    result += "rights=%s"%rights
-    result += "\n"
+    result += "type=%s\n" % credential.type    
+    result += "version=%s\n" % credential.version    
+    result += "rights=%s\n"%rights
     return result
 
 def show_credentials (cred_s):
@@ -650,6 +651,9 @@ class Sfi:
         # extract what's needed
         self.private_key = client_bootstrap.private_key()
         self.my_credential_string = client_bootstrap.my_credential_string ()
+        self.my_credential = {'geni_type': 'geni_sfa',
+                              'geni_version': '3.0', 
+                              'geni_value': self.my_credential_string}
         self.my_gid = client_bootstrap.my_gid ()
         self.client_bootstrap = client_bootstrap
 
@@ -662,6 +666,11 @@ class Sfi:
 
     def slice_credential_string(self, name):
         return self.client_bootstrap.slice_credential_string (name)
+
+    def slice_credential(self, name):
+        return {'geni_type': 'geni_sfa',
+                'geni_version': '3.0',
+                'geni_value': self.slice_credential_string(name)}    
 
     # xxx should be supported by sfaclientbootstrap as well
     def delegate_cred(self, object_cred, hrn, type='authority'):
@@ -988,7 +997,7 @@ or version information about sfi itself
             creds.append(delegated_cred)  
         # options and call_id when supported
         api_options = {}
-	api_options['call_id']=unique_call_id()
+        api_options['call_id']=unique_call_id()
         if options.show_credential:
             show_credentials(creds)
         result = server.ListSlices(creds, *self.ois(server,api_options))
@@ -1008,7 +1017,7 @@ or with an slice hrn, shows currently provisioned resources
         server = self.sliceapi()
 
         # set creds
-        creds = [self.my_credential_string]
+        creds = [self.my_credential]
         if options.delegate:
             creds.append(self.delegate_cred(cred, get_authority(self.authority)))
         if options.show_credential:
@@ -1058,7 +1067,7 @@ or with an slice hrn, shows currently provisioned resources
         server = self.sliceapi()
 
         # set creds
-        creds = [self.slice_credential_string(args[0])]
+        creds = [self.slice_credential(args[0])]
         if options.delegate:
             creds.append(self.delegate_cred(cred, get_authority(self.authority)))
         if options.show_credential:
@@ -1172,7 +1181,7 @@ or with an slice hrn, shows currently provisioned resources
         slice_urn = hrn_to_urn(slice_hrn, 'slice') 
 
         # creds
-        slice_cred = self.slice_credential_string(slice_hrn)
+        slice_cred = self.slice_credential(slice_hrn)
         creds = [slice_cred]
         if options.delegate:
             delegated_cred = self.delegate_cred(slice_cred, get_authority(self.authority))
@@ -1198,7 +1207,7 @@ or with an slice hrn, shows currently provisioned resources
         slice_urn = Xrn(slice_hrn, type='slice').get_urn()
 
         # credentials
-        creds = [self.slice_credential_string(slice_hrn)]
+        creds = [self.slice_credential(slice_hrn)]
 
         delegated_cred = None
         if server_version.get('interface') == 'slicemgr':
@@ -1263,7 +1272,7 @@ or with an slice hrn, shows currently provisioned resources
         slice_urn = Xrn(slice_hrn, type='slice').get_urn()
 
         # credentials
-        creds = [self.slice_credential_string(slice_hrn)]
+        creds = [self.slice_credential(slice_hrn)]
         delegated_cred = None
         if server_version.get('interface') == 'slicemgr':
             # delegate our cred to the slice manager
@@ -1300,7 +1309,7 @@ or with an slice hrn, shows currently provisioned resources
         slice_urn = hrn_to_urn(slice_hrn, 'slice') 
 
         # creds 
-        slice_cred = self.slice_credential_string(slice_hrn)
+        slice_cred = self.slice_credential(slice_hrn)
         creds = [slice_cred]
         if options.delegate:
             delegated_cred = self.delegate_cred(slice_cred, get_authority(self.authority))
@@ -1377,7 +1386,7 @@ or with an slice hrn, shows currently provisioned resources
         action = args[1]
         slice_urn = Xrn(slice_hrn, type='slice').get_urn() 
         # cred
-        slice_cred = self.slice_credential_string(args[0])
+        slice_cred = self.slice_credential(args[0])
         creds = [slice_cred]
         if options.delegate:
             delegated_cred = self.delegate_cred(slice_cred, get_authority(self.authority))
@@ -1404,7 +1413,7 @@ or with an slice hrn, shows currently provisioned resources
         slice_urn = hrn_to_urn(slice_hrn, 'slice') 
         # time: don't try to be smart on the time format, server-side will
         # creds
-        slice_cred = self.slice_credential_string(args[0])
+        slice_cred = self.slice_credential(args[0])
         creds = [slice_cred]
         if options.delegate:
             delegated_cred = self.delegate_cred(slice_cred, get_authority(self.authority))
@@ -1432,7 +1441,7 @@ or with an slice hrn, shows currently provisioned resources
         slice_hrn = args[0]
         slice_urn = hrn_to_urn(slice_hrn, 'slice') 
         # creds
-        slice_cred = self.slice_credential_string(slice_hrn)
+        slice_cred = self.slice_credential(slice_hrn)
         creds = [slice_cred]
         if options.delegate:
             delegated_cred = self.delegate_cred(slice_cred, get_authority(self.authority))
