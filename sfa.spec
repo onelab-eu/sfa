@@ -137,6 +137,9 @@ The SFA driver for FEDERICA.
 %description nitos
 The SFA driver for NITOS.
 
+%description dummy
+The SFA driver for a Dummy Testbed.
+
 %description sfatables
 sfatables is a tool for defining access and admission control policies
 in an SFA network, in much the same way as iptables is for ip
