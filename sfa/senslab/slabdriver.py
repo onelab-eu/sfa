@@ -34,8 +34,6 @@ from sfa.senslab.slabslices import SlabSlices
 
 
 
-
-
 # thierry : note
 # this inheritance scheme is so that the driver object can receive
 # GetNodes or GetSites sorts of calls directly
@@ -98,10 +96,12 @@ class SlabDriver(Driver):
               #For compatibility
             top_level_status = 'empty' 
             result = {}
-            result.fromkeys(['geni_urn','pl_login','geni_status','geni_resources'],None)
+            result.fromkeys(\
+                ['geni_urn','pl_login','geni_status','geni_resources'], None)
             result['pl_login'] = recuser.hrn
-            logger.debug("Slabdriver - sliver_status Sliver status urn %s hrn %s sl\
-                             %s \r\n " %(slice_urn, slice_hrn, sl))
+            logger.debug("Slabdriver - sliver_status Sliver status \
+                                        urn %s hrn %s sl  %s \r\n " \
+                                        %(slice_urn, slice_hrn, sl))
             try:
                 nodes_in_slice = sl['node_ids']
             except KeyError:
@@ -132,7 +132,8 @@ class SlabDriver(Driver):
                 #res['slab_boot_state'] = node['boot_state']
                 
                 res['pl_hostname'] = node['hostname']
-                res['pl_boot_state'] = nodeall_byhostname[node['hostname']]['boot_state']
+                res['pl_boot_state'] = \
+                            nodeall_byhostname[node['hostname']]['boot_state']
                 #res['pl_last_contact'] = strftime(self.time_format, \
                                                     #gmtime(float(timestamp)))
                 sliver_id =  Xrn(slice_urn, type='slice', \
@@ -175,8 +176,9 @@ class SlabDriver(Driver):
     
         # parse rspec
         rspec = RSpec(rspec_string)
-        logger.debug("SLABDRIVER.PY \t create_sliver \tr spec.version %s slice_record %s " \
-                                                            %(rspec.version,slice_record))
+        logger.debug("SLABDRIVER.PY \t create_sliver \tr spec.version \
+                                            %s slice_record %s " \
+                                            %(rspec.version,slice_record))
 
         # ensure site record exists?
         # ensure slice record exists
@@ -211,18 +213,19 @@ class SlabDriver(Driver):
         
         # add/remove leases
         requested_lease_list = []
-        kept_leases = []
+
         logger.debug("SLABDRIVER.PY \tcreate_sliver AVANTLEASE " )
+        rspec_requested_leases = rspec.version.get_leases()
         for lease in rspec.version.get_leases():
             single_requested_lease = {}
             logger.debug("SLABDRIVER.PY \tcreate_sliver lease %s " %(lease))
             if not lease.get('lease_id'):
                 single_requested_lease['hostname'] = \
-                            slab_xrn_to_hostname(lease.get('component_id').strip())
+                            slab_xrn_to_hostname(\
+                                            lease.get('component_id').strip())
                 single_requested_lease['start_time'] = lease.get('start_time')
                 single_requested_lease['duration'] = lease.get('duration')
-            else:
-                kept_leases.append(int(lease['lease_id']))
+
             if single_requested_lease.get('hostname'):
                 requested_lease_list.append(single_requested_lease)
                 
@@ -251,11 +254,12 @@ class SlabDriver(Driver):
           
                 
                         
-        logger.debug("SLABDRIVER.PY \tcreate_sliver  requested_job_dict %s " %(requested_job_dict))    
+        logger.debug("SLABDRIVER.PY \tcreate_sliver  requested_job_dict %s "\
+                                                     %(requested_job_dict))    
         #verify_slice_leases returns the leases , but the return value is unused
         #here. Removed SA 13/08/12           
         slices.verify_slice_leases(sfa_slice, \
-                                    requested_job_dict, kept_leases, peer)
+                                    requested_job_dict, peer)
         
         return aggregate.get_rspec(slice_xrn=slice_urn, version=rspec.version)
         
@@ -285,12 +289,14 @@ class SlabDriver(Driver):
             try:
                 if peer:
                     self.UnBindObjectFromPeer('slice', \
-                                            sfa_slice['record_id_slice'], peer,None)
+                                            sfa_slice['record_id_slice'], \
+                                            peer, None)
                 self.DeleteSliceFromNodes(sfa_slice)
             finally:
                 if peer:
-                    self.BindObjectToPeer('slice', sfa_slice['record_id_slice'], \
-                                                peer, sfa_slice['peer_slice_id'])
+                    self.BindObjectToPeer('slice', \
+                                            sfa_slice['record_id_slice'], \
+                                            peer, sfa_slice['peer_slice_id'])
             return 1
             
             

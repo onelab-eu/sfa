@@ -1,14 +1,12 @@
 import time
-
-
 from sfa.util.xrn import hrn_to_urn, urn_to_hrn
 
 from sfa.rspecs.rspec import RSpec
 from sfa.rspecs.elements.versions.slabv1Node import SlabPosition
 from sfa.rspecs.elements.location import Location
 from sfa.rspecs.elements.hardware_type import HardwareType
-#from sfa.rspecs.elements.login import Login
-#from sfa.rspecs.elements.services import Services
+from sfa.rspecs.elements.login import Login
+from sfa.rspecs.elements.services import Services
 from sfa.rspecs.elements.sliver import Sliver
 from sfa.rspecs.elements.lease import Lease
 from sfa.rspecs.elements.granularity import Granularity
@@ -60,8 +58,9 @@ class SlabAggregate:
 
         slices = self.driver.GetSlices(slice_filter= str(slice_name), \
                                                 slice_filter_type = 'slice_hrn')
-        logger.debug("Slabaggregate api \tget_slice_and_slivers  slices %s self.driver.hrn %s" \
-                                                                    %(slices, self.driver.hrn))
+        logger.debug("Slabaggregate api \tget_slice_and_slivers \
+                        slices %s self.driver.hrn %s" \
+                        %(slices, self.driver.hrn))
         if not slices:
             return (sfa_slice, slivers)
         #if isinstance(sfa_slice, list):
@@ -73,20 +72,23 @@ class SlabAggregate:
         #and therfore, node allocated to this slice
         for sfa_slice in slices:
             try:
-                   
-                for node in sfa_slice['node_ids']:
-                    sliver_xrn = Xrn(slice_urn, type='sliver', id=node)
-                    sliver_xrn.set_authority(self.driver.hrn)
-                    #node_id = self.driver.root_auth + '.' + node_id
-                    sliver = Sliver({'sliver_id':sliver_xrn.urn, 
-                                    'name': sfa_slice['slice_hrn'],
-                                    'type': 'slab-node', 
-                                    'tags': []})
-                   
-                    slivers[node] = sliver
+                node_ids_list =  sfa_slice['node_ids']  
             except KeyError:
                 logger.log_exc("SLABAGGREGATE \t \
                                         get_slice_and_slivers KeyError ")
+                continue
+                                        
+            for node in node_ids_list:
+                sliver_xrn = Xrn(slice_urn, type='sliver', id=node)
+                sliver_xrn.set_authority(self.driver.hrn)
+                #node_id = self.driver.root_auth + '.' + node_id
+                sliver = Sliver({'sliver_id':sliver_xrn.urn, 
+                                'name': sfa_slice['slice_hrn'],
+                                'type': 'slab-node', 
+                                'tags': []})
+                
+                slivers[node] = sliver
+          
         
         #Add default sliver attribute :
         #connection information for senslab
@@ -94,16 +96,7 @@ class SlabAggregate:
         ldap_username = tmp[1].split('_')[0]
         vmaddr = 'ssh ' + ldap_username + '@grenoble.senslab.info'
         slivers['default_sliver'] =  {'vm': vmaddr , 'login': ldap_username}
-        ## sort sliver attributes by node id    
-        ##tags = self.driver.GetSliceTags({'slice_tag_id': slice['slice_tag_ids']})
-        ##for tag in tags:
-            ### most likely a default/global sliver attribute (node_id == None)
-            ##if tag['node_id'] not in slivers:
-                ##sliver = Sliver({'sliver_id': urn_to_sliver_id(slice_urn, slice['slice_id'], ""),
-                                 ##'name': 'slab-vm',
-                                 ##'tags': []})
-                ##slivers[tag['node_id']] = sliver
-            ##slivers[tag['node_id']]['tags'].append(tag)
+
         logger.debug("SLABAGGREGATE api get_slice_and_slivers  slivers %s "\
                                                              %(slivers))
         return (slices, slivers)
@@ -121,7 +114,7 @@ class SlabAggregate:
         #if slice_xrn:
             #if not slices or not slices['node_ids']:
                 #return ([],[])
-        tags_filter = {}
+        #tags_filter = {}
         
         # get the granularity in second for the reservation system
         grain = self.driver.GetLeaseGranularity()
@@ -155,7 +148,8 @@ class SlabAggregate:
         for node in nodes:
            
             nodes_dict[node['node_id']] = node
-        
+        #logger.debug("SLABAGGREGATE api get_nodes nodes  %s "\
+                                                             #%(nodes ))
         # get sites
         #sites_dict  = self.get_sites({'site_id': site_ids}) 
         # get interfaces
@@ -167,16 +161,19 @@ class SlabAggregate:
         # Make a list of all the nodes in the slice before getting their attributes
         rspec_nodes = []
         slice_nodes_list = []
-        logger.debug("SLABAGGREGATE api get_rspec slice_nodes_list  %s "\
+        logger.debug("SLABAGGREGATE api get_nodes slice_nodes_list  %s "\
                                                              %(slices )) 
         if slices:
             for one_slice in slices:
-                slice_nodes_list = one_slice['node_ids']
+                try:
+                    slice_nodes_list = one_slice['node_ids']
+                except KeyError:
+                    pass
                 #for node in one_slice['node_ids']:
                     #slice_nodes_list.append(node)
                    
         reserved_nodes = self.driver.GetNodesCurrentlyInUse()
-        logger.debug("SLABAGGREGATE api get_rspec slice_nodes_list  %s "\
+        logger.debug("SLABAGGREGATE api get_nodes slice_nodes_list  %s "\
                                                              %(slice_nodes_list)) 
         for node in nodes:
             # skip whitelisted nodes
@@ -184,8 +181,8 @@ class SlabAggregate:
                 #if not slice or slice['slice_id'] not in node['slice_ids_whitelist']:
                     #continue
             #rspec_node = Node()
-            logger.debug("SLABAGGREGATE api get_rspec node  %s "\
-                                                             %(node)) 
+            #logger.debug("SLABAGGREGATE api get_nodes node  %s "\
+                                                             #%(node)) 
             if slice_nodes_list == [] or node['hostname'] in slice_nodes_list:
                    
                 rspec_node = SlabNode()
@@ -204,10 +201,12 @@ class SlabAggregate:
                 
                 # Senslab's nodes are federated : there is only one authority 
                 # for all Senslab sites, registered in SFA.
-                # Removing the part including the site in authority_id SA 27/07/12
+                # Removing the part including the site 
+                # in authority_id SA 27/07/12
                 rspec_node['authority_id'] = rspec_node['component_manager_id']  
     
-                # do not include boot state (<available> element) in the manifest rspec
+                # do not include boot state (<available> element)
+                #in the manifest rspec
                 
                
                 rspec_node['boot_state'] = node['boot_state']
@@ -218,7 +217,6 @@ class SlabAggregate:
     
                 # only doing this because protogeni rspec needs
                 # to advertise available initscripts 
-                #rspec_node['pl_initscripts'] = None
                 # add site/interface info to nodes.
                 # assumes that sites, interfaces and tags have already been prepared.
                 #site = sites_dict[node['site_id']]
@@ -231,12 +229,12 @@ class SlabAggregate:
                     try:
                         position[field] = node[field]
                     except KeyError, error :
-                        logger.log_exc("SLABAGGREGATE\t get_rspec position %s "%(error))
+                        logger.log_exc("SLABAGGREGATE\t get_nodes \
+                                                        position %s "%(error))
     
                 rspec_node['position'] = position
                 #rspec_node['interfaces'] = []
                
-                #tags = [PLTag(node_tags[tag_id]) for tag_id in node['node_tag_ids']]
                 # Granularity
                 granularity = Granularity({'grain': grain})
                 rspec_node['granularity'] = granularity
@@ -249,9 +247,9 @@ class SlabAggregate:
                     rspec_node['slivers'] = [sliver]
                     
                     # slivers always provide the ssh service
-                    #login = Login({'authentication': 'ssh-keys', 'hostname': node['hostname'], 'port':'22', 'username': sliver['name']})
-                    #service = Services({'login': login})
-                    #rspec_node['services'] = [service]
+                    login = Login({'authentication': 'ssh-keys', 'hostname': node['hostname'], 'port':'22', 'username': sliver['name']})
+                    service = Services({'login': login})
+                    rspec_node['services'] = [service]
                 rspec_nodes.append(rspec_node)
 
         return (rspec_nodes)       
@@ -260,8 +258,7 @@ class SlabAggregate:
     
         now = int(time.time())
         lease_filter = {'clip': now }
-        
-        #self.driver.synchronize_oar_and_slice_table()
+
         #if slice_record:
             #lease_filter.update({'name': slice_record['name']})
         return_fields = ['lease_id', 'hostname', 'site_id', \
@@ -348,8 +345,6 @@ class SlabAggregate:
         if lease_option in ['all', 'resources']:
         #if not options.get('list_leases') or options.get('list_leases') and options['list_leases'] != 'leases':
             nodes = self.get_nodes(slices, slivers) 
-            logger.debug("SlabAggregate \tget_rspec **** \
-                        nodes %s \r\n" %(nodes))
             #In case creating a job,  slice_xrn is not set to None
             rspec.version.add_nodes(nodes)
             if slice_xrn :
@@ -381,6 +376,6 @@ class SlabAggregate:
             leases = self.get_leases(slices)
             rspec.version.add_leases(leases)
             
-        logger.debug("SlabAggregate \tget_rspec ******* rspec_toxml %s \r\n"\
-                                            %(rspec.toxml())) 
+        #logger.debug("SlabAggregate \tget_rspec ******* rspec_toxml %s \r\n"\
+                                            #%(rspec.toxml())) 
         return rspec.toxml()          

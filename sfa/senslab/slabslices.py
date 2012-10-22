@@ -52,6 +52,120 @@ class SlabSlices:
 
         return sfa_peer
         
+       #def verify_slice_leases(self, sfa_slice, requested_jobs_dict, peer):
+
+       
+        ##First get the list of current leases from OAR          
+        #leases = self.driver.GetLeases({'name':sfa_slice['slice_hrn']})
+        #logger.debug("SLABSLICES verify_slice_leases requested_jobs_dict %s \
+                        #leases %s "%(requested_jobs_dict, leases ))
+        
+        #current_nodes_reserved_by_start_time = {}
+        #requested_nodes_by_start_time = {}
+        #leases_by_start_time = {}
+        #reschedule_jobs_dict = {}
+        
+        
+                        
+        #if leases : 
+            
+            ##Create reduced dictionary with key start_time and value 
+            ## the list of nodes
+            ##-for the leases already registered by OAR first
+            ## then for the new leases requested by the user
+            
+            ##Leases already scheduled/running in OAR
+            #for lease in leases :
+                #current_nodes_reserved_by_start_time[lease['t_from']] = \
+                        #lease['reserved_nodes']
+                #leases_by_start_time[lease['t_from']] = lease
+                
+            
+            ##Requested jobs     
+            #for start_time in requested_jobs_dict:
+                #requested_nodes_by_start_time[int(start_time)]  = \
+                        #requested_jobs_dict[start_time]['hostname']            
+            ##Check if there is any difference between the leases already
+            ##registered in OAR and the requested jobs.   
+            ##Difference could be:
+            ##-Lease deleted in the requested jobs
+            ##-Added/removed nodes
+            ##-Newly added lease 
+
+        
+            ##Find all deleted leases
+            #start_time_list = \
+                #list(set(leases_by_start_time.keys()).\
+                #difference(requested_nodes_by_start_time.keys()))
+            #deleted_leases = [leases_by_start_time[start_time]['lease_id'] \
+                                #for start_time in start_time_list]
+    
+    
+                
+            ##Find added or removed nodes in exisiting leases
+            #for start_time in requested_nodes_by_start_time:
+                #if start_time in current_nodes_reserved_by_start_time:
+                    
+                    #if requested_nodes_by_start_time[start_time] == \
+                        #current_nodes_reserved_by_start_time[start_time]:
+                        #continue
+                    
+                    #else:
+                        #update_node_set = \
+                                #set(requested_nodes_by_start_time[start_time])
+                        #added_nodes = \
+                            #update_node_set.difference(\
+                            #current_nodes_reserved_by_start_time[start_time])
+                        #shared_nodes = \
+                            #update_node_set.intersection(\
+                            #current_nodes_reserved_by_start_time[start_time])
+                        #old_nodes_set = \
+                            #set(\
+                            #current_nodes_reserved_by_start_time[start_time])
+                        #removed_nodes = \
+                            #old_nodes_set.difference(\
+                            #requested_nodes_by_start_time[start_time])
+                        #logger.debug("SLABSLICES verify_slice_leases \
+                            #shared_nodes %s  added_nodes %s removed_nodes %s"\
+                            #%(shared_nodes, added_nodes,removed_nodes ))
+                        ##If the lease is modified, delete it before 
+                        ##creating it again.
+                        ##Add the deleted lease job id in the list
+                        ##WARNING :rescheduling does not work if there is already  
+                        ## 2 running/scheduled jobs because deleting a job 
+                        ##takes time SA 18/10/2012
+                        #if added_nodes or removed_nodes:
+                            #deleted_leases.append(\
+                                #leases_by_start_time[start_time]['lease_id'])
+                            ##Reschedule the job 
+                            #if added_nodes or shared_nodes:
+                                #reschedule_jobs_dict[str(start_time)] = \
+                                            #requested_jobs_dict[str(start_time)]
+    
+                #else: 
+                        ##New lease 
+                        #job = requested_jobs_dict[str(start_time)]
+                        #self.driver.AddLeases(job['hostname'], \
+                                #sfa_slice, int(job['start_time']), \
+                                #int(job['duration']))
+    
+            ##Deleted leases are the ones with lease id not declared in the Rspec
+            #if deleted_leases:
+                #self.driver.DeleteLeases(deleted_leases, sfa_slice['slice_hrn'])
+                #logger.debug("SLABSLICES \
+                        #verify_slice_leases slice %s deleted_leases %s"\
+                        #%(sfa_slice, deleted_leases))
+                        
+                        
+            #if reschedule_jobs_dict : 
+                #for start_time in reschedule :
+                    #job = reschedule_jobs_dict[start_time]
+                    #self.driver.AddLeases(job['hostname'], \
+                        #sfa_slice, int(job['start_time']), \
+                        #int(job['duration']))
+        #return leases     
+        
+        
         
     def verify_slice_leases(self, sfa_slice, requested_jobs_dict, peer):
 
@@ -61,105 +175,113 @@ class SlabSlices:
         logger.debug("SLABSLICES verify_slice_leases requested_jobs_dict %s \
                         leases %s "%(requested_jobs_dict, leases ))
         
+        current_nodes_reserved_by_start_time = {}
+        requested_nodes_by_start_time = {}
+        leases_by_start_time = {}
+        reschedule_jobs_dict = {}
+
         
-        if leases : 
-            current_nodes_reserved_by_start_time = {}
-            requested_nodes_by_start_time = {}
-            leases_by_start_time = {}
-            #Create reduced dictionary with key start_time and value 
-            # the list of nodes
-            #-for the leases already registered by OAR first
-            # then for the new leases requested by the user
+        #Create reduced dictionary with key start_time and value 
+        # the list of nodes
+        #-for the leases already registered by OAR first
+        # then for the new leases requested by the user
+        
+        #Leases already scheduled/running in OAR
+        for lease in leases :
+            current_nodes_reserved_by_start_time[lease['t_from']] = \
+                    lease['reserved_nodes']
+            leases_by_start_time[lease['t_from']] = lease
             
-            #Leases already scheduled/running in OAR
-            for lease in leases :
-                current_nodes_reserved_by_start_time[lease['t_from']] = \
-                        lease['reserved_nodes']
-                leases_by_start_time[lease['t_from']] = lease
+        
+        #Requested jobs     
+        for start_time in requested_jobs_dict:
+            requested_nodes_by_start_time[int(start_time)]  = \
+                    requested_jobs_dict[start_time]['hostname']            
+        #Check if there is any difference between the leases already
+        #registered in OAR and the requested jobs.   
+        #Difference could be:
+        #-Lease deleted in the requested jobs
+        #-Added/removed nodes
+        #-Newly added lease 
+
+        logger.debug("SLABSLICES verify_slice_leases requested_nodes_by_start_time %s \
+                         "%(requested_nodes_by_start_time ))
+        #Find all deleted leases
+        start_time_list = \
+            list(set(leases_by_start_time.keys()).\
+            difference(requested_nodes_by_start_time.keys()))
+        deleted_leases = [leases_by_start_time[start_time]['lease_id'] \
+                            for start_time in start_time_list]
+
+
+            
+        #Find added or removed nodes in exisiting leases
+        for start_time in requested_nodes_by_start_time: 
+            logger.debug("SLABSLICES verify_slice_leases  start_time %s \
+                         "%( start_time))
+            if start_time in current_nodes_reserved_by_start_time:
                 
-            #Requested jobs     
-            for start_time in requested_jobs_dict:
-                requested_nodes_by_start_time[int(start_time)]  = \
-                        requested_jobs_dict[start_time]['hostname']
-                     
-            #Check if there is any difference between the leases already
-            #registered in OAR and the requested jobs.   
-            #Difference could be:
-            #-Lease deleted in the requested jobs
-            #-Added/removed nodes
-            #-Newly added lease 
+                if requested_nodes_by_start_time[start_time] == \
+                    current_nodes_reserved_by_start_time[start_time]:
+                    continue
+                
+                else:
+                    update_node_set = \
+                            set(requested_nodes_by_start_time[start_time])
+                    added_nodes = \
+                        update_node_set.difference(\
+                        current_nodes_reserved_by_start_time[start_time])
+                    shared_nodes = \
+                        update_node_set.intersection(\
+                        current_nodes_reserved_by_start_time[start_time])
+                    old_nodes_set = \
+                        set(\
+                        current_nodes_reserved_by_start_time[start_time])
+                    removed_nodes = \
+                        old_nodes_set.difference(\
+                        requested_nodes_by_start_time[start_time])
+                    logger.debug("SLABSLICES verify_slice_leases \
+                        shared_nodes %s  added_nodes %s removed_nodes %s"\
+                        %(shared_nodes, added_nodes,removed_nodes ))
+                    #If the lease is modified, delete it before 
+                    #creating it again.
+                    #Add the deleted lease job id in the list
+                    #WARNING :rescheduling does not work if there is already  
+                    # 2 running/scheduled jobs because deleting a job 
+                    #takes time SA 18/10/2012
+                    if added_nodes or removed_nodes:
+                        deleted_leases.append(\
+                            leases_by_start_time[start_time]['lease_id'])
+                        #Reschedule the job 
+                        if added_nodes or shared_nodes:
+                            reschedule_jobs_dict[str(start_time)] = \
+                                        requested_jobs_dict[str(start_time)]
 
-            
-            #Find all deleted leases
-            start_time_list = \
-                list(set(leases_by_start_time.keys()).\
-                difference(requested_nodes_by_start_time.keys()))
-            deleted_leases = [leases_by_start_time[start_time]['lease_id'] \
-                                for start_time in start_time_list]
-
-  
-            reschedule_jobs_dict = {}
-            #Find added or removed nodes in exisiting leases
-            for start_time in requested_nodes_by_start_time:
-                if start_time in current_nodes_reserved_by_start_time:
+            else: 
+                    #New lease
                     
-                    if requested_nodes_by_start_time[start_time] == \
-                        current_nodes_reserved_by_start_time[start_time]:
-                        continue
-                    
-                    else:
-                        update_node_set = \
-                                set(requested_nodes_by_start_time[start_time])
-                        added_nodes = \
-                            update_node_set.difference(\
-                            current_nodes_reserved_by_start_time[start_time])
-                        shared_nodes = \
-                            update_node_set.intersection(\
-                            current_nodes_reserved_by_start_time[start_time])
-                        old_nodes_set = \
-                            set(\
-                            current_nodes_reserved_by_start_time[start_time])
-                        removed_nodes = \
-                            old_nodes_set.difference(\
-                            requested_nodes_by_start_time[start_time])
-                        logger.debug("SLABSLICES verify_slice_leases \
-                            shared_nodes %s  added_nodes %s removed_nodes %s"\
-                            %(shared_nodes, added_nodes,removed_nodes ))
-                        #If the lease is modified, delete it before 
-                        #creating it again.
-                        #Add the deleted lease job id in the list
-                        #WARNING :rescheduling does not work if there is already  
-                        # 2 running/scheduled jobs because deleting a job 
-                        #takes time SA 18/10/2012
-                        if added_nodes or removed_nodes:
-                            deleted_leases.append(\
-                                leases_by_start_time[start_time]['lease_id'])
-                            #Reschedule the job 
-                            if added_nodes or shared_nodes:
-                                reschedule_jobs_dict[str(start_time)] = \
-                                            requested_jobs_dict[str(start_time)]
-
-                else: 
-                        #New lease 
-                        job = requested_jobs_dict[str(start_time)]
-                        self.driver.AddLeases(job['hostname'], \
-                                sfa_slice, int(job['start_time']), \
-                                int(job['duration']))
-
-            #Deleted leases are the ones with lease id not declared in the Rspec
-            if deleted_leases:
-                self.driver.DeleteLeases(deleted_leases, sfa_slice['slice_hrn'])
-                logger.debug("SLABSLICES \
-                        verify_slice_leases slice %s deleted_leases %s"\
-                        %(sfa_slice, deleted_leases))
-                        
-                        
-            if reschedule_jobs_dict : 
-                for start_time in reschedule :
-                    job = reschedule_jobs_dict[start_time]
+                    job = requested_jobs_dict[str(start_time)]
+                    logger.debug("SLABSLICES \
+                    NEWLEASE slice %s  job %s"\
+                    %(sfa_slice, job)) 
                     self.driver.AddLeases(job['hostname'], \
-                        sfa_slice, int(job['start_time']), \
-                        int(job['duration']))
+                            sfa_slice, int(job['start_time']), \
+                            int(job['duration']))
+
+        #Deleted leases are the ones with lease id not declared in the Rspec
+        if deleted_leases:
+            self.driver.DeleteLeases(deleted_leases, sfa_slice['slice_hrn'])
+            logger.debug("SLABSLICES \
+                    verify_slice_leases slice %s deleted_leases %s"\
+                    %(sfa_slice, deleted_leases))
+                    
+                    
+        if reschedule_jobs_dict : 
+            for start_time in reschedule :
+                job = reschedule_jobs_dict[start_time]
+                self.driver.AddLeases(job['hostname'], \
+                    sfa_slice, int(job['start_time']), \
+                    int(job['duration']))
         return leases
 
     def verify_slice_nodes(self, sfa_slice, requested_slivers, peer):

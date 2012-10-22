@@ -303,7 +303,10 @@ def  TestSfi(arg = None):
 
     print " =================    SFI.PY STATUS SLICE   ============="
     status_slice = os.system("sfi.py status senslab2.avakian_slice")
-
+    
+    print " =================    SFI.PY DELETE SLICE   ============="
+    status_slice = os.system("sfi.py delete senslab2.avakian_slice")
+    
     print " =================    SFI.PY CREATE SLICE   ============="
     create = os.system("sfi.py create senslab2.avakian_slice /home/savakian/flab-sfa/rspec_sfa.rspec")
       
