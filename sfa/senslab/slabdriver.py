@@ -1050,10 +1050,10 @@ class SlabDriver(Driver):
                     # First put the walltime in seconds oarAdditionalDelay = 20;
                     #  additional delay for /bin/sleep command to
                     # take in account  prologue and epilogue scripts execution
-                    # int walltimeAdditionalDelay = 120;  additional delay
+                    # int walltimeAdditionalDelay = 240;  additional delay
                     desired_walltime = duration 
-                    total_walltime = desired_walltime + 140#+2 min 20
-                    sleep_walltime = desired_walltime + 20 #+20 sec
+                    total_walltime = desired_walltime + 240 #+4 min Update SA 23/10/12
+                    sleep_walltime = desired_walltime  # 0 sec added Update SA 23/10/12
                     walltime = []
                     #Put the walltime back in str form
                     #First get the hours
