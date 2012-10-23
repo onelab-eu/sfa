@@ -209,7 +209,7 @@ class SlabDriver(Driver):
                                     requested_slivers %s  listnodes %s" \
                                     %(requested_slivers,l))
         #verify_slice_nodes returns nodes, but unused here. Removed SA 13/08/12.
-        slices.verify_slice_nodes(sfa_slice, requested_slivers, peer) 
+        #slices.verify_slice_nodes(sfa_slice, requested_slivers, peer) 
         
         # add/remove leases
         requested_lease_list = []

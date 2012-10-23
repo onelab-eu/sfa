@@ -163,7 +163,7 @@ class SlabSlices:
                     
                     
         if reschedule_jobs_dict : 
-            for start_time in reschedule :
+            for start_time in  reschedule_jobs_dict:
                 job = reschedule_jobs_dict[start_time]
                 self.driver.AddLeases(job['hostname'], \
                     sfa_slice, int(job['start_time']), \
@@ -186,7 +186,7 @@ class SlabSlices:
             #added_nodes = list(set(requested_slivers).\
                                         #difference(current_slivers))
 
-            #Update the table with the nodes that populate the slice
+
             logger.debug("SLABSLICES \tverify_slice_nodes slice %s\
                                          \r\n \r\n deleted_nodes %s"\
                                         %(sfa_slice, deleted_nodes))
