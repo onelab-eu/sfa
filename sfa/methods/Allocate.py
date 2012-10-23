@@ -52,7 +52,7 @@ class Allocate(Method):
             chain_name = 'FORWARD-INCOMING'
         self.api.logger.debug("Allocate: sfatables on chain %s"%chain_name)
         origin_hrn = Credential(cred=valid_creds[0]).get_gid_caller().get_hrn()
-        self.api.logger.info("interface: %s\tcaller-hrn: %s\ttarget-hrn: %s\tmethod-name: %s"%(self.api.interface, origin_hrn, xrns, self.name)) 
+        self.api.logger.info("interface: %s\tcaller-hrn: %s\ttarget-hrn: %s\tmethod-name: %s"%(self.api.interface, origin_hrn, xrn, self.name)) 
         rspec = run_sfatables(chain_name, xrn.get_hrn(), origin_hrn, rspec)
         slivers = RSpec(rspec).version.get_nodes_with_slivers()
         if not slivers:
