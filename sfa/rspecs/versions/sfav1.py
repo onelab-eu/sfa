@@ -15,8 +15,8 @@ class SFAv1(RSpecVersion):
     type = 'SFA'
     content_type = '*'
     version = '1'
-    schema = None
-    namespace = None
+    schema = ''
+    namespace = ''
     extensions = {}
     namespaces = None
     template = '<RSpec type="%s"></RSpec>' % type
