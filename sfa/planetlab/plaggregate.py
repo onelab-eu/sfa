@@ -130,7 +130,6 @@ class PlAggregate:
             filter['name'] = list(names)
         if slice_ids:
             filter['slice_id'] = list(slice_ids)
-        logger.debug('plaggregate.get_slivers: filter: %s' % str(filter)) 
         slices = self.driver.shell.GetSlices(filter)
         if not slices:
             return []
