@@ -342,22 +342,17 @@ class PlSlices:
         slices = self.driver.shell.GetSlices([slicename]) 
         if not slices:
             slice = {'name': slicename,
-                     'url': slice_record.get('url', slice_hrn), 
-                     'description': slice_record.get('description', slice_hrn)}
+                     'url': 'No Url', 
+                     'description': 'No Description'}
             # add the slice                          
             slice['slice_id'] = self.driver.shell.AddSlice(slice)
             slice['node_ids'] = []
             slice['person_ids'] = []
-            if peer:
+            if peer and slice_record:
                 slice['peer_slice_id'] = slice_record.get('slice_id', None) 
-            # mark this slice as an sfa peer record
-#            if sfa_peer:
-#                peer_dict = {'type': 'slice', 'hrn': slice_hrn, 
-#                             'peer_authority': sfa_peer, 'pointer': slice['slice_id']}
-#                self.registry.register_peer_object(self.credential, peer_dict)
         else:
             slice = slices[0]
-            if peer:
+            if peer and slice_record:
                 slice['peer_slice_id'] = slice_record.get('slice_id', None)
                 # unbind from peer so we can modify if necessary. Will bind back later
                 self.driver.shell.UnBindObjectFromPeer('slice', slice['slice_id'], peer['shortname'])

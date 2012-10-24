@@ -129,8 +129,11 @@ class PlAggregate:
         if names:
             filter['name'] = list(names)
         if slice_ids:
-            filter['slice_id'] = list(slice_ids) 
+            filter['slice_id'] = list(slice_ids)
+        logger.debug('plaggregate.get_slivers: filter: %s' % str(filter)) 
         slices = self.driver.shell.GetSlices(filter)
+        if not slices:
+            return []
         slice = slices[0]
         if node_ids:
             slice['node_ids'] = node_ids
@@ -336,7 +339,7 @@ class PlAggregate:
         geni_slivers = []
         slivers = self.get_slivers(urns, options) 
         if len(slivers) == 0:
-            raise SliverDoesNotExist("You have not allocated any slivers here")
+            raise SliverDoesNotExist("You have not allocated any slivers here for %s" % str(urns))
         rspec.xml.set('expires',  datetime_to_string(utcparse(slivers[0]['expires'])))
       
         if not options.get('list_leases') or options['list_leases'] != 'leases':
