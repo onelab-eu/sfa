@@ -4,10 +4,9 @@ from collections import defaultdict
 from sfa.util.sfatime import utcparse, datetime_to_epoch
 from sfa.util.sfalogging import logger
 from sfa.util.xrn import Xrn, get_leaf, get_authority, urn_to_hrn
-
 from sfa.rspecs.rspec import RSpec
-
 from sfa.planetlab.vlink import VLink
+from sfa.planetlab.topology import Topology
 from sfa.planetlab.plxrn import PlXrn, hrn_to_pl_slicename
 
 MAXINT =  2L**31-1
@@ -215,10 +214,15 @@ class PlSlices:
         return str(key)
 
     def verify_slice_links(self, slice, requested_links, nodes):
-        # nodes is undefined here
+         
         if not requested_links:
             return
-   
+
+        # exit if links are not supported here
+        topology = Topology()
+        if not topology:
+            return 
+
         # build dict of nodes 
         nodes_dict = {}
         interface_ids = []
