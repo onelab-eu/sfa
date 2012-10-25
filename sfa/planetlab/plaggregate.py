@@ -238,7 +238,7 @@ class PlAggregate:
             nodes_dict[node['node_id']] = node
         return nodes_dict
 
-    def rspec_node_to_geni_sliver(self, rspec_node):
+    def rspec_node_to_geni_sliver(self, rspec_node, allocation_status=None):
         op_status = "geni_unknown"
         state = rspec_node['boot_state'].lower()
         if state == 'boot':
@@ -246,10 +246,13 @@ class PlAggregate:
         else:
             op_status =' geni_failed'
 
+        if not allocation_status:
+            allocation_status = 'provisioned'
+
         # required fields
         geni_sliver = {'geni_sliver_urn': rspec_node['sliver_id'],
                        'geni_expires': rspec_node['expires'],
-                       'geni_allocation_status': 'geni_provisioned',
+                       'geni_allocation_status': allocation_status,
                        'geni_operational_status': op_status,
                        'geni_error': None,
                        }
@@ -328,7 +331,7 @@ class PlAggregate:
             rspec.version.add_links(links)
         return rspec.toxml()
 
-    def describe(self, urns, version=None, options={}):
+    def describe(self, urns, version=None, options={}, allocation_status=None):
         version_manager = VersionManager()
         version = version_manager.get_version(version)
         rspec_version = version_manager._get_version(version.type, version.version, 'manifest')
@@ -361,7 +364,7 @@ class PlAggregate:
                 if sliver['slice_ids_whitelist'] and sliver['slice_id'] not in sliver['slice_ids_whitelist']:
                     continue
                 rspec_node = self.sliver_to_rspec_node(sliver, sites, interfaces, node_tags, pl_initscripts)
-                geni_sliver = self.rspec_node_to_geni_sliver(rspec_node)
+                geni_sliver = self.rspec_node_to_geni_sliver(rspec_node, allocation_status=allocation_status)
                 rspec_nodes.append(rspec_node) 
                 geni_slivers.append(geni_sliver)
             rspec.version.add_nodes(rspec_nodes)
