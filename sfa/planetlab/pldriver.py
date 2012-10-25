@@ -568,7 +568,7 @@ class PlDriver (Driver):
         rspec =  aggregate.list_resources(version=version, options=options)
         return rspec
 
-    def describe(self, urns, version, options={}):
+    def describe(self, urns, version, options={}, allocation_status=None):
         aggregate = PlAggregate(self)
         return aggregate.describe(urns, version=version, options=options)
     
