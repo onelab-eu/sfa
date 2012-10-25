@@ -700,10 +700,10 @@ class PlDriver (Driver):
         # only used by plc and ple.
         slices.handle_peer(site, slice, persons, peer)
         
-        return aggregate.describe([xrn.get_urn()], version=rspec.version, allocation_status='allocated')
+        return aggregate.describe([xrn.get_urn()], version=rspec.version, allocation_status='geni_allocated')
 
     def provision(self, urns, options={}):
-        return self.describe(urns, None, options=options, allocation_status='provisioned')
+        return self.describe(urns, None, options=options, allocation_status='geni_provisioned')
 
     def delete(self, urns, options={}):
         names = []

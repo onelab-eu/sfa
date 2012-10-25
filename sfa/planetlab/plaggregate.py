@@ -247,7 +247,7 @@ class PlAggregate:
             op_status =' geni_failed'
 
         if not allocation_status:
-            allocation_status = 'provisioned'
+            allocation_status = 'geni_provisioned'
 
         # required fields
         geni_sliver = {'geni_sliver_urn': rspec_node['sliver_id'],
