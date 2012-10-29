@@ -90,8 +90,9 @@ class SlabSlices:
         #-Added/removed nodes
         #-Newly added lease 
 
-        logger.debug("SLABSLICES verify_slice_leases requested_nodes_by_start_time %s \
-                         "%(requested_nodes_by_start_time ))
+        logger.debug("SLABSLICES verify_slice_leases \
+                        requested_nodes_by_start_time %s \
+                        "%(requested_nodes_by_start_time ))
         #Find all deleted leases
         start_time_list = \
             list(set(leases_by_start_time.keys()).\
