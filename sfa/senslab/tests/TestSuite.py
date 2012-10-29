@@ -95,27 +95,26 @@ def TestLdap(job_id = None):
     record['mail'] = "robin@arkham.fr"
     
     
+    login = ldap.generate_login(data)
+    print "\r\n Robin \tgenerate_login  ", ret
     
-    #login = ldap.generate_login(data)
-    #print "\r\n Robin \tgenerate_login  ", ret 
-    
-    #ret = ldap.LdapAddUser(data)
-    #print "\r\n Robin  \tLdapAddUser ", ret 
+    ret = ldap.LdapAddUser(data)
+    print "\r\n Robin  \tLdapAddUser ", ret
 
-    #req_ldap = '(uid=' + login + ')'
-    #ret = ldap.LdapSearch(req_ldap, [])
-    #print "\r\n Robin \tldap.LdapSearch ids = %s %s"%(login,ret )
+    req_ldap = '(uid=' + login + ')'
+    ret = ldap.LdapSearch(req_ldap, [])
+    print "\r\n Robin \tldap.LdapSearch ids = %s %s"%(login,ret )
     
-    #password = "Thridrobin"
-    #enc = ldap.encrypt_password(password)
-    #print "\r\n Robin \tencrypt_password ", enc
+    password = "Thridrobin"
+    enc = ldap.encrypt_password(password)
+    print "\r\n Robin \tencrypt_password ", enc
     
-    #ret = ldap.LdapModifyUser(record, {'userPassword':enc})
-    #print "\r\n Robin \tChange password LdapModifyUser ", ret 
+    ret = ldap.LdapModifyUser(record, {'userPassword':enc})
+    print "\r\n Robin \tChange password LdapModifyUser ", ret
     
-    #dn = 'uid=' + login + ',' + ldap.baseDN
-    #ret = ldap.LdapDelete(dn)
-    #print "\r\n Robin  \tLdapDelete ", ret 
+    dn = 'uid=' + login + ',' + ldap.baseDN
+    ret = ldap.LdapDelete(dn)
+    print "\r\n Robin  \tLdapDelete ", ret
     
     datanight = {}
     datanight['last_name'] = "Grayson"
@@ -248,7 +247,9 @@ def TestOAR(job_id = None):
     print "\r\nOAR ", uri, raw_json, "\r\n KKK \t",raw_json.keys()
     return
     
-def TestSlabDriver(job_id = '1'):
+def TestSlabDriver(job_id = None):
+    if job_id is None:
+        job_id = 1
     if isinstance(job_id,list) and len(job_id) == 1:
        job_id = job_id[0]
     slabdriver = SlabDriver(Config())
@@ -258,10 +259,10 @@ def TestSlabDriver(job_id = '1'):
     l = slabdriver.GetSlices(slice_filter = '269', slice_filter_type = 'record_id_user')
     
     
-    print "\r\n \r\nGetSlices" ,l
+    print "\r\n \r\nGetSlices", l
     
     persons = slabdriver.GetPersons()
-    print "\r\n \r\n  GetPersons" ,persons
+    print "\r\n \r\n  GetPersons", persons
     #slabdriver.DeleteJobs(job_id,'senslab2.avakian_slice')
   
   
@@ -314,9 +315,11 @@ def  TestSfi(arg = None):
     create = os.system("sfi.py create senslab2.avakian_slice /home/savakian/flab-sfa/rspec_sfa.rspec")
       
       
-def RunAll():
-    TestLdap()
-    TestOAR()
+def RunAll(job_id = 1):
+    TestLdap(job_id)
+    TestOAR(job_id)
+    TestSlabDriver(job_id)
+    TestSfi()
     
    
 supported_options = {
