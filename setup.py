@@ -47,6 +47,7 @@ packages = [
     'sfa/client',
     'sfa/planetlab',
     'sfa/nitos',
+    'sfa/dummy',
     'sfa/openstack',
     'sfa/federica',
     'sfatables',

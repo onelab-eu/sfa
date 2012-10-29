@@ -35,7 +35,8 @@ flavour_xml_section_hash = { \
     'pl':'sfa_plc',
     'openstack':'sfa_nova',
     'fd':'sfa_federica',
-    'nitos':'sfa_nitos'
+    'nitos':'sfa_nitos',
+    'dummy':'sfa_dummy',
     }
 configuration={ \
     'name':'sfa',

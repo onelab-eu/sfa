@@ -93,6 +93,11 @@ Summary: the SFA layer around NITOS
 Group: Applications/System
 Requires: sfa
 
+%package dummy
+Summary: the SFA layer around a Dummy Testbed 
+Group: Applications/System
+Requires: sfa
+
 %package sfatables
 Summary: sfatables policy tool for SFA
 Group: Applications/System
@@ -131,6 +136,9 @@ The SFA driver for FEDERICA.
 
 %description nitos
 The SFA driver for NITOS.
+
+%description dummy
+The SFA driver for a Dummy Testbed.
 
 %description sfatables
 sfatables is a tool for defining access and admission control policies
@@ -220,6 +228,9 @@ rm -rf $RPM_BUILD_ROOT
 
 %files nitos
 %{python_sitelib}/sfa/nitos
+
+%files dummy
+%{python_sitelib}/sfa/dummy
 
 %files sfatables
 /etc/sfatables/*
