@@ -39,15 +39,16 @@ class Slabv1Lease:
 
     @staticmethod
     def get_lease_objs(lease_elems):
-        leases = []    
+        leases = []
         for lease_elem in lease_elems:
-            lease = Lease(lease_elem.attrib, lease_elem)
-            if lease.get('lease_id'):
-               lease['lease_id'] = lease_elem.attrib['lease_id']
-            lease['component_id'] = lease_elem.attrib['component_id']
-            lease['slice_id'] = lease_elem.attrib['slice_id']
-            lease['start_time'] = lease_elem.attrib['start_time']
-            lease['duration'] = lease_elem.attrib['duration']
+            #get nodes
+            node_elems = lease_elem.xpath('./default:node | ./node')
+            for node_elem in node_elems:
+                 lease = Lease(lease_elem.attrib, lease_elem)
+                 lease['slice_id'] = lease_elem.attrib['slice_id']
+                 lease['start_time'] = lease_elem.attrib['start_time']
+                 lease['duration'] = lease_elem.attrib['duration']
+                 lease['component_id'] = node_elem.attrib['component_id']
+                 leases.append(lease)
 
-            leases.append(lease)
-        return leases      
+        return leases
