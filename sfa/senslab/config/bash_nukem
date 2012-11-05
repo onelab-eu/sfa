@@ -71,6 +71,7 @@ sudo cp $git_local_repo/sfa/senslab/config/$vm/default_config.xml /etc/sfa/defau
 # sudo cp $git_local_repo/sfa/senslab/config/$vm/site_config  /etc/sfa/configs/site_config
 # sudo ln -s ldap_config.py  /etc/sfa/ldap_config.py
 sudo cp $git_local_repo/sfa/senslab/config/ldap_config.py  /etc/sfa/ldap_config.py 
+sudo cp $git_local_repo/sfa/senslab/config/oar_config.py  /etc/sfa/oar_config.py 
 sudo service sfa restart
 
 # User stuff : clean your folder

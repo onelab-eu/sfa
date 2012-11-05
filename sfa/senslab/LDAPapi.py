@@ -4,7 +4,7 @@ from sfa.util.xrn import get_authority
 import ldap
 from sfa.util.config import Config
 from sfa.trust.hierarchy import Hierarchy
-#from sfa.trust.certificate import *
+
 import ldap.modlist as modlist
 from sfa.util.sfalogging import logger
 import os.path
@@ -14,6 +14,7 @@ import os.path
 
 class LdapConfig():
     def __init__(self, config_file =  '/etc/sfa/ldap_config.py'):
+        
         try:
             execfile(config_file, self.__dict__)
        
@@ -216,7 +217,7 @@ class LDAPapi :
         """
         #Keep consistency with Java Senslab's LDAP API 
         #RFC2307SSHAPasswordEncryptor so set the salt size to 8 bytres
-        return lssha.encrypt(password,salt_size = 8)
+        return lssha.encrypt(password, salt_size = 8)
     
 
 
@@ -344,7 +345,7 @@ class LDAPapi :
         #If the user wants to set his own password , he must go to the Senslab 
         #website.
         password = self.generate_password()
-        attrs['userPassword']= self.encrypt_password(password)
+        attrs['userPassword'] = self.encrypt_password(password)
         
         #Account automatically validated (no mail request to admins)
         #Set to 0 to disable the account, -1 to enable it,

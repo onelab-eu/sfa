@@ -3,7 +3,7 @@ from httplib import HTTPConnection, HTTPException
 import json
 #import datetime
 #from time import gmtime, strftime 
-
+import os.path
 #import urllib
 #import urllib2
 from sfa.util.config import Config
@@ -11,8 +11,8 @@ from sfa.util.config import Config
 
 from sfa.util.sfalogging import logger
 
-
 OARIP = '194.199.16.166'
+
 
 OAR_REQUEST_POST_URI_DICT = {'POST_job':{'uri': '/oarapi/jobs.json'},
                             'DELETE_jobs_id':{'uri':'/oarapi/jobs/id.json'},
@@ -28,14 +28,26 @@ POST_FORMAT = {'json' : {'content':"application/json", 'object':json},}
 
 
 class OARrestapi:
-    def __init__(self):
+    def __init__(self, config_file =  '/etc/sfa/oar_config.py'):
         self.oarserver = {}
-        self.oarserver['ip'] = OARIP
-        self.oarserver['port'] = 8800
+       
+        
         self.oarserver['uri'] = None
         self.oarserver['postformat'] = 'json'
+        
+        try:
+            execfile(config_file, self.__dict__)
+       
+            self.config_file = config_file
+            # path to configuration data
+            self.config_path = os.path.dirname(config_file)
+            
+        except IOError:
+            raise IOError, "Could not find or load the configuration file: %s" \
+                            % config_file
         #logger.setLevelDebug()
-
+        self.oarserver['ip'] = self.OAR_IP
+        self.oarserver['port'] = self.OAR_PORT
         self.jobstates  = ['Terminated', 'Hold', 'Waiting', 'toLaunch', \
                             'toError', 'toAckReservation', 'Launching', \
                             'Finishing', 'Running', 'Suspended', 'Resuming',\
