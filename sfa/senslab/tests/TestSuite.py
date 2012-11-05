@@ -199,13 +199,14 @@ def get_stuff(oar, uri):
 
   
 def TestOAR(job_id = None):
-    
-    if isinstance(job_id,list) and len(job_id) == 1:
-       job_id = job_id[0]
-       
-    if job_id is None :
-        job_id = 1
+    print "JOB_ID",  job_id    
+    if isinstance(job_id,list) :
+        if len(job_id) >= 1:
+            job_id = job_id[0]
+        else:
+            job_id = '1'
         
+    print "JOB_ID",  job_id    
     oar = OARrestapi()
     jobs = oar.parser.SendRequest("GET_reserved_nodes", username = 'avakian') 
     print "\r\n OAR GET_reserved_nodes ",jobs
