@@ -342,6 +342,20 @@ Thierry Parmentelat
     </category>
 
     <!-- ======================================== -->
+    <category id="sfa_dummy">
+      <name></name>
+      <description>The settings for using SFA with a demmy testbed.</description>
+
+      <variablelist>
+        <variable id="url" type="string">
+          <name>XMLRPC URL</name>
+          <value>http://127.0.0.1:8080</value>
+          <description>URL for the Dummy Testbed xmlrpc API</description>
+        </variable>
+      </variablelist>
+    </category>
+
+    <!-- ======================================== -->
 
   </variables>
 
