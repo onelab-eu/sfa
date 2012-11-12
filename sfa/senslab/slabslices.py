@@ -319,8 +319,8 @@ class SlabSlices:
         if slices_list:
             for sl in slices_list:
             
-                logger.debug("SLABSLICE \tverify_slice slicename %s sl %s \
-                                    slice_record %s"%(slicename, sl, \
+                logger.debug("SLABSLICE \tverify_slice slicename %s slices_list %s sl %s \
+                                    slice_record %s"%(slicename, slices_list,sl, \
                                                             slice_record))
                 sfa_slice = sl
                 sfa_slice.update(slice_record)

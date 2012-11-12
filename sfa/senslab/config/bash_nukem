@@ -31,12 +31,12 @@ fi
 # First restart sfa (prevents stalling when connecting
 # to the DB and dropping tables)
 sudo service sfa restart
+
 # Nuke the database 
 sudo sfaadmin.py registry nuke
 
 # Drop table in slab_sfa
 # to avoid duplicates.
-
 psql -d slab_sfa -U sfa -W -q -c "drop table slice_senslab;"
 
 
@@ -70,8 +70,16 @@ sudo cp $git_local_repo/sfa/senslab/config/$vm/default_config.xml /etc/sfa/defau
 # sudo cp $git_local_repo/sfa/senslab/config/$vm/site.xml  /etc/sfa/site.xml
 # sudo cp $git_local_repo/sfa/senslab/config/$vm/site_config  /etc/sfa/configs/site_config
 # sudo ln -s ldap_config.py  /etc/sfa/ldap_config.py
-sudo cp $git_local_repo/sfa/senslab/config/ldap_config.py  /etc/sfa/ldap_config.py 
-sudo cp $git_local_repo/sfa/senslab/config/oar_config.py  /etc/sfa/oar_config.py 
+
+#Senslab LDAP and OAR access config files
+if [ !-f /etc/sfa/ldap_config.py ] 
+then
+    sudo cp $git_local_repo/sfa/senslab/config/ldap_config.py  /etc/sfa/ldap_config.py 
+
+if [ !-f /etc/sfa/oar_config.py ] 
+then
+    sudo cp $git_local_repo/sfa/senslab/config/oar_config.py  /etc/sfa/oar_config.py 
+
 sudo service sfa restart
 
 # User stuff : clean your folder

@@ -844,8 +844,10 @@ class SlabDriver(Driver):
                 #slicerec_dict.update({'node_ids':[lease['reserved_nodes'][n]['hostname'] for n in lease['reserved_nodes']]})
                 slicerec_dict.update({'list_node_ids':{'hostname':reserved_list}})   
                 slicerec_dict.update({'node_ids':lease['reserved_nodes']})
-                slicerec_dict.update(fixed_slicerec_dict)
-                slicerec_dict.update({'hrn':\
+                #If the slice does not belong to senslab:
+                if fixed_slicerec_dict:
+                    slicerec_dict.update(fixed_slicerec_dict)
+                    slicerec_dict.update({'hrn':\
                                     str(fixed_slicerec_dict['slice_hrn'])})
                     
     
@@ -876,8 +878,11 @@ class SlabDriver(Driver):
                     if owner == lease['user']:
                         slicerec_dict['oar_job_id'] = lease['lease_id']
                         reserved_list = []
-                        for reserved_node in lease['reserved_nodes']:
-                            reserved_list.append(reserved_node['hostname'])
+                        
+                        #for reserved_node in lease['reserved_nodes']:
+                        logger.debug("SLABDRIVER.PY  \tGetSlices lease %s " %(lease ))
+                            #reserved_list.append(reserved_node['hostname'])
+                        reserved_list.extend(lease['reserved_nodes'])
                         #slicerec_dict.update({'node_ids':{'hostname':reserved_list}})    
                         #slicerec_dict.update({'node_ids':[lease['reserved_nodes'][n]['hostname'] for n in lease['reserved_nodes']]})
                         slicerec_dict.update({'node_ids':lease['reserved_nodes']})
@@ -1291,6 +1296,7 @@ class SlabDriver(Driver):
                     try:
                         for rec in recslice_list:
                             record['oar_job_id'].append(rec['oar_job_id'])
+                            record['node_ids'] = [ self.root_auth + hostname for hostname in rec['node_ids']]
                     except KeyError:
                         pass
 
