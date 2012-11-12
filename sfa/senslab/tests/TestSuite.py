@@ -205,7 +205,8 @@ def TestOAR(job_id = None):
             job_id = job_id[0]
         else:
             job_id = '1'
-        
+    else:
+        job_id = '1'    
     print "JOB_ID",  job_id    
     oar = OARrestapi()
     jobs = oar.parser.SendRequest("GET_reserved_nodes", username = 'avakian') 
@@ -316,10 +317,10 @@ def  TestSfi(arg = None):
     create = os.system("sfi.py create senslab2.avakian_slice /home/savakian/flab-sfa/rspec_sfa.rspec")
       
       
-def RunAll(job_id = 1):
-    TestLdap(job_id)
-    TestOAR(job_id)
-    TestSlabDriver(job_id)
+def RunAll( arg ):
+    TestLdap()
+    TestOAR()
+    TestSlabDriver()
     TestSfi()
     
    

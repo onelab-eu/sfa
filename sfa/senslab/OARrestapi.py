@@ -11,8 +11,6 @@ from sfa.util.config import Config
 
 from sfa.util.sfalogging import logger
 
-OARIP = '194.199.16.166'
-
 
 OAR_REQUEST_POST_URI_DICT = {'POST_job':{'uri': '/oarapi/jobs.json'},
                             'DELETE_jobs_id':{'uri':'/oarapi/jobs/id.json'},
