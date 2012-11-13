@@ -891,15 +891,15 @@ class SlabDriver(Driver):
                         slicerec_dict.update({'hrn':\
                                     str(fixed_slicerec_dict['slice_hrn'])})
                         slicerec_dictlist.append(slicerec_dict)
-            
+                        fixed_slicerec_dict.update(slicerec_dict)
             logger.debug("SLABDRIVER.PY  \tGetSlices RETURN slices %s \
                         slice_filter %s " %(return_slice_list, slice_filter))
         
         #if return_fields_list:
             #return_slice_list  = parse_filter(sliceslist, \
                                 #slice_filter,'slice', return_fields_list)
-
-        return slicerec_dictlist
+        return return_slice_list
+        #return slicerec_dictlist
         
     
     def testbed_name (self): return self.hrn

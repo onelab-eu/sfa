@@ -338,8 +338,9 @@ class SlabAggregate:
             lease_option = options['list_leases']
         except KeyError:
             #If no options are specified, at least print the resources
-            if slice_xrn :
-                lease_option = 'all'
+            lease_option = 'all'
+           #if slice_xrn :
+               #lease_option = 'all'
             pass 
         
         if lease_option in ['all', 'resources']:
