@@ -89,6 +89,7 @@ class SlabImporter:
         sites_listdict  = slabdriver.GetSites()
         
         ldap_person_listdict = slabdriver.GetPersons()
+        print>>sys.stderr,"\r\n SLABIMPORT \t ldap_person_listdict %s \r\n" %(ldap_person_listdict)
         slices_listdict = slabdriver.GetSlices()
         try:
             slices_by_userid = dict ( [ (one_slice['record_id_user'], one_slice ) for one_slice in slices_listdict ] )
@@ -164,139 +165,143 @@ class SlabImporter:
                 node_record.stale=False
                     
                     
-            # import persons
-            for person in ldap_person_listdict : 
-                if 'ssh-rsa' not in person['pkey']:
-                    continue
-                person_hrn = person['hrn']
-                slice_hrn = self.slicename_to_hrn(person['hrn'])
-               
-                # xxx suspicious again
-                if len(person_hrn) > 64: person_hrn = person_hrn[:64]
-                person_urn = hrn_to_urn(person_hrn, 'user')
-    
-                user_record = self.find_record_by_type_hrn('user', person_hrn)
-                slice_record = self.find_record_by_type_hrn ('slice', slice_hrn)
+        # import persons
+        for person in ldap_person_listdict : 
+            print>>sys.stderr,"SlabImporter: person: %s" %(person['hrn'])
+            if 'ssh-rsa' not in person['pkey']:
+                #people with invalid ssh key (ssh-dss, empty, bullshit keys...)
+                #won't be imported
+                continue
+            person_hrn = person['hrn']
+            slice_hrn = self.slicename_to_hrn(person['hrn'])
+            
+            # xxx suspicious again
+            if len(person_hrn) > 64: person_hrn = person_hrn[:64]
+            person_urn = hrn_to_urn(person_hrn, 'user')
+
+            user_record = self.find_record_by_type_hrn('user', person_hrn)
+            slice_record = self.find_record_by_type_hrn ('slice', slice_hrn)
+            
+            # return a tuple pubkey (a plc key object) and pkey (a Keypair object)
+            def init_person_key (person, slab_key):
+                pubkey = None
+                if  person['pkey']:
+                    # randomly pick first key in set
+                    pubkey = slab_key
+                    
+                    try:
+                        pkey = convert_public_key(pubkey)
+                    except TypeError:
+                        #key not good. create another pkey
+                        self.logger.warn('SlabImporter: \
+                                            unable to convert public \
+                                            key for %s' % person_hrn)
+                        pkey = Keypair(create=True)
+                    
+                else:
+                    # the user has no keys. Creating a random keypair for the user's gid
+                    self.logger.warn("SlabImporter: person %s does not have a  public key"%person_hrn)
+                    pkey = Keypair(create=True) 
+                return (pubkey, pkey)
+                            
                 
-                # return a tuple pubkey (a plc key object) and pkey (a Keypair object)
-                def init_person_key (person, slab_key):
-                    pubkey = None
-                    if  person['pkey']:
-                        # randomly pick first key in set
-                        pubkey = slab_key
+            try:
+                slab_key = person['pkey']
+                # new person
+                if not user_record:
+                    (pubkey,pkey) = init_person_key (person, slab_key )
+                    if pubkey is not None and pkey is not None :
+                        person_gid = self.auth_hierarchy.create_gid(person_urn, create_uuid(), pkey)
+                        if person['email']:
+                            print>>sys.stderr, "\r\n \r\n SLAB IMPORTER PERSON EMAIL OK email %s " %(person['email'])
+                            person_gid.set_email(person['email'])
+                            user_record = RegUser (hrn=person_hrn, gid=person_gid, 
+                                                    pointer='-1', 
+                                                    authority=get_authority(person_hrn),
+                                                    email=person['email'])
+                        else:
+                            user_record = RegUser (hrn=person_hrn, gid=person_gid, 
+                                                    pointer='-1', 
+                                                    authority=get_authority(person_hrn))
+                            
+                        if pubkey: 
+                            user_record.reg_keys = [RegKey (pubkey)]
+                        else:
+                            self.logger.warning("No key found for user %s"%user_record)
+                        user_record.just_created()
+                        dbsession.add (user_record)
+                        dbsession.commit()
+                        self.logger.info("SlabImporter: imported person: %s" % user_record)
+                        self.update_just_added_records_dict( user_record )
+                else:
+                    # update the record ?
+                    # if user's primary key has changed then we need to update the 
+                    # users gid by forcing an update here
+                    sfa_keys = user_record.reg_keys
+                    print>>sys.stderr,"SlabImporter: \t \t USER UPDATE person: %s" %(person['hrn'])
+                    new_key=False
+                    if slab_key is not sfa_keys : 
+                        new_key = True
+                    if new_key:
+                        (pubkey,pkey) = init_person_key (person, slab_key)
+                        person_gid = self.auth_hierarchy.create_gid(person_urn, create_uuid(), pkey)
+                        if not pubkey:
+                            user_record.reg_keys=[]
+                        else:
+                            user_record.reg_keys=[ RegKey (pubkey)]
+                        self.logger.info("SlabImporter: updated person: %s" % user_record)
                         
-                        try:
-                            pkey = convert_public_key(pubkey)
-                        except TypeError:
-                            #key not good. create another pkey
-                            self.logger.warn('SlabImporter: \
-                                                unable to convert public \
-                                                key for %s' % person_hrn)
-                            pkey = Keypair(create=True)
-                       
-                    else:
-                        # the user has no keys. Creating a random keypair for the user's gid
-                        self.logger.warn("SlabImporter: person %s does not have a PL public key"%person_hrn)
-                        pkey = Keypair(create=True) 
-                    return (pubkey, pkey)
-                                
-                 
-                try:
-                    slab_key = person['pkey']
-                    # new person
-                    if not user_record:
-                        (pubkey,pkey) = init_person_key (person, slab_key )
-                        if pubkey is not None and pkey is not None :
-                            person_gid = self.auth_hierarchy.create_gid(person_urn, create_uuid(), pkey)
-                            if person['email']:
-                                print>>sys.stderr, "\r\n \r\n SLAB IMPORTER PERSON EMAIL OK email %s " %(person['email'])
-                                person_gid.set_email(person['email'])
-                                user_record = RegUser (hrn=person_hrn, gid=person_gid, 
-                                                        pointer='-1', 
-                                                        authority=get_authority(person_hrn),
-                                                        email=person['email'])
-                            else:
-                                user_record = RegUser (hrn=person_hrn, gid=person_gid, 
-                                                        pointer='-1', 
-                                                        authority=get_authority(person_hrn))
-                                
-                            if pubkey: 
-                                user_record.reg_keys = [RegKey (pubkey)]
-                            else:
-                                self.logger.warning("No key found for user %s"%user_record)
-                            user_record.just_created()
-                            dbsession.add (user_record)
-                            dbsession.commit()
-                            self.logger.info("SlabImporter: imported person: %s" % user_record)
-                            print>>sys.stderr, "\r\n \r\n SLAB IMPORTER PERSON IMPORT NOTuser_record %s " %(user_record)
-                            self.update_just_added_records_dict( user_record )
-                    else:
-                        # update the record ?
-                        # if user's primary key has changed then we need to update the 
-                        # users gid by forcing an update here
-                        sfa_keys = user_record.reg_keys
-                       
-                        new_key=False
-                        if slab_key is not sfa_keys : 
-                            new_key = True
-                        if new_key:
-                            (pubkey,pkey) = init_person_key (person, slab_key)
-                            person_gid = self.auth_hierarchy.create_gid(person_urn, create_uuid(), pkey)
-                            if not pubkey:
-                                user_record.reg_keys=[]
-                            else:
-                                user_record.reg_keys=[ RegKey (pubkey)]
-                            self.logger.info("SlabImporter: updated person: %s" % user_record)
                     if person['email']:
                         user_record.email = person['email']
-                    dbsession.commit()
-                    user_record.stale=False
-                except:
-                    self.logger.log_exc("SlabImporter: failed to import person  %s"%(person) )       
-                
-                try:
-                    slice = slices_by_userid[user_record.record_id]
-                except:
-                    self.logger.warning ("SlabImporter: cannot locate slices_by_userid[user_record.record_id] %s - ignored"%user_record)  
-                      
-                if not slice_record :
-                    try:
-                        pkey = Keypair(create=True)
-                        urn = hrn_to_urn(slice_hrn, 'slice')
-                        slice_gid = self.auth_hierarchy.create_gid(urn, create_uuid(), pkey)
-                        slice_record = RegSlice (hrn=slice_hrn, gid=slice_gid, 
-                                                    pointer='-1',
-                                                    authority=get_authority(slice_hrn))
-                     
-                        slice_record.just_created()
-                        dbsession.add(slice_record)
-                        dbsession.commit()
                         
-                        #Serial id created after commit
-                        #Get it
-                        sl_rec = dbsession.query(RegSlice).filter(RegSlice.hrn.match(slice_hrn)).all()
-                        
-                        slab_slice = SliceSenslab( slice_hrn = slice_hrn, record_id_slice=sl_rec[0].record_id, record_id_user= user_record.record_id)
-                        print>>sys.stderr, "\r\n \r\n SLAB IMPORTER SLICE IMPORT NOTslice_record %s \r\n slab_slice %s" %(sl_rec,slab_slice)
-                        slab_dbsession.add(slab_slice)
-                        slab_dbsession.commit()
-                        self.logger.info("SlabImporter: imported slice: %s" % slice_record)  
-                        self.update_just_added_records_dict ( slice_record )
-
-                    except:
-                        self.logger.log_exc("SlabImporter: failed to import slice")
-                        
-                #No slice update upon import in senslab 
-                else:
-                    # xxx update the record ...
-                    self.logger.warning ("Slice update not yet implemented")
-                    pass
-                # record current users affiliated with the slice
-
-
-                slice_record.reg_researchers =  [user_record]
                 dbsession.commit()
-                slice_record.stale=False 
+                user_record.stale=False
+            except:
+                self.logger.log_exc("SlabImporter: failed to import person  %s"%(person) )       
+            
+            try:
+                slice = slices_by_userid[user_record.record_id]
+            except:
+                self.logger.warning ("SlabImporter: cannot locate slices_by_userid[user_record.record_id] %s - ignored"%user_record)  
+                    
+            if not slice_record :
+                try:
+                    pkey = Keypair(create=True)
+                    urn = hrn_to_urn(slice_hrn, 'slice')
+                    slice_gid = self.auth_hierarchy.create_gid(urn, create_uuid(), pkey)
+                    slice_record = RegSlice (hrn=slice_hrn, gid=slice_gid, 
+                                                pointer='-1',
+                                                authority=get_authority(slice_hrn))
+                    
+                    slice_record.just_created()
+                    dbsession.add(slice_record)
+                    dbsession.commit()
+                    
+                    #Serial id created after commit
+                    #Get it
+                    sl_rec = dbsession.query(RegSlice).filter(RegSlice.hrn.match(slice_hrn)).all()
+                    
+                    slab_slice = SliceSenslab( slice_hrn = slice_hrn, record_id_slice=sl_rec[0].record_id, record_id_user= user_record.record_id)
+                    print>>sys.stderr, "\r\n \r\n SLAB IMPORTER SLICE IMPORT NOTslice_record %s \r\n slab_slice %s" %(sl_rec,slab_slice)
+                    slab_dbsession.add(slab_slice)
+                    slab_dbsession.commit()
+                    self.logger.info("SlabImporter: imported slice: %s" % slice_record)  
+                    self.update_just_added_records_dict ( slice_record )
+
+                except:
+                    self.logger.log_exc("SlabImporter: failed to import slice")
+                    
+            #No slice update upon import in senslab 
+            else:
+                # xxx update the record ...
+                self.logger.warning ("Slice update not yet implemented")
+                pass
+            # record current users affiliated with the slice
+
+
+            slice_record.reg_researchers =  [user_record]
+            dbsession.commit()
+            slice_record.stale=False 
                        
   
                  
