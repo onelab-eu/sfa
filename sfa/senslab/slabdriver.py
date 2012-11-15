@@ -6,7 +6,7 @@ from sfa.util.faults import SliverDoesNotExist, UnknownSfaType
 from sfa.util.sfalogging import logger
 
 from sfa.storage.alchemy import dbsession
-from sfa.storage.model import RegRecord, RegUser
+from sfa.storage.model import RegRecord, RegUser, RegSlice
 
 from sfa.trust.credential import Credential
 
@@ -15,7 +15,7 @@ from sfa.managers.driver import Driver
 from sfa.rspecs.version_manager import VersionManager
 from sfa.rspecs.rspec import RSpec
 
-from sfa.util.xrn import hrn_to_urn
+from sfa.util.xrn import hrn_to_urn, get_authority
 
 
 ## thierry: everything that is API-related (i.e. handling incoming requests) 
@@ -158,7 +158,10 @@ class SlabDriver(Driver):
                                                     %(resources,res))
             return result        
             
-             
+    def get_user(self, hrn):
+        return dbsession.query(RegRecord).filter_by(hrn = hrn).first() 
+         
+         
     def create_sliver (self, slice_urn, slice_hrn, creds, rspec_string, \
                                                              users, options):
         aggregate = SlabAggregate(self)
@@ -172,13 +175,17 @@ class SlabDriver(Driver):
             creds = [creds]
     
         if users:
-            slice_record = users[0].get('slice_record', {})
-    
+            slice_record = users[0].get('slice_record', {}) 
+            logger.debug("SLABDRIVER.PY \t create_sliver \t\
+                                            slice_record %s \r\n \r\n users %s" \
+                                            %(slice_record, users))
+            slice_record['user'] = {'keys':users[0]['keys'], 'email':users[0]['email'], 'hrn':slice_record['reg-researchers'][0]}
         # parse rspec
         rspec = RSpec(rspec_string)
-        logger.debug("SLABDRIVER.PY \t create_sliver \tr spec.version \
-                                            %s slice_record %s " \
-                                            %(rspec.version,slice_record))
+        logger.debug("SLABDRIVER.PY \t create_sliver \trspec.version \
+                                            %s slice_record %s users %s" \
+                                            %(rspec.version,slice_record, users))
+                                            
 
         # ensure site record exists?
         # ensure slice record exists
@@ -186,24 +193,26 @@ class SlabDriver(Driver):
         sfa_slice = slices.verify_slice(slice_hrn, slice_record, peer, \
                                                     sfa_peer)
                                                     
+        # ensure person records exists
+        #verify_persons returns added persons but since the return value
+        #is not used 
+        slices.verify_persons(slice_hrn, sfa_slice, users, peer, \
+                                                    sfa_peer, options=options)                                           
         #requested_attributes returned by rspec.version.get_slice_attributes() 
         #unused, removed SA 13/08/12
         rspec.version.get_slice_attributes()
 
         logger.debug("SLABDRIVER.PY create_sliver slice %s " %(sfa_slice))
         
-        # ensure person records exists
-        #verify_persons returns added persons but since the return value
-        #is not used 
-        slices.verify_persons(slice_hrn, sfa_slice, users, peer, \
-                                                    sfa_peer, options=options)
+        
         
 
         
         # add/remove slice from nodes 
        
-        requested_slivers = [node.get('component_name') \
-                            for node in rspec.version.get_nodes_with_slivers()]
+        requested_slivers = [node.get('component_id') \
+                            for node in rspec.version.get_nodes_with_slivers()\
+                            if node.get('authority_id') is self.root_auth]
         l = [ node for node in rspec.version.get_nodes_with_slivers() ]
         logger.debug("SLADRIVER \tcreate_sliver requested_slivers \
                                     requested_slivers %s  listnodes %s" \
@@ -220,14 +229,15 @@ class SlabDriver(Driver):
             single_requested_lease = {}
             logger.debug("SLABDRIVER.PY \tcreate_sliver lease %s " %(lease))
             if not lease.get('lease_id'):
-                single_requested_lease['hostname'] = \
-                            slab_xrn_to_hostname(\
-                                            lease.get('component_id').strip())
-                single_requested_lease['start_time'] = lease.get('start_time')
-                single_requested_lease['duration'] = lease.get('duration')
+                if get_authority(lease['component_id']) == self.root_auth:
+                    single_requested_lease['hostname'] = \
+                                slab_xrn_to_hostname(\
+                                                lease.get('component_id').strip())
+                    single_requested_lease['start_time'] = lease.get('start_time')
+                    single_requested_lease['duration'] = lease.get('duration')
 
-            if single_requested_lease.get('hostname'):
-                requested_lease_list.append(single_requested_lease)
+            #if single_requested_lease.get('hostname'):
+                    requested_lease_list.append(single_requested_lease)
                 
         logger.debug("SLABDRIVER.PY \tcreate_sliver APRESLEASE" )       
         #dCreate dict of leases by start_time, regrouping nodes reserved
@@ -300,13 +310,28 @@ class SlabDriver(Driver):
             return 1
             
             
-    def AddSlice(self, slice_record):
+    def AddSlice(self, slice_record, user_record):
+        #Add slice to the sfa table
+        sfa_record = RegSlice (hrn=slice_record['slice_hrn'], gid=slice_record['gid'], 
+                                                 pointer=slice_record['slice_id'],
+                                                 authority=slice_record['authority'])
+        logger.debug("SLABDRIVER.PY AddSlice  sfa_record %s user_record %s" %(sfa_record, user_record))
+        #There is no way to separate-adding the slice to the tesbed 
+        #nd then importing it from the testebd to SFA because of the senslab's architecture
+        sfa_record.just_created()
+        dbsession.add(sfa_record)
+        dbsession.commit() 
+        sfa_record.reg_researchers =  [user_record]
+        dbsession.commit()       
+        #sl_rec = dbsession.query(RegSlice).filter(RegSlice.hrn.match(slice_hrn)).all()
+                    
+                            
         slab_slice = SliceSenslab( slice_hrn = slice_record['slice_hrn'], \
-                        record_id_slice= slice_record['record_id_slice'] , \
-                        record_id_user= slice_record['record_id_user'], \
+                        record_id_slice = sfa_record.record_id , \
+                        record_id_user = slice_record['record_id_user'], \
                         peer_authority = slice_record['peer_authority'])
-        logger.debug("SLABDRIVER.PY \tAddSlice slice_record %s slab_slice %s" \
-                                            %(slice_record,slab_slice))
+        logger.debug("SLABDRIVER.PY \tAddSlice slice_record %s slab_slice %s sfa_record %s" \
+                                            %(slice_record,slab_slice, sfa_record))
         slab_dbsession.add(slab_slice)
         slab_dbsession.commit()
         return
@@ -801,7 +826,7 @@ class SlabDriver(Driver):
                     slicerec = slab_dbsession.query(SliceSenslab).filter_by(record_id_user = slice_filter).first()
                     
                 if slicerec is None:
-                    return login, []
+                    return login, None
                 else:
                     fixed_slicerec_dict = slicerec.dump_sqlalchemyobj_to_dict()
                     
@@ -814,8 +839,8 @@ class SlabDriver(Driver):
             
             login, fixed_slicerec_dict = __get_slice_records(slice_filter, slice_filter_type)
             logger.debug(" SLABDRIVER \tGetSlices login %s \
-                                            slice record %s" \
-                                            %(login, fixed_slicerec_dict))
+                                            slice record %s slice_filter %s"\
+                                            %(login, fixed_slicerec_dict,slice_filter))
     
             
     
@@ -823,9 +848,11 @@ class SlabDriver(Driver):
             
             leases_list = self.GetReservedNodes(username = login)
             #If no job is running or no job scheduled            
-            if leases_list == [] :
-                return [fixed_slicerec_dict]
-            
+            #if leases_list == [] :
+                #return [fixed_slicerec_dict]
+            if leases_list == [] and fixed_slicerec_dict:
+                slicerec_dictlist.append(fixed_slicerec_dict)
+                
             #Several jobs for one slice  
             for lease in leases_list : 
                 slicerec_dict = {} 
@@ -881,10 +908,9 @@ class SlabDriver(Driver):
                         
                         #for reserved_node in lease['reserved_nodes']:
                         logger.debug("SLABDRIVER.PY  \tGetSlices lease %s " %(lease ))
-                            #reserved_list.append(reserved_node['hostname'])
+
                         reserved_list.extend(lease['reserved_nodes'])
-                        #slicerec_dict.update({'node_ids':{'hostname':reserved_list}})    
-                        #slicerec_dict.update({'node_ids':[lease['reserved_nodes'][n]['hostname'] for n in lease['reserved_nodes']]})
+
                         slicerec_dict.update({'node_ids':lease['reserved_nodes']})
                         slicerec_dict.update({'list_node_ids':{'hostname':reserved_list}}) 
                         slicerec_dict.update(fixed_slicerec_dict)
