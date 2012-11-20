@@ -210,7 +210,7 @@ class PlImporter:
                 except:
                     # if the site import fails then there is no point in trying to import the
                     # site's child records (node, slices, persons), so skip them.
-                    self.logger.log_exc("PlImporter: failed to import site. Skipping child records") 
+                    self.logger.log_exc("PlImporter: failed to import site %s. Skipping child records"%site_hrn) 
                     continue 
             else:
                 # xxx update the record ...
@@ -244,7 +244,7 @@ class PlImporter:
                         self.logger.info("PlImporter: imported node: %s" % node_record)  
                         self.remember_record (node_record)
                     except:
-                        self.logger.log_exc("PlImporter: failed to import node") 
+                        self.logger.log_exc("PlImporter: failed to import node %s"%node_hrn) 
                 else:
                     # xxx update the record ...
                     pass
@@ -360,10 +360,10 @@ class PlImporter:
                         self.logger.info("PlImporter: imported slice: %s" % slice_record)  
                         self.remember_record ( slice_record )
                     except:
-                        self.logger.log_exc("PlImporter: failed to import slice")
+                        self.logger.log_exc("PlImporter: failed to import slice %s (%s)"%(slice_hrn,slice['name']))
                 else:
                     # xxx update the record ...
-                    self.logger.warning ("Slice update not yet implemented")
+                    self.logger.warning ("Slice update not yet implemented on slice %s (%s)"%(slice_hrn,slice['name']))
                     pass
                 # record current users affiliated with the slice
                 slice_record.reg_researchers = \
