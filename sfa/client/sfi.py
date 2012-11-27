@@ -730,7 +730,7 @@ class Sfi:
             return
 
         # the delegating user's gid
-        caller_gidfile = self.my_gid()
+        caller_gidfile = self.my_gid
   
         # the gid of the user who will be delegated to
         delegee_gid = self.client_bootstrap.gid(hrn,type)
