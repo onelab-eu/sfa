@@ -1064,11 +1064,13 @@ or with an slice hrn, shows currently provisioned resources
         # set creds
         creds = []
         if args:
-            creds.append(self.slice_credential_string(args[0]))
+            the_credential=self.slice_credential_string(args[0])
+            creds.append(the_credential)
         else:
-            creds.append(self.my_credential_string)
+            the_credential=self.my_credential_string
+            creds.append(the_credential)
         if options.delegate:
-            creds.append(self.delegate_cred(cred, get_authority(self.authority)))
+            creds.append(self.delegate_cred(the_credential, get_authority(self.authority)))
         if options.show_credential:
             show_credentials(creds)
 
