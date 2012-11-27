@@ -316,6 +316,7 @@ class SlabSlices:
         slicename = slice_hrn
         slices_list = self.driver.GetSlices(slice_filter = slicename, \
                                             slice_filter_type = 'slice_hrn') 
+        sfa_slice = None                                 
         if slices_list:
             for sl in slices_list:
             
@@ -366,10 +367,11 @@ class SlabSlices:
                     
                      }
                      
-            if peer:
-                sfa_slice['slice_id'] = slice_record['record_id']
+                if peer:
+                    sfa_slice['slice_id'] = slice_record['record_id']
             # add the slice  
-            self.driver.AddSlice(sfa_slice, user)                         
+            if sfa_slice:
+                self.driver.AddSlice(sfa_slice, user)                         
             #slice['slice_id'] = self.driver.AddSlice(slice)
             logger.debug("SLABSLICES \tverify_slice ADDSLICE OK") 
             #slice['node_ids']=[]
@@ -398,7 +400,7 @@ class SlabSlices:
         """
         #TODO SA 21/08/12 verify_persons Needs review 
         
-        
+        logger.debug("SLABSLICES \tverify_persons \tslice_hrn  %s  \t slice_record %s\r\n users %s \t peer %s "%( slice_hrn, slice_record, users,  peer)) 
         users_by_id = {}  
         users_by_hrn = {} 
         #users_dict : dict whose keys can either be the user's hrn or its id.
@@ -406,19 +408,17 @@ class SlabSlices:
         users_dict = {}
         
         #First create dicts by hrn and id for each user in the user record list:      
-        for user in users:
+        for info in users:
             
-            if 'urn' in user and (not 'hrn' in user ) :
-                user['hrn'], user['type'] = urn_to_hrn(user['urn'])
+            if 'slice_record' in info :
+                slice_rec = info['slice_record'] 
+                user = slice_rec['user']
+
                
-            if 'person_id' in user and 'hrn' in user:
-                users_by_id[user['person_id']] = user
-                users_dict[user['person_id']] = {'person_id':\
-                                        user['person_id'], 'hrn':user['hrn']}
+            if'hrn' in user:
 
                 users_by_hrn[user['hrn']] = user
-                users_dict[user['hrn']] = {'person_id':user['person_id'], \
-                                                        'hrn':user['hrn']}
+                users_dict[user['hrn']] = user
                 
         
         logger.debug( "SLABSLICE.PY \t verify_person  \
@@ -451,8 +451,8 @@ class SlabSlices:
             if existing_users:
                 for user in existing_users :
                     existing_user_hrns.append(users_dict[user['hrn']]['hrn'])
-                    existing_user_ids.\
-                                    append(users_dict[user['hrn']]['person_id'])
+                    #existing_user_ids.\
+                                    #append(users_dict[user['hrn']]['person_id'])
          
             # User from another known trusted federated site. Check 
             # if a senslab account matching the email has already been created.
@@ -474,25 +474,27 @@ class SlabSlices:
                 else:
                     #User not existing in LDAP
                     #TODO SA 21/08/12 raise smthg to add user or add it auto ?
+                    new_record = {}
+                    new_record['pkey'] = users[0]['keys'][0]
+                    new_record['mail'] = users[0]['email']
                     logger.debug(" SLABSLICE.PY \tverify_person users \
                                 not in ldap ...NEW ACCOUNT NEEDED %s \r\n \t \
                                 ldap_reslt %s "  %(users, ldap_reslt))
    
-        requested_user_ids = users_by_id.keys() 
+        #requested_user_ids = users_by_id.keys() 
         requested_user_hrns = users_by_hrn.keys()
-        logger.debug("SLABSLICE.PY \tverify_person requested_user_ids  %s \
-                        user_by_hrn %s " %(requested_user_ids, users_by_hrn)) 
+        logger.debug("SLABSLICE.PY \tverify_person  \
+                        user_by_hrn %s " %( users_by_hrn)) 
       
    
         #Check that the user of the slice in the slice record
         #matches the existing users 
         try:
-            if slice_record['record_id_user'] in requested_user_ids and \
-                                slice_record['PI'][0] in requested_user_hrns:
-                logger.debug(" SLABSLICE  \tverify_person  \
-                        requested_user_ids %s = \
-                        slice_record['record_id_user'] %s" \
-                        %(requested_user_ids,slice_record['record_id_user']))
+            if slice_record['PI'][0] in requested_user_hrns:
+            #if slice_record['record_id_user'] in requested_user_ids and \
+                                #slice_record['PI'][0] in requested_user_hrns:
+                logger.debug(" SLABSLICE  \tverify_person  \slice_record['record_id_user'] %s" \
+                        %(slice_record['record_id_user']))
            
         except KeyError:
             pass

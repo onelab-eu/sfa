@@ -142,7 +142,8 @@ class SlabDriver(Driver):
                         authority=self.hrn).urn
     
                 res['geni_urn'] = sliver_id 
-                if nodeall_byhostname[node['hostname']]['boot_state'] == 'Alive':
+                node_name  = node['hostname']
+                if nodeall_byhostname[node_name]['boot_state'] == 'Alive':
 
                     res['geni_status'] = 'ready'
                 else:
@@ -178,14 +179,16 @@ class SlabDriver(Driver):
         if users:
             slice_record = users[0].get('slice_record', {}) 
             logger.debug("SLABDRIVER.PY \t create_sliver \t\
-                                            slice_record %s \r\n \r\n users %s" \
-                                            %(slice_record, users))
-            slice_record['user'] = {'keys':users[0]['keys'], 'email':users[0]['email'], 'hrn':slice_record['reg-researchers'][0]}
+                                        slice_record %s \r\n \r\n users %s" \
+                                        %(slice_record, users))
+            slice_record['user'] = {'keys':users[0]['keys'], \
+                                    'email':users[0]['email'], \
+                                    'hrn':slice_record['reg-researchers'][0]}
         # parse rspec
         rspec = RSpec(rspec_string)
         logger.debug("SLABDRIVER.PY \t create_sliver \trspec.version \
-                                            %s slice_record %s users %s" \
-                                            %(rspec.version,slice_record, users))
+                                        %s slice_record %s users %s" \
+                                        %(rspec.version,slice_record, users))
                                             
 
         # ensure site record exists?
@@ -229,15 +232,16 @@ class SlabDriver(Driver):
         for lease in rspec.version.get_leases():
             single_requested_lease = {}
             logger.debug("SLABDRIVER.PY \tcreate_sliver lease %s " %(lease))
+            
             if not lease.get('lease_id'):
                 if get_authority(lease['component_id']) == self.root_auth:
                     single_requested_lease['hostname'] = \
-                                slab_xrn_to_hostname(\
-                                                lease.get('component_id').strip())
-                    single_requested_lease['start_time'] = lease.get('start_time')
+                                        slab_xrn_to_hostname(\
+                                        lease.get('component_id').strip())
+                    single_requested_lease['start_time'] = \
+                                                        lease.get('start_time')
                     single_requested_lease['duration'] = lease.get('duration')
 
-            #if single_requested_lease.get('hostname'):
                     requested_lease_list.append(single_requested_lease)
                 
         logger.debug("SLABDRIVER.PY \tcreate_sliver APRESLEASE" )       
@@ -312,27 +316,36 @@ class SlabDriver(Driver):
             
             
     def AddSlice(self, slice_record, user_record):
-        #Add slice to the sfa table
-        sfa_record = RegSlice (hrn=slice_record['slice_hrn'], gid=slice_record['gid'], 
-                                                 pointer=slice_record['slice_id'],
-                                                 authority=slice_record['authority'])
-        logger.debug("SLABDRIVER.PY AddSlice  sfa_record %s user_record %s" %(sfa_record, user_record))
-        #There is no way to separate-adding the slice to the tesbed 
-        #nd then importing it from the testebd to SFA because of the senslab's architecture
+        """Add slice to the sfa tables and senslab table only if the user
+        already exists in senslab database(user already registered in LDAP).
+        There is no way to separate adding the slice to the tesbed 
+        and then importing it from the testbed to SFA because of
+        senslab's architecture. Therefore, sfa tables are updated here.
+        """
+ 
+        sfa_record = RegSlice(hrn=slice_record['slice_hrn'], 
+                                gid=slice_record['gid'], 
+                                pointer=slice_record['slice_id'],
+                                authority=slice_record['authority'])
+                                
+        logger.debug("SLABDRIVER.PY AddSlice  sfa_record %s user_record %s" \
+                                                    %(sfa_record, user_record))
         sfa_record.just_created()
         dbsession.add(sfa_record)
         dbsession.commit() 
+        #Update the reg-researcher dependance table
         sfa_record.reg_researchers =  [user_record]
         dbsession.commit()       
-        #sl_rec = dbsession.query(RegSlice).filter(RegSlice.hrn.match(slice_hrn)).all()
-                    
-                            
+     
+        #Update the senslab table with the new slice                     
         slab_slice = SliceSenslab( slice_hrn = slice_record['slice_hrn'], \
                         record_id_slice = sfa_record.record_id , \
                         record_id_user = slice_record['record_id_user'], \
                         peer_authority = slice_record['peer_authority'])
-        logger.debug("SLABDRIVER.PY \tAddSlice slice_record %s slab_slice %s sfa_record %s" \
-                                            %(slice_record,slab_slice, sfa_record))
+                        
+        logger.debug("SLABDRIVER.PY \tAddSlice slice_record %s \
+                                    slab_slice %s sfa_record %s" \
+                                    %(slice_record,slab_slice, sfa_record))
         slab_dbsession.add(slab_slice)
         slab_dbsession.commit()
         return
@@ -388,8 +401,7 @@ class SlabDriver(Driver):
         slices = self.GetSlices()        
         logger.debug("SLABDRIVER.PY \tlist_slices hrn %s \r\n \r\n" %(slices))        
         slice_hrns = [slab_slice['slice_hrn'] for slab_slice in slices]
-        #slice_hrns = [slicename_to_hrn(self.hrn, slab_slice['slice_hrn']) \
-                                                    #for slab_slice in slices]
+
         slice_urns = [hrn_to_urn(slice_hrn, 'slice') \
                                                 for slice_hrn in slice_hrns]
 
@@ -413,8 +425,10 @@ class SlabDriver(Driver):
         """
         return -1
             
-    #No site or node record update allowed       
+      
     def update (self, old_sfa_record, new_sfa_record, hrn, new_key):
+        """No site or node record update allowed in Senslab."""
+        
         pointer = old_sfa_record['pointer']
         old_sfa_record_type = old_sfa_record['type']
 
@@ -502,16 +516,12 @@ class SlabDriver(Driver):
         logger.debug("SLABDRIVER \tGetPeers auth = %s, peer_filter %s, \
                     return_field %s " %(auth , peer_filter, return_fields_list))
         all_records = dbsession.query(RegRecord).filter(RegRecord.type.like('%authority%')).all()
+        
         for record in all_records:
             existing_records[(record.hrn, record.type)] = record
             if record.type not in existing_hrns_by_types:
                 existing_hrns_by_types[record.type] = [record.hrn]
-                logger.debug("SLABDRIVER \tGetPeer\t NOT IN \
-                    existing_hrns_by_types %s " %( existing_hrns_by_types))
             else:
-                
-                logger.debug("SLABDRIVER \tGetPeer\t \INNN  type %s hrn %s " \
-                                                %(record.type,record.hrn))
                 existing_hrns_by_types[record.type].append(record.hrn)
 
                         
@@ -563,7 +573,13 @@ class SlabDriver(Driver):
                 #add a filter for make_ldap_filters_from_record
                 person = self.ldap.LdapFindUser(searched_attributes, \
                                 is_user_enabled=True)
-                person_list.append(person)
+                #If a person was found, append it to the list
+                if person:
+                    person_list.append(person)
+                    
+            #If the list is empty, return None
+            if len(person_list) is 0:
+                person_list = None
           
         else:
             #Get only enabled user accounts in senslab LDAP : 
@@ -573,6 +589,8 @@ class SlabDriver(Driver):
         return person_list
 
     def GetTimezone(self):
+        """ Get the OAR servier time and timezone.
+        Unused SA 16/11/12"""
         server_timestamp, server_tz = self.oar.parser.\
                                             SendRequest("GET_timezone")
         return server_timestamp, server_tz
@@ -731,7 +749,8 @@ class SlabDriver(Driver):
         """
         node_dict_by_id = self.oar.parser.SendRequest("GET_resources_full")
         node_dict_list = node_dict_by_id.values()
-        logger.debug (" SLABDRIVER GetNodes  node_filter_dict %s return_fields_list %s "%(node_filter_dict,return_fields_list))
+        logger.debug (" SLABDRIVER GetNodes  node_filter_dict %s \
+            return_fields_list %s "%(node_filter_dict, return_fields_list))
         #No  filtering needed return the list directly
         if not (node_filter_dict or return_fields_list):
             return node_dict_list
@@ -788,8 +807,6 @@ class SlabDriver(Driver):
                 
       
     def GetSlices(self, slice_filter = None, slice_filter_type = None):
-    #def GetSlices(self, slice_filter = None, slice_filter_type = None, \
-                                            #return_fields_list = None):
         """ Get the slice records from the slab db. 
         Returns a slice ditc if slice_filter  and slice_filter_type 
         are specified.
@@ -805,7 +822,8 @@ class SlabDriver(Driver):
         if slice_filter_type in authorized_filter_types_list:
             
             
-            def __get_slice_records(slice_filter = None, slice_filter_type = None):
+            def __get_slice_records(slice_filter = None, \
+                                            slice_filter_type = None):
        
                 login = None
                 #Get list of slices based on the slice hrn
@@ -813,15 +831,16 @@ class SlabDriver(Driver):
         
                     login = slice_filter.split(".")[1].split("_")[0] 
                     
-                    #DO NOT USE RegSlice - reg_researchers to get the hrn of the user
-                    #otherwise will mess up the RegRecord in Resolve, don't know
-                    #why - SA 08/08/2012
+                    #DO NOT USE RegSlice - reg_researchers to get the hrn 
+                    #of the user otherwise will mess up the RegRecord in 
+                    #Resolve, don't know why - SA 08/08/2012
                     
                     #Only one entry for one user  = one slice in slice_senslab table
                     slicerec = slab_dbsession.query(SliceSenslab).filter_by(slice_hrn = slice_filter).first()
                     
                     if slicerec is None:
                         return login, None    
+                    
                 #Get slice based on user id                             
                 if slice_filter_type == 'record_id_user':
                     slicerec = slab_dbsession.query(SliceSenslab).filter_by(record_id_user = slice_filter).first()
@@ -874,11 +893,12 @@ class SlabDriver(Driver):
                 logger.debug("SLABDRIVER.PY  \tGetSlices  \
                         slicerec_dict %s return_slicerec_dictlist %s \
                         lease['reserved_nodes'] \
-                        %s" %(slicerec_dict, return_slicerec_dictlist,\
+                        %s" %(slicerec_dict, return_slicerec_dictlist, \
                         lease['reserved_nodes'] ))
                 
             logger.debug("SLABDRIVER.PY  \tGetSlices  RETURN \
-                        return_slicerec_dictlist  %s" %(return_slicerec_dictlist))
+                        return_slicerec_dictlist  %s" \
+                        %(return_slicerec_dictlist))
                             
             return return_slicerec_dictlist
                 
@@ -894,9 +914,7 @@ class SlabDriver(Driver):
             #Get all the jobs reserved nodes
             leases_list = self.GetReservedNodes()
             
-
-            
-                
+               
             for fixed_slicerec_dict in return_slicerec_dictlist:
                 slicerec_dict = {} 
                 owner = fixed_slicerec_dict['slice_hrn'].split(".")[1].split("_")[0] 
@@ -918,8 +936,9 @@ class SlabDriver(Driver):
                         #return_slicerec_dictlist.append(slicerec_dict)
                         fixed_slicerec_dict.update(slicerec_dict)
                         
-            logger.debug("SLABDRIVER.PY  \tGetSlices RETURN return_slicerec_dictlist %s \
-                        slice_filter %s " %(return_slicerec_dictlist, slice_filter))
+            logger.debug("SLABDRIVER.PY  \tGetSlices RETURN \
+                        return_slicerec_dictlist %s \slice_filter %s " \
+                        %(return_slicerec_dictlist, slice_filter))
 
         return return_slicerec_dictlist
         
@@ -942,10 +961,7 @@ class SlabDriver(Driver):
             'geni_ad_rspec_versions': ad_rspec_versions,
             }
           
-          
-          
-          
-          
+
           
     ##
     # Convert SFA fields to PLC fields for use when registering up updating
@@ -968,7 +984,8 @@ class SlabDriver(Driver):
             if not "instantiation" in slab_record:
                 slab_record["instantiation"] = "senslab-instantiated"
             #slab_record["hrn"] = hrn_to_pl_slicename(hrn)     
-            #Unused hrn_to_pl_slicename because Slab's hrn already in the appropriate form SA 23/07/12
+            #Unused hrn_to_pl_slicename because Slab's hrn already 
+            #in the appropriate form SA 23/07/12
             slab_record["hrn"] = hrn 
             logger.debug("SLABDRIVER.PY sfa_fields_to_slab_fields \
                         slab_record %s  " %(slab_record['hrn']))
@@ -1055,8 +1072,8 @@ class SlabDriver(Driver):
             reqdict['resource'] = "{network_address in ("   
     
             for node in lease_dict['added_nodes']: 
-                logger.debug("\r\n \r\n OARrestapi \t __create_job_structure_request_for_OAR \
-                                                                node %s" %(node))
+                logger.debug("\r\n \r\n OARrestapi \t \
+                __create_job_structure_request_for_OAR node %s" %(node))
     
                 # Get the ID of the node 
                 nodeid = node
@@ -1162,8 +1179,7 @@ class SlabDriver(Driver):
             javacmdline = "/usr/bin/java"
             jarname = \
                 "/opt/senslabexperimentwrapper/sfa-1.0-jar-with-dependencies.jar"
-            #ret=subprocess.check_output(["/usr/bin/java", "-jar", ", \
-                                                        #str(jobid), slice_user])
+
             output = subprocess.Popen([javacmdline, "-jar", jarname, str(jobid), \
                                 slice_user],stdout=subprocess.PIPE).communicate()[0]
     
@@ -1183,7 +1199,8 @@ class SlabDriver(Driver):
             
         return
         
-    def AddLeases(self, hostname_list, slice_record, lease_start_time, lease_duration):
+    def AddLeases(self, hostname_list, slice_record, \
+                                        lease_start_time, lease_duration):
         logger.debug("SLABDRIVER \r\n \r\n \t AddLeases hostname_list %s  \
                 slice_record %s lease_start_time %s lease_duration %s  "\
                  %( hostname_list, slice_record , lease_start_time, \
@@ -1191,7 +1208,8 @@ class SlabDriver(Driver):
 
         tmp = slice_record['reg-researchers'][0].split(".")
         username = tmp[(len(tmp)-1)]
-        self.LaunchExperimentOnOAR(hostname_list, slice_record['slice_hrn'], lease_start_time, lease_duration, username)
+        self.LaunchExperimentOnOAR(hostname_list, slice_record['slice_hrn'], \
+                                    lease_start_time, lease_duration, username)
         start_time = datetime.fromtimestamp(int(lease_start_time)).strftime(self.time_format)
         logger.debug("SLABDRIVER \t AddLeases hostname_list start_time %s " %(start_time))
         
@@ -1220,7 +1238,7 @@ class SlabDriver(Driver):
 
         reservation_list = []
         #Find the slice associated with this user senslab ldap uid
-        logger.debug(" SLABDRIVER.PY \tGetLeases ")
+        logger.debug(" SLABDRIVER.PY \tGetLeases unfiltered_reservation_list %s " %(unfiltered_reservation_list))
         #Create user dict first to avoid looking several times for
         #the same user in LDAP SA 27/07/12
         resa_user_dict = {}
@@ -1230,20 +1248,25 @@ class SlabDriver(Driver):
             if resa['user'] not in resa_user_dict: 
                 logger.debug("SLABDRIVER \tGetLeases userNOTIN ")
                 ldap_info = self.ldap.LdapSearch('(uid='+resa['user']+')')
-                ldap_info = ldap_info[0][1]
-                user = dbsession.query(RegUser).filter_by(email = \
+                if ldap_info:
+                    ldap_info = ldap_info[0][1]
+                    user = dbsession.query(RegUser).filter_by(email = \
                                                     ldap_info['mail'][0]).first()
-                #Separated in case user not in database : 
-                #record_id not defined SA 17/07//12
-                query_slice_info = slab_dbsession.query(SliceSenslab).filter_by(record_id_user = user.record_id)
-                if query_slice_info:
-                    slice_info = query_slice_info.first()
-                else:
-                    slice_info = None
+                    #Separated in case user not in database : 
+                    #record_id not defined SA 17/07//12
+                    query_slice_info = slab_dbsession.query(SliceSenslab).filter_by(record_id_user = user.record_id)
+                    if query_slice_info:
+                        slice_info = query_slice_info.first()
+                    else:
+                        slice_info = None
+                        
+                    resa_user_dict[resa['user']] = {}
+                    resa_user_dict[resa['user']]['ldap_info'] = user
+                    resa_user_dict[resa['user']]['slice_info'] = slice_info
+                #else:
+                    #del unfiltered_reservation_list[unfiltered_reservation_list.index(resa)]
+
                     
-                resa_user_dict[resa['user']] = {}
-                resa_user_dict[resa['user']]['ldap_info'] = user
-                resa_user_dict[resa['user']]['slice_info'] = slice_info
  
         logger.debug("SLABDRIVER \tGetLeases resa_user_dict %s"\
                                             %(resa_user_dict))         
@@ -1251,17 +1274,18 @@ class SlabDriver(Driver):
             
             
             #Put the slice_urn  
-            resa['slice_hrn'] = resa_user_dict[resa['user']]['slice_info'].slice_hrn
-            resa['slice_id'] = hrn_to_urn(resa['slice_hrn'], 'slice')    
-            #Put the slice_urn 
-            #resa['slice_id'] = hrn_to_urn(slice_info.slice_hrn, 'slice')
-            resa['component_id_list'] = []
-            #Transform the hostnames into urns (component ids)
-            for node in resa['reserved_nodes']:
-                #resa['component_id_list'].append(hostname_to_urn(self.hrn, \
-                         #self.root_auth, node['hostname']))
-                slab_xrn = slab_xrn_object(self.root_auth, node)
-                resa['component_id_list'].append(slab_xrn.urn)
+            if resa['user'] in resa_user_dict:
+                resa['slice_hrn'] = resa_user_dict[resa['user']]['slice_info'].slice_hrn
+                resa['slice_id'] = hrn_to_urn(resa['slice_hrn'], 'slice')    
+                #Put the slice_urn 
+                #resa['slice_id'] = hrn_to_urn(slice_info.slice_hrn, 'slice')
+                resa['component_id_list'] = []
+                #Transform the hostnames into urns (component ids)
+                for node in resa['reserved_nodes']:
+                    #resa['component_id_list'].append(hostname_to_urn(self.hrn, \
+                            #self.root_auth, node['hostname']))
+                    slab_xrn = slab_xrn_object(self.root_auth, node)
+                    resa['component_id_list'].append(slab_xrn.urn)
         
         #Filter the reservation list if necessary
         #Returns all the leases associated with a given slice

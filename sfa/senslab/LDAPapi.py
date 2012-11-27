@@ -127,16 +127,41 @@ class LDAPapi :
         Record contains first name and last name.
         
         """ 
-        #Remove all special characters from first_name/last name
-        lower_first_name = record['first_name'].replace('-','')\
-                                        .replace('_','').replace('[','')\
-                                        .replace(']','').replace(' ','')\
-                                        .lower()
-        lower_last_name = record['last_name'].replace('-','')\
-                                        .replace('_','').replace('[','')\
-                                        .replace(']','').replace(' ','')\
-                                        .lower()  
-        length_last_name = len(lower_last_name)
+        if 'first_name' in record and 'last_name' in record:
+            #Remove all special characters from first_name/last name
+            lower_first_name = record['first_name'].replace('-','')\
+                                            .replace('_','').replace('[','')\
+                                            .replace(']','').replace(' ','')\
+                                            .lower()
+            lower_last_name = record['last_name'].replace('-','')\
+                                            .replace('_','').replace('[','')\
+                                            .replace(']','').replace(' ','')\
+                                            .lower()  
+
+            
+        #No first name and last name 
+        #check  email    
+        else:
+            email = record['mail']
+            email = email.split('@')[0].lower()
+            lower_first_name = None
+            lower_last_name = None
+            #Assume there is first name and last name in email
+            #if there is a  separator
+            separator_list = ['.','_','-']
+            for sep in separator_list:
+                if sep in email:
+                    mail = email.split(sep)
+                    lower_first_name = mail[0]
+                    lower_last_name = mail[1]
+                    break
+            #Otherwise just take the part before the @ as the 
+            #lower_first_name  and lower_last_name
+            if lower_first_name is None:
+               lower_first_name = email
+               lower_last_name = email
+               
+        length_last_name = len(lower_last_name)  
         login_max_length = 8
         
         #Try generating a unique login based on first name and last name
@@ -281,17 +306,7 @@ class LDAPapi :
             #Plus, the SFA user may already have an account with senslab
             #using another login.
                 
-            #if 'hrn' in record :
-                #splited_hrn = record['hrn'].split(".")
-                #if splited_hrn[0] != self.authname :
-                    #logger.warning(" \r\n LDAP.PY \
-                        #make_ldap_filters_from_record I know nothing \
-                        #about %s my authname is %s not %s" \
-                        #%(record['hrn'], self.authname, splited_hrn[0]) )
-                        
-                #login=splited_hrn[1]
-                #req_ldapdict['uid'] = login
-            
+           
 
             logger.debug("\r\n \t LDAP.PY make_ldap_filters_from_record \
                                 record %s req_ldapdict %s" \
