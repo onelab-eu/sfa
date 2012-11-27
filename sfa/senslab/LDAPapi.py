@@ -334,13 +334,22 @@ class LDAPapi :
                                     "organizationalPerson", "posixAccount", \
                                     "shadowAccount", "systemQuotas", \
                                     "ldapPublicKey"]
-        
-        attrs['givenName'] = str(record['first_name']).lower().capitalize()
-        attrs['sn'] = str(record['last_name']).lower().capitalize()
-        attrs['cn'] = attrs['givenName'] + ' ' + attrs['sn']
-        attrs['gecos'] = attrs['givenName'] + ' ' + attrs['sn']
+       
+            
         attrs['uid'] = self.generate_login(record)   
-                    
+        try:
+            attrs['givenName'] = str(record['first_name']).lower().capitalize()
+            attrs['sn'] = str(record['last_name']).lower().capitalize()
+            attrs['cn'] = attrs['givenName'] + ' ' + attrs['sn']
+            attrs['gecos'] = attrs['givenName'] + ' ' + attrs['sn']
+            
+        except: 
+            attrs['givenName'] = attrs['uid']
+            attrs['sn'] = attrs['uid']
+            attrs['cn'] = attrs['uid']
+            attrs['gecos'] = attrs['uid']
+            
+                     
         attrs['quota'] = self.ldapUserQuotaNFS 
         attrs['homeDirectory'] = self.ldapUserHomePath + attrs['uid']
         attrs['loginShell'] = self.ldapShell

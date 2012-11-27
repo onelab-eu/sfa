@@ -859,8 +859,8 @@ class SlabDriver(Driver):
             login, fixed_slicerec_dict = \
                             __get_slice_records(slice_filter, slice_filter_type)
             logger.debug(" SLABDRIVER \tGetSlices login %s \
-                            slice record %s slice_filter %s"\
-                            %(login, fixed_slicerec_dict,slice_filter))
+                            slice record %s slice_filter %s slice_filter_type %s "\
+                            %(login, fixed_slicerec_dict,slice_filter, slice_filter_type))
     
             
             #Now we have the slice record fixed_slicerec_dict, get the 

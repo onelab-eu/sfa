@@ -518,19 +518,19 @@ class SlabSlices:
         for added_user_hrn in added_user_hrns:
             added_user = users_dict[added_user_hrn]
             #hrn, type = urn_to_hrn(added_user['urn'])  
-            try:
-                person = {
 
-                    'first_name': added_user['first_name'],
-                    'last_name': added_user['last_name'],
-                    'person_id': added_user['person_id'],
-                    'peer_person_id': None,
-                    'keys': added_user['keys'][0],
-                    'key_ids': added_user.get('key_ids', []),
-                    
-                } 
-            except KeyError:
-                pass
+            person = {}
+            person['peer_person_id'] =  None
+            k_list  = ['first_name','last_name','person_id']
+            for k in k_list:
+                if k in added_user:
+                    person[k] = added_user[k]
+
+            person['keys'] = added_user['keys'][0]
+            person['key_ids'] =  added_user.get('key_ids', [])
+                
+
+
             
             person['person_id'] = self.driver.AddPerson(person)
             if peer:
