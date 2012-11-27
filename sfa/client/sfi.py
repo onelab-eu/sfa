@@ -413,7 +413,7 @@ class Sfi:
                        "restart", "shutdown",  "get_ticket", "renew", "status"):
             parser.add_option("-d", "--delegate", dest="delegate", default=None, 
                              action="store_true",
-                             help="Include a credential delegated to the user's root"+\
+                             help="Include a credential delegated to the user's root "+\
                                   "authority in set of credentials for this call")
 
         # show_credential option
