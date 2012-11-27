@@ -471,9 +471,12 @@ class Sfi:
         if command in ("delegate"):
            parser.add_option("-u", "--user",
                             action="store_true", dest="delegate_user", default=False,
-                            help="delegate user credential")
+                            help="delegate your own credentials")
            parser.add_option("-s", "--slice", dest="delegate_slice",
                             help="delegate slice credential", metavar="HRN", default=None)
+           parser.add_option("-a", "--authority", dest='delegate_to_authority', default=None, action='store_true',
+                             help="""by default the only argument is expected to be a user, 
+use this if you mean an authority instead""")
         
         if command in ("version"):
             parser.add_option("-R","--registry-version",
@@ -717,27 +720,6 @@ class Sfi:
     def slice_credential_string(self, name):
         return self.client_bootstrap.slice_credential_string (name)
 
-    # xxx should be supported by sfaclientbootstrap as well
-    def delegate_cred(self, object_cred, hrn, type='authority'):
-        # the gid and hrn of the object we are delegating
-        if isinstance(object_cred, str):
-            object_cred = Credential(string=object_cred) 
-        object_gid = object_cred.get_gid_object()
-        object_hrn = object_gid.get_hrn()
-    
-        if not object_cred.get_privileges().get_all_delegate():
-            self.logger.error("Object credential %s does not have delegate bit set"%object_hrn)
-            return
-
-        # the delegating user's gid
-        caller_gidfile = self.my_gid
-  
-        # the gid of the user who will be delegated to
-        delegee_gid = self.client_bootstrap.gid(hrn,type)
-        delegee_hrn = delegee_gid.get_hrn()
-        dcred = object_cred.delegate(delegee_gid, self.private_key, caller_gidfile)
-        return dcred.save_to_string(save_parents=True)
-     
     #
     # Management of the servers
     # 
@@ -1461,31 +1443,32 @@ or with an slice hrn, shows currently provisioned resources
         GID(string=gid).save_to_file(filename)
          
 
-    def delegate(self, options, args):
+    def delegate (self, options, args):
         """
         (locally) create delegate credential for use by given hrn
         """
-        delegee_hrn = args[0]
+        if len(args) != 1:
+            self.print_help()
+            sys.exit(1)
+        to_hrn = args[0]
+        print 'to_hrn',to_hrn
+        if options.delegate_to_authority:       to_type='authority'
+        else:                                   to_type='user'
         if options.delegate_user:
-            cred = self.delegate_cred(self.my_credential_string, delegee_hrn, 'user')
+            message="%s.user"%self.user
+            original = self.my_credential_string
         elif options.delegate_slice:
-            slice_cred = self.slice_credential_string(options.delegate_slice)
-            cred = self.delegate_cred(slice_cred, delegee_hrn, 'slice')
+            message="%s.slice"%options.delegate_slice
+            original = self.slice_credential_string(options.delegate_slice)
         else:
             self.logger.warning("Must specify either --user or --slice <hrn>")
             return
-        delegated_cred = Credential(string=cred)
-        object_hrn = delegated_cred.get_gid_object().get_hrn()
-        if options.delegate_user:
-            dest_fn = os.path.join(self.options.sfi_dir, get_leaf(delegee_hrn) + "_"
-                                  + get_leaf(object_hrn) + ".cred")
-        elif options.delegate_slice:
-            dest_fn = os.path.join(self.options.sfi_dir, get_leaf(delegee_hrn) + "_slice_"
-                                  + get_leaf(object_hrn) + ".cred")
-
-        delegated_cred.save_to_file(dest_fn, save_parents=True)
-
-        self.logger.info("delegated credential for %s to %s and wrote to %s"%(object_hrn, delegee_hrn,dest_fn))
+        delegated_string = self.client_bootstrap.delegate_credential_string(original, to_hrn, to_type)
+        delegated_credential = Credential (string=delegated_string)
+        filename = os.path.join ( self.options.sfi_dir,
+                                  "%s_for_%s.%s.cred"%(message,to_hrn,to_type))
+        delegated_credential.save_to_file(filename, save_parents=True)
+        self.logger.info("delegated credential for %s to %s and wrote to %s"%(message,to_hrn,filename))
     
     def trusted(self, options, args):
         """

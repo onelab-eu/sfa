@@ -22,6 +22,7 @@ from sfa.client.sfaserverproxy import SfaServerProxy
 # see optimizing dependencies below
 from sfa.trust.certificate import Keypair, Certificate
 from sfa.trust.credential import Credential
+from sfa.trust.gid import GID
 ########## 
 # a helper class to implement the bootstrapping of crypto. material
 # assuming we are starting from scratch on the client side 
@@ -354,3 +355,38 @@ class SfaClientBootstrap:
     def private_key (self):
         self.assert_private_key()
         return self.private_key_filename()
+
+    def delegate_credential_string (self, original_credential, to_hrn, to_type='authority'):
+        """
+        sign a delegation credential to someone else
+
+        original_credential : typically one's user- or slice- credential to be delegated to s/b else
+        to_hrn : the hrn of the person that will be allowed to do stuff on our behalf
+        to_type : goes with to_hrn, usually 'user' or 'authority'
+
+        returns a string with the delegated credential
+
+        this internally uses self.my_gid()
+        it also retrieves the gid for to_hrn/to_type
+        and uses Credential.delegate()"""
+
+        # the gid and hrn of the object we are delegating
+        if isinstance (original_credential, str):
+            original_credential = Credential (string=original_credential)
+        original_gid = original_credential.get_gid_object()
+        original_hrn = original_gid.get_hrn()
+
+        if not original_credential.get_privileges().get_all_delegate():
+            self.logger.error("delegate_credential_string: original credential %s does not have delegate bit set"%original_hrn)
+            return
+
+        # the delegating user's gid
+        my_gid = self.my_gid()
+
+        # retrieve the GID for the entity that we're delegating to
+        to_gidfile = self.gid (to_hrn,to_type)
+#        to_gid = GID ( to_gidfile )
+#        to_hrn = delegee_gid.get_hrn()
+#        print 'to_hrn',to_hrn
+        delegated_credential = original_credential.delegate(to_gidfile, self.private_key(), my_gid)
+        return delegated_credential.save_to_string(save_parents=True)
