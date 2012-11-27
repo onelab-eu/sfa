@@ -415,7 +415,7 @@ class SlabSlices:
                 user = slice_rec['user']
 
                
-            if'hrn' in user:
+            if 'hrn' in user:
 
                 users_by_hrn[user['hrn']] = user
                 users_dict[user['hrn']] = user
@@ -477,6 +477,7 @@ class SlabSlices:
                     new_record = {}
                     new_record['pkey'] = users[0]['keys'][0]
                     new_record['mail'] = users[0]['email']
+                    self.driver.ldap.LdapAddUser(new_record)
                     logger.debug(" SLABSLICE.PY \tverify_person users \
                                 not in ldap ...NEW ACCOUNT NEEDED %s \r\n \t \
                                 ldap_reslt %s "  %(users, ldap_reslt))
@@ -517,17 +518,20 @@ class SlabSlices:
         for added_user_hrn in added_user_hrns:
             added_user = users_dict[added_user_hrn]
             #hrn, type = urn_to_hrn(added_user['urn'])  
-            person = {
-                #'first_name': added_user.get('first_name', hrn),
-                #'last_name': added_user.get('last_name', hrn),
-                'first_name': added_user['first_name'],
-                'last_name': added_user['last_name'],
-                'person_id': added_user['person_id'],
-                'peer_person_id': None,
-                'keys': [],
-                'key_ids': added_user.get('key_ids', []),
-                
-            } 
+            try:
+                person = {
+
+                    'first_name': added_user['first_name'],
+                    'last_name': added_user['last_name'],
+                    'person_id': added_user['person_id'],
+                    'peer_person_id': None,
+                    'keys': added_user['keys'][0],
+                    'key_ids': added_user.get('key_ids', []),
+                    
+                } 
+            except KeyError:
+                pass
+            
             person['person_id'] = self.driver.AddPerson(person)
             if peer:
                 person['peer_person_id'] = added_user['person_id']
