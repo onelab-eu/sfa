@@ -155,7 +155,7 @@ class SlabImporter:
                         node_record.just_created()
                         dbsession.add(node_record)
                         dbsession.commit()
-                        self.logger.info("SlabImporter: imported node: %s" % node_record)  
+                        #self.logger.info("SlabImporter: imported node: %s" % node_record)  
                         self.update_just_added_records_dict(node_record)
                     except:
                         self.logger.log_exc("SlabImporter: failed to import node") 
@@ -238,11 +238,12 @@ class SlabImporter:
                     # if user's primary key has changed then we need to update the 
                     # users gid by forcing an update here
                     sfa_keys = user_record.reg_keys
-                    print>>sys.stderr,"SlabImporter: \t \t USER UPDATE person: %s" %(person['hrn'])
+                   
                     new_key=False
                     if slab_key is not sfa_keys : 
                         new_key = True
                     if new_key:
+                        print>>sys.stderr,"SlabImporter: \t \t USER UPDATE person: %s" %(person['hrn'])
                         (pubkey,pkey) = init_person_key (person, slab_key)
                         person_gid = self.auth_hierarchy.create_gid(person_urn, create_uuid(), pkey)
                         if not pubkey:
@@ -255,7 +256,9 @@ class SlabImporter:
                         user_record.email = person['email']
                         
                 dbsession.commit()
+
                 user_record.stale=False
+                print>>sys.stderr,"SlabImporter: STALE!! PERSON : %s" %user_record
             except:
                 self.logger.log_exc("SlabImporter: failed to import person  %s"%(person) )       
             
@@ -315,7 +318,9 @@ class SlabImporter:
                 record.stale=False
           
 
-        for record in all_records:
+        for record in all_records: 
+            if record.type == 'user':
+                print>>sys.stderr,"SlabImporter: stale records: hrn %s %s" %(record.hrn,record.stale)
             try:        
                 stale=record.stale
             except:     
@@ -323,6 +328,10 @@ class SlabImporter:
                 self.logger.warning("stale not found with %s"%record)
             if stale:
                 self.logger.info("SlabImporter: deleting stale record: %s" % record)
+                if record.type == 'user':
+                    rec = slab_dbsession.query(SliceSenslab).filter_by(record_id_user = record.record_id).first()
+                    slab_dbsession.delete(rec)
+                    slab_dbsession.commit()
                 dbsession.delete(record)
                 dbsession.commit()         
                  
