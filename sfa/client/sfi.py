@@ -408,14 +408,6 @@ class Sfi:
                                action="callback", callback=optparse_dictvalue_callback, nargs=1,
                                help="set extra/testbed-dependent flags, e.g. --extra enabled=true")
 
-        # user specifies remote aggregate/sm/component                          
-        if command in ("resources", "slices", "create", "delete", "start", "stop", 
-                       "restart", "shutdown",  "get_ticket", "renew", "status"):
-            parser.add_option("-d", "--delegate", dest="delegate", default=None, 
-                             action="store_true",
-                             help="Include a credential delegated to the user's root "+\
-                                  "authority in set of credentials for this call")
-
         # show_credential option
         if command in ("list","resources","create","add","update","remove","slices","delete","status","renew"):
             parser.add_option("-C","--credential",dest='show_credential',action='store_true',default=False,
@@ -822,12 +814,6 @@ use this if you mean an authority instead""")
         else:
             return []
 
-    #################### dealing with delegated credentials
-    # most commands have a -d option that means 'delegate to my own authority'
-    # if is unclear if that is useful at all, but just in case..
-    def delegate_to_my_authority (original):
-        return self.client_bootstrap.delegate_credential_string (original, self.authority, 'authority')
-
     ######################################## miscell utilities
     def get_rspec_file(self, rspec):
        if (os.path.isabs(rspec)):
@@ -1025,8 +1011,6 @@ or version information about sfi itself
         server = self.sliceapi()
         # creds
         creds = [self.my_credential_string]
-        if options.delegate:
-            creds.append ( self.delegate_to_my_authority(self.my_credential_string) )
         # options and call_id when supported
         api_options = {}
 	api_options['call_id']=unique_call_id()
@@ -1056,8 +1040,6 @@ or with an slice hrn, shows currently provisioned resources
         else:
             the_credential=self.my_credential_string
             creds.append(the_credential)
-        if options.delegate:
-            creds.append(self.delegate_to_my_authority(the_credential))
         if options.show_credential:
             show_credentials(creds)
 
@@ -1191,8 +1173,6 @@ or with an slice hrn, shows currently provisioned resources
         # creds
         slice_cred = self.slice_credential_string(slice_hrn)
         creds = [slice_cred]
-        if options.delegate:
-            creds.append (self.delegate_to_my_authority (slice_cred))
         
         # options and call_id when supported
         api_options = {}
@@ -1220,8 +1200,6 @@ or with an slice hrn, shows currently provisioned resources
         # creds 
         slice_cred = self.slice_credential_string(slice_hrn)
         creds = [slice_cred]
-        if options.delegate:
-            creds.append (self.delegate_to_my_authority (slice_cred))
 
         # options and call_id when supported
         api_options = {}
@@ -1248,8 +1226,6 @@ or with an slice hrn, shows currently provisioned resources
         # cred
         slice_cred = self.slice_credential_string(args[0])
         creds = [slice_cred]
-        if options.delegate:
-            creds.append (self.delegate_to_my_authority (slice_cred))
         # xxx Thierry - does this not need an api_options as well ?
         result = server.Start(slice_urn, creds)
         value = ReturnValue.get_value(result)
@@ -1270,8 +1246,6 @@ or with an slice hrn, shows currently provisioned resources
         # cred
         slice_cred = self.slice_credential_string(args[0])
         creds = [slice_cred]
-        if options.delegate:
-            creds.append (self.delegate_to_my_authority (slice_cred))
         result =  server.Stop(slice_urn, creds)
         value = ReturnValue.get_value(result)
         if self.options.raw:
@@ -1292,8 +1266,6 @@ or with an slice hrn, shows currently provisioned resources
         # cred
         slice_cred = self.slice_credential_string(args[0])
         creds = [slice_cred]
-        if options.delegate:
-            creds.append (self.delegate_to_my_authority (slice_cred))
         result = server.reset_slice(creds, slice_urn)
         value = ReturnValue.get_value(result)
         if self.options.raw:
@@ -1317,8 +1289,6 @@ or with an slice hrn, shows currently provisioned resources
         # creds
         slice_cred = self.slice_credential_string(args[0])
         creds = [slice_cred]
-        if options.delegate:
-            creds.append (self.delegate_to_my_authority (slice_cred))
         # options and call_id when supported
         api_options = {}
 	api_options['call_id']=unique_call_id()
@@ -1344,8 +1314,6 @@ or with an slice hrn, shows currently provisioned resources
         # creds
         slice_cred = self.slice_credential_string(slice_hrn)
         creds = [slice_cred]
-        if options.delegate:
-            creds.append (self.delegate_to_my_authority (slice_cred))
         result = server.Shutdown(slice_urn, creds)
         value = ReturnValue.get_value(result)
         if self.options.raw:
@@ -1366,9 +1334,6 @@ or with an slice hrn, shows currently provisioned resources
         # creds
         slice_cred = self.slice_credential_string(slice_hrn)
         creds = [slice_cred]
-        if options.delegate:
-            delegated_cred = self.delegate_to_my_authority(slice_cred)
-            creds.append(delegated_cred)
         # rspec
         rspec_file = self.get_rspec_file(rspec_path) 
         rspec = open(rspec_file).read()
