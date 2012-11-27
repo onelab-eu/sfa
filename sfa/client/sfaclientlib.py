@@ -82,9 +82,9 @@ from sfa.trust.credential import Credential
 # the usage model is to reuse an existing keypair)
 # 
 # there might be a more portable, i.e. less language-dependant way, to
-# implement this step by exec'ing the openssl command a known
-# successful attempt at this approach that worked for Java is
-# documented below
+# implement this step by exec'ing the openssl command.
+# a known successful attempt at this approach that worked 
+# for Java is documented below
 # http://nam.ece.upatras.gr/fstoolkit/trac/wiki/JavaSFAClient
 #
 ####################
