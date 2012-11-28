@@ -343,7 +343,7 @@ class Sfi:
         ("shutdown", "slice_hrn"),
         ("get_ticket", "slice_hrn rspec"),
         ("redeem_ticket", "ticket"),
-        ("delegate", "name"),
+        ("delegate", "to_hrn"),
         ("gid", "[name]"),
         ("trusted", "cred"),
         ("config", ""),
@@ -462,12 +462,17 @@ class Sfi:
                              help="gives details, like user keys", default=False)
         if command in ("delegate"):
            parser.add_option("-u", "--user",
-                            action="store_true", dest="delegate_user", default=False,
-                            help="delegate your own credentials")
-           parser.add_option("-s", "--slice", dest="delegate_slice",
-                            help="delegate slice credential", metavar="HRN", default=None)
-           parser.add_option("-a", "--authority", dest='delegate_to_authority', default=None, action='store_true',
-                             help="""by default the only argument is expected to be a user, 
+                             action="store_true", dest="delegate_user", default=False,
+                             help="delegate your own credentials; default if no other option is provided")
+           parser.add_option("-s", "--slice", dest="delegate_slices",action='append',default=[],
+                             metavar="slice_hrn", help="delegate cred. for slice HRN")
+           parser.add_option("-a", "--auths", dest='delegate_auths',action='append',default=[],
+                             metavar='auth_hrn', help="delegate cred for auth HRN")
+           # this primarily is a shorthand for -a my_hrn^
+           parser.add_option("-p", "--pi", dest='delegate_pi', default=None, action='store_true',
+                             help="delegate your PI credentials, so s.t. like -a your_hrn^")
+           parser.add_option("-A","--to-authority",dest='delegate_to_authority',action='store_true',default=False,
+                             help="""by default the mandatory argument is expected to be a user, 
 use this if you mean an authority instead""")
         
         if command in ("version"):
@@ -708,6 +713,9 @@ use this if you mean an authority instead""")
             self.logger.critical("no authority specified. Use -a or set SF_AUTH")
             sys.exit(-1)
         return self.client_bootstrap.authority_credential_string (self.authority)
+
+    def authority_credential_string(self, auth_hrn):
+        return self.client_bootstrap.authority_credential_string (auth_hrn)
 
     def slice_credential_string(self, name):
         return self.client_bootstrap.slice_credential_string (name)
@@ -1414,24 +1422,43 @@ or with an slice hrn, shows currently provisioned resources
             self.print_help()
             sys.exit(1)
         to_hrn = args[0]
-        print 'to_hrn',to_hrn
-        if options.delegate_to_authority:       to_type='authority'
-        else:                                   to_type='user'
+        # support for several delegations in the same call
+        # so first we gather the things to do
+        tuples=[]
+        for slice_hrn in options.delegate_slices:
+            message="%s.slice"%slice_hrn
+            original = self.slice_credential_string(slice_hrn)
+            tuples.append ( (message, original,) )
+        if options.delegate_pi:
+            my_authority=self.authority
+            message="%s.pi"%my_authority
+            original = self.my_authority_credential_string()
+            tuples.append ( (message, original,) )
+        for auth_hrn in options.delegate_auths:
+            message="%s.auth"%auth_hrn
+            original=self.authority_credential_string(auth_hrn)
+            tuples.append ( (message, original, ) )
+        # if nothing was specified at all at this point, let's assume -u
+        if not tuples: options.delegate_user=True
+        # this user cred
         if options.delegate_user:
             message="%s.user"%self.user
             original = self.my_credential_string
-        elif options.delegate_slice:
-            message="%s.slice"%options.delegate_slice
-            original = self.slice_credential_string(options.delegate_slice)
-        else:
-            self.logger.warning("Must specify either --user or --slice <hrn>")
-            return
-        delegated_string = self.client_bootstrap.delegate_credential_string(original, to_hrn, to_type)
-        delegated_credential = Credential (string=delegated_string)
-        filename = os.path.join ( self.options.sfi_dir,
-                                  "%s_for_%s.%s.cred"%(message,to_hrn,to_type))
-        delegated_credential.save_to_file(filename, save_parents=True)
-        self.logger.info("delegated credential for %s to %s and wrote to %s"%(message,to_hrn,filename))
+            tuples.append ( (message, original, ) )
+
+        # default type for beneficial is user unless -A
+        if options.delegate_to_authority:       to_type='authority'
+        else:                                   to_type='user'
+
+        # let's now handle all this
+        # it's all in the filenaming scheme
+        for (message,original) in tuples:
+            delegated_string = self.client_bootstrap.delegate_credential_string(original, to_hrn, to_type)
+            delegated_credential = Credential (string=delegated_string)
+            filename = os.path.join ( self.options.sfi_dir,
+                                      "%s_for_%s.%s.cred"%(message,to_hrn,to_type))
+            delegated_credential.save_to_file(filename, save_parents=True)
+            self.logger.info("delegated credential for %s to %s and wrote to %s"%(message,to_hrn,filename))
     
     def trusted(self, options, args):
         """
