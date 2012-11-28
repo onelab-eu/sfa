@@ -706,35 +706,60 @@ class PlDriver (Driver):
         return self.describe(urns, None, options=options, allocation_status='geni_provisioned')
 
     def delete(self, urns, options={}):
-        names = []
-        ids = []
+        # urns argument may contain slice or sliver urns. Slice urns contain the
+        # a slice's name whereas sliver urns contain a slice_id, node_id tupple. 
+        # We will collect names/ids specified in the urns provided by the caller.    
+        slice_names = []
+        slice_ids = []
+        node_ids = []
+
         for urn in urns:
-            xrn = PlXrn(xrn=urn, type='slice')
-            names.append(xrn.pl_slicename())
-            if xrn.id:
-                ids.append(xrn.id)    
-        slices = self.shell.GetSlices({'name': names})
+            xrn = PlXrn(xrn=urn)
+            if xrn.type == 'slice' and xrn.pl_slicename() not in slice_names:
+                slice_names.append(xrn.pl_slicename())
+            elif xrn.type == 'sliver':
+                leaf = xrn.leaf
+                leaf_split = leaf.split('-')
+                if len(leaf_split) > 1:
+                    slice_ids.append(leaf_split[0])
+                    node_ids.append(leaf_split[1]) 
+
+        # look up the requested urns
+        filter = {}
+        if slice_names:
+            filter['name'] = slice_names
+        if slice_ids:
+            filter['id'] = slice_ids
+        slices = self.shell.GetSlices(filter)
         if not slices:
             raise SearchFailed(urns)
         slice = slices[0]
-        if ids:
-            node_ids = ids
-        else:
+        if not node_ids:
             node_ids = slice['node_ids']
-        slice_hrn = PlXrn(auth=self.hrn, slicename=slice['name']).get_hrn()     
         # determine if this is a peer slice
         # xxx I wonder if this would not need to use PlSlices.get_peer instead 
         # in which case plc.peers could be deprecated as this here
         # is the only/last call to this last method in plc.peers
+        slice_hrn = PlXrn(auth=self.hrn, slicename=slice['name']).get_hrn()     
         peer = peers.get_peer(self, slice_hrn)
         try:
             if peer:
                 self.shell.UnBindObjectFromPeer('slice', slice['slice_id'], peer)
+        
             self.shell.DeleteSliceFromNodes(slice['slice_id'], node_ids)
         finally:
             if peer:
                 self.shell.BindObjectToPeer('slice', slice['slice_id'], peer, slice['peer_slice_id'])
-        return True
+
+        # prepare return struct
+        geni_slivers = []
+        for node_id in node_ids:
+            sliver_hrn = '%s.%s-%s' % (self.hrn, slice['slice_id'], node_id)
+            geni_slivers.append(
+                {'geni_sliver_urn': Xrn(sliver_hrn).urn,
+                 'geni_allocation_status': 'geni_unallocated',
+                 'geni_expires': slice['expires']})  
+        return geni_slivers
     
     def renew (self, urns, expiration_time, options={}):
         # we can only renew slices, not individual slivers. ignore sliver
