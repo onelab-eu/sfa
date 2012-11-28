@@ -1,6 +1,6 @@
 %define name sfa
 %define version 2.1
-%define taglevel 17
+%define taglevel 18
 
 %define release %{taglevel}%{?pldistro:.%{pldistro}}%{?date:.%{date}}
 %global python_sitearch	%( python -c "from distutils.sysconfig import get_python_lib; print get_python_lib(1)" )
@@ -270,6 +270,15 @@ fi
 [ "$1" -ge "1" ] && service sfa-cm restart || :
 
 %changelog
+* Wed Nov 28 2012 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-2.1-18
+- support fordelegation in sfaclientlib
+- sfi delegate fixed
+- other delegation-related sfi option trashed
+- new config (based on ini format)
+- new dummy driver and related package
+- pl importer has more explicit error messages
+- credential dump shows expiration
+
 * Tue Oct 16 2012 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-2.1-17
 - bugfix in forwarding Resolve requests
 - various fixes in the nitos driver wrt keys and users
