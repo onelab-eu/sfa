@@ -756,9 +756,9 @@ class PlDriver (Driver):
         for node_id in node_ids:
             sliver_hrn = '%s.%s-%s' % (self.hrn, slice['slice_id'], node_id)
             geni_slivers.append(
-                {'geni_sliver_urn': Xrn(sliver_hrn).urn,
+                {'geni_sliver_urn': Xrn(sliver_hrn, type='sliver').urn,
                  'geni_allocation_status': 'geni_unallocated',
-                 'geni_expires': slice['expires']})  
+                 'geni_expires': datetime_to_string(utcparse(slice['expires']))})  
         return geni_slivers
     
     def renew (self, urns, expiration_time, options={}):
