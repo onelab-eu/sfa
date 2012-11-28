@@ -474,10 +474,10 @@ class SlabSlices:
                 else:
                     #User not existing in LDAP
                     #TODO SA 21/08/12 raise smthg to add user or add it auto ?
-                    new_record = {}
-                    new_record['pkey'] = users[0]['keys'][0]
-                    new_record['mail'] = users[0]['email']
-                    self.driver.ldap.LdapAddUser(new_record)
+                    #new_record = {}
+                    #new_record['pkey'] = users[0]['keys'][0]
+                    #new_record['mail'] = users[0]['email']
+                  
                     logger.debug(" SLABSLICE.PY \tverify_person users \
                                 not in ldap ...NEW ACCOUNT NEEDED %s \r\n \t \
                                 ldap_reslt %s "  %(users, ldap_reslt))
@@ -526,19 +526,22 @@ class SlabSlices:
                 if k in added_user:
                     person[k] = added_user[k]
 
-            person['keys'] = added_user['keys'][0]
+            person['pkey'] = added_user['keys'][0]
+            person['mail'] = added_user['email']
+            person['email'] = added_user['email']
             person['key_ids'] =  added_user.get('key_ids', [])
                 
-
-
+            #person['person_id'] = self.driver.AddPerson(person)
+            person['uid'] = self.driver.AddPerson(person)
             
-            person['person_id'] = self.driver.AddPerson(person)
-            if peer:
-                person['peer_person_id'] = added_user['person_id']
+            #Update slice_Record with the id now known to LDAP
+            slice_record['reg-researcher'] = [self.root_auth + '.' + person['uid']]
+            #if peer:
+                #person['peer_person_id'] = added_user['person_id']
             added_persons.append(person)
            
             # enable the account 
-            self.driver.UpdatePerson(person['person_id'], {'enabled': True})
+            #self.driver.UpdatePerson(person['person_id'], {'enabled': True})
             
             # add person to site
             #self.driver.AddPersonToSite(added_user_id, login_base)

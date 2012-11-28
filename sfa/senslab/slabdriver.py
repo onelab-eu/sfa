@@ -1613,8 +1613,8 @@ class SlabDriver(Driver):
         
         """
         ret = self.ldap.LdapAddUser(record)
-        logger.warning("SLABDRIVER AddPerson return code %s \r\n ", ret)
-        return
+        logger.debug("SLABDRIVER AddPerson return code %s \r\n "%(ret))
+        return ret['uid']
     
     #TODO AddPersonToSite 04/07/2012 SA
     def AddPersonToSite (self, auth, person_id_or_email, \

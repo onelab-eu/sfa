@@ -142,7 +142,10 @@ class LDAPapi :
         #No first name and last name 
         #check  email    
         else:
-            email = record['mail']
+            #For compatibility with other ldap func
+            if 'mail' in record and 'email' not in record:
+                record['email'] = record['mail']
+            email = record['email']
             email = email.split('@')[0].lower()
             lower_first_name = None
             lower_last_name = None
@@ -429,7 +432,7 @@ class LDAPapi :
                 return {'bool' : False, 'message' : error }
         
             self.conn.close()
-            return {'bool': True}  
+            return {'bool': True, 'uid':filter_by['uid']}  
         else: 
             return result
 
