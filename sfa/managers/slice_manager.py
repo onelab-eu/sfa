@@ -143,7 +143,7 @@ class SliceManager:
     
         # get the callers hrn
         valid_cred = api.auth.checkCredentials(creds, 'listnodes', hrn)[0]
-        caller_hrn = Credential(string=valid_cred).get_gid_caller().get_hrn()
+        caller_hrn = Credential(cred=valid_cred).get_gid_caller().get_hrn()
     
         # attempt to use delegated credential first
         cred = api.getDelegatedCredential(creds)
@@ -232,7 +232,7 @@ class SliceManager:
         # get the callers hrn
         hrn, type = urn_to_hrn(xrn)
         valid_cred = api.auth.checkCredentials(creds, 'createsliver', hrn)[0]
-        caller_hrn = Credential(string=valid_cred).get_gid_caller().get_hrn()
+        caller_hrn = Credential(cred=valid_cred).get_gid_caller().get_hrn()
         threads = ThreadManager()
         for aggregate in api.aggregates:
             # prevent infinite loop. Dont send request back to caller
@@ -277,7 +277,7 @@ class SliceManager:
         (hrn, urn_type) = urn_to_hrn(xrn)
         # get the callers hrn
         valid_cred = api.auth.checkCredentials(creds, 'renewsliver', hrn)[0]
-        caller_hrn = Credential(string=valid_cred).get_gid_caller().get_hrn()
+        caller_hrn = Credential(cred=valid_cred).get_gid_caller().get_hrn()
 
         # attempt to use delegated credential first
         cred = api.getDelegatedCredential(creds)
@@ -317,7 +317,7 @@ class SliceManager:
         (hrn, type) = urn_to_hrn(xrn)
         # get the callers hrn
         valid_cred = api.auth.checkCredentials(creds, 'deletesliver', hrn)[0]
-        caller_hrn = Credential(string=valid_cred).get_gid_caller().get_hrn()
+        caller_hrn = Credential(cred=valid_cred).get_gid_caller().get_hrn()
 
         # attempt to use delegated credential first
         cred = api.getDelegatedCredential(creds)
@@ -399,7 +399,7 @@ class SliceManager:
     
         # get the callers hrn
         valid_cred = api.auth.checkCredentials(creds, 'listslices', None)[0]
-        caller_hrn = Credential(string=valid_cred).get_gid_caller().get_hrn()
+        caller_hrn = Credential(cred=valid_cred).get_gid_caller().get_hrn()
     
         # attempt to use delegated credential first
         cred= api.getDelegatedCredential(creds)
@@ -442,7 +442,7 @@ class SliceManager:
     
         # get the callers hrn
         valid_cred = api.auth.checkCredentials(creds, 'getticket', slice_hrn)[0]
-        caller_hrn = Credential(string=valid_cred).get_gid_caller().get_hrn()
+        caller_hrn = Credential(cred=valid_cred).get_gid_caller().get_hrn()
     
         # attempt to use delegated credential first
         cred = api.getDelegatedCredential(creds)
@@ -501,7 +501,7 @@ class SliceManager:
     
         # get the callers hrn
         valid_cred = api.auth.checkCredentials(creds, 'startslice', hrn)[0]
-        caller_hrn = Credential(string=valid_cred).get_gid_caller().get_hrn()
+        caller_hrn = Credential(cred=valid_cred).get_gid_caller().get_hrn()
     
         # attempt to use delegated credential first
         cred = api.getDelegatedCredential(creds)
@@ -523,7 +523,7 @@ class SliceManager:
         xrn = Xrn(xrn)  
         # get the callers hrn
         valid_cred = api.auth.checkCredentials(creds, 'stopslice', xrn.hrn)[0]
-        caller_hrn = Credential(string=valid_cred).get_gid_caller().get_hrn()
+        caller_hrn = Credential(cred=valid_cred).get_gid_caller().get_hrn()
     
         # attempt to use delegated credential first
         cred = api.getDelegatedCredential(creds)
