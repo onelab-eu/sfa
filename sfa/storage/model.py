@@ -311,6 +311,26 @@ class RegKey (Base):
         result += ">"
         return result
 
+class SliverAllocation(Base,AlchemyObj):
+    __tablename__       = 'sliver_allocation'
+    sliver_id           = Column(String, primary_key=True)
+    allocation_state    = Column(String)
+
+    def __init__(self, sliver_id, allocation_state):
+        self.sliver_id = sliver_id
+        self.allocation_state = allocation_state
+
+    def __repr__(self):
+        result = "<sliver_allocation sliver_id=%s allocation_state=%s" % \
+                  (self.sliver_id, self.allocation_state)
+        return result
+
+    @validates('allocation_state')
+    def validate_allocation_state(self, key, state):
+        allocation_states = ['geni_unallocated', 'geni_allocated', 'geni_provisioned']
+        assert state in allocation_states
+        return state
+
 ##############################
 # although the db needs of course to be reachable for the following functions
 # the schema management functions are here and not in alchemy
