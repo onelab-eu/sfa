@@ -21,6 +21,9 @@ from sfa.rspecs.version_manager import VersionManager
 from sfa.planetlab.plxrn import PlXrn, hostname_to_urn, hrn_to_pl_slicename, slicename_to_hrn
 from sfa.planetlab.vlink import get_tc_rate
 from sfa.planetlab.topology import Topology
+from sfa.storage.alchemy import dbsession
+from sfa.storage.model import SliverAllocation
+
 
 import time
 
@@ -109,7 +112,7 @@ class PlAggregate:
             pl_initscripts[initscript['initscript_id']] = initscript
         return pl_initscripts
 
-    def get_slivers(self, urns, options):
+    def get_slivers(self, urns, options={}):
         names = set()
         slice_ids = set()
         node_ids = []
@@ -143,7 +146,8 @@ class PlAggregate:
             node.update(slices[0]) 
             node['tags'] = tags_dict[node['node_id']]
             sliver_hrn = '%s.%s-%s' % (self.driver.hrn, slice['slice_id'], node['node_id'])
-            node['urn'] = PlXrn(xrn=sliver_hrn, type='sliver').get_urn() 
+            node['sliver_id'] = Xrn(sliver_hrn, type='sliver').urn
+            node['urn'] = node['sliver_id'] 
             slivers.append(node)
         return slivers
 
@@ -238,7 +242,7 @@ class PlAggregate:
             nodes_dict[node['node_id']] = node
         return nodes_dict
 
-    def rspec_node_to_geni_sliver(self, rspec_node, allocation_status=None):
+    def rspec_node_to_geni_sliver(self, rspec_node):
         op_status = "geni_unknown"
         state = rspec_node['boot_state'].lower()
         if state == 'boot':
@@ -246,13 +250,10 @@ class PlAggregate:
         else:
             op_status =' geni_failed'
 
-        if not allocation_status:
-            allocation_status = 'geni_provisioned'
 
         # required fields
         geni_sliver = {'geni_sliver_urn': rspec_node['sliver_id'],
                        'geni_expires': rspec_node['expires'],
-                       'geni_allocation_status': allocation_status,
                        'geni_operational_status': op_status,
                        'geni_error': None,
                        }
@@ -331,7 +332,7 @@ class PlAggregate:
             rspec.version.add_links(links)
         return rspec.toxml()
 
-    def describe(self, urns, version=None, options={}, allocation_status=None):
+    def describe(self, urns, version=None, options={}):
         version_manager = VersionManager()
         version = version_manager.get_version(version)
         rspec_version = version_manager._get_version(version.type, version.version, 'manifest')
@@ -343,6 +344,14 @@ class PlAggregate:
         if len(slivers) == 0:
             raise SliverDoesNotExist("You have not allocated any slivers here for %s" % str(urns))
         rspec.xml.set('expires',  datetime_to_string(utcparse(slivers[0]['expires'])))
+
+        # lookup the sliver allocations
+        sliver_ids = [sliver['sliver_id'] for sliver in slivers]
+        constraint = SliverAllocation.sliver_id.in_(sliver_ids)
+        sliver_allocations = dbsession.query(SliverAllocation).filter(constraint)
+        sliver_allocation_dict = {}
+        for sliver_allocation in sliver_allocations:
+            sliver_allocation_dict[sliver_allocation.sliver_id] = sliver_allocation
       
         if not options.get('list_leases') or options['list_leases'] != 'leases':
             # add slivers
@@ -364,7 +373,9 @@ class PlAggregate:
                 if sliver['slice_ids_whitelist'] and sliver['slice_id'] not in sliver['slice_ids_whitelist']:
                     continue
                 rspec_node = self.sliver_to_rspec_node(sliver, sites, interfaces, node_tags, pl_initscripts)
-                geni_sliver = self.rspec_node_to_geni_sliver(rspec_node, allocation_status=allocation_status)
+                geni_sliver = self.rspec_node_to_geni_sliver(rspec_node)
+                sliver_allocation = sliver_allocation_dict[sliver['sliver_id']]
+                geni_sliver['geni_allocation_status'] = sliver_allocation.allocation_state
                 rspec_nodes.append(rspec_node) 
                 geni_slivers.append(geni_sliver)
             rspec.version.add_nodes(rspec_nodes)

@@ -10,7 +10,7 @@ from sfa.util.cache import Cache
 
 # one would think the driver should not need to mess with the SFA db, but..
 from sfa.storage.alchemy import dbsession
-from sfa.storage.model import RegRecord
+from sfa.storage.model import RegRecord, SliverAllocation
 
 # used to be used in get_ticket
 #from sfa.trust.sfaticket import SfaTicket
@@ -577,70 +577,6 @@ class PlDriver (Driver):
         desc =  aggregate.describe(urns)
         return desc['geni_slivers']
 
-        # find out where this slice is currently running
-        slicename = hrn_to_pl_slicename(slice_hrn)
-        
-        slices = self.shell.GetSlices([slicename], ['slice_id', 'node_ids','person_ids','name','expires'])
-        if len(slices) == 0:        
-            raise SliverDoesNotExist("%s (used %s as slicename internally)" % (slice_hrn, slicename))
-        slice = slices[0]
-        
-        # report about the local nodes only
-        nodes = self.shell.GetNodes({'node_id':slice['node_ids'],'peer_id':None},
-                              ['node_id', 'hostname', 'site_id', 'boot_state', 'last_contact'])
-
-        if len(nodes) == 0:
-            raise SliverDoesNotExist("You have not allocated any slivers here") 
-
-        # get login info
-        user = {}
-        if slice['person_ids']:
-            persons = self.shell.GetPersons(slice['person_ids'], ['key_ids'])
-            key_ids = [key_id for person in persons for key_id in person['key_ids']]
-            person_keys = self.shell.GetKeys(key_ids)
-            keys = [key['key'] for key in person_keys]
-
-            user.update({'urn': slice_urn,
-                         'login': slice['name'],
-                         'protocol': ['ssh'],
-                         'port': ['22'],
-                         'keys': keys})
-
-        site_ids = [node['site_id'] for node in nodes]
-    
-        result = {}
-        result['geni_urn'] = slice_urn
-        result['pl_login'] = slice['name']
-        result['pl_expires'] = datetime_to_string(utcparse(slice['expires']))
-        result['geni_expires'] = datetime_to_string(utcparse(slice['expires']))
-        
-        resources = []
-        for node in nodes:
-            res = {}
-            res['pl_hostname'] = node['hostname']
-            res['pl_boot_state'] = node['boot_state']
-            res['pl_last_contact'] = node['last_contact']
-            res['geni_expires'] = datetime_to_string(utcparse(slice['expires']))
-            if node['last_contact'] is not None:
-                
-                res['pl_last_contact'] = datetime_to_string(utcparse(node['last_contact']))
-            sliver_id = "%s:%s" % (slice['slice_id'], node['node_id'])
-            sliver_xrn = Xrn(slice_urn, id = sliver_id)
-            sliver_xrn.set_authority(self.hrn)
-            res['geni_urn'] = sliver_xrn.get_urn()
-            if node['boot_state'] == 'boot':
-                res['geni_status'] = 'ready'
-            else:
-                res['geni_status'] = 'failed'
-            res['geni_allocation_status'] = 'geni_provisioned'
-                
-            res['geni_error'] = ''
-            res['users'] = [user]  
-            resources.append(res)
-            
-        result['geni_resources'] = resources
-        return result
-
     def allocate (self, urn, rspec_string, options={}):
         xrn = Xrn(urn)
         aggregate = PlAggregate(self)
@@ -675,7 +611,30 @@ class PlDriver (Driver):
                 hostname = xrn_to_hostname(node.get('component_id').strip())
             if hostname:
                 requested_slivers.append(hostname)
-        nodes = slices.verify_slice_nodes(slice, requested_slivers, peer) 
+        nodes = slices.verify_slice_nodes(slice, requested_slivers, peer)
+
+        # update all sliver allocation states setting then to geni_allocated   
+        sliver_state_updated = {}
+        for node in nodes:
+            sliver_hrn = '%s.%s-%s' % (self.hrn, slice['slice_id'], node['node_id'])
+            sliver_id = Xrn(sliver_hrn, type='sliver').urn
+            sliver_state_updated[sliver_id] = False 
+
+        constraint = SliverAllocation.sliver_id.in_(sliver_state_updated.keys())
+        cur_sliver_allocations = dbsession.query(SliverAllocation).filter(constraint)
+        for sliver_allocation in cur_sliver_allocations:
+            sliver_allocation.allocation_state = 'geni_allocated'
+            sliver_state_updated[sliver_allocation.sliver_id] = True
+        dbsession.commit()
+
+        # Some states may not have been updated becuase no sliver allocation state record 
+        # exists for the sliver. Insert new allocation records for these slivers and set 
+        # it to geni_allocated.
+        for (sliver_id, state_updated) in sliver_state_updated.items():
+            if state_updated == False:
+                record = SliverAllocation(sliver_id=sliver_id, allocation_state='geni_allocated')
+                dbsession.add(record)
+        dbsession.commit()  
    
         # add/remove links links 
         slices.verify_slice_links(slice, rspec.version.get_link_requests(), nodes)
@@ -695,70 +654,68 @@ class PlDriver (Driver):
                 requested_leases.append(requested_lease)
 
         leases = slices.verify_slice_leases(slice, requested_leases, kept_leases, peer)
-    
         # handle MyPLC peer association.
         # only used by plc and ple.
         slices.handle_peer(site, slice, persons, peer)
         
-        return aggregate.describe([xrn.get_urn()], version=rspec.version, allocation_status='geni_allocated')
+        return aggregate.describe([xrn.get_urn()], version=rspec.version)
 
     def provision(self, urns, options={}):
-        return self.describe(urns, None, options=options, allocation_status='geni_provisioned')
+        # update sliver allocation states and set them to geni_provisioned
+        aggregate = PlAggregate(self)
+        slivers = aggregate.get_slivers(urns)
+        sliver_ids = [sliver['sliver_id'] for sliver in slivers]
+        constraint = SliverAllocation.sliver_id.in_(sliver_ids)
+        cur_sliver_allocations = dbsession.query(SliverAllocation).filter(constraint)
+        for sliver_allocation in cur_sliver_allocations:
+            sliver_allocation.allocation_state = 'geni_provisioned'
+        dbsession.commit()
+     
+        return self.describe(urns, None, options=options)
 
     def delete(self, urns, options={}):
-        # urns argument may contain slice or sliver urns. Slice urns contain the
-        # a slice's name whereas sliver urns contain a slice_id, node_id tupple. 
-        # We will collect names/ids specified in the urns provided by the caller.    
-        slice_names = []
-        slice_ids = []
+
+        aggregate = PlAggregate(self)
+        slivers = aggregate.get_slivers(urns)
+        slice_id = slivers[0]['slice_id'] 
         node_ids = []
+        sliver_ids = []
+        for sliver in slivers:
+            node_ids.append(sliver['node_id'])
+            sliver_ids.append(sliver['sliver_id']) 
 
-        for urn in urns:
-            xrn = PlXrn(xrn=urn)
-            if xrn.type == 'slice' and xrn.pl_slicename() not in slice_names:
-                slice_names.append(xrn.pl_slicename())
-            elif xrn.type == 'sliver':
-                leaf = xrn.leaf
-                leaf_split = leaf.split('-')
-                if len(leaf_split) > 1:
-                    slice_ids.append(leaf_split[0])
-                    node_ids.append(leaf_split[1]) 
-
-        # look up the requested urns
-        filter = {}
-        if slice_names:
-            filter['name'] = slice_names
-        if slice_ids:
-            filter['id'] = slice_ids
-        slices = self.shell.GetSlices(filter)
-        if not slices:
-            raise SearchFailed(urns)
-        slice = slices[0]
-        if not node_ids:
-            node_ids = slice['node_ids']
         # determine if this is a peer slice
         # xxx I wonder if this would not need to use PlSlices.get_peer instead 
         # in which case plc.peers could be deprecated as this here
         # is the only/last call to this last method in plc.peers
-        slice_hrn = PlXrn(auth=self.hrn, slicename=slice['name']).get_hrn()     
+        slice_hrn = PlXrn(auth=self.hrn, slicename=slivers[0]['name']).get_hrn()     
         peer = peers.get_peer(self, slice_hrn)
         try:
             if peer:
-                self.shell.UnBindObjectFromPeer('slice', slice['slice_id'], peer)
-        
-            self.shell.DeleteSliceFromNodes(slice['slice_id'], node_ids)
+                self.shell.UnBindObjectFromPeer('slice', slice_id, peer)
+ 
+            self.shell.DeleteSliceFromNodes(slice_id, node_ids)
+ 
+            # update slivera allocation states
+            constraint = SliverAllocation.sliver_id.in_(sliver_ids)
+            cur_sliver_allocations = dbsession.query(SliverAllocation).filter(constraint)
+            for sliver_allocation in cur_sliver_allocations:
+                sliver_allocation.allocation_state = 'geni_unallocated'
+            dbsession.commit()
         finally:
             if peer:
-                self.shell.BindObjectToPeer('slice', slice['slice_id'], peer, slice['peer_slice_id'])
+                self.shell.BindObjectToPeer('slice', slice_id, peer, slice['peer_slice_id'])
+
+        
 
         # prepare return struct
         geni_slivers = []
         for node_id in node_ids:
-            sliver_hrn = '%s.%s-%s' % (self.hrn, slice['slice_id'], node_id)
+            sliver_hrn = '%s.%s-%s' % (self.hrn, slice_id, node_id)
             geni_slivers.append(
                 {'geni_sliver_urn': Xrn(sliver_hrn, type='sliver').urn,
                  'geni_allocation_status': 'geni_unallocated',
-                 'geni_expires': datetime_to_string(utcparse(slice['expires']))})  
+                 'geni_expires': datetime_to_string(utcparse(slivers[0]['expires']))})  
         return geni_slivers
     
     def renew (self, urns, expiration_time, options={}):
