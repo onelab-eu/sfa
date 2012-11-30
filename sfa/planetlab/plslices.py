@@ -197,7 +197,10 @@ class PlSlices:
 
         except: 
             logger.log_exc('Failed to add/remove slice from nodes')
-        return nodes
+
+        slices = self.driver.shell.GetSlices(slice['name'], ['node_ids']) 
+        resulting_nodes = self.driver.shell.GetNodes(slices[0]['node_ids'])
+        return resulting_nodes
 
     def free_egre_key(self):
         used = set()
