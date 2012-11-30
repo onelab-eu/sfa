@@ -129,85 +129,88 @@ function db_start () {
 
     if ! rpm -q myplc >& /dev/null; then
 
-	######## standalone deployment - no colocated myplc
+        ######## standalone deployment - no colocated myplc
 
-	######## sysconfig 
-	# Set data directory and redirect startup output to /var/log/pgsql
-	mkdir -p $(dirname $postgresql_sysconfig)
-	# remove previous definitions
-	touch $postgresql_sysconfig
-	tmp=${postgresql_sysconfig}.new
-	( egrep -v '^(PGDATA=|PGLOG=|PGPORT=)' $postgresql_sysconfig 
-	    echo "PGDATA=$PGDATA"
-	    echo "PGLOG=/var/log/pgsql"
-	    echo "PGPORT=$SFA_DB_PORT"
-	) >> $tmp ; mv -f $tmp $postgresql_sysconfig
+        ######## sysconfig 
+        # Set data directory and redirect startup output to /var/log/pgsql
+        mkdir -p $(dirname $postgresql_sysconfig)
+        # remove previous definitions
+        touch $postgresql_sysconfig
+        tmp=${postgresql_sysconfig}.new
+        ( egrep -v '^(PGDATA=|PGLOG=|PGPORT=)' $postgresql_sysconfig 
+            echo "PGDATA=$PGDATA"
+            echo "PGLOG=/var/log/pgsql"
+            echo "PGPORT=$SFA_DB_PORT"
+        ) >> $tmp ; mv -f $tmp $postgresql_sysconfig
 
-	######## /var/lib/pgsql/data 
-	# Fix ownership (rpm installation may have changed it)
-	chown -R -H postgres:postgres $(dirname $PGDATA)
+        ######## /var/lib/pgsql/data 
+        # Fix ownership (rpm installation may have changed it)
+        chown -R -H postgres:postgres $(dirname $PGDATA)
 
-	# PostgreSQL must be started at least once to bootstrap
-	# /var/lib/pgsql/data
-	if [ ! -f $postgresql_conf ] ; then
-	    service postgresql initdb &> /dev/null || :
-	    check
-	fi
+        # PostgreSQL must be started at least once to bootstrap
+        # /var/lib/pgsql/data
+        if [ ! -f $postgresql_conf ] ; then
+            service postgresql initdb &> /dev/null || :
+            check
+        fi
 
-	######## /var/lib/pgsql/data/postgresql.conf
-	registry_ip=""
-	foo=$(python -c "import socket; print socket.gethostbyname(\"$SFA_REGISTRY_HOST\")") && registry_ip="$foo"
-	# Enable DB server. drop Postgresql<=7.x
-	# PostgreSQL >=8.0 defines listen_addresses
-	# listen on a specific IP + localhost, more robust when run within a vserver
-	sed -i -e '/^listen_addresses/d' $postgresql_conf
-	if [ -z "$registry_ip" ] ; then
-	    echo "listen_addresses = 'localhost'" >> $postgresql_conf
-	else
-	    echo "listen_addresses = '${registry_ip},localhost'" >> $postgresql_conf
-	fi
-	# tweak timezone to be 'UTC'
-	sed -i -e '/^timezone=/d' $postgresql_conf
-	echo "timezone='UTC'" >> $postgresql_conf
+        ######## /var/lib/pgsql/data/postgresql.conf
+        registry_ip=""
+        foo=$(python -c "import socket; print socket.gethostbyname(\"$SFA_REGISTRY_HOST\")") && registry_ip="$foo"
+        # Enable DB server. drop Postgresql<=7.x
+        # PostgreSQL >=8.0 defines listen_addresses
+        # listen on a specific IP + localhost, more robust when run within a vserver
+        sed -i -e '/^listen_addresses/d' $postgresql_conf
+        if [ -z "$registry_ip" ] ; then
+            echo "listen_addresses = 'localhost'" >> $postgresql_conf
+        else
+            echo "listen_addresses = '${registry_ip},localhost'" >> $postgresql_conf
+        fi
+        # tweak timezone to be 'UTC'
+        sed -i -e '/^timezone=/d' $postgresql_conf
+        echo "timezone='UTC'" >> $postgresql_conf
 
-	######## /var/lib/pgsql/data/pg_hba.conf
-	# Disable access to all DBs from all hosts
-	sed -i -e '/^\(host\|local\)/d' $pghba_conf
+        ######## /var/lib/pgsql/data/pg_hba.conf
+        # Disable access to all DBs from all hosts
+        sed -i -e '/^\(host\|local\)/d' $pghba_conf
 
-	# Enable passwordless localhost access
-	echo "local all all trust" >>$pghba_conf
-	# grant access
-	(
-	    echo "host $SFA_DB_NAME $SFA_DB_USER 127.0.0.1/32 password"
-	    [ -n "$registry_ip" ] && echo "host $SFA_DB_NAME $SFA_DB_USER ${registry_ip}/32 password"
-	) >>$pghba_conf
+        # Enable passwordless localhost access
+        echo "local all all trust" >>$pghba_conf
+        # grant access
+        (
+            echo "host $SFA_DB_NAME $SFA_DB_USER 127.0.0.1/32 password"
+            [ -n "$registry_ip" ] && echo "host $SFA_DB_NAME $SFA_DB_USER ${registry_ip}/32 password"
+        ) >>$pghba_conf
 
-    if [ "$SFA_GENERIC_FLAVOUR" == "openstack" ] ; then
-        [ -n "$registry_ip" ] && echo "host nova nova ${registry_ip}/32 password" >> $pghba_conf
-    fi   
-	
-	# Fix ownership (sed -i changes it)
-	chown postgres:postgres $postgresql_conf $pghba_conf
+        if [ "$SFA_GENERIC_FLAVOUR" == "openstack" ] ; then
+            [ -n "$registry_ip" ] && echo "host nova nova ${registry_ip}/32 password" >> $pghba_conf
+        fi   
+        
+        # Fix ownership (sed -i changes it)
+        chown postgres:postgres $postgresql_conf $pghba_conf
 
-	######## compute a password if needed
-	if [ -z "$SFA_DB_PASSWORD" ] ; then
-	    SFA_DB_PASSWORD=$(uuidgen)
-	    sfa-config --category=sfa_db --variable=password --value="$SFA_DB_PASSWORD" --save=$sfa_local_config $sfa_local_config >& /dev/null
-	    reload force
-	fi
+        ######## compute a password if needed
+        if [ -z "$SFA_DB_PASSWORD" ] ; then
+            SFA_DB_PASSWORD=$(uuidgen)
+            sfa-config --category=sfa_db --variable=password --value="$SFA_DB_PASSWORD" --save=$sfa_local_config $sfa_local_config >& /dev/null
+            reload force
+        fi
 
-    else
+    #else
 
         ######## we are colocated with a myplc
-	# no need to worry about the pgsql setup (see /etc/plc.d/postgresql)
-	# myplc enforces the password for its user
-	PLC_DB_USER=$(plc-config --category=plc_db --variable=user)
-	PLC_DB_PASSWORD=$(plc-config --category=plc_db --variable=password)
-	# store this as the SFA user/password 
-	sfa-config --category=sfa_db --variable=user --value=$PLC_DB_USER --save=$sfa_local_config $sfa_local_config >& /dev/null
-	sfa-config --category=sfa_db --variable=password --value=$PLC_DB_PASSWORD --save=$sfa_local_config $sfa_local_config >& /dev/null
-	reload force
-    fi
+        # no need to worry about the pgsql setup (see /etc/plc.d/postgresql)
+        # myplc enforces the password for its user
+        
+        # The code below overwrites the site specific sfa db info with myplc db info. 
+        # This is most likely unncecessary and wrong so I'm commenting it out for now.  
+        #PLC_DB_USER=$(plc-config --category=plc_db --variable=user)
+        #PLC_DB_PASSWORD=$(plc-config --category=plc_db --variable=password)
+        # store this as the SFA user/password 
+        #sfa-config --category=sfa_db --variable=user --value=$PLC_DB_USER --save=$sfa_local_config $sfa_local_config >& /dev/null
+        #sfa-config --category=sfa_db --variable=password --value=$PLC_DB_PASSWORD --save=$sfa_local_config $sfa_local_config >& /dev/null
+        #reload force
+    #fi
 
     ######## Start up the server
     # not too nice, but.. when co-located with myplc we'll let it start/stop postgresql
