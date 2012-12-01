@@ -127,7 +127,7 @@ function db_start () {
     # only if enabled
     [ "$SFA_DB_ENABLED" == 1 -o "$SFA_DB_ENABLED" == True ] || return
 
-    if ! rpm -q myplc >& /dev/null; then
+    #if ! rpm -q myplc >& /dev/null; then
 
         ######## standalone deployment - no colocated myplc
 
@@ -196,7 +196,7 @@ function db_start () {
             reload force
         fi
 
-    else
+    #else
 
         ######## we are colocated with a myplc
         # no need to worry about the pgsql setup (see /etc/plc.d/postgresql)
@@ -204,13 +204,13 @@ function db_start () {
         
         # The code below overwrites the site specific sfa db info with myplc db info. 
         # This is most likely unncecessary and wrong so I'm commenting it out for now.  
-        PLC_DB_USER=$(plc-config --category=plc_db --variable=user)
-        PLC_DB_PASSWORD=$(plc-config --category=plc_db --variable=password)
+    #    PLC_DB_USER=$(plc-config --category=plc_db --variable=user)
+    #    PLC_DB_PASSWORD=$(plc-config --category=plc_db --variable=password)
         # store this as the SFA user/password 
-        sfa-config --category=sfa_db --variable=user --value=$PLC_DB_USER --save=$sfa_local_config $sfa_local_config >& /dev/null
-        sfa-config --category=sfa_db --variable=password --value=$PLC_DB_PASSWORD --save=$sfa_local_config $sfa_local_config >& /dev/null
-        reload force
-    fi
+    #    sfa-config --category=sfa_db --variable=user --value=$PLC_DB_USER --save=$sfa_local_config $sfa_local_config >& /dev/null
+    #    sfa-config --category=sfa_db --variable=password --value=$PLC_DB_PASSWORD --save=$sfa_local_config $sfa_local_config >& /dev/null
+    #    reload force
+    #fi
 
     ######## Start up the server
     # not too nice, but.. when co-located with myplc we'll let it start/stop postgresql
