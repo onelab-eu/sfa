@@ -374,8 +374,12 @@ class PlAggregate:
                     continue
                 rspec_node = self.sliver_to_rspec_node(sliver, sites, interfaces, node_tags, pl_initscripts)
                 geni_sliver = self.rspec_node_to_geni_sliver(rspec_node)
-                sliver_allocation = sliver_allocation_dict[sliver['sliver_id']]
-                geni_sliver['geni_allocation_status'] = sliver_allocation.allocation_state
+                sliver_allocation_record = sliver_allocation_dict.get(sliver['sliver_id'])
+                if sliver_allocation_record:
+                    sliver_allocation = sliver_allocation.allocation_state
+                else:
+                    sliver_allocation = 'geni_unallocated'
+                geni_sliver['geni_allocation_status'] = sliver_allocation
                 rspec_nodes.append(rspec_node) 
                 geni_slivers.append(geni_sliver)
             rspec.version.add_nodes(rspec_nodes)

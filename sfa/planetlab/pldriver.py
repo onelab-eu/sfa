@@ -700,13 +700,11 @@ class PlDriver (Driver):
             constraint = SliverAllocation.sliver_id.in_(sliver_ids)
             cur_sliver_allocations = dbsession.query(SliverAllocation).filter(constraint)
             for sliver_allocation in cur_sliver_allocations:
-                sliver_allocation.allocation_state = 'geni_unallocated'
+                dbsession.delete(sliver_allocation)
             dbsession.commit()
         finally:
             if peer:
                 self.shell.BindObjectToPeer('slice', slice_id, peer, slice['peer_slice_id'])
-
-        
 
         # prepare return struct
         geni_slivers = []
