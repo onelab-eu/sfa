@@ -1,7 +1,8 @@
 import datetime
 #
 from sfa.util.faults import MissingSfaInfo, UnknownSfaType, \
-    RecordNotFound, SfaNotImplemented, SliverDoesNotExist, SearchFailed
+    RecordNotFound, SfaNotImplemented, SliverDoesNotExist, SearchFailed, \
+    UnsupportedOperation 
 from sfa.util.sfalogging import logger
 from sfa.util.defaultdict import defaultdict
 from sfa.util.sfatime import utcparse, datetime_to_string, datetime_to_epoch
