@@ -336,7 +336,7 @@ class PlAggregate:
         version_manager = VersionManager()
         version = version_manager.get_version(version)
         rspec_version = version_manager._get_version(version.type, version.version, 'manifest')
-        rspec = RSpec(version=version, user_options=options)
+        rspec = RSpec(version=rspec_version, user_options=options)
 
         # get slivers
         geni_slivers = []
