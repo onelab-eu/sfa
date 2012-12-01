@@ -316,9 +316,11 @@ class SliverAllocation(Base,AlchemyObj):
     sliver_id           = Column(String, primary_key=True)
     allocation_state    = Column(String)
 
-    def __init__(self, sliver_id, allocation_state):
-        self.sliver_id = sliver_id
-        self.allocation_state = allocation_state
+    def __init__(self, **kwds):
+        if 'sliver_id' in kwds:
+            self.sliver_id = kwds['sliver_id']
+        if 'allocation_state' in kwds:
+            self.allocation_state = kwds['allocation_state']
 
     def __repr__(self):
         result = "<sliver_allocation sliver_id=%s allocation_state=%s" % \
@@ -330,6 +332,39 @@ class SliverAllocation(Base,AlchemyObj):
         allocation_states = ['geni_unallocated', 'geni_allocated', 'geni_provisioned']
         assert state in allocation_states
         return state
+
+    @staticmethod    
+    def set_allocations(self, sliver_ids, state):
+        from sfa.storage.alchemy import dbsession
+        if not isinstance(sliver_ids, list):
+            sliver_ids = [sliver_ids]
+        sliver_state_updated = {}
+        constraint = SliverAllocation.sliver_id.in_(sliver_ids)
+        sliver_allocations = dbsession.query (SliverAllocation).filter(constraint)
+        sliver_ids_found = []
+        for sliver_allocation in sliver_allocations:
+            sliver_allocation.allocation_state = state
+            sliver_ids_found = sliver_allocation.sliver_id
+
+        # Some states may not have been updated becuase no sliver allocation state record
+        # exists for the sliver. Insert new allocation records for these slivers and set
+        # it to geni_allocated.
+        sliver_ids_not_found = set(sliver_ids).difference(sliver_ids_found)
+        for sliver_id in sliver_ids_not_found:
+            record = SliverAllocation(sliver_id=sliver_id, allocation_state=state)
+            dbsession.add(record)
+        dbsession.commit()
+
+    @staticmethod
+    def delete_allocations(self, sliver_ids):
+        from sfa.storage.alchemy import dbsession
+        if not isinstance(sliver_ids, list):
+            sliver_ids = [sliver_ids]
+        constraint = SliverAllocation.sliver_id.in_(sliver_ids)
+        sliver_allocations = dbsession.query(SliverAllocation).filter(constraint)
+        for sliver_allocation in sliver_allocations:
+            dbsession.delete(sliver_allocation)
+        dbsession.commit()
 
 ##############################
 # although the db needs of course to be reachable for the following functions
