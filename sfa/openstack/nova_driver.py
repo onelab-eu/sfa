@@ -13,9 +13,10 @@ from sfa.util.cache import Cache
 from sfa.trust.credential import Credential
 # used to be used in get_ticket
 #from sfa.trust.sfaticket import SfaTicket
-
 from sfa.rspecs.version_manager import VersionManager
 from sfa.rspecs.rspec import RSpec
+from sfa.storage.alchemy import dbsession
+from sfa.storage.model import RegRecord, SliverAllocation
 
 # the driver interface, mostly provides default behaviours
 from sfa.managers.driver import Driver
@@ -353,21 +354,42 @@ class NovaDriver(Driver):
         rspec = RSpec(rspec_string)
         instance_name = hrn_to_os_slicename(slice_hrn)
         tenant_name = OSXrn(xrn=slice_hrn, type='slice').get_tenant_name()
-        aggregate.run_instances(instance_name, tenant_name, rspec_string, key_name, pubkeys)    
+        slivers = aggregate.run_instances(instance_name, tenant_name, \
+                                          rspec_string, key_name, pubkeys)
+        
+        # update all sliver allocation states setting then to geni_allocated    
+        sliver_ids = [sliver.id for sliver in slivers]
+        SliverAllocation.set_allocations(sliver_ids, 'geni_allocated')
    
         return aggregate.describe(urns=[urn], version=rspec.version)
 
     def provision(self, urns, options={}):
+        # update sliver allocation states and set them to geni_provisioned
+        aggregate = OSAggregate(self)
+        instances = aggregate.get_instances(urns)
+        sliver_ids = []
+        for instance in instances:
+            sliver_hrn = "%s.%s" % (self.driver.hrn, instance.id)
+            sliver_ids.append(Xrn(sliver_hrn, type='sliver').urn)
+        SliverAllocation.set_allocations(sliver_ids, 'geni_provisioned') 
+            
         return self.describe(urns, options=options) 
 
     def delete (self, urns, options={}):
+        # collect sliver ids so we can update sliver allocation states after
+        # we remove the slivers.
         aggregate = OSAggregate(self)
-        for urn in urns:
-            xrn = OSXrn(xrn=urn, type='slice')
-            tenant_name = xrn.get_tenant_name()
-            project_name = xrn.get_slicename()
-            id = xrn.id
-            aggregate.delete_instance(tenant_name, project_name, id)   
+        instances = aggregate.get_instances(urns)
+        sliver_ids = []
+        for instance in instances:
+            sliver_hrn = "%s.%s" % (self.driver.hrn, instance.id)
+            sliver_ids.append(Xrn(sliver_hrn, type='sliver').urn)
+            
+            # delete the instance
+            aggregate.delete_instance(instance)
+            
+        # delete sliver allocation states
+        SliverAllocation.delete_allocations(sliver_ids)
         return True
 
     def renew (self, urns, expiration_time, options={}):

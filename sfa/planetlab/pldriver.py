@@ -615,28 +615,13 @@ class PlDriver (Driver):
         nodes = slices.verify_slice_nodes(slice, requested_slivers, peer)
 
         # update all sliver allocation states setting then to geni_allocated   
-        sliver_state_updated = {}
+        sliver_ids = []
         for node in nodes:
             sliver_hrn = '%s.%s-%s' % (self.hrn, slice['slice_id'], node['node_id'])
             sliver_id = Xrn(sliver_hrn, type='sliver').urn
-            sliver_state_updated[sliver_id] = False 
-
-        constraint = SliverAllocation.sliver_id.in_(sliver_state_updated.keys())
-        cur_sliver_allocations = dbsession.query(SliverAllocation).filter(constraint)
-        for sliver_allocation in cur_sliver_allocations:
-            sliver_allocation.allocation_state = 'geni_allocated'
-            sliver_state_updated[sliver_allocation.sliver_id] = True
-        dbsession.commit()
-
-        # Some states may not have been updated becuase no sliver allocation state record 
-        # exists for the sliver. Insert new allocation records for these slivers and set 
-        # it to geni_allocated.
-        for (sliver_id, state_updated) in sliver_state_updated.items():
-            if state_updated == False:
-                record = SliverAllocation(sliver_id=sliver_id, allocation_state='geni_allocated')
-                dbsession.add(record)
-        dbsession.commit()  
-   
+            sliver_ids.append(sliver_id)
+        SliverAllocation.set_allocations(sliver_ids, 'geni_allocated')
+         
         # add/remove links links 
         slices.verify_slice_links(slice, rspec.version.get_link_requests(), nodes)
 
@@ -666,16 +651,13 @@ class PlDriver (Driver):
         aggregate = PlAggregate(self)
         slivers = aggregate.get_slivers(urns)
         sliver_ids = [sliver['sliver_id'] for sliver in slivers]
-        constraint = SliverAllocation.sliver_id.in_(sliver_ids)
-        cur_sliver_allocations = dbsession.query(SliverAllocation).filter(constraint)
-        for sliver_allocation in cur_sliver_allocations:
-            sliver_allocation.allocation_state = 'geni_provisioned'
-        dbsession.commit()
+        SliverAllocation.set_allocations(sliver_ids, 'geni_provisioned')
      
         return self.describe(urns, None, options=options)
 
     def delete(self, urns, options={}):
-
+        # collect sliver ids so we can update sliver allocation states after
+        # we remove the slivers.
         aggregate = PlAggregate(self)
         slivers = aggregate.get_slivers(urns)
         slice_id = slivers[0]['slice_id'] 
@@ -697,12 +679,8 @@ class PlDriver (Driver):
  
             self.shell.DeleteSliceFromNodes(slice_id, node_ids)
  
-            # update slivera allocation states
-            constraint = SliverAllocation.sliver_id.in_(sliver_ids)
-            cur_sliver_allocations = dbsession.query(SliverAllocation).filter(constraint)
-            for sliver_allocation in cur_sliver_allocations:
-                dbsession.delete(sliver_allocation)
-            dbsession.commit()
+            # delete sliver allocation states
+            SliverAllocation.delete_allocations(sliver_ids)
         finally:
             if peer:
                 self.shell.BindObjectToPeer('slice', slice_id, peer, slice['peer_slice_id'])

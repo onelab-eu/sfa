@@ -57,7 +57,6 @@ class OSAggregate:
             zones = [zone.name for zone in zones]
         return zones
 
-
     def list_resources(self, version=None, options={}):
         version_manager = VersionManager()
         version = version_manager.get_version(version)
@@ -96,19 +95,20 @@ class OSAggregate:
         ids = set()
         for urn in urns:
             xrn = OSXrn(xrn=urn)
-            names.add(xrn.get_slice_name())
-            if xrn.id:
-                ids.add(xrn.id)
+            if xrn.type == 'slice':
+                names.add(xrn.get_slice_name())
+            elif xrn.type == 'sliver':
+                ids.add(xrn.leaf)
 
         # look up instances
         instances = []
-        for name in name:
-            servers = self.driver.shell.nova_manager.servers.findall(name=name)
-            instances.extend(servers)
-
-        # filter on id
+        filter = {}
+        if names:
+            filter['name'] = names
         if ids:
-            instances = [server for server in servers if server.id in ids]
+            filter['id'] = ids   
+        servers = self.driver.shell.nova_manager.servers.findall(**filter)
+        instances.extend(servers)
 
         return instances
 
@@ -335,6 +335,7 @@ class OSAggregate:
         rspec = RSpec(rspec)
         requested_instances = defaultdict(list)
         # iterate over clouds/zones/nodes
+        slivers = []
         for node in rspec.version.get_nodes_with_slivers():
             instances = node.get('slivers', [])
             if not instances:
@@ -354,39 +355,41 @@ class OSAggregate:
                         metadata['component_id'] = node['component_id']
                     if node.get('client_id'):
                         metadata['client_id'] = node['client_id'] 
-                    self.driver.shell.nova_manager.servers.create(flavor=flavor_id,
+                    server = self.driver.shell.nova_manager.servers.create(
+                                                            flavor=flavor_id,
                                                             image=image_id,
                                                             key_name = key_name,
                                                             security_groups = [group_name],
                                                             files=files,
                                                             meta=metadata, 
                                                             name=instance_name)
+                    slivers.append(server)
                 except Exception, err:    
                     logger.log_exc(err)                                
                            
+        return slivers        
 
-
-    def delete_instance(self, tenant_name, instance_name, id=None):
+    def delete_instance(self, instance):
     
-        def _delete_security_group(instance):
-            security_group = instance.metadata.get('security_groups', '')
+        def _delete_security_group(inst):
+            security_group = inst.metadata.get('security_groups', '')
             if security_group:
                 manager = SecurityGroup(self.driver)
                 timeout = 10.0 # wait a maximum of 10 seconds before forcing the security group delete
                 start_time = time.time()
                 instance_deleted = False
                 while instance_deleted == False and (time.time() - start_time) < timeout:
-                    inst = self.driver.shell.nova_manager.servers.findall(id=instance.id)
-                    if not inst:
+                    tmp_inst = self.driver.shell.nova_manager.servers.findall(id=inst.id)
+                    if not tmp_inst:
                         instance_deleted = True
                     time.sleep(.5)
                 manager.delete_security_group(security_group)
 
-        thread_manager = ThreadManager() 
-        self.driver.shell.nova_manager.connect(tenant=tenant_name)
-        args = {'name': instance_name}
-        if id:
-            args['id'] = id
+        thread_manager = ThreadManager()
+        tenant = self.driver.shell.auth_manager.tenants.find(id=instance.tenant_id)  
+        self.driver.shell.nova_manager.connect(tenant=tenant.name)
+        args = {'name': instance.name
+                'id': instance.id}
         instances = self.driver.shell.nova_manager.servers.findall(**args)
         security_group_manager = SecurityGroup(self.driver)
         for instance in instances:
