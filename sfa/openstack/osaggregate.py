@@ -36,19 +36,6 @@ def pubkeys_to_user_data(pubkeys):
         user_data += "\n"
     return user_data
 
-def instance_to_sliver(instance, xrn=None):
-    sliver_urn = None
-    if slice_xrn:
-        sliver_xrn = Xrn(xrn=slice_xrn, type='slice', id=instance.id).get_urn()
-
-    sliver = Sliver({'slice_id': sliver_urn,
-                     'name': instance.name,
-                     'type': instance.name,
-                     'cpus': str(instance.vcpus),
-                     'memory': str(instance.ram),
-                     'storage':  str(instance.disk)})
-    return sliver
-
 def image_to_rspec_disk_image(image):
     img = DiskImage()
     img['name'] = image['name']
@@ -87,7 +74,6 @@ class OSAggregate:
         instances = self.get_instances(urns)
         if len(instances) == 0:
             raise SliverDoesNotExist("You have not allocated any slivers here")
-
         geni_slivers = []
         rspec_nodes = []
         for instance in instances:
@@ -96,7 +82,7 @@ class OSAggregate:
         version_manager = VersionManager()
         version = version_manager.get_version(version)
         rspec_version = version_manager._get_version(version.type, version.version, 'manifest')
-        rspec = RSpec(version=version, user_options=options)
+        rspec = RSpec(version=rspec_version, user_options=options)
         rspec.version.add_nodes(rspec_nodes)
         result = {'geni_urn': Xrn(urns[0]).get_urn(),
                   'geni_rspec': rspec.toxml(), 
@@ -224,10 +210,11 @@ class OSAggregate:
             op_status = 'geni_configuring'
         elif state == 'failed':
             op_status =' geni_failed'
-         
-        urn = OSXrn(name=instance.name, type='slice', id=instance.id).get_urn()
+        
+        sliver_hrn = '%s.%s' % (root_hrn, instance.id)
+        sliver_id = Xrn(sliver_hrn, type='sliver').urn 
         # required fields
-        geni_sliver = {'geni_sliver_urn': urn, 
+        geni_sliver = {'geni_sliver_urn': sliver_id, 
                        'geni_expires': None,
                        'geni_allocation_status': 'geni_provisioned',
                        'geni_operational_status': op_status,
