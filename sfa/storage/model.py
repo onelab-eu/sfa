@@ -334,7 +334,7 @@ class SliverAllocation(Base,AlchemyObj):
         return state
 
     @staticmethod    
-    def set_allocations(self, sliver_ids, state):
+    def set_allocations(sliver_ids, state):
         from sfa.storage.alchemy import dbsession
         if not isinstance(sliver_ids, list):
             sliver_ids = [sliver_ids]
@@ -344,7 +344,7 @@ class SliverAllocation(Base,AlchemyObj):
         sliver_ids_found = []
         for sliver_allocation in sliver_allocations:
             sliver_allocation.allocation_state = state
-            sliver_ids_found = sliver_allocation.sliver_id
+            sliver_ids_found.append(sliver_allocation.sliver_id)
 
         # Some states may not have been updated becuase no sliver allocation state record
         # exists for the sliver. Insert new allocation records for these slivers and set
@@ -356,7 +356,7 @@ class SliverAllocation(Base,AlchemyObj):
         dbsession.commit()
 
     @staticmethod
-    def delete_allocations(self, sliver_ids):
+    def delete_allocations(sliver_ids):
         from sfa.storage.alchemy import dbsession
         if not isinstance(sliver_ids, list):
             sliver_ids = [sliver_ids]
