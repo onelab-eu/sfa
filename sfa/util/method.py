@@ -56,7 +56,7 @@ class Method:
     	
     def __call__(self, *args, **kwds):
         """
-        Main entry point for all SfaAPI functions. Type checks
+        Main entry point for all SFA API functions. Type checks
         arguments, authenticates, and executes call().
         """
 
