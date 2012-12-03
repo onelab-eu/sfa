@@ -215,7 +215,7 @@ class RegistryManager:
             record_dicts = record_list
         
         # if we still have not found the record yet, try the local registry
-        logger.debug("before trying local records, %d foreign records"% len(record_dicts))
+#        logger.debug("before trying local records, %d foreign records"% len(record_dicts))
         if not record_dicts:
             recursive = False
             if ('recursive' in options and options['recursive']):
@@ -228,10 +228,10 @@ class RegistryManager:
                 raise MissingAuthority(hrn)
             if recursive:
                 records = dbsession.query(RegRecord).filter(RegRecord.hrn.startswith(hrn)).all()
-                logger.debug("recursive mode, found %d local records"%(len(records)))
+#                logger.debug("recursive mode, found %d local records"%(len(records)))
             else:
                 records = dbsession.query(RegRecord).filter_by(authority=hrn).all()
-                logger.debug("non recursive mode, found %d local records"%(len(records)))
+#                logger.debug("non recursive mode, found %d local records"%(len(records)))
             # so that sfi list can show more than plain names...
             for record in records: augment_with_sfa_builtins (record)
             record_dicts=[ record.todict(exclude_types=[InstrumentedList]) for record in records ]
