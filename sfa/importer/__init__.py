@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
 import sys
+from datetime import datetime
 
 from sfa.util.xrn import get_authority, hrn_to_urn
 from sfa.generic import Generic
@@ -115,9 +116,13 @@ class Importer:
         generic=Generic.the_flavour()
         importer_class = generic.importer_class()
         if importer_class:
-            self.logger.info ("Using flavour %s for importing (class %s)"%\
-                         (generic.flavour,importer_class.__name__))
+            beg_time=datetime.now()
+            self.logger.info ("Starting import on %s, using class %s from flavour %s"%\
+                         (beg_time,importer_class.__name__,generic.flavour))
             testbed_importer = importer_class (auth_hierarchy, self.logger)
             if testbed_importer:
                 testbed_importer.add_options(options)
                 testbed_importer.run (options)
+            end_time=datetime.now()
+            duration=end_time-begin_time
+            self.logger.info("Import took %s"%duration)
