@@ -116,9 +116,9 @@ class Importer:
         generic=Generic.the_flavour()
         importer_class = generic.importer_class()
         if importer_class:
-            beg_time=datetime.now()
+            begin_time=datetime.now()
             self.logger.info ("Starting import on %s, using class %s from flavour %s"%\
-                         (beg_time,importer_class.__name__,generic.flavour))
+                         (begin_time,importer_class.__name__,generic.flavour))
             testbed_importer = importer_class (auth_hierarchy, self.logger)
             if testbed_importer:
                 testbed_importer.add_options(options)
