@@ -388,7 +388,7 @@ class OSAggregate:
         thread_manager = ThreadManager()
         tenant = self.driver.shell.auth_manager.tenants.find(id=instance.tenant_id)  
         self.driver.shell.nova_manager.connect(tenant=tenant.name)
-        args = {'name': instance.name
+        args = {'name': instance.name,
                 'id': instance.id}
         instances = self.driver.shell.nova_manager.servers.findall(**args)
         security_group_manager = SecurityGroup(self.driver)
