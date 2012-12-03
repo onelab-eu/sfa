@@ -300,9 +300,9 @@ class PlImporter:
                         person_gid = self.auth_hierarchy.create_gid(person_urn, create_uuid(), pkey)
                         person_gid.set_email(person['email'])
                         user_record = RegUser (hrn=person_hrn, gid=person_gid, 
-                                                 pointer=person['person_id'], 
-                                                 authority=get_authority(person_hrn),
-                                                 email=person['email'])
+                                               pointer=person['person_id'], 
+                                               authority=get_authority(person_hrn),
+                                               email=person['email'])
                         if pubkey: 
                             user_record.reg_keys=[RegKey (pubkey['key'], pubkey['key_id'])]
                         else:
