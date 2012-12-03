@@ -26,7 +26,8 @@ from sfa.util.xrn import hrn_to_urn, get_authority
 from sfa.senslab.OARrestapi import  OARrestapi
 from sfa.senslab.LDAPapi import LDAPapi
 
-from sfa.senslab.slabpostgres import SlabDB, slab_dbsession, SliceSenslab
+from sfa.senslab.slabpostgres import SlabDB, slab_dbsession, SliceSenslab, \
+                                                        FederatedToSenslab
                                                                 
 from sfa.senslab.slabaggregate import SlabAggregate, slab_xrn_to_hostname, \
                                                             slab_xrn_object
@@ -1529,7 +1530,7 @@ class SlabDriver(Driver):
         return
     
     #TODO UpdatePerson 04/07/2012 SA
-    def UpdatePerson(self, auth, person_id_or_email, person_fields=None):
+    def UpdatePerson(self, slab_hrn, federated_hrn, person_fields=None):
         """Updates a person. Only the fields specified in person_fields 
         are updated, all other fields are left untouched.
         Users and techs can only update themselves. PIs can only update
@@ -1538,7 +1539,11 @@ class SlabDriver(Driver):
         FROM PLC API DOC
          
         """
-        logger.warning("SLABDRIVER UpdatePerson EMPTY - DO NOTHING \r\n ")
+        new_row = FederatedToSenslab(slab_hrn, federated_hrn)
+        slab_dbsession.add(new_row)
+        slab_dbsession.commit()
+        
+        logger.debug("SLABDRIVER UpdatePerson EMPTY - DO NOTHING \r\n ")
         return
     
     #TODO GetKeys 04/07/2012 SA

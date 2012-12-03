@@ -76,83 +76,83 @@ def TestLdap(job_id = None):
     print "\r\n TEST ldap.LdapSearch ids = avakian",ret
 
 
-    password = ldap.generate_password()
-    print "\r\n TEST generate_password ",password 
+    #password = ldap.generate_password()
+    #print "\r\n TEST generate_password ",password 
     
-    maxi = ldap.find_max_uidNumber()
-    print "\r\n TEST find_max_uidNumber " , maxi
+    #maxi = ldap.find_max_uidNumber()
+    #print "\r\n TEST find_max_uidNumber " , maxi
 
-    data = {}
-    data['last_name'] = "Drake"
-    data['first_name']="Tim"
-    data['givenName']= data['first_name']
-    data['mail'] = "robin@arkham.fr"
+    #data = {}
+    #data['last_name'] = "Drake"
+    #data['first_name']="Tim"
+    #data['givenName']= data['first_name']
+    #data['mail'] = "robin@arkham.fr"
     
-    record={}
-    record['hrn'] = 'senslab2.drake'
-    record['last_name'] = "Drake"
-    record['first_name']="Tim"
-    record['mail'] = "robin@arkham.fr"
+    #record={}
+    #record['hrn'] = 'senslab2.drake'
+    #record['last_name'] = "Drake"
+    #record['first_name']="Tim"
+    #record['mail'] = "robin@arkham.fr"
     
     
-    login = ldap.generate_login(data)
-    print "\r\n Robin \tgenerate_login  ", ret
+    #login = ldap.generate_login(data)
+    #print "\r\n Robin \tgenerate_login  ", ret, login
     
-    ret = ldap.LdapAddUser(data)
-    print "\r\n Robin  \tLdapAddUser ", ret
+    #ret = ldap.LdapAddUser(data)
+    #print "\r\n Robin  \tLdapAddUser ", ret
 
-    req_ldap = '(uid=' + login + ')'
-    ret = ldap.LdapSearch(req_ldap, [])
-    print "\r\n Robin \tldap.LdapSearch ids = %s %s"%(login,ret )
+    #req_ldap = '(uid=' + login + ')'
+    #ret = ldap.LdapSearch(req_ldap, [])
+    #print "\r\n Robin \tldap.LdapSearch ids = %s %s"%(login,ret )
     
-    password = "Thridrobin"
-    enc = ldap.encrypt_password(password)
-    print "\r\n Robin \tencrypt_password ", enc
+    #password = "Thridrobin"
+    #enc = ldap.encrypt_password(password)
+    #print "\r\n Robin \tencrypt_password ", enc
     
-    ret = ldap.LdapModifyUser(record, {'userPassword':enc})
-    print "\r\n Robin \tChange password LdapModifyUser ", ret
+    #ret = ldap.LdapModifyUser(record, {'userPassword':enc})
+    #print "\r\n Robin \tChange password LdapModifyUser ", ret
     
-    dn = 'uid=' + login + ',' + ldap.baseDN
-    ret = ldap.LdapDelete(dn)
-    print "\r\n Robin  \tLdapDelete ", ret
+    ##dn = 'uid=' + login + ',' + ldap.baseDN
+    ##ret = ldap.LdapDelete(dn)
+    ##print "\r\n Robin  \tLdapDelete ", ret
     
-    datanight = {}
-    datanight['last_name'] = "Grayson"
-    datanight['first_name']="Dick"
-    datanight['givenName']= datanight['first_name']
-    datanight['mail'] = "nightwing@arkham.fr"
+    #datanight = {}
+    #datanight['last_name'] = "Grayson"
+    #datanight['first_name']="Dick"
+    #datanight['givenName']= datanight['first_name']
+    #datanight['mail'] = "nightwing@arkham.fr"
     
     
-    record_night = {}
-    record_night['hrn'] = 'senslab2.grayson'
-    record_night['last_name'] = datanight['last_name']
-    record_night['first_name'] = datanight['first_name']
-    record_night['mail'] = datanight['mail']
+    #record_night = {}
+    #record_night['hrn'] = 'senslab2.grayson'
+    #record_night['last_name'] = datanight['last_name']
+    #record_night['first_name'] = datanight['first_name']
+    #record_night['mail'] = datanight['mail']
     
-    ret = ldap.LdapFindUser(record_night)
-    print "\r\n Nightwing \tldap.LdapFindHrn %s : %s"%(record_night,ret)
+    #ret = ldap.LdapFindUser(record_night)
+    #print "\r\n Nightwing \tldap.LdapFindUser %s : %s"%(record_night,ret)
     
-    ret = ldap.LdapSearch('(uid=grayson)', [])
-    print "\r\n Nightwing \tldap.LdapSearch ids = %s %s"%('grayson',ret )
+    #ret = ldap.LdapSearch('(uid=grayson)', [])
+    #print "\r\n Nightwing \tldap.LdapSearch ids = %s %s"%('grayson',ret )
 
-    ret = ldap.LdapAddUser(datanight)
-    print "\r\n Nightwing \tLdapAddUser ", ret 
+    #ret = ldap.LdapAddUser(datanight)
+    #print "\r\n Nightwing \tLdapAddUser ", ret 
     
-    ret = ldap.LdapResetPassword(record_night)
-    print "\r\n Nightwing  \tLdapResetPassword de %s : %s "%(record_night,ret)
+    #ret = ldap.LdapResetPassword(record_night)
+    #print "\r\n Nightwing  \tLdapResetPassword de %s : %s "%(record_night,ret)
     
-    ret = ldap.LdapDeleteUser(record_night)
-    print "\r\n Nightwing   \tLdapDeleteUser ", ret 
+    ##ret = ldap.LdapDeleteUser(record_night)
+    ##print "\r\n Nightwing   \tLdapDeleteUser ", ret 
     
     
-    record_avakian = {}
-    record_avakian['hrn']= 'senslab2.avakian'
-    record_avakian['last_name'] = 'avakian'
-    record_avakian['first_name'] = 'sandrine'
-    record_avakian['mail'] = 'sandrine.avakian@inria.fr'
-    pubkey = "ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEAwSUkJ+cr3xM47h8lFkIXJoJhg4wHakTaLJmgTXkzvUmQsQeFB2MjUZ6WAelMXj/EFz2+XkK+bcWNXwfbrLptJQ+XwGpPZlu9YV/kzO63ghVrAyEg0+p7Pn1TO9f1ZYg4R6JfP/3qwH1AsE+X3PNpIewsuEIKwd2wUCJDf5RXJTpl39GizcBFemrRqgs0bdqAN/vUT9YvtWn8fCYR5EfJHVXOK8P1KmnbuGZpk7ryz21pDMlgw13+8aYB+LPkxdv5zG54A5c6o9N3zOCblvRFWaNBqathS8y04cOYWPmyu+Q0Xccwi7vM3Ktm8RoJw+raQNwsmneJOm6KXKnjoOQeiQ== savakian@sfa2.grenoble.senslab.info"
-    ret = ldap.LdapModifyUser(record_avakian, {'sshPublicKey':pubkey})
-    print "\r\n Sandrine \tChange pubkey LdapModifyUser ", ret 
+    #record_avakian = {}
+    #record_avakian['hrn']= 'senslab2.avakian'
+    #record_avakian['last_name'] = 'avakian'
+    #record_avakian['first_name'] = 'sandrine'
+    #record_avakian['mail'] = 'sandrine.avakian@inria.fr'
+    #pubkey = "ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEAwSUkJ+cr3xM47h8lFkIXJoJhg4wHakTaLJmgTXkzvUmQsQeFB2MjUZ6WAelMXj/EFz2+XkK+bcWNXwfbrLptJQ+XwGpPZlu9YV/kzO63ghVrAyEg0+p7Pn1TO9f1ZYg4R6JfP/3qwH1AsE+X3PNpIewsuEIKwd2wUCJDf5RXJTpl39GizcBFemrRqgs0bdqAN/vUT9YvtWn8fCYR5EfJHVXOK8P1KmnbuGZpk7ryz21pDMlgw13+8aYB+LPkxdv5zG54A5c6o9N3zOCblvRFWaNBqathS8y04cOYWPmyu+Q0Xccwi7vM3Ktm8RoJw+raQNwsmneJOm6KXKnjoOQeiQ== savakian@sfa2.grenoble.senslab.info"
+    #ret = ldap.LdapModifyUser(record_night, {'sshPublicKey':pubkey})
+    #print "\r\n Sandrine \tChange pubkey LdapModifyUser ", ret 
     
     #record_myslice = {}
     #record_myslice['hrn']= 'senslab2.myslice'
@@ -265,6 +265,9 @@ def TestSlabDriver(job_id = None):
     
     persons = slabdriver.GetPersons()
     print "\r\n \r\n  GetPersons", persons
+    
+    leases = slabdriver.GetLeases()
+    print "\r\n \r\n  GetLeases", leases
     #slabdriver.DeleteJobs(job_id,'senslab2.avakian_slice')
   
   

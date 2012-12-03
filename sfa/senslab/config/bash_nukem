@@ -72,13 +72,15 @@ sudo cp $git_local_repo/sfa/senslab/config/$vm/default_config.xml /etc/sfa/defau
 # sudo ln -s ldap_config.py  /etc/sfa/ldap_config.py
 
 #Senslab LDAP and OAR access config files
-if [ !-f /etc/sfa/ldap_config.py ] 
+if [ ! -f /etc/sfa/ldap_config.py ] 
 then
     sudo cp $git_local_repo/sfa/senslab/config/ldap_config.py  /etc/sfa/ldap_config.py 
+fi
 
-if [ !-f /etc/sfa/oar_config.py ] 
+if [ ! -f /etc/sfa/oar_config.py ] 
 then
     sudo cp $git_local_repo/sfa/senslab/config/oar_config.py  /etc/sfa/oar_config.py 
+fi
 
 sudo service sfa restart
 

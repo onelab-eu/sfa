@@ -25,6 +25,39 @@ tablenames_dict = {'slice_senslab': slice_table}
 
 SlabBase = declarative_base()
 
+class FederatedToSenslab( SlabBase):
+    
+    __tablename__ = 'identities'
+    slab_hrn =  Column(String, primary_key=True)
+    aka_hrn = Column(String)
+    email = Column(String)
+    
+    def __init__ (self, slab_hrn = None, aka_hrn = None, email= None):
+        self.slab_hrn = slab_hrn
+        self.aka_hrn = aka_hrn
+        self.email = email
+        
+    def __repr__(self):
+        """Prints the SQLAlchemy record to the format defined
+        by the function.
+        """
+        result = "< slab_hrn =%s, aka_hrn=%s , email=%s"% (self.slab_hrn, self.aka_hrn, self.email)
+        result += ">"
+        return result
+    
+    def dump_sqlalchemyobj_to_dict(self):
+        """Transforms a SQLalchemy record object to a python dictionary.
+        Returns the dictionary.
+        """
+        
+        dump_dict = {'slab_hrn':self.slab_hrn,
+        'aka_hrn':self.aka_hrn,
+        'email' : self.email, }
+        return dump_dict 
+          
+    
+    
+        
 class SliceSenslab (SlabBase):
     """ SQL alchemy class to manipulate slice_senslab table in 
     slab_sfa database.

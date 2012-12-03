@@ -432,7 +432,7 @@ class LDAPapi :
                 return {'bool' : False, 'message' : error }
         
             self.conn.close()
-            return {'bool': True, 'uid':filter_by['uid']}  
+            return {'bool': True, 'uid':user_ldap_attrs['uid']}  
         else: 
             return result
 

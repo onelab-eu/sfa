@@ -535,13 +535,13 @@ class SlabSlices:
             person['uid'] = self.driver.AddPerson(person)
             
             #Update slice_Record with the id now known to LDAP
-            slice_record['reg-researcher'] = [self.root_auth + '.' + person['uid']]
+            slice_record['reg-researchers'] = [self.driver.root_auth + '.' + person['uid']]
             #if peer:
                 #person['peer_person_id'] = added_user['person_id']
             added_persons.append(person)
            
             # enable the account 
-            #self.driver.UpdatePerson(person['person_id'], {'enabled': True})
+            self.driver.UpdatePerson(slice_record['reg-researchers'][0], added_user_hrn)
             
             # add person to site
             #self.driver.AddPersonToSite(added_user_id, login_base)
