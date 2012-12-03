@@ -153,6 +153,9 @@ class PlImporter:
                                    ['person_id', 'email', 'key_ids', 'site_ids', 'role_ids'])
         # create a hash of persons by person_id
         persons_by_id = dict ( [ ( person['person_id'], person) for person in persons ] )
+        # also gather non-enabled user accounts so as to issue relevant warnings
+        disabled_persons = shell.GetPersons({'peer_id': None, 'enabled': False}, ['person_id'])
+        disabled_person_ids = [ person['person_id'] for person in disabled_persons ] 
         # Get all plc public keys
         # accumulate key ids for keys retrieval
         key_ids = []
@@ -245,6 +248,7 @@ class PlImporter:
                         self.remember_record (node_record)
                     except:
                         self.logger.log_exc("PlImporter: failed to import node %s"%node_hrn) 
+                        continue
                 else:
                     # xxx update the record ...
                     pass
@@ -253,10 +257,17 @@ class PlImporter:
             site_pis=[]
             # import persons
             for person_id in site['person_ids']:
-                try:
-                    person = persons_by_id[person_id]
-                except:
-                    self.logger.warning ("PlImporter: cannot locate person_id %s - ignored"%person_id)
+                proceed=False
+                if person_id in persons_by_id:
+                    person=persons_by_id[person_id]
+                    proceed=True
+                elif person_id in disabled_person_ids:
+                    pass
+                else:
+                    self.logger.warning ("PlImporter: cannot locate person_id %s in site %s - ignored"%(person_id,site_hrn))
+                # make sure to NOT run this if anything is wrong
+                if not proceed: continue
+
                 person_hrn = email_to_hrn(site_hrn, person['email'])
                 # xxx suspicious again
                 if len(person_hrn) > 64: person_hrn = person_hrn[:64]
@@ -335,6 +346,12 @@ class PlImporter:
                     self.logger.log_exc("PlImporter: failed to import person %d %s"%(person['person_id'],person['email']))
     
             # maintain the list of PIs for a given site
+            # for the record, Jordan had proposed the following addition as a welcome hotfix to a previous version:
+            # site_pis = list(set(site_pis)) 
+            # this was likely due to a bug in the above logic,
+            # that had to do with enabled persons, and where the whole loop on persons
+            # could be performed twice with the same person...
+            # so hopefully we do not need to eliminate duplicates explicitly here anymore
             site_record.reg_pis = site_pis
             dbsession.commit()
 
