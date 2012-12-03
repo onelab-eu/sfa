@@ -1,6 +1,6 @@
 %define name sfa
 %define version 2.1
-%define taglevel 19
+%define taglevel 20
 
 %define release %{taglevel}%{?pldistro:.%{pldistro}}%{?date:.%{date}}
 %global python_sitearch	%( python -c "from distutils.sysconfig import get_python_lib; print get_python_lib(1)" )
@@ -270,6 +270,10 @@ fi
 [ "$1" -ge "1" ] && service sfa-cm restart || :
 
 %changelog
+* Mon Dec 03 2012 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-2.1-20
+- fix 2 major bugs in PL importer
+- esp. wrt GID management against PLC key
+
 * Wed Nov 28 2012 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-2.1-19
 - nicer sfi delegate, can handle multiple delegations and for authorities(pi) as well
 
