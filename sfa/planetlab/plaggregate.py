@@ -376,7 +376,7 @@ class PlAggregate:
                 geni_sliver = self.rspec_node_to_geni_sliver(rspec_node)
                 sliver_allocation_record = sliver_allocation_dict.get(sliver['sliver_id'])
                 if sliver_allocation_record:
-                    sliver_allocation = sliver_allocation.allocation_state
+                    sliver_allocation = sliver_allocation_record.allocation_state
                 else:
                     sliver_allocation = 'geni_unallocated'
                 geni_sliver['geni_allocation_status'] = sliver_allocation
