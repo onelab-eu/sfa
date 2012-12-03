@@ -314,25 +314,43 @@ class PlImporter:
                         self.remember_record ( user_record )
                     else:
                         # update the record ?
-                        # if user's primary key has changed then we need to update the 
+                        #
+                        # if a user key has changed then we need to update the
                         # users gid by forcing an update here
+                        #
+                        # right now, SFA only has *one* key attached to a user, and this is
+                        # the key that the GID was made with
+                        # so the logic here is, we consider that things are OK (unchanged) if
+                        # all the SFA keys are present as PLC keys
+                        # otherwise we trigger the creation of a new gid from *some* plc key
+                        # and record this on the SFA side
+                        # it would make sense to add a feature in PLC so that one could pick a 'primary'
+                        # key but this is not available on the myplc side for now
+                        # = or = it would be much better to support several keys in SFA but that
+                        # does not seem doable without a major overhaul in the data model as
+                        # a GID is attached to a hrn, but it's also linked to a key, so...
+                        # NOTE: with this logic, the first key entered in PLC remains the one
+                        # current in SFA until it is removed from PLC
                         sfa_keys = user_record.reg_keys
-                        def key_in_list (key,sfa_keys):
-                            for reg_key in sfa_keys:
-                                if reg_key.key==key['key']: return True
+                        def sfa_key_in_list (sfa_key,plc_keys):
+                            for plc_key in plc_keys:
+                                if plc_key['key']==sfa_key.key:
+                                    return True
                             return False
-                        # is there a new key in myplc ?
+                        # are all the SFA keys known to PLC ?
                         new_keys=False
-                        for key in plc_keys:
-                            if not key_in_list (key,sfa_keys):
+                        for sfa_key in sfa_keys:
+                            if not sfa_key_in_list (sfa_key,plc_keys):
                                 new_keys = True
                         if new_keys:
                             (pubkey,pkey) = init_person_key (person, plc_keys)
                             person_gid = self.auth_hierarchy.create_gid(person_urn, create_uuid(), pkey)
+                            person_gid.set_email(person['email'])
                             if not pubkey:
                                 user_record.reg_keys=[]
                             else:
                                 user_record.reg_keys=[ RegKey (pubkey['key'], pubkey['key_id'])]
+                            user_record.gid = person_gid
                             self.logger.info("PlImporter: updated person: %s" % user_record)
                     user_record.email = person['email']
                     dbsession.commit()
@@ -348,8 +366,8 @@ class PlImporter:
             # maintain the list of PIs for a given site
             # for the record, Jordan had proposed the following addition as a welcome hotfix to a previous version:
             # site_pis = list(set(site_pis)) 
-            # this was likely due to a bug in the above logic,
-            # that had to do with enabled persons, and where the whole loop on persons
+            # this was likely due to a bug in the above logic, that had to do with disabled persons
+            # being improperly handled, and where the whole loop on persons
             # could be performed twice with the same person...
             # so hopefully we do not need to eliminate duplicates explicitly here anymore
             site_record.reg_pis = site_pis
