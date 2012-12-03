@@ -380,7 +380,8 @@ class PlImporter:
                         self.logger.log_exc("PlImporter: failed to import slice %s (%s)"%(slice_hrn,slice['name']))
                 else:
                     # xxx update the record ...
-                    self.logger.warning ("Slice update not yet implemented on slice %s (%s)"%(slice_hrn,slice['name']))
+                    # given that we record the current set of users anyways, there does not seem to be much left to do here
+                    # self.logger.warning ("Slice update not yet implemented on slice %s (%s)"%(slice_hrn,slice['name']))
                     pass
                 # record current users affiliated with the slice
                 slice_record.reg_researchers = \
