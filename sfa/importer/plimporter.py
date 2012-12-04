@@ -339,9 +339,12 @@ class PlImporter:
                             return False
                         # are all the SFA keys known to PLC ?
                         new_keys=False
-                        for sfa_key in sfa_keys:
-                            if not sfa_key_in_list (sfa_key,plc_keys):
-                                new_keys = True
+                        if len(sfa_keys) != len(plc_keys):
+                            new_keys=True
+                        else: 
+                            for sfa_key in sfa_keys:
+                                 if not sfa_key_in_list (sfa_key,plc_keys):
+                                     new_keys = True
                         if new_keys:
                             (pubkey,pkey) = init_person_key (person, plc_keys)
                             person_gid = self.auth_hierarchy.create_gid(person_urn, create_uuid(), pkey)
