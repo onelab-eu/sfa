@@ -128,7 +128,7 @@ class SfaApi (XmlrpcApi):
                 
         delegated_cred = None
         for cred in creds:
-            if hierarchy.auth_exists(Credential(string=cred).get_gid_caller().get_hrn()):
+            if hierarchy.auth_exists(Credential(cred=cred).get_gid_caller().get_hrn()):
                 delegated_cred = cred
                 break
         return delegated_cred
