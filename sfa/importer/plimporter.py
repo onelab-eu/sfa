@@ -339,7 +339,7 @@ class PlImporter:
                             return False
                         # are all the SFA keys known to PLC ?
                         new_keys=False
-                        if len(sfa_keys) != len(plc_keys):
+                        if not sfa_keys and plc_keys:
                             new_keys=True
                         else: 
                             for sfa_key in sfa_keys:
