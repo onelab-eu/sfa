@@ -73,11 +73,21 @@ class OSAggregate:
         instances = self.get_instances(urns)
         if len(instances) == 0:
             raise SliverDoesNotExist("You have not allocated any slivers here")
+
+        # lookup the sliver allocations
+        sliver_ids = [sliver['sliver_id'] for sliver in slivers]
+        constraint = SliverAllocation.sliver_id.in_(sliver_ids)
+        sliver_allocations = dbsession.query(SliverAllocation).filter(constraint)
+        sliver_allocation_dict = {}
+        for sliver_allocation in sliver_allocations:
+            sliver_allocation_dict[sliver_allocation.sliver_id] = sliver_allocation
+
         geni_slivers = []
         rspec_nodes = []
         for instance in instances:
             rspec_nodes.append(self.instance_to_rspec_node(instance))
-            geni_slivers.append(self.instance_to_geni_sliver(instance))
+            geni_sliver = self.instance_to_geni_sliver(instance, sliver_sllocation_dict)
+            geni_slivers.append(geni_sliver)
         version_manager = VersionManager()
         version = version_manager.get_version(version)
         rspec_version = version_manager._get_version(version.type, version.version, 'manifest')
@@ -201,22 +211,32 @@ class OSAggregate:
                          'storage':  str(instance.disk)})
         return sliver   
 
-    def instance_to_geni_sliver(self, instance):
-        op_status = "geni_unknown"
-        state = instance.state.lower()
-        if state == 'active':
-            op_status = 'geni_ready'
-        elif state == 'building': 
-            op_status = 'geni_configuring'
-        elif state == 'failed':
-            op_status =' geni_failed'
-        
+    def instance_to_geni_sliver(self, instance, sliver_allocations = {}):
         sliver_hrn = '%s.%s' % (root_hrn, instance.id)
-        sliver_id = Xrn(sliver_hrn, type='sliver').urn 
+        sliver_id = Xrn(sliver_hrn, type='sliver').urn
+ 
+        # set sliver allocation and operational status
+        sliver_allocation = sliver_allocations[sliver_id]
+        if sliver_allocation:
+            allocation_status = sliver_allocation.allocation_state
+            if allocation_status == 'geni_allocated':
+                op_status =  'geni_pending_allocation'
+            elif allocation_status == 'geni_provisioned':
+                state = instance.state.lower()
+                if state == 'active':
+                    op_status = 'geni_ready'
+                elif state == 'building':
+                    op_status = 'geni_notready'
+                elif state == 'failed':
+                    op_status =' geni_failed'
+                else:
+                    op_status = 'geni_unknown'
+            else:
+                allocation_status = 'geni_unallocated'    
         # required fields
         geni_sliver = {'geni_sliver_urn': sliver_id, 
                        'geni_expires': None,
-                       'geni_allocation_status': 'geni_provisioned',
+                       'geni_allocation_status': allocation_status,
                        'geni_operational_status': op_status,
                        'geni_error': None,
                        'plos_created_at': datetime_to_string(utcparse(instance.created)),

@@ -246,18 +246,27 @@ class PlAggregate:
             nodes_dict[node['node_id']] = node
         return nodes_dict
 
-    def rspec_node_to_geni_sliver(self, rspec_node):
-        op_status = "geni_unknown"
-        state = rspec_node['boot_state'].lower()
-        if state == 'boot':
-            op_status = 'geni_ready'
-        else:
-            op_status =' geni_failed'
-
-
+    def rspec_node_to_geni_sliver(self, rspec_node, sliver_allocations = {}):
+        if rspec_node['sliver_id'] in sliver_allocations:
+            # set sliver allocation and operational status
+            sliver_allocation = sliver_allocations[rspec_node['sliver_id']]
+            if sliver_allocation:
+                allocation_status = sliver_allocation.allocation_state
+                if allocation_status == 'geni_allocated':
+                    op_status =  'geni_pending_allocation'
+                elif allocation_status == 'geni_provisioned':
+                    if rspec_node['boot_state'] == 'boot':
+                        op_status = 'geni_ready'
+                    else:
+                        op_status = 'geni_failed'
+                else:
+                    op_status = 'geni_unknown'
+            else:
+                allocation_status = 'geni_unallocated'    
         # required fields
         geni_sliver = {'geni_sliver_urn': rspec_node['sliver_id'],
                        'geni_expires': rspec_node['expires'],
+                       'geni_allocation_status' : allocation_status,
                        'geni_operational_status': op_status,
                        'geni_error': None,
                        }
@@ -379,14 +388,8 @@ class PlAggregate:
                 rspec_node = self.sliver_to_rspec_node(sliver, sites, interfaces, node_tags, pl_initscripts)
                 # manifest node element shouldn't contain available attribute
                 rspec_node.pop('available')
-                geni_sliver = self.rspec_node_to_geni_sliver(rspec_node)
-                sliver_allocation_record = sliver_allocation_dict.get(sliver['sliver_id'])
-                if sliver_allocation_record:
-                    sliver_allocation = sliver_allocation_record.allocation_state
-                else:
-                    sliver_allocation = 'geni_unallocated'
-                geni_sliver['geni_allocation_status'] = sliver_allocation
                 rspec_nodes.append(rspec_node) 
+                geni_sliver = self.rspec_node_to_geni_sliver(rspec_node, sliver_allocation_dict)
                 geni_slivers.append(geni_sliver)
             rspec.version.add_nodes(rspec_nodes)
 
