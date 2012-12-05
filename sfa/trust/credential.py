@@ -256,6 +256,8 @@ class Credential(object):
         if cred:
             if isinstance(cred, StringTypes):
                 string = cred
+                self.type = 'geni_sfa'
+                self.version = '1.0'
             elif isinstance(cred, dict):
                 string = cred['geni_value']
                 self.type = cred['geni_type']
