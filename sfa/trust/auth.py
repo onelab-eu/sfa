@@ -4,7 +4,7 @@
 import sys
 
 from sfa.util.faults import InsufficientRights, MissingCallerGID, MissingTrustedRoots, PermissionError, \
-    BadRequestHash, ConnectionKeyGIDMismatch, SfaPermissionDenied
+    BadRequestHash, ConnectionKeyGIDMismatch, SfaPermissionDenied, CredentialNotVerifiable
 from sfa.util.sfalogging import logger
 from sfa.util.config import Config
 from sfa.util.xrn import Xrn, get_authority
@@ -75,6 +75,9 @@ class Auth:
         self.client_cred = cred
         logger.debug("Auth.check: handling hrn=%s and credential=%s"%\
                          (hrn,cred.get_summary_tostring()))
+
+        if cred.type not in ['geni_sfa']:
+            raise CredentialNotVerifiable(cred.type, "%s not supported" % cred.type)
         self.client_gid = self.client_cred.get_gid_caller()
         self.object_gid = self.client_cred.get_gid_object()
         
