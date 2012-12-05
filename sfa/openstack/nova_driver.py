@@ -395,7 +395,8 @@ class NovaDriver(Driver):
         return True
 
     def renew (self, urns, expiration_time, options={}):
-        return True
+        description = self.describe(urns, None, options)
+        return description['geni_slivers']
 
     def perform_operational_action  (self, urns, action, options={}):
         aggregate = OSAggregate(self)

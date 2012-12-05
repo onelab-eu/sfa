@@ -710,11 +710,10 @@ class PlDriver (Driver):
         slice = slices[0]
         requested_time = utcparse(expiration_time)
         record = {'expires': int(datetime_to_epoch(requested_time))}
-        try:
-            self.shell.UpdateSlice(slice['slice_id'], record)
-            return True
-        except:
-            return False
+        self.shell.UpdateSlice(slice['slice_id'], record)
+        description = self.describe(urns, None, options)
+        return description['geni_slivers']
+            
 
     def perform_operational_action (self, urns, action, options={}):
         # MyPLC doesn't support operational actions. Lets pretend like it
