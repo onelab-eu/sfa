@@ -392,7 +392,15 @@ class NovaDriver(Driver):
             
         # delete sliver allocation states
         SliverAllocation.delete_allocations(sliver_ids)
-        return True
+
+        # return geni_slivers
+        geni_slivers = []
+        for sliver_id in sliver_ids:
+            geni_slivers.append(
+                {'geni_sliver_urn': sliver['sliver_id'],
+                 'geni_allocation_status': 'geni_unallocated',
+                 'geni_expires': None})        
+        return geni_slivers
 
     def renew (self, urns, expiration_time, options={}):
         description = self.describe(urns, None, options)

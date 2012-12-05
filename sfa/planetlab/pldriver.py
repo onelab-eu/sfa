@@ -662,39 +662,39 @@ class PlDriver (Driver):
         # we remove the slivers.
         aggregate = PlAggregate(self)
         slivers = aggregate.get_slivers(urns)
-        slice_id = slivers[0]['slice_id'] 
-        node_ids = []
-        sliver_ids = []
-        for sliver in slivers:
-            node_ids.append(sliver['node_id'])
-            sliver_ids.append(sliver['sliver_id']) 
+        if slivers:
+            slice_id = slivers[0]['slice_id'] 
+            node_ids = []
+            sliver_ids = []
+            for sliver in slivers:
+                node_ids.append(sliver['node_id'])
+                sliver_ids.append(sliver['sliver_id']) 
 
-        # determine if this is a peer slice
-        # xxx I wonder if this would not need to use PlSlices.get_peer instead 
-        # in which case plc.peers could be deprecated as this here
-        # is the only/last call to this last method in plc.peers
-        slice_hrn = PlXrn(auth=self.hrn, slicename=slivers[0]['name']).get_hrn()     
-        peer = peers.get_peer(self, slice_hrn)
-        try:
-            if peer:
-                self.shell.UnBindObjectFromPeer('slice', slice_id, peer)
- 
-            self.shell.DeleteSliceFromNodes(slice_id, node_ids)
- 
-            # delete sliver allocation states
-            SliverAllocation.delete_allocations(sliver_ids)
-        finally:
-            if peer:
-                self.shell.BindObjectToPeer('slice', slice_id, peer, slice['peer_slice_id'])
+            # determine if this is a peer slice
+            # xxx I wonder if this would not need to use PlSlices.get_peer instead 
+            # in which case plc.peers could be deprecated as this here
+            # is the only/last call to this last method in plc.peers
+            slice_hrn = PlXrn(auth=self.hrn, slicename=slivers[0]['name']).get_hrn()     
+            peer = peers.get_peer(self, slice_hrn)
+            try:
+                if peer:
+                    self.shell.UnBindObjectFromPeer('slice', slice_id, peer)
+     
+                self.shell.DeleteSliceFromNodes(slice_id, node_ids)
+     
+                # delete sliver allocation states
+                SliverAllocation.delete_allocations(sliver_ids)
+            finally:
+                if peer:
+                    self.shell.BindObjectToPeer('slice', slice_id, peer, slice['peer_slice_id'])
 
         # prepare return struct
         geni_slivers = []
-        for node_id in node_ids:
-            sliver_hrn = '%s.%s-%s' % (self.hrn, slice_id, node_id)
+        for sliver in slivers:
             geni_slivers.append(
-                {'geni_sliver_urn': Xrn(sliver_hrn, type='sliver').urn,
+                {'geni_sliver_urn': sliver['sliver_id'],
                  'geni_allocation_status': 'geni_unallocated',
-                 'geni_expires': datetime_to_string(utcparse(slivers[0]['expires']))})  
+                 'geni_expires': datetime_to_string(utcparse(sliver['expires']))})  
         return geni_slivers
     
     def renew (self, urns, expiration_time, options={}):
