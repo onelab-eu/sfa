@@ -161,6 +161,10 @@ class PlAggregate:
         rspec_node['authority_id'] = hrn_to_urn(PlXrn.site_hrn(self.driver.hrn, site['login_base']), 'authority+sa')
         # do not include boot state (<available> element) in the manifest rspec
         rspec_node['boot_state'] = node['boot_state']
+        if node['boot_state'] == 'boot': 
+            rspec_node['available'] = 'true'
+        else:
+            rspec_node['available'] = 'false'
         rspec_node['exclusive'] = 'false'
         rspec_node['hardware_types'] = [HardwareType({'name': 'plab-pc'}),
                                         HardwareType({'name': 'pc'})]
@@ -373,6 +377,8 @@ class PlAggregate:
                 if sliver['slice_ids_whitelist'] and sliver['slice_id'] not in sliver['slice_ids_whitelist']:
                     continue
                 rspec_node = self.sliver_to_rspec_node(sliver, sites, interfaces, node_tags, pl_initscripts)
+                # manifest node element shouldn't contain available attribute
+                rspec_node.pop('available')
                 geni_sliver = self.rspec_node_to_geni_sliver(rspec_node)
                 sliver_allocation_record = sliver_allocation_dict.get(sliver['sliver_id'])
                 if sliver_allocation_record:

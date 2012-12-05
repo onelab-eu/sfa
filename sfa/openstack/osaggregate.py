@@ -250,7 +250,7 @@ class OSAggregate:
                 sliver = self.instance_to_sliver(instance)
                 sliver['disk_image'] = disk_images
                 slivers.append(sliver)
-        
+            rspec_node['available'] = 'true'
             rspec_node['slivers'] = slivers
             rspec_nodes.append(rspec_node) 
 
