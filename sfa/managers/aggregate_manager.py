@@ -4,6 +4,8 @@ from sfa.util.version import version_core
 from sfa.util.xrn import Xrn
 from sfa.util.callids import Callids
 from sfa.util.sfalogging import logger
+from sfa.util.faults import SfaInvalidArgument, InvalidRSpecVersion
+
 
 class AggregateManager:
 
@@ -119,6 +121,16 @@ class AggregateManager:
         """
         call_id = options.get('call_id')
         if Callids().already_handled(call_id): return ""
+
+        # make sure geni_rspec_version is specified in options
+        if 'geni_rspec_version' not in options:
+            msg = 'geni_rspec_version is required and must be set in options struct'
+            raise SfaInvalidArgument('geni_rspec_version', msg
+        # make sure we support the requested rspec version
+        version_manager = VersionManager()
+        if not version_manager.get(options['geni_rspec_version']):
+            raise InvalidRSpecVersion(options['geni_rspec_version'])
+                       
         return self.driver.provision(xrns, options)
     
     def Delete(self, api, xrns, creds, options):
