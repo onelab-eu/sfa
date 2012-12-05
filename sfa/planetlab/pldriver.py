@@ -726,7 +726,7 @@ class PlDriver (Driver):
         # fault if sliver is not full allocated (operational status is geni_pending_allocation)
         description = self.describe(urns, None, options)
         for sliver in description['geni_slivers']:
-            if sliver['operational_status'] == 'geni_pending_allocation':
+            if sliver['geni_operational_status'] == 'geni_pending_allocation':
                 raise UnsupportedOperation(action, "Sliver must be fully allocated (operational status is not geni_pending_allocation)")
         #
         # Perform Operational Action Here
