@@ -576,7 +576,9 @@ class PlDriver (Driver):
     def status (self, urns, options={}):
         aggregate = PlAggregate(self)
         desc =  aggregate.describe(urns)
-        return desc['geni_slivers']
+        status = {'geni_urn': desc['geni_urn'],
+                  'geni_slivers': desc['geni_slivers']}
+        return status
 
     def allocate (self, urn, rspec_string, options={}):
         xrn = Xrn(urn)
