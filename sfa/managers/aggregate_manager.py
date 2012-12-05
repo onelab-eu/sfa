@@ -125,10 +125,11 @@ class AggregateManager:
         # make sure geni_rspec_version is specified in options
         if 'geni_rspec_version' not in options:
             msg = 'geni_rspec_version is required and must be set in options struct'
-            raise SfaInvalidArgument('geni_rspec_version', msg
+            raise SfaInvalidArgument(msg, 'geni_rspec_version')
         # make sure we support the requested rspec version
         version_manager = VersionManager()
-        if not version_manager.get(options['geni_rspec_version']):
+        rspec_version = version_manager.get_version(options['geni_rspec_version']) 
+        if not rspec_version:
             raise InvalidRSpecVersion(options['geni_rspec_version'])
                        
         return self.driver.provision(xrns, options)

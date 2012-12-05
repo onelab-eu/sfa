@@ -1288,6 +1288,11 @@ or with an slice hrn, shows currently provisioned resources
 
         api_options = {}
         api_options ['call_id'] = unique_call_id()
+
+        # set the requtested rspec version
+        version_manager = VersionManager()
+        rspec_version = version_manager._get_version('geni', '3.0').to_dict()
+        api_options['geni_rspec_version'] = rspec_version 
         result = server.Provision([slice_urn], creds, api_options)
         value = ReturnValue.get_value(result)
         if self.options.raw:

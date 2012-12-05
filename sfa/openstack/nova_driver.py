@@ -374,8 +374,9 @@ class NovaDriver(Driver):
             sliver_hrn = "%s.%s" % (self.driver.hrn, instance.id)
             sliver_ids.append(Xrn(sliver_hrn, type='sliver').urn)
         SliverAllocation.set_allocations(sliver_ids, 'geni_provisioned') 
-            
-        return self.describe(urns, options=options) 
+        version_manager = VersionManager()
+        rspec_version = version_manager.get_version(options['geni_rspec_version'])
+        return self.describe(urns, rspec_version, options=options) 
 
     def delete (self, urns, options={}):
         # collect sliver ids so we can update sliver allocation states after
