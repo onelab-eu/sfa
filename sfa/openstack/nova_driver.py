@@ -408,6 +408,16 @@ class NovaDriver(Driver):
             action_method = aggreate.restart_instances
         else:
             raise UnsupportedOperation(action)
+
+         # fault if sliver is not full allocated (operational status is geni_pending_allocation)
+        description = self.describe(urns, None, options)
+        for sliver in description['geni_slivers']:
+            if sliver['geni_operational_status'] == 'geni_pending_allocation':
+                raise UnsupportedOperation(action, "Sliver must be fully allocated (operational status is not geni_pending_allocation)")
+        #
+        # Perform Operational Action Here
+        #
+
         instances = aggregate.get_instances(urns) 
         for instance in instances:
             tenant_name = self.driver.shell.auth_manager.client.tenant_name
