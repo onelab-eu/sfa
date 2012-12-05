@@ -408,14 +408,13 @@ class NovaDriver(Driver):
             action_method = aggreate.restart_instances
         else:
             raise UnsupportedOperation(action)
-        for urn in urns:
-            xrn = OSXrn(urn=urn)
-            tenant_name = xrn.get_tenant_name()
-            project_name = xrn.get_slicename()
-            id = xrn.id
-            aggreate.action_method(tenant_name, project_name, id)
+        instances = aggregate.get_instances(urns) 
+        for instance in instances:
+            tenant_name = self.driver.shell.auth_manager.client.tenant_name
+            action_method(tenant_name, instance.name, instance.id)
         description = self.describe(urns)
-        return description['geni_slivers']      
+        geni_slivers = self.describe(urns, None, options)['geni_slivers']
+        return geni_slivers
 
     def shutdown(self, xrn, options={}):
         xrn = OSXrn(xrn=xrn, type='slice')

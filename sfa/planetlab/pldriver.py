@@ -720,12 +720,20 @@ class PlDriver (Driver):
         # MyPLC doesn't support operational actions. Lets pretend like it
         # supports start, but reject everything else.
         action = action.lower()
-        if action == 'geni_start':
-            pass
-        else:
+        if action not in ['geni_start']:
             raise UnsupportedOperation(action)
+
+        # fault if sliver is not full allocated (operational status is geni_pending_allocation)
         description = self.describe(urns, None, options)
-        return description['geni_slivers']
+        for sliver in description['geni_slivers']:
+            if sliver['operational_status'] == 'geni_pending_allocation':
+                raise UnsupportedOperation(action, "Sliver must be fully allocated (operational status is not geni_pending_allocation)")
+        #
+        # Perform Operational Action Here
+        #
+
+        geni_slivers = self.describe(urns, None, options)['geni_slivers']
+        return geni_slivers
 
     # set the 'enabled' tag to 0
     def shutdown (self, xrn, options={}):

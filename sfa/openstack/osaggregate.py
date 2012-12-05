@@ -201,9 +201,10 @@ class OSAggregate:
 
     def instance_to_sliver(self, instance, xrn=None):
         if xrn:
-            xrn = Xrn(xrn=slice_xrn, type='slice', id=instance.id).get_urn()
+            sliver_hrn = '%s.%s' % (self.driver.hrn, instance.id)
+            sliver_id = Xrn(sliver_hrn, type='sliver').urn
 
-        sliver = Sliver({'sliver_id': xrn.get_urn(),
+        sliver = Sliver({'sliver_id': sliver_id,
                          'name': instance.name,
                          'type': instance.name,
                          'cpus': str(instance.vcpus),
@@ -212,7 +213,7 @@ class OSAggregate:
         return sliver   
 
     def instance_to_geni_sliver(self, instance, sliver_allocations = {}):
-        sliver_hrn = '%s.%s' % (root_hrn, instance.id)
+        sliver_hrn = '%s.%s' % (self.driver.hrn, instance.id)
         sliver_id = Xrn(sliver_hrn, type='sliver').urn
  
         # set sliver allocation and operational status
