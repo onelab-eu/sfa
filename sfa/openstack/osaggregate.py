@@ -71,9 +71,6 @@ class OSAggregate:
         tenant_name = OSXrn(xrn=urns[0], type='slice').get_tenant_name()
         self.driver.shell.nova_manager.connect(tenant=tenant_name)
         instances = self.get_instances(urns)
-        if len(instances) == 0:
-            raise SliverDoesNotExist("You have not allocated any slivers here")
-
         # lookup the sliver allocations
         sliver_ids = [sliver['sliver_id'] for sliver in slivers]
         constraint = SliverAllocation.sliver_id.in_(sliver_ids)

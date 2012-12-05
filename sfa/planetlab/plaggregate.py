@@ -354,8 +354,6 @@ class PlAggregate:
         # get slivers
         geni_slivers = []
         slivers = self.get_slivers(urns, options) 
-        if len(slivers) == 0:
-            raise SliverDoesNotExist("You have not allocated any slivers here for %s" % str(urns))
         rspec.xml.set('expires',  datetime_to_string(utcparse(slivers[0]['expires'])))
 
         # lookup the sliver allocations
