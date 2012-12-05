@@ -89,6 +89,7 @@ class OSAggregate:
         version = version_manager.get_version(version)
         rspec_version = version_manager._get_version(version.type, version.version, 'manifest')
         rspec = RSpec(version=rspec_version, user_options=options)
+        rspec.xml.set('expires',  datetime_to_string(utcparse(time.time())))
         rspec.version.add_nodes(rspec_nodes)
         result = {'geni_urn': Xrn(urns[0]).get_urn(),
                   'geni_rspec': rspec.toxml(), 

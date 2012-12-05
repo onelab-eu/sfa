@@ -353,8 +353,12 @@ class PlAggregate:
 
         # get slivers
         geni_slivers = []
-        slivers = self.get_slivers(urns, options) 
-        rspec.xml.set('expires',  datetime_to_string(utcparse(slivers[0]['expires'])))
+        slivers = self.get_slivers(urns, options)
+        if slivers:
+            rspec_expires = datetime_to_string(utcparse(slivers[0]['expires']))
+        else:
+            rspec_expires = datetime_to_string(utcparse(time.time()))      
+        rspec.xml.set('expires',  rspec_expires)
 
         # lookup the sliver allocations
         sliver_ids = [sliver['sliver_id'] for sliver in slivers]
@@ -403,8 +407,9 @@ class PlAggregate:
             rspec.version.add_links(links)
 
         if not options.get('list_leases') or options['list_leases'] != 'resources':
-            leases = self.get_leases(slivers[0])
-            rspec.version.add_leases(leases)
+            if slivers:
+                leases = self.get_leases(slivers[0])
+                rspec.version.add_leases(leases)
 
                
         return {'geni_urn': urns[0], 
