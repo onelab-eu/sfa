@@ -367,7 +367,7 @@ class RegistryManager:
         # is there a change in keys ?
         new_key=None
         if type=='user':
-            if getattr(new_key,'keys',None):
+            if getattr(new_record,'keys',None):
                 new_key=new_record.keys
                 if isinstance (new_key,types.ListType):
                     new_key=new_key[0]
@@ -381,7 +381,6 @@ class RegistryManager:
             gid_object = api.auth.hierarchy.create_gid(urn, uuid, pkey)
             gid = gid_object.save_to_string(save_parents=True)
             record.gid = gid
-            dsession.commit()
         
         # xxx should do side effects from new_record to record
         # not too sure how to do that
@@ -391,12 +390,10 @@ class RegistryManager:
         if isinstance (record, RegSlice):
             researcher_hrns = getattr(new_record,'researcher',None)
             if researcher_hrns is not None: record.update_researchers (researcher_hrns)
-            dbsession.commit()
 
         elif isinstance (record, RegAuthority):
             pi_hrns = getattr(new_record,'pi',None)
             if pi_hrns is not None: record.update_pis (pi_hrns)
-            dbsession.commit()
         
         # update the PLC information that was specified with the record
         # xxx oddly enough, without this useless statement, 
@@ -404,9 +401,11 @@ class RegistryManager:
         # anyway the driver should receive an object 
         # (and then extract __dict__ itself if needed)
         print "DO NOT REMOVE ME before driver.update, record=%s"%record
-        if not self.driver.update (record.__dict__, new_record.__dict__, hrn, new_key):
-            logger.warning("driver.update failed")
-    
+        (pointer, new_key_pointer) = self.driver.update (record.__dict__, new_record.__dict__, hrn, new_key)
+        if new_key and new_key_pointer:    
+            record.reg_keys=[ RegKey (new_key, new_key_pointer)]
+
+        dbsession.commit();
         # update membership for researchers, pis, owners, operators
         self.update_driver_relations (record, new_record)
         
