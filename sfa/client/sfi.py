@@ -328,8 +328,8 @@ class Sfi:
         ("version", ""),  
         ("list", "authority"),
         ("show", "name"),
-        ("add", "record"),
-        ("update", "record"),
+        ("add", "[record]"),
+        ("update", "[record]"),
         ("remove", "name"),
         ("slices", ""),
         ("resources", "[slice_hrn]"),
@@ -931,7 +931,7 @@ or version information about sfi itself
         return
     
     def add(self, options, args):
-        "add record into registry from xml file (Register)"
+        "add record into registry by using the command options (Recommended) or from xml file (Register)"
         auth_cred = self.my_authority_credential_string()
         if options.show_credential:
             show_credentials(auth_cred)
@@ -956,7 +956,7 @@ or version information about sfi itself
         return self.registry().Register(record_dict, auth_cred)
     
     def update(self, options, args):
-        "update record into registry from xml file (Update)"
+        "update record into registry by using the command options (Recommended) or from xml file (Update)"
         record_dict = {}
         if len(args) > 0:
             record_filepath = args[0]
