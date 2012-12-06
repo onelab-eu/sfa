@@ -380,7 +380,6 @@ class RegistryManager:
             urn = hrn_to_urn(hrn,type)
             gid_object = api.auth.hierarchy.create_gid(urn, uuid, pkey)
             gid = gid_object.save_to_string(save_parents=True)
-            record.gid = gid
         
         # xxx should do side effects from new_record to record
         # not too sure how to do that
@@ -404,6 +403,7 @@ class RegistryManager:
         (pointer, new_key_pointer) = self.driver.update (record.__dict__, new_record.__dict__, hrn, new_key)
         if new_key and new_key_pointer:    
             record.reg_keys=[ RegKey (new_key, new_key_pointer)]
+            record.gid = gid
 
         dbsession.commit();
         # update membership for researchers, pis, owners, operators
