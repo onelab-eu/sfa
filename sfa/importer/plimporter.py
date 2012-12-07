@@ -354,6 +354,7 @@ class PlImporter:
                             else:
                                 user_record.reg_keys=[ RegKey (pubkey['key'], pubkey['key_id'])]
                             user_record.gid = person_gid
+                            user_record.just_updated()
                             self.logger.info("PlImporter: updated person: %s" % user_record)
                     user_record.email = person['email']
                     dbsession.commit()
