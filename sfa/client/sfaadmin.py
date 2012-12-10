@@ -112,29 +112,52 @@ class RegistryCommands(Commands):
         return record_dict
 
 
-    @args('-x', '--xrn', dest='xrn', metavar='<xrn>', help='object hrn/urn (mandatory)')
-    @args('-t', '--type', dest='type', metavar='<type>', help='object type', default=None)
-    def check_gid(self, xrn, type=None):
+    @args('-x', '--xrn', dest='xrn', metavar='<xrn>', help='object hrn/urn', default=None)
+    @args('-t', '--type', dest='type', metavar='<type>', help='object type (mandatory)',)
+    @args('-a', '--all', dest='all', metavar='<all>', action='store_true', default=False, help='check all users GID')
+    def check_gid(self, xrn=None, type=None, all=None):
         """Check the correspondance between the GID and the PubKey"""
-        records = self.api.manager.Resolve(self.api, xrn, type, details=True)
-        record = records[0]
 
-        # get the pubkey stored in SFA DB
-        db_pubkey_str = record['keys'][0]
-        db_pubkey_obj = convert_public_key(db_pubkey_str)
+        # db records
+        from sfa.storage.alchemy import dbsession
+        from sfa.storage.model import RegRecord
+        db_query = dbsession.query(RegRecord).filter_by(type=type)
+        if xrn and not all:
+            hrn = Xrn(xrn).get_hrn()
+            db_query = db_query.filter_by(hrn=hrn)
+        elif all and xrn:
+            print "Use either -a or -x <xrn>, not both !!!"
+            sys.exit(1)
+        elif not all and not xrn:
+            print "Use either -a or -x <xrn>, one of them is mandatory !!!"
+            sys.exit(1)
 
+        records = db_query.all()
+        if not records:
+            print "No Record found"
+            sys.exit(1)
 
-        # get the pubkey from the gid
-        gid_str = record['gid']
-        gid_obj = GID(string = gid_str)
-        gid_pubkey_obj = gid_obj.get_pubkey()
+        OK = []
+        NOK = []
+        for record in records:
+             # get the pubkey stored in SFA DB
+             db_pubkey_str = record.reg_keys[0].key
+             db_pubkey_obj = convert_public_key(db_pubkey_str)
 
-        # Check if gid_pubkey_obj and db_pubkey_obj are the same
-        check = gid_pubkey_obj.is_same(db_pubkey_obj)
-        if check :
-            print "The GID PubKey is correponding to the Record PubKey"
-        else:
-            print "ERROR: The GID PubKey is not correponding to the Record PubKey, the GID needs to be updated"
+             # get the pubkey from the gid
+             gid_str = record.gid
+             gid_obj = GID(string = gid_str)
+             gid_pubkey_obj = gid_obj.get_pubkey()
+
+             # Check if gid_pubkey_obj and db_pubkey_obj are the same
+             check = gid_pubkey_obj.is_same(db_pubkey_obj)
+             if check :
+                 OK.append(record.hrn)
+             else:
+                 NOK.append(record.hrn)
+
+        print "GID/PubKey correpondence is OK for: %s\nGID/PubKey correpondence is NOT OK for: %s" %(OK,NOK)
+
 
 
     @args('-x', '--xrn', dest='xrn', metavar='<xrn>', help='object hrn/urn (mandatory)') 
