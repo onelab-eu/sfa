@@ -1,5 +1,5 @@
 import time
-from sfa.util.xrn import hrn_to_urn, urn_to_hrn
+from sfa.util.xrn import hrn_to_urn, urn_to_hrn, get_authority
 
 from sfa.rspecs.rspec import RSpec
 from sfa.rspecs.elements.versions.slabv1Node import SlabPosition
@@ -83,7 +83,7 @@ class SlabAggregate:
                 sliver_xrn.set_authority(self.driver.hrn)
                 #node_id = self.driver.root_auth + '.' + node_id
                 sliver = Sliver({'sliver_id':sliver_xrn.urn, 
-                                'name': sfa_slice['slice_hrn'],
+                                'name': sfa_slice['hrn'],
                                 'type': 'slab-node', 
                                 'tags': []})
                 
@@ -92,10 +92,13 @@ class SlabAggregate:
         
         #Add default sliver attribute :
         #connection information for senslab
-        tmp = sfa_slice['slice_hrn'].split('.')
-        ldap_username = tmp[1].split('_')[0]
-        vmaddr = 'ssh ' + ldap_username + '@grenoble.senslab.info'
-        slivers['default_sliver'] =  {'vm': vmaddr , 'login': ldap_username}
+        if get_authority (sfa_slice['hrn']) == self.driver.root_auth: 
+            tmp = sfa_slice['hrn'].split('.')
+            ldap_username = tmp[1].split('_')[0]
+            vmaddr = 'ssh ' + ldap_username + '@grenoble.senslab.info'
+            slivers['default_sliver'] =  {'vm': vmaddr , 'login': ldap_username}
+            
+        #TODO get_slice_and_slivers Find the login of the external user
 
         logger.debug("SLABAGGREGATE api get_slice_and_slivers  slivers %s "\
                                                              %(slivers))
@@ -331,8 +334,8 @@ class SlabAggregate:
            #rspec.xml.set('expires',  datetime_to_epoch(slice['expires']))
          # add sliver defaults
         #nodes, links = self.get_nodes(slice, slivers)
-        logger.debug("\r\n \r\n SlabAggregate \tget_rspec ******* slice_xrn %s \r\n \r\n"\
-                                            %(slice_xrn)) 
+        logger.debug("\r\n \r\n SlabAggregate \tget_rspec ******* slice_xrn %s slices  %s\r\n \r\n"\
+                                            %(slice_xrn, slices)) 
                                             
         try:                                    
             lease_option = options['list_leases']
@@ -357,7 +360,7 @@ class SlabAggregate:
                 
                 
                 #for one_slice in slices :
-                ldap_username = slices[0]['slice_hrn']
+                ldap_username = slices[0]['hrn']
                 tmp = ldap_username.split('.')
                 ldap_username = tmp[1].split('_')[0]
               

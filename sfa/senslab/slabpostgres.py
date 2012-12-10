@@ -20,97 +20,51 @@ CASCADE ON UPDATE CASCADE','oar_job_id':'integer DEFAULT -1',  \
 'record_id_slice':'integer', 'slice_hrn':'text NOT NULL'}
 
 #Dict with all the specific senslab tables
-tablenames_dict = {'slice_senslab': slice_table}
+tablenames_dict = {'slab_xp': slice_table}
 
 
 SlabBase = declarative_base()
 
-class FederatedToSenslab( SlabBase):
-    
-    __tablename__ = 'identities'
-    slab_hrn =  Column(String, primary_key=True)
-    aka_hrn = Column(String)
-    email = Column(String)
-    
-    def __init__ (self, slab_hrn = None, aka_hrn = None, email= None):
-        self.slab_hrn = slab_hrn
-        self.aka_hrn = aka_hrn
-        self.email = email
+
         
-    def __repr__(self):
-        """Prints the SQLAlchemy record to the format defined
-        by the function.
-        """
-        result = "< slab_hrn =%s, aka_hrn=%s , email=%s"% (self.slab_hrn, self.aka_hrn, self.email)
-        result += ">"
-        return result
-    
-    def dump_sqlalchemyobj_to_dict(self):
-        """Transforms a SQLalchemy record object to a python dictionary.
-        Returns the dictionary.
-        """
-        
-        dump_dict = {'slab_hrn':self.slab_hrn,
-        'aka_hrn':self.aka_hrn,
-        'email' : self.email, }
-        return dump_dict 
-          
-    
-    
-        
-class SliceSenslab (SlabBase):
+class SenslabXP (SlabBase):
     """ SQL alchemy class to manipulate slice_senslab table in 
     slab_sfa database.
     
     """
-    __tablename__ = 'slice_senslab' 
-    #record_id_user = Column(Integer, primary_key=True)
+    __tablename__ = 'slab_xp' 
 
-    slice_hrn = Column(String, primary_key=True)
-    peer_authority = Column(String, nullable = True)
-    record_id_slice = Column(Integer)    
-    record_id_user = Column(Integer) 
+
+    slice_hrn = Column(String)
+    job_id = Column(Integer, primary_key = True)
+    end_time = Column(Integer, nullable = False)
+
 
     #oar_job_id = Column( Integer,default = -1)
     #node_list = Column(postgresql.ARRAY(String), nullable =True)
     
-    def __init__ (self, slice_hrn =None, record_id_slice=None, \
-                                    record_id_user= None,peer_authority=None):
+    def __init__ (self, slice_hrn =None, job_id=None,  end_time=None):
         """
         Defines a row of the slice_senslab table
         """
-        if record_id_slice: 
-            self.record_id_slice = record_id_slice
         if slice_hrn:
             self.slice_hrn = slice_hrn
-        if record_id_user: 
-            self.record_id_user = record_id_user
-        if peer_authority:
-            self.peer_authority = peer_authority
+        if job_id :
+            self.job_id = job_id
+        if end_time:
+            self.end_time = end_time
             
             
     def __repr__(self):
         """Prints the SQLAlchemy record to the format defined
         by the function.
         """
-        result = "<Record id user =%s, slice hrn=%s, Record id slice =%s , \
-                peer_authority =%s"% (self.record_id_user, self.slice_hrn, \
-                self.record_id_slice, self.peer_authority)
+        result = "<slab_xp : slice_hrn = %s , job_id %s end_time = %s" \
+            %(self.slice_hrn, self.job_id, self.end_time)
         result += ">"
         return result
           
-    def dump_sqlalchemyobj_to_dict(self):
-        """Transforms a SQLalchemy record object to a python dictionary.
-        Returns the dictionary.
-        """
-        
-        dump_dict = {'slice_hrn':self.slice_hrn,
-        'peer_authority':self.peer_authority,
-        'record_id':self.record_id_slice, 
-        'record_id_user':self.record_id_user,
-        'record_id_slice':self.record_id_slice, }
-        return dump_dict 
-          
+   
           
 class SlabDB:
     """ SQL Alchemy connection class.

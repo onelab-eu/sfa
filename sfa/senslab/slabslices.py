@@ -55,9 +55,10 @@ class SlabSlices:
         
     def verify_slice_leases(self, sfa_slice, requested_jobs_dict, peer):
 
-       
+        logger.debug("SLABSLICES verify_slice_leases sfa_slice %s \
+                        "%( sfa_slice))
         #First get the list of current leases from OAR          
-        leases = self.driver.GetLeases({'name':sfa_slice['slice_hrn']})
+        leases = self.driver.GetLeases({'name':sfa_slice['hrn']})
         logger.debug("SLABSLICES verify_slice_leases requested_jobs_dict %s \
                         leases %s "%(requested_jobs_dict, leases ))
         
@@ -157,7 +158,7 @@ class SlabSlices:
 
         #Deleted leases are the ones with lease id not declared in the Rspec
         if deleted_leases:
-            self.driver.DeleteLeases(deleted_leases, sfa_slice['slice_hrn'])
+            self.driver.DeleteLeases(deleted_leases, sfa_slice['hrn'])
             logger.debug("SLABSLICES \
                     verify_slice_leases slice %s deleted_leases %s"\
                     %(sfa_slice, deleted_leases))

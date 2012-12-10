@@ -4,7 +4,7 @@ from sfa.util.config import Config
 from sfa.util.xrn import Xrn, get_authority, hrn_to_urn
 
 from sfa.senslab.slabdriver import SlabDriver
-from sfa.senslab.slabpostgres import SliceSenslab, slab_dbsession
+from sfa.senslab.slabpostgres import SenslabXP, slab_dbsession
 
 from sfa.trust.certificate import Keypair,convert_public_key
 from sfa.trust.gid import create_uuid
@@ -63,9 +63,9 @@ class SlabImporter:
         
         #Create special slice table for senslab 
         
-        if not slabdriver.db.exists('slice_senslab'):
+        if not slabdriver.db.exists('slab_xp'):
             slabdriver.db.createtable()
-            self.logger.info ("SlabImporter.run:  slice_senslab table created ")
+            self.logger.info ("SlabImporter.run:  slab_xp table created ")
 
         #retrieve all existing SFA objects
         all_records = dbsession.query(RegRecord).all()
@@ -257,8 +257,7 @@ class SlabImporter:
                         
                 dbsession.commit()
 
-                user_record.stale=False
-                print>>sys.stderr,"SlabImporter: STALE!! PERSON : %s" %user_record
+                user_record.stale = False
             except:
                 self.logger.log_exc("SlabImporter: failed to import person  %s"%(person) )       
             
@@ -284,11 +283,11 @@ class SlabImporter:
                     #Get it
                     sl_rec = dbsession.query(RegSlice).filter(RegSlice.hrn.match(slice_hrn)).all()
                     
-                    slab_slice = SliceSenslab( slice_hrn = slice_hrn, record_id_slice=sl_rec[0].record_id, record_id_user= user_record.record_id)
-                    print>>sys.stderr, "\r\n \r\n SLAB IMPORTER SLICE IMPORT NOTslice_record %s \r\n slab_slice %s" %(sl_rec,slab_slice)
-                    slab_dbsession.add(slab_slice)
-                    slab_dbsession.commit()
-                    self.logger.info("SlabImporter: imported slice: %s" % slice_record)  
+                    #slab_slice = SenslabXP( slice_hrn = slice_hrn, record_id_slice=sl_rec[0].record_id, record_id_user= user_record.record_id)
+                    #print>>sys.stderr, "\r\n \r\n SLAB IMPORTER SLICE IMPORT NOTslice_record %s \r\n slab_slice %s" %(sl_rec,slab_slice)
+                    #slab_dbsession.add(slab_slice)
+                    #slab_dbsession.commit()
+                    #self.logger.info("SlabImporter: imported slice: %s" % slice_record)  
                     self.update_just_added_records_dict ( slice_record )
 
                 except:
@@ -328,10 +327,10 @@ class SlabImporter:
                 self.logger.warning("stale not found with %s"%record)
             if stale:
                 self.logger.info("SlabImporter: deleting stale record: %s" % record)
-                if record.type == 'user':
-                    rec = slab_dbsession.query(SliceSenslab).filter_by(record_id_user = record.record_id).first()
-                    slab_dbsession.delete(rec)
-                    slab_dbsession.commit()
+                #if record.type == 'user':
+                    #rec = slab_dbsession.query(SenslabXP).filter_by(record_id_user = record.record_id).first()
+                    #slab_dbsession.delete(rec)
+                    #slab_dbsession.commit()
                 dbsession.delete(record)
                 dbsession.commit()         
                  
