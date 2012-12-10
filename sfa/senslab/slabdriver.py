@@ -1246,10 +1246,10 @@ class SlabDriver(Driver):
         grain = 60 
         return grain
     
-    def update_jobs_in_slabdb(self, job_oar_list):
+    def update_jobs_in_slabdb(self, job_oar_list, jobs_psql):
         #Get all the entries in slab_xp table
-        jobs_psql_query = slab_dbsession.query(SenslabXP).all()
-        jobs_psql =  [ row.job_id for row in jobs_psql_query ]
+        
+        
         jobs_psql = set(jobs_psql)
         kept_jobs = set(job_oar_list).intersection(jobs_psql)
         
@@ -1275,59 +1275,74 @@ class SlabDriver(Driver):
         #the same user in LDAP SA 27/07/12
         resa_user_dict = {}
         job_oar_list = []
+        
+        jobs_psql_query = slab_dbsession.query(SenslabXP).all()
+        jobs_psql_dict =  [ (row.job_id, row.__dict__ )for row in jobs_psql_query ]
+        jobs_psql_dict = dict(jobs_psql_dict)
+        logger.debug("SLABDRIVER \r\n \r\n \tGetLeases jobs_psql_dict %s"\
+                                            %(jobs_psql_dict))
+        jobs_psql_id_list =  [ row.job_id for row in jobs_psql_query ]
+        
+        
+        
         for resa in unfiltered_reservation_list:
             logger.debug("SLABDRIVER \tGetLeases USER %s"\
                                             %(resa['user']))   
             #Cosntruct list of jobs (runing, waiting..) in oar
-            job_oar_list.append(resa['lease_id'])                           
-            if resa['user'] not in resa_user_dict: 
-                logger.debug("SLABDRIVER \tGetLeases userNOTIN ")
-                ldap_info = self.ldap.LdapSearch('(uid='+resa['user']+')')
-                if ldap_info:
-                    ldap_info = ldap_info[0][1]
-                    #Get the backref :relationship table reg-researchers 
-                    user = dbsession.query(RegUser).options(joinedload('reg_slices_as_researcher')).filter_by(email = \
-                                                    ldap_info['mail'][0])
-                    if user:
-                        user = user.first()
-                        user = user.__dict__
-                        slice_info =  user['reg_slices_as_researcher'][0].__dict__
-                    #Separated in case user not in database : 
-                    #record_id not defined SA 17/07//12
+            job_oar_list.append(resa['lease_id'])   
+            if resa['lease_id'] in jobs_psql_dict:
+                job_info = jobs_psql_dict[resa['lease_id']]
+                            
+            #if resa['user'] not in resa_user_dict: 
+                #logger.debug("SLABDRIVER \tGetLeases userNOTIN ")
+                #ldap_info = self.ldap.LdapSearch('(uid='+resa['user']+')')
+                #if ldap_info:
+                    #ldap_info = ldap_info[0][1]
+                    ##Get the backref :relationship table reg-researchers 
+                    #user = dbsession.query(RegUser).options(joinedload('reg_slices_as_researcher')).filter_by(email = \
+                                                    #ldap_info['mail'][0])
+                    #if user:
+                        #user = user.first()
+                        #user = user.__dict__
+                        #slice_info =  user['reg_slices_as_researcher'][0].__dict__
+                    ##Separated in case user not in database : 
+                    ##record_id not defined SA 17/07//12
                     
-                    #query_slice_info = slab_dbsession.query(SenslabXP).filter_by(record_id_user = user.record_id)
-                    #if query_slice_info:
-                        #slice_info = query_slice_info.first()
-                    #else:
-                        #slice_info = None
+                    ##query_slice_info = slab_dbsession.query(SenslabXP).filter_by(record_id_user = user.record_id)
+                    ##if query_slice_info:
+                        ##slice_info = query_slice_info.first()
+                    ##else:
+                        ##slice_info = None
                         
-                    resa_user_dict[resa['user']] = {}
-                    resa_user_dict[resa['user']]['ldap_info'] = user
-                    resa_user_dict[resa['user']]['slice_info'] = slice_info
+                    #resa_user_dict[resa['user']] = {}
+                    #resa_user_dict[resa['user']]['ldap_info'] = user
+                    #resa_user_dict[resa['user']]['slice_info'] = slice_info
                     
-                    resa['slice_hrn'] = resa_user_dict[resa['user']]['slice_info']['hrn']
-                    resa['slice_id'] = hrn_to_urn(resa['slice_hrn'], 'slice')    
-                    #Put the slice_urn 
-                    #resa['slice_id'] = hrn_to_urn(slice_info.slice_hrn, 'slice')
-                    resa['component_id_list'] = []
-                    #Transform the hostnames into urns (component ids)
-                    for node in resa['reserved_nodes']:
-                        #resa['component_id_list'].append(hostname_to_urn(self.hrn, \
-                                #self.root_auth, node['hostname']))
-                        slab_xrn = slab_xrn_object(self.root_auth, node)
-                        resa['component_id_list'].append(slab_xrn.urn)
+                    #resa['slice_hrn'] = resa_user_dict[resa['user']]['slice_info']['hrn']
+                    #resa['slice_id'] = hrn_to_urn(resa['slice_hrn'], 'slice')
+                        
+                resa['slice_hrn'] = job_info['slice_hrn']
+                resa['slice_id'] = hrn_to_urn(resa['slice_hrn'], 'slice')
+    
+                resa['component_id_list'] = []
+                #Transform the hostnames into urns (component ids)
+                for node in resa['reserved_nodes']:
+                    #resa['component_id_list'].append(hostname_to_urn(self.hrn, \
+                            #self.root_auth, node['hostname']))
+                    slab_xrn = slab_xrn_object(self.root_auth, node)
+                    resa['component_id_list'].append(slab_xrn.urn)
                     
                 if lease_filter_dict:
                     if lease_filter_dict['name'] == resa['slice_hrn']:
                         reservation_list.append(resa)
                         
-            if lease_filter_dict is None:
-                reservation_list = unfiltered_reservation_list
+        if lease_filter_dict is None:
+            reservation_list = unfiltered_reservation_list
                 #else:
                     #del unfiltered_reservation_list[unfiltered_reservation_list.index(resa)]
 
                     
- 
+        self.update_jobs_in_slabdb(job_oar_list, jobs_psql_id_list)
         logger.debug("SLABDRIVER \tGetLeases resa_user_dict %s"\
                                             %(resa_user_dict))         
         #for resa in unfiltered_reservation_list:
