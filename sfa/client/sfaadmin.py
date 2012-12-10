@@ -11,6 +11,7 @@ from sfa.storage.record import Record
 from sfa.client.sfi import save_records_to_file
 from sfa.trust.hierarchy import Hierarchy
 from sfa.trust.gid import GID
+from sfa.trust.certificate import convert_public_key
 
 from sfa.client.candidates import Candidates
 
@@ -109,6 +110,32 @@ class RegistryCommands(Commands):
         if pis:
             record_dict['pi'] = pis
         return record_dict
+
+
+    @args('-x', '--xrn', dest='xrn', metavar='<xrn>', help='object hrn/urn (mandatory)')
+    @args('-t', '--type', dest='type', metavar='<type>', help='object type', default=None)
+    def check_gid(self, xrn, type=None):
+        """Check the correspondance between the GID and the PubKey"""
+        records = self.api.manager.Resolve(self.api, xrn, type, details=True)
+        record = records[0]
+
+        # get the pubkey stored in SFA DB
+        db_pubkey_str = record['keys'][0]
+        db_pubkey_obj = convert_public_key(db_pubkey_str)
+
+
+        # get the pubkey from the gid
+        gid_str = record['gid']
+        gid_obj = GID(string = gid_str)
+        gid_pubkey_obj = gid_obj.get_pubkey()
+
+        # Check if gid_pubkey_obj and db_pubkey_obj are the same
+        check = gid_pubkey_obj.is_same(db_pubkey_obj)
+        if check :
+            print "The GID PubKey is correponding to the Record PubKey"
+        else:
+            print "ERROR: The GID PubKey is not correponding to the Record PubKey, the GID needs to be updated"
+
 
     @args('-x', '--xrn', dest='xrn', metavar='<xrn>', help='object hrn/urn (mandatory)') 
     @args('-t', '--type', dest='type', metavar='<type>', help='object type', default=None) 
