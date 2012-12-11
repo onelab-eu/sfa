@@ -1225,7 +1225,6 @@ or with an slice hrn, shows currently provisioned resources
         # rspec
         rspec_file = self.get_rspec_file(args[1])
         rspec = open(rspec_file).read()
-
         # users
         # need to pass along user keys to the aggregate.
         # users = [
@@ -1240,19 +1239,9 @@ or with an slice hrn, shows currently provisioned resources
             user_urns = [hrn_to_urn(hrn, 'user') for hrn in user_hrns]
             user_records = self.registry().Resolve(user_urns, [self.my_credential_string])
 
-            if 'sfa' not in server_version:
-                users = pg_users_arg(user_records)
-                rspec = RSpec(rspec)
-                cm_hrn = Xrn(xrn=server_version['urn']).get_hrn()
-                cm_urn = Xrn(cm_hrn, type='authority+cm').get_urn()
-                rspec.filter({'component_manager_id': cm_urn})
-                rspec = RSpecConverter.to_pg_rspec(rspec.toxml(), content_type='request')
-            else:
-                users = sfa_users_arg(user_records, slice_record)
-
         api_options = {}
         api_options ['call_id'] = unique_call_id()
-        api_options['geni_users'] = users    
+        api_options['geni_users'] = users
         result = server.Allocate(slice_urn, creds, rspec, api_options)
         value = ReturnValue.get_value(result)
         if self.options.raw:
