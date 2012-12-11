@@ -1,6 +1,6 @@
 %define name sfa
 %define version 2.1
-%define taglevel 20
+%define taglevel 21
 
 %define release %{taglevel}%{?pldistro:.%{pldistro}}%{?date:.%{date}}
 %global python_sitearch	%( python -c "from distutils.sysconfig import get_python_lib; print get_python_lib(1)" )
@@ -270,6 +270,13 @@ fi
 [ "$1" -ge "1" ] && service sfa-cm restart || :
 
 %changelog
+* Tue Dec 11 2012 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-2.1-21
+- PL importer: minor fixes for corner cases
+- PL importer: also handles last_updated more accurately
+- sfi update can be used to select a key among several in PL
+- sfi add/update usage message fixes (no more record)
+- new feature sfaadmin registry check_gid [-a]
+
 * Mon Dec 03 2012 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-2.1-20
 - fix 2 major bugs in PL importer
 - esp. wrt GID management against PLC key
