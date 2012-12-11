@@ -1,6 +1,7 @@
 from types import StringTypes
 from datetime import datetime
 
+from sqlalchemy import or_, and_ 
 from sqlalchemy import Column, Integer, String, DateTime
 from sqlalchemy import Table, Column, MetaData, join, ForeignKey
 from sqlalchemy.orm import relationship, backref
@@ -314,11 +315,14 @@ class RegKey (Base):
 class SliverAllocation(Base,AlchemyObj):
     __tablename__       = 'sliver_allocation'
     sliver_id           = Column(String, primary_key=True)
+    client_id           = Column(String)
     allocation_state    = Column(String)
 
     def __init__(self, **kwds):
         if 'sliver_id' in kwds:
             self.sliver_id = kwds['sliver_id']
+        if 'sliver_id' in kwds:
+            self.client_id = kwds['client_id']
         if 'allocation_state' in kwds:
             self.allocation_state = kwds['allocation_state']
 
@@ -365,6 +369,27 @@ class SliverAllocation(Base,AlchemyObj):
         for sliver_allocation in sliver_allocations:
             dbsession.delete(sliver_allocation)
         dbsession.commit()
+    
+    def sync(self):
+        from sfa.storage.alchemy import dbsession
+        
+        constraints = [SliverAllocation.sliver_id==self.sliver_id,
+                       SliverAllocation.client_id==self.client_id,
+                       SliverAllocation.allocation_state==self.allocation_state]
+        results = dbsession.query(SliverAllocation).filter(and_(*constraints))
+        records = []
+        for result in results:
+            records.append(result) 
+        
+        if not records:
+            dbsession.add(self)
+        else:
+            record = records[0]
+            record.sliver_id = self.sliver_id
+            record.client_id  = self.client_id
+            record.allocation_state = self.allocation_state
+        dbsession.commit()    
+        
 
 ##############################
 # although the db needs of course to be reachable for the following functions

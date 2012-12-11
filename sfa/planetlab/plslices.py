@@ -8,6 +8,8 @@ from sfa.rspecs.rspec import RSpec
 from sfa.planetlab.vlink import VLink
 from sfa.planetlab.topology import Topology
 from sfa.planetlab.plxrn import PlXrn, hrn_to_pl_slicename
+from sfa.storage.model import SliverAllocation
+from sfa.storage.alchemy import dbsession
 
 MAXINT =  2L**31-1
 
@@ -178,28 +180,48 @@ class PlSlices:
         return leases
 
 
-    def verify_slice_nodes(self, slice, requested_slivers, peer):
+    def verify_slice_nodes(self, slice, rspec_nodes, peer):
+        
+        slivers = {}
+        for node in rspec_nodes:
+            hostname = None
+            client_id = node.get('client_id')    
+            if node.get('component_name'):
+                hostname = node.get('component_name').strip()
+            elif node.get('component_id'):
+                hostname = xrn_to_hostname(node.get('component_id').strip())
+            if hostname:
+                slivers[hostname] = client_id
         
         nodes = self.driver.shell.GetNodes(slice['node_ids'], ['node_id', 'hostname', 'interface_ids'])
         current_slivers = [node['hostname'] for node in nodes]
 
         # remove nodes not in rspec
-        deleted_nodes = list(set(current_slivers).difference(requested_slivers))
+        deleted_nodes = list(set(current_slivers).difference(slivers.keys()))
 
         # add nodes from rspec
-        added_nodes = list(set(requested_slivers).difference(current_slivers))        
+        added_nodes = list(set(slivers.keys()).difference(current_slivers))        
 
         try:
             if peer:
                 self.driver.shell.UnBindObjectFromPeer('slice', slice['slice_id'], peer['shortname'])
             self.driver.shell.AddSliceToNodes(slice['name'], added_nodes)
             self.driver.shell.DeleteSliceFromNodes(slice['name'], deleted_nodes)
-
+            
         except: 
             logger.log_exc('Failed to add/remove slice from nodes')
 
         slices = self.driver.shell.GetSlices(slice['name'], ['node_ids']) 
         resulting_nodes = self.driver.shell.GetNodes(slices[0]['node_ids'])
+
+        # update sliver allocations
+        for node in resulting_nodes:
+            client_id = slivers[node['hostname']]
+            logger.info(client_id)
+            sliver_hrn = '%s.%s-%s' % (self.driver.hrn, slice['slice_id'], node['node_id'])
+            sliver_id = Xrn(sliver_hrn, type='sliver').urn
+            record = SliverAllocation(sliver_id=sliver_id, client_id=client_id, allocation_state='geni_allocated')      
+            record.sync()
         return resulting_nodes
 
     def free_egre_key(self):

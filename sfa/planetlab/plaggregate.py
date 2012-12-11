@@ -195,7 +195,8 @@ class PlAggregate:
         rspec_node['tags'] = tags
         return rspec_node
 
-    def sliver_to_rspec_node(self, sliver, sites, interfaces, node_tags, pl_initscripts):
+    def sliver_to_rspec_node(self, sliver, sites, interfaces, node_tags, \
+                             pl_initscripts, sliver_allocations):
         # get the granularity in second for the reservation system
         grain = self.driver.shell.GetLeaseGranularity()
         rspec_node = self.node_to_rspec_node(sliver, sites, interfaces, node_tags, pl_initscripts, grain)
@@ -209,7 +210,7 @@ class PlAggregate:
                          'type': 'plab-vserver',
                          'tags': []})
         rspec_node['sliver_id'] = rspec_sliver['sliver_id']
-        rspec_node['client_id'] = sliver['hostname']
+        rspec_node['client_id'] = sliver_allocations[sliver['urn']].client_id
         rspec_node['slivers'] = [rspec_sliver]
 
         # slivers always provide the ssh service
@@ -387,7 +388,8 @@ class PlAggregate:
             for sliver in slivers:
                 if sliver['slice_ids_whitelist'] and sliver['slice_id'] not in sliver['slice_ids_whitelist']:
                     continue
-                rspec_node = self.sliver_to_rspec_node(sliver, sites, interfaces, node_tags, pl_initscripts)
+                rspec_node = self.sliver_to_rspec_node(sliver, sites, interfaces, node_tags, 
+                                                       pl_initscripts, sliver_allocation_dict)
                 # manifest node element shouldn't contain available attribute
                 rspec_node.pop('available')
                 rspec_nodes.append(rspec_node) 

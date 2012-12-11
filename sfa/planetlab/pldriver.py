@@ -569,7 +569,7 @@ class PlDriver (Driver):
         rspec =  aggregate.list_resources(version=version, options=options)
         return rspec
 
-    def describe(self, urns, version, options={}, allocation_status=None):
+    def describe(self, urns, version, options={}):
         aggregate = PlAggregate(self)
         return aggregate.describe(urns, version=version, options=options)
     
@@ -603,26 +603,10 @@ class PlDriver (Driver):
         persons = slices.verify_persons(xrn.hrn, slice, users, peer, sfa_peer, options=options)
         # ensure slice attributes exists
         slices.verify_slice_attributes(slice, requested_attributes, options=options)
-        
+       
         # add/remove slice from nodes
-        requested_slivers = []
-        for node in rspec.version.get_nodes_with_slivers():
-            hostname = None
-            if node.get('component_name'):
-                hostname = node.get('component_name').strip()
-            elif node.get('component_id'):
-                hostname = xrn_to_hostname(node.get('component_id').strip())
-            if hostname:
-                requested_slivers.append(hostname)
-        nodes = slices.verify_slice_nodes(slice, requested_slivers, peer)
-
-        # update all sliver allocation states setting then to geni_allocated   
-        sliver_ids = []
-        for node in nodes:
-            sliver_hrn = '%s.%s-%s' % (self.hrn, slice['slice_id'], node['node_id'])
-            sliver_id = Xrn(sliver_hrn, type='sliver').urn
-            sliver_ids.append(sliver_id)
-        SliverAllocation.set_allocations(sliver_ids, 'geni_allocated')
+        request_nodes = rspec.version.get_nodes_with_slivers()
+        nodes = slices.verify_slice_nodes(slice, request_nodes, peer)
          
         # add/remove links links 
         slices.verify_slice_links(slice, rspec.version.get_link_requests(), nodes)
@@ -654,8 +638,9 @@ class PlDriver (Driver):
         slivers = aggregate.get_slivers(urns)
         sliver_ids = [sliver['sliver_id'] for sliver in slivers]
         SliverAllocation.set_allocations(sliver_ids, 'geni_provisioned')
-     
-        return self.describe(urns, None, options=options)
+        version_manager = VersionManager()
+        rspec_version = version_manager.get_version(options['geni_rspec_version']) 
+        return self.describe(urns, rspec_version, options=options)
 
     def delete(self, urns, options={}):
         # collect sliver ids so we can update sliver allocation states after
