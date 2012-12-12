@@ -328,8 +328,8 @@ class Sfi:
         ("version", ""),  
         ("list", "authority"),
         ("show", "name"),
-        ("add", "record"),
-        ("update", "record"),
+        ("add", "[record]"),
+        ("update", "[record]"),
         ("remove", "name"),
         ("slices", ""),
         ("resources", "[slice_hrn]"),
@@ -343,7 +343,7 @@ class Sfi:
         ("shutdown", "slice_hrn"),
         ("get_ticket", "slice_hrn rspec"),
         ("redeem_ticket", "ticket"),
-        ("delegate", "name"),
+        ("delegate", "to_hrn"),
         ("gid", "[name]"),
         ("trusted", "cred"),
         ("config", ""),
@@ -408,14 +408,6 @@ class Sfi:
                                action="callback", callback=optparse_dictvalue_callback, nargs=1,
                                help="set extra/testbed-dependent flags, e.g. --extra enabled=true")
 
-        # user specifies remote aggregate/sm/component                          
-        if command in ("resources", "slices", "create", "delete", "start", "stop", 
-                       "restart", "shutdown",  "get_ticket", "renew", "status"):
-            parser.add_option("-d", "--delegate", dest="delegate", default=None, 
-                             action="store_true",
-                             help="Include a credential delegated to the user's root"+\
-                                  "authority in set of credentials for this call")
-
         # show_credential option
         if command in ("list","resources","create","add","update","remove","slices","delete","status","renew"):
             parser.add_option("-C","--credential",dest='show_credential',action='store_true',default=False,
@@ -470,10 +462,18 @@ class Sfi:
                              help="gives details, like user keys", default=False)
         if command in ("delegate"):
            parser.add_option("-u", "--user",
-                            action="store_true", dest="delegate_user", default=False,
-                            help="delegate user credential")
-           parser.add_option("-s", "--slice", dest="delegate_slice",
-                            help="delegate slice credential", metavar="HRN", default=None)
+                             action="store_true", dest="delegate_user", default=False,
+                             help="delegate your own credentials; default if no other option is provided")
+           parser.add_option("-s", "--slice", dest="delegate_slices",action='append',default=[],
+                             metavar="slice_hrn", help="delegate cred. for slice HRN")
+           parser.add_option("-a", "--auths", dest='delegate_auths',action='append',default=[],
+                             metavar='auth_hrn', help="delegate cred for auth HRN")
+           # this primarily is a shorthand for -a my_hrn^
+           parser.add_option("-p", "--pi", dest='delegate_pi', default=None, action='store_true',
+                             help="delegate your PI credentials, so s.t. like -a your_hrn^")
+           parser.add_option("-A","--to-authority",dest='delegate_to_authority',action='store_true',default=False,
+                             help="""by default the mandatory argument is expected to be a user, 
+use this if you mean an authority instead""")
         
         if command in ("version"):
             parser.add_option("-R","--registry-version",
@@ -714,30 +714,12 @@ class Sfi:
             sys.exit(-1)
         return self.client_bootstrap.authority_credential_string (self.authority)
 
+    def authority_credential_string(self, auth_hrn):
+        return self.client_bootstrap.authority_credential_string (auth_hrn)
+
     def slice_credential_string(self, name):
         return self.client_bootstrap.slice_credential_string (name)
 
-    # xxx should be supported by sfaclientbootstrap as well
-    def delegate_cred(self, object_cred, hrn, type='authority'):
-        # the gid and hrn of the object we are delegating
-        if isinstance(object_cred, str):
-            object_cred = Credential(string=object_cred) 
-        object_gid = object_cred.get_gid_object()
-        object_hrn = object_gid.get_hrn()
-    
-        if not object_cred.get_privileges().get_all_delegate():
-            self.logger.error("Object credential %s does not have delegate bit set"%object_hrn)
-            return
-
-        # the delegating user's gid
-        caller_gidfile = self.my_gid()
-  
-        # the gid of the user who will be delegated to
-        delegee_gid = self.client_bootstrap.gid(hrn,type)
-        delegee_hrn = delegee_gid.get_hrn()
-        dcred = object_cred.delegate(delegee_gid, self.private_key, caller_gidfile)
-        return dcred.save_to_string(save_parents=True)
-     
     #
     # Management of the servers
     # 
@@ -949,7 +931,7 @@ or version information about sfi itself
         return
     
     def add(self, options, args):
-        "add record into registry from xml file (Register)"
+        "add record into registry by using the command options (Recommended) or from xml file (Register)"
         auth_cred = self.my_authority_credential_string()
         if options.show_credential:
             show_credentials(auth_cred)
@@ -974,7 +956,7 @@ or version information about sfi itself
         return self.registry().Register(record_dict, auth_cred)
     
     def update(self, options, args):
-        "update record into registry from xml file (Update)"
+        "update record into registry by using the command options (Recommended) or from xml file (Update)"
         record_dict = {}
         if len(args) > 0:
             record_filepath = args[0]
@@ -1037,9 +1019,6 @@ or version information about sfi itself
         server = self.sliceapi()
         # creds
         creds = [self.my_credential_string]
-        if options.delegate:
-            delegated_cred = self.delegate_cred(self.my_credential_string, get_authority(self.authority))
-            creds.append(delegated_cred)  
         # options and call_id when supported
         api_options = {}
 	api_options['call_id']=unique_call_id()
@@ -1064,11 +1043,11 @@ or with an slice hrn, shows currently provisioned resources
         # set creds
         creds = []
         if args:
-            creds.append(self.slice_credential_string(args[0]))
+            the_credential=self.slice_credential_string(args[0])
+            creds.append(the_credential)
         else:
-            creds.append(self.my_credential_string)
-        if options.delegate:
-            creds.append(self.delegate_cred(cred, get_authority(self.authority)))
+            the_credential=self.my_credential_string
+            creds.append(the_credential)
         if options.show_credential:
             show_credentials(creds)
 
@@ -1202,9 +1181,6 @@ or with an slice hrn, shows currently provisioned resources
         # creds
         slice_cred = self.slice_credential_string(slice_hrn)
         creds = [slice_cred]
-        if options.delegate:
-            delegated_cred = self.delegate_cred(slice_cred, get_authority(self.authority))
-            creds.append(delegated_cred)
         
         # options and call_id when supported
         api_options = {}
@@ -1232,9 +1208,6 @@ or with an slice hrn, shows currently provisioned resources
         # creds 
         slice_cred = self.slice_credential_string(slice_hrn)
         creds = [slice_cred]
-        if options.delegate:
-            delegated_cred = self.delegate_cred(slice_cred, get_authority(self.authority))
-            creds.append(delegated_cred)
 
         # options and call_id when supported
         api_options = {}
@@ -1261,9 +1234,6 @@ or with an slice hrn, shows currently provisioned resources
         # cred
         slice_cred = self.slice_credential_string(args[0])
         creds = [slice_cred]
-        if options.delegate:
-            delegated_cred = self.delegate_cred(slice_cred, get_authority(self.authority))
-            creds.append(delegated_cred)
         # xxx Thierry - does this not need an api_options as well ?
         result = server.Start(slice_urn, creds)
         value = ReturnValue.get_value(result)
@@ -1284,9 +1254,6 @@ or with an slice hrn, shows currently provisioned resources
         # cred
         slice_cred = self.slice_credential_string(args[0])
         creds = [slice_cred]
-        if options.delegate:
-            delegated_cred = self.delegate_cred(slice_cred, get_authority(self.authority))
-            creds.append(delegated_cred)
         result =  server.Stop(slice_urn, creds)
         value = ReturnValue.get_value(result)
         if self.options.raw:
@@ -1307,9 +1274,6 @@ or with an slice hrn, shows currently provisioned resources
         # cred
         slice_cred = self.slice_credential_string(args[0])
         creds = [slice_cred]
-        if options.delegate:
-            delegated_cred = self.delegate_cred(slice_cred, get_authority(self.authority))
-            creds.append(delegated_cred)
         result = server.reset_slice(creds, slice_urn)
         value = ReturnValue.get_value(result)
         if self.options.raw:
@@ -1333,9 +1297,6 @@ or with an slice hrn, shows currently provisioned resources
         # creds
         slice_cred = self.slice_credential_string(args[0])
         creds = [slice_cred]
-        if options.delegate:
-            delegated_cred = self.delegate_cred(slice_cred, get_authority(self.authority))
-            creds.append(delegated_cred)
         # options and call_id when supported
         api_options = {}
 	api_options['call_id']=unique_call_id()
@@ -1361,9 +1322,6 @@ or with an slice hrn, shows currently provisioned resources
         # creds
         slice_cred = self.slice_credential_string(slice_hrn)
         creds = [slice_cred]
-        if options.delegate:
-            delegated_cred = self.delegate_cred(slice_cred, get_authority(self.authority))
-            creds.append(delegated_cred)
         result = server.Shutdown(slice_urn, creds)
         value = ReturnValue.get_value(result)
         if self.options.raw:
@@ -1384,9 +1342,6 @@ or with an slice hrn, shows currently provisioned resources
         # creds
         slice_cred = self.slice_credential_string(slice_hrn)
         creds = [slice_cred]
-        if options.delegate:
-            delegated_cred = self.delegate_cred(slice_cred, get_authority(self.authority))
-            creds.append(delegated_cred)
         # rspec
         rspec_file = self.get_rspec_file(rspec_path) 
         rspec = open(rspec_file).read()
@@ -1459,31 +1414,51 @@ or with an slice hrn, shows currently provisioned resources
         GID(string=gid).save_to_file(filename)
          
 
-    def delegate(self, options, args):
+    def delegate (self, options, args):
         """
         (locally) create delegate credential for use by given hrn
         """
-        delegee_hrn = args[0]
+        if len(args) != 1:
+            self.print_help()
+            sys.exit(1)
+        to_hrn = args[0]
+        # support for several delegations in the same call
+        # so first we gather the things to do
+        tuples=[]
+        for slice_hrn in options.delegate_slices:
+            message="%s.slice"%slice_hrn
+            original = self.slice_credential_string(slice_hrn)
+            tuples.append ( (message, original,) )
+        if options.delegate_pi:
+            my_authority=self.authority
+            message="%s.pi"%my_authority
+            original = self.my_authority_credential_string()
+            tuples.append ( (message, original,) )
+        for auth_hrn in options.delegate_auths:
+            message="%s.auth"%auth_hrn
+            original=self.authority_credential_string(auth_hrn)
+            tuples.append ( (message, original, ) )
+        # if nothing was specified at all at this point, let's assume -u
+        if not tuples: options.delegate_user=True
+        # this user cred
         if options.delegate_user:
-            cred = self.delegate_cred(self.my_credential_string, delegee_hrn, 'user')
-        elif options.delegate_slice:
-            slice_cred = self.slice_credential_string(options.delegate_slice)
-            cred = self.delegate_cred(slice_cred, delegee_hrn, 'slice')
-        else:
-            self.logger.warning("Must specify either --user or --slice <hrn>")
-            return
-        delegated_cred = Credential(string=cred)
-        object_hrn = delegated_cred.get_gid_object().get_hrn()
-        if options.delegate_user:
-            dest_fn = os.path.join(self.options.sfi_dir, get_leaf(delegee_hrn) + "_"
-                                  + get_leaf(object_hrn) + ".cred")
-        elif options.delegate_slice:
-            dest_fn = os.path.join(self.options.sfi_dir, get_leaf(delegee_hrn) + "_slice_"
-                                  + get_leaf(object_hrn) + ".cred")
+            message="%s.user"%self.user
+            original = self.my_credential_string
+            tuples.append ( (message, original, ) )
 
-        delegated_cred.save_to_file(dest_fn, save_parents=True)
+        # default type for beneficial is user unless -A
+        if options.delegate_to_authority:       to_type='authority'
+        else:                                   to_type='user'
 
-        self.logger.info("delegated credential for %s to %s and wrote to %s"%(object_hrn, delegee_hrn,dest_fn))
+        # let's now handle all this
+        # it's all in the filenaming scheme
+        for (message,original) in tuples:
+            delegated_string = self.client_bootstrap.delegate_credential_string(original, to_hrn, to_type)
+            delegated_credential = Credential (string=delegated_string)
+            filename = os.path.join ( self.options.sfi_dir,
+                                      "%s_for_%s.%s.cred"%(message,to_hrn,to_type))
+            delegated_credential.save_to_file(filename, save_parents=True)
+            self.logger.info("delegated credential for %s to %s and wrote to %s"%(message,to_hrn,filename))
     
     def trusted(self, options, args):
         """

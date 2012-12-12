@@ -94,7 +94,10 @@ class PlDriver (Driver):
             if not persons:
                 for key in ['first_name','last_name']:
                     if key not in sfa_record: sfa_record[key]='*from*sfa*'
-                pointer = self.shell.AddPerson(dict(sfa_record))
+                # AddPerson does not allow everything to be set
+                can_add = ['first_name', 'last_name', 'title','email', 'password', 'phone', 'url', 'bio']
+                add_person_dict=dict ( [ (k,sfa_record[k]) for k in sfa_record if k in can_add ] )
+                pointer = self.shell.AddPerson(add_person_dict)
             else:
                 pointer = persons[0]['person_id']
     
@@ -135,6 +138,7 @@ class PlDriver (Driver):
     def update (self, old_sfa_record, new_sfa_record, hrn, new_key):
         pointer = old_sfa_record['pointer']
         type = old_sfa_record['type']
+        new_key_pointer = None
 
         # new_key implemented for users only
         if new_key and type not in [ 'user' ]:
@@ -173,20 +177,19 @@ class PlDriver (Driver):
                 keys = person['key_ids']
                 keys = self.shell.GetKeys(person['key_ids'])
                 
-                # Delete all stale keys
                 key_exists = False
                 for key in keys:
-                    if new_key != key['key']:
-                        self.shell.DeleteKey(key['key_id'])
-                    else:
+                    if new_key == key['key']:
                         key_exists = True
+                        new_key_pointer = key['key_id']
+                        break
                 if not key_exists:
-                    self.shell.AddPersonKey(pointer, {'key_type': 'ssh', 'key': new_key})
+                    new_key_pointer = self.shell.AddPersonKey(pointer, {'key_type': 'ssh', 'key': new_key})
     
         elif type == "node":
             self.shell.UpdateNode(pointer, new_sfa_record)
 
-        return True
+        return (pointer, new_key_pointer)
         
 
     ##########
