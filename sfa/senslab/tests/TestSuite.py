@@ -23,6 +23,8 @@ from sfa.senslab.OARrestapi import OARrestapi
 from sfa.senslab.slabdriver import SlabDriver
 from sfa.util.config import Config
 
+
+
 import sys
 
 
@@ -76,73 +78,73 @@ def TestLdap(job_id = None):
     print "\r\n TEST ldap.LdapSearch ids = avakian",ret
 
 
-    #password = ldap.generate_password()
-    #print "\r\n TEST generate_password ",password 
+    password = ldap.generate_password()
+    print "\r\n TEST generate_password ",password 
     
-    #maxi = ldap.find_max_uidNumber()
-    #print "\r\n TEST find_max_uidNumber " , maxi
+    maxi = ldap.find_max_uidNumber()
+    print "\r\n TEST find_max_uidNumber " , maxi
 
-    #data = {}
-    #data['last_name'] = "Drake"
-    #data['first_name']="Tim"
-    #data['givenName']= data['first_name']
-    #data['mail'] = "robin@arkham.fr"
+    data = {}
+    data['last_name'] = "Drake"
+    data['first_name']="Tim"
+    data['givenName']= data['first_name']
+    data['mail'] = "robin@arkham.fr"
     
-    #record={}
-    #record['hrn'] = 'senslab2.drake'
-    #record['last_name'] = "Drake"
-    #record['first_name']="Tim"
-    #record['mail'] = "robin@arkham.fr"
+    record={}
+    record['hrn'] = 'senslab2.drake'
+    record['last_name'] = "Drake"
+    record['first_name']="Tim"
+    record['mail'] = "robin@arkham.fr"
     
     
-    #login = ldap.generate_login(data)
-    #print "\r\n Robin \tgenerate_login  ", ret, login
+    login = ldap.generate_login(data)
+    print "\r\n Robin \tgenerate_login  ", ret, login
     
-    #ret = ldap.LdapAddUser(data)
-    #print "\r\n Robin  \tLdapAddUser ", ret
+    ret = ldap.LdapAddUser(data)
+    print "\r\n Robin  \tLdapAddUser ", ret
 
-    #req_ldap = '(uid=' + login + ')'
-    #ret = ldap.LdapSearch(req_ldap, [])
-    #print "\r\n Robin \tldap.LdapSearch ids = %s %s"%(login,ret )
+    req_ldap = '(uid=' + login + ')'
+    ret = ldap.LdapSearch(req_ldap, [])
+    print "\r\n Robin \tldap.LdapSearch ids = %s %s"%(login,ret )
     
-    #password = "Thridrobin"
-    #enc = ldap.encrypt_password(password)
-    #print "\r\n Robin \tencrypt_password ", enc
+    password = "Thridrobin"
+    enc = ldap.encrypt_password(password)
+    print "\r\n Robin \tencrypt_password ", enc
     
-    #ret = ldap.LdapModifyUser(record, {'userPassword':enc})
-    #print "\r\n Robin \tChange password LdapModifyUser ", ret
+    ret = ldap.LdapModifyUser(record, {'userPassword':enc})
+    print "\r\n Robin \tChange password LdapModifyUser ", ret
     
-    ##dn = 'uid=' + login + ',' + ldap.baseDN
-    ##ret = ldap.LdapDelete(dn)
-    ##print "\r\n Robin  \tLdapDelete ", ret
+    #dn = 'uid=' + login + ',' + ldap.baseDN
+    #ret = ldap.LdapDelete(dn)
+    #print "\r\n Robin  \tLdapDelete ", ret
     
-    #datanight = {}
-    #datanight['last_name'] = "Grayson"
-    #datanight['first_name']="Dick"
-    #datanight['givenName']= datanight['first_name']
-    #datanight['mail'] = "nightwing@arkham.fr"
+    datanight = {}
+    datanight['last_name'] = "Grayson"
+    datanight['first_name']="Dick"
+    datanight['givenName']= datanight['first_name']
+    datanight['mail'] = "nightwing@arkham.fr"
     
     
-    #record_night = {}
-    #record_night['hrn'] = 'senslab2.grayson'
-    #record_night['last_name'] = datanight['last_name']
-    #record_night['first_name'] = datanight['first_name']
-    #record_night['mail'] = datanight['mail']
+    record_night = {}
+    record_night['hrn'] = 'senslab2.grayson'
+    record_night['last_name'] = datanight['last_name']
+    record_night['first_name'] = datanight['first_name']
+    record_night['mail'] = datanight['mail']
     
-    #ret = ldap.LdapFindUser(record_night)
-    #print "\r\n Nightwing \tldap.LdapFindUser %s : %s"%(record_night,ret)
+    ret = ldap.LdapFindUser(record_night)
+    print "\r\n Nightwing \tldap.LdapFindUser %s : %s"%(record_night,ret)
     
     #ret = ldap.LdapSearch('(uid=grayson)', [])
     #print "\r\n Nightwing \tldap.LdapSearch ids = %s %s"%('grayson',ret )
 
-    #ret = ldap.LdapAddUser(datanight)
-    #print "\r\n Nightwing \tLdapAddUser ", ret 
+    ret = ldap.LdapAddUser(datanight)
+    print "\r\n Nightwing \tLdapAddUser ", ret 
     
-    #ret = ldap.LdapResetPassword(record_night)
-    #print "\r\n Nightwing  \tLdapResetPassword de %s : %s "%(record_night,ret)
+    ret = ldap.LdapResetPassword(record_night)
+    print "\r\n Nightwing  \tLdapResetPassword de %s : %s "%(record_night,ret)
     
-    ##ret = ldap.LdapDeleteUser(record_night)
-    ##print "\r\n Nightwing   \tLdapDeleteUser ", ret 
+    ret = ldap.LdapDeleteUser(record_night)
+    print "\r\n Nightwing   \tLdapDeleteUser ", ret 
     
     
     #record_avakian = {}
@@ -249,28 +251,37 @@ def TestOAR(job_id = None):
     print "\r\nOAR ", uri, raw_json, "\r\n KKK \t",raw_json.keys()
     return
     
+    
+  
 def TestSlabDriver(job_id = None):
     if job_id is None:
         job_id = 1
     if isinstance(job_id,list) and len(job_id) == 1:
        job_id = job_id[0]
     slabdriver = SlabDriver(Config())
-    nodes = slabdriver.GetReservedNodes(username='avakian')
-    print "\r\n \r\n" ,nodes
     
-    l = slabdriver.GetSlices(slice_filter = '269', slice_filter_type = 'record_id_user')
+    nodes = slabdriver.GetReservedNodes()
+    print " \r\n \r\n GetReservedNodes" ,nodes
     
+    sl = slabdriver.GetSlices(slice_filter='senslab2.avakian_slice', slice_filter_type='slice_hrn') 
+    print "\r\n \r\nGetSlices", sl[0]
     
-    print "\r\n \r\nGetSlices", l
+    sl = slabdriver.GetSlices(slice_filter='528', slice_filter_type='record_id_user')  
+    print "\r\n \r\nGetSlices", sl
+    
+    sl = slabdriver.GetSlices()  
+    print "\r\n \r\nGetSlices", sl
     
     persons = slabdriver.GetPersons()
     print "\r\n \r\n  GetPersons", persons
     
-    leases = slabdriver.GetLeases()
+    leases = slabdriver.GetLeases(login='avakian')
     print "\r\n \r\n  GetLeases", leases
-    #slabdriver.DeleteJobs(job_id,'senslab2.avakian_slice')
+
   
-  
+
+
+      
 def  TestSfi(arg = None):
     import os
     print " =================    SFI.PY RESOURCES            ============="
@@ -319,7 +330,32 @@ def  TestSfi(arg = None):
     print " =================    SFI.PY CREATE SLICE   ============="
     create = os.system("sfi.py create senslab2.avakian_slice /home/savakian/flab-sfa/rspec_sfa.rspec")
       
+def TestSQL(arg = None):
+    from sfa.storage.model import make_record, RegRecord, RegAuthority, RegUser, RegSlice, RegKey
+    from sfa.storage.alchemy import dbsession
+    from sqlalchemy.orm.collections import InstrumentedList 
+    
+    from sqlalchemy.orm import joinedload 
+    
+    solo_query_slice_list = dbsession.query(RegSlice).options(joinedload('reg_researchers')).filter_by(hrn='senslab2.avakian_slice').first()
+    print "\r\n \r\n ===========      query_slice_list  RegSlice joinedload('reg_researchers')   senslab2.avakian    first \r\n \t ",solo_query_slice_list.__dict__
       
+    query_slice_list = dbsession.query(RegSlice).options(joinedload('reg_researchers')).all()             
+    print "\r\n \r\n ===========      query_slice_list RegSlice joinedload('reg_researchers')   ALL  \r\n \t", query_slice_list[0].__dict__ 
+    return_slicerec_dictlist = []
+    record = query_slice_list[0]
+    print "\r\n \r\n ===========   \r\n \t", record 
+    
+    tmp = record.__dict__
+    print "\r\n \r\n ===========   \r\n \t", tmp 
+    tmp['reg_researchers'] = tmp['reg_researchers'][0].__dict__
+    print "\r\n \r\n ===========   \r\n \t", tmp 
+        #del tmp['reg_researchers']['_sa_instance_state']
+    return_slicerec_dictlist.append(tmp)
+        
+    print "\r\n \r\n ===========   \r\n \t",return_slicerec_dictlist
+    
+    
 def RunAll( arg ):
     TestLdap()
     TestOAR()
@@ -332,6 +368,7 @@ supported_options = {
         'LDAP': TestLdap,
         'driver': TestSlabDriver,
         'sfi':TestSfi,
+        'sql':TestSQL,
         'all' : RunAll }
         
 def main():

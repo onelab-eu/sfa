@@ -968,7 +968,7 @@ class SlabDriver(Driver):
             return_slicerec_dictlist = []
             for record in query_slice_list:
                 tmp = record.__dict__
-                tmp['reg_researchers'] = tmp['reg_researchers'].__dict__
+                tmp['reg_researchers'] = tmp['reg_researchers'][0].__dict__
                 #del tmp['reg_researchers']['_sa_instance_state']
                 return_slicerec_dictlist.append(tmp)
                 #return_slicerec_dictlist.append(record.__dict__)

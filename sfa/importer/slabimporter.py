@@ -75,6 +75,8 @@ class SlabImporter:
        
         self.records_by_type_hrn = \
             dict ( [ ( (record.type,record.hrn) , record ) for record in all_records ] )
+        self.users_rec_by_email = \
+            dict ( [ (record.email, record) for record in all_records if record.type == 'user' ] )
             
         # create hash by (type,pointer) 
         self.records_by_type_pointer = \
@@ -92,7 +94,7 @@ class SlabImporter:
         print>>sys.stderr,"\r\n SLABIMPORT \t ldap_person_listdict %s \r\n" %(ldap_person_listdict)
         slices_listdict = slabdriver.GetSlices()
         try:
-            slices_by_userid = dict ( [ (one_slice['record_id_user'], one_slice ) for one_slice in slices_listdict ] )
+            slices_by_userid = dict ( [ (one_slice['reg_researchers']['record_id'], one_slice ) for one_slice in slices_listdict ] )
         except TypeError:
              self.logger.log_exc("SlabImporter: failed to create list of slices by user id.") 
              pass
@@ -178,8 +180,10 @@ class SlabImporter:
             # xxx suspicious again
             if len(person_hrn) > 64: person_hrn = person_hrn[:64]
             person_urn = hrn_to_urn(person_hrn, 'user')
-
-            user_record = self.find_record_by_type_hrn('user', person_hrn)
+            
+            user_record = self.users_rec_by_email[person['email']]
+            print>>sys.stderr,"SlabImporter: user_record " , user_record
+            #user_record = self.find_record_by_type_hrn('user', person_hrn)
             slice_record = self.find_record_by_type_hrn ('slice', slice_hrn)
             
             # return a tuple pubkey (a plc key object) and pkey (a Keypair object)
