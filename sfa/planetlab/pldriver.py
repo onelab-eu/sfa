@@ -94,7 +94,10 @@ class PlDriver (Driver):
             if not persons:
                 for key in ['first_name','last_name']:
                     if key not in sfa_record: sfa_record[key]='*from*sfa*'
-                pointer = self.shell.AddPerson(dict(sfa_record))
+                # AddPerson does not allow everything to be set
+                can_add = ['first_name', 'last_name', 'title','email', 'password', 'phone', 'url', 'bio']
+                add_person_dict=dict ( [ (k,sfa_record[k]) for k in sfa_record if k in can_add ] )
+                pointer = self.shell.AddPerson(add_person_dict)
             else:
                 pointer = persons[0]['person_id']
     
