@@ -217,7 +217,6 @@ class PlSlices:
         # update sliver allocations
         for node in resulting_nodes:
             client_id = slivers[node['hostname']]
-            logger.info(client_id)
             sliver_hrn = '%s.%s-%s' % (self.driver.hrn, slice['slice_id'], node['node_id'])
             sliver_id = Xrn(sliver_hrn, type='sliver').urn
             record = SliverAllocation(sliver_id=sliver_id, client_id=client_id, allocation_state='geni_allocated')      
