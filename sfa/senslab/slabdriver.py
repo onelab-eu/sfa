@@ -39,6 +39,9 @@ from sfa.senslab.slabslices import SlabSlices
 # this inheritance scheme is so that the driver object can receive
 # GetNodes or GetSites sorts of calls directly
 # and thus minimize the differences in the managers with the pl version
+
+
+
 class SlabDriver(Driver):
     """ Senslab Driver class inherited from Driver generic class.
     
@@ -76,8 +79,8 @@ class SlabDriver(Driver):
         #Slice has the same slice hrn for each slice in the slice/lease list
         #So fetch the info on the user once 
         one_slice = slice_list[0] 
-        recuser = dbsession.query(RegRecord).filter_by(record_id = \
-                                            one_slice['record_id_user']).first()
+        #recuser = dbsession.query(RegRecord).filter_by(record_id = \
+                                            #one_slice['record_id_user']).first()
         
         #Make a list of all the nodes hostnames  in use for this slice
         slice_nodes_list = []
@@ -100,7 +103,7 @@ class SlabDriver(Driver):
             result = {}
             result.fromkeys(\
                 ['geni_urn','pl_login','geni_status','geni_resources'], None)
-            result['pl_login'] = recuser.hrn
+            result['pl_login'] = one_slice['reg_researchers']['hrn']
             logger.debug("Slabdriver - sliver_status Sliver status \
                                         urn %s hrn %s single_slice  %s \r\n " \
                                         %(slice_urn, slice_hrn, single_slice))
@@ -361,6 +364,14 @@ class SlabDriver(Driver):
         if options.get('info'):
             version_string = version_string + "_" + \
                                         options.get('info', 'default')
+                                        
+        # Adding the list_leases option to the caching key
+        if options.get('list_leases'):
+            version_string = version_string + "_"+options.get('list_leases', 'default')
+            
+        # Adding geni_available to caching key
+        if options.get('geni_available'):
+            version_string = version_string + "_" + str(options.get('geni_available'))
     
         # look in cache first
         #if cached_requested and self.cache and not slice_hrn:
@@ -802,7 +813,86 @@ class SlabDriver(Driver):
         return return_site_list
                 
                 
-      
+    def _sql_get_slice_info( self, slice_filter ):
+        #DO NOT USE RegSlice - reg_researchers to get the hrn 
+        #of the user otherwise will mess up the RegRecord in 
+        #Resolve, don't know why - SA 08/08/2012
+        
+        #Only one entry for one user  = one slice in slab_xp table
+        #slicerec = dbsession.query(RegRecord).filter_by(hrn = slice_filter).first()
+        raw_slicerec = dbsession.query(RegSlice).options(joinedload('reg_researchers')).filter_by(hrn = slice_filter).first()
+        #raw_slicerec = dbsession.query(RegRecord).filter_by(hrn = slice_filter).first()
+        if raw_slicerec: 
+            #load_reg_researcher
+            #raw_slicerec.reg_researchers
+            raw_slicerec = raw_slicerec.__dict__
+            logger.debug(" SLABDRIVER \t  get_slice_info slice_filter %s  raw_slicerec %s"%(slice_filter,raw_slicerec))
+            slicerec = raw_slicerec
+            #only one researcher per slice so take the first one
+            #slicerec['reg_researchers'] = raw_slicerec['reg_researchers']
+            #del slicerec['reg_researchers']['_sa_instance_state']
+            return slicerec
+        
+        else :
+            return None
+            
+            
+    def _sql_get_slice_info_from_user( self, slice_filter ): 
+        #slicerec = dbsession.query(RegRecord).filter_by(record_id = slice_filter).first()
+        raw_slicerec = dbsession.query(RegUser).options(joinedload('reg_slices_as_researcher')).filter_by(record_id = slice_filter).first()
+        #raw_slicerec = dbsession.query(RegRecord).filter_by(record_id = slice_filter).first()
+        #Put it in correct order 
+        user_needed_fields = ['peer_authority', 'hrn', 'last_updated', 'classtype', 'authority', 'gid', 'record_id', 'date_created', 'type', 'email', 'pointer']
+        slice_needed_fields = ['peer_authority', 'hrn', 'last_updated', 'classtype', 'authority', 'gid', 'record_id', 'date_created', 'type', 'pointer']
+        if raw_slicerec:
+            #raw_slicerec.reg_slices_as_researcher
+            raw_slicerec = raw_slicerec.__dict__
+            slicerec = {}
+            slicerec = dict([(k,raw_slicerec['reg_slices_as_researcher'][0].__dict__[k]) for k in slice_needed_fields])
+            slicerec['reg_researchers'] = dict([(k, raw_slicerec[k]) for k in user_needed_fields])
+             #TODO Handle multiple slices for one user SA 10/12/12
+                        #for now only take the first slice record associated to the rec user
+                        ##slicerec  = raw_slicerec['reg_slices_as_researcher'][0].__dict__
+                        #del raw_slicerec['reg_slices_as_researcher']
+                        #slicerec['reg_researchers'] = raw_slicerec
+                        ##del slicerec['_sa_instance_state']
+                                   
+            return slicerec
+        
+        else:
+            return None
+            
+    def _get_slice_records(self, slice_filter = None, \
+                    slice_filter_type = None):
+       
+        login = None
+        #Get list of slices based on the slice hrn
+        if slice_filter_type == 'slice_hrn':
+            
+            if get_authority(slice_filter) == self.root_auth:
+                login = slice_filter.split(".")[1].split("_")[0] 
+            
+            slicerec = self._sql_get_slice_info(slice_filter)
+            
+            if slicerec is None:
+                return login, None    
+            
+        #Get slice based on user id                             
+        if slice_filter_type == 'record_id_user': 
+            
+            slicerec = self._sql_get_slice_info_from_user(slice_filter)
+                
+        if slicerec:
+            fixed_slicerec_dict = slicerec
+            #At this point if the there is no login it means 
+            #record_id_user filter has been used for filtering
+            if login is None :
+                #If theslice record is from senslab
+                if fixed_slicerec_dict['peer_authority'] is None:
+                    login = fixed_slicerec_dict['hrn'].split(".")[1].split("_")[0] 
+            return login, fixed_slicerec_dict
+                  
+                  
     def GetSlices(self, slice_filter = None, slice_filter_type = None):
         """ Get the slice records from the slab db. 
         Returns a slice ditc if slice_filter  and slice_filter_type 
@@ -817,49 +907,9 @@ class SlabDriver(Driver):
         
         #First try to get information on the slice based on the filter provided     
         if slice_filter_type in authorized_filter_types_list:
-            
-            
-            def __get_slice_records(slice_filter = None, \
-                                            slice_filter_type = None):
-       
-                login = None
-                #Get list of slices based on the slice hrn
-                if slice_filter_type == 'slice_hrn':
-                   
-                    if get_authority(slice_filter) == self.root_auth:
-                        login = slice_filter.split(".")[1].split("_")[0] 
-                    
-                    #DO NOT USE RegSlice - reg_researchers to get the hrn 
-                    #of the user otherwise will mess up the RegRecord in 
-                    #Resolve, don't know why - SA 08/08/2012
-                    
-                    #Only one entry for one user  = one slice in slab_xp table
-                    slicerec = dbsession.query(RegRecord).filter_by(hrn = slice_filter).first()
-                    #slicerec = slab_dbsession.query(SenslabXP).filter_by(slice_hrn = slice_filter).first()
-                    
-                    if slicerec is None:
-                        return login, None    
-                    
-                #Get slice based on user id                             
-                if slice_filter_type == 'record_id_user': 
-                    slicerec = dbsession.query(RegRecord).filter_by(record_id = slice_filter).first()
-                    #slicerec = slab_dbsession.query(SenslabXP).filter_by(record_id_user = slice_filter).first()
-                    
-               
-                if slicerec:
-                    fixed_slicerec_dict = slicerec.__dict__
-                    #At this point if the there is no login it means 
-                    #record_id_user filter has been used for filtering
-                    if login is None :
-                        #If theslice record is from senslab
-                        if fixed_slicerec_dict['peer_authority'] is None:
-                            login = fixed_slicerec_dict['hrn'].split(".")[1].split("_")[0] 
-                    return login, fixed_slicerec_dict
-                
-            
-            
+
             login, fixed_slicerec_dict = \
-                            __get_slice_records(slice_filter, slice_filter_type)
+                            self._get_slice_records(slice_filter, slice_filter_type)
             logger.debug(" SLABDRIVER \tGetSlices login %s \
                             slice record %s slice_filter %s slice_filter_type %s "\
                             %(login, fixed_slicerec_dict,slice_filter, slice_filter_type))
@@ -867,8 +917,8 @@ class SlabDriver(Driver):
             
             #Now we have the slice record fixed_slicerec_dict, get the 
             #jobs associated to this slice
-            leases_list = self.GetReservedNodes(username = login)
-            
+            #leases_list = self.GetReservedNodes(username = login)
+            leases_list = self.GetLeases(login = login)
             #If no job is running or no job scheduled 
             #return only the slice record           
             if leases_list == [] and fixed_slicerec_dict:
@@ -881,11 +931,13 @@ class SlabDriver(Driver):
                 
                 reserved_list = lease['reserved_nodes']
                 
-                slicerec_dict['oar_job_id'] = lease['lease_id']
+                slicerec_dict['oar_job_id']= lease['lease_id']
                 slicerec_dict.update({'list_node_ids':{'hostname':reserved_list}})   
                 slicerec_dict.update({'node_ids':lease['reserved_nodes']})
+                
                 #Update lease dict with the slice record
                 if fixed_slicerec_dict:
+                    fixed_slicerec_dict['oar_job_id'].append(slicerec_dict['oar_job_id'])
                     slicerec_dict.update(fixed_slicerec_dict)
                     #slicerec_dict.update({'hrn':\
                                     #str(fixed_slicerec_dict['slice_hrn'])})
@@ -907,12 +959,18 @@ class SlabDriver(Driver):
                 
         else:
             #Get all slices from the senslab sfa database ,
-            #put them in dict format            
-            query_slice_list = dbsession.query(RegRecord).filter_by(type='slice').all()
+            #put them in dict format 
+            #query_slice_list = dbsession.query(RegRecord).all()           
+            query_slice_list = dbsession.query(RegSlice).options(joinedload('reg_researchers')).all()          
+            #query_slice_list = dbsession.query(RegRecord).filter_by(type='slice').all()
             #query_slice_list = slab_dbsession.query(SenslabXP).all()
             return_slicerec_dictlist = []
             for record in query_slice_list:
-                return_slicerec_dictlist.append(record.__dict__)
+                tmp = record.__dict__
+                tmp['reg_researchers'] = tmp['reg_researchers'].__dict__
+                #del tmp['reg_researchers']['_sa_instance_state']
+                return_slicerec_dictlist.append(tmp)
+                #return_slicerec_dictlist.append(record.__dict__)
                 
             #Get all the jobs reserved nodes
             leases_list = self.GetReservedNodes()
@@ -1249,24 +1307,24 @@ class SlabDriver(Driver):
     def update_jobs_in_slabdb(self, job_oar_list, jobs_psql):
         #Get all the entries in slab_xp table
         
-        
+
         jobs_psql = set(jobs_psql)
         kept_jobs = set(job_oar_list).intersection(jobs_psql)
-        
+       
         deleted_jobs = set(jobs_psql).difference(kept_jobs)
         deleted_jobs = list(deleted_jobs)
-        
-        slab_dbsession.query(SenslabXP).filter(SenslabXP.job_id.in_(deleted_jobs)).delete(synchronize_session='fetch')
-        slab_dbsession.commit()
+        if len(deleted_jobs) > 0:
+            slab_dbsession.query(SenslabXP).filter(SenslabXP.job_id.in_(deleted_jobs)).delete(synchronize_session='fetch')
+            slab_dbsession.commit()
         
         return
 
         
     
-    def GetLeases(self, lease_filter_dict=None):
+    def GetLeases(self, lease_filter_dict=None, login=None):
         
         
-        unfiltered_reservation_list = self.GetReservedNodes()
+        unfiltered_reservation_list = self.GetReservedNodes(login)
 
         reservation_list = []
         #Find the slice associated with this user senslab ldap uid
@@ -1396,27 +1454,44 @@ class SlabDriver(Driver):
                 #about the user of this slice. This kind of 
                 #information is in the Senslab's DB.
                 if str(record['type']) == 'slice':
+                    if 'reg_researchers' in record and isinstance(record['reg_researchers'],list) :
+                        record['reg_researchers'] = record['reg_researchers'][0].__dict__
+                        record.update({'PI':[record['reg_researchers']['hrn']],
+                                'researcher': [record['reg_researchers']['hrn']],
+                                'name':record['hrn'], 
+                                'oar_job_id':[],
+                                'node_ids': [],
+                                'person_ids':[record['reg_researchers']['record_id']],
+                                'geni_urn':'',  #For client_helper.py compatibility
+                                'keys':'',  #For client_helper.py compatibility
+                                'key_ids':''})  #For client_helper.py compatibility
+                        
+                        
                     #Get slab slice record.
                     recslice_list = self.GetSlices(slice_filter = \
                                                 str(record['hrn']),\
                                                 slice_filter_type = 'slice_hrn')
                     
-                    recuser = dbsession.query(RegRecord).filter_by(record_id = \
-                                            recslice_list[0]['record_id_user']).first()
-                    logger.debug("SLABDRIVER \tfill_record_info TYPE SLICE RECUSER %s " %(recuser))
-                    record.update({'PI':[recuser.hrn],
-                                'researcher': [recuser.hrn],
-                                'name':record['hrn'], 
-                                'oar_job_id':[],
-                                'node_ids': [],
-                                'person_ids':[recslice_list[0]['record_id_user']],
-                                'geni_urn':'',  #For client_helper.py compatibility
-                                'keys':'',  #For client_helper.py compatibility
-                                'key_ids':''})  #For client_helper.py compatibility
-                    
+                    #recuser = recslice_list[0]['reg_researchers']
+                    ##recuser = dbsession.query(RegRecord).filter_by(record_id = \
+                                            ##recslice_list[0]['record_id_user']).first()
+                   
+                    #record.update({'PI':[recuser['hrn']],
+                                #'researcher': [recuser['hrn']],
+                                #'name':record['hrn'], 
+                                #'oar_job_id':[],
+                                #'node_ids': [],
+                                #'person_ids':[recslice_list[0]['reg_researchers']['record_id']],
+                                #'geni_urn':'',  #For client_helper.py compatibility
+                                #'keys':'',  #For client_helper.py compatibility
+                                #'key_ids':''})  #For client_helper.py compatibility
+                    logger.debug("SLABDRIVER \tfill_record_info TYPE SLICE RECUSER record['hrn'] %s ecord['oar_job_id'] %s " %(record['hrn'],record['oar_job_id']))
                     try:
-                        for rec in recslice_list:
-                            record['oar_job_id'].append(rec['oar_job_id'])
+                        for rec in recslice_list: 
+                            logger.debug("SLABDRIVER\r\n  \t \t fill_record_info oar_job_id %s " %(rec['oar_job_id']))
+                            #record['oar_job_id'].append(rec['oar_job_id'])
+                            del record['_sa_instance_state']
+                            del record['reg_researchers']
                             record['node_ids'] = [ self.root_auth + hostname for hostname in rec['node_ids']]
                     except KeyError:
                         pass
@@ -1436,18 +1511,19 @@ class SlabDriver(Driver):
                     #Append slice record in records list, 
                     #therefore fetches user and slice info again(one more loop)
                     #Will update PIs and researcher for the slice
-                    recuser = dbsession.query(RegRecord).filter_by(record_id = \
-                                                recslice_list[0]['record_id_user']).first()
+                    #recuser = dbsession.query(RegRecord).filter_by(record_id = \
+                                                #recslice_list[0]['record_id_user']).first()
+                    recuser = recslice_list[0]['reg_researchers']
                     logger.debug( "SLABDRIVER.PY \t fill_record_info USER  \
                                                 recuser %s \r\n \r\n" %(recuser)) 
                     recslice = {}
                     recslice = recslice_list[0]
-                    recslice.update({'PI':[recuser.hrn],
-                        'researcher': [recuser.hrn],
+                    recslice.update({'PI':[recuser['hrn']],
+                        'researcher': [recuser['hrn']],
                         'name':record['hrn'], 
                         'node_ids': [],
                         'oar_job_id': [],
-                        'person_ids':[recslice_list[0]['record_id_user']]}) 
+                        'person_ids':[recuser['record_id']]}) 
                     try:
                         for rec in recslice_list:
                             recslice['oar_job_id'].append(rec['oar_job_id'])
@@ -1455,7 +1531,7 @@ class SlabDriver(Driver):
                         pass
                             
                     recslice.update({'type':'slice', \
-                                                'hrn':recslice_list[0]['slice_hrn']})
+                                                'hrn':recslice_list[0]['hrn']})
 
 
                     #GetPersons takes [] as filters 
@@ -1472,8 +1548,9 @@ class SlabDriver(Driver):
                     
                     logger.debug("SLABDRIVER.PY \tfill_record_info ADDING SLICE\
                                 INFO TO USER records %s" %(record_list)) 
+                
                 logger.debug("SLABDRIVER.PY \tfill_record_info END \
-                                #record %s \r\n \r\n " %(record))     
+                                record %s \r\n \r\n " %(record))     
 
         except TypeError, error:
             logger.log_exc("SLABDRIVER \t fill_record_info  EXCEPTION %s"\
