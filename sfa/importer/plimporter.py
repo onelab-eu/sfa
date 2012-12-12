@@ -153,6 +153,9 @@ class PlImporter:
                                    ['person_id', 'email', 'key_ids', 'site_ids', 'role_ids'])
         # create a hash of persons by person_id
         persons_by_id = dict ( [ ( person['person_id'], person) for person in persons ] )
+        # also gather non-enabled user accounts so as to issue relevant warnings
+        disabled_persons = shell.GetPersons({'peer_id': None, 'enabled': False}, ['person_id'])
+        disabled_person_ids = [ person['person_id'] for person in disabled_persons ] 
         # Get all plc public keys
         # accumulate key ids for keys retrieval
         key_ids = []
@@ -210,7 +213,7 @@ class PlImporter:
                 except:
                     # if the site import fails then there is no point in trying to import the
                     # site's child records (node, slices, persons), so skip them.
-                    self.logger.log_exc("PlImporter: failed to import site. Skipping child records") 
+                    self.logger.log_exc("PlImporter: failed to import site %s. Skipping child records"%site_hrn) 
                     continue 
             else:
                 # xxx update the record ...
@@ -244,7 +247,8 @@ class PlImporter:
                         self.logger.info("PlImporter: imported node: %s" % node_record)  
                         self.remember_record (node_record)
                     except:
-                        self.logger.log_exc("PlImporter: failed to import node") 
+                        self.logger.log_exc("PlImporter: failed to import node %s"%node_hrn) 
+                        continue
                 else:
                     # xxx update the record ...
                     pass
@@ -253,10 +257,17 @@ class PlImporter:
             site_pis=[]
             # import persons
             for person_id in site['person_ids']:
-                try:
-                    person = persons_by_id[person_id]
-                except:
-                    self.logger.warning ("PlImporter: cannot locate person_id %s - ignored"%person_id)
+                proceed=False
+                if person_id in persons_by_id:
+                    person=persons_by_id[person_id]
+                    proceed=True
+                elif person_id in disabled_person_ids:
+                    pass
+                else:
+                    self.logger.warning ("PlImporter: cannot locate person_id %s in site %s - ignored"%(person_id,site_hrn))
+                # make sure to NOT run this if anything is wrong
+                if not proceed: continue
+
                 person_hrn = email_to_hrn(site_hrn, person['email'])
                 # xxx suspicious again
                 if len(person_hrn) > 64: person_hrn = person_hrn[:64]
@@ -289,9 +300,9 @@ class PlImporter:
                         person_gid = self.auth_hierarchy.create_gid(person_urn, create_uuid(), pkey)
                         person_gid.set_email(person['email'])
                         user_record = RegUser (hrn=person_hrn, gid=person_gid, 
-                                                 pointer=person['person_id'], 
-                                                 authority=get_authority(person_hrn),
-                                                 email=person['email'])
+                                               pointer=person['person_id'], 
+                                               authority=get_authority(person_hrn),
+                                               email=person['email'])
                         if pubkey: 
                             user_record.reg_keys=[RegKey (pubkey['key'], pubkey['key_id'])]
                         else:
@@ -303,25 +314,47 @@ class PlImporter:
                         self.remember_record ( user_record )
                     else:
                         # update the record ?
-                        # if user's primary key has changed then we need to update the 
+                        #
+                        # if a user key has changed then we need to update the
                         # users gid by forcing an update here
+                        #
+                        # right now, SFA only has *one* key attached to a user, and this is
+                        # the key that the GID was made with
+                        # so the logic here is, we consider that things are OK (unchanged) if
+                        # all the SFA keys are present as PLC keys
+                        # otherwise we trigger the creation of a new gid from *some* plc key
+                        # and record this on the SFA side
+                        # it would make sense to add a feature in PLC so that one could pick a 'primary'
+                        # key but this is not available on the myplc side for now
+                        # = or = it would be much better to support several keys in SFA but that
+                        # does not seem doable without a major overhaul in the data model as
+                        # a GID is attached to a hrn, but it's also linked to a key, so...
+                        # NOTE: with this logic, the first key entered in PLC remains the one
+                        # current in SFA until it is removed from PLC
                         sfa_keys = user_record.reg_keys
-                        def key_in_list (key,sfa_keys):
-                            for reg_key in sfa_keys:
-                                if reg_key.key==key['key']: return True
+                        def sfa_key_in_list (sfa_key,plc_keys):
+                            for plc_key in plc_keys:
+                                if plc_key['key']==sfa_key.key:
+                                    return True
                             return False
-                        # is there a new key in myplc ?
+                        # are all the SFA keys known to PLC ?
                         new_keys=False
-                        for key in plc_keys:
-                            if not key_in_list (key,sfa_keys):
-                                new_keys = True
+                        if not sfa_keys and plc_keys:
+                            new_keys=True
+                        else: 
+                            for sfa_key in sfa_keys:
+                                 if not sfa_key_in_list (sfa_key,plc_keys):
+                                     new_keys = True
                         if new_keys:
                             (pubkey,pkey) = init_person_key (person, plc_keys)
                             person_gid = self.auth_hierarchy.create_gid(person_urn, create_uuid(), pkey)
+                            person_gid.set_email(person['email'])
                             if not pubkey:
                                 user_record.reg_keys=[]
                             else:
                                 user_record.reg_keys=[ RegKey (pubkey['key'], pubkey['key_id'])]
+                            user_record.gid = person_gid
+                            user_record.just_updated()
                             self.logger.info("PlImporter: updated person: %s" % user_record)
                     user_record.email = person['email']
                     dbsession.commit()
@@ -335,6 +368,12 @@ class PlImporter:
                     self.logger.log_exc("PlImporter: failed to import person %d %s"%(person['person_id'],person['email']))
     
             # maintain the list of PIs for a given site
+            # for the record, Jordan had proposed the following addition as a welcome hotfix to a previous version:
+            # site_pis = list(set(site_pis)) 
+            # this was likely due to a bug in the above logic, that had to do with disabled persons
+            # being improperly handled, and where the whole loop on persons
+            # could be performed twice with the same person...
+            # so hopefully we do not need to eliminate duplicates explicitly here anymore
             site_record.reg_pis = site_pis
             dbsession.commit()
 
@@ -360,10 +399,11 @@ class PlImporter:
                         self.logger.info("PlImporter: imported slice: %s" % slice_record)  
                         self.remember_record ( slice_record )
                     except:
-                        self.logger.log_exc("PlImporter: failed to import slice")
+                        self.logger.log_exc("PlImporter: failed to import slice %s (%s)"%(slice_hrn,slice['name']))
                 else:
                     # xxx update the record ...
-                    self.logger.warning ("Slice update not yet implemented")
+                    # given that we record the current set of users anyways, there does not seem to be much left to do here
+                    # self.logger.warning ("Slice update not yet implemented on slice %s (%s)"%(slice_hrn,slice['name']))
                     pass
                 # record current users affiliated with the slice
                 slice_record.reg_researchers = \

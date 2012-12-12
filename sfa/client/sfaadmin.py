@@ -11,6 +11,7 @@ from sfa.storage.record import Record
 from sfa.client.sfi import save_records_to_file
 from sfa.trust.hierarchy import Hierarchy
 from sfa.trust.gid import GID
+from sfa.trust.certificate import convert_public_key
 
 from sfa.client.candidates import Candidates
 
@@ -109,6 +110,55 @@ class RegistryCommands(Commands):
         if pis:
             record_dict['pi'] = pis
         return record_dict
+
+
+    @args('-x', '--xrn', dest='xrn', metavar='<xrn>', help='object hrn/urn', default=None)
+    @args('-t', '--type', dest='type', metavar='<type>', help='object type (mandatory)',)
+    @args('-a', '--all', dest='all', metavar='<all>', action='store_true', default=False, help='check all users GID')
+    def check_gid(self, xrn=None, type=None, all=None):
+        """Check the correspondance between the GID and the PubKey"""
+
+        # db records
+        from sfa.storage.alchemy import dbsession
+        from sfa.storage.model import RegRecord
+        db_query = dbsession.query(RegRecord).filter_by(type=type)
+        if xrn and not all:
+            hrn = Xrn(xrn).get_hrn()
+            db_query = db_query.filter_by(hrn=hrn)
+        elif all and xrn:
+            print "Use either -a or -x <xrn>, not both !!!"
+            sys.exit(1)
+        elif not all and not xrn:
+            print "Use either -a or -x <xrn>, one of them is mandatory !!!"
+            sys.exit(1)
+
+        records = db_query.all()
+        if not records:
+            print "No Record found"
+            sys.exit(1)
+
+        OK = []
+        NOK = []
+        for record in records:
+             # get the pubkey stored in SFA DB
+             db_pubkey_str = record.reg_keys[0].key
+             db_pubkey_obj = convert_public_key(db_pubkey_str)
+
+             # get the pubkey from the gid
+             gid_str = record.gid
+             gid_obj = GID(string = gid_str)
+             gid_pubkey_obj = gid_obj.get_pubkey()
+
+             # Check if gid_pubkey_obj and db_pubkey_obj are the same
+             check = gid_pubkey_obj.is_same(db_pubkey_obj)
+             if check :
+                 OK.append(record.hrn)
+             else:
+                 NOK.append(record.hrn)
+
+        print "GID/PubKey correpondence is OK for: %s\nGID/PubKey correpondence is NOT OK for: %s" %(OK,NOK)
+
+
 
     @args('-x', '--xrn', dest='xrn', metavar='<xrn>', help='object hrn/urn (mandatory)') 
     @args('-t', '--type', dest='type', metavar='<type>', help='object type', default=None) 

@@ -119,7 +119,56 @@ DO NOT EDIT. This file was automatically generated at
                     value = int(value)    
                 setattr(self, name, value)
                 setattr(self, name.upper(), value)
-        
+
+    def variables(self):
+        """
+        Return all variables.
+
+        Returns:
+
+        variables = { 'category_id': (category, variablelist) }
+
+        category = { 'id': "category_identifier",
+                     'name': "Category name",
+                     'description': "Category description" }
+
+        variablelist = { 'variable_id': variable }
+
+        variable = { 'id': "variable_identifier",
+                     'type': "variable_type",
+                     'value': "variable_value",
+                     'name': "Variable name",
+                     'description': "Variable description" }
+        """
+
+        variables = {}
+        for section in self.config.sections():
+            category = {
+                'id': section,
+                'name': section,
+                'description': section,
+            }
+            variable_list = {}
+            for item in self.config.items(section):
+                var_name = item[0] 
+                name = "%s_%s" % (section, var_name)
+                value = item[1]
+                if isbool(value):
+                    value_type = bool
+                elif value.isdigit():
+                    value_type = int
+                else:
+                    value_type = str
+                variable = {
+                    'id': var_name,
+                    'type': value_type,
+                    'value': value,
+                    'name': name,
+                    'description': name,
+                }
+                variable_list[name] = variable
+            variables[section] = (category, variable_list)
+        return variables      
 
     def verify(self, config1, config2, validate_method):
         return True
