@@ -937,6 +937,7 @@ class SlabDriver(Driver):
                 
                 #Update lease dict with the slice record
                 if fixed_slicerec_dict:
+                    fixed_slicerec_dict['oar_job_id'] = []
                     fixed_slicerec_dict['oar_job_id'].append(slicerec_dict['oar_job_id'])
                     slicerec_dict.update(fixed_slicerec_dict)
                     #slicerec_dict.update({'hrn':\
