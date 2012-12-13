@@ -211,6 +211,8 @@ class PlAggregate:
                          'tags': []})
         rspec_node['sliver_id'] = rspec_sliver['sliver_id']
         rspec_node['client_id'] = sliver_allocations[sliver['urn']].client_id
+        if sliver_allocations[sliver['urn']].component_id:
+            rspec_node['component_id'] = sliver_allocations[sliver['urn']].component_id
         rspec_node['slivers'] = [rspec_sliver]
 
         # slivers always provide the ssh service
@@ -301,7 +303,7 @@ class PlAggregate:
             site=sites_dict[site_id]
 
             rspec_lease['lease_id'] = lease['lease_id']
-            rspec_lease['component_id'] = hostname_to_urn(self.driver.hrn, site['login_base'], lease['hostname'])
+            rspec_lease['component_id'] = PlXrn(self.driver.hrn, hostname=lease['hostname']).urn
             slice_hrn = slicename_to_hrn(self.driver.hrn, lease['name'])
             slice_urn = hrn_to_urn(slice_hrn, 'slice')
             rspec_lease['slice_id'] = slice_urn

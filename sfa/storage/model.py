@@ -316,13 +316,16 @@ class SliverAllocation(Base,AlchemyObj):
     __tablename__       = 'sliver_allocation'
     sliver_id           = Column(String, primary_key=True)
     client_id           = Column(String)
+    component_id        = Column(String)
     allocation_state    = Column(String)
 
     def __init__(self, **kwds):
         if 'sliver_id' in kwds:
             self.sliver_id = kwds['sliver_id']
-        if 'sliver_id' in kwds:
+        if 'client_id' in kwds:
             self.client_id = kwds['client_id']
+        if 'component_id' in kwds:
+            self.component_id = kwds['component_id']
         if 'allocation_state' in kwds:
             self.allocation_state = kwds['allocation_state']
 
@@ -373,9 +376,7 @@ class SliverAllocation(Base,AlchemyObj):
     def sync(self):
         from sfa.storage.alchemy import dbsession
         
-        constraints = [SliverAllocation.sliver_id==self.sliver_id,
-                       SliverAllocation.client_id==self.client_id,
-                       SliverAllocation.allocation_state==self.allocation_state]
+        constraints = [SliverAllocation.sliver_id==self.sliver_id]
         results = dbsession.query(SliverAllocation).filter(and_(*constraints))
         records = []
         for result in results:
@@ -387,6 +388,7 @@ class SliverAllocation(Base,AlchemyObj):
             record = records[0]
             record.sliver_id = self.sliver_id
             record.client_id  = self.client_id
+            record.component_id  = self.component_id
             record.allocation_state = self.allocation_state
         dbsession.commit()    
         

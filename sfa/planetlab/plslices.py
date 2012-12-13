@@ -184,14 +184,15 @@ class PlSlices:
         
         slivers = {}
         for node in rspec_nodes:
-            hostname = None
-            client_id = node.get('client_id')    
-            if node.get('component_name'):
-                hostname = node.get('component_name').strip()
-            elif node.get('component_id'):
-                hostname = xrn_to_hostname(node.get('component_id').strip())
+            hostname = node.get('component_name')
+            client_id = node.get('client_id')
+            component_id = node.get('component_id').strip()    
             if hostname:
-                slivers[hostname] = client_id
+                hostname = hostname.strip()
+            elif component_id:
+                hostname = xrn_to_hostname(component_id)
+            if hostname:
+                slivers[hostname] = {'client_id': client_id, 'component_id': component_id}
         
         nodes = self.driver.shell.GetNodes(slice['node_ids'], ['node_id', 'hostname', 'interface_ids'])
         current_slivers = [node['hostname'] for node in nodes]
@@ -216,10 +217,13 @@ class PlSlices:
 
         # update sliver allocations
         for node in resulting_nodes:
-            client_id = slivers[node['hostname']]
+            client_id = slivers[node['hostname']]['client_id']
+            component_id = slivers[node['hostname']]['component_id']
             sliver_hrn = '%s.%s-%s' % (self.driver.hrn, slice['slice_id'], node['node_id'])
             sliver_id = Xrn(sliver_hrn, type='sliver').urn
-            record = SliverAllocation(sliver_id=sliver_id, client_id=client_id, allocation_state='geni_allocated')      
+            record = SliverAllocation(sliver_id=sliver_id, client_id=client_id, 
+                                      component_id=component_id, 
+                                      allocation_state='geni_allocated')      
             record.sync()
         return resulting_nodes
 
