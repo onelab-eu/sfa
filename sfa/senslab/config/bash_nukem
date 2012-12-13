@@ -86,7 +86,7 @@ case "$3" in
     0) echo "No federation at all"
         #Insert a # on every beginning of line except if there is 'aggregates'
         sed -i '/aggregates/!s/^/#/g' /etc/sfa/aggregates.xml 
-        sed -i '/aggregates/!s/^/#/g' /etc/sfa/registries.xml   
+        sed -i '/registries/!s/^/#/g' /etc/sfa/registries.xml   
         ;;
     1) echo "Setting up federation with other senslab "
         #  Commenting out senslab and ple, lines 2 and 4 OR
