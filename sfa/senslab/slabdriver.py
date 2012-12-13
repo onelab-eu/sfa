@@ -1292,8 +1292,8 @@ class SlabDriver(Driver):
     
     #Delete the jobs from job_senslab table
     def DeleteSliceFromNodes(self, slice_record):
-
-        self.DeleteJobs(slice_record['oar_job_id'], slice_record['hrn'])
+        for job_id in slice_record['oar_job_id']:
+            self.DeleteJobs(job_id, slice_record['hrn'])
         return   
     
  
@@ -1814,10 +1814,11 @@ class SlabDriver(Driver):
         logger.warning("SLABDRIVER AddPersonKey EMPTY - DO NOTHING \r\n ")
         return
     
-    def DeleteLeases(self, leases_id_list, slice_hrn ):
+    def DeleteLeases(self, leases_id_list, slice_hrn ):        
+        logger.debug("SLABDRIVER DeleteLeases leases_id_list %s slice_hrn %s \
+                \r\n " %(leases_id_list, slice_hrn))
         for job_id in leases_id_list:
             self.DeleteJobs(job_id, slice_hrn)
         
-        logger.debug("SLABDRIVER DeleteLeases leases_id_list %s slice_hrn %s \
-                \r\n " %(leases_id_list, slice_hrn))
+
         return 
