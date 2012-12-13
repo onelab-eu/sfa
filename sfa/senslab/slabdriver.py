@@ -1338,7 +1338,7 @@ class SlabDriver(Driver):
         jobs_psql_query = slab_dbsession.query(SenslabXP).all()
         jobs_psql_dict =  [ (row.job_id, row.__dict__ )for row in jobs_psql_query ]
         jobs_psql_dict = dict(jobs_psql_dict)
-        logger.debug("SLABDRIVER \r\n \r\n \tGetLeases jobs_psql_dict %s"\
+        logger.debug("SLABDRIVER \tGetLeases jobs_psql_dict %s"\
                                             %(jobs_psql_dict))
         jobs_psql_id_list =  [ row.job_id for row in jobs_psql_query ]
         
@@ -1347,11 +1347,19 @@ class SlabDriver(Driver):
         for resa in unfiltered_reservation_list:
             logger.debug("SLABDRIVER \tGetLeases USER %s"\
                                             %(resa['user']))   
-            #Cosntruct list of jobs (runing, waiting..) in oar
-            job_oar_list.append(resa['lease_id'])   
+            #Cosntruct list of jobs (runing, waiting..) in oar 
+            job_oar_list.append(resa['lease_id'])  
+            #If there is information on the job in SLAB DB (slice used and job id) 
             if resa['lease_id'] in jobs_psql_dict:
                 job_info = jobs_psql_dict[resa['lease_id']]
-                            
+                logger.debug("SLABDRIVER \tGetLeases resa_user_dict %s"\
+                                            %(resa_user_dict))        
+                resa['slice_hrn'] = job_info['slice_hrn']
+                resa['slice_id'] = hrn_to_urn(resa['slice_hrn'], 'slice')
+                
+             #Assume it is a senslab slice:   
+            else:
+                resa['slice_id'] =  hrn_to_urn(self.root_auth+'.'+ resa['user'] +"_slice"  , 'slice')            
             #if resa['user'] not in resa_user_dict: 
                 #logger.debug("SLABDRIVER \tGetLeases userNOTIN ")
                 #ldap_info = self.ldap.LdapSearch('(uid='+resa['user']+')')
@@ -1379,9 +1387,7 @@ class SlabDriver(Driver):
                     
                     #resa['slice_hrn'] = resa_user_dict[resa['user']]['slice_info']['hrn']
                     #resa['slice_id'] = hrn_to_urn(resa['slice_hrn'], 'slice')
-                        
-                resa['slice_hrn'] = job_info['slice_hrn']
-                resa['slice_id'] = hrn_to_urn(resa['slice_hrn'], 'slice')
+                
     
                 resa['component_id_list'] = []
                 #Transform the hostnames into urns (component ids)
@@ -1402,8 +1408,7 @@ class SlabDriver(Driver):
 
                     
         self.update_jobs_in_slabdb(job_oar_list, jobs_psql_id_list)
-        logger.debug("SLABDRIVER \tGetLeases resa_user_dict %s"\
-                                            %(resa_user_dict))         
+                
         #for resa in unfiltered_reservation_list:
             
             

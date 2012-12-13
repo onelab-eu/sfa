@@ -281,7 +281,11 @@ class SlabAggregate:
                 rspec_lease['component_id'] = slab_xrn.urn
                 #rspec_lease['component_id'] = hostname_to_urn(self.driver.hrn, \
                                         #site, node['hostname'])
-                rspec_lease['slice_id'] = lease['slice_id']
+                try:
+                    rspec_lease['slice_id'] = lease['slice_id']
+                except KeyError:
+                    #No info on the slice used in slab_xp table
+                    pass
                 rspec_lease['start_time'] = lease['t_from']
                 rspec_lease['duration'] = (lease['t_until'] - lease['t_from']) \
                                                                     / grain   
