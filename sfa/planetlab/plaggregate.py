@@ -271,7 +271,7 @@ class PlAggregate:
                        'geni_expires': rspec_node['expires'],
                        'geni_allocation_status' : allocation_status,
                        'geni_operational_status': op_status,
-                       'geni_error': None,
+                       'geni_error': '',
                        }
         return geni_sliver        
 
