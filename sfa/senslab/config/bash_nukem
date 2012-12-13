@@ -3,9 +3,10 @@
 # Configuration first : set the local repository
 # where the code can be found
 # Test number of arguments 
-if (( ! $# == 2 ))
+if (( ! $# == 3 ))
 then
-    echo " Usage : bash_nukem repository_directory vm (should be senslab or senslab2)"
+    echo " Usage : bash_nukem repository_directory vm (should be senslab or senslab2) and \
+    federation option (0 (not federated),1(other senslab) , 2(ple) 3 (senslab and ple))"
     echo  $#
     exit
 fi
@@ -26,6 +27,13 @@ then
 else
     echo "Vm options should be senslab or senslab2, not " $2
     exit 
+fi
+
+if [ $vm = "senslab" ]
+then
+    federation_commented_line_nb=2
+else
+    federation_commented_line_nb=3
 fi
 
 # First restart sfa (prevents stalling when connecting
@@ -70,6 +78,38 @@ sudo cp $git_local_repo/sfa/senslab/config/$vm/default_config.xml /etc/sfa/defau
 # sudo cp $git_local_repo/sfa/senslab/config/$vm/site.xml  /etc/sfa/site.xml
 # sudo cp $git_local_repo/sfa/senslab/config/$vm/site_config  /etc/sfa/configs/site_config
 # sudo ln -s ldap_config.py  /etc/sfa/ldap_config.py
+sudo cp $git_local_repo/sfa/senslab/config/registries.xml /etc/sfa/registries.xml
+sudo cp $git_local_repo/sfa/senslab/config/aggregates.xml /etc/sfa/aggregates.xml
+
+
+case "$3" in
+    0) echo "No federation at all"
+        #Insert a # on every beginning of line except if there is 'aggregates'
+        sed -i '/aggregates/!s/^/#/g' /etc/sfa/aggregates.xml 
+        sed -i '/aggregates/!s/^/#/g' /etc/sfa/registries.xml   
+        ;;
+    1) echo "Setting up federation with other senslab "
+        #  Commenting out senslab and ple, lines 2 and 4 OR
+        #  Commenting out senslab2 and ple, lines 3 and 4
+        sed -i "${federation_commented_line_nb} s/^/#/" /etc/sfa/aggregates.xml 
+        sed -i "${federation_commented_line_nb} s/^/#/" /etc/sfa/registries.xml 
+        sed -i '4 s/^/#/' /etc/sfa/aggregates.xml 
+        sed -i '4 s/^/#/' /etc/sfa/registries.xml 
+        ;;
+
+    2) echo "Setting up federation with  ple " 
+        sed -i '2 s/^/#/' /etc/sfa/aggregates.xml 
+        sed -i '2 s/^/#/' /etc/sfa/registries.xml 
+        sed -i '3 s/^/#/' /etc/sfa/aggregates.xml 
+        sed -i '3 s/^/#/' /etc/sfa/registries.xml 
+        ;;  
+
+    3) echo "setting federation with other senslab and ple"
+        # Commenting out senslab or senslab2
+        sed -i "${federation_commented_line_nb} s/^/#/" /etc/sfa/aggregates.xml 
+        sed -i "${federation_commented_line_nb} s/^/#/" /etc/sfa/registries.xml 
+        ;;
+esac
 
 #Senslab LDAP and OAR access config files
 if [ ! -f /etc/sfa/ldap_config.py ] 

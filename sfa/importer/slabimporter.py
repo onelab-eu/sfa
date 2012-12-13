@@ -75,6 +75,7 @@ class SlabImporter:
        
         self.records_by_type_hrn = \
             dict ( [ ( (record.type,record.hrn) , record ) for record in all_records ] )
+        print>>sys.stderr,"\r\n SLABIMPORT \t all_records[0] %s all_records[0].email %s \r\n" %(all_records[0].type, all_records[0])
         self.users_rec_by_email = \
             dict ( [ (record.email, record) for record in all_records if record.type == 'user' ] )
             
@@ -169,6 +170,8 @@ class SlabImporter:
                     
         # import persons
         for person in ldap_person_listdict : 
+            
+
             print>>sys.stderr,"SlabImporter: person: %s" %(person['hrn'])
             if 'ssh-rsa' not in person['pkey']:
                 #people with invalid ssh key (ssh-dss, empty, bullshit keys...)
@@ -181,9 +184,20 @@ class SlabImporter:
             if len(person_hrn) > 64: person_hrn = person_hrn[:64]
             person_urn = hrn_to_urn(person_hrn, 'user')
             
-            user_record = self.users_rec_by_email[person['email']]
-            print>>sys.stderr,"SlabImporter: user_record " , user_record
-            #user_record = self.find_record_by_type_hrn('user', person_hrn)
+            
+            print>>sys.stderr," \r\n SlabImporter:  HEYYYYYYYYYY" , self.users_rec_by_email
+            
+            #Check if user using person['email'] form LDAP is already registered
+            #in SFA. One email = one person. Inb this case, do not create another
+            #record for this person
+            #person_hrn  returned by GetPErson based on senslab root auth + uid ldap
+            user_record = self.find_record_by_type_hrn('user', person_hrn)
+            if not user_record and  person['email'] in self.users_rec_by_email:
+                user_record = self.users_rec_by_email[person['email']]
+                person_hrn = user_record.hrn
+                person_urn = hrn_to_urn(person_hrn, 'user')
+                
+            
             slice_record = self.find_record_by_type_hrn ('slice', slice_hrn)
             
             # return a tuple pubkey (a plc key object) and pkey (a Keypair object)

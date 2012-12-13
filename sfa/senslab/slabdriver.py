@@ -1491,7 +1491,7 @@ class SlabDriver(Driver):
                         for rec in recslice_list: 
                             logger.debug("SLABDRIVER\r\n  \t \t fill_record_info oar_job_id %s " %(rec['oar_job_id']))
                             #record['oar_job_id'].append(rec['oar_job_id'])
-                            del record['_sa_instance_state']
+                            #del record['_sa_instance_state']
                             del record['reg_researchers']
                             record['node_ids'] = [ self.root_auth + hostname for hostname in rec['node_ids']]
                     except KeyError:
