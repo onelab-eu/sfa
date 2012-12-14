@@ -245,15 +245,20 @@ class NitosImporter:
                         # if user's primary key has changed then we need to update the 
                         # users gid by forcing an update here
                         sfa_keys = user_record.reg_keys
-                        def key_in_list (key,sfa_keys):
-                            for reg_key in sfa_keys:
-                                if reg_key.key==key: return True
+
+                        def sfa_key_in_list (sfa_key,nitos_user_keys):
+                            for nitos_key in nitos_user_keys:
+                                if nitos_key==sfa_key: return True
                             return False
-                        # is there a new key in NITOS ?
+                        # are all the SFA keys known to nitos ?
                         new_keys=False
-                        for key in user['keys']:
-                            if not key_in_list (key,sfa_keys):
-                                new_keys = True
+                        if not sfa_keys and user['keys']:
+                            new_keys = True
+                        else:
+                            for sfa_key in sfa_keys:
+                                 if not sfa_key_in_list (sfa_key.key,user['keys']):
+                                     new_keys = True
+
                         if new_keys:
                             (pubkey,pkey) = init_user_key (user)
                             user_gid = self.auth_hierarchy.create_gid(user_urn, create_uuid(), pkey)
@@ -261,6 +266,8 @@ class NitosImporter:
                                 user_record.reg_keys=[]
                             else:
                                 user_record.reg_keys=[ RegKey (pubkey)]
+                            user_record.gid = user_gid
+                            user_record.just_updated()
                             self.logger.info("NitosImporter: updated user: %s" % user_record)
                     user_record.email = user['email']
                     dbsession.commit()
@@ -319,8 +326,3 @@ class NitosImporter:
                 dbsession.commit()
 
 
-
-if __name__ == "__main__":
-       from sfa.util.sfalogging import logger
-       nitosimporter = NitosImporter("pla.nitos", logger)
-       nitosimporter.run(None)
