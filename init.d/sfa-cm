@@ -7,6 +7,10 @@
 # description:   Wraps PLCAPI into the SFA compliant API
 #
 
+echo "sfa-cm is no longer supported"
+echo "you should consider rpm -e sfa-cm"
+exit 1
+
 # Source config
 [ -f /etc/sfa/sfa_config.sh ] && . /etc/sfa/sfa_config.sh
 
