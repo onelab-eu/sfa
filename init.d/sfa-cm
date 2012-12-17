@@ -8,7 +8,7 @@
 #
 
 # Source config
-. /etc/sfa/sfa_config
+[ -f /etc/sfa/sfa_config.sh ] && . /etc/sfa/sfa_config.sh
 
 # source function library
 . /etc/init.d/functions
