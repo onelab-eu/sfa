@@ -4,6 +4,7 @@ import json
 #import datetime
 #from time import gmtime, strftime 
 import os.path
+import sys
 #import urllib
 #import urllib2
 from sfa.util.config import Config
@@ -54,7 +55,7 @@ class OARrestapi:
         self.parser = OARGETParser(self)
        
             
-    def GETRequestToOARRestAPI(self, request, strval=None , username = None ): 
+    def GETRequestToOARRestAPI(self, request, strval=None ,next_page=None, username = None ): 
         self.oarserver['uri'] = \
                             OARGETParser.OARrequests_uri_dict[request]['uri']
         #Get job details with username                   
@@ -66,11 +67,17 @@ class OARrestapi:
         if strval:
             self.oarserver['uri'] = self.oarserver['uri'].\
                                             replace("id",str(strval))
-            logger.debug("OARrestapi: \t  GETRequestToOARRestAPI  \
-                            self.oarserver['uri'] %s strval %s" \
-                            %(self.oarserver['uri'], strval))
+            
+        if next_page:
+            self.oarserver['uri'] += next_page
+            
         if username:
             headers['X-REMOTE_IDENT'] = username 
+            
+        print>>sys.stderr, " \r\n \t    OARrestapi \tGETRequestToOARRestAPI %s" %( self.oarserver['uri'])
+        logger.debug("OARrestapi: \t  GETRequestToOARRestAPI  \
+                        self.oarserver['uri'] %s strval %s" \
+                        %(self.oarserver['uri'], strval))
         try :  
             #seems that it does not work if we don't add this
             headers['content-length'] = '0' 
@@ -86,6 +93,7 @@ class OARrestapi:
             #raise ServerError("GET_OAR_SRVR : Could not reach OARserver")
         try:
             js_dict = json.loads(resp)
+            #print "\r\n \t\t\t js_dict keys" , js_dict.keys(), " \r\n", js_dict
             return js_dict
         
         except ValueError, error:
@@ -540,16 +548,62 @@ class OARGETParser:
         }
 
 
+    def FindNextPage(self):
+        if "links" in self.raw_json:
+            for page in self.raw_json['links']:
+                if page['rel'] == 'next':
+                    self.concatenate = True
+                    print>>sys.stderr, " \r\n \t\t FindNextPage  self.concatenate %s" %(self.concatenate )
+                    return True, "?"+page['href'].split("?")[1]
+        if self.concatenate :
+            self.end = True
+            print>>sys.stderr, " \r\n \t\t END FindNextPage  self.concatenate %s" %(self.concatenate )
+        return False, None
+            
+    def ConcatenateJsonPages (self, saved_json_list):
+        #reset items list
 
+        tmp = {}
+        tmp['items'] = []
+        print >>sys.stderr, " \r\n ConcatenateJsonPages saved_json_list len ", len(saved_json_list)
+        for page in saved_json_list:
+            #for node in page['items']:
+                #self.raw_json['items'].append(node)
+            print>>sys.stderr, " \r\n ConcatenateJsonPages  page['items']len ", len(page['items'])
+            tmp['items'].extend(page['items'])
+        #print>>sys.stderr, " \r\n ConcatenateJsonPages len ", len(self.raw_json['items'])
+        #print>>sys.stderr, " \r\n ConcatenateJsonPages  self.raw_json['items']", self.raw_json['items']        
+        return tmp
+                        
     def SendRequest(self, request, strval = None , username = None):
         """ Connects to OAR , sends the valid GET requests and uses
         the appropriate json parsing functions.
         
         """
+        self.raw_json = None
+        next_page = True
+        next_offset = None
+        save_json = None
+        self.concatenate = False
+        self.end = False
+        a = 0
+        save_json = []
+        self.raw_json_list = []
         if request in self.OARrequests_uri_dict :
-            self.raw_json = self.server.GETRequestToOARRestAPI(request, \
+            while next_page:
+                self.raw_json = self.server.GETRequestToOARRestAPI(request, \
                                                                 strval, \
-                                                                username) 
+                                                                next_offset, \
+                                                                username)
+                
+                next_page , next_offset = self.FindNextPage()
+                if self.concatenate:
+                    #self.raw_json_list.append(self.raw_json)
+                    save_json.append(self.raw_json)
+            if self.concatenate and self.end :
+                #self.raw_json = self.ConcatenateJsonPages(self.raw_json_list) 
+                self.raw_json = self.ConcatenateJsonPages(save_json)
+
             return self.OARrequests_uri_dict[request]['parse_func'](self)
         else:
             logger.error("OARRESTAPI OARGetParse __init__ : ERROR_REQUEST " \
