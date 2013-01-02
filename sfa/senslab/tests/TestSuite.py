@@ -266,7 +266,7 @@ def TestSlabDriver(job_id = None):
     sl = slabdriver.GetSlices(slice_filter='senslab2.avakian_slice', slice_filter_type='slice_hrn') 
     print "\r\n \r\nGetSlices", sl[0]
     
-    sl = slabdriver.GetSlices(slice_filter='528', slice_filter_type='record_id_user')  
+    sl = slabdriver.GetSlices(slice_filter='529', slice_filter_type='record_id_user')  
     print "\r\n \r\nGetSlices", sl
     
     sl = slabdriver.GetSlices()  
