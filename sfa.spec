@@ -1,6 +1,6 @@
 %define name sfa
 %define version 2.1
-%define taglevel 21
+%define taglevel 22
 
 %define release %{taglevel}%{?pldistro:.%{pldistro}}%{?date:.%{date}}
 %global python_sitearch	%( python -c "from distutils.sysconfig import get_python_lib; print get_python_lib(1)" )
@@ -270,6 +270,11 @@ fi
 [ "$1" -ge "1" ] && service sfa-cm restart || :
 
 %changelog
+* Sun Dec 16 2012 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-2.1-22
+- suited (and required) to run with plcapi-5.1-5 b/c of changes to AddPerson
+- tweaks in nitos importer
+- improvements to sfaadmin check-gid
+
 * Tue Dec 11 2012 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-2.1-21
 - PL importer: minor fixes for corner cases
 - PL importer: also handles last_updated more accurately

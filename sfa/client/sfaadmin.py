@@ -115,7 +115,8 @@ class RegistryCommands(Commands):
     @args('-x', '--xrn', dest='xrn', metavar='<xrn>', help='object hrn/urn', default=None)
     @args('-t', '--type', dest='type', metavar='<type>', help='object type (mandatory)',)
     @args('-a', '--all', dest='all', metavar='<all>', action='store_true', default=False, help='check all users GID')
-    def check_gid(self, xrn=None, type=None, all=None):
+    @args('-v', '--verbose', dest='verbose', metavar='<verbose>', action='store_true', default=False, help='verbose mode: display user\'s hrn ')
+    def check_gid(self, xrn=None, type=None, all=None, verbose=None):
         """Check the correspondance between the GID and the PubKey"""
 
         # db records
@@ -139,10 +140,20 @@ class RegistryCommands(Commands):
 
         OK = []
         NOK = []
+        ERROR = []
+        NOKEY = []
         for record in records:
              # get the pubkey stored in SFA DB
-             db_pubkey_str = record.reg_keys[0].key
-             db_pubkey_obj = convert_public_key(db_pubkey_str)
+             if record.reg_keys:
+                 db_pubkey_str = record.reg_keys[0].key
+                 try:
+                   db_pubkey_obj = convert_public_key(db_pubkey_str)
+                 except:
+                   ERROR.append(record.hrn)
+                   continue
+             else:
+                 NOKEY.append(record.hrn)
+                 continue
 
              # get the pubkey from the gid
              gid_str = record.gid
@@ -156,7 +167,16 @@ class RegistryCommands(Commands):
              else:
                  NOK.append(record.hrn)
 
-        print "GID/PubKey correpondence is OK for: %s\nGID/PubKey correpondence is NOT OK for: %s" %(OK,NOK)
+        if not verbose:
+            print "Users NOT having a PubKey: %s\n\
+Users having a non RSA PubKey: %s\n\
+Users having a GID/PubKey correpondence OK: %s\n\
+Users having a GID/PubKey correpondence Not OK: %s\n"%(len(NOKEY), len(ERROR), len(OK), len(NOK))
+        else:
+            print "Users NOT having a PubKey: %s and are: \n%s\n\n\
+Users having a non RSA PubKey: %s and are: \n%s\n\n\
+Users having a GID/PubKey correpondence OK: %s and are: \n%s\n\n\
+Users having a GID/PubKey correpondence NOT OK: %s and are: \n%s\n\n"%(len(NOKEY),NOKEY, len(ERROR), ERROR, len(OK), OK, len(NOK), NOK)
 
 
 
