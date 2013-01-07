@@ -78,6 +78,30 @@ sudo cp $git_local_repo/sfa/senslab/config/$vm/default_config.xml /etc/sfa/defau
 # sudo cp $git_local_repo/sfa/senslab/config/$vm/site.xml  /etc/sfa/site.xml
 # sudo cp $git_local_repo/sfa/senslab/config/$vm/site_config  /etc/sfa/configs/site_config
 # sudo ln -s ldap_config.py  /etc/sfa/ldap_config.py
+
+
+#Senslab LDAP and OAR access config files
+if [ ! -f /etc/sfa/ldap_config.py ] 
+then
+    sudo cp $git_local_repo/sfa/senslab/config/ldap_config.py  /etc/sfa/ldap_config.py 
+fi
+
+if [ ! -f /etc/sfa/oar_config.py ] 
+then
+    sudo cp $git_local_repo/sfa/senslab/config/oar_config.py  /etc/sfa/oar_config.py 
+fi
+
+sudo service sfa restart
+
+# User stuff : clean your folder
+cd  ~/.sfi
+rm *.sscert *.cred *.gid sfi_cache.dat
+cd ~
+
+# Import the datbase form ldap
+sudo sfaadmin.py registry import_registry
+sudo service sfa restart
+
 sudo cp $git_local_repo/sfa/senslab/config/registries.xml /etc/sfa/registries.xml
 sudo cp $git_local_repo/sfa/senslab/config/aggregates.xml /etc/sfa/aggregates.xml
 
@@ -111,26 +135,6 @@ case "$3" in
         ;;
 esac
 
-#Senslab LDAP and OAR access config files
-if [ ! -f /etc/sfa/ldap_config.py ] 
-then
-    sudo cp $git_local_repo/sfa/senslab/config/ldap_config.py  /etc/sfa/ldap_config.py 
-fi
-
-if [ ! -f /etc/sfa/oar_config.py ] 
-then
-    sudo cp $git_local_repo/sfa/senslab/config/oar_config.py  /etc/sfa/oar_config.py 
-fi
-
-sudo service sfa restart
-
-# User stuff : clean your folder
-cd  ~/.sfi
-rm *.sscert *.cred *.gid sfi_cache.dat
-cd ~
-
-# Import the datbase form ldap
-sudo sfaadmin.py registry import_registry
 sudo service sfa restart
 
 sudo rm -rf /var/lib/sfa/authorities/plc

@@ -15,7 +15,7 @@ from sfa.managers.driver import Driver
 from sfa.rspecs.version_manager import VersionManager
 from sfa.rspecs.rspec import RSpec
 
-from sfa.util.xrn import hrn_to_urn, get_authority
+from sfa.util.xrn import Xrn, hrn_to_urn, get_authority
 
 
 ## thierry: everything that is API-related (i.e. handling incoming requests) 
@@ -182,9 +182,9 @@ class SlabDriver(Driver):
     
         if users:
             slice_record = users[0].get('slice_record', {}) 
-            logger.debug("SLABDRIVER.PY \t create_sliver \t\
-                                        slice_record %s \r\n \r\n users %s" \
-                                        %(slice_record, users))
+            logger.debug("SLABDRIVER.PY \t ===============create_sliver \t\
+                                        creds %s \r\n \r\n users %s" \
+                                        %(creds, users))
             slice_record['user'] = {'keys':users[0]['keys'], \
                                     'email':users[0]['email'], \
                                     'hrn':slice_record['reg-researchers'][0]}
@@ -966,7 +966,7 @@ class SlabDriver(Driver):
             #query_slice_list = dbsession.query(RegRecord).filter_by(type='slice').all()
             #query_slice_list = slab_dbsession.query(SenslabXP).all()
             return_slicerec_dictlist = []
-            for record in query_slice_list:
+            for record in query_slice_list: 
                 tmp = record.__dict__
                 tmp['reg_researchers'] = tmp['reg_researchers'][0].__dict__
                 #del tmp['reg_researchers']['_sa_instance_state']
@@ -1396,8 +1396,12 @@ class SlabDriver(Driver):
                             #self.root_auth, node['hostname']))
                     slab_xrn = slab_xrn_object(self.root_auth, node)
                     resa['component_id_list'].append(slab_xrn.urn)
+                    resa['slice_hrn'] = Xrn(resa['slice_id']).get_hrn()
                     
                 if lease_filter_dict:
+                    logger.debug("SLABDRIVER \tGetLeases resa_ %s \r\n leasefilter %s"\
+                                            %(resa,lease_filter_dict)) 
+                        
                     if lease_filter_dict['name'] == resa['slice_hrn']:
                         reservation_list.append(resa)
                         
