@@ -55,11 +55,12 @@ class PlDriver (Driver):
 
     def sliver_to_slice_xrn(self, xrn):
         sliver_id_parts = Xrn(xrn).get_sliver_id_parts()
-        slices = self.shell.GetSlices(sliver_id_parts[0])
+        slice_id = int(sliver_id_parts[0])
+        slices = self.shell.GetSlices(slice_id)
         if not slices:
             raise Forbidden("Unable to locate slice record for sliver:  %s" % xrn)
         slice = slices[0]
-        slice_xrn = Xrn(auth=self.hrn, slicename=slice['name'])
+        slice_xrn = PlXrn(auth=self.hrn, slicename=slice['name'])
         return slice_xrn 
  
     def check_sliver_credentials(self, creds, urns):
