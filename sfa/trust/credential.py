@@ -291,7 +291,7 @@ class Credential(object):
         if not self.gidObject:
             self.decode()
         if self.gidObject:
-            subject = self.self.gidObject.get_printable_subject()
+            subject = self.gidObject.get_printable_subject()
         return subject
 
     # sounds like this should be __repr__ instead ??
@@ -1056,7 +1056,11 @@ class Credential(object):
         result += "CREDENTIAL %s\n" % self.get_subject()
         filename=self.get_filename()
         if filename: result += "Filename %s\n"%filename
-        result += "      privs: %s\n" % self.get_privileges().save_to_string()
+        privileges = self.get_privileges()
+        if privileges:
+            result += "      privs: %s\n" % privileges.save_to_string()
+        else:
+            result += "      privs: \n" 
         gidCaller = self.get_gid_caller()
         if gidCaller:
             result += "  gidCaller:\n"
