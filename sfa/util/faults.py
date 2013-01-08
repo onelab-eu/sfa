@@ -33,6 +33,16 @@ class SfaFault(xmlrpclib.Fault):
             faultString += ": " + str(extra)
         xmlrpclib.Fault.__init__(self, faultCode, faultString)
 
+class Forbidden(SfaFault):
+    def __init__(self,  extra = None):
+        faultString = "FORBIDDEN:" 
+        SfaFault.__init__(self, GENICODE.FORBIDDEN, faultString, extra)   
+
+class CredentialMismatch(SfaFault):
+    def __init__(self,  extra = None):
+        faultString = "Credential mismatch"
+        SfaFault.__init__(self, GENICODE.CREDENTIAL_MISMATCH, faultString, extra) 
+
 class SfaInvalidAPIMethod(SfaFault):
     def __init__(self, method, interface = None, extra = None):
         faultString = "Invalid method " + method
