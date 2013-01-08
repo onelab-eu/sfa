@@ -2,7 +2,7 @@ import datetime
 #
 from sfa.util.faults import MissingSfaInfo, UnknownSfaType, \
     RecordNotFound, SfaNotImplemented, SliverDoesNotExist, SearchFailed, \
-    UnsupportedOperation 
+    UnsupportedOperation, Forbidden 
 from sfa.util.sfalogging import logger
 from sfa.util.defaultdict import defaultdict
 from sfa.util.sfatime import utcparse, datetime_to_string, datetime_to_epoch
@@ -52,7 +52,41 @@ class PlDriver (Driver):
             if PlDriver.cache is None:
                 PlDriver.cache = Cache()
             self.cache = PlDriver.cache
+
+    def sliver_to_slice_xrn(self, xrn):
+        sliver_id_parts = Xrn(xrn).get_sliver_id_parts()
+        slices = self.shell.GetSlices(sliver_id_parts[0])
+        if not slices:
+            raise Forbidden("Unable to locate slice record for sliver:  %s" % xrn)
+        slice = slices[0]
+        slice_xrn = Xrn(auth=self.hrn, slicename=slice['name'])
+        return slice_xrn 
  
+    def check_sliver_credentials(self, creds, urns):
+        # build list of cred object hrns
+        slice_cred_names = []
+        for cred in creds:
+            slice_cred_hrn = Credential(cred=cred).get_gid_object().get_hrn() 
+            slice_cred_names.append(PlXrn(xrn=slice_cred_hrn).pl_slicename()) 
+
+        # look slice names of slivers listed in urns arg
+        slice_ids = []
+        for urn in urns:
+            sliver_id_parts = Xrn(xrn=urn).get_sliver_id_parts()
+            slice_ids.append(sliver_id_parts[0])
+
+        if not slice_ids:
+             raise Forbidden("sliver urn not provided")
+
+        slices = self.shell.GetSlices(slice_ids)
+        sliver_names = [slice['name'] for slice in slices]
+
+        # make sure we have a credential for every specified sliver ierd
+        for sliver_name in sliver_names:
+            if sliver_name not in slice_cred_names:
+                msg = "Valid credential not found for target: %s" % sliver_name
+                raise Forbidden(msg)
+
     ########################################
     ########## registry oriented
     ########################################

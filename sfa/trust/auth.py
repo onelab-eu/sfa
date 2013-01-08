@@ -4,7 +4,7 @@
 import sys
 
 from sfa.util.faults import InsufficientRights, MissingCallerGID, MissingTrustedRoots, PermissionError, \
-    BadRequestHash, ConnectionKeyGIDMismatch, SfaPermissionDenied, CredentialNotVerifiable
+    BadRequestHash, ConnectionKeyGIDMismatch, SfaPermissionDenied, CredentialNotVerifiable, Forbidden
 from sfa.util.sfalogging import logger
 from sfa.util.config import Config
 from sfa.util.xrn import Xrn, get_authority
@@ -34,17 +34,22 @@ class Auth:
         self.trusted_cert_list = TrustedRoots(self.config.get_trustedroots_dir()).get_list()
         self.trusted_cert_file_list = TrustedRoots(self.config.get_trustedroots_dir()).get_file_list()
 
-        
-    def checkCredentials(self, creds, operation, xrns=[]):
+    def checkCredentials(self, creds, operation, xrns=[], check_sliver_callback=None):
         if not isinstance(xrns, list):
             xrns = [xrns]
-        hrns = [Xrn(xrn).hrn for xrn in xrns] 
+
+        slice_xrns = Xrn.filter_type(xrns, 'slice')
+        sliver_xrns = Xrn.filter_type(xrns, 'sliver')
+
+        # we are not able to validate slivers in the traditional way so 
+        # we make sure not to include sliver urns/hrns in the core validation loop
+        hrns = [Xrn(xrn).hrn for xrn in xrns if xrn not in sliver_xrns] 
         valid = []
         if not isinstance(creds, list):
             creds = [creds]
         logger.debug("Auth.checkCredentials with %d creds on hrns=%s"%(len(creds),hrns))
         # won't work if either creds or hrns is empty - let's make it more explicit
-        if not creds: raise InsufficientRights("Access denied - no credential provided")
+        if not creds: raise Forbidden("no credential provided")
         if not hrns: hrns = [None]
         for cred in creds:
             for hrn in hrns:
@@ -56,9 +61,20 @@ class Auth:
                     logger.debug("failed to validate credential - dump=%s"%cred_obj.dump_string(dump_parents=True))
                     error = sys.exc_info()[:2]
                     continue
-            
+        
+        # make sure all sliver xrns are validated against the valid credentials
+        if sliver_xrns:
+            if not check_sliver_callback:
+                msg = "sliver verification callback method not found." 
+                msg += " Unable to validate sliver xrns: %s" % sliver_xrns
+                raise Forbidden(msg)
+            check_sliver_callback(valid, sliver_xrns)
+                
         if not len(valid):
-            raise InsufficientRights('Access denied: %s -- %s' % (error[0],error[1]))
+            msg = "Valid credential not found for method: %s" % operation
+            if xrns:
+                msg += " target: %s" % xrns 
+            raise Forbidden(msg)
         
         return valid
         

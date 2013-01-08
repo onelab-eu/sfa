@@ -58,7 +58,6 @@ class AggregateManager:
             'geni_api_versions': {'3': 'http://%s:%s' % (socket.gethostname(), api.config.sfa_aggregate_port)},
             'geni_single_allocation': 0, # Accept operations that act on as subset of slivers in a given state.
             'geni_allocate': 'geni_many',# Multiple slivers can exist and be incrementally added, including those which connect or overlap in some way.
-            'geni_best_effort': 'true',
             'geni_credential_types': cred_types,
         }
         version.update(version_generic)

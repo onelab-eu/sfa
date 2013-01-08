@@ -42,7 +42,13 @@ class RegistryManager:
             hrn = urn_to_hrn(xrn)[0]
         else:
             hrn, type = urn_to_hrn(xrn)
-            
+
+        # Slivers don't have credentials but users should be able to 
+        # specify a sliver xrn and receive the slice's credential
+        if type == 'sliver' or '-' in Xrn(hrn).leaf:
+            slice_xrn = self.driver.sliver_to_slice_xrn(hrn)
+            hrn = slice_xrn.hrn 
+  
         # Is this a root or sub authority
         auth_hrn = api.auth.get_authority(hrn)
         if not auth_hrn or hrn == api.config.SFA_INTERFACE_HRN:

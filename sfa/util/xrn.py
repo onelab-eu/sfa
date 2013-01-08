@@ -109,6 +109,26 @@ class Xrn:
     def urn_split (urn):
         return Xrn.urn_meaningful(urn).split('+')
 
+    @staticmethod
+    def filter_type(urns=[], type=None):
+        urn_list = []
+        if not type:
+            return urns
+
+        for urn in urns:
+            xrn = Xrn(xrn=urn)
+            if not xrn.type:
+                # If an xrn doesn't have a type its probably a hrn. 
+                # We have to make some assumptions on the hrn's type
+                # based on the contents of the hrn.  
+                if type == 'sliver' and '-' in xrn.leaf:
+                    urn_list.append(urn) 
+                elif type != 'sliver' and not '-' in xrn.leaf:
+                    urn_list.append(urn)
+            elif (xrn.type == type):
+                # Xrn is probably a urn so we can just compare types  
+                urn_list.append(urn)
+        return urn_list
     ####################
     # the local fields that are kept consistent
     # self.urn
@@ -181,6 +201,15 @@ class Xrn:
         self.hrn = hrn 
         self.hrn_to_urn()
         self._normalize()
+
+    # sliver_id_parts is list that contains the sliver's 
+    # slice id and node id 
+    def get_sliver_id_parts(self):
+        sliver_id_parts = []
+        if self.type == 'sliver' or '-' in self.leaf:
+            sliver_id_parts = self.leaf.split('-')
+        return sliver_id_parts
+        
         
     def urn_to_hrn(self):
         """

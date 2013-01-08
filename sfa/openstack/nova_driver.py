@@ -49,6 +49,13 @@ class NovaDriver(Driver):
             if NovaDriver.cache is None:
                 NovaDriver.cache = Cache()
             self.cache = NovaDriver.cache
+
+    def sliver_to_slice_xrn(self, xrn):
+        return xrn
+
+    def check_sliver_credentials(self, creds, urns):
+        #TODO: Implement
+        return
  
     ########################################
     ########## registry oriented
