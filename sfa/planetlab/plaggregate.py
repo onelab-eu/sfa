@@ -136,6 +136,7 @@ class PlAggregate:
             return []
         slice = slices[0]
         if node_ids:
+            node_ids = [node_id for node_id in node_ids if node_id in slice['node_ids']]
             slice['node_ids'] = node_ids
         tags_dict = self.get_slice_tags(slice)
         nodes_dict = self.get_slice_nodes(slice, options)
