@@ -117,15 +117,7 @@ class Xrn:
 
         for urn in urns:
             xrn = Xrn(xrn=urn)
-            if not xrn.type:
-                # If an xrn doesn't have a type its probably a hrn. 
-                # We have to make some assumptions on the hrn's type
-                # based on the contents of the hrn.  
-                if type == 'sliver' and '-' in xrn.leaf:
-                    urn_list.append(urn) 
-                elif type != 'sliver' and not '-' in xrn.leaf:
-                    urn_list.append(urn)
-            elif (xrn.type == type):
+            if (xrn.type == type):
                 # Xrn is probably a urn so we can just compare types  
                 urn_list.append(urn)
         return urn_list
