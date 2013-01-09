@@ -121,8 +121,8 @@ class PlAggregate:
             if xrn.type == 'sliver':
                  # id: slice_id-node_id
                 sliver_id_parts = xrn.get_sliver_id_parts()
-                slice_ids.add(sliver_id_parts[0]) 
-                node_ids.append(sliver_id_parts[1])
+                slice_ids.add(int(sliver_id_parts[0])) 
+                node_ids.append(int(sliver_id_parts[1]))
             else:  
                 names.add(xrn.pl_slicename())
 
