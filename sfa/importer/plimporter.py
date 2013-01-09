@@ -250,7 +250,7 @@ class PlImporter:
                     pass
                 node_record.stale=False
 
-            site_pis=[]
+            site_pis=set()
             # import persons
             for person_id in site['person_ids']:
                 try:
@@ -330,12 +330,12 @@ class PlImporter:
                     # this is valid for all sites she is in..
                     # PI is coded with role_id==20
                     if 20 in person['role_ids']:
-                        site_pis.append (user_record)
+                        site_pis.add (user_record)
                 except:
                     self.logger.log_exc("PlImporter: failed to import person %d %s"%(person['person_id'],person['email']))
     
             # maintain the list of PIs for a given site
-            site_record.reg_pis = site_pis
+            site_record.reg_pis = list(site_pis)
             dbsession.commit()
 
             # import slices
