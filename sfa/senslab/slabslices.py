@@ -360,7 +360,7 @@ class SlabSlices:
                      'node_list' : [],
                      'authority' : slice_record['authority'],
                      'gid':slice_record['gid'],
-                     'record_id_user' : user.record_id,
+                     #'record_id_user' : user.record_id,
                      'slice_id' : slice_record['record_id'],
                      'reg-researchers':slice_record['reg-researchers'],
                      #'record_id_slice': slice_record['record_id'],
@@ -403,7 +403,8 @@ class SlabSlices:
         
         logger.debug("SLABSLICES \tverify_persons \tslice_hrn  %s  \t slice_record %s\r\n users %s \t peer %s "%( slice_hrn, slice_record, users,  peer)) 
         users_by_id = {}  
-        users_by_hrn = {} 
+        #users_by_hrn = {} 
+        users_by_email = {}
         #users_dict : dict whose keys can either be the user's hrn or its id.
         #Values contains only id and hrn 
         users_dict = {}
@@ -417,18 +418,19 @@ class SlabSlices:
 
                
             if 'hrn' in user:
-
-                users_by_hrn[user['hrn']] = user
-                users_dict[user['hrn']] = user
-                
+                users_by_email[user['email']] = user
+                #users_by_hrn[user['hrn']] = user
+                #users_dict[user['hrn']] = user
+                users_dict[user['email']] = user
         
         logger.debug( "SLABSLICE.PY \t verify_person  \
-                        users_dict %s \r\n user_by_hrn %s \r\n \
+                        users_dict %s \r\n user_by_email %s \r\n \
                         \tusers_by_id %s " \
-                        %(users_dict,users_by_hrn, users_by_id))
+                        %(users_dict,users_by_email, users_by_id))
         
         existing_user_ids = []
-        existing_user_hrns = []
+        #existing_user_hrns = []
+        existing_user_emails = []
         existing_users = []
         # Check if user is in Senslab LDAP using its hrn.
         # Assuming Senslab is centralised :  one LDAP for all sites, 
@@ -436,22 +438,25 @@ class SlabSlices:
         # LDAP does not provide users id, therefore we rely on hrns containing
         # the login of the user.
         # If the hrn is not a senslab hrn, the user may not be in LDAP.
-        if users_by_hrn:
+        #if users_by_hrn:
+        if users_by_email :
             #Construct the list of filters (list of dicts) for GetPersons
             filter_user = []
-            for hrn in users_by_hrn:
-                filter_user.append (users_by_hrn[hrn])
-            logger.debug(" SLABSLICE.PY \tverify_person  filter_user %s " \
-                                                    %(filter_user))
+            #for hrn in users_by_hrn:
+            for email in users_by_email :
+                #filter_user.append (users_by_hrn[hrn])
+                filter_user.append (users_by_email[email])
             #Check user's in LDAP with GetPersons
             #Needed because what if the user has been deleted in LDAP but 
             #is still in SFA?
             existing_users = self.driver.GetPersons(filter_user) 
-                           
+            logger.debug(" \r\n SLABSLICE.PY \tverify_person  filter_user %s existing_users %s " \
+                                                    %(filter_user, existing_users))               
             #User's in senslab LDAP               
             if existing_users:
                 for user in existing_users :
-                    existing_user_hrns.append(users_dict[user['hrn']]['hrn'])
+                    existing_user_emails.append(users_dict[user['email']]['email'])
+                    #existing_user_hrns.append(users_dict[user['hrn']]['hrn'])
                     #existing_user_ids.\
                                     #append(users_dict[user['hrn']]['person_id'])
          
@@ -484,9 +489,12 @@ class SlabSlices:
                                 ldap_reslt %s "  %(users, ldap_reslt))
    
         #requested_user_ids = users_by_id.keys() 
-        requested_user_hrns = users_by_hrn.keys()
+        #requested_user_hrns = users_by_hrn.keys()
+        requested_user_emails = users_by_email.keys()
         logger.debug("SLABSLICE.PY \tverify_person  \
-                        user_by_hrn %s " %( users_by_hrn)) 
+                       users_by_email  %s " %( users_by_email)) 
+        #logger.debug("SLABSLICE.PY \tverify_person  \
+                        #user_by_hrn %s " %( users_by_hrn)) 
       
    
         #Check that the user of the slice in the slice record
@@ -495,8 +503,8 @@ class SlabSlices:
             if slice_record['PI'][0] in requested_user_hrns:
             #if slice_record['record_id_user'] in requested_user_ids and \
                                 #slice_record['PI'][0] in requested_user_hrns:
-                logger.debug(" SLABSLICE  \tverify_person  \slice_record['record_id_user'] %s" \
-                        %(slice_record['record_id_user']))
+                logger.debug(" SLABSLICE  \tverify_person ['PI'] slice_record %s" \
+                        %(slice_record))
            
         except KeyError:
             pass
@@ -507,19 +515,21 @@ class SlabSlices:
         #to remove/ add any user from/to a slice.
         #However a user from SFA which is not registered in Senslab yet
         #should be added to the LDAP.
-
-        added_user_hrns = set(requested_user_hrns).\
-                                            difference(set(existing_user_hrns))
+        added_user_emails = set(requested_user_emails).\
+                                            difference(set(existing_user_emails))
+        #added_user_hrns = set(requested_user_hrns).\
+                                            #difference(set(existing_user_hrns))
 
         #self.verify_keys(existing_slice_users, updated_users_list, \
                                                             #peer, append)
 
         added_persons = []
         # add new users
-        for added_user_hrn in added_user_hrns:
-            added_user = users_dict[added_user_hrn]
+        #for added_user_hrn in added_user_hrns:
+            #added_user = users_dict[added_user_hrn]
+        for added_user_email in added_user_emails:
             #hrn, type = urn_to_hrn(added_user['urn'])  
-
+            
             person = {}
             person['peer_person_id'] =  None
             k_list  = ['first_name','last_name','person_id']
@@ -534,15 +544,18 @@ class SlabSlices:
                 
             #person['person_id'] = self.driver.AddPerson(person)
             person['uid'] = self.driver.AddPerson(person)
-            
+            slice_record['HEYMOTHERFUCKER'] = "DAFUQ?"
             #Update slice_Record with the id now known to LDAP
-            slice_record['reg-researchers'] = [self.driver.root_auth + '.' + person['uid']]
+            
+            slice_record['reg_researchers'] = [self.driver.root_auth + '.' + person['uid']]
+            slice_record['reg-researchers'] =  slice_record['reg_researchers']
+            logger.debug(" SLABSLICE \r\n \r\n  \t THE SECONDverify_person slice_record['record_id_user'] %s" %(slice_record))
             #if peer:
                 #person['peer_person_id'] = added_user['person_id']
             added_persons.append(person)
            
             # enable the account 
-            self.driver.UpdatePerson(slice_record['reg-researchers'][0], added_user_hrn)
+            self.driver.UpdatePerson(slice_record['reg_researchers'][0], added_user_hrn)
             
             # add person to site
             #self.driver.AddPersonToSite(added_user_id, login_base)

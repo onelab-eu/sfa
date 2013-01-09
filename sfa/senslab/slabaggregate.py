@@ -58,9 +58,10 @@ class SlabAggregate:
 
         slices = self.driver.GetSlices(slice_filter= str(slice_name), \
                                                 slice_filter_type = 'slice_hrn')
+        
         logger.debug("Slabaggregate api \tget_slice_and_slivers \
-                        slices %s self.driver.hrn %s" \
-                        %(slices, self.driver.hrn))
+                        sfa_slice %s \r\n slices %s self.driver.hrn %s" \
+                        %(sfa_slice, slices, self.driver.hrn))
         if not slices:
             return (sfa_slice, slivers)
         #if isinstance(sfa_slice, list):

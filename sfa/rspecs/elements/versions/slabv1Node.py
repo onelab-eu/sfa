@@ -58,7 +58,7 @@ class Slabv1Node:
         else:
             network_elem = xml
        
-        logger.debug("slabv1Node \t add_nodes  nodes %s \r\n "%(nodes))
+        #logger.debug("slabv1Node \t add_nodes  nodes %s \r\n "%(nodes))
         node_elems = []
         #Then add nodes items to the network item in the xml
         for node in nodes:

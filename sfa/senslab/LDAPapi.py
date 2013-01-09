@@ -392,7 +392,7 @@ class LDAPapi :
 
     def LdapAddUser(self, record) :
         """Add SFA user to LDAP if it is not in LDAP  yet. """
-        
+        logger.debug(" \r\n \t LDAP LdapAddUser \r\n\r\n =====================================================\r\n ")
         user_ldap_attrs = self.make_ldap_attributes_from_record(record)
 
         
@@ -658,9 +658,15 @@ class LDAPapi :
                 hrn = record['hrn']
                 parent_hrn = get_authority(hrn)
                 peer_authority = None
-                if parent_hrn is not self.authname:
+                if parent_hrn != self.authname:
                     peer_authority = parent_hrn
-
+                    
+                #In case the user was not imported from Senslab LDAP
+                #but from another federated site, has an account in 
+                #senslab but currently using his hrn from federated site
+                #then the login is different from the one found in its hrn
+                if tmpname != hrn.split('.')[1]:
+                    hrn = None
                 results =  {	
                             'type': 'user',
                             'pkey': ldapentry['sshPublicKey'][0],
