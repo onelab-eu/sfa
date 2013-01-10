@@ -51,11 +51,39 @@ class NovaDriver(Driver):
             self.cache = NovaDriver.cache
 
     def sliver_to_slice_xrn(self, xrn):
-        return xrn
+        sliver_id_parts = Xrn(xrn).get_sliver_id_parts()
+        slice = self.shell.auth_manager.tenants.find(id=sliver_id_parts[0])
+        if not slice:
+            raise Forbidden("Unable to locate slice record for sliver:  %s" % xrn)
+        slice_xrn = OSXrn(name=slice.name, type='slice')
+        return slice_xrn
 
     def check_sliver_credentials(self, creds, urns):
-        #TODO: Implement
-        return
+        # build list of cred object hrns
+        slice_cred_names = []
+        for cred in creds:
+            slice_cred_hrn = Credential(cred=cred).get_gid_object().get_hrn()
+            slice_cred_names.append(OSXrn(xrn=slice_cred_hrn).get_slicename())
+
+        # look up slice name of slivers listed in urns arg
+        slice_ids = []
+        for urn in urns:
+            sliver_id_parts = Xrn(xrn=urn).get_sliver_id_parts()
+            slice_ids.append(sliver_id_parts[0])
+
+        if not slice_ids:
+             raise Forbidden("sliver urn not provided")
+
+        sliver_names = []
+        for slice_id in slice_ids:
+            slice = self.shell.auth_manager.tenants.find(slice_id) 
+            sliver_names.append(slice['name'])
+
+        # make sure we have a credential for every specified sliver ierd
+        for sliver_name in sliver_names:
+            if sliver_name not in slice_cred_names:
+                msg = "Valid credential not found for target: %s" % sliver_name
+                raise Forbidden(msg)
  
     ########################################
     ########## registry oriented
