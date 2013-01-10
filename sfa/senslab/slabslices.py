@@ -416,12 +416,13 @@ class SlabSlices:
                 slice_rec = info['slice_record'] 
                 user = slice_rec['user']
 
-               
-            if 'hrn' in user:
+            if 'email' in user:  
                 users_by_email[user['email']] = user
+                users_dict[user['email']] = user
+                
+            #if 'hrn' in user:
                 #users_by_hrn[user['hrn']] = user
                 #users_dict[user['hrn']] = user
-                users_dict[user['email']] = user
         
         logger.debug( "SLABSLICE.PY \t verify_person  \
                         users_dict %s \r\n user_by_email %s \r\n \
@@ -455,7 +456,9 @@ class SlabSlices:
             #User's in senslab LDAP               
             if existing_users:
                 for user in existing_users :
+                    users_dict[user['email']].update(user)
                     existing_user_emails.append(users_dict[user['email']]['email'])
+                    
                     #existing_user_hrns.append(users_dict[user['hrn']]['hrn'])
                     #existing_user_ids.\
                                     #append(users_dict[user['hrn']]['person_id'])
@@ -525,8 +528,18 @@ class SlabSlices:
 
         added_persons = []
         # add new users
+        
+        #requested_user_email is in existing_user_emails
+        if len(added_user_emails) == 0:
+           
+            slice_record['login'] = users_dict[requested_user_emails[0]]['uid']
+            logger.debug(" SLABSLICE  \tverify_person QUICK DIRTY %s" \
+                        %(slice_record))
+            
         #for added_user_hrn in added_user_hrns:
             #added_user = users_dict[added_user_hrn]
+            
+            
         for added_user_email in added_user_emails:
             #hrn, type = urn_to_hrn(added_user['urn'])  
             
@@ -544,9 +557,8 @@ class SlabSlices:
                 
             #person['person_id'] = self.driver.AddPerson(person)
             person['uid'] = self.driver.AddPerson(person)
-            slice_record['HEYMOTHERFUCKER'] = "DAFUQ?"
             #Update slice_Record with the id now known to LDAP
-            
+            slice_record['login'] = person['uid']
             slice_record['reg_researchers'] = [self.driver.root_auth + '.' + person['uid']]
             slice_record['reg-researchers'] =  slice_record['reg_researchers']
             logger.debug(" SLABSLICE \r\n \r\n  \t THE SECONDverify_person slice_record['record_id_user'] %s" %(slice_record))

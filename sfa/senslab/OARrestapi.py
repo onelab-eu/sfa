@@ -145,8 +145,8 @@ class OARrestapi:
             return answer
 
         except ValueError, error:
-            logger.log_exc("Failed to parse Server Response: error %s answer \
-                            %s" %(error, answer))
+            logger.log_exc("Failed to parse Server Response: error %s  \
+                            %s" %(error))
             #raise ServerError("Failed to parse Server Response:" + answer)
 
 

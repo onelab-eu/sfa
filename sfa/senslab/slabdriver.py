@@ -1,4 +1,5 @@
 import subprocess
+import os
 
 from datetime import datetime
 
@@ -1230,7 +1231,10 @@ class SlabDriver(Driver):
             # second step : configure the experiment
             # we need to store the nodes in a yaml (well...) file like this :
             # [1,56,23,14,45,75] with name /tmp/sfa<jobid>.json
-            job_file = open('/tmp/sfa/'+ str(jobid) + '.json', 'w')
+            tmp_dir = '/tmp/sfa/'
+            if not os.path.exists(tmp_dir):
+                os.makedirs(tmp_dir)
+            job_file = open(tmp_dir + str(jobid) + '.json', 'w')
             job_file.write('[')
             job_file.write(str(added_nodes[0].strip('node')))
             for node in added_nodes[1:len(added_nodes)] :
@@ -1274,12 +1278,14 @@ class SlabDriver(Driver):
                  %( hostname_list, slice_record , lease_start_time, \
                  lease_duration))
 
-        tmp = slice_record['reg-researchers'][0].split(".")
-        username = tmp[(len(tmp)-1)]
+        #tmp = slice_record['reg-researchers'][0].split(".")
+        username = slice_record['user']['uid']
+        #username = tmp[(len(tmp)-1)]
         job_id = self.LaunchExperimentOnOAR(hostname_list, slice_record['hrn'], \
                                     lease_start_time, lease_duration, username)
         start_time = datetime.fromtimestamp(int(lease_start_time)).strftime(self.time_format)
         end_time = lease_start_time + lease_duration
+        logger.debug("SLABDRIVER \r\n \r\n \t AddLeases %s %s %s " %(type(slice_record['hrn']), type(job_id), type(end_time)))
         slab_ex_row = SenslabXP(slice_record['hrn'], job_id, end_time)
         logger.debug("SLABDRIVER \r\n \r\n \t slab_ex_row %s" %(slab_ex_row))
         slab_dbsession.add(slab_ex_row)
@@ -1390,13 +1396,13 @@ class SlabDriver(Driver):
                 
     
                 resa['component_id_list'] = []
+                resa['hrn'] = Xrn(resa['slice_id']).get_hrn()
                 #Transform the hostnames into urns (component ids)
                 for node in resa['reserved_nodes']:
                     #resa['component_id_list'].append(hostname_to_urn(self.hrn, \
                             #self.root_auth, node['hostname']))
                     slab_xrn = slab_xrn_object(self.root_auth, node)
                     resa['component_id_list'].append(slab_xrn.urn)
-                    resa['slice_hrn'] = Xrn(resa['slice_id']).get_hrn()
                     
                 if lease_filter_dict:
                     logger.debug("SLABDRIVER \tGetLeases resa_ %s \r\n leasefilter %s"\
