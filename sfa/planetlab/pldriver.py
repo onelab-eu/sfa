@@ -71,7 +71,7 @@ class PlDriver (Driver):
             slice_cred_hrn = Credential(cred=cred).get_gid_object().get_hrn() 
             slice_cred_names.append(PlXrn(xrn=slice_cred_hrn).pl_slicename()) 
 
-        # look slice names of slivers listed in urns arg
+        # look up slice name of slivers listed in urns arg
         slice_ids = []
         for urn in urns:
             sliver_id_parts = Xrn(xrn=urn).get_sliver_id_parts()
