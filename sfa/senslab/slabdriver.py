@@ -1278,7 +1278,7 @@ class SlabDriver(Driver):
                  lease_duration))
 
         #tmp = slice_record['reg-researchers'][0].split(".")
-        username = slice_record['user']['uid']
+        username = slice_record['login']
         #username = tmp[(len(tmp)-1)]
         job_id = self.LaunchExperimentOnOAR(hostname_list, slice_record['hrn'], \
                                     lease_start_time, lease_duration, username)
@@ -1407,7 +1407,7 @@ class SlabDriver(Driver):
                     logger.debug("SLABDRIVER \tGetLeases resa_ %s \r\n leasefilter %s"\
                                             %(resa,lease_filter_dict)) 
                         
-                    if lease_filter_dict['name'] == resa['slice_hrn']:
+                    if lease_filter_dict['name'] == resa['hrn']:
                         reservation_list.append(resa)
                         
         if lease_filter_dict is None:
@@ -1773,14 +1773,14 @@ class SlabDriver(Driver):
         return
     
     def __add_person_to_db(self, user_dict):
-        hrn = Xrn(user_dict['urn']).get_hrn()
+
         check_if_exists = dbsession.query(RegUser).filter_by(email = user_dict['email']).first()
         #user doesn't exists
         if not check_if_exists:
             logger.debug("__add_person_to_db \t Adding %s \r\n \r\n \
             _________________________________________________________________________\
             " %(hrn))
-            user_record = RegUser(hrn = hrn, pointer= '-1', authority=get_authority(hrn), \
+            user_record = RegUser(hrn =user_dict['hrn'] , pointer= '-1', authority=get_authority(hrn), \
                                                     email= user_dict['email'], gid = None)
             user_record.reg_keys = [RegKey(user_dict['pkey'])]
             user_record.just_created()

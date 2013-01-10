@@ -555,7 +555,7 @@ class SlabSlices:
             person['mail'] = added_user['email']
             person['email'] = added_user['email']
             person['key_ids'] =  added_user.get('key_ids', [])
-            person['urn'] =   added_user['urn']
+            #person['urn'] =   added_user['urn']
               
             #person['person_id'] = self.driver.AddPerson(person)
             person['uid'] = self.driver.AddPerson(person)
@@ -571,7 +571,7 @@ class SlabSlices:
             added_persons.append(person)
            
             # enable the account 
-            self.driver.UpdatePerson(slice_record['reg_researchers'][0], added_user_hrn)
+            #self.driver.UpdatePerson(slice_record['reg_researchers'][0], added_user_email)
             
             # add person to site
             #self.driver.AddPersonToSite(added_user_id, login_base)
