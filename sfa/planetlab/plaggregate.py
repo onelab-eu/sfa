@@ -363,11 +363,14 @@ class PlAggregate:
         rspec.xml.set('expires',  rspec_expires)
 
         # lookup the sliver allocations
+        geni_urn = None
         sliver_ids = [sliver['sliver_id'] for sliver in slivers]
         constraint = SliverAllocation.sliver_id.in_(sliver_ids)
         sliver_allocations = dbsession.query(SliverAllocation).filter(constraint)
         sliver_allocation_dict = {}
         for sliver_allocation in sliver_allocations:
+            if not geni_urn:
+                geni_urn = sliver_allocation.slice_urn
             sliver_allocation_dict[sliver_allocation.sliver_id] = sliver_allocation
       
         if not options.get('list_leases') or options['list_leases'] != 'leases':
@@ -415,6 +418,6 @@ class PlAggregate:
                 rspec.version.add_leases(leases)
 
                
-        return {'geni_urn': urns[0], 
+        return {'geni_urn': geni_urn, 
                 'geni_rspec': rspec.toxml(),
                 'geni_slivers': geni_slivers}

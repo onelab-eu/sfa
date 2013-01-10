@@ -317,6 +317,7 @@ class SliverAllocation(Base,AlchemyObj):
     sliver_id           = Column(String, primary_key=True)
     client_id           = Column(String)
     component_id        = Column(String)
+    slice_urn           = Column(String)
     allocation_state    = Column(String)
 
     def __init__(self, **kwds):
@@ -326,6 +327,8 @@ class SliverAllocation(Base,AlchemyObj):
             self.client_id = kwds['client_id']
         if 'component_id' in kwds:
             self.component_id = kwds['component_id']
+        if 'slice_urn' in kwds:
+            self.slice_urn = kwds['slice_urn']
         if 'allocation_state' in kwds:
             self.allocation_state = kwds['allocation_state']
 
@@ -389,6 +392,7 @@ class SliverAllocation(Base,AlchemyObj):
             record.sliver_id = self.sliver_id
             record.client_id  = self.client_id
             record.component_id  = self.component_id
+            record.slice_urn  = self.slice_urn
             record.allocation_state = self.allocation_state
         dbsession.commit()    
         

@@ -645,7 +645,7 @@ class PlDriver (Driver):
        
         # add/remove slice from nodes
         request_nodes = rspec.version.get_nodes_with_slivers()
-        nodes = slices.verify_slice_nodes(slice, request_nodes, peer)
+        nodes = slices.verify_slice_nodes(urn, slice, request_nodes, peer)
          
         # add/remove links links 
         slices.verify_slice_links(slice, rspec.version.get_link_requests(), nodes)

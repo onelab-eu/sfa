@@ -180,7 +180,7 @@ class PlSlices:
         return leases
 
 
-    def verify_slice_nodes(self, slice, rspec_nodes, peer):
+    def verify_slice_nodes(self, slice_urn, slice, rspec_nodes, peer):
         
         slivers = {}
         for node in rspec_nodes:
@@ -222,7 +222,8 @@ class PlSlices:
             sliver_hrn = '%s.%s-%s' % (self.driver.hrn, slice['slice_id'], node['node_id'])
             sliver_id = Xrn(sliver_hrn, type='sliver').urn
             record = SliverAllocation(sliver_id=sliver_id, client_id=client_id, 
-                                      component_id=component_id, 
+                                      component_id=component_id,
+                                      slice_urn = slice_urn, 
                                       allocation_state='geni_allocated')      
             record.sync()
         return resulting_nodes
