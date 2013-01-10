@@ -5,7 +5,6 @@ from datetime import datetime
 
 from sfa.util.faults import SliverDoesNotExist, UnknownSfaType
 from sfa.util.sfalogging import logger
-
 from sfa.storage.alchemy import dbsession
 from sfa.storage.model import RegRecord, RegUser, RegSlice
 from sqlalchemy.orm import joinedload
@@ -57,7 +56,7 @@ class SlabDriver(Driver):
         self.oar = OARrestapi()
         self.ldap = LDAPapi()
         self.time_format = "%Y-%m-%d %H:%M:%S"
-        self.db = SlabDB(config, debug = True)
+        self.db = SlabDB(config, debug = False)
         self.cache = None
         
     
@@ -1773,6 +1772,22 @@ class SlabDriver(Driver):
         logger.warning("SLABDRIVER DeleteSlice %s "%(slice_record))
         return
     
+    def __add_person_to_db(self, user_dict):
+        hrn = Xrn(user_dict['urn']).get_hrn()
+        check_if_exists = dbsession.query(RegUser).filter_by(email = user_dict['email']).first()
+        #user doesn't exists
+        if not check_if_exists:
+            logger.debug("__add_person_to_db \t Adding %s \r\n \r\n \
+            _________________________________________________________________________\
+            " %(hrn))
+            user_record = RegUser(hrn = hrn, pointer= '-1', authority=get_authority(hrn), \
+                                                    email= user_dict['email'], gid = None)
+            user_record.reg_keys = [RegKey(user_dict['pkey'])]
+            user_record.just_created()
+            dbsession.add (user_record)
+            dbsession.commit()
+        return 
+        
     #TODO AddPerson 04/07/2012 SA
     #def AddPerson(self, auth,  person_fields=None): 
     def AddPerson(self, record):#TODO fixing 28/08//2012 SA
@@ -1786,6 +1801,7 @@ class SlabDriver(Driver):
         """
         ret = self.ldap.LdapAddUser(record)
         logger.debug("SLABDRIVER AddPerson return code %s \r\n "%(ret))
+        self.__add_person_to_db(record)
         return ret['uid']
     
     #TODO AddPersonToSite 04/07/2012 SA

@@ -542,7 +542,8 @@ class SlabSlices:
             
         for added_user_email in added_user_emails:
             #hrn, type = urn_to_hrn(added_user['urn'])  
-            
+            added_user = users_dict[added_user_email]
+            logger.debug(" SLABSLICE \r\n \r\n  \t THE SECOND verify_person  added_user %s" %(added_user))
             person = {}
             person['peer_person_id'] =  None
             k_list  = ['first_name','last_name','person_id']
@@ -554,14 +555,17 @@ class SlabSlices:
             person['mail'] = added_user['email']
             person['email'] = added_user['email']
             person['key_ids'] =  added_user.get('key_ids', [])
-                
+            person['urn'] =   added_user['urn']
+              
             #person['person_id'] = self.driver.AddPerson(person)
             person['uid'] = self.driver.AddPerson(person)
+            
+            logger.debug(" SLABSLICE \r\n \r\n  \t THE SECOND verify_person ppeersonne  %s" %(person))
             #Update slice_Record with the id now known to LDAP
             slice_record['login'] = person['uid']
-            slice_record['reg_researchers'] = [self.driver.root_auth + '.' + person['uid']]
-            slice_record['reg-researchers'] =  slice_record['reg_researchers']
-            logger.debug(" SLABSLICE \r\n \r\n  \t THE SECONDverify_person slice_record['record_id_user'] %s" %(slice_record))
+            #slice_record['reg_researchers'] = [self.driver.root_auth + '.' + person['uid']]
+            #slice_record['reg-researchers'] =  slice_record['reg_researchers']
+            
             #if peer:
                 #person['peer_person_id'] = added_user['person_id']
             added_persons.append(person)

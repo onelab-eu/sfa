@@ -649,44 +649,44 @@ class LDAPapi :
             if ldapentry['mail'][0] == "unknown":
                 tmpemail = None
                     
-            #except IndexError: 
-                #logger.error("LDAP ldapFindHRn : no entry for record %s found"\
-                            #%(record))
-                #return None
-                
-            try:
+            parent_hrn = None
+            peer_authority = None    
+            if 'hrn' in record:
                 hrn = record['hrn']
                 parent_hrn = get_authority(hrn)
-                peer_authority = None
                 if parent_hrn != self.authname:
                     peer_authority = parent_hrn
-                    
                 #In case the user was not imported from Senslab LDAP
                 #but from another federated site, has an account in 
                 #senslab but currently using his hrn from federated site
-                #then the login is different from the one found in its hrn
+                #then the login is different from the one found in its hrn    
                 if tmpname != hrn.split('.')[1]:
                     hrn = None
-                results =  {	
-                            'type': 'user',
-                            'pkey': ldapentry['sshPublicKey'][0],
-                            #'uid': ldapentry[1]['uid'][0],
-                            'uid': tmpname ,
-                            'email':tmpemail,
-                            #'email': ldapentry[1]['mail'][0],
-                            'first_name': ldapentry['givenName'][0],
-                            'last_name': ldapentry['sn'][0],
-                            #'phone': 'none',
-                            'serial': 'none',
-                            'authority': parent_hrn,
-                            'peer_authority': peer_authority,
-                            'pointer' : -1,
-                            'hrn': hrn,
-                            }
-            except KeyError,error:
-                logger.log_exc("LDAPapi \t LdaFindUser KEyError %s" \
-                                %error )
-                return
+            else:
+                hrn = None
+                
+               
+                
+            results =  {	
+                        'type': 'user',
+                        'pkey': ldapentry['sshPublicKey'][0],
+                        #'uid': ldapentry[1]['uid'][0],
+                        'uid': tmpname ,
+                        'email':tmpemail,
+                        #'email': ldapentry[1]['mail'][0],
+                        'first_name': ldapentry['givenName'][0],
+                        'last_name': ldapentry['sn'][0],
+                        #'phone': 'none',
+                        'serial': 'none',
+                        'authority': parent_hrn,
+                        'peer_authority': peer_authority,
+                        'pointer' : -1,
+                        'hrn': hrn,
+                        }
+            #except KeyError,error:
+                #logger.log_exc("LDAPapi \t LdaFindUser KEyError %s" \
+                                #%error )
+                #return
         else:
         #Asked for all users in ldap
             results = []
