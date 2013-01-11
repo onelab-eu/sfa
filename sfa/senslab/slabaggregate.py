@@ -44,7 +44,7 @@ class SlabAggregate:
     def __init__(self, driver):
         self.driver = driver
 
-    def get_slice_and_slivers(self, slice_xrn):
+    def get_slice_and_slivers(self, slice_xrn, login=None):
         """
         Returns a dict of slivers keyed on the sliver's node_id
         """
@@ -57,7 +57,7 @@ class SlabAggregate:
         slice_name = slice_hrn
 
         slices = self.driver.GetSlices(slice_filter= str(slice_name), \
-                                                slice_filter_type = 'slice_hrn')
+                                                slice_filter_type = 'slice_hrn', login=login)
         
         logger.debug("Slabaggregate api \tget_slice_and_slivers \
                         sfa_slice %s \r\n slices %s self.driver.hrn %s" \
@@ -312,7 +312,7 @@ class SlabAggregate:
             #rspec_leases.append(rspec_lease)
         #return rspec_leases   
 #from plc/aggregate.py 
-    def get_rspec(self, slice_xrn=None, version = None, options={}):
+    def get_rspec(self, slice_xrn=None, login=None, version = None, options={}):
 
         rspec = None
         version_manager = VersionManager()	
@@ -329,7 +329,7 @@ class SlabAggregate:
             rspec_version = version_manager._get_version(version.type, \
                                                 version.version, 'manifest')
            
-        slices, slivers = self.get_slice_and_slivers(slice_xrn)
+        slices, slivers = self.get_slice_and_slivers(slice_xrn, login)
         #at this point sliver may be empty if no senslab job 
         #is running for this user/slice.
         rspec = RSpec(version=rspec_version, user_options=options)

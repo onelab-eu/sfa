@@ -276,7 +276,7 @@ class SlabDriver(Driver):
         slices.verify_slice_leases(sfa_slice, \
                                     requested_job_dict, peer)
         
-        return aggregate.get_rspec(slice_xrn=slice_urn, version=rspec.version)
+        return aggregate.get_rspec(slice_xrn=slice_urn, login=sfa_slice['login'],version=rspec.version)
         
         
     def delete_sliver (self, slice_urn, slice_hrn, creds, options):
@@ -865,17 +865,19 @@ class SlabDriver(Driver):
     def _get_slice_records(self, slice_filter = None, \
                     slice_filter_type = None):
        
-        login = None
+        #login = None
+	
         #Get list of slices based on the slice hrn
         if slice_filter_type == 'slice_hrn':
             
-            if get_authority(slice_filter) == self.root_auth:
-                login = slice_filter.split(".")[1].split("_")[0] 
+            #if get_authority(slice_filter) == self.root_auth:
+                #login = slice_filter.split(".")[1].split("_")[0] 
             
             slicerec = self._sql_get_slice_info(slice_filter)
             
             if slicerec is None:
-                return login, None    
+                return  None    		    
+                #return login, None    
             
         #Get slice based on user id                             
         if slice_filter_type == 'record_id_user': 
@@ -886,14 +888,14 @@ class SlabDriver(Driver):
             fixed_slicerec_dict = slicerec
             #At this point if the there is no login it means 
             #record_id_user filter has been used for filtering
-            if login is None :
-                #If theslice record is from senslab
-                if fixed_slicerec_dict['peer_authority'] is None:
-                    login = fixed_slicerec_dict['hrn'].split(".")[1].split("_")[0] 
-            return login, fixed_slicerec_dict
+            #if login is None :
+                ##If theslice record is from senslab
+                #if fixed_slicerec_dict['peer_authority'] is None:
+                    #login = fixed_slicerec_dict['hrn'].split(".")[1].split("_")[0] 
+            #return login, fixed_slicerec_dict
+            return fixed_slicerec_dict                  
                   
-                  
-    def GetSlices(self, slice_filter = None, slice_filter_type = None):
+    def GetSlices(self, slice_filter = None, slice_filter_type = None, login=None):
         """ Get the slice records from the slab db. 
         Returns a slice ditc if slice_filter  and slice_filter_type 
         are specified.
@@ -901,15 +903,16 @@ class SlabDriver(Driver):
         specified. 
        
         """
-        login = None
+        #login = None
         authorized_filter_types_list = ['slice_hrn', 'record_id_user']
         return_slicerec_dictlist = []
         
         #First try to get information on the slice based on the filter provided     
         if slice_filter_type in authorized_filter_types_list:
-
-            login, fixed_slicerec_dict = \
+            fixed_slicerec_dict = \
                             self._get_slice_records(slice_filter, slice_filter_type)
+            #login, fixed_slicerec_dict = \
+                            #self._get_slice_records(slice_filter, slice_filter_type)
             logger.debug(" SLABDRIVER \tGetSlices login %s \
                             slice record %s slice_filter %s slice_filter_type %s "\
                             %(login, fixed_slicerec_dict,slice_filter, slice_filter_type))
@@ -1208,7 +1211,8 @@ class SlabDriver(Driver):
     
             return reqdict
         
-                                   
+        logger.debug("SLABDRIVER.PY \tLaunchExperimentOnOAR slice_user %s\
+                             \r\n "  %(slice_user))                             
         #Create the request for OAR
         reqdict = __create_job_structure_request_for_OAR(lease_dict)
          # first step : start the OAR job and update the job 
@@ -1284,9 +1288,14 @@ class SlabDriver(Driver):
                                     lease_start_time, lease_duration, username)
         start_time = datetime.fromtimestamp(int(lease_start_time)).strftime(self.time_format)
         end_time = lease_start_time + lease_duration
+
+        import logging, logging.handlers
+        from sfa.util.sfalogging import _SfaLogger
+	logger.debug("SLABDRIVER \r\n \r\n \t AddLeases TURN ON LOGGING SQL %s %s %s "%(slice_record['hrn'], job_id, end_time))
+        sql_logger = _SfaLogger(loggername = 'sqlalchemy.engine', level=logging.DEBUG)
         logger.debug("SLABDRIVER \r\n \r\n \t AddLeases %s %s %s " %(type(slice_record['hrn']), type(job_id), type(end_time)))
-        slab_ex_row = SenslabXP(slice_record['hrn'], job_id, end_time)
-        logger.debug("SLABDRIVER \r\n \r\n \t slab_ex_row %s" %(slab_ex_row))
+        slab_ex_row = SenslabXP(slice_hrn = slice_record['hrn'], job_id = job_id,end_time= end_time)
+        logger.debug("SLABDRIVER \r\n \r\n \t AddLeases slab_ex_row %s" %(slab_ex_row))
         slab_dbsession.add(slab_ex_row)
         slab_dbsession.commit()
         
@@ -1316,7 +1325,8 @@ class SlabDriver(Driver):
 
         jobs_psql = set(jobs_psql)
         kept_jobs = set(job_oar_list).intersection(jobs_psql)
-       
+        logger.debug ( "\r\n \t\tt update_jobs_in_slabdb jobs_psql %s \r\n \t job_oar_list %s \
+        kept_jobs %s " %(jobs_psql,job_oar_list,kept_jobs))
         deleted_jobs = set(jobs_psql).difference(kept_jobs)
         deleted_jobs = list(deleted_jobs)
         if len(deleted_jobs) > 0:
@@ -1334,7 +1344,7 @@ class SlabDriver(Driver):
 
         reservation_list = []
         #Find the slice associated with this user senslab ldap uid
-        logger.debug(" SLABDRIVER.PY \tGetLeases unfiltered_reservation_list %s " %(unfiltered_reservation_list))
+        logger.debug(" SLABDRIVER.PY \tGetLeases  login %s unfiltered_reservation_list %s " %(login ,unfiltered_reservation_list))
         #Create user dict first to avoid looking several times for
         #the same user in LDAP SA 27/07/12
         resa_user_dict = {}
@@ -1779,7 +1789,7 @@ class SlabDriver(Driver):
         if not check_if_exists:
             logger.debug("__add_person_to_db \t Adding %s \r\n \r\n \
             _________________________________________________________________________\
-            " %(hrn))
+            " %(user_dict['hrn']))
             user_record = RegUser(hrn =user_dict['hrn'] , pointer= '-1', authority=get_authority(hrn), \
                                                     email= user_dict['email'], gid = None)
             user_record.reg_keys = [RegKey(user_dict['pkey'])]
