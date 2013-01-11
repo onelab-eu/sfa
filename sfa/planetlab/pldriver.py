@@ -722,16 +722,11 @@ class PlDriver (Driver):
         return geni_slivers
     
     def renew (self, urns, expiration_time, options={}):
-        # we can only renew slices, not individual slivers. ignore sliver
-        # ids in the urn 
-        names = []
-        for urn in urns:
-            xrn = PlXrn(xrn=urn, type='slice')
-            names.append(xrn.pl_slicename())
-        slices = self.shell.GetSlices(names, ['slice_id'])
-        if not slices:
+        aggregate = PlAggregate(self)
+        slivers = aggregate.get_slivers(urns)
+        if not slivers:
             raise SearchFailed(urns)
-        slice = slices[0]
+        slice = slivers[0]
         requested_time = utcparse(expiration_time)
         record = {'expires': int(datetime_to_epoch(requested_time))}
         self.shell.UpdateSlice(slice['slice_id'], record)
