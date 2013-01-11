@@ -371,7 +371,7 @@ class NovaDriver(Driver):
                   'geni_slivers': desc['geni_slivers']}
         return status
 
-    def allocate (self, urn, rspec_string, options={}):
+    def allocate (self, urn, rspec_string, expiration, options={}):
         xrn = Xrn(urn) 
         aggregate = OSAggregate(self)
 

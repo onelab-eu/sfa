@@ -104,14 +104,14 @@ class AggregateManager:
         return self.driver.status (urns, options=options)
    
 
-    def Allocate(self, api, xrn, creds, rspec_string, options):
+    def Allocate(self, api, xrn, creds, rspec_string, expiration, options):
         """
         Allocate resources as described in a request RSpec argument 
         to a slice with the named URN.
         """
         call_id = options.get('call_id')
         if Callids().already_handled(call_id): return ""
-        return self.driver.allocate(xrn, rspec_string, options)
+        return self.driver.allocate(xrn, rspec_string, expiration, options)
  
     def Provision(self, api, xrns, creds, options):
         """

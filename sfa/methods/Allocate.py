@@ -1,4 +1,5 @@
 from sfa.util.faults import SfaInvalidArgument, InvalidRSpec, SfatablesRejected
+from sfa.util.sfatime import datetime_to_string 
 from sfa.util.xrn import Xrn
 from sfa.util.method import Method
 from sfa.util.sfatablesRuntime import run_sfatables
@@ -39,6 +40,9 @@ class Allocate(Method):
 
         # Find the valid credentials
         valid_creds = self.api.auth.checkCredentials(creds, 'createsliver', xrn.get_hrn())
+        # use the expiration from the first valid credential to determine when 
+        # the slivers should expire.
+        expiration = datetime_to_string(Credential(cred=valid_creds[0]).expiration)
         
         # make sure request is not empty
         slivers = RSpec(rspec).version.get_nodes_with_slivers()
@@ -58,5 +62,5 @@ class Allocate(Method):
         if not slivers:
             raise SfatablesRejected(slice_xrn)
 
-        result = self.api.manager.Allocate(self.api, xrn.get_urn(), creds, rspec, options)
+        result = self.api.manager.Allocate(self.api, xrn.get_urn(), creds, rspec, expiration, options)
         return result

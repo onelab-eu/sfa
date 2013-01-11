@@ -372,11 +372,12 @@ class PlSlices:
         
         return site        
 
-    def verify_slice(self, slice_hrn, slice_record, peer, sfa_peer, options={}):
+    def verify_slice(self, slice_hrn, slice_record, peer, sfa_peer, expiration, options={}):
         slicename = hrn_to_pl_slicename(slice_hrn)
         parts = slicename.split("_")
         login_base = parts[0]
         slices = self.driver.shell.GetSlices([slicename]) 
+        expires = int(datetime_to_epoch(utcparse(expiration)))
         if not slices:
             slice = {'name': slicename,
                      'url': 'No Url', 
@@ -386,18 +387,19 @@ class PlSlices:
             slice['node_ids'] = []
             slice['person_ids'] = []
             if peer and slice_record:
-                slice['peer_slice_id'] = slice_record.get('slice_id', None) 
+                slice['peer_slice_id'] = slice_record.get('slice_id', None)
+            # set the expiration
+            self.driver.shell.UpdateSlice(slice['slice_id'], {'expires': expires}) 
         else:
             slice = slices[0]
             if peer and slice_record:
                 slice['peer_slice_id'] = slice_record.get('slice_id', None)
                 # unbind from peer so we can modify if necessary. Will bind back later
                 self.driver.shell.UnBindObjectFromPeer('slice', slice['slice_id'], peer['shortname'])
-	        #Update existing record (e.g. expires field) it with the latest info.
-            if slice_record and slice_record.get('expires'):
-                requested_expires = int(datetime_to_epoch(utcparse(slice_record['expires'])))
-                if requested_expires and slice['expires'] != requested_expires:
-                    self.driver.shell.UpdateSlice( slice['slice_id'], {'expires' : requested_expires})
+            
+	        #Update expiration if necessary
+            if slice['expires'] != expires:
+                self.driver.shell.UpdateSlice( slice['slice_id'], {'expires' : expires})
        
         return slice
 

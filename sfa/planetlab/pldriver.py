@@ -619,7 +619,7 @@ class PlDriver (Driver):
                   'geni_slivers': desc['geni_slivers']}
         return status
 
-    def allocate (self, urn, rspec_string, options={}):
+    def allocate (self, urn, rspec_string, expiration, options={}):
         xrn = Xrn(urn)
         aggregate = PlAggregate(self)
         slices = PlSlices(self)
@@ -637,7 +637,7 @@ class PlDriver (Driver):
         # ensure site record exists
         site = slices.verify_site(xrn.hrn, slice_record, peer, sfa_peer, options=options)
         # ensure slice record exists
-        slice = slices.verify_slice(xrn.hrn, slice_record, peer, sfa_peer, options=options)
+        slice = slices.verify_slice(xrn.hrn, slice_record, peer, sfa_peer, expiration=expiration, options=options)
         # ensure person records exists
         persons = slices.verify_persons(xrn.hrn, slice, users, peer, sfa_peer, options=options)
         # ensure slice attributes exists
