@@ -120,9 +120,14 @@ class PlAggregate:
             xrn = PlXrn(xrn=urn)
             if xrn.type == 'sliver':
                  # id: slice_id-node_id
-                sliver_id_parts = xrn.get_sliver_id_parts()
-                slice_ids.add(int(sliver_id_parts[0])) 
-                node_ids.append(int(sliver_id_parts[1]))
+                try:
+                    sliver_id_parts = xrn.get_sliver_id_parts()
+                    slice_id = int(sliver_id_parts[0]) 
+                    node_id = int(sliver_id_parts[1])
+                    slice_ids.add(slice_id) 
+                    node_ids.append(node_id)
+                except ValueError:
+                    pass 
             else:  
                 names.add(xrn.pl_slicename())
 

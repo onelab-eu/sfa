@@ -56,8 +56,12 @@ class PlDriver (Driver):
 
     def sliver_to_slice_xrn(self, xrn):
         sliver_id_parts = Xrn(xrn).get_sliver_id_parts()
-        slice_id = int(sliver_id_parts[0])
-        slices = self.shell.GetSlices(slice_id)
+        filter = {}
+        try:
+            filter['slice_id'] = int(sliver_id_parts[0])
+        except ValueError:
+            fliter['name'] = sliver_id_parts[0] 
+        slices = self.shell.GetSlices(filter)
         if not slices:
             raise Forbidden("Unable to locate slice record for sliver:  %s" % xrn)
         slice = slices[0]
@@ -75,7 +79,10 @@ class PlDriver (Driver):
         slice_ids = []
         for urn in urns:
             sliver_id_parts = Xrn(xrn=urn).get_sliver_id_parts()
-            slice_ids.append(sliver_id_parts[0])
+            try:
+                slice_ids.append(int(sliver_id_parts[0]))
+            except ValueError: 
+                pass
 
         if not slice_ids:
              raise Forbidden("sliver urn not provided")
