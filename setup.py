@@ -9,6 +9,8 @@ from glob import glob
 import shutil
 from distutils.core import setup
 
+from sfa.util.version import version_tag
+
 scripts = glob("clientbin/*.py") + \
     [ 
     'config/sfa-config-tty',
@@ -105,5 +107,6 @@ else:
     setup(name='sfa',
           packages = packages, 
           data_files = data_files,
-          scripts = scripts)
+          scripts = scripts,
+          version=version_tag)
 
