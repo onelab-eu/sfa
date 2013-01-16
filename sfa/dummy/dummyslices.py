@@ -72,7 +72,7 @@ class DummySlices:
         if 'node_ids' not in slice.keys():
             slice['node_ids']=[] 
         nodes = self.driver.shell.GetNodes({'node_ids': slice['node_ids']})
-        current_slivers = [node['hostname'] for node in nodes]
+        current_slivers = [node['node_id'] for node in nodes]
 
         # remove nodes not in rspec
         deleted_nodes = list(set(current_slivers).difference(requested_slivers))

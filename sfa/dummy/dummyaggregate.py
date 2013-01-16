@@ -43,6 +43,7 @@ class DummyAggregate:
         slice = slices[0]
         
         # sort slivers by node id 
+        slice_nodes = []
         if 'node_ids' in slice.keys():
             slice_nodes = self.driver.shell.GetNodes({'node_ids': slice['node_ids']}) 
         for node in slice_nodes:
