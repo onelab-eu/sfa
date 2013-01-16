@@ -489,9 +489,9 @@ class DummyDriver (Driver):
         requested_attributes = rspec.version.get_slice_attributes()
         
         # ensure slice record exists
-        slice = slices.verify_slice(slice_hrn, slice_record, peer, sfa_peer, options=options)
+        slice = slices.verify_slice(slice_hrn, slice_record, sfa_peer, options=options)
         # ensure user records exists
-        users = slices.verify_users(slice_hrn, slice, users, peer, sfa_peer, options=options)
+        #users = slices.verify_users(slice_hrn, slice, users, sfa_peer, options=options)
         
         # add/remove slice from nodes
         requested_slivers = []
@@ -503,7 +503,11 @@ class DummyDriver (Driver):
                 hostname = xrn_to_hostname(node.get('component_id').strip())
             if hostname:
                 requested_slivers.append(hostname)
-        nodes = slices.verify_slice_nodes(slice, requested_slivers, peer) 
+        requested_slivers_ids = []
+        for hostname in requested_slivers:
+            node_id = self.shell.GetNodes({'hostname': hostname})[0]['node_id']
+            requested_slivers_ids.append(node_id) 
+        nodes = slices.verify_slice_nodes(slice, requested_slivers_ids) 
     
         return aggregate.get_rspec(slice_xrn=slice_urn, version=rspec.version)
 

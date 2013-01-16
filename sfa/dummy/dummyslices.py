@@ -68,8 +68,9 @@ class DummySlices:
         return sfa_peer
 
 
-    def verify_slice_nodes(self, slice, requested_slivers, peer):
-        
+    def verify_slice_nodes(self, slice, requested_slivers):
+        if 'node_ids' not in slice.keys():
+            slice['node_ids']=[] 
         nodes = self.driver.shell.GetNodes({'node_ids': slice['node_ids']})
         current_slivers = [node['hostname'] for node in nodes]
 
@@ -89,7 +90,7 @@ class DummySlices:
 
         
 
-    def verify_slice(self, slice_hrn, slice_record, peer, sfa_peer, options={}):
+    def verify_slice(self, slice_hrn, slice_record, sfa_peer, options={}):
         slicename = hrn_to_dummy_slicename(slice_hrn)
         parts = slicename.split("_")
         login_base = parts[0]
@@ -109,14 +110,15 @@ class DummySlices:
        
         return slice
 
-    def verify_users(self, slice_hrn, slice_record, users, peer, sfa_peer, options={}):
+    def verify_users(self, slice_hrn, slice_record, users, sfa_peer, options={}):
         users_by_email = {}
         users_dict = {} 
+        users_by_site = {}
         for user in users:
             user['urn'] = user['urn'].lower()
             hrn, type = urn_to_hrn(user['urn'])
             username = get_leaf(hrn)
-            login_base = PlXrn(xrn=user['urn']).pl_login_base()
+            login_base = DummyXrn(xrn=user['urn']).dummy_login_base()
             user['username'] = username
             user['site'] = login_base
 
@@ -204,7 +206,7 @@ class DummySlices:
         # update_existing users
         updated_users_list = [user for user in users_dict.values() if user['email'] in \
           updated_user_ids]
-        self.verify_keys(existing_slice_users, updated_users_list, peer, options)
+        self.verify_keys(existing_slice_users, updated_users_list, options)
 
         added_persons = []
         # add new users
@@ -220,8 +222,6 @@ class DummySlices:
                 'key_ids': added_user.get('key_ids', []),
             }
             person['person_id'] = self.driver.shell.AddPerson(person)
-            if peer:
-                person['peer_person_id'] = added_user['person_id']
             added_persons.append(person)
            
             # enable the account 
@@ -250,7 +250,7 @@ class DummySlices:
         return added_persons
             
 
-    def verify_keys(self, old_users, new_users, peer, options={}):
+    def verify_keys(self, old_users, new_users, options={}):
         # existing keys 
         existing_keys = []
         for user in old_users:
