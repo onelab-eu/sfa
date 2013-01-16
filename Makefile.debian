@@ -1,26 +1,26 @@
+PROJECT=sfa
 PYTHON=python
 DESTDIR=/
-PROJECT=sfa
-VERSION=0.2.0
+SETUPOPTS=
 
 all: builddeb 
 
 source:
-	$(PYTHON) setup.py sdist $(COMPILE)
+	$(PYTHON) setup.py sdist $(SETUPOPTS)
 
 install:
-	$(PYTHON) setup.py install --root $(DESTDIR) $(COMPILE)
+	$(PYTHON) setup.py install --root $(DESTDIR) $(SETUPOPTS)
 
 #buildrpm:
 #	$(PYTHON) setup.py bdist_rpm --post-install=rpm/postinstall --pre-uninstall=rpm/preuninstall
 
+# build the source package in the parent directory
+# then rename it to project_version.orig.tar.gz as expected for debian packaging
+# finally build the package
 builddeb:
 	rm -f sfaadmin sfascan sfi  
-	# build the source package in the parent directory
-	# then rename it to project_version.orig.tar.gz
-	$(PYTHON) setup.py sdist $(COMPILE) --dist-dir=../ --prune
+	$(PYTHON) setup.py sdist $(SETUPOPTS)  --formats=gztar --dist-dir=../ --prune
 	rename -f 's/$(PROJECT)-(.*)\.tar\.gz/$(PROJECT)_$$1\.orig\.tar\.gz/' ../*
-	# build the package
 	dpkg-buildpackage -i -I -rfakeroot
 
 clean:
