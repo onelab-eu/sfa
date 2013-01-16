@@ -48,6 +48,7 @@ packages = [
     'sfatables/processors',
     ]
 
+# need to do something about functions
 initscripts = [ 'functions', 'sfa', 'sfa-cm' ]
 
 data_files = [ ('/etc/sfa/', [ 'config/aggregates.xml',
@@ -108,5 +109,8 @@ else:
           packages = packages, 
           data_files = data_files,
           scripts = scripts,
+          url="http://svn.planet-lab.org/wiki/SFATutorial",
+          author="Thierry Parmentelat, Tony Mack, Scott Baker",
+          author_email="thierry.parmentelat@inria.fr, tmack@princeton.cs.edu, smbaker@gmail.com",
           version=version_tag)
 

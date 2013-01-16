@@ -1,0 +1,5 @@
+sfa (@VERSION@) UNRELEASED; urgency=low
+
+  * Initial release. 
+
+ -- Thierry Parmentelat <thierry.parmentelat@inria.fr>  @DATE@ +0000

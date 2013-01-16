@@ -1,13 +1,11 @@
 Source: sfa
+Maintainer: Thierry Parmentelat <Thierry.Parmentelat@inria.fr>
 Section: misc
 Priority: optional
-Maintainer: Jordan Augé <jordan.auge@lip6.fr>
+Standards-Version: 3.9.2
 Build-Depends: debhelper (>=7.0.50~), debconf, dpatch
-Homepage: http://www.joomla.org
-Standards-Version: 3.9.3.1
 
 Package: sfa
-Architecture: all
+Architecture: any
 Depends: python-openssl, python-m2crypto, python-dateutil
-Description: SFA
- SFA
+Description: Slice Facility Architecture, generic implementation derived from PlanetLab

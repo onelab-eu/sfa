@@ -2,37 +2,27 @@ PROJECT=sfa
 PYTHON=python
 DESTDIR=/
 SETUPOPTS=
+VERSION=$(shell python -c "from sfa.util.version import version_tag; print version_tag" | sed -e s,-,.,)
+DATE=$(shell date -u +"%a, %d %b %Y %T")
 
-all: builddeb 
+debian: sourcedeb pkgdeb
 
-source:
-	$(PYTHON) setup.py sdist $(SETUPOPTS)
-
-install:
-	$(PYTHON) setup.py install --root $(DESTDIR) $(SETUPOPTS)
-
-#buildrpm:
-#	$(PYTHON) setup.py bdist_rpm --post-install=rpm/postinstall --pre-uninstall=rpm/preuninstall
+force:
 
 # build the source package in the parent directory
 # then rename it to project_version.orig.tar.gz as expected for debian packaging
 # finally build the package
-builddeb:
-	rm -f sfaadmin sfascan sfi  
-	$(PYTHON) setup.py sdist $(SETUPOPTS)  --formats=gztar --dist-dir=../ --prune
-	rename -f 's/$(PROJECT)-(.*)\.tar\.gz/$(PROJECT)_$$1\.orig\.tar\.gz/' ../*
+sourcedeb: force
+	rm -f sfaadmin sfascan sfi
+	sed -e "s|@VERSION@|$(VERSION)|" -e "s|@DATE@|$(DATE)|" debian/changelog.in > debian/changelog
+	$(PYTHON) setup.py sdist $(SETUPOPTS) --formats=gztar --dist-dir=../ --prune
+	rename -f 's/$(PROJECT)-(.*)-(.*)\.tar\.gz/$(PROJECT)_$$1.$$2\.orig\.tar\.gz/' ../*
+
+pkgdeb:
 	dpkg-buildpackage -i -I -rfakeroot
 
-clean:
-	$(PYTHON) setup.py clean
-	$(MAKE) -f $(CURDIR)/debian/rules clean
-	rm -rf build/ MANIFEST
+debian.clean clean:
+	-$(PYTHON) setup.py clean
+	$(MAKE) -f debian/rules clean
+	rm -rf build/ MANIFEST ../*.tar.gz ../*.dsc ../*.build
 	find . -name '*.pyc' -delete
-
-help:
-	@echo "make source - Create source package"
-	@echo "make install - Install on local system"
-#	@echo "make buildrpm - Generate an rpm package"
-	@echo "make builddeb - Generate a deb package"
-	@echo "make clean - Get rid of scratch and byte files"
-

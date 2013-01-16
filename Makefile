@@ -64,6 +64,8 @@ wsdl-clean:
 ##########
 debian: version
 	$(MAKE) -f Makefile.debian
+debian.clean: 
+	$(MAKE) -f Makefile.debian clean
 
 ##########
 tests-install:
