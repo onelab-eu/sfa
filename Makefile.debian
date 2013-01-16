@@ -5,23 +5,24 @@ SETUPOPTS=
 VERSION=$(shell python -c "from sfa.util.version import version_tag; print version_tag" | sed -e s,-,.,)
 DATE=$(shell date -u +"%a, %d %b %Y %T")
 
-debian: sourcedeb pkgdeb
+debian: debian.source debian.package
 
 force:
 
 # build the source package in the parent directory
 # then rename it to project_version.orig.tar.gz as expected for debian packaging
 # finally build the package
-sourcedeb: force
+debian.source: force
 	rm -f sfaadmin sfascan sfi
 	sed -e "s|@VERSION@|$(VERSION)|" -e "s|@DATE@|$(DATE)|" debian/changelog.in > debian/changelog
 	$(PYTHON) setup.py sdist $(SETUPOPTS) --formats=gztar --dist-dir=../ --prune
 	rename -f 's/$(PROJECT)-(.*)-(.*)\.tar\.gz/$(PROJECT)_$$1.$$2\.orig\.tar\.gz/' ../*
 
-pkgdeb:
-	dpkg-buildpackage -i -I -rfakeroot
+debian.package:
+#	dpkg-buildpackage -i -I -rfakeroot
+	debuild -uc -us --source-option=--include-binaries --source-option=-isession
 
-debian.clean clean:
+debian.clean:
 	-$(PYTHON) setup.py clean
 	$(MAKE) -f debian/rules clean
 	rm -rf build/ MANIFEST ../*.tar.gz ../*.dsc ../*.build
