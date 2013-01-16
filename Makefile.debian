@@ -3,7 +3,7 @@ VERSION=$(shell python -c "from sfa.util.version import version_tag; print versi
 DATE=$(shell date -u +"%a, %d %b %Y %T")
 DEBIAN_TARBALL=../$(PROJECT)_$(VERSION).orig.tar.bz2
 
-debian: deban/changelog debian.source debian.package
+debian: debian/changelog debian.source debian.package
 
 force:
 
