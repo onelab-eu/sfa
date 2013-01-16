@@ -62,6 +62,10 @@ wsdl-clean:
 .PHONY: wsdl wsdl-install wsdl-clean
 
 ##########
+debian: version
+	$(MAKE) -f Makefile.debian
+
+##########
 tests-install:
 	mkdir -p $(DESTDIR)/usr/share/sfa/tests
 	install -m 755 tests/*.py $(DESTDIR)/usr/share/sfa/tests/
