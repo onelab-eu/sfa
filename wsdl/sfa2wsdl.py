@@ -9,7 +9,6 @@ import os, sys
 import time
 import pdb
 import xml.dom.minidom
-#import xml.dom.ext
 import apistub
 import inspect
 
@@ -327,10 +326,9 @@ class WSDLGen:
 
     def pretty_print(self):
         if (self.wsdl):
-            #xml.dom.ext.PrettyPrint(self.wsdl)
-            xml.dom.minidom.Document.toprettyxml(self.wsdl)
+             print xml.dom.minidom.Document.toprettyxml(self.wsdl)
         else:
-            raise Exception("Empty WSDL")
+             raise Exception("Empty WSDL")
 
 def main():
     parser = OptionParser()
