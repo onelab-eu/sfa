@@ -359,7 +359,9 @@ class DummyDriver (Driver):
     def update_relation (self, subject_type, target_type, relation_name, subject_id, target_ids):
         # hard-wire the code for slice/user for now, could be smarter if needed
         if subject_type =='slice' and target_type == 'user' and relation_name == 'researcher':
-            subject=self.shell.GetSlices (subject_id)[0]
+            subject=self.shell.GetSlices ({'slice_id': subject_id})[0]
+            if 'user_ids' not in subject.keys():
+                 subject['user_ids'] = []
             current_target_ids = subject['user_ids']
             add_target_ids = list ( set (target_ids).difference(current_target_ids))
             del_target_ids = list ( set (current_target_ids).difference(target_ids))

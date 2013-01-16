@@ -60,7 +60,7 @@ class DummyXrn (Xrn):
         sliver_id_parts = leaf.split(':')
         name = sliver_id_parts[0]
         name = re.sub('[^a-zA-Z0-9_]', '', name)
-        return self.pl_login_base() + '_' + name
+        return name
 
     #def hrn_to_pl_authname(hrn):
     def dummy_authname (self):

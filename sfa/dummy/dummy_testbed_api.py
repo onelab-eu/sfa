@@ -132,7 +132,10 @@ def AddUserKey(param):
     try:
         for user in DB['users_list']:
              if param['user_id'] == user['user_id']:
-                 user['keys'].append(param['key'])
+                 if 'keys' in user.keys():
+                     user['keys'].append(param['key'])
+                 else:
+                    user['keys'] = [param['key']] 
                  return True
         return False
     except:
