@@ -8,33 +8,46 @@
 # description:   Wraps PLCAPI into the SFA compliant API
 #
 
-# source function library
-. /etc/init.d/functions
-
-# <jordan>
-
+####################
 # borrowed from postgresql
-versions=()
-for v in `ls /usr/lib/postgresql/ 2>/dev/null`; do
-    if [ -x /usr/lib/postgresql/$v/bin/pg_ctl ] && [ ! -x /etc/init.d/postgresql-$v ]; then
-        versions+=($v)
+function debian_get_postgresql_versions () {
+    versions=()
+    for v in `ls /usr/lib/postgresql/ 2>/dev/null`; do
+	if [ -x /usr/lib/postgresql/$v/bin/pg_ctl ] && [ ! -x /etc/init.d/postgresql-$v ]; then
+            versions+=($v)
+	fi
+    done
+    if [[ ${#versions[*]} == "0" ]]; then 
+	echo "E: Missing postgresql installation. Aborting."
+	exit
     fi
-done
-if [[ ${#versions[*]} == "0" ]]; then 
-    echo "E: Missing postgresql installation. Aborting."
-    exit
-fi
-if [[ ${#versions[*]} != "1" ]]; then 
-    echo "E: Too many postgresql versions installed. Aborting."
-    exit
-fi
-pgver=${versions[0]}
+    if [[ ${#versions[*]} != "1" ]]; then 
+	echo "E: Too many postgresql versions installed. Aborting."
+	exit
+    fi
+    pgver=${versions[0]}
+}
 
-LOCKFILE=/var/run/sfa-start.py
-# </jordan>
+####################
+if [ -f /etc/redhat-release ] ; then
+    # source function library
+    . /etc/init.d/functions
+    PGDATA=/var/lib/pgsql/data/
+    PGWATCH=postmaster
+    PGLOCK=/var/lock/subsys/postgresql
+    SFALOCK=/var/lock/subsys/sfa-start.pid
+elif [ -f /etc/debian_version ] ; then
+    debian_get_postgresql_versions
+    PGDATA=/etc/postgresql/$pgver/main/
+    PGWATCH=postgres
+    PGLOCK=/var/run/postgresql/$pgver-main.pid
+    SFALOCK=/var/run/sfa-start.pid
+else
+    echo "initscript can only handle redhat/fedora or debian/ubuntu systems"
+    exit 1
+fi
 
-# Default locations
-PGDATA=/etc/postgresql/$pgver/main/
+
 postgresql_conf=$PGDATA/postgresql.conf
 pghba_conf=$PGDATA/pg_hba.conf
 postgresql_sysconfig=/etc/sysconfig/pgsql
@@ -67,7 +80,7 @@ check ()
 function postgresql_check () {
 
     # wait until postmaster is up and running - or 10s max
-    if status postgres >& /dev/null && [ -f /var/run/postgresql/$pgver-main.pid ] ; then
+    if status $PGWATCH >& /dev/null && [ -f $PGLOCK ] ; then
 	# The only way we can be sure is if we can access it
 	for i in $(seq 1 10) ; do
 	    # Must do this as the postgres user initially (before we
@@ -299,16 +312,18 @@ function start() {
     [ "$SFA_FLASHPOLICY_ENABLED" == 1 ] && \
         action "Flash Policy Server" daemon /usr/bin/sfa_flashpolicy.py --file="$SFA_FLASHPOLICY_CONFIG_FILE" --port=$SFA_FLASHPOLICY_PORT -d
 
-    touch $LOCKFILE
+    touch $SFALOCK
 
 }
 
 function stop() {
     action $"Shutting down SFA" killproc sfa-start.py
+# a possible alternative reads; esp. as we remove lock manually below
+#    echo $"Shutting down SFA" ; pkill '^sfa-start'
 
     db_stop
 
-    rm -f $LOCKFILE
+    rm -f $SFALOCK
 }
 
 
@@ -318,13 +333,16 @@ case "$1" in
     reload) reload force ;;
     restart) stop; start ;;
     condrestart)
-	if [ -f $LOCKFILE ]; then
+	if [ -f $SFALOCK ]; then
             stop
             start
 	fi
 	;;
     status)
 	status sfa-start.py
+# possible alternative for debian
+#	pids=$(pgrep '^sfa-start'); [ -n "$pids" ] && ps $pids
+
 	RETVAL=$?
 	;;
     dbdump)
