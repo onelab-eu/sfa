@@ -36,6 +36,13 @@ class Auth:
         self.trusted_cert_file_list = TrustedRoots(self.config.get_trustedroots_dir()).get_file_list()
 
     def checkCredentials(self, creds, operation, xrns=[], check_sliver_callback=None):
+        # if xrns are specified they cannot be None or empty string
+        if xrns:
+            for xrn in xrns:
+                if not xrn:
+                    raise BadArgs("Invalid urn or hrn: %s" % hrn)
+
+        
         if not isinstance(xrns, list):
             xrns = [xrns]
 
@@ -54,10 +61,6 @@ class Auth:
         if not hrns: hrns = [None]
         for cred in creds:
             for hrn in hrns:
-                # if an hrn is specified it cannot be None or empty string
-                if not hrn:
-                    raise BadArgs("Invalid urn or hrn: %s" % hrn)
-                    
                 try:
                     self.check(cred, operation, hrn)
                     valid.append(cred)
