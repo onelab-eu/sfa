@@ -77,11 +77,11 @@ Summary: the SFA layer around MyPLC
 Group: Applications/System
 Requires: sfa
 
-%package cm
-Summary: the SFA layer around MyPLC NodeManager
-Group: Applications/System
-Requires: sfa
-Requires: pyOpenSSL >= 0.6
+#%package cm
+#Summary: the SFA layer around MyPLC NodeManager
+#Group: Applications/System
+#Requires: sfa
+#Requires: pyOpenSSL >= 0.6
 
 %package federica
 Summary: the SFA layer around Federica
@@ -127,9 +127,9 @@ sfi.py, together with other utilities.
 This package implements the SFA interface which serves as a layer
 between the existing PlanetLab interfaces and the SFA API.
 
-%description cm
-This package implements the SFA interface which serves as a layer
-between the existing PlanetLab NodeManager interfaces and the SFA API.
+#%description cm
+#This package implements the SFA interface which serves as a layer
+#between the existing PlanetLab NodeManager interfaces and the SFA API.
 
 %description federica
 The SFA driver for FEDERICA.
@@ -216,12 +216,12 @@ rm -rf $RPM_BUILD_ROOT
 /etc/sfa/xml.xsd
 /etc/sfa/protogeni-rspec-common.xsd
 /etc/sfa/topology
-%{_bindir}/gen-sfa-cm-config.py*
+#%{_bindir}/gen-sfa-cm-config.py*
 
-%files cm
-/etc/init.d/sfa-cm
-%{_bindir}/sfa_component_setup.py*
-# cron jobs here 
+#%files cm
+#/etc/init.d/sfa-cm
+#%{_bindir}/sfa_component_setup.py*
+## cron jobs here 
 
 %files federica
 %{python_sitelib}/sfa/federica
@@ -256,18 +256,18 @@ fi
 %postun
 [ "$1" -ge "1" ] && { service sfa dbdump ; service sfa restart ; }
 
-### sfa-cm installs the 'sfa-cm' service
-%post cm
-chkconfig --add sfa-cm
-
-%preun cm
-if [ "$1" = 0 ] ; then
-   /sbin/service sfa-cm stop || :
-   /sbin/chkconfig --del sfa-cm || :
-fi
-
-%postun cm
-[ "$1" -ge "1" ] && service sfa-cm restart || :
+#### sfa-cm installs the 'sfa-cm' service
+#%post cm
+#chkconfig --add sfa-cm
+#
+#%preun cm
+#if [ "$1" = 0 ] ; then
+#   /sbin/service sfa-cm stop || :
+#   /sbin/chkconfig --del sfa-cm || :
+#fi
+#
+#%postun cm
+#[ "$1" -ge "1" ] && service sfa-cm restart || :
 
 %changelog
 * Sun Dec 16 2012 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-2.1-22

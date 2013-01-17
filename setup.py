@@ -13,7 +13,7 @@ scripts = glob("clientbin/*.py") + \
     [ 
     'config/sfa-config-tty',
     'config/sfa-config',
-    'config/gen-sfa-cm-config.py',
+#    'config/gen-sfa-cm-config.py',
     'sfa/server/sfa-start.py', 
     'sfa/server/sfa_component_setup.py', 
     'sfatables/sfatables',
@@ -46,7 +46,9 @@ packages = [
     'sfatables/processors',
     ]
 
-initscripts = [ 'sfa', 'sfa-cm' ]
+initscripts = [ 'sfa', 
+#                'sfa-cm',
+                ]
 
 data_files = [ ('/etc/sfa/', [ 'config/aggregates.xml',
                               'config/registries.xml',
