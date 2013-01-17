@@ -37,6 +37,7 @@ if [ -f /etc/redhat-release ] ; then
     PGLOCK=/var/lock/subsys/postgresql
     SFALOCK=/var/lock/subsys/sfa-start.pid
 elif [ -f /etc/debian_version ] ; then
+    . /etc/init.d/funcfions.sfa
     debian_get_postgresql_versions
     PGDATA=/etc/postgresql/$pgver/main/
     PGWATCH=postgres

@@ -49,7 +49,7 @@ packages = [
     ]
 
 # need to do something about functions
-initscripts = [ 'functions', 'sfa', 'sfa-cm' ]
+initscripts = [ 'sfa', 'sfa-cm', 'functions.sfa' ]
 
 data_files = [ ('/etc/sfa/', [ 'config/aggregates.xml',
                               'config/registries.xml',
