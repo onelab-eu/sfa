@@ -696,6 +696,12 @@ class Credential(object):
     def decode(self):
         if not self.xml:
             return
+
+        doc = None
+        try:
+            doc = parseString(self.xml)
+        except ExpatError,e:
+            raise CredentialNotVerifiable("Malformed credential")
         doc = parseString(self.xml)
         sigs = []
         signed_cred = doc.getElementsByTagName("signed-credential")

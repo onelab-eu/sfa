@@ -329,7 +329,7 @@ class InvalidXML(SfaFault):
     def __init__(self, value, extra = None):
         self.value = value
         faultString = "Invalid XML Document: %(value)s" % locals()
-        SfaFault.__init__(self, GENICODE.ERROR, faultString, extra)
+        SfaFault.__init__(self, GENICODE.BADARGS, faultString, extra)
     def __str__(self):
         return repr(self.value)
 
@@ -341,10 +341,13 @@ class AccountNotEnabled(SfaFault):
         return repr(self.value)
 
 class CredentialNotVerifiable(SfaFault):
-    def __init__(self, value, extra = None):
+    def __init__(self, value=None, extra = None):
         self.value = value
-        faultString = "Unable to verify credential: %(value)s, " %locals()
-        SfaFault.__init__(self, GENICODE.ERROR, faultString, extra)
+        faultString = "Unable to verify credential" %locals()
+        if value:
+            faultString += ": %s" % value
+        faultString += ", " 
+        SfaFault.__init__(self, GENICODE.BADARGS, faultString, extra)
     def __str__(self):
         return repr(self.value)
 
