@@ -3,9 +3,62 @@ Maintainer: Thierry Parmentelat <Thierry.Parmentelat@inria.fr>
 Section: misc
 Priority: optional
 Standards-Version: 3.9.2
-Build-Depends: debhelper (>=7.0.50~), debconf, dpatch
+Build-Depends: devscripts, debhelper (>=7.0.50~), debconf, dpatch
 
-Package: sfa
+Package: sfa-common
 Architecture: any
 Depends: python-openssl, python-m2crypto, python-dateutil
 Description: Slice Facility Architecture, generic implementation derived from PlanetLab
+
+Package: sfa-flashpolicy
+Architecture: any
+Depends: sfa-common
+Description: SFA support for flash clients
+
+Package: sfa-client
+Architecture: any
+Depends: sfa-common
+Depends: pyOpenSSL >= 0.7
+Description: sfi, the SFA experimenter-side CLI
+
+Package: sfa-plc
+Architecture: any
+Depends: sfa-common
+Description: the SFA layer around MyPLC
+
+Package: sfa-cm
+Architecture: any
+Depends: sfa-common
+Depends: pyOpenSSL >= 0.6
+Description: the SFA layer around MyPLC NodeManager
+
+Package: sfa-federica
+Architecture: any
+Depends: sfa-common
+Description: the SFA layer around Federica
+
+Package: sfa-nitos
+Architecture: any
+Depends: sfa-common
+Description: the SFA layer around NITOS
+
+Package: sfa-dummy
+Architecture: any
+Depends: sfa-common
+Description: the SFA layer around a Dummy Testbed 
+
+Package: sfa-sfatables
+Architecture: any
+Depends: sfa-common
+Description: sfatables policy tool for SFA
+
+Package: sfa-xmlbuilder
+Architecture: any
+Provides: python-xmlbuilder
+Description: third-party xmlbuilder tool
+
+Package: sfa-tests
+Architecture: any
+Depends: sfa-common
+Description: unit tests suite for SFA
+

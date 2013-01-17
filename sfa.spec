@@ -67,7 +67,7 @@ Group: Applications/System
 Requires: sfa
 
 %package client
-Summary: the SFA experimenter-side CLI
+Summary: sfi, the SFA experimenter-side CLI
 Group: Applications/System
 Requires: sfa
 Requires: pyOpenSSL >= 0.7
