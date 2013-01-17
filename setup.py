@@ -15,9 +15,9 @@ scripts = glob("clientbin/*.py") + \
     [ 
     'config/sfa-config-tty',
     'config/sfa-config',
-    'config/gen-sfa-cm-config.py',
+#    'config/gen-sfa-cm-config.py',
     'sfa/server/sfa-start.py', 
-    'sfa/server/sfa_component_setup.py', 
+#    'sfa/server/sfa_component_setup.py', 
     'sfatables/sfatables',
     'keyconvert/keyconvert.py',
     'flashpolicy/sfa_flashpolicy.py',
@@ -48,8 +48,9 @@ packages = [
     'sfatables/processors',
     ]
 
-# need to do something about functions
-initscripts = [ 'sfa', 'sfa-cm', 'functions.sfa' ]
+initscripts = [ 'sfa', 
+                'functions.sfa',
+                ]
 
 data_files = [ ('/etc/sfa/', [ 'config/aggregates.xml',
                               'config/registries.xml',

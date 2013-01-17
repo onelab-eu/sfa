@@ -124,7 +124,7 @@ class PlDriver (Driver):
                 self.shell.AddPersonKey(pointer, {'key_type' : 'ssh', 'key' : pub_key})
 
         elif type == 'node':
-            login_base = PlXrn(xrn=sfa_record['authority'],type='node').pl_login_base()
+            login_base = PlXrn(xrn=sfa_record['authority'],type='authority').pl_login_base()
             nodes = self.shell.GetNodes([pl_record['hostname']])
             if not nodes:
                 pointer = self.shell.AddNode(login_base, pl_record)
