@@ -71,10 +71,7 @@ class Auth:
             check_sliver_callback(valid, sliver_xrns)
                 
         if not len(valid):
-            msg = "Valid credential not found for method: %s" % operation
-            if xrns:
-                msg += " target: %s" % xrns 
-            raise Forbidden(msg)
+            raise Forbidden("Invalid credential")
         
         return valid
         
