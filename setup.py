@@ -15,7 +15,7 @@ scripts = glob("clientbin/*.py") + \
     'config/sfa-config',
 #    'config/gen-sfa-cm-config.py',
     'sfa/server/sfa-start.py', 
-    'sfa/server/sfa_component_setup.py', 
+#    'sfa/server/sfa_component_setup.py', 
     'sfatables/sfatables',
     'keyconvert/keyconvert.py',
     'flashpolicy/sfa_flashpolicy.py',
