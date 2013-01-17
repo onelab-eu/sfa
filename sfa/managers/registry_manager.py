@@ -400,12 +400,16 @@ class RegistryManager:
         # anyway the driver should receive an object 
         # (and then extract __dict__ itself if needed)
         print "DO NOT REMOVE ME before driver.update, record=%s"%record
-        (pointer, new_key_pointer) = self.driver.update (record.__dict__, new_record.__dict__, hrn, new_key)
-        if new_key and new_key_pointer:    
+        new_key_pointer = -1
+        try:
+           (pointer, new_key_pointer) = self.driver.update (record.__dict__, new_record.__dict__, hrn, new_key)
+        except:
+           pass
+        if new_key and new_key_pointer:
             record.reg_keys=[ RegKey (new_key, new_key_pointer)]
             record.gid = gid
 
-        dbsession.commit();
+        dbsession.commit()
         # update membership for researchers, pis, owners, operators
         self.update_driver_relations (record, new_record)
         
