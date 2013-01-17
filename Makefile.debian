@@ -15,7 +15,7 @@ debian.source: force
 	rsync -a $(TARBALL) $(DEBIAN_TARBALL)
 
 debian.package:
-	debuild -uc -us --source-option=--include-binaries --source-option=-isession
+	debuild -uc -us -b 
 
 debian.clean:
 	$(MAKE) -f debian/rules clean

@@ -3,7 +3,7 @@
 # 
 # overwritten by the specfile
 DESTDIR="/"
-
+PREFIX=/usr
 ##########
 all: python wsdl 
 
@@ -29,12 +29,12 @@ sfa/util/version.py: sfa/util/version.py.in
 	sed -e "s,@VERSIONTAG@,$(VERSIONTAG),g" -e "s,@SCMURL@,$(SCMURL),g" sfa/util/version.py.in > $@
 
 xmlbuilder-install:
-	cd xmlbuilder-0.9 && python setup.py install --root=$(DESTDIR) && cd -
+	cd xmlbuilder-0.9 && python setup.py install --prefix=$(PREFIX) --root=$(DESTDIR) && cd -
 	rm -rf $(DESTDIR)/usr/lib*/python*/site-packages/*egg-info
 
 # postinstall steps - various cleanups and tweaks for a nicer rpm
 python-install:
-	python setup.py install --root=$(DESTDIR)	
+	python setup.py install --prefix=$(PREFIX) --root=$(DESTDIR)
 	chmod 444 $(DESTDIR)/etc/sfa/default_config.xml
 	rm -rf $(DESTDIR)/usr/lib*/python*/site-packages/*egg-info
 	rm -rf $(DESTDIR)/usr/lib*/python*/site-packages/sfa/storage/migrations
