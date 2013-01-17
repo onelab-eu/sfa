@@ -4,7 +4,8 @@
 import sys
 
 from sfa.util.faults import InsufficientRights, MissingCallerGID, MissingTrustedRoots, PermissionError, \
-    BadRequestHash, ConnectionKeyGIDMismatch, SfaPermissionDenied, CredentialNotVerifiable, Forbidden
+    BadRequestHash, ConnectionKeyGIDMismatch, SfaPermissionDenied, CredentialNotVerifiable, Forbidden,
+    BadArgs
 from sfa.util.sfalogging import logger
 from sfa.util.config import Config
 from sfa.util.xrn import Xrn, get_authority
@@ -53,6 +54,10 @@ class Auth:
         if not hrns: hrns = [None]
         for cred in creds:
             for hrn in hrns:
+                # if an hrn is specified it cannot be None or empty string
+                if not hrn:
+                    raise BadArgs("Invalid urn or hrn: %s" % hrn)
+                    
                 try:
                     self.check(cred, operation, hrn)
                     valid.append(cred)
