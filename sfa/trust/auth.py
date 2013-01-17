@@ -40,7 +40,7 @@ class Auth:
         if xrns:
             for xrn in xrns:
                 if not xrn:
-                    raise BadArgs("Invalid urn or hrn: %s" % hrn)
+                    raise BadArgs("Invalid urn or hrn")
 
         
         if not isinstance(xrns, list):

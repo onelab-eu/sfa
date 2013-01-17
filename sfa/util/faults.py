@@ -35,12 +35,12 @@ class SfaFault(xmlrpclib.Fault):
 
 class Forbidden(SfaFault):
     def __init__(self,  extra = None):
-        faultString = "FORBIDDEN:" 
+        faultString = "FORBIDDEN" 
         SfaFault.__init__(self, GENICODE.FORBIDDEN, faultString, extra)   
 
 class BadArgs(SfaFault):
     def __init__(self,  extra = None):
-        faultString = "BADARGS:"
+        faultString = "BADARGS"
         SfaFault.__init__(self, GENICODE.BADARGS, faultString, extra)
 
 
