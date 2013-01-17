@@ -7,4 +7,3 @@ etc/sfa/sig.xsd
 etc/sfa/xml.xsd
 etc/sfa/protogeni-rspec-common.xsd
 etc/sfa/topology
-usr/bin/gen-sfa-cm-config.py*
