@@ -7,20 +7,14 @@ Build-Depends: devscripts, debhelper (>=7.0.50~), debconf, dpatch
 
 Package: sfa-common
 Architecture: any
-Depends: python (>= 2.5), python-openssl (>= 0.7), python-m2crypto, python-dateutil, python-lxml, python-libxslt1, python-setuptools, python-zsi, postgresql (>= 8.2)
-# further depends from fedora - no obvious match on debian for now
-###tmp### #Requires: xmlsec1-openssl-devel  (libxmlsec1-dev or libxmlsec1-openssl or ??)
-###tmp### #Requires: util-linux-ng
-###tmp### # for the registry
-###tmp### #Requires: postgresql >= 8.2, postgresql-server >= 8.2
-###tmp### # xxx here 
-###tmp### Requires: postgresql-python
-###tmp### Requires: python-psycopg2
-###tmp### # f8=0.4 - f12=0.5 f14=0.6 f16=0.7
-###tmp### Requires: python-sqlalchemy
-###tmp### Requires: python-migrate
-###tmp### # the eucalyptus aggregate uses this module
-###tmp### Requires: python-xmlbuilder
+Depends: python (>= 2.5), python-openssl (>= 0.7), python-m2crypto, python-dateutil, python-lxml, python-libxslt1, python-setuptools, python-zsi, postgresql (>= 8.2), python-sqlalchemy, python-migrate
+#further depends from fedora - no obvious match on debian for now
+#Requires: xmlsec1-openssl-devel  (libxmlsec1-dev or libxmlsec1-openssl or ??)
+#Requires: util-linux-ng
+#Requires: postgresql-python
+#Requires: python-psycopg2
+# the eucalyptus aggregate uses this module
+#Requires: python-xmlbuilder
 Description: Slice Facility Architecture, generic implementation derived from PlanetLab
 
 Package: sfa-flashpolicy
