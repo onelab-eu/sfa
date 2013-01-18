@@ -48,9 +48,8 @@ packages = [
     'sfatables/processors',
     ]
 
-initscripts = [ 'sfa', 
-                'functions.sfa',
-                ]
+initscripts = [ 'sfa' ]
+if not os.isfile('/etc/redhat-release'): initscripts.append('functions.sfa')
 
 data_files = [ ('/etc/sfa/', [ 'config/aggregates.xml',
                               'config/registries.xml',
