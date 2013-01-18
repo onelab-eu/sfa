@@ -22,7 +22,6 @@ class VersionManager:
             for attr_name in dir(module):
                 attr = getattr(module, attr_name)
                 if hasattr(attr, 'version') and hasattr(attr, 'enabled') and attr.enabled == True:
-                    print filename, module, attr 
                     self.versions.append(attr())
 
     def _get_version(self, type, version_num=None, content_type=None):
