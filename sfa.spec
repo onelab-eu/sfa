@@ -1,6 +1,6 @@
 %define name sfa
 %define version 2.1
-%define taglevel 22
+%define taglevel 23
 
 %define release %{taglevel}%{?pldistro:.%{pldistro}}%{?date:.%{date}}
 %global python_sitearch	%( python -c "from distutils.sysconfig import get_python_lib; print get_python_lib(1)" )
@@ -270,6 +270,14 @@ fi
 #[ "$1" -ge "1" ] && service sfa-cm restart || :
 
 %changelog
+* Sun Jan 20 2013 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-2.1-23
+- minor fix in registry
+- fix for sfi gid, use clientbootstrap
+- support for debians and ubuntus (packaging and initscript)
+- deprecated cm package altogether
+- pl flavour, minor fix for tags
+- various fixes for the dummy flavour
+
 * Sun Dec 16 2012 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-2.1-22
 - suited (and required) to run with plcapi-5.1-5 b/c of changes to AddPerson
 - tweaks in nitos importer
