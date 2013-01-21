@@ -136,10 +136,42 @@ class PlAggregate:
             filter['name'] = list(names)
         if slice_ids:
             filter['slice_id'] = list(slice_ids)
+        # get slices
         slices = self.driver.shell.GetSlices(filter)
         if not slices:
             return []
-        slice = slices[0]
+        slice = slices[0]        
+
+        # get sliver users
+        persons = []
+        person_ids = []
+        for slice in slices:
+            person_ids.extend(slice['person_ids'])
+        if person_ids:
+            persons = self.driver.shell.GetPersons(person_ids)
+                 
+        # get user keys
+        keys = {}
+        key_ids = []
+        for person in persons:
+            key_ids.extend(person['key_ids'])
+        
+        if key_ids:
+            key_list = self.driver.shell.GetKeys(key_ids)
+            for key in key_list:
+                keys[key['key_id']] = key  
+
+        # construct user key info
+        users = []
+        for person in persons:
+            name = person['email'][0:person['email'].index('@')]
+            user = {
+                'login': slice['name'], 
+                'user_urn': Xrn('%s.%s' % (self.driver.hrn, name), type='user').urn,
+                'keys': [keys[k_id]['key'] for k_id in person['key_ids'] if k_id in keys]
+            }
+            users.append(user)
+
         if node_ids:
             node_ids = [node_id for node_id in node_ids if node_id in slice['node_ids']]
             slice['node_ids'] = node_ids
@@ -152,6 +184,7 @@ class PlAggregate:
             sliver_hrn = '%s.%s-%s' % (self.driver.hrn, slice['slice_id'], node['node_id'])
             node['sliver_id'] = Xrn(sliver_hrn, type='sliver').urn
             node['urn'] = node['sliver_id'] 
+            node['services_user'] = users
             slivers.append(node)
         return slivers
 
@@ -220,8 +253,14 @@ class PlAggregate:
         rspec_node['slivers'] = [rspec_sliver]
 
         # slivers always provide the ssh service
-        login = Login({'authentication': 'ssh-keys', 'hostname': sliver['hostname'], 'port':'22', 'username': sliver['name']})
-        service = Services({'login': login})
+        login = Login({'authentication': 'ssh-keys', 
+                       'hostname': sliver['hostname'], 
+                       'port':'22', 
+                       'username': sliver['name'],
+                       'login': sliver['name']
+                      })
+        service = Services({'login': login,
+                            'services_user': sliver['services_user']})
         rspec_node['services'] = [service]    
         return rspec_node      
 

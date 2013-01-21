@@ -6,5 +6,6 @@ class Services(Element):
         'install',
         'execute',
         'login',
+        'services_user',
     ]
 

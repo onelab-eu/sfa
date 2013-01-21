@@ -5,5 +5,5 @@ class Login(Element):
         'authentication',
         'hostname',
         'port',
-        'username'
+        'username',
     ]
