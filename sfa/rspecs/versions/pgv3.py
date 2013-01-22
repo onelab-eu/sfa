@@ -20,7 +20,7 @@ class GENIv3Ad(GENIv3):
     enabled = True
     content_type = 'ad'
     schema = 'http://www.geni.net/resources/rspec/3/ad.xsd'
-    template = """<rspec type="advertisement" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://www.geni.net/resources/rspec/3" xmlns:plos="http://www.planet-lab.org/resources/sfa/ext/plos/1" xmlns:flack="http://www.protogeni.net/resources/rspec/ext/flack/1" xmlns:planetlab="http://www.planet-lab.org/resources/sfa/ext/planetlab/1" xmlns:opstate="http://www.geni.net/resources/rspec/ext/opstate/1" xsi:schemaLocation="http://www.geni.net/resources/rspec/3 http://www.geni.net/resources/rspec/3/ad.xsd http://www.planet-lab.org/resources/sfa/ext/planetlab/1 http://www.planet-lab.org/resources/sfa/ext/planetlab/1/planetlab.xsd http://www.planet-lab.org/resources/sfa/ext/plos/1 http://www.planet-lab.org/resources/sfa/ext/plos/1/plos.xsd http://www.geni.net/resources/rspec/ext/opstate/1 http://www.protogeni.net/resources/rspec/ext/opstate/1/ad.xsd">
+    template = """<rspec type="advertisement" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://www.geni.net/resources/rspec/3" xmlns:plos="http://www.planet-lab.org/resources/sfa/ext/plos/1" xmlns:flack="http://www.protogeni.net/resources/rspec/ext/flack/1" xmlns:planetlab="http://www.planet-lab.org/resources/sfa/ext/planetlab/1" xmlns:opstate="http://www.geni.net/resources/rspec/ext/opstate/1" xsi:schemaLocation="http://www.geni.net/resources/rspec/3 http://www.geni.net/resources/rspec/3/ad.xsd http://www.planet-lab.org/resources/sfa/ext/planetlab/1 http://www.planet-lab.org/resources/sfa/ext/planetlab/1/planetlab.xsd http://www.planet-lab.org/resources/sfa/ext/plos/1 http://www.planet-lab.org/resources/sfa/ext/plos/1/plos.xsd http://www.geni.net/resources/rspec/ext/opstate/1 http://www.geni.net/resources/rspec/ext/opstate/1/ad.xsd">
     <opstate:rspec_opstate aggregate_manager_id="urn:publicid:IDN+plc+authority+cm" start="geni_notready">
       <opstate:sliver_type name="plab-vserver" />
       <opstate:sliver_type name="plos-pc" />
@@ -30,13 +30,6 @@ class GENIv3Ad(GENIv3):
         </opstate:action>
         <opstate:description>VMs begin powered down or inactive. They
         must be explicitly booted before use.</opstate:description>
-      </opstate:state>
-      <opstate:state name="geni_configuring">
-        <opstate:wait type="geni_success" next="geni_ready" />
-        <opstate:wait type="geni_failure" next="geni_failed" />
-        <opstate:description>Booting takes a significant amount of time, so it
-        happens asynchronously while the node is in this
-        state.</opstate:description>
       </opstate:state>
       <opstate:state name="geni_ready">
         <opstate:description>The node is up and ready to use.</opstate:description>
