@@ -244,7 +244,7 @@ function db_start () {
 
     ######## Start up the server
     # not too nice, but.. when co-located with myplc we'll let it start/stop postgresql
-    if ! rpm -q myplc >& /dev/null ; then
+    if [ ! -f /etc/myplc-release ] ; then
 	echo STARTING...
 	service postgresql start >& /dev/null
     fi
