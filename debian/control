@@ -3,19 +3,17 @@ Maintainer: Thierry Parmentelat <Thierry.Parmentelat@inria.fr>
 Section: misc
 Priority: optional
 Standards-Version: 3.9.2
-Build-Depends: devscripts, debhelper (>=7.0.50~), debconf, dpatch
+Build-Depends: devscripts, debhelper (>=7.0.50~), debconf, dpatch, python-setuptools, make
+
+Package: sfa
+Architecture: any
+Depends: postgresql (>= 8.2), python-psycopg2, python-sqlalchemy, python-migrate, uuid-runtime
+Description: Server-side for SFA, generic implementation derived from PlanetLab
 
 Package: sfa-common
 Architecture: any
-Depends: python (>= 2.5), python-openssl (>= 0.7), python-m2crypto, python-dateutil, python-lxml, python-libxslt1, python-setuptools, python-zsi, postgresql (>= 8.2), python-psycopg2, python-sqlalchemy, python-migrate, uuid-runtime
-#further depends from fedora - no obvious match on debian for now
-#Requires: xmlsec1-openssl-devel  (libxmlsec1-dev or libxmlsec1-openssl or ??)
-#Requires: util-linux-ng
-#Requires: postgresql-python
-#Requires: python-psycopg2
-# the eucalyptus aggregate uses this module
-#Requires: python-xmlbuilder
-Description: Slice Facility Architecture, generic implementation derived from PlanetLab
+Depends: python (>= 2.7), python-openssl (>= 0.7), python-m2crypto, python-dateutil, python-lxml, python-libxslt1, python-zsi
+Description: Python libraries for SFA, generic implementation derived from PlanetLab
 
 Package: sfa-flashpolicy
 Architecture: any
