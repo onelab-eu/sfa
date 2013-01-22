@@ -159,6 +159,8 @@ BINS =	./config/sfa-config-tty ./config/gen-sfa-cm-config.py \
 
 synclib: synccheck
 	+$(RSYNC) --relative ./sfa/ --exclude migrations $(SSHURL)/usr/lib\*/python2.\*/site-packages/
+synclibdeb: synccheck
+	+$(RSYNC) --relative ./sfa/ --exclude migrations $(SSHURL)/usr/share/pyshared/
 syncbin: synccheck
 	+$(RSYNC)  $(BINS) $(SSHURL)/usr/bin/
 syncinit: synccheck
@@ -176,6 +178,7 @@ syncmig:
 
 # full-fledged
 sync: synclib syncbin syncinit syncconfig syncrestart
+syncdeb: synclibdeb syncbin syncinit syncconfig syncrestart
 # 99% of the time this is enough
 syncfast: synclib syncrestart
 
