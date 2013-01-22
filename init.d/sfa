@@ -1,11 +1,12 @@
 #!/bin/bash
 #
-# sfa   Wraps PLCAPI into the SFA compliant API
+# sfa
+# Provides a generic SFA wrapper based on the initial PlanetLab Implementation
 #
 # hopefully right after plc
 # chkconfig: 2345 61 39
 #
-# description:   Wraps PLCAPI into the SFA compliant API
+# description:   An implementation  of the SFA Architecture
 #
 
 ####################
@@ -113,7 +114,6 @@ function reload () {
 
     # Regenerate the main configuration file from default values
     # overlaid with site-specific and current values.
-    # Thierry -- 2007-07-05 : values in plc_config.xml are *not* taken into account here
     files=( $sfa_default_config $sfa_local_config )
     for file in "${files[@]}" ; do
 	if [ -n "$force" -o $file -nt $sfa_whole_config ] ; then
@@ -141,10 +141,6 @@ function reload () {
     if [ -n "$force" -o $sfa_whole_config -nt /etc/sfa/sfa_config.sh ] ; then
 	sfa-config --shell $sfa_default_config $sfa_local_config > /etc/sfa/sfa_config.sh
     fi
-#    if [ -n "$force" -o $sfa_whole_config -nt /etc/sfa/php/sfa_config.php ] ; then
-#	mkdir -p /etc/sfa/php
-#	plc-config --php  $sfa_whole_config >/etc/sfa/php/sfa_config.php
-#    fi
 
     # [re]generate the sfa_component_config
     # this is a server-side thing but produces a file that somehow needs to be pushed
