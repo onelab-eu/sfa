@@ -99,8 +99,13 @@ Summary: unit tests suite for SFA
 Group: Applications/System
 Requires: sfa-common
 
-%description
-This package provides the python libraries for the PlanetLab implementation of SFA
+%description 
+This package provides the registry, aggregate manager and slice
+managers for SFA.  In most cases it is advisable to install additional
+package for a given testbed, like e.g. sfa-plc for a PlanetLab tesbed.
+
+%description common
+This package contains the python libraries for SFA both client and server-side.
 
 %description client
 This package provides the client side of the SFA API, in particular
