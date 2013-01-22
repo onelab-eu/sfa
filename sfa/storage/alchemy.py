@@ -31,6 +31,7 @@ class Alchemy:
             (config.SFA_DB_USER,config.SFA_DB_PASSWORD,config.SFA_DB_HOST,config.SFA_DB_PORT,dbname)
         for url in [ unix_url, tcp_url ] :
             try:
+                logger.debug("Trying db URL %s"%url)
                 self.engine = create_engine (url)
                 self.check()
                 self.url=url
@@ -38,10 +39,7 @@ class Alchemy:
             except:
                 pass
         self.engine=None
-        logger.warning("Could not connect to database: db=%s, user=%s, host=%s, port=%s" % \
-                           (dbname, config.SFA_DB_USER, config.SFA_DB_HOST, config.SFA_DB_PORT))
-        logger.debug("Using password=%s"%config.SFA_DB_PASSWORD)
-        raise Exception,"Could not connect to database %s as %s"%(dbname,config.SFA_DB_USER)
+        raise Exception,"Could not connect to database %s as %s with psycopg2"%(dbname,config.SFA_DB_USER)
 
 
     # expects boolean True: debug is ON or False: debug is OFF
