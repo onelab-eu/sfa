@@ -6,8 +6,14 @@
 # hopefully right after plc
 # chkconfig: 2345 61 39
 #
-# description:   An implementation  of the SFA Architecture
-#
+### BEGIN INIT INFO
+# Provides:		sfa
+# Required-Start:	postgresql 
+# Required-Stop:	postgresql 
+# Default-Start:	2 3 4 5
+# Default-Stop:		0 1 6
+# Short-Description:	An implementation  of the SFA Architecture
+### END INIT INFO
 
 ####################
 # borrowed from postgresql
