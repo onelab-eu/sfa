@@ -160,7 +160,7 @@ function db_start () {
     # only if enabled
     [ "$SFA_DB_ENABLED" == 1 -o "$SFA_DB_ENABLED" == True ] || return
 
-    if ! rpm -q myplc >& /dev/null; then
+    if [ ! -f /etc/myplc-release ] ; then
 
 	######## standalone deployment - no colocated myplc
 
@@ -281,7 +281,7 @@ function db_stop () {
     [ "$SFA_DB_ENABLED" == 1 -o "$SFA_DB_ENABLED" == True ] || return
 
     # not too nice, but.. when co-located with myplc we'll let it start/stop postgresql
-    if ! rpm -q myplc >& /dev/null ; then
+    if [ ! -f /etc/myplc-release ] ; then
 	service postgresql stop >& /dev/null
 	check
 	MESSAGE=$"Stopping PostgreSQL server"
