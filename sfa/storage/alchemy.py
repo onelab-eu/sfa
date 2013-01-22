@@ -38,8 +38,11 @@ class Alchemy:
             except:
                 pass
         self.engine=None
-        raise Exception,"Could not connect to database"
-                
+        logger.warning("Could not connect to database: db=%s, user=%s, host=%s, port=%s" % \
+                           (dbname, config.SFA_DB_USER, config.SFA_DB_HOST, config.SFA_DB_PORT))
+        logger.debug("Using password=%s"%config.SFA_DB_PASSWORD)
+        raise Exception,"Could not connect to database %s as %s"%(dbname,config.SFA_DB_USER)
+
 
     # expects boolean True: debug is ON or False: debug is OFF
     def debug (self, echo):
