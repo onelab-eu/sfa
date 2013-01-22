@@ -266,7 +266,7 @@ function db_start () {
 	check
     fi
     check
-    # mention sfaadmin.py instead of just sfaadmin for people who do not install through rpm
+    # mention sfaadmin.py instead of just sfaadmin for safety
     sfaadmin.py reg sync_db
 
     MESSAGE=$"SFA: Checking for PostgreSQL server"
