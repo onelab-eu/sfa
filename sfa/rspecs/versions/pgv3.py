@@ -25,7 +25,7 @@ class GENIv3Ad(GENIv3):
       <opstate:sliver_type name="plab-vserver" />
       <opstate:sliver_type name="plos-pc" />
       <opstate:state name="geni_notready">
-        <opstate:action name="geni_start" next="geni_configuring">
+        <opstate:action name="geni_start" next="geni_ready">
           <opstate:description>Boot the node</opstate:description>
         </opstate:action>
         <opstate:description>VMs begin powered down or inactive. They
