@@ -1,6 +1,6 @@
 %define name sfa
 %define version 2.1
-%define taglevel 22
+%define taglevel 23
 
 %define release %{taglevel}%{?pldistro:.%{pldistro}}%{?date:.%{date}}
 %global python_sitearch	%( python -c "from distutils.sysconfig import get_python_lib; print get_python_lib(1)" )
@@ -21,23 +21,11 @@ Packager: PlanetLab Central <support@planet-lab.org>
 Distribution: PlanetLab %{plrelease}
 URL: %{SCMURL}
 
-Summary: the SFA python libraries
+Summary: Server-side for SFA, generic implementation derived from PlanetLab 
 Group: Applications/System
 BuildRequires: make
+BuildRequires: python-setuptools
 
-Requires: python >= 2.5
-Requires: pyOpenSSL >= 0.7
-Requires: m2crypto
-Requires: xmlsec1-openssl-devel
-Requires: libxslt-python
-Requires: python-ZSI
-# for uuidgen - used in db password generation
-# on f8 this actually comes with e2fsprogs, go figure
-Requires: util-linux-ng
-# xmlbuilder depends on lxml
-Requires: python-lxml
-Requires: python-setuptools
-Requires: python-dateutil
 # for the registry
 Requires: postgresql >= 8.2, postgresql-server >= 8.2
 Requires: postgresql-python
@@ -47,29 +35,28 @@ Requires: python-sqlalchemy
 Requires: python-migrate
 # the eucalyptus aggregate uses this module
 Requires: python-xmlbuilder
+# for uuidgen - used in db password generation
+# on f8 this actually comes with e2fsprogs, go figure
+Requires: util-linux-ng
+# and the SFA libraries of course
+Requires: sfa-common
  
-# python 2.5 has uuid module added, for python 2.4 we still need it.
-# we can't really check for if we can load uuid as a python module,
-# it'll be installed by "devel.pkgs". we have the epel repository so
-# python-uuid will be provided. but we can test for the python
-# version.
-# %define has_py24 %( python -c "import sys;sys.exit(sys.version_info[0:2] == (2,4))" 2> /dev/null; echo $? )
-# %if %has_py24
-#
-# this also didn't work very well. I'll just check for distroname - baris
-#%if %{distroname} == "centos5"
-#Requires: python-uuid
-#%endif
-
-%package flashpolicy
-Summary: SFA support for flash clients
+%package common
+Summary: Python libraries for SFA, generic implementation derived from PlanetLab
 Group: Applications/System
-Requires: sfa
+Requires: python >= 2.7
+Requires: pyOpenSSL >= 0.7
+Requires: m2crypto
+Requires: python-dateutil
+Requires: python-lxml
+Requires: libxslt-python
+Requires: python-ZSI
+Requires: xmlsec1-openssl-devel
 
 %package client
-Summary: the SFA experimenter-side CLI
+Summary: sfi, the SFA experimenter-side CLI
 Group: Applications/System
-Requires: sfa
+Requires: sfa-common
 Requires: pyOpenSSL >= 0.7
 
 %package plc
@@ -77,11 +64,10 @@ Summary: the SFA layer around MyPLC
 Group: Applications/System
 Requires: sfa
 
-%package cm
-Summary: the SFA layer around MyPLC NodeManager
+%package flashpolicy
+Summary: SFA support for flash clients
 Group: Applications/System
 Requires: sfa
-Requires: pyOpenSSL >= 0.6
 
 %package federica
 Summary: the SFA layer around Federica
@@ -111,13 +97,15 @@ Provides: python-xmlbuilder
 %package tests
 Summary: unit tests suite for SFA
 Group: Applications/System
-Requires: sfa
+Requires: sfa-common
 
-%description
-This package provides the python libraries for the PlanetLab implementation of SFA
+%description 
+This package provides the registry, aggregate manager and slice
+managers for SFA.  In most cases it is advisable to install additional
+package for a given testbed, like e.g. sfa-plc for a PlanetLab tesbed.
 
-%description flashpolicy
-This package provides support for adobe flash client applications.  
+%description common
+This package contains the python libraries for SFA both client and server-side.
 
 %description client
 This package provides the client side of the SFA API, in particular
@@ -127,9 +115,8 @@ sfi.py, together with other utilities.
 This package implements the SFA interface which serves as a layer
 between the existing PlanetLab interfaces and the SFA API.
 
-%description cm
-This package implements the SFA interface which serves as a layer
-between the existing PlanetLab NodeManager interfaces and the SFA API.
+%description flashpolicy
+This package provides support for adobe flash client applications.  
 
 %description federica
 The SFA driver for FEDERICA.
@@ -166,17 +153,6 @@ make VERSIONTAG="%{version}-%{taglevel}" SCMURL="%{SCMURL}" install DESTDIR="$RP
 rm -rf $RPM_BUILD_ROOT
 
 %files
-%{python_sitelib}/sfa/__init__.py*
-%{python_sitelib}/sfa/trust
-%{python_sitelib}/sfa/storage
-%{python_sitelib}/sfa/util
-%{python_sitelib}/sfa/server
-%{python_sitelib}/sfa/methods
-%{python_sitelib}/sfa/generic
-%{python_sitelib}/sfa/managers
-%{python_sitelib}/sfa/importer
-%{python_sitelib}/sfa/rspecs
-%{python_sitelib}/sfa/client
 /etc/init.d/sfa
 %{_bindir}/sfa-start.py*
 %{_bindir}/sfaadmin.py*
@@ -191,9 +167,18 @@ rm -rf $RPM_BUILD_ROOT
 /usr/share/sfa/examples
 /var/www/html/wsdl/*.wsdl
 
-%files flashpolicy
-%{_bindir}/sfa_flashpolicy.py*
-/etc/sfa/sfa_flashpolicy_config.xml
+%files common
+%{python_sitelib}/sfa/__init__.py*
+%{python_sitelib}/sfa/trust
+%{python_sitelib}/sfa/storage
+%{python_sitelib}/sfa/util
+%{python_sitelib}/sfa/server
+%{python_sitelib}/sfa/methods
+%{python_sitelib}/sfa/generic
+%{python_sitelib}/sfa/managers
+%{python_sitelib}/sfa/importer
+%{python_sitelib}/sfa/rspecs
+%{python_sitelib}/sfa/client
 
 %files client
 %config (noreplace) /etc/sfa/sfi_config
@@ -216,12 +201,10 @@ rm -rf $RPM_BUILD_ROOT
 /etc/sfa/xml.xsd
 /etc/sfa/protogeni-rspec-common.xsd
 /etc/sfa/topology
-%{_bindir}/gen-sfa-cm-config.py*
 
-%files cm
-/etc/init.d/sfa-cm
-%{_bindir}/sfa_component_setup.py*
-# cron jobs here 
+%files flashpolicy
+%{_bindir}/sfa_flashpolicy.py*
+/etc/sfa/sfa_flashpolicy_config.xml
 
 %files federica
 %{python_sitelib}/sfa/federica
@@ -256,20 +239,28 @@ fi
 %postun
 [ "$1" -ge "1" ] && { service sfa dbdump ; service sfa restart ; }
 
-### sfa-cm installs the 'sfa-cm' service
-%post cm
-chkconfig --add sfa-cm
-
-%preun cm
-if [ "$1" = 0 ] ; then
-   /sbin/service sfa-cm stop || :
-   /sbin/chkconfig --del sfa-cm || :
-fi
-
-%postun cm
-[ "$1" -ge "1" ] && service sfa-cm restart || :
+#### sfa-cm installs the 'sfa-cm' service
+#%post cm
+#chkconfig --add sfa-cm
+#
+#%preun cm
+#if [ "$1" = 0 ] ; then
+#   /sbin/service sfa-cm stop || :
+#   /sbin/chkconfig --del sfa-cm || :
+#fi
+#
+#%postun cm
+#[ "$1" -ge "1" ] && service sfa-cm restart || :
 
 %changelog
+* Sun Jan 20 2013 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-2.1-23
+- minor fix in registry
+- fix for sfi gid, use clientbootstrap
+- support for debians and ubuntus (packaging and initscript)
+- deprecated cm package altogether
+- pl flavour, minor fix for tags
+- various fixes for the dummy flavour
+
 * Sun Dec 16 2012 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-2.1-22
 - suited (and required) to run with plcapi-5.1-5 b/c of changes to AddPerson
 - tweaks in nitos importer

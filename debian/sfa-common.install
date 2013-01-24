@@ -1,0 +1,11 @@
+usr/lib*/python*/site-packages/sfa/__init__.py*
+usr/lib*/python*/site-packages/sfa/trust
+usr/lib*/python*/site-packages/sfa/storage
+usr/lib*/python*/site-packages/sfa/util
+usr/lib*/python*/site-packages/sfa/server
+usr/lib*/python*/site-packages/sfa/methods
+usr/lib*/python*/site-packages/sfa/generic
+usr/lib*/python*/site-packages/sfa/managers
+usr/lib*/python*/site-packages/sfa/importer
+usr/lib*/python*/site-packages/sfa/rspecs
+usr/lib*/python*/site-packages/sfa/client
