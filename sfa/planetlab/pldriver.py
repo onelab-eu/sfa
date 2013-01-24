@@ -646,7 +646,7 @@ class PlDriver (Driver):
         # ensure slice record exists
         slice = slices.verify_slice(xrn.hrn, slice_record, peer, sfa_peer, expiration=expiration, options=options)
         # ensure person records exists
-        persons = slices.verify_persons(xrn.hrn, slice, users, peer, sfa_peer, options=options)
+        #persons = slices.verify_persons(xrn.hrn, slice, users, peer, sfa_peer, options=options)
         # ensure slice attributes exists
         slices.verify_slice_attributes(slice, requested_attributes, options=options)
        
@@ -674,14 +674,22 @@ class PlDriver (Driver):
         leases = slices.verify_slice_leases(slice, requested_leases, kept_leases, peer)
         # handle MyPLC peer association.
         # only used by plc and ple.
-        slices.handle_peer(site, slice, persons, peer)
+        slices.handle_peer(site, slice, None, peer)
         
         return aggregate.describe([xrn.get_urn()], version=rspec.version)
 
     def provision(self, urns, options={}):
-        # update sliver allocation states and set them to geni_provisioned
+        # update users
+        slices = PlSlices(self)
         aggregate = PlAggregate(self)
         slivers = aggregate.get_slivers(urns)
+        slice = slivers[0]
+        peer = slices.get_peer(slice['hrn'])
+        sfa_peer = slices.get_sfa_peer(slice['hrn'])
+        users = options.get('geni_users', [])
+        persons = slices.verify_persons(None, slice, users, peer, sfa_peer, options=options)
+        slices.handle_peer(None, None, persons, peer)
+        # update sliver allocation states and set them to geni_provisioned
         sliver_ids = [sliver['sliver_id'] for sliver in slivers]
         SliverAllocation.set_allocations(sliver_ids, 'geni_provisioned')
         version_manager = VersionManager()

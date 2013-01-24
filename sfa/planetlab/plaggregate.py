@@ -140,7 +140,8 @@ class PlAggregate:
         slices = self.driver.shell.GetSlices(filter)
         if not slices:
             return []
-        slice = slices[0]        
+        slice = slices[0]     
+        slice['hrn'] = PlXrn(auth=self.driver.hrn, slicename=slice['name']).hrn   
 
         # get sliver users
         persons = []
@@ -179,7 +180,7 @@ class PlAggregate:
         nodes_dict = self.get_slice_nodes(slice, options)
         slivers = []
         for node in nodes_dict.values():
-            node.update(slices[0]) 
+            node.update(slice) 
             node['tags'] = tags_dict[node['node_id']]
             sliver_hrn = '%s.%s-%s' % (self.driver.hrn, slice['slice_id'], node['node_id'])
             node['sliver_id'] = Xrn(sliver_hrn, type='sliver').urn

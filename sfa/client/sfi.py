@@ -1225,23 +1225,8 @@ or with an slice hrn, shows currently provisioned resources
         # rspec
         rspec_file = self.get_rspec_file(args[1])
         rspec = open(rspec_file).read()
-        # users
-        # need to pass along user keys to the aggregate.
-        # users = [
-        #  { urn: urn:publicid:IDN+emulab.net+user+alice
-        #    keys: [<ssh key A>, <ssh key B>]
-        #  }]
-        users = []
-        slice_records = self.registry().Resolve(slice_urn, [self.my_credential_string])
-        if slice_records and 'researcher' in slice_records[0] and slice_records[0]['researcher']!=[]:
-            slice_record = slice_records[0]
-            user_hrns = slice_record['researcher']
-            user_urns = [hrn_to_urn(hrn, 'user') for hrn in user_hrns]
-            user_records = self.registry().Resolve(user_urns, [self.my_credential_string])
-
         api_options = {}
         api_options ['call_id'] = unique_call_id()
-        api_options['geni_users'] = users
         result = server.Allocate(slice_urn, creds, rspec, api_options)
         value = ReturnValue.get_value(result)
         if self.options.raw:
@@ -1281,7 +1266,24 @@ or with an slice hrn, shows currently provisioned resources
         # set the requtested rspec version
         version_manager = VersionManager()
         rspec_version = version_manager._get_version('geni', '3.0').to_dict()
-        api_options['geni_rspec_version'] = rspec_version 
+        api_options['geni_rspec_version'] = rspec_version
+
+        # users
+        # need to pass along user keys to the aggregate.
+        # users = [
+        #  { urn: urn:publicid:IDN+emulab.net+user+alice
+        #    keys: [<ssh key A>, <ssh key B>]
+        #  }]
+        users = []
+        slice_records = self.registry().Resolve(slice_urn, [self.my_credential_string])
+        if slice_records and 'researcher' in slice_records[0] and slice_records[0]['researcher']!=[]:
+            slice_record = slice_records[0]
+            user_hrns = slice_record['researcher']
+            user_urns = [hrn_to_urn(hrn, 'user') for hrn in user_hrns]
+            user_records = self.registry().Resolve(user_urns, [self.my_credential_string])
+            users = pg_users_arg(user_records)
+        
+        api_options['geni_users'] = users
         result = server.Provision([slice_urn], creds, api_options)
         value = ReturnValue.get_value(result)
         if self.options.raw:
