@@ -34,6 +34,7 @@ packages = [
     'sfa/rspecs',
     'sfa/rspecs/elements',
     'sfa/rspecs/elements/versions',
+    'sfa/rspecs/elements/v3',
     'sfa/rspecs/versions',
     'sfa/client',
     'sfa/planetlab',
