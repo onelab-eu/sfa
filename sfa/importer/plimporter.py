@@ -362,9 +362,13 @@ class PlImporter:
                     except:
                         self.logger.log_exc("PlImporter: failed to import slice")
                 else:
+                    # update the pointer if it has changed
+                    if slice_id != slice_record.pointer:
+                        self.logger.info("updating record (slice) pointer")
+                        slice_record.pointer = slice_id
+                        dbsession.commit()             
                     # xxx update the record ...
-                    self.logger.warning ("Slice update not yet implemented")
-                    pass
+                    #self.logger.warning ("Slice update not yet implemented")
                 # record current users affiliated with the slice
                 slice_record.reg_researchers = \
                     [ self.locate_by_type_pointer ('user',user_id) for user_id in slice['person_ids'] ]
