@@ -9,13 +9,15 @@ from glob import glob
 import shutil
 from distutils.core import setup
 
+from sfa.util.version import version_tag
+
 scripts = glob("clientbin/*.py") + \
     [ 
     'config/sfa-config-tty',
     'config/sfa-config',
-    'config/gen-sfa-cm-config.py',
+#    'config/gen-sfa-cm-config.py',
     'sfa/server/sfa-start.py', 
-    'sfa/server/sfa_component_setup.py', 
+#    'sfa/server/sfa_component_setup.py', 
     'sfatables/sfatables',
     'keyconvert/keyconvert.py',
     'flashpolicy/sfa_flashpolicy.py',
@@ -46,7 +48,8 @@ packages = [
     'sfatables/processors',
     ]
 
-initscripts = [ 'sfa', 'sfa-cm' ]
+initscripts = [ 'sfa' ]
+if not os.path.isfile('/etc/redhat-release'): initscripts.append('functions.sfa')
 
 data_files = [ ('/etc/sfa/', [ 'config/aggregates.xml',
                               'config/registries.xml',
@@ -105,5 +108,9 @@ else:
     setup(name='sfa',
           packages = packages, 
           data_files = data_files,
-          scripts = scripts)
+          scripts = scripts,
+          url="http://svn.planet-lab.org/wiki/SFATutorial",
+          author="Thierry Parmentelat, Tony Mack, Scott Baker",
+          author_email="thierry.parmentelat@inria.fr, tmack@princeton.cs.edu, smbaker@gmail.com",
+          version=version_tag)
 

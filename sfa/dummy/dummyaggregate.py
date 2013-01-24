@@ -43,7 +43,9 @@ class DummyAggregate:
         slice = slices[0]
         
         # sort slivers by node id 
-        slice_nodes = self.driver.shell.GetNodes({'node_ids': slice['node_ids']})   
+        slice_nodes = []
+        if 'node_ids' in slice.keys():
+            slice_nodes = self.driver.shell.GetNodes({'node_ids': slice['node_ids']}) 
         for node in slice_nodes:
             slivers[node['node_id']] = node  
 
@@ -53,7 +55,7 @@ class DummyAggregate:
         # if we are dealing with a slice that has no node just return 
         # and empty list    
         if slice_xrn:
-            if not slice or not slice['node_ids']:
+            if not slice or 'node_ids' not in slice.keys() or not slice['node_ids']:
                 return []
 
         filter = {}

@@ -29,9 +29,12 @@ def FilterList(myfilter, mylist):
     result.extend(mylist)
     for item in mylist:
          for key in myfilter.keys():
-             if myfilter[key] != item[key]:
-                result.remove(item)
-                break
+             if 'ids' in key:
+                 pass
+             else:
+                 if myfilter[key] != item[key]:
+                     result.remove(item)
+                     break
     return result
 
 
@@ -132,7 +135,10 @@ def AddUserKey(param):
     try:
         for user in DB['users_list']:
              if param['user_id'] == user['user_id']:
-                 user['keys'].append(param['key'])
+                 if 'keys' in user.keys():
+                     user['keys'].append(param['key'])
+                 else:
+                    user['keys'] = [param['key']] 
                  return True
         return False
     except:

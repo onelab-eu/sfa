@@ -238,7 +238,8 @@ class PlAggregate:
                 rspec_node['interfaces'].append(interface)
                 if_count+=1
 
-            tags = [PLTag(node_tags[tag_id]) for tag_id in node['node_tag_ids']]
+            tags = [PLTag(node_tags[tag_id]) for tag_id in node['node_tag_ids']\
+                    if tag_id in node_tags]
             rspec_node['tags'] = tags
             if node['node_id'] in slivers:
                 # add sliver info

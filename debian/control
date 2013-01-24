@@ -1,0 +1,62 @@
+Source: sfa
+Maintainer: Thierry Parmentelat <Thierry.Parmentelat@inria.fr>
+Section: misc
+Priority: optional
+Standards-Version: 3.9.2
+Build-Depends: devscripts, debhelper (>=7.0.50~), debconf, dpatch, python-setuptools, make
+
+Package: sfa
+Architecture: any
+Depends: postgresql (>= 8.2), python-psycopg2, python-sqlalchemy, python-migrate, uuid-runtime
+Description: Server-side for SFA, generic implementation derived from PlanetLab
+
+Package: sfa-common
+Architecture: any
+Depends: python (>= 2.7), python-openssl (>= 0.7), python-m2crypto, python-dateutil, python-lxml, python-libxslt1, python-zsi
+Description: Python libraries for SFA, generic implementation derived from PlanetLab
+
+Package: sfa-flashpolicy
+Architecture: any
+Depends: sfa-common
+Description: SFA support for flash clients
+
+Package: sfa-client
+Architecture: any
+Depends: sfa-common
+Description: sfi, the SFA experimenter-side CLI
+
+Package: sfa-plc
+Architecture: any
+Depends: sfa-common
+Description: the SFA layer around MyPLC
+
+Package: sfa-federica
+Architecture: any
+Depends: sfa-common
+Description: the SFA layer around Federica
+
+Package: sfa-nitos
+Architecture: any
+Depends: sfa-common
+Description: the SFA layer around NITOS
+
+Package: sfa-dummy
+Architecture: any
+Depends: sfa-common
+Description: the SFA layer around a Dummy Testbed 
+
+Package: sfa-sfatables
+Architecture: any
+Depends: sfa-common
+Description: sfatables policy tool for SFA
+
+Package: sfa-xmlbuilder
+Architecture: any
+Provides: python-xmlbuilder
+Description: third-party xmlbuilder tool
+
+Package: sfa-tests
+Architecture: any
+Depends: sfa-common
+Description: unit tests suite for SFA
+

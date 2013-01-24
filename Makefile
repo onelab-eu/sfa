@@ -3,7 +3,7 @@
 # 
 # overwritten by the specfile
 DESTDIR="/"
-
+PREFIX=/usr
 ##########
 all: python wsdl 
 
@@ -29,12 +29,12 @@ sfa/util/version.py: sfa/util/version.py.in
 	sed -e "s,@VERSIONTAG@,$(VERSIONTAG),g" -e "s,@SCMURL@,$(SCMURL),g" sfa/util/version.py.in > $@
 
 xmlbuilder-install:
-	cd xmlbuilder-0.9 && python setup.py install --root=$(DESTDIR) && cd -
+	cd xmlbuilder-0.9 && python setup.py install --prefix=$(PREFIX) --root=$(DESTDIR) && cd -
 	rm -rf $(DESTDIR)/usr/lib*/python*/site-packages/*egg-info
 
 # postinstall steps - various cleanups and tweaks for a nicer rpm
 python-install:
-	python setup.py install --root=$(DESTDIR)	
+	python setup.py install --prefix=$(PREFIX) --root=$(DESTDIR)
 	chmod 444 $(DESTDIR)/etc/sfa/default_config.xml
 	rm -rf $(DESTDIR)/usr/lib*/python*/site-packages/*egg-info
 	rm -rf $(DESTDIR)/usr/lib*/python*/site-packages/sfa/storage/migrations
@@ -60,6 +60,12 @@ wsdl-clean:
 	$(MAKE) -C wsdl clean
 
 .PHONY: wsdl wsdl-install wsdl-clean
+
+##########
+debian: version
+	$(MAKE) -f Makefile.debian debian
+debian.clean: 
+	$(MAKE) -f Makefile.debian clean
 
 ##########
 tests-install:
@@ -153,6 +159,8 @@ BINS =	./config/sfa-config-tty ./config/gen-sfa-cm-config.py \
 
 synclib: synccheck
 	+$(RSYNC) --relative ./sfa/ --exclude migrations $(SSHURL)/usr/lib\*/python2.\*/site-packages/
+synclibdeb: synccheck
+	+$(RSYNC) --relative ./sfa/ --exclude migrations $(SSHURL)/usr/share/pyshared/
 syncbin: synccheck
 	+$(RSYNC)  $(BINS) $(SSHURL)/usr/bin/
 syncinit: synccheck
@@ -170,6 +178,7 @@ syncmig:
 
 # full-fledged
 sync: synclib syncbin syncinit syncconfig syncrestart
+syncdeb: synclibdeb syncbin syncinit syncconfig syncrestart
 # 99% of the time this is enough
 syncfast: synclib syncrestart
 

@@ -1,19 +1,63 @@
 #!/bin/bash
 #
-# sfa   Wraps PLCAPI into the SFA compliant API
+# sfa
+# Provides a generic SFA wrapper based on the initial PlanetLab Implementation
 #
 # hopefully right after plc
 # chkconfig: 2345 61 39
 #
-# description:   Wraps PLCAPI into the SFA compliant API
-#
+### BEGIN INIT INFO
+# Provides:		sfa
+# Required-Start:	postgresql 
+# Required-Stop:	postgresql 
+# Default-Start:	2 3 4 5
+# Default-Stop:		0 1 6
+# Short-Description:	An implementation  of the SFA Architecture
+### END INIT INFO
 
-# source function library
-. /etc/init.d/functions
-# Default locations
-PGDATA=/var/lib/pgsql/data
+####################
+# borrowed from postgresql
+function debian_get_postgresql_versions () {
+    versions=()
+    for v in `ls /usr/lib/postgresql/ 2>/dev/null`; do
+	if [ -x /usr/lib/postgresql/$v/bin/pg_ctl ] && [ ! -x /etc/init.d/postgresql-$v ]; then
+            versions+=($v)
+	fi
+    done
+    if [[ ${#versions[*]} == "0" ]]; then 
+	echo "E: Missing postgresql installation. Aborting."
+	exit
+    fi
+    if [[ ${#versions[*]} != "1" ]]; then 
+	echo "E: Too many postgresql versions installed. Aborting."
+	exit
+    fi
+    pgver=${versions[0]}
+}
+
+####################
+if [ -f /etc/redhat-release ] ; then
+    # source function library
+    . /etc/init.d/functions
+    PGDATA=/var/lib/pgsql/data/
+    PGWATCH=postmaster
+    PGLOCK=/var/lock/subsys/postgresql
+    SFALOCK=/var/lock/subsys/sfa-start.pid
+elif [ -f /etc/debian_version ] ; then
+    . /etc/init.d/functions.sfa
+    debian_get_postgresql_versions
+    PGDATA=/etc/postgresql/$pgver/main/
+    PGWATCH=postgres
+    PGLOCK=/var/run/postgresql/$pgver-main.pid
+    SFALOCK=/var/run/sfa-start.pid
+else
+    echo "initscript can only handle redhat/fedora or debian/ubuntu systems"
+    exit 1
+fi
+
+
 postgresql_conf=$PGDATA/postgresql.conf
-pghba_conf=$PGDATA/pg_hba.conf
+pg_hba_conf=$PGDATA/pg_hba.conf
 postgresql_sysconfig=/etc/sysconfig/pgsql
 
 # SFA consolidated (merged) config file
@@ -44,7 +88,7 @@ check ()
 function postgresql_check () {
 
     # wait until postmaster is up and running - or 10s max
-    if status postmaster >& /dev/null && [ -f /var/lock/subsys/postgresql ] ; then
+    if status $PGWATCH >& /dev/null && [ -f $PGLOCK ] ; then
 	# The only way we can be sure is if we can access it
 	for i in $(seq 1 10) ; do
 	    # Must do this as the postgres user initially (before we
@@ -76,7 +120,6 @@ function reload () {
 
     # Regenerate the main configuration file from default values
     # overlaid with site-specific and current values.
-    # Thierry -- 2007-07-05 : values in plc_config.xml are *not* taken into account here
     files=( $sfa_default_config $sfa_local_config )
     for file in "${files[@]}" ; do
 	if [ -n "$force" -o $file -nt $sfa_whole_config ] ; then
@@ -104,10 +147,6 @@ function reload () {
     if [ -n "$force" -o $sfa_whole_config -nt /etc/sfa/sfa_config.sh ] ; then
 	sfa-config --shell $sfa_default_config $sfa_local_config > /etc/sfa/sfa_config.sh
     fi
-#    if [ -n "$force" -o $sfa_whole_config -nt /etc/sfa/php/sfa_config.php ] ; then
-#	mkdir -p /etc/sfa/php
-#	plc-config --php  $sfa_whole_config >/etc/sfa/php/sfa_config.php
-#    fi
 
     # [re]generate the sfa_component_config
     # this is a server-side thing but produces a file that somehow needs to be pushed
@@ -127,7 +166,7 @@ function db_start () {
     # only if enabled
     [ "$SFA_DB_ENABLED" == 1 -o "$SFA_DB_ENABLED" == True ] || return
 
-    if ! rpm -q myplc >& /dev/null; then
+    if [ ! -f /etc/myplc-release ] ; then
 
 	######## standalone deployment - no colocated myplc
 
@@ -172,22 +211,22 @@ function db_start () {
 
 	######## /var/lib/pgsql/data/pg_hba.conf
 	# Disable access to all DBs from all hosts
-	sed -i -e '/^\(host\|local\)/d' $pghba_conf
+	sed -i -e '/^\(host\|local\)/d' $pg_hba_conf
 
 	# Enable passwordless localhost access
-	echo "local all all trust" >>$pghba_conf
+	echo "local all all trust" >>$pg_hba_conf
 	# grant access
 	(
 	    echo "host $SFA_DB_NAME $SFA_DB_USER 127.0.0.1/32 password"
 	    [ -n "$registry_ip" ] && echo "host $SFA_DB_NAME $SFA_DB_USER ${registry_ip}/32 password"
-	) >>$pghba_conf
+	) >>$pg_hba_conf
 
     if [ "$SFA_GENERIC_FLAVOUR" == "openstack" ] ; then
-        [ -n "$registry_ip" ] && echo "host nova nova ${registry_ip}/32 password" >> $pghba_conf
+        [ -n "$registry_ip" ] && echo "host nova nova ${registry_ip}/32 password" >> $pg_hba_conf
     fi   
 	
 	# Fix ownership (sed -i changes it)
-	chown postgres:postgres $postgresql_conf $pghba_conf
+	chown postgres:postgres $postgresql_conf $pg_hba_conf
 
 	######## compute a password if needed
 	if [ -z "$SFA_DB_PASSWORD" ] ; then
@@ -211,7 +250,7 @@ function db_start () {
 
     ######## Start up the server
     # not too nice, but.. when co-located with myplc we'll let it start/stop postgresql
-    if ! rpm -q myplc >& /dev/null ; then
+    if [ ! -f /etc/myplc-release ] ; then
 	echo STARTING...
 	service postgresql start >& /dev/null
     fi
@@ -233,7 +272,7 @@ function db_start () {
 	check
     fi
     check
-    # mention sfaadmin.py instead of just sfaadmin for people who do not install through rpm
+    # mention sfaadmin.py instead of just sfaadmin for safety
     sfaadmin.py reg sync_db
 
     MESSAGE=$"SFA: Checking for PostgreSQL server"
@@ -248,7 +287,7 @@ function db_stop () {
     [ "$SFA_DB_ENABLED" == 1 -o "$SFA_DB_ENABLED" == True ] || return
 
     # not too nice, but.. when co-located with myplc we'll let it start/stop postgresql
-    if ! rpm -q myplc >& /dev/null ; then
+    if [ ! -f /etc/myplc-release ] ; then
 	service postgresql stop >& /dev/null
 	check
 	MESSAGE=$"Stopping PostgreSQL server"
@@ -276,16 +315,18 @@ function start() {
     [ "$SFA_FLASHPOLICY_ENABLED" == 1 ] && \
         action "Flash Policy Server" daemon /usr/bin/sfa_flashpolicy.py --file="$SFA_FLASHPOLICY_CONFIG_FILE" --port=$SFA_FLASHPOLICY_PORT -d
 
-    touch /var/lock/subsys/sfa-start.py
+    touch $SFALOCK
 
 }
 
 function stop() {
     action $"Shutting down SFA" killproc sfa-start.py
+# a possible alternative reads; esp. as we remove lock manually below
+#    echo $"Shutting down SFA" ; pkill '^sfa-start'
 
     db_stop
 
-    rm -f /var/lock/subsys/sfa-start.py
+    rm -f $SFALOCK
 }
 
 
@@ -295,13 +336,16 @@ case "$1" in
     reload) reload force ;;
     restart) stop; start ;;
     condrestart)
-	if [ -f /var/lock/subsys/sfa-start.py ]; then
+	if [ -f $SFALOCK ]; then
             stop
             start
 	fi
 	;;
     status)
 	status sfa-start.py
+# possible alternative for debian
+#	pids=$(pgrep '^sfa-start'); [ -n "$pids" ] && ps $pids
+
 	RETVAL=$?
 	;;
     dbdump)

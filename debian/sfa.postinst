@@ -1,0 +1,6 @@
+#!/bin/bash
+# this file is not used yet
+# I take it the idea was to implement
+# something like chkconfig sfa on
+
+update-rc.d sfa defaults

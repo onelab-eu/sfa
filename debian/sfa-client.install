@@ -1,0 +1,8 @@
+etc/sfa/sfi_config
+usr/bin/sfi*.py*
+usr/bin/sfi
+usr/bin/get*.py*
+usr/bin/setRecord.py*
+usr/bin/sfascan.py*
+usr/bin/sfascan
+usr/bin/sfadump.py*

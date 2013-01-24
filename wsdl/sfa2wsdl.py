@@ -9,16 +9,15 @@ import os, sys
 import time
 import pdb
 import xml.dom.minidom
-import xml.dom.ext
 import apistub
 import inspect
 
 from types import *
 from optparse import OptionParser
 
-from sfa.storage.parameter import Parameter,Mixed
+from sfa.storage.parameter import Parameter, Mixed
 
-import globals
+plc_ns="http://www.planet-lab.org/sfa"
 
 class SoapError(Exception):
      def __init__(self, value):
@@ -273,7 +272,7 @@ class WSDLGen:
                         servport_el.setAttribute("binding", "tns:" + name + "_binding")
 
                         soapaddress = servport_el.appendChild(self.wsdl.createElement("soap:address"))
-                        soapaddress.setAttribute("location", "%s/%s" % (globals.plc_ns,service))
+                        soapaddress.setAttribute("location", "%s/%s" % (plc_ns,service))
 
 
     def compute_wsdl_definitions(self):
@@ -289,7 +288,7 @@ class WSDLGen:
             xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
             xmlns:soapenc="http://schemas.xmlsoap.org/soap/encoding/"
             xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/"/>
-            """ % (self.interface_name(),globals.plc_ns,globals.plc_ns,globals.plc_ns)
+            """ % (self.interface_name(),plc_ns,plc_ns,plc_ns)
             
         self.wsdl = xml.dom.minidom.parseString(wsdl_text_header)
         
@@ -310,7 +309,7 @@ class WSDLGen:
             <types>
                 <xsd:schema xmlns="http://www.w3.org/2001/XMLSchema" targetNamespace="%s/schema"/>
             </types>
-        </wsdl:definitions> """ % (self.interface_name(),globals.plc_ns, globals.plc_ns, globals.plc_ns, globals.plc_ns)
+        </wsdl:definitions> """ % (self.interface_name(),plc_ns, plc_ns, plc_ns, plc_ns)
         self.types = xml.dom.minidom.parseString(wsdl_text_header)
         
 
@@ -327,9 +326,9 @@ class WSDLGen:
 
     def pretty_print(self):
         if (self.wsdl):
-            xml.dom.ext.PrettyPrint(self.wsdl)
+             print xml.dom.minidom.Document.toprettyxml(self.wsdl)
         else:
-            raise Exception("Empty WSDL")
+             raise Exception("Empty WSDL")
 
 def main():
     parser = OptionParser()
