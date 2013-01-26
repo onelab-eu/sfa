@@ -1,6 +1,6 @@
 # sfa should not depend on sfatables
 # if the sfatables.runtime import fails, just define run_sfatables as identity
-import sys
+
 try:
     from sfatables.runtime import SFATablesRules
 
@@ -27,7 +27,7 @@ try:
         """
         if not context_callback:
             context_callback = fetch_context
-    
+
         chain = chain.upper()
         rules = SFATablesRules(chain)
         if rules.sorted_rule_list:

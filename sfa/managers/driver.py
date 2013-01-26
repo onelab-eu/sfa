@@ -2,7 +2,7 @@
 # an attempt to document what a driver class should provide, 
 # and implement reasonable defaults
 #
-import sys
+
 class Driver:
     
     def __init__ (self, config): 
@@ -24,7 +24,6 @@ class Driver:
     # to perform such a core operation (i.e. getting rights right) 
     # this is no longer in use when performing other SFA operations 
     def augment_records_with_testbed_info (self, sfa_records):
-        print >>sys.stderr, "  \r\n \r\n DRIVER.PY augment_records_with_testbed_info sfa_records ",sfa_records
         return sfa_records
 
     # incoming record, as provided by the client to the Register API call

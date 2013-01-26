@@ -155,7 +155,7 @@ class RegistryManager:
         local_records = dbsession.query(RegRecord).filter(RegRecord.hrn.in_(local_hrns))
         if type:
             local_records = local_records.filter_by(type=type)
-        local_records=local_records.all()                
+        local_records=local_records.all()
         
         for local_record in local_records:
             augment_with_sfa_builtins (local_record)
@@ -177,6 +177,7 @@ class RegistryManager:
                         record.url=neighbour_dict[hrn].get_url()
                         return 
             for record in local_records: solve_neighbour_url (record)
+        
         # convert local record objects to dicts for xmlrpc
         # xxx somehow here calling dict(record) issues a weird error
         # however record.todict() seems to work fine

@@ -1147,7 +1147,6 @@ or with an slice hrn, shows currently provisioned resources
                 rspec.filter({'component_manager_id': server_version['urn']})
                 rspec = RSpecConverter.to_pg_rspec(rspec.toxml(), content_type='request')
             else:
-                print >>sys.stderr, "\r\n \r\n \r\n WOOOOOO"
                 users = sfa_users_arg(user_records, slice_record)
 
         # do not append users, keys, or slice tags. Anything

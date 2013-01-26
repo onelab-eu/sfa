@@ -1,5 +1,4 @@
 #!/usr/bin/python
-# just checking write access on repo
 import sys
 import unittest
 

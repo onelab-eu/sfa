@@ -84,8 +84,9 @@ def install_peer_certs(server_key_file, server_cert_file):
     peer_gids = []
     if not new_hrns:
         return 
+
     trusted_certs_dir = api.config.get_trustedroots_dir()
-    for new_hrn in new_hrns: 
+    for new_hrn in new_hrns:
         if not new_hrn: continue
         # the gid for this interface should already be installed
         if new_hrn == api.config.SFA_INTERFACE_HRN: continue
@@ -98,6 +99,7 @@ def install_peer_certs(server_key_file, server_cert_file):
             if 'sfa' not in server_version:
                 logger.info("get_trusted_certs: skipping non sfa aggregate: %s" % new_hrn)
                 continue
+      
             trusted_gids = ReturnValue.get_value(interface.get_trusted_certs())
             if trusted_gids:
                 # the gid we want should be the first one in the list,
@@ -182,7 +184,8 @@ def main():
     hierarchy = Hierarchy()
     auth_info = hierarchy.get_interface_auth_info()
     server_key_file = auth_info.get_privkey_filename()
-    server_cert_file = auth_info.get_gid_filename() 
+    server_cert_file = auth_info.get_gid_filename()
+
     # ensure interface cert is present in trusted roots dir
     trusted_roots = TrustedRoots(config.get_trustedroots_dir())
     trusted_roots.add_gid(GID(filename=server_cert_file))

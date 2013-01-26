@@ -2,7 +2,6 @@ from sfa.util.faults import SfaInvalidArgument, InvalidRSpec
 from sfa.util.xrn import urn_to_hrn
 from sfa.util.method import Method
 from sfa.util.sfatablesRuntime import run_sfatables
-import sys
 from sfa.trust.credential import Credential
 from sfa.storage.parameter import Parameter, Mixed
 from sfa.rspecs.rspec import RSpec
@@ -34,6 +33,7 @@ class CreateSliver(Method):
         hrn, type = urn_to_hrn(slice_xrn)
 
         self.api.logger.info("interface: %s\ttarget-hrn: %s\tmethod-name: %s"%(self.api.interface, hrn, self.name))
+
         # Find the valid credentials
         valid_creds = self.api.auth.checkCredentials(creds, 'createsliver', hrn)
         origin_hrn = Credential(string=valid_creds[0]).get_gid_caller().get_hrn()

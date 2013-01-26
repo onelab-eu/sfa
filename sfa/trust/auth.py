@@ -68,6 +68,7 @@ class Auth:
         self.client_cred = Credential(string = cred)
         self.client_gid = self.client_cred.get_gid_caller()
         self.object_gid = self.client_cred.get_gid_object()
+        
         # make sure the client_gid is not blank
         if not self.client_gid:
             raise MissingCallerGID(self.client_cred.get_subject())
@@ -77,13 +78,12 @@ class Auth:
             self.verifyPeerCert(self.peer_cert, self.client_gid)                   
 
         # make sure the client is allowed to perform the operation
-        if operation:    
+        if operation:
             if not self.client_cred.can_perform(operation):
                 raise InsufficientRights(operation)
 
         if self.trusted_cert_list:
             self.client_cred.verify(self.trusted_cert_file_list, self.config.SFA_CREDENTIAL_SCHEMA)
-            
         else:
            raise MissingTrustedRoots(self.config.get_trustedroots_dir())
        
@@ -91,7 +91,6 @@ class Auth:
         # This check does not apply to trusted peers 
         trusted_peers = [gid.get_hrn() for gid in self.trusted_cert_list]
         if hrn and self.client_gid.get_hrn() not in trusted_peers:
-            
             target_hrn = self.object_gid.get_hrn()
             if not hrn == target_hrn:
                 raise PermissionError("Target hrn: %s doesn't match specified hrn: %s " % \
@@ -235,7 +234,7 @@ class Auth:
             return
         #if name.startswith(get_authority(name)):
             #return
-
+    
         raise PermissionError(name)
 
     def determine_user_rights(self, caller_hrn, reg_record):

@@ -1,3 +1,3 @@
 <registries>
-	<registry addr="192.168.0.252" hrn="senslab" port="12345"/>
+	<registry addr="" hrn="" port=""/>
 </registries>

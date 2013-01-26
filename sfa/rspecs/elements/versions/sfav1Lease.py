@@ -22,6 +22,7 @@ class SFAv1Lease:
 
     @staticmethod
     def add_leases(xml, leases):
+        
         network_elems = xml.xpath('//network')
         if len(network_elems) > 0:
             network_elem = network_elems[0]

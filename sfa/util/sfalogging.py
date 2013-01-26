@@ -144,9 +144,6 @@ debug_logger = _SfaLogger(loggername='debug', level=logging.DEBUG)
 warn_logger = _SfaLogger(loggername='warning', level=logging.WARNING)
 error_logger = _SfaLogger(loggername='error', level=logging.ERROR)
 critical_logger = _SfaLogger(loggername='critical', level=logging.CRITICAL)
-
-#sql_logger = _SfaLogger(loggername = 'sqlalchemy.engine', level=logging.DEBUG)
-
 logger = info_logger
 sfi_logger = _SfaLogger(logfile=os.path.expanduser("~/.sfi/")+'sfi.log',loggername='sfilog', level=logging.DEBUG)
 ########################################
