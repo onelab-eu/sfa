@@ -80,8 +80,16 @@ class SFAv1Node:
             tags = node.get('tags', [])
             if tags:
                 for tag in tags:
-                    tag_elem = node_elem.add_element(tag['tagname'])
-                    tag_elem.set_text(tag['value'])
+                    if tag['tagname']=="settings":
+                        tag_elem = node_elem.add_element(tag['tagname'])
+                        for subtag in tag['value']:
+                            subtag_elem = tag_elem.add_element('setting')
+                            subtag_elem.set('name', str(subtag['tagname']))
+                            subtag_elem.set('description', str(subtag['description']))
+                            subtag_elem.set_text(subtag['value'])
+                    else:
+                        tag_elem = node_elem.add_element(tag['tagname'])
+                        tag_elem.set_text(tag['value'])
             SFAv1Sliver.add_slivers(node_elem, node.get('slivers', []))
 
     @staticmethod 
