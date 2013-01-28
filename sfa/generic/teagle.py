@@ -1,16 +1,32 @@
-from sfa.generic.pl import pl
+from sfa.generic import Generic
 
-import sfa.managers.aggregate_manager_teagle
+class teagle (Generic):
+    
+    # the importer class
+    def importer_class (self): 
+        import sfa.importer.dummyimporter
+        return sfa.importer.dummyimporter.DummyImporter
+        
+    # use the standard api class
+    def api_class (self):
+        import sfa.server.sfaapi
+        return sfa.server.sfaapi.SfaApi
 
-class teagle (pl):
-
-# the teagle flavour behaves like pl, except for 
-# the aggregate
+    # the manager classes for the server-side services
+    def registry_manager_class (self) : 
+        import sfa.managers.registry_manager
+        return sfa.managers.registry_manager.RegistryManager
+    def slicemgr_manager_class (self) : 
+        import sfa.managers.slice_manager
+        return sfa.managers.slice_manager.SliceManager
     def aggregate_manager_class (self) :
-        return sfa.managers.aggregate_manager_teagle.AggregateManagerTeagle
+        import sfa.managers.aggregate_manager
+        return sfa.managers.aggregate_manager.AggregateManager
 
-# I believe the component stuff is not implemented
-    def component_manager_class (self):
-        return None
-    def component_driver_class (self):
-        return None
+    # driver class for server-side services, talk to the whole testbed
+    def driver_class (self):
+        import teaglesfa.driver
+        return teaglesfa.driver.TeagleDriver
+#        import sfa.dummy.dummydriver
+#        return sfa.dummy.dummydriver.DummyDriver
+
