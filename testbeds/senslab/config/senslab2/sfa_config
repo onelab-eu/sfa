@@ -1,0 +1,151 @@
+# DO NOT EDIT. This file was automatically generated at
+# Mon Jun 25 15:01:21 2012 from:
+# 
+# /etc/sfa/sfa_config.xml
+
+# XMLRPC URL
+# URL for the federica xmlrpc API; login and password need to be set
+# like in http://login:password@hostname:port/the/path
+SFA_FEDERICA_URL='https://root:password@federica.sfa.wrapper.com:8443/fedewrapper/xmlrpc/'
+
+# Cache advertisement rspec
+# Enable caching of the global advertisement, as returned by
+# ListResources without a slice argument.
+SFA_AGGREGATE_CACHING=1
+
+# Hostname
+# The hostname where the aggregate is expected to be found.
+SFA_AGGREGATE_HOST='localhost'
+
+# Enable Aggregate
+# Allows this local SFA instance to run as an aggregate manager.
+SFA_AGGREGATE_ENABLED=1
+
+# Port number
+# The port where the aggregate is to be found.
+SFA_AGGREGATE_PORT=52346
+
+# Database name
+# SFA database name.
+SFA_DB_NAME='sfa'
+
+# Enabled
+# Enable the database server on this machine.
+SFA_DB_ENABLED=1
+
+# Database host
+# The host where the SFA database can be reached.
+SFA_DB_HOST='localhost'
+
+# Database user
+# When SFA gets co-hosted with a myplc, this should match the PLC
+# config.
+SFA_DB_USER='sfa'
+
+# Database password
+# When SFA gets co-hosted with a myplc, this should match the PLC
+# config.
+SFA_DB_PASSWORD='sfa'
+
+# Database port
+# The port where the SFA database can be reached.
+SFA_DB_PORT=5432
+
+# Flash policy config file
+# The path to where the flash policy config file can be reached.
+SFA_FLASHPOLICY_CONFIG_FILE='/etc/sfa/sfa_flashpolicy_config.xml'
+
+# Enable Flash Policy Server
+# Allows this local SFA instance to run a flash policy server.
+SFA_FLASHPOLICY_ENABLED=0
+
+# Flash policy port
+# The flash policy server port.
+SFA_FLASHPOLICY_PORT=843
+
+# Nova API Port
+# The Nova/EC2 API port.
+SFA_NOVA_API_PORT=8773
+
+# Sfa nova user
+# Account/context to use when performing administrative nova operations
+SFA_NOVA_USER='novaadmin'
+
+# Nova API url
+# The Nova/EC2 API url
+SFA_NOVA_API_URL='127.0.0.1'
+
+# URL
+# Full URL of PLC interface.
+SFA_PLC_URL='https://localhost:443/PLCAPI/'
+
+# Password
+# The PLC password for SFA_PLC_USER.
+SFA_PLC_PASSWORD='root'
+
+# PLC login name for an admin user; SFA will carry on operations under this account.
+SFA_PLC_USER='root@localhost.localdomain'
+
+# Root Authority
+# The hrn of the registry's root auth.
+SFA_REGISTRY_ROOT_AUTH='senslab2'
+
+# Hostname
+# The hostname where the registry is expected to be found; using
+# localhost when the local registry is enabled seems reasonable.
+SFA_REGISTRY_HOST='localhost'
+
+# Enable Registry
+# Allows this local SFA instance to run as a registry.
+SFA_REGISTRY_ENABLED=1
+
+# Port number
+# The port where the registry is to be found.
+SFA_REGISTRY_PORT=52345
+
+# Cache advertisement rspec
+# Enable caching of the global advertisement, as returned by
+# ListResources without a slice argument.
+SFA_SM_CACHING=0
+
+# Hostname
+# The hostname where the slice manager is expected to be found.
+SFA_SM_HOST='localhost'
+
+# Enable Slice Manager
+# Allows this local SFA instance to run as a slice manager.
+SFA_SM_ENABLED=1
+
+# Port number
+# The port where the slice manager is to be found.
+SFA_SM_PORT=52347
+
+# Human readable name
+# The human readable name for this interface.
+SFA_INTERFACE_HRN='senslab2'
+
+# Generic Flavour
+# This string refers to a class located in sfa.generic that describes
+# which specific implementation needs to be used for api, manager and
+# driver objects. PlanetLab users do not need to change this setting.
+SFA_GENERIC_FLAVOUR='slab'
+
+# Credential Schema
+# The path to the default credential schema
+SFA_CREDENTIAL_SCHEMA='/etc/sfa/credential.xsd'
+
+# Debug
+# Logging level; 0=minimum, 1=info, 2=debug
+SFA_API_LOGLEVEL=2
+
+# User Session Keys Path 
+# Some services will peform operations on behalf of a user, but make it
+# look like the user is the one performing the operation. Doing this
+# requires a valid key pair and credential for the user. This option
+# defines the path where key pairs and credentials are generated and
+# stored. This functionality is used by the SFA web GUI.
+SFA_SESSION_KEY_PATH='/var/lib/sfa/session_keys'
+
+# Max Slice Renew
+# Maximum amout of days a user can extend/renew their slices to
+SFA_MAX_SLICE_RENEW=60

@@ -43,6 +43,7 @@ packages = [
     'sfa/dummy',
     'sfa/openstack',
     'sfa/federica',
+    'sfa/senslab',
     'sfatables',
     'sfatables/commands',
     'sfatables/processors',

@@ -1,0 +1,46 @@
+Source code management:
+Git
+
+git repository url :
+git://138.96.116.40/sfa.git
+git://git.f-lab.fr/sfa.git
+
+
+Branches to build:
+senslab2
+
+Add a step to build:
+Excecute a shell script
+_________________________________________________________________________________________
+make clean
+make
+sudo python setup.py install
+git_local_repo="/root/.jenkins/jobs/SFA/workspace"
+#jenkins clones the git repo here when started by root
+vm="senslab2"
+sudo cp $git_local_repo/sfa/senslab/config/$vm/sfa_config.xml /etc/sfa/sfa_config.xml
+sudo cp $git_local_repo/sfa/senslab/config/$vm/default_config.xml /etc/sfa/default_config.xml
+
+sudo cp $git_local_repo/sfa/senslab/config/ldap_config.py  /etc/sfa/ldap_config.py 
+sudo service sfa restart
+#nosetests --with-xcoverage --with-xunit --cover-package=senslab --cover-erase --verbose
+#FAIL nosetests --with-xcoverage --with-xunit  --all-modules --traverse-namespace --cover-package=senslab --cover-erase --cover-inclusive --verbose 
+nosetests --with-xcoverage --with-xunit --traverse-namespace  --cover-package=senslab --cover-erase --verbose 
+
+pylint -f parseable /root/.jenkins/jobs/SFA/workspace/sfa/senslab/ | tee pylint.out
+____________________________________________________________________________________________
+
+
+Add a step to build :
+Publish tests report results JUnit
+nosestests.xml
+
+Add a step to build :
+Publish cobertura covergae report
+**/coverage.xml
+Consider only stable builds
+
+Add a step to build : 
+Report violations
+pylint :
+XML filename pattern  : **/pylint.out

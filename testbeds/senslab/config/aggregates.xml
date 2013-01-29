@@ -1,0 +1,5 @@
+<aggregates>
+	<aggregate addr="192.168.0.252" hrn="senslab" port="12346"/>
+	<aggregate addr="192.168.0.249" hrn="senslab2" port="52346"/>
+	<aggregate addr="138.96.112.249" hrn="ple" port="12346"/>
+</aggregates>
