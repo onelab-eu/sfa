@@ -80,7 +80,9 @@ class SFAv1Node:
             tags = node.get('tags', [])
             if tags:
                 for tag in tags:
-                    if tag['tagname']=="settings":
+                    # backdoor for FITeagle
+                    # Alexander Willner <alexander.willner@tu-berlin.de>
+                    if tag['tagname']=="fiteagle_settings":
                         tag_elem = node_elem.add_element(tag['tagname'])
                         for subtag in tag['value']:
                             subtag_elem = tag_elem.add_element('setting')
