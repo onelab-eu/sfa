@@ -225,12 +225,9 @@ class Auth:
         @param name human readable name to test  
         """
         object_hrn = self.object_gid.get_hrn()
-	#strname = str(name).strip("['']")
-	if object_hrn == name:
-        #if object_hrn == strname:
-            return 
-        if name.startswith(object_hrn + ".") :
-        #if strname.startswith((object_hrn + ".")) is True:
+        if object_hrn == name:
+            return
+        if name.startswith(object_hrn + "."):
             return
         #if name.startswith(get_authority(name)):
             #return
