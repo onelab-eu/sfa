@@ -1,6 +1,6 @@
 %define name sfa
 %define version 2.1
-%define taglevel 23
+%define taglevel 24
 
 %define release %{taglevel}%{?pldistro:.%{pldistro}}%{?date:.%{date}}
 %global python_sitearch	%( python -c "from distutils.sysconfig import get_python_lib; print get_python_lib(1)" )
@@ -264,6 +264,12 @@ fi
 #[ "$1" -ge "1" ] && service sfa-cm restart || :
 
 %changelog
+* Tue Jan 29 2013 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-2.1-24
+- merged the senslab driver from git.f-lab.fr
+- merged the teagle flavour
+- debian packaging should work much better
+- added debug messsages for when db connection fails
+
 * Sun Jan 20 2013 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-2.1-23
 - minor fix in registry
 - fix for sfi gid, use clientbootstrap
