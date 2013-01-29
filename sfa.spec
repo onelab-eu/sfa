@@ -79,6 +79,11 @@ Summary: the SFA layer around NITOS
 Group: Applications/System
 Requires: sfa
 
+%package senslab
+Summary: the SFA layer around SensLab
+Group: Applications/System
+Requires: sfa
+
 %package dummy
 Summary: the SFA layer around a Dummy Testbed 
 Group: Applications/System
@@ -123,6 +128,9 @@ The SFA driver for FEDERICA.
 
 %description nitos
 The SFA driver for NITOS.
+
+%description senslab
+The SFA driver for SensLab.
 
 %description dummy
 The SFA driver for a Dummy Testbed.
@@ -211,6 +219,9 @@ rm -rf $RPM_BUILD_ROOT
 
 %files nitos
 %{python_sitelib}/sfa/nitos
+
+%files senslab
+%{python_sitelib}/sfa/senslab
 
 %files dummy
 %{python_sitelib}/sfa/dummy

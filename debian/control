@@ -40,6 +40,11 @@ Architecture: any
 Depends: sfa-common
 Description: the SFA layer around NITOS
 
+Package: sfa-senslab
+Architecture: any
+Depends: sfa-common
+Description: the SFA layer around SensLab
+
 Package: sfa-dummy
 Architecture: any
 Depends: sfa-common
