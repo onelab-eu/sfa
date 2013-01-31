@@ -42,6 +42,7 @@ class SliceManager:
         version_manager = VersionManager()
         ad_rspec_versions = []
         request_rspec_versions = []
+        cred_types = [{'geni_type': 'geni_sfa', 'geni_version': str(i)} for i in range(4)[-2:]]
         for rspec_version in version_manager.versions:
             if rspec_version.content_type in ['*', 'ad']:
                 ad_rspec_versions.append(rspec_version.to_dict())
@@ -51,13 +52,14 @@ class SliceManager:
         version_more = {
             'interface':'slicemgr',
             'sfa': 2,
-            'geni_api': 2,
-            'geni_api_versions': {'2': 'http://%s:%s' % (api.config.SFA_SM_HOST, api.config.SFA_SM_PORT)},
+            'geni_api': 3,
+            'geni_api_versions': {'3': 'http://%s:%s' % (api.config.SFA_SM_HOST, api.config.SFA_SM_PORT)},
             'hrn' : xrn.get_hrn(),
             'urn' : xrn.get_urn(),
             'peers': peers,
-            'geni_request_rspec_versions': request_rspec_versions,
-            'geni_ad_rspec_versions': ad_rspec_versions,
+            'geni_single_allocation': 0, # Accept operations that act on as subset of slivers in a given state.
+            'geni_allocate': 'geni_many',# Multiple slivers can exist and be incrementally added, including those which connect or overlap in some way.
+            'geni_credential_types': cred_types,
             }
         sm_version=version_core(version_more)
         # local aggregate if present needs to have localhost resolved
@@ -115,7 +117,7 @@ class SliceManager:
                 if 'sfa' in version.keys():
                     forward_options['rspec_version'] = version_manager.get_version('SFA 1').to_dict()
                 else:
-                    forward_options['rspec_version'] = version_manager.get_version('ProtoGENI 2').to_dict()
+                    forward_options['rspec_version'] = version_manager.get_version('GENI 3').to_dict()
                     forward_options['geni_rspec_version'] = {'type': 'geni', 'version': '3.0'}
                 rspec = server.ListResources(credential, forward_options)
                 return {"aggregate": aggregate, "rspec": rspec, "elapsed": time.time()-tStart, "status": "success"}
@@ -186,12 +188,12 @@ class SliceManager:
         return rspec.toxml()
 
 
-    def CreateSliver(self, api, xrn, creds, rspec_str, users, options):
+    def Allocate(self, api, xrn, creds, rspec_str, expiration, options):
         call_id = options.get('call_id')
         if Callids().already_handled(call_id): return ""
     
         version_manager = VersionManager()
-        def _CreateSliver(aggregate, server, xrn, credential, rspec, users, options):
+        def _Allocate(aggregate, server, xrn, credential, rspec, expiration, options):
             tStart = time.time()
             try:
                 # Need to call GetVersion at an aggregate to determine the supported
@@ -205,11 +207,10 @@ class SliceManager:
                     filter = {'component_manager_id': server_version['urn']}
                     rspec.filter(filter)
                     rspec = rspec.toxml()
-                    requested_users = sfa_to_pg_users_arg(users)
-                rspec = server.CreateSliver(xrn, credential, rspec, requested_users, options)
+                rspec = server.Allocate(xrn, credential, rspec, expiration, options)
                 return {"aggregate": aggregate, "rspec": rspec, "elapsed": time.time()-tStart, "status": "success"}
             except:
-                logger.log_exc('Something wrong in _CreateSliver with URL %s'%server.url)
+                logger.log_exc('Something wrong in _Allocate with URL %s'%server.url)
                 return {"aggregate": aggregate, "elapsed": time.time()-tStart, "status": "exception", "exc_info": sys.exc_info()}
 
         # Validate the RSpec against PlanetLab's schema --disabled for now
@@ -242,20 +243,89 @@ class SliceManager:
             interface = api.aggregates[aggregate]
             server = api.server_proxy(interface, cred)
             # Just send entire RSpec to each aggregate
-            threads.run(_CreateSliver, aggregate, server, xrn, [cred], rspec.toxml(), users, options)
+            threads.run(_Allocate, aggregate, server, xrn, [cred], rspec.toxml(), expiration, options)
                 
         results = threads.get_results()
         manifest_version = version_manager._get_version(rspec.version.type, rspec.version.version, 'manifest')
         result_rspec = RSpec(version=manifest_version)
+        geni_urn = None
+        geni_slivers = []
+
         for result in results:
-            self.add_slicemgr_stat(result_rspec, "CreateSliver", result["aggregate"], result["elapsed"], 
+            self.add_slicemgr_stat(result_rspec, "Allocate", result["aggregate"], result["elapsed"], 
                                    result["status"], result.get("exc_info",None))
             if result["status"]=="success":
                 try:
-                    result_rspec.version.merge(ReturnValue.get_value(result["rspec"]))
+                    geni_urn = result['result']['geni_urn']
+                    result_rspec.version.merge(ReturnValue.get_value(result['result']['geni_rspec']))
+                    geni_slivers.extend(result['result']['geni_slivers'])
                 except:
-                    api.logger.log_exc("SM.CreateSliver: Failed to merge aggregate rspec")
-        return result_rspec.toxml()
+                    api.logger.log_exc("SM.Allocate: Failed to merge aggregate rspec")
+        return {
+            'geni_urn': geni_urn,
+            'geni_rspec': result_rspec.toxml(),
+            'geni_slivers': geni_slivers
+        }
+
+
+    def Provision(self, api, xrn, creds, options):
+        call_id = options.get('call_id')
+        if Callids().already_handled(call_id): return ""
+
+        version_manager = VersionManager()
+        def _Provision(aggregate, server, xrn, credential, options):
+            tStart = time.time()
+            try:
+                # Need to call GetVersion at an aggregate to determine the supported
+                # rspec type/format beofre calling CreateSliver at an Aggregate.
+                server_version = api.get_cached_server_version(server)
+                result = server.Provision(xrn, credential, options)
+                return {"aggregate": aggregate, "result": result, "elapsed": time.time()-tStart, "status": "success"}
+            except:
+                logger.log_exc('Something wrong in _Allocate with URL %s'%server.url)
+                return {"aggregate": aggregate, "elapsed": time.time()-tStart, "status": "exception", "exc_info": sys.exc_info()}
+
+        # attempt to use delegated credential first
+        cred = api.getDelegatedCredential(creds)
+        if not cred:
+            cred = api.getCredential()
+
+        # get the callers hrn
+        valid_cred = api.auth.checkCredentials(creds, 'createsliver', xrn)[0]
+        caller_hrn = Credential(cred=valid_cred).get_gid_caller().get_hrn()
+        threads = ThreadManager()
+        for aggregate in api.aggregates:
+            # prevent infinite loop. Dont send request back to caller
+            # unless the caller is the aggregate's SM
+            if caller_hrn == aggregate and aggregate != api.hrn:
+                continue
+            interface = api.aggregates[aggregate]
+            server = api.server_proxy(interface, cred)
+            # Just send entire RSpec to each aggregate
+            threads.run(_Provision, aggregate, server, xrn, [cred], options)
+
+        results = threads.get_results()
+        manifest_version = version_manager._get_version('GENI', '3', 'manifest')
+        result_rspec = RSpec(version=manifest_version)
+        geni_slivers = []
+        geni_urn  = None  
+        for result in results:
+            self.add_slicemgr_stat(result_rspec, "Provision", result["aggregate"], result["elapsed"],
+                                   result["status"], result.get("exc_info",None))
+            if result["status"]=="success":
+                try:
+                    geni_urn = result['result']['geni_urn']
+                    result_rspec.version.merge(ReturnValue.get_value(result['result']['geni_rspec']))
+                    geni_slivers.extend(result['result']['geni_slivers'])
+                except:
+                    api.logger.log_exc("SM.Provision: Failed to merge aggregate rspec")
+        return {
+            'geni_urn': geni_urn,
+            'geni_rspec': result_rspec.toxml(),
+            'geni_slivers': geni_slivers
+        }            
+
+
     
     def RenewSliver(self, api, xrn, creds, expiration_time, options):
         call_id = options.get('call_id')
@@ -355,33 +425,67 @@ class SliceManager:
         results = [ReturnValue.get_value(result) for result in threads.get_results()]
     
         # get rid of any void result - e.g. when call_id was hit, where by convention we return {}
-        results = [ result for result in results if result and result['geni_resources']]
+        results = [ result for result in results if result and result['geni_slivers']]
     
         # do not try to combine if there's no result
         if not results : return {}
     
         # otherwise let's merge stuff
-        overall = {}
-    
-        # mmh, it is expected that all results carry the same urn
-        overall['geni_urn'] = results[0]['geni_urn']
-        overall['pl_login'] = None
+        geni_slivers = []
+        geni_urn  = None
         for result in results:
-            if result.get('pl_login'):
-                overall['pl_login'] = result['pl_login']
-                break
-            elif isinstance(result.get('value'), dict) and result['value'].get('pl_login'):
-                overall['pl_login'] = result['value']['pl_login']
-                break
-        # append all geni_resources
-        overall['geni_resources'] = \
-            reduce (lambda x,y: x+y, [ result['geni_resources'] for result in results] , [])
-        overall['status'] = 'unknown'
-        if overall['geni_resources']:
-            overall['status'] = 'ready'
-    
-        return overall
-    
+            try:
+                geni_urn = result['geni_urn']
+                geni_slivers.extend(result['result']['geni_slivers'])
+            except:
+                api.logger.log_exc("SM.Provision: Failed to merge aggregate rspec")
+        return {
+            'geni_urn': geni_urn,
+            'geni_slivers': geni_slivers
+        }
+
+   
+    def Describe(self, api, xrns, creds, options):
+        def _Describe(server, xrn, creds, options):
+            return server.Describe(xrn, creds, options)
+
+        call_id = options.get('call_id')
+        if Callids().already_handled(call_id): return {}
+        # attempt to use delegated credential first
+        cred = api.getDelegatedCredential(creds)
+        if not cred:
+            cred = api.getCredential()
+        threads = ThreadManager()
+        for aggregate in api.aggregates:
+            interface = api.aggregates[aggregate]
+            server = api.server_proxy(interface, cred)
+            threads.run (_Describe, server, slice_xrn, [cred], options)
+        results = [ReturnValue.get_value(result) for result in threads.get_results()]
+
+        # get rid of any void result - e.g. when call_id was hit, where by convention we return {}
+        results = [ result for result in results if result and result.get('geni_urn')]
+
+        # do not try to combine if there's no result
+        if not results : return {}
+
+        # otherwise let's merge stuff
+        manifest_version = version_manager._get_version('GENI', '3', 'manifest')
+        result_rspec = RSpec(version=manifest_version)
+        geni_slivers = []
+        geni_urn  = None
+        for result in results:
+            try:
+                geni_urn = result['geni_urn']
+                result_rspec.version.merge(ReturnValue.get_value(result['result']['geni_rspec']))
+                geni_slivers.extend(result['result']['geni_slivers'])
+            except:
+                api.logger.log_exc("SM.Provision: Failed to merge aggregate rspec")
+        return {
+            'geni_urn': geni_urn,
+            'geni_rspec': result_rspec.toxml(),    
+            'geni_slivers': geni_slivers
+        }  
+ 
     def ListSlices(self, api, creds, options):
         call_id = options.get('call_id') 
         if Callids().already_handled(call_id): return []
