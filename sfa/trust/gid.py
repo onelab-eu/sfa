@@ -80,9 +80,9 @@ class GID(Certificate):
     # @param filename If filename!=None, load the GID from a file
     # @param lifeDays life of GID in days - default is 1825==5 years
 
-    def __init__(self, create=False, subject=None, string=None, filename=None, uuid=None, hrn=None, urn=None, lifeDays=1825):
+    def __init__(self, create=False, subject=None, string=None, filename=None, uuid=None, hrn=None, urn=None, lifeDays=1825, email=None):
         
-        Certificate.__init__(self, lifeDays, create, subject, string, filename)
+        Certificate.__init__(self, lifeDays, create, subject, string, filename, email=email)
         if subject:
             logger.debug("Creating GID for subject: %s" % subject)
         if uuid:

@@ -318,7 +318,7 @@ class Certificate:
     # @param filename If filename!=None, load the certficiate from the file.
     # @param isCA If !=None, set whether this cert is for a CA
 
-    def __init__(self, lifeDays=1825, create=False, subject=None, string=None, filename=None, isCA=None):
+    def __init__(self, lifeDays=1825, create=False, subject=None, string=None, filename=None, isCA=None, email=None):
         self.data = {}
         if create or subject:
             self.create(lifeDays)
@@ -328,6 +328,8 @@ class Certificate:
             self.load_from_string(string)
         if filename:
             self.load_from_file(filename)
+        if email:
+            self.set_email(email)
 
         # Set the CA bit if a value was supplied
         if isCA != None:

@@ -73,7 +73,7 @@ class OpenstackImporter:
                 else:
                     self.logger.warn("OpenstackImporter: person %s does not have a PL public key"%hrn)
                     pkey = Keypair(create=True)
-                user_gid = self.auth_hierarchy.create_gid(urn, create_uuid(), pkey)
+                user_gid = self.auth_hierarchy.create_gid(urn, create_uuid(), pkey, email=user.email)
                 user_record = RegUser ()
                 user_record.type='user'
                 user_record.hrn=hrn

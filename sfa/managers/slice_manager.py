@@ -483,53 +483,6 @@ class SliceManager:
             'geni_slivers': geni_slivers
         }  
  
-    def ListSlices(self, api, creds, options):
-        call_id = options.get('call_id') 
-        if Callids().already_handled(call_id): return []
-    
-        def _ListSlices(server, creds, options):
-            return server.ListSlices(creds, options)
-
-        # look in cache first
-        # xxx is this really frequent enough that it is worth being cached ?
-        if self.cache:
-            slices = self.cache.get('slices')
-            if slices:
-                api.logger.debug("SliceManager.ListSlices returns from cache")
-                return slices
-    
-        # get the callers hrn
-        valid_cred = api.auth.checkCredentials(creds, 'listslices', None)[0]
-        caller_hrn = Credential(cred=valid_cred).get_gid_caller().get_hrn()
-    
-        # attempt to use delegated credential first
-        cred= api.getDelegatedCredential(creds)
-        if not cred:
-            cred = api.getCredential()
-        threads = ThreadManager()
-        # fetch from aggregates
-        for aggregate in api.aggregates:
-            # prevent infinite loop. Dont send request back to caller
-            # unless the caller is the aggregate's SM
-            if caller_hrn == aggregate and aggregate != api.hrn:
-                continue
-            interface = api.aggregates[aggregate]
-            server = api.server_proxy(interface, cred)
-            threads.run(_ListSlices, server, [cred], options)
-    
-        # combime results
-        results = [ReturnValue.get_value(result) for result in threads.get_results()]
-        slices = []
-        for result in results:
-            slices.extend(result)
-    
-        # cache the result
-        if self.cache:
-            api.logger.debug("SliceManager.ListSlices caches value")
-            self.cache.add('slices', slices)
-    
-        return slices
-    
     
     def GetTicket(self, api, xrn, creds, rspec, users, options):
         slice_hrn, type = urn_to_hrn(xrn)
@@ -597,11 +550,9 @@ class SliceManager:
         ticket.sign()          
         return ticket.save_to_string(save_parents=True)
     
-    def start_slice(self, api, xrn, creds):
-        hrn, type = urn_to_hrn(xrn)
-    
+    def PerformOperationalAction(self, api, xrn, creds, action, options):
         # get the callers hrn
-        valid_cred = api.auth.checkCredentials(creds, 'startslice', hrn)[0]
+        valid_cred = api.auth.checkCredentials(creds, 'createsliver', xrn)[0]
         caller_hrn = Credential(cred=valid_cred).get_gid_caller().get_hrn()
     
         # attempt to use delegated credential first
@@ -616,7 +567,7 @@ class SliceManager:
                 continue
             interface = api.aggregates[aggregate]
             server = api.server_proxy(interface, cred)    
-            threads.run(server.Start, xrn, cred)
+            threads.run(server.PerformOperationalAction, xrn, cred, action, options)
         threads.get_results()    
         return 1
      
