@@ -114,13 +114,9 @@ class SliceManager:
             try:
                 version = api.get_cached_server_version(server)
                 # force ProtoGENI aggregates to give us a v2 RSpec
-                if 'sfa' in version.keys():
-                    forward_options['rspec_version'] = version_manager.get_version('SFA 1').to_dict()
-                else:
-                    forward_options['rspec_version'] = version_manager.get_version('GENI 3').to_dict()
-                    forward_options['geni_rspec_version'] = {'type': 'geni', 'version': '3.0'}
-                rspec = server.ListResources(credential, forward_options)
-                return {"aggregate": aggregate, "rspec": rspec, "elapsed": time.time()-tStart, "status": "success"}
+                forward_options['geni_rspec_version'] = options.get('geni_rspec_version')
+                result = server.ListResources(credential, forward_options)
+                return {"aggregate": aggregate, "result": result, "elapsed": time.time()-tStart, "status": "success"}
             except Exception, e:
                 api.logger.log_exc("ListResources failed at %s" %(server.url))
                 return {"aggregate": aggregate, "elapsed": time.time()-tStart, "status": "exception", "exc_info": sys.exc_info()}
@@ -175,8 +171,9 @@ class SliceManager:
             self.add_slicemgr_stat(rspec, "ListResources", result["aggregate"], result["elapsed"], 
                                    result["status"], result.get("exc_info",None))
             if result["status"]=="success":
+                res = result['result']['value']
                 try:
-                    rspec.version.merge(ReturnValue.get_value(result["rspec"]))
+                    rspec.version.merge(ReturnValue.get_value(res))
                 except:
                     api.logger.log_exc("SM.ListResources: Failed to merge aggregate rspec")
     
@@ -361,7 +358,7 @@ class SliceManager:
                 continue
             interface = api.aggregates[aggregate]
             server = api.server_proxy(interface, cred)
-            threads.run(_RenewSliver, aggregate, server, xrn, [cred], expiration_time, options)
+            threads.run(_Renew, aggregate, server, xrn, [cred], expiration_time, options)
 
         results = threads.get_results()
 
