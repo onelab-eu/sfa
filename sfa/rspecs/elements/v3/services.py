@@ -1,7 +1,7 @@
 from sfa.rspecs.elements.element import Element  
 from sfa.rspecs.elements.execute import Execute  
 from sfa.rspecs.elements.install import Install  
-from sfa.rspecs.elements.services import Services  
+from sfa.rspecs.elements.services import ServicesElement  
 from sfa.rspecs.elements.login import Login
 
 class Services:
@@ -39,7 +39,7 @@ class Services:
     def get_services(xml):
         services = []
         for services_elem in xml.xpath('./default:services | ./services'):
-            service = Services(services_elem.attrib, services_elem)
+            service = ServicesElement(services_elem.attrib, services_elem)
             # get install 
             install_elems = xml.xpath('./default:install | ./install')
             service['install'] = [install_elem.get_instance(Install) for install_elem in install_elems]
@@ -51,10 +51,10 @@ class Services:
             service['login'] = [login_elem.get_instance(Login) for login_elem in login_elems]
             
             ssh_user_elems = xml.xpath('./ssh-user:service_user | ./service_user')
-            service_users = []    
+            services_user = []    
             for ssh_user_elem in ssh_user_elems:
-                service_user = ssh_user_elem.get_instance(None, fields=['login', 'user_urn'])
-            service['services_user'] = service_user
+                services_user = ssh_user_elem.get_instance(None, fields=['login', 'user_urn'])
+            service['services_user'] = services_user
             services.append(service)  
         return services
 

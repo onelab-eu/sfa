@@ -3,7 +3,7 @@ from sfa.util.xml import XpathFilter
 from sfa.util.xrn import Xrn
 
 from sfa.rspecs.elements.element import Element
-from sfa.rspecs.elements.node import Node
+from sfa.rspecs.elements.node import NodeElement
 from sfa.rspecs.elements.sliver import Sliver
 from sfa.rspecs.elements.location import Location
 from sfa.rspecs.elements.hardware_type import HardwareType
@@ -122,7 +122,7 @@ class SFAv1Node:
     def get_node_objs(node_elems):
         nodes = []    
         for node_elem in node_elems:
-            node = Node(node_elem.attrib, node_elem)
+            node = NodeElement(node_elem.attrib, node_elem)
             if 'site_id' in node_elem.attrib:
                 node['authority_id'] = node_elem.attrib['site_id']
             # get location

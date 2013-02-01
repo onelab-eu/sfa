@@ -1,7 +1,7 @@
 from sfa.rspecs.elements.element import Element  
 from sfa.rspecs.elements.execute import Execute  
 from sfa.rspecs.elements.install import Install  
-from sfa.rspecs.elements.services import Services  
+from sfa.rspecs.elements.services import ServicesElement  
 from sfa.rspecs.elements.login import Login
 
 class PGv2Services:
@@ -28,7 +28,7 @@ class PGv2Services:
     def get_services(xml):
         services = []
         for services_elem in xml.xpath('./default:services | ./services'):
-            service = Services(services_elem.attrib, services_elem)
+            service = ServicesElement(services_elem.attrib, services_elem)
             # get install 
             install_elems = xml.xpath('./default:install | ./install')
             service['install'] = [install_elem.get_instance(Install) for install_elem in install_elems]

@@ -1,6 +1,6 @@
 from sfa.rspecs.elements.element import Element
  
-class Node(Element):
+class NodeElement(Element):
     
     fields = [
         'component_id',

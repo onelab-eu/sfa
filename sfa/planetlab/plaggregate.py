@@ -6,13 +6,13 @@ from sfa.util.sfalogging import logger
 from sfa.util.faults import SliverDoesNotExist
 from sfa.rspecs.rspec import RSpec
 from sfa.rspecs.elements.hardware_type import HardwareType
-from sfa.rspecs.elements.node import Node
+from sfa.rspecs.elements.node import NodeElement
 from sfa.rspecs.elements.link import Link
 from sfa.rspecs.elements.sliver import Sliver
 from sfa.rspecs.elements.login import Login
 from sfa.rspecs.elements.location import Location
 from sfa.rspecs.elements.interface import Interface
-from sfa.rspecs.elements.services import Services
+from sfa.rspecs.elements.services import ServicesElement
 from sfa.rspecs.elements.pltag import PLTag
 from sfa.rspecs.elements.lease import Lease
 from sfa.rspecs.elements.granularity import Granularity
@@ -190,7 +190,7 @@ class PlAggregate:
         return slivers
 
     def node_to_rspec_node(self, node, sites, interfaces, node_tags, pl_initscripts=[], grain=None, options={}):
-        rspec_node = Node()
+        rspec_node = NodeElement()
         # xxx how to retrieve site['login_base']
         site=sites[node['site_id']]
         rspec_node['component_id'] = PlXrn(self.driver.hrn, hostname=node['hostname']).get_urn()
@@ -260,7 +260,7 @@ class PlAggregate:
                        'username': sliver['name'],
                        'login': sliver['name']
                       })
-        service = Services({'login': login,
+        service = ServicesElement({'login': login,
                             'services_user': sliver['services_user']})
         rspec_node['services'] = [service]    
         return rspec_node      

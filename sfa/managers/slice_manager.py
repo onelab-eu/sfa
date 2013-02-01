@@ -193,22 +193,21 @@ class SliceManager:
         if Callids().already_handled(call_id): return ""
     
         version_manager = VersionManager()
-        def _Allocate(aggregate, server, xrn, credential, rspec, expiration, options):
+        def _Allocate(aggregate, server, xrn, credential, rspec, options):
             tStart = time.time()
             try:
                 # Need to call GetVersion at an aggregate to determine the supported
                 # rspec type/format beofre calling CreateSliver at an Aggregate.
-                server_version = api.get_cached_server_version(server)
-                requested_users = users
-                if 'sfa' not in server_version and 'geni_api' in server_version:
+                #server_version = api.get_cached_server_version(server)
+                #if 'sfa' not in server_version and 'geni_api' in server_version:
                     # sfa aggregtes support both sfa and pg rspecs, no need to convert
                     # if aggregate supports sfa rspecs. otherwise convert to pg rspec
-                    rspec = RSpec(RSpecConverter.to_pg_rspec(rspec, 'request'))
-                    filter = {'component_manager_id': server_version['urn']}
-                    rspec.filter(filter)
-                    rspec = rspec.toxml()
-                rspec = server.Allocate(xrn, credential, rspec, expiration, options)
-                return {"aggregate": aggregate, "rspec": rspec, "elapsed": time.time()-tStart, "status": "success"}
+                    #rspec = RSpec(RSpecConverter.to_pg_rspec(rspec, 'request'))
+                    #filter = {'component_manager_id': server_version['urn']}
+                    #rspec.filter(filter)
+                    #rspec = rspec.toxml()
+                result = server.Allocate(xrn, credential, rspec, options)
+                return {"aggregate": aggregate, "result": result, "elapsed": time.time()-tStart, "status": "success"}
             except:
                 logger.log_exc('Something wrong in _Allocate with URL %s'%server.url)
                 return {"aggregate": aggregate, "elapsed": time.time()-tStart, "status": "exception", "exc_info": sys.exc_info()}
@@ -243,7 +242,7 @@ class SliceManager:
             interface = api.aggregates[aggregate]
             server = api.server_proxy(interface, cred)
             # Just send entire RSpec to each aggregate
-            threads.run(_Allocate, aggregate, server, xrn, [cred], rspec.toxml(), expiration, options)
+            threads.run(_Allocate, aggregate, server, xrn, [cred], rspec.toxml(), options)
                 
         results = threads.get_results()
         manifest_version = version_manager._get_version(rspec.version.type, rspec.version.version, 'manifest')
@@ -256,9 +255,10 @@ class SliceManager:
                                    result["status"], result.get("exc_info",None))
             if result["status"]=="success":
                 try:
-                    geni_urn = result['result']['geni_urn']
-                    result_rspec.version.merge(ReturnValue.get_value(result['result']['geni_rspec']))
-                    geni_slivers.extend(result['result']['geni_slivers'])
+                    res = result['result']['value']
+                    geni_urn = res['geni_urn']
+                    result_rspec.version.merge(ReturnValue.get_value(res['geni_rspec']))
+                    geni_slivers.extend(res['geni_slivers'])
                 except:
                     api.logger.log_exc("SM.Allocate: Failed to merge aggregate rspec")
         return {
@@ -314,9 +314,10 @@ class SliceManager:
                                    result["status"], result.get("exc_info",None))
             if result["status"]=="success":
                 try:
-                    geni_urn = result['result']['geni_urn']
-                    result_rspec.version.merge(ReturnValue.get_value(result['result']['geni_rspec']))
-                    geni_slivers.extend(result['result']['geni_slivers'])
+                    res = result['result']['value']
+                    geni_urn = res['geni_urn']
+                    result_rspec.version.merge(ReturnValue.get_value(res['geni_rspec']))
+                    geni_slivers.extend(res['geni_slivers'])
                 except:
                     api.logger.log_exc("SM.Provision: Failed to merge aggregate rspec")
         return {
@@ -327,13 +328,13 @@ class SliceManager:
 
 
     
-    def RenewSliver(self, api, xrn, creds, expiration_time, options):
+    def Renew(self, api, xrn, creds, expiration_time, options):
         call_id = options.get('call_id')
         if Callids().already_handled(call_id): return True
 
-        def _RenewSliver(aggregate, server, xrn, creds, expiration_time, options):
+        def _Renew(aggregate, server, xrn, creds, expiration_time, options):
             try:
-                result=server.RenewSliver(xrn, creds, expiration_time, options)
+                result=server.Renew(xrn, creds, expiration_time, options)
                 if type(result)!=dict:
                     result = {'code': {'geni_code': 0}, 'value': result}
                 result['aggregate'] = aggregate
@@ -344,9 +345,8 @@ class SliceManager:
                         'code': {'geni_code': -1},
                         'value': False, 'output': ""}
 
-        (hrn, urn_type) = urn_to_hrn(xrn)
         # get the callers hrn
-        valid_cred = api.auth.checkCredentials(creds, 'renewsliver', hrn)[0]
+        valid_cred = api.auth.checkCredentials(creds, 'renewsliver', xrn)[0]
         caller_hrn = Credential(cred=valid_cred).get_gid_caller().get_hrn()
 
         # attempt to use delegated credential first
@@ -377,12 +377,12 @@ class SliceManager:
 
         return results
 
-    def DeleteSliver(self, api, xrn, creds, options):
+    def Delete(self, api, xrn, creds, options):
         call_id = options.get('call_id')
         if Callids().already_handled(call_id): return ""
 
-        def _DeleteSliver(server, xrn, creds, options):
-            return server.DeleteSliver(xrn, creds, options)
+        def _Delete(server, xrn, creds, options):
+            return server.Delete(xrn, creds, options)
 
         (hrn, type) = urn_to_hrn(xrn)
         # get the callers hrn
