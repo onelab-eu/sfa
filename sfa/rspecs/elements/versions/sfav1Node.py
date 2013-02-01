@@ -144,7 +144,7 @@ class SFAv1Node:
             # get slivers
             node['slivers'] = SFAv1Sliver.get_slivers(node_elem)
             # get tags
-            node['tags'] =  SFAv1PLTag.get_pl_tags(node_elem, ignore=Node.fields+["hardware_type"])
+            node['tags'] =  SFAv1PLTag.get_pl_tags(node_elem, ignore=NodeElement.fields+["hardware_type"])
             # get hardware types
             hardware_type_elems = node_elem.xpath('./default:hardware_type | ./hardware_type')
             node['hardware_types'] = [hw_type.get_instance(HardwareType) for hw_type in hardware_type_elems]
