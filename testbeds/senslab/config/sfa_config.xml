@@ -1,0 +1,253 @@
+<?xml version="1.0" encoding="utf-8"?>
+<configuration>
+  <variables>
+    <category id="sfa">
+      <name>General</name>
+      <description>Basic system variables.</description>
+      <variablelist>
+        <variable id="generic_flavour" type="string">
+          <name>Generic Flavour</name>
+          <value>slab</value>
+          <description>This string refers to a class located in sfa.generic that describes 
+          which specific implementation needs to be used for api, manager and driver objects.
+          PlanetLab users do not need to change this setting.
+          </description>
+        </variable>
+        <variable id="interface_hrn" type="string">
+          <name>Human readable name</name>
+          <value>senslab</value>
+          <description>The human readable name for this interface.</description>
+        </variable>
+        <variable id="credential_schema" type="string">
+          <name>Credential Schema</name>
+          <value>/etc/sfa/credential.xsd</value>
+          <description>The path to the default credential schema</description>
+        </variable>
+        <variable id="api_loglevel" type="int">
+          <name>Debug</name>
+          <value>0</value>
+          <description>Logging level; 0=minimum, 1=info, 2=debug</description>
+        </variable>
+        <variable id="max_slice_renew" type="int">
+          <name>Max Slice Renew</name>
+          <value>60</value>
+          <description>Maximum amout of days a user can extend/renew their slices to</description>
+        </variable>
+        <variable id="session_key_path" type="string">
+          <name>User Session Keys Path </name>
+          <value>/var/lib/sfa/session_keys</value>
+          <description>Some services will peform operations on behalf of a user, but make
+            it look like the user is the one performing the operation. Doing this requires a 
+            valid key pair and credential for the user. This option defines the path where 
+            key pairs and credentials are generated and stored.
+            This functionality is used by the SFA web GUI. 
+            </description>
+        </variable>
+      </variablelist>
+    </category>
+    <category id="sfa_registry">
+      <name>Registry</name>
+      <description>The settings that affect the registry that will run
+      as part of this SFA instance.</description>
+      <variablelist>
+        <variable id="enabled" type="boolean">
+          <name>Enable Registry</name>
+          <value>true</value>
+          <description>Allows this local SFA instance to run as a
+	  registry.</description>
+        </variable>
+        <variable id="host" type="hostname">
+          <name>Hostname</name>
+          <value>localhost</value>
+          <description>The hostname where the registry is expected to
+	  be found; using localhost when the local registry is enabled
+	  seems reasonable.</description>
+        </variable>
+        <variable id="port" type="int">
+          <name>Port number</name>
+          <value>12345</value>
+          <description>The port where the registry is to be found.</description>
+        </variable>
+        <variable id="root_auth" type="string">
+          <name>Root Authority</name>
+          <value>senslab</value>
+          <description>The hrn of the registry's root auth.</description>
+        </variable>
+      </variablelist>
+    </category>
+    <category id="sfa_sm">
+      <name>Slice Manager</name>
+      <description>The settings that affect the slice manager that will run
+      as part of this SFA instance.</description>
+      <variablelist>
+        <variable id="enabled" type="boolean">
+          <name>Enable Slice Manager</name>
+          <value>true</value>
+          <description>Allows this local SFA instance to run as a
+	  slice manager.</description>
+        </variable>
+        <variable id="host" type="hostname">
+          <name>Hostname</name>
+          <value>localhost</value>
+          <description>The hostname where the slice manager is expected to
+	  be found.</description>
+        </variable>
+        <variable id="port" type="int">
+          <name>Port number</name>
+          <value>12347</value>
+          <description>The port where the slice manager is to be found.</description>
+        </variable>
+        <variable id="caching" type="boolean">
+          <name>Cache advertisement rspec</name>
+          <value>false</value>
+          <description>Enable caching of the global advertisement, as
+	  returned by ListResources without a slice argument. </description>
+        </variable>
+      </variablelist>
+    </category>
+    <category id="sfa_aggregate">
+      <name>Aggregate</name>
+      <description>The settings that affect the aggregate manager that will run
+      as part of this SFA instance.</description>
+      <variablelist>
+        <variable id="enabled" type="boolean">
+          <name>Enable Aggregate</name>
+          <value>true</value>
+          <description>Allows this local SFA instance to run as an
+	  aggregate manager.</description>
+        </variable>
+        <variable id="host" type="hostname">
+          <name>Hostname</name>
+          <value>localhost</value>
+          <description>The hostname where the aggregate is expected to
+	  be found.</description>
+        </variable>
+        <variable id="port" type="int">
+          <name>Port number</name>
+          <value>12346</value>
+          <description>The port where the aggregate is to be found.</description>
+        </variable>
+        <variable id="caching" type="boolean">
+          <name>Cache advertisement rspec</name>
+          <value>true</value>
+          <description>Enable caching of the global advertisement, as
+	  returned by ListResources without a slice argument. </description>
+        </variable>
+      </variablelist>
+    </category>
+    <category id="sfa_db">
+      <name/>
+      <description>The settings that tell this SFA instance where to find its database. You can essentially leave this as-is unless you plan on hosting your data on some other box.</description>
+      <variablelist>
+        <variable id="enabled" type="boolean">
+          <name>Enabled</name>
+          <value>true</value>
+          <description>Enable the database server on this machine.</description>
+        </variable>
+        <variable id="host" type="hostname">
+          <name>Database host</name>
+          <value>localhost</value>
+          <description>The host where the SFA database can be reached.</description>
+        </variable>
+        <variable id="port" type="int">
+          <name>Database port</name>
+          <value>5432</value>
+          <description>The port where the SFA database can be reached.</description>
+        </variable>
+        <variable id="user" type="string">
+          <name>Database user</name>
+          <value>sfa</value>
+          <description>When SFA gets co-hosted with a myplc, this should match the PLC config.</description>
+        </variable>
+        <variable id="password" type="string">
+          <name>Database password</name>
+          <value>sfa</value>
+          <description>When SFA gets co-hosted with a myplc, this should match the PLC config.</description>
+        </variable>
+        <variable id="name" type="string">
+          <name>Database name</name>
+          <value>sfa</value>
+          <description>SFA database name.</description>
+        </variable>
+      </variablelist>
+    </category>
+    <category id="sfa_flashpolicy">
+      <name>SFA Flash Policy</name>
+      <description>The settings that affect the flash policy server that will run
+      as part of this SFA instance.</description>
+      <variablelist>
+        <variable id="enabled" type="boolean">
+          <name>Enable Flash Policy Server</name>
+          <value>false</value>
+          <description>Allows this local SFA instance to run a
+          flash policy server.</description>
+        </variable>
+        <variable id="config_file" type="string">
+          <name>Flash policy config file</name>
+          <value>/etc/sfa/sfa_flashpolicy_config.xml</value>
+          <description>The path to where the flash policy config file can be reached.</description>
+        </variable>
+        <variable id="port" type="int">
+          <name>Flash policy port</name>
+          <value>843</value>
+          <description>The flash policy server port.</description>
+        </variable>
+      </variablelist>
+    </category>
+    <category id="sfa_plc">
+      <name/>
+      <description>The settings that tell this SFA instance how to interact with the underlying PLC. Refer to plc-config-tty on this installation for more information.</description>
+      <variablelist>
+        <variable id="user" type="string">
+          <name>PLC login name for an admin user; SFA will carry on operations under this account.</name>
+          <value>root@localhost.localdomain</value>
+          <description/>
+        </variable>
+        <variable id="password" type="string">
+          <name>Password</name>
+          <value>root</value>
+          <description>The PLC password for SFA_PLC_USER.</description>
+        </variable>
+        <variable id="url" type="string">
+          <name>URL</name>
+          <value>https://localhost:443/PLCAPI/</value>
+          <description>Full URL of PLC interface.</description>
+        </variable>
+      </variablelist>
+    </category>
+    <category id="sfa_federica">
+      <name/>
+      <description>The settings that tell this SFA instance how to interact with the FEDERICA testbed.</description>
+      <variablelist>
+        <variable id="url" type="string">
+          <name>XMLRPC URL</name>
+          <value>https://root:password@federica.sfa.wrapper.com:8443/fedewrapper/xmlrpc/</value>
+          <description>URL for the federica xmlrpc API; login and password need to be set like in http://login:password@hostname:port/the/path </description>
+        </variable>
+      </variablelist>
+    </category>
+    <category id="sfa_nova">
+      <name>SFA Flash Policy</name>
+      <description>The settings that affect how SFA connects to 
+                   the Nova/EC2 API</description>
+      <variablelist>
+        <variable id="user" type="string">
+          <name>Sfa nova user</name>
+          <value>novaadmin</value>
+          <description>Account/context to use when performing 
+                       administrative nova operations</description>
+        </variable>
+        <variable id="api_url" type="string">
+          <name>Nova API url</name>
+          <value>127.0.0.1</value>
+          <description>The Nova/EC2 API url </description>
+        </variable>
+        <variable id="api_port" type="int">
+          <name>Nova API Port</name>
+          <value>8773</value>
+          <description>The Nova/EC2 API port.</description>
+        </variable>
+      </variablelist>
+    </category>
+  </variables>
+</configuration>
