@@ -222,7 +222,7 @@ class Hierarchy:
     # @param uuid the unique identifier to store in the GID
     # @param pkey the public key to store in the GID
 
-    def create_gid(self, xrn, uuid, pkey, CA=False):
+    def create_gid(self, xrn, uuid, pkey, CA=False, email=None):
         hrn, type = urn_to_hrn(xrn)
         if not type:
             type = 'authority'
@@ -231,7 +231,7 @@ class Hierarchy:
         # If xrn was a hrn instead of a urn, then the gid's urn will be
         # of type None 
         urn = hrn_to_urn(hrn, type)
-        gid = GID(subject=hrn, uuid=uuid, hrn=hrn, urn=urn)
+        gid = GID(subject=hrn, uuid=uuid, hrn=hrn, urn=urn, email=email)
         # is this a CA cert
         if hrn == self.config.SFA_INTERFACE_HRN or not parent_hrn:
             # root or sub authority  
