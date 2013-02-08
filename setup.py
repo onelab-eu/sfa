@@ -50,6 +50,7 @@ initscripts = [ 'sfa', 'sfa-cm' ]
 data_files = [ ('/etc/sfa/', [ 'config/aggregates.xml',
                               'config/registries.xml',
                               'config/default_config.xml',
+                              'config/api_versions.xml',
                               'config/sfi_config',
                               'config/topology',
                               'sfa/managers/pl/pl.rng',

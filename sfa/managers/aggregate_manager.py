@@ -5,6 +5,7 @@ from sfa.util.xrn import Xrn
 from sfa.util.callids import Callids
 from sfa.util.sfalogging import logger
 from sfa.util.faults import SfaInvalidArgument, InvalidRSpecVersion
+from sfa.server.api_versions import ApiVersions
 
 
 class AggregateManager:
@@ -49,13 +50,15 @@ class AggregateManager:
         xrn=Xrn(api.hrn, type='authority')
         version = version_core()
         cred_types = [{'geni_type': 'geni_sfa', 'geni_version': str(i)} for i in range(4)[-2:]]
+        geni_api_versions = ApiVersions().get_versions()
+        geni_api_versions.append({'3': 'http://%s:%s' % (socket.gethostname(), api.config.sfa_aggregate_port)})
         version_generic = {
             'testbed': self.driver.testbed_name(),
             'interface':'aggregate',
             'hrn':xrn.get_hrn(),
             'urn':xrn.get_urn(),
             'geni_api': 3,
-            'geni_api_versions': {'3': 'http://%s:%s' % (socket.gethostname(), api.config.sfa_aggregate_port)},
+            'geni_api_versions': geni_api_versions,
             'geni_single_allocation': 0, # Accept operations that act on as subset of slivers in a given state.
             'geni_allocate': 'geni_many',# Multiple slivers can exist and be incrementally added, including those which connect or overlap in some way.
             'geni_credential_types': cred_types,
