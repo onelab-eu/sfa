@@ -8,7 +8,6 @@ from sfa.util.sfalogging import logger
 from sfa.storage.alchemy import dbsession
 from sfa.storage.model import RegRecord, RegUser, RegSlice
 from sqlalchemy.orm import joinedload
-from sfa.trust.credential import Credential
 
 
 from sfa.managers.driver import Driver
@@ -245,7 +244,7 @@ class SlabDriver(Driver):
                     requested_lease_list.append(single_requested_lease)
                 
         logger.debug("SLABDRIVER.PY \tcreate_sliver APRESLEASE" )       
-        #dCreate dict of leases by start_time, regrouping nodes reserved
+        #Create dict of leases by start_time, regrouping nodes reserved
         #at the same
         #time, for the same amount of time = one job on OAR
         requested_job_dict = {}

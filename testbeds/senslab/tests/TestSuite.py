@@ -91,7 +91,7 @@ def TestLdap(job_id = None):
     data['mail'] = "robin@arkham.fr"
     
     record={}
-    record['hrn'] = 'senslab2.drake'
+    record['hrn'] = 'senslab.drake'
     record['last_name'] = "Drake"
     record['first_name']="Tim"
     record['mail'] = "robin@arkham.fr"
@@ -126,7 +126,7 @@ def TestLdap(job_id = None):
     
     
     record_night = {}
-    record_night['hrn'] = 'senslab2.grayson'
+    record_night['hrn'] = 'senslab.grayson'
     record_night['last_name'] = datanight['last_name']
     record_night['first_name'] = datanight['first_name']
     record_night['mail'] = datanight['mail']
@@ -148,7 +148,7 @@ def TestLdap(job_id = None):
     
     
     #record_avakian = {}
-    #record_avakian['hrn']= 'senslab2.avakian'
+    #record_avakian['hrn']= 'senslab.avakian'
     #record_avakian['last_name'] = 'avakian'
     #record_avakian['first_name'] = 'sandrine'
     #record_avakian['mail'] = 'sandrine.avakian@inria.fr'
@@ -157,7 +157,7 @@ def TestLdap(job_id = None):
     #print "\r\n Sandrine \tChange pubkey LdapModifyUser ", ret 
     
     #record_myslice = {}
-    #record_myslice['hrn']= 'senslab2.myslice'
+    #record_myslice['hrn']= 'senslab.myslice'
     #record_myslice['last_name'] = 'myslice'
     #record_myslice['first_name'] = 'myslice'
     #record_myslice['mail'] = 'nturro@inria.fr'
@@ -263,7 +263,7 @@ def TestSlabDriver(job_id = None):
     nodes = slabdriver.GetReservedNodes()
     print " \r\n \r\n GetReservedNodes" ,nodes
     
-    sl = slabdriver.GetSlices(slice_filter='senslab2.avakian_slice', slice_filter_type='slice_hrn') 
+    sl = slabdriver.GetSlices(slice_filter='senslab.avakian_slice', slice_filter_type='slice_hrn') 
     print "\r\n \r\nGetSlices", sl[0]
     
     sl = slabdriver.GetSlices(slice_filter='529', slice_filter_type='record_id_user')  
@@ -285,7 +285,7 @@ def TestSlabDriver(job_id = None):
 def  TestSfi(arg = None):
     import os
     print " =================    SFI.PY RESOURCES            ============="
-    listing = os.system("sfi.py list senslab2")
+    listing = os.system("sfi.py list senslab")
     
     print 
     resources = os.system("sfi.py resources")
@@ -307,28 +307,28 @@ def  TestSfi(arg = None):
     rspecfile.close()
     
     print " =================    SFI.PY SHOW SLICE   ============="
-    slices_rec = os.system("sfi.py resources senslab2.avakian_slice")
+    slices_rec = os.system("sfi.py resources senslab.avakian_slice")
     
     print  " =================    SFI.PY SHOW USER   ============="
-    show_slice = os.system("sfi.py show senslab2.avakian_slice")
+    show_slice = os.system("sfi.py show senslab.avakian_slice")
 
     print " =================    SFI.PY SHOW NODE   ============="
-    show = os.system("sfi.py show senslab2.avakian")
+    show = os.system("sfi.py show senslab.avakian")
 
     print " =================    SFI.PY SLICES       ============="
-    show_node  = os.system("sfi.py show senslab2.node67.grenoble.senslab.info")
+    show_node  = os.system("sfi.py show senslab.node67.grenoble.senslab.info")
 
     print " =================    SFI.PY LIST SLICE   ============="
     slices = os.system("sfi.py slices")
 
     print " =================    SFI.PY STATUS SLICE   ============="
-    status_slice = os.system("sfi.py status senslab2.avakian_slice")
+    status_slice = os.system("sfi.py status senslab.avakian_slice")
     
     print " =================    SFI.PY DELETE SLICE   ============="
-    status_slice = os.system("sfi.py delete senslab2.avakian_slice")
+    status_slice = os.system("sfi.py delete senslab.avakian_slice")
     
     print " =================    SFI.PY CREATE SLICE   ============="
-    create = os.system("sfi.py create senslab2.avakian_slice /home/savakian/flab-sfa/rspec_sfa.rspec")
+    create = os.system("sfi.py create senslab.avakian_slice /home/savakian/flab-sfa/rspec_sfa.rspec")
       
 def TestSQL(arg = None):
     from sfa.storage.model import make_record, RegRecord, RegAuthority, RegUser, RegSlice, RegKey
@@ -337,8 +337,8 @@ def TestSQL(arg = None):
     
     from sqlalchemy.orm import joinedload 
     
-    solo_query_slice_list = dbsession.query(RegSlice).options(joinedload('reg_researchers')).filter_by(hrn='senslab2.avakian_slice').first()
-    print "\r\n \r\n ===========      query_slice_list  RegSlice joinedload('reg_researchers')   senslab2.avakian    first \r\n \t ",solo_query_slice_list.__dict__
+    solo_query_slice_list = dbsession.query(RegSlice).options(joinedload('reg_researchers')).filter_by(hrn='senslab.avakian_slice').first()
+    print "\r\n \r\n ===========      query_slice_list  RegSlice joinedload('reg_researchers')   senslab.avakian    first \r\n \t ",solo_query_slice_list.__dict__
       
     query_slice_list = dbsession.query(RegSlice).options(joinedload('reg_researchers')).all()             
     print "\r\n \r\n ===========      query_slice_list RegSlice joinedload('reg_researchers')   ALL  \r\n \t", query_slice_list[0].__dict__ 
