@@ -14,7 +14,7 @@ class AggregateManager:
         xrn=Xrn(api.hrn)
         version = version_core()
         geni_api_versions = ApiVersions().get_versions()
-        geni_api_versions.append({'2': 'http://%s:%s' % (api.config.SFA_AGGREGATE_HOST, api.config.SFA_AGGREGATE_PORT)})
+        geni_api_versions['2'] = 'http://%s:%s' % (api.config.SFA_AGGREGATE_HOST, api.config.SFA_AGGREGATE_PORT)
         version_generic = {
             'interface':'aggregate',
             'sfa': 2,

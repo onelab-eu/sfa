@@ -32,7 +32,7 @@ class ApiVersions:
         self.xml = XML(source)
 
     def get_versions(self):
-        versions = []
+        versions = {}
         for value in self.xml.todict().values():
             if not value:
                 continue
@@ -40,8 +40,7 @@ class ApiVersions:
                 for item in value:
                     if isinstance(item, dict) and \
                        set(ApiVersions.required_fields).issubset(item.keys()):
-                        api_version = {str(item['version']): item['url']}
-                        versions.append(api_version)
+                        versions[str(item['version'])] = item['url']
         return versions  
                 
            
