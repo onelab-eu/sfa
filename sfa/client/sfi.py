@@ -936,10 +936,17 @@ or version information about sfi itself
         if options.show_credential:
             show_credentials(auth_cred)
         record_dict = {}
-        if len(args) > 0:
-            record_filepath = args[0]
-            rec_file = self.get_record_file(record_filepath)
-            record_dict.update(load_record_from_file(rec_file).todict())
+        if len(args) > 1:
+            self.print_help()
+            sys.exit(1)
+        if len(args)==1:
+            try:
+                record_filepath = args[0]
+                rec_file = self.get_record_file(record_filepath)
+                record_dict.update(load_record_from_file(rec_file).todict())
+            except:
+                print "Cannot load record file %s"%record_filepath
+                sys.exit(1)
         if options:
             record_dict.update(load_record_from_opts(options).todict())
         # we should have a type by now
