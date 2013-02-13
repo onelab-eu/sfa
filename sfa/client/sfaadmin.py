@@ -193,12 +193,12 @@ Users having a GID/PubKey correpondence NOT OK: %s and are: \n%s\n\n"%(len(NOKEY
           help='Description, useful for slices', default=None)
     @args('-k', '--key', dest='key', metavar='<key>', help='public key string or file', 
           default=None)
-    @args('-s', '--slices', dest='slices', metavar='<slices>', help='slice xrns', 
+    @args('-s', '--slices', dest='slices', metavar='<slices>', help='Set/replace slice xrns', 
           default='', type="str", action='callback', callback=optparse_listvalue_callback)
-    @args('-r', '--researchers', dest='researchers', metavar='<researchers>', help='slice researchers', 
+    @args('-r', '--researchers', dest='researchers', metavar='<researchers>', help='Set/replace slice researchers', 
           default='', type="str", action='callback', callback=optparse_listvalue_callback)
     @args('-p', '--pis', dest='pis', metavar='<PIs>', 
-          help='Principal Investigators/Project Managers ', 
+          help='Set/replace Principal Investigators/Project Managers', 
           default='', type="str", action='callback', callback=optparse_listvalue_callback)
     def register(self, xrn, type=None, url=None, description=None, key=None, slices='', 
                  pis='', researchers='',email=''):
@@ -215,12 +215,12 @@ Users having a GID/PubKey correpondence NOT OK: %s and are: \n%s\n\n"%(len(NOKEY
           help='Description', default=None)
     @args('-k', '--key', dest='key', metavar='<key>', help='public key string or file',
           default=None)
-    @args('-s', '--slices', dest='slices', metavar='<slices>', help='slice xrns',
+    @args('-s', '--slices', dest='slices', metavar='<slices>', help='Set/replace slice xrns',
           default='', type="str", action='callback', callback=optparse_listvalue_callback)
-    @args('-r', '--researchers', dest='researchers', metavar='<researchers>', help='slice researchers',
+    @args('-r', '--researchers', dest='researchers', metavar='<researchers>', help='Set/replace slice researchers',
           default='', type="str", action='callback', callback=optparse_listvalue_callback)
     @args('-p', '--pis', dest='pis', metavar='<PIs>',
-          help='Principal Investigators/Project Managers ',
+          help='Set/replace Principal Investigators/Project Managers',
           default='', type="str", action='callback', callback=optparse_listvalue_callback)
     def update(self, xrn, type=None, url=None, description=None, key=None, slices='', 
                pis='', researchers=''):

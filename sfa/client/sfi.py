@@ -312,12 +312,12 @@ class Sfi:
             parser.add_option('-e', '--email', dest='email', default="",  help="email (mandatory for users)") 
             parser.add_option('-k', '--key', dest='key', metavar='<key>', help='public key string or file', 
                               default=None)
-            parser.add_option('-s', '--slices', dest='slices', metavar='<slices>', help='slice xrns',
+            parser.add_option('-s', '--slices', dest='slices', metavar='<slices>', help='Set/replace slice xrns',
                               default='', type="str", action='callback', callback=optparse_listvalue_callback)
             parser.add_option('-r', '--researchers', dest='researchers', metavar='<researchers>', 
-                              help='slice researchers', default='', type="str", action='callback', 
+                              help='Set/replace slice researchers', default='', type="str", action='callback', 
                               callback=optparse_listvalue_callback)
-            parser.add_option('-p', '--pis', dest='pis', metavar='<PIs>', help='Principal Investigators/Project Managers',
+            parser.add_option('-p', '--pis', dest='pis', metavar='<PIs>', help='Set/replace Principal Investigators/Project Managers',
                               default='', type="str", action='callback', callback=optparse_listvalue_callback)
             parser.add_option ('-X','--extra',dest='extras',default={},type='str',metavar="<EXTRA_ASSIGNS>",
                                action="callback", callback=optparse_dictvalue_callback, nargs=1,
