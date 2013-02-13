@@ -310,10 +310,6 @@ class Sfi:
             parser.add_option('-x', '--xrn', dest='xrn', metavar='<xrn>', help='object hrn/urn (mandatory)')
             parser.add_option('-t', '--type', dest='type', metavar='<type>', help='object type', default=None)
             parser.add_option('-e', '--email', dest='email', default="",  help="email (mandatory for users)") 
-# use --extra instead
-#            parser.add_option('-u', '--url', dest='url', metavar='<url>', default=None, help="URL, useful for slices") 
-#            parser.add_option('-d', '--description', dest='description', metavar='<description>', 
-#                              help='Description, useful for slices', default=None)
             parser.add_option('-k', '--key', dest='key', metavar='<key>', help='public key string or file', 
                               default=None)
             parser.add_option('-s', '--slices', dest='slices', metavar='<slices>', help='slice xrns',
@@ -323,9 +319,6 @@ class Sfi:
                               callback=optparse_listvalue_callback)
             parser.add_option('-p', '--pis', dest='pis', metavar='<PIs>', help='Principal Investigators/Project Managers',
                               default='', type="str", action='callback', callback=optparse_listvalue_callback)
-# use --extra instead
-#            parser.add_option('-f', '--firstname', dest='firstname', metavar='<firstname>', help='user first name')
-#            parser.add_option('-l', '--lastname', dest='lastname', metavar='<lastname>', help='user last name')
             parser.add_option ('-X','--extra',dest='extras',default={},type='str',metavar="<EXTRA_ASSIGNS>",
                                action="callback", callback=optparse_dictvalue_callback, nargs=1,
                                help="set extra/testbed-dependent flags, e.g. --extra enabled=true")
