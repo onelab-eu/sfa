@@ -59,8 +59,8 @@ class Slabv1(RSpecVersion):
     def get_slice_timeslot(self ):
         return Slabv1Timeslot.get_slice_timeslot(self.xml)
     
-    def add_connection_information(self, ldap_username):
-        return Slabv1Node.add_connection_information(self.xml,ldap_username)
+    def add_connection_information(self, ldap_username, sites_set):
+        return Slabv1Node.add_connection_information(self.xml,ldap_username, sites_set)
     
     def add_nodes(self, nodes, check_for_dupes=False):
         return Slabv1Node.add_nodes(self.xml,nodes )

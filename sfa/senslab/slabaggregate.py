@@ -2,8 +2,7 @@ import time
 from sfa.util.xrn import hrn_to_urn, urn_to_hrn, get_authority
 
 from sfa.rspecs.rspec import RSpec
-from sfa.rspecs.elements.versions.slabv1Node import SlabPosition
-from sfa.rspecs.elements.location import Location
+#from sfa.rspecs.elements.location import Location
 from sfa.rspecs.elements.hardware_type import HardwareType
 from sfa.rspecs.elements.login import Login
 from sfa.rspecs.elements.services import Services
@@ -13,7 +12,8 @@ from sfa.rspecs.elements.granularity import Granularity
 from sfa.rspecs.version_manager import VersionManager
 
 
-from sfa.rspecs.elements.versions.slabv1Node import SlabNode
+from sfa.rspecs.elements.versions.slabv1Node import SlabPosition, SlabNode, \
+                                                            SlabLocation
 from sfa.util.sfalogging import logger
 
 from sfa.util.xrn import Xrn
@@ -57,7 +57,8 @@ class SlabAggregate:
         slice_name = slice_hrn
 
         slices = self.driver.GetSlices(slice_filter= str(slice_name), \
-                                                slice_filter_type = 'slice_hrn', login=login)
+                                            slice_filter_type = 'slice_hrn', \
+                                            login=login)
         
         logger.debug("Slabaggregate api \tget_slice_and_slivers \
                         sfa_slice %s \r\n slices %s self.driver.hrn %s" \
@@ -82,7 +83,6 @@ class SlabAggregate:
             for node in node_ids_list:
                 sliver_xrn = Xrn(slice_urn, type='sliver', id=node)
                 sliver_xrn.set_authority(self.driver.hrn)
-                #node_id = self.driver.root_auth + '.' + node_id
                 sliver = Sliver({'sliver_id':sliver_xrn.urn, 
                                 'name': sfa_slice['hrn'],
                                 'type': 'slab-node', 
@@ -96,8 +96,9 @@ class SlabAggregate:
         if get_authority (sfa_slice['hrn']) == self.driver.root_auth: 
             tmp = sfa_slice['hrn'].split('.')
             ldap_username = tmp[1].split('_')[0]
-            vmaddr = 'ssh ' + ldap_username + '@grenoble.senslab.info'
-            slivers['default_sliver'] =  {'vm': vmaddr , 'login': ldap_username}
+            ssh_access = None
+            slivers['default_sliver'] =  {'ssh': ssh_access , \
+                                        'login': ldap_username}
             
         #TODO get_slice_and_slivers Find the login of the external user
 
@@ -193,11 +194,13 @@ class SlabAggregate:
                 # xxx how to retrieve site['login_base']
                 #site_id=node['site_id']
                 #site=sites_dict[site_id]
+
                 rspec_node['mobile'] = node['mobile']
                 rspec_node['archi'] = node['archi']
                 rspec_node['radio'] = node['radio']
     
-                slab_xrn = slab_xrn_object(self.driver.root_auth, node['hostname'])
+                slab_xrn = slab_xrn_object(self.driver.root_auth, \
+                                                    node['hostname'])
                 rspec_node['component_id'] = slab_xrn.urn
                 rspec_node['component_name'] = node['hostname']  
                 rspec_node['component_manager_id'] = \
@@ -217,16 +220,19 @@ class SlabAggregate:
                 if node['hostname'] in reserved_nodes:
                     rspec_node['boot_state'] = "Reserved"
                 rspec_node['exclusive'] = 'true'
-                rspec_node['hardware_types'] = [HardwareType({'name': 'slab-node'})]
+                rspec_node['hardware_types'] = [HardwareType({'name': \
+                                                'slab-node'})]
     
                 # only doing this because protogeni rspec needs
                 # to advertise available initscripts 
                 # add site/interface info to nodes.
-                # assumes that sites, interfaces and tags have already been prepared.
-                #site = sites_dict[node['site_id']]
-                location = Location({'country':'France'})
+                # assumes that sites, interfaces and tags have already been             
+                #prepared.
+
+                location = SlabLocation({'country':'France','site': \
+                                            node['site']})
                 rspec_node['location'] = location
-            
+
             
                 position = SlabPosition()
                 for field in position :
@@ -354,6 +360,11 @@ class SlabAggregate:
         if lease_option in ['all', 'resources']:
         #if not options.get('list_leases') or options.get('list_leases') and options['list_leases'] != 'leases':
             nodes = self.get_nodes(slices, slivers) 
+            logger.debug("\r\n \r\n SlabAggregate \ lease_option %s get rspec  ******* nodes %s"\
+                                            %(lease_option, nodes[0]))
+
+            sites_set = set([node['location']['site'] for node in nodes] )    
+
             #In case creating a job,  slice_xrn is not set to None
             rspec.version.add_nodes(nodes)
             if slice_xrn :
@@ -370,7 +381,7 @@ class SlabAggregate:
                 ldap_username = tmp[1].split('_')[0]
               
                 if version.type == "Slab":
-                    rspec.version.add_connection_information(ldap_username)
+                    rspec.version.add_connection_information(ldap_username, sites_set)
 
             default_sliver = slivers.get('default_sliver', [])
             if default_sliver:
