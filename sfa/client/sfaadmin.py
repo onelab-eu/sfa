@@ -15,15 +15,14 @@ from sfa.trust.certificate import convert_public_key
 
 from sfa.client.candidates import Candidates
 
+from sfa.client.common import optparse_listvalue_callback, terminal_render, filter_records
+
 pprinter = PrettyPrinter(indent=4)
 
 try:
     help_basedir=Hierarchy().basedir
 except:
     help_basedir='*unable to locate Hierarchy().basedir'
-
-def optparse_listvalue_callback(option, opt, value, parser):
-    setattr(parser.values, option.dest, value.split(','))
 
 def args(*args, **kwargs):
     def _decorator(func):
@@ -52,15 +51,19 @@ class RegistryCommands(Commands):
     @args('-x', '--xrn', dest='xrn', metavar='<xrn>', help='authority to list (hrn/urn - mandatory)') 
     @args('-t', '--type', dest='type', metavar='<type>', help='object type', default=None) 
     @args('-r', '--recursive', dest='recursive', metavar='<recursive>', help='list all child records', 
-          action='store_true', default=False) 
-    def list(self, xrn, type=None, recursive=False):
+          action='store_true', default=False)
+    @args('-v', '--verbose', dest='verbose', action='store_true', default=False)
+    def list(self, xrn, type=None, recursive=False, verbose=False):
         """List names registered at a given authority - possibly filtered by type"""
         xrn = Xrn(xrn, type) 
-        options = {'recursive': recursive}    
-        records = self.api.manager.List(self.api, xrn.get_hrn(), options=options)
-        for record in records:
-            if not type or record['type'] == type:
-                print "%s (%s)" % (record['hrn'], record['type'])
+        options_dict = {'recursive': recursive}
+        records = self.api.manager.List(self.api, xrn.get_hrn(), options=options_dict)
+        list = filter_records(type, records)
+        # terminal_render expects an options object
+        class Options: pass
+        options=Options()
+        options.verbose=verbose
+        terminal_render (list, options)
 
 
     @args('-x', '--xrn', dest='xrn', metavar='<xrn>', help='object hrn/urn (mandatory)') 
@@ -222,6 +225,7 @@ Users having a GID/PubKey correpondence NOT OK: %s and are: \n%s\n\n"%(len(NOKEY
     def update(self, xrn, type=None, url=None, description=None, key=None, slices='', 
                pis='', researchers=''):
         """Update an existing Registry record""" 
+        print 'incoming PIS',pis
         record_dict = self._record_dict(xrn=xrn, type=type, url=url, description=description, 
                                         key=key, slices=slices, researchers=researchers, pis=pis)
         self.api.manager.Update(self.api, record_dict)

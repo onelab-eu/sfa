@@ -46,30 +46,8 @@ from sfa.client.candidates import Candidates
 
 CM_PORT=12346
 
-# utility methods here
-def optparse_listvalue_callback(option, option_string, value, parser):
-    setattr(parser.values, option.dest, value.split(','))
-
-# a code fragment that could be helpful for argparse which unfortunately is 
-# available with 2.7 only, so this feels like too strong a requirement for the client side
-#class ExtraArgAction  (argparse.Action):
-#    def __call__ (self, parser, namespace, values, option_string=None):
-# would need a try/except of course
-#        (k,v)=values.split('=')
-#        d=getattr(namespace,self.dest)
-#        d[k]=v
-#####
-#parser.add_argument ("-X","--extra",dest='extras', default={}, action=ExtraArgAction,
-#                     help="set extra flags, testbed dependent, e.g. --extra enabled=true")
-    
-def optparse_dictvalue_callback (option, option_string, value, parser):
-    try:
-        (k,v)=value.split('=',1)
-        d=getattr(parser.values, option.dest)
-        d[k]=v
-    except:
-        parser.print_help()
-        sys.exit(1)
+from sfa.client.common import optparse_listvalue_callback, optparse_dictvalue_callback, \
+    terminal_render, filter_records 
 
 # display methods
 def display_rspec(rspec, format='rspec'):
@@ -105,14 +83,6 @@ def display_record(record, dump=False):
         info = record.getdict()
         print "%s (%s)" % (info['hrn'], info['type'])
     return
-
-
-def filter_records(type, records):
-    filtered_records = []
-    for record in records:
-        if (record['type'] == type) or (type == "all"):
-            filtered_records.append(record)
-    return filtered_records
 
 
 def credential_printable (credential_string):
@@ -196,54 +166,6 @@ def save_record_to_file(filename, record_dict):
     f.write(xml)
     f.close()
     return
-
-# used in sfi list
-def terminal_render (records,options):
-    # sort records by type
-    grouped_by_type={}
-    for record in records:
-        type=record['type']
-        if type not in grouped_by_type: grouped_by_type[type]=[]
-        grouped_by_type[type].append(record)
-    group_types=grouped_by_type.keys()
-    group_types.sort()
-    for type in group_types:
-        group=grouped_by_type[type]
-#        print 20 * '-', type
-        try:    renderer=eval('terminal_render_'+type)
-        except: renderer=terminal_render_default
-        for record in group: renderer(record,options)
-
-def render_plural (how_many, name,names=None):
-    if not names: names="%ss"%name
-    if how_many<=0: return "No %s"%name
-    elif how_many==1: return "1 %s"%name
-    else: return "%d %s"%(how_many,names)
-
-def terminal_render_default (record,options):
-    print "%s (%s)" % (record['hrn'], record['type'])
-def terminal_render_user (record, options):
-    print "%s (User)"%record['hrn'],
-    if record.get('reg-pi-authorities',None): print " [PI at %s]"%(" and ".join(record['reg-pi-authorities'])),
-    if record.get('reg-slices',None): print " [IN slices %s]"%(" and ".join(record['reg-slices'])),
-    user_keys=record.get('reg-keys',[])
-    if not options.verbose:
-        print " [has %s]"%(render_plural(len(user_keys),"key"))
-    else:
-        print ""
-        for key in user_keys: print 8*' ',key.strip("\n")
-        
-def terminal_render_slice (record, options):
-    print "%s (Slice)"%record['hrn'],
-    if record.get('reg-researchers',None): print " [USERS %s]"%(" and ".join(record['reg-researchers'])),
-#    print record.keys()
-    print ""
-def terminal_render_authority (record, options):
-    print "%s (Authority)"%record['hrn'],
-    if record.get('reg-pis',None): print " [PIS %s]"%(" and ".join(record['reg-pis'])),
-    print ""
-def terminal_render_node (record, options):
-    print "%s (Node)"%record['hrn']
 
 # minimally check a key argument
 def check_ssh_key (key):
