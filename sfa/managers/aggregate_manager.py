@@ -1,6 +1,8 @@
+import socket
 from sfa.util.version import version_core
 from sfa.util.xrn import Xrn
 from sfa.util.callids import Callids
+from sfa.server.api_versions import ApiVersions
 
 class AggregateManager:
 
@@ -11,11 +13,13 @@ class AggregateManager:
     def GetVersion(self, api, options):
         xrn=Xrn(api.hrn)
         version = version_core()
+        geni_api_versions = ApiVersions().get_versions()
+        geni_api_versions['2'] = 'http://%s:%s' % (api.config.SFA_AGGREGATE_HOST, api.config.SFA_AGGREGATE_PORT)
         version_generic = {
             'interface':'aggregate',
             'sfa': 2,
             'geni_api': 2,
-            'geni_api_versions': {'2': 'http://%s:%s' % (api.config.SFA_AGGREGATE_HOST, api.config.SFA_AGGREGATE_PORT)}, 
+            'geni_api_versions': geni_api_versions, 
             'hrn':xrn.get_hrn(),
             'urn':xrn.get_urn(),
             }
