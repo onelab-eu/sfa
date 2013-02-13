@@ -316,7 +316,7 @@ def  TestSfi(arg = None):
     show = os.system("sfi.py show senslab.avakian")
 
     print " =================    SFI.PY SLICES       ============="
-    show_node  = os.system("sfi.py show senslab.node67.grenoble.senslab.info")
+    show_node  = os.system("sfi.py show senslab.node6.devlille.senslab.info")
 
     print " =================    SFI.PY LIST SLICE   ============="
     slices = os.system("sfi.py slices")

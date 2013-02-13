@@ -240,10 +240,13 @@ class SlabDriver(Driver):
                     single_requested_lease['start_time'] = \
                                                         lease.get('start_time')
                     single_requested_lease['duration'] = lease.get('duration')
-
-                    requested_lease_list.append(single_requested_lease)
-                
-        logger.debug("SLABDRIVER.PY \tcreate_sliver APRESLEASE" )       
+                    #Check the experiment's duration is valid before adding
+                    #the lease to the requested leases list
+                    duration_in_seconds = \
+                            int(single_requested_lease['duration'])*60
+                    if duration_in_seconds > self.GetLeaseGranularity():
+                        requested_lease_list.append(single_requested_lease)
+                     
         #Create dict of leases by start_time, regrouping nodes reserved
         #at the same
         #time, for the same amount of time = one job on OAR
@@ -1313,9 +1316,10 @@ class SlabDriver(Driver):
     def GetLeaseGranularity(self):
         """ Returns the granularity of Senslab testbed.
         OAR returns seconds for experiments duration.
-        Defined in seconds. """
+        Defined in seconds. 
+        Experiments which last less than 10 min are invalid"""
         
-        grain = 60 
+        grain = 600 
         return grain
     
     def update_jobs_in_slabdb(self, job_oar_list, jobs_psql):

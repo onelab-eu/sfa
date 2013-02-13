@@ -19,13 +19,18 @@ class SlabNode(Node):
 
 class SlabPosition(Element):
     fields = ['posx', 'posy','posz']
+    
+class SlabLocation(Location):
+    fields = list(Location.fields)
+    fields.extend (['site'])
+    
 
 
 
 class Slabv1Node:
     
     @staticmethod
-    def add_connection_information(xml, ldap_username):
+    def add_connection_information(xml, ldap_username, sites_set):
         """ Adds login and ssh connection info in the network item in 
         the xml. Does not create the network element, therefore 
         should be used after add_nodes, which creates the network item.
@@ -39,9 +44,12 @@ class Slabv1Node:
 
         slab_network_dict = {}
         slab_network_dict['login'] = ldap_username
-        slab_network_dict['vm'] = 'ssh ' + ldap_username + \
-                                        '@grenoble.senslab.info'
-        network_elem.set('vm', unicode(slab_network_dict['vm']))
+ 
+        slab_network_dict['ssh'] = \
+            ['ssh ' + ldap_username + '@'+site+'.senslab.info' \
+            for site in sites_set]
+        network_elem.set('ssh', \
+                unicode(slab_network_dict['ssh']))
         network_elem.set('login', unicode( slab_network_dict['login']))
 
         
@@ -58,7 +66,7 @@ class Slabv1Node:
         else:
             network_elem = xml
        
-        #logger.debug("slabv1Node \t add_nodes  nodes %s \r\n "%(nodes))
+        logger.debug("slabv1Node \t add_nodes  nodes %s \r\n "%(nodes[0]))
         node_elems = []
         #Then add nodes items to the network item in the xml
         for node in nodes:
@@ -87,7 +95,7 @@ class Slabv1Node:
             # set location
                 if attribute is 'location':
                     node_elem.add_instance('location', node['location'], \
-                                                        Location.fields)
+                                                        SlabLocation.fields)
              # add granularity of the reservation system
              #TODO put the granularity in network instead SA 18/07/12
                 if attribute is 'granularity' :
@@ -145,7 +153,7 @@ class Slabv1Node:
         node_elems = xml.xpath(xpath)    
         logger.debug("SLABV1NODE \tget_nodes_with_slivers  \
                                 node_elems %s"%(node_elems))
-        return Slabv1Node.get_node_objs(node_elems)
+        return Slabv1Node.get_node_objs(node_elems)            
 
     @staticmethod
     def get_node_objs(node_elems):
@@ -169,7 +177,8 @@ class Slabv1Node:
                                             for location_elem in location_elems]
             if len(locations) > 0:
                 node['location'] = locations[0]
-
+                
+            
             # get interfaces
             iface_elems = node_elem.xpath('./default:interface | ./interface')
             node['interfaces'] = [iface_elem.get_instance(Interface) \
