@@ -3,7 +3,7 @@ from passlib.hash import ldap_salted_sha1 as lssha
 from sfa.util.xrn import get_authority 
 import ldap
 from sfa.util.config import Config
-from sfa.trust.hierarchy import Hierarchy
+
 
 import ldap.modlist as modlist
 from sfa.util.sfalogging import logger
@@ -93,7 +93,7 @@ class LDAPapi :
     def __init__(self):
         logger.setLevelDebug() 
         #SFA related config
-        self.senslabauth = Hierarchy()
+
         config = Config()
         
         self.authname = config.SFA_REGISTRY_ROOT_AUTH
@@ -106,17 +106,18 @@ class LDAPapi :
         
         self.lengthPassword = 8
         self.baseDN = self.conn.ldapPeopleDN
-        #authinfo=self.senslabauth.get_auth_info(self.authname)
+
         
         
-        self.charsPassword = [ '!','$','(',')','*','+',',','-','.', \
-                                '0','1','2','3','4','5','6','7','8','9', \
-                                'A','B','C','D','E','F','G','H','I','J', \
-                                'K','L','M','N','O','P','Q','R','S','T', \
-                                'U','V','W','X','Y','Z','_','a','b','c', \
-                                'd','e','f','g','h','i','j','k','l','m', \
-                                'n','o','p','q','r','s','t','u','v','w', \
-                                'x','y','z','\'']
+        self.charsPassword = [ '!', '$', '(',')', '*', '+', ',', '-', '.', \
+                                '0', '1', '2', '3', '4', '5', '6', '7', '8', \
+                                '9', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', \
+                                'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', \
+                                'R', 'S', 'T',  'U', 'V', 'W', 'X', 'Y', 'Z', \
+                                '_', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', \
+                                'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p' ,'q', \
+                                'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', \
+                                '\'']
         
         self.ldapShell = '/bin/bash'
 
@@ -151,7 +152,7 @@ class LDAPapi :
             lower_last_name = None
             #Assume there is first name and last name in email
             #if there is a  separator
-            separator_list = ['.','_','-']
+            separator_list = ['.', '_', '-']
             for sep in separator_list:
                 if sep in email:
                     mail = email.split(sep)
@@ -161,8 +162,8 @@ class LDAPapi :
             #Otherwise just take the part before the @ as the 
             #lower_first_name  and lower_last_name
             if lower_first_name is None:
-               lower_first_name = email
-               lower_last_name = email
+                lower_first_name = email
+                lower_last_name = email
                
         length_last_name = len(lower_last_name)  
         login_max_length = 8
@@ -281,8 +282,9 @@ class LDAPapi :
         
         """
         return 'A REMPLIR '
-
-    def make_ldap_filters_from_record(self, record=None):
+    
+    @staticmethod
+    def make_ldap_filters_from_record( record=None):
         """TODO Handle OR filtering in the ldap query when 
         dealing with a list of records instead of doing a for loop in GetPersons   
         Helper function to make LDAP filter requests out of SFA records.
@@ -346,7 +348,7 @@ class LDAPapi :
             attrs['cn'] = attrs['givenName'] + ' ' + attrs['sn']
             attrs['gecos'] = attrs['givenName'] + ' ' + attrs['sn']
             
-        except: 
+        except KeyError: 
             attrs['givenName'] = attrs['uid']
             attrs['sn'] = attrs['uid']
             attrs['cn'] = attrs['uid']
@@ -420,11 +422,11 @@ class LDAPapi :
             try:
                 ldif = modlist.addModlist(user_ldap_attrs)
                 logger.debug("LDAPapi.py add attrs %s \r\n  ldif %s"\
-                                %(user_ldap_attrs,ldif) )
-                self.conn.ldapserv.add_s(dn,ldif)
+                                %(user_ldap_attrs, ldif) )
+                self.conn.ldapserv.add_s(dn, ldif)
                 
                 logger.info("Adding user %s login %s in LDAP" \
-                        %(user_ldap_attrs['cn'] ,user_ldap_attrs['uid']))
+                        %(user_ldap_attrs['cn'] , user_ldap_attrs['uid']))
                         
                         
             except ldap.LDAPError, error:
@@ -459,12 +461,12 @@ class LDAPapi :
         Deletes a SFA person in LDAP, based on the user's hrn.
         """
         #Find uid of the  person 
-        person = self.LdapFindUser(record_filter,[])
+        person = self.LdapFindUser(record_filter, [])
         logger.debug("LDAPapi.py \t LdapDeleteUser record %s person %s" \
         %(record_filter, person))
 
         if person:
-            dn = 'uid=' + person['uid'] + "," +self.baseDN 
+            dn = 'uid=' + person['uid'] + "," + self.baseDN 
         else:
             return {'bool': False}
         
@@ -475,12 +477,12 @@ class LDAPapi :
     def LdapModify(self, dn, old_attributes_dict, new_attributes_dict): 
         """ Modifies a LDAP entry """
          
-        ldif = modlist.modifyModlist(old_attributes_dict,new_attributes_dict)
+        ldif = modlist.modifyModlist(old_attributes_dict, new_attributes_dict)
         # Connect and bind/authenticate    
         result = self.conn.connect() 
         if (result['bool']): 
             try:
-                self.conn.ldapserv.modify_s(dn,ldif)
+                self.conn.ldapserv.modify_s(dn, ldif)
                 self.conn.close()
                 return {'bool' : True }
             except ldap.LDAPError, error:
@@ -502,7 +504,7 @@ class LDAPapi :
         #Get all the attributes of the user_uid_login 
         #person = self.LdapFindUser(record_filter,[])
         req_ldap = self.make_ldap_filters_from_record(user_record)
-        person_list = self.LdapSearch(req_ldap,[])
+        person_list = self.LdapSearch(req_ldap, [])
         logger.debug("LDAPapi.py \t LdapModifyUser person_list : %s" \
                                                         %(person_list))
         if person_list and len(person_list) > 1 :
@@ -516,7 +518,7 @@ class LDAPapi :
         # The dn of our existing entry/object
         #One result only from ldapSearch
         person = person_list[0][1]
-        dn  = 'uid=' + person['uid'][0] + "," +self.baseDN  
+        dn  = 'uid=' + person['uid'][0] + "," + self.baseDN  
        
         if new_attributes_dict:
             old = {}
@@ -527,7 +529,7 @@ class LDAPapi :
                     old[k] = person[k]
             logger.debug(" LDAPapi.py \t LdapModifyUser  new_attributes %s"\
                                 %( new_attributes_dict))  
-            result = self.LdapModify(dn, old,new_attributes_dict)
+            result = self.LdapModify(dn, old, new_attributes_dict)
             return result
         else:
             logger.error("LDAP \t LdapModifyUser  No new attributes given. ")
@@ -547,7 +549,7 @@ class LDAPapi :
         return ret
 
             
-    def LdapResetPassword(self,record):
+    def LdapResetPassword(self, record):
         """
         Resets password for the user whose record is the parameter and changes
         the corresponding entry in the LDAP.
@@ -574,7 +576,7 @@ class LDAPapi :
             
             return_fields_list = []
             if expected_fields == None : 
-                return_fields_list = ['mail','givenName', 'sn', 'uid', \
+                return_fields_list = ['mail', 'givenName', 'sn', 'uid', \
                                         'sshPublicKey', 'shadowExpire']
             else : 
                 return_fields_list = expected_fields
@@ -593,7 +595,7 @@ class LDAPapi :
                 #Get all the results matching the search from ldap in one 
                 #shot (1 value)
                 result_type, result_data = \
-                                        self.conn.ldapserv.result(msg_id,1)
+                                        self.conn.ldapserv.result(msg_id, 1)
 
                 self.conn.close()
 
@@ -602,7 +604,7 @@ class LDAPapi :
 
                 return result_data
             
-            except  ldap.LDAPError,error :
+            except  ldap.LDAPError, error :
                 logger.log_exc("LDAP LdapSearch Error %s" %error)
                 return []
             
@@ -628,7 +630,7 @@ class LDAPapi :
         req_ldap = self.make_ldap_filters_from_record(custom_record)     
         return_fields_list = []
         if expected_fields == None : 
-            return_fields_list = ['mail','givenName', 'sn', 'uid', \
+            return_fields_list = ['mail', 'givenName', 'sn', 'uid', \
                                     'sshPublicKey']
         else : 
             return_fields_list = expected_fields
@@ -694,7 +696,7 @@ class LDAPapi :
                 logger.debug(" LDAP.py LdapFindUser ldapentry name : %s " \
                                 %(ldapentry[1]['uid'][0]))
                 tmpname = ldapentry[1]['uid'][0]
-                hrn=self.authname+"."+ tmpname
+                hrn = self.authname + "." + tmpname
                 
                 tmpemail = ldapentry[1]['mail'][0]
                 if ldapentry[1]['mail'][0] == "unknown":
@@ -702,7 +704,7 @@ class LDAPapi :
 
         
                 parent_hrn = get_authority(hrn)
-                parent_auth_info = self.senslabauth.get_auth_info(parent_hrn)
+
                 try:
                     results.append(  {	
                             'type': 'user',
@@ -720,7 +722,7 @@ class LDAPapi :
                             'pointer' : -1,
                             'hrn': hrn,
                             } ) 
-                except KeyError,error:
+                except KeyError, error:
                     logger.log_exc("LDAPapi.PY \t LdapFindUser EXCEPTION %s" \
                                                 %(error))
                     return

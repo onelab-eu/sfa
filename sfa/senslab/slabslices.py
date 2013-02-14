@@ -148,13 +148,13 @@ class SlabSlices:
             else: 
                     #New lease
                     
-                    job = requested_jobs_dict[str(start_time)]
-                    logger.debug("SLABSLICES \
-                    NEWLEASE slice %s  job %s"\
-                    %(sfa_slice, job)) 
-                    self.driver.AddLeases(job['hostname'], \
-                            sfa_slice, int(job['start_time']), \
-                            int(job['duration']))
+                job = requested_jobs_dict[str(start_time)]
+                logger.debug("SLABSLICES \
+                NEWLEASE slice %s  job %s"\
+                %(sfa_slice, job)) 
+                self.driver.AddLeases(job['hostname'], \
+                        sfa_slice, int(job['start_time']), \
+                        int(job['duration']))
 
         #Deleted leases are the ones with lease id not declared in the Rspec
         if deleted_leases:
