@@ -4,9 +4,8 @@ from sfa.util.config import Config
 from sfa.util.xrn import Xrn, get_authority, hrn_to_urn
 
 from sfa.senslab.slabdriver import SlabDriver
-from sfa.senslab.slabpostgres import SenslabXP, slab_dbsession
 
-from sfa.trust.certificate import Keypair,convert_public_key
+from sfa.trust.certificate import Keypair, convert_public_key
 from sfa.trust.gid import create_uuid
 
 from sfa.storage.alchemy import dbsession
@@ -29,7 +28,7 @@ class SlabImporter:
         self.logger.setLevelDebug()
 
     def hostname_to_hrn_escaped(self, root_auth, hostname):
-        return '.'.join( [root_auth,Xrn.escape(hostname)] )
+        return '.'.join( [root_auth, Xrn.escape(hostname)] )
 
 
     
@@ -40,21 +39,21 @@ class SlabImporter:
         # we don't have any options for now
         pass
     
-    def find_record_by_type_hrn(self,type,hrn):
-        return self.records_by_type_hrn.get ( (type, hrn), None)
+    def find_record_by_type_hrn(self, record_type, hrn):
+        return self.records_by_type_hrn.get ( (record_type, hrn), None)
     
-    def locate_by_type_pointer (self, type, pointer):
-        print>>sys.stderr, " \r\n \r\n \t SLABPOSTGRES locate_by_type_pointer  .........................." 
-        ret = self.records_by_type_pointer.get ( (type, pointer), None)
-        print>>sys.stderr, " \r\n \r\n \t SLABPOSTGRES locate_by_type_pointer  " 
+    def locate_by_type_pointer (self, record_type, pointer):
+        print >>sys.stderr, " \r\n \r\n \t SLABPOSTGRES locate_by_type_pointer  .........................." 
+        ret = self.records_by_type_pointer.get ( (record_type, pointer), None)
+        print >>sys.stderr, " \r\n \r\n \t SLABPOSTGRES locate_by_type_pointer  " 
         return ret
     
     def update_just_added_records_dict (self, record):
-        tuple = (record.type, record.hrn)
-        if tuple in self.records_by_type_hrn:
-            self.logger.warning ("SlabImporter.update_just_added_records_dict: duplicate (%s,%s)"%tuple)
+        rec_tuple = (record.type, record.hrn)
+        if rec_tuple in self.records_by_type_hrn:
+            self.logger.warning ("SlabImporter.update_just_added_records_dict: duplicate (%s,%s)"%rec_tuple)
             return
-        self.records_by_type_hrn [ tuple ] = record
+        self.records_by_type_hrn [ rec_tuple ] = record
         
     def run (self, options):
         config = Config()
@@ -85,20 +84,20 @@ class SlabImporter:
 
         # initialize record.stale to True by default, then mark stale=False on the ones that are in use
         for record in all_records: 
-            record.stale=True
+            record.stale = True
         
-        nodes_listdict  = slabdriver.GetNodes()
+        nodes_listdict  = slabdriver.slab_api.GetNodes()
         nodes_by_id = dict([(node['node_id'],node) for node in nodes_listdict])
-        sites_listdict  = slabdriver.GetSites()
+        sites_listdict  = slabdriver.slab_api.GetSites()
         
-        ldap_person_listdict = slabdriver.GetPersons()
+        ldap_person_listdict = slabdriver.slab_api.GetPersons()
         print>>sys.stderr,"\r\n SLABIMPORT \t ldap_person_listdict %s \r\n" %(ldap_person_listdict)
-        slices_listdict = slabdriver.GetSlices()
+        slices_listdict = slabdriver.slab_api.GetSlices()
         try:
             slices_by_userid = dict ( [ (one_slice['reg_researchers']['record_id'], one_slice ) for one_slice in slices_listdict ] )
         except TypeError:
-             self.logger.log_exc("SlabImporter: failed to create list of slices by user id.") 
-             pass
+            self.logger.log_exc("SlabImporter: failed to create list of slices by user id.") 
+            pass
  
         for site in sites_listdict:
             site_hrn = _get_site_hrn(site) 
@@ -125,7 +124,7 @@ class SlabImporter:
             else:
                 # xxx update the record ...
                 pass
-            site_record.stale=False 
+            site_record.stale = False 
             
          # import node records in site
             for node_id in site['node_ids']:
@@ -136,7 +135,7 @@ class SlabImporter:
                     continue 
                 site_auth = get_authority(site_hrn)
                 site_name = site['name']                
-                escaped_hrn =  self.hostname_to_hrn_escaped(slabdriver.root_auth, node['hostname'])
+                escaped_hrn =  self.hostname_to_hrn_escaped(slabdriver.slab_api.root_auth, node['hostname'])
                 print>>sys.stderr, "\r\n \r\n SLABIMPORTER node %s " %(node)               
                 hrn =  node['hrn']
 
@@ -172,7 +171,7 @@ class SlabImporter:
         for person in ldap_person_listdict : 
             
 
-            print>>sys.stderr,"SlabImporter: person: %s" %(person['hrn'])
+            print>>sys.stderr,"SlabImporter: person: %s" %(person)
             if 'ssh-rsa' not in person['pkey']:
                 #people with invalid ssh key (ssh-dss, empty, bullshit keys...)
                 #won't be imported
@@ -280,7 +279,7 @@ class SlabImporter:
                 self.logger.log_exc("SlabImporter: failed to import person  %s"%(person) )       
             
             try:
-                slice = slices_by_userid[user_record.record_id]
+                single_slice = slices_by_userid[user_record.record_id]
             except:
                 self.logger.warning ("SlabImporter: cannot locate slices_by_userid[user_record.record_id] %s - ignored"%user_record)  
                     
@@ -327,7 +326,8 @@ class SlabImporter:
                  
          ### remove stale records
         # special records must be preserved
-        system_hrns = [slabdriver.hrn, slabdriver.root_auth,  slabdriver.hrn+ '.slicemanager']
+        system_hrns = [slabdriver.hrn, slabdriver.slab_api.root_auth,  \
+                                        slabdriver.hrn+ '.slicemanager']
         for record in all_records: 
             if record.hrn in system_hrns: 
                 record.stale=False
@@ -337,7 +337,8 @@ class SlabImporter:
 
         for record in all_records: 
             if record.type == 'user':
-                print>>sys.stderr,"SlabImporter: stale records: hrn %s %s" %(record.hrn,record.stale)
+                print>>sys.stderr,"SlabImporter: stale records: hrn %s %s" \
+                                            %(record.hrn,record.stale)
             try:        
                 stale=record.stale
             except:     

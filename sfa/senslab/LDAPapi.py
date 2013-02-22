@@ -238,14 +238,15 @@ class LDAPapi :
             password += self.charsPassword[char_index]
 
         return password
-
-    def encrypt_password(self, password):
+    
+    @staticmethod
+    def encrypt_password( password):
         """ Use passlib library to make a RFC2307 LDAP encrypted password
         salt size = 8, use sha-1 algorithm. Returns encrypted password.
         
         """
         #Keep consistency with Java Senslab's LDAP API 
-        #RFC2307SSHAPasswordEncryptor so set the salt size to 8 bytres
+        #RFC2307SSHAPasswordEncryptor so set the salt size to 8 bytes
         return lssha.encrypt(password, salt_size = 8)
     
 

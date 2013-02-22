@@ -56,7 +56,7 @@ class SlabAggregate:
         slice_hrn, _ = urn_to_hrn(slice_xrn)
         slice_name = slice_hrn
 
-        slices = self.driver.GetSlices(slice_filter= str(slice_name), \
+        slices = self.driver.slab_api.GetSlices(slice_filter= str(slice_name), \
                                             slice_filter_type = 'slice_hrn', \
                                             login=login)
         
@@ -93,7 +93,7 @@ class SlabAggregate:
         
         #Add default sliver attribute :
         #connection information for senslab
-        if get_authority (sfa_slice['hrn']) == self.driver.root_auth: 
+        if get_authority (sfa_slice['hrn']) == self.driver.slab_api.root_auth: 
             tmp = sfa_slice['hrn'].split('.')
             ldap_username = tmp[1].split('_')[0]
             ssh_access = None
@@ -122,7 +122,7 @@ class SlabAggregate:
         #tags_filter = {}
         
         # get the granularity in second for the reservation system
-        grain = self.driver.GetLeaseGranularity()
+        grain = self.driver.slab_api.GetLeaseGranularity()
         
         # Commenting this part since all nodes should be returned, 
         # even if a slice is provided
@@ -131,20 +131,20 @@ class SlabAggregate:
         #        #first case, a non empty slice was provided
         #        filter['hostname'] = slice['node_ids']
         #        tags_filter=filter.copy()
-        #        nodes = self.driver.GetNodes(filter['hostname'])
+        #        nodes = self.driver.slab_api.GetNodes(filter['hostname'])
         #    else :
         #        #second case, a slice was provided, but is empty
         #        nodes={}
         #else :
         #    #third case, no slice was provided
-        #    nodes = self.driver.GetNodes()
-        nodes = self.driver.GetNodes()
+        #    nodes = self.driver.slab_api.GetNodes()
+        nodes = self.driver.slab_api.GetNodes()
         #geni_available = options.get('geni_available')    
         #if geni_available:
             #filter['boot_state'] = 'boot'     
        
         #filter.update({'peer_id': None})
-        #nodes = self.driver.GetNodes(filter['hostname'])
+        #nodes = self.driver.slab_api.GetNodes(filter['hostname'])
         
         #site_ids = []
         #interface_ids = []
@@ -177,7 +177,7 @@ class SlabAggregate:
                 #for node in one_slice['node_ids']:
                     #slice_nodes_list.append(node)
                    
-        reserved_nodes = self.driver.GetNodesCurrentlyInUse()
+        reserved_nodes = self.driver.slab_api.GetNodesCurrentlyInUse()
         logger.debug("SLABAGGREGATE api get_nodes slice_nodes_list  %s "\
                                                              %(slice_nodes_list)) 
         for node in nodes:
@@ -199,12 +199,12 @@ class SlabAggregate:
                 rspec_node['archi'] = node['archi']
                 rspec_node['radio'] = node['radio']
     
-                slab_xrn = slab_xrn_object(self.driver.root_auth, \
+                slab_xrn = slab_xrn_object(self.driver.slab_api.root_auth, \
                                                     node['hostname'])
                 rspec_node['component_id'] = slab_xrn.urn
                 rspec_node['component_name'] = node['hostname']  
                 rspec_node['component_manager_id'] = \
-                                hrn_to_urn(self.driver.root_auth, 'authority+sa')
+                                hrn_to_urn(self.driver.slab_api.root_auth, 'authority+sa')
                 
                 # Senslab's nodes are federated : there is only one authority 
                 # for all Senslab sites, registered in SFA.
@@ -273,9 +273,9 @@ class SlabAggregate:
             #lease_filter.update({'name': slice_record['name']})
         return_fields = ['lease_id', 'hostname', 'site_id', \
                             'name', 'start_time', 'duration']
-        #leases = self.driver.GetLeases(lease_filter)
-        leases = self.driver.GetLeases()
-        grain = self.driver.GetLeaseGranularity()
+        #leases = self.driver.slab_api.GetLeases(lease_filter)
+        leases = self.driver.slab_api.GetLeases()
+        grain = self.driver.slab_api.GetLeaseGranularity()
         site_ids = []
         rspec_leases = []
         for lease in leases:
@@ -284,7 +284,7 @@ class SlabAggregate:
                 rspec_lease = Lease()
                 rspec_lease['lease_id'] = lease['lease_id']
                 #site = node['site_id']
-                slab_xrn = slab_xrn_object(self.driver.root_auth, node)
+                slab_xrn = slab_xrn_object(self.driver.slab_api.root_auth, node)
                 rspec_lease['component_id'] = slab_xrn.urn
                 #rspec_lease['component_id'] = hostname_to_urn(self.driver.hrn, \
                                         #site, node['hostname'])

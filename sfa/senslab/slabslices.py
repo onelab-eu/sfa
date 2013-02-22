@@ -351,7 +351,7 @@ class SlabSlices:
             if ldap_user : 
                 hrn = self.driver.root_auth +'.'+ ldap_user['uid']
                 
-                user = self.driver.get_user(hrn)
+                user = self.driver.get_user_record(hrn)
                 
                 logger.debug(" SLABSLICES \tverify_slice hrn %s USER %s" %(hrn, user))
                 sfa_slice = {'slice_hrn': slicename,
