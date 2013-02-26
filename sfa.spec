@@ -1,6 +1,6 @@
 %define name sfa
 %define version 2.1
-%define taglevel 24
+%define taglevel 25
 
 %define release %{taglevel}%{?pldistro:.%{pldistro}}%{?date:.%{date}}
 %global python_sitearch	%( python -c "from distutils.sysconfig import get_python_lib; print get_python_lib(1)" )
@@ -265,6 +265,16 @@ fi
 #[ "$1" -ge "1" ] && service sfa-cm restart || :
 
 %changelog
+* Tue Feb 26 2013 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-2.1-25
+- sfi and sfaadmin list now share the same display code for related objs
+- support for advertising alternate api urls - for other API versions - api_versions.xml
+- cleaned up GID class
+- senslab: improved importer
+- senslab: add site to SlabLocation from Location
+- senslab: new class JsonPage
+- senslab:  fix debian packaging
+- federica: fix list_slices
+
 * Tue Jan 29 2013 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-2.1-24
 - merged the senslab driver from git.f-lab.fr
 - merged the teagle flavour
