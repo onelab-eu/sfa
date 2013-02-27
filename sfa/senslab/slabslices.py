@@ -27,11 +27,11 @@ class SlabSlices:
                     site_authority %s hrn %s" %(slice_authority, \
                                         site_authority, hrn))
         #This slice belongs to the current site
-        if site_authority == self.driver.root_auth :
+        if site_authority == self.driver.slab_api.root_auth :
             return None
         # check if we are already peered with this site_authority, if so
-        #peers = self.driver.GetPeers({})  
-        peers = self.driver.GetPeers(peer_filter = slice_authority)
+        #peers = self.driver.slab_api.GetPeers({})  
+        peers = self.driver.slab_api.GetPeers(peer_filter = slice_authority)
         for peer_record in peers:
           
             if site_authority == peer_record.hrn:
@@ -58,7 +58,7 @@ class SlabSlices:
         logger.debug("SLABSLICES verify_slice_leases sfa_slice %s \
                         "%( sfa_slice))
         #First get the list of current leases from OAR          
-        leases = self.driver.GetLeases({'name':sfa_slice['hrn']})
+        leases = self.driver.slab_api.GetLeases({'name':sfa_slice['hrn']})
         logger.debug("SLABSLICES verify_slice_leases requested_jobs_dict %s \
                         leases %s "%(requested_jobs_dict, leases ))
         
@@ -152,13 +152,13 @@ class SlabSlices:
                 logger.debug("SLABSLICES \
                 NEWLEASE slice %s  job %s"\
                 %(sfa_slice, job)) 
-                self.driver.AddLeases(job['hostname'], \
+                self.driver.slab_api.AddLeases(job['hostname'], \
                         sfa_slice, int(job['start_time']), \
                         int(job['duration']))
 
         #Deleted leases are the ones with lease id not declared in the Rspec
         if deleted_leases:
-            self.driver.DeleteLeases(deleted_leases, sfa_slice['hrn'])
+            self.driver.slab_api.DeleteLeases(deleted_leases, sfa_slice['hrn'])
             logger.debug("SLABSLICES \
                     verify_slice_leases slice %s deleted_leases %s"\
                     %(sfa_slice, deleted_leases))
@@ -167,7 +167,7 @@ class SlabSlices:
         if reschedule_jobs_dict : 
             for start_time in  reschedule_jobs_dict:
                 job = reschedule_jobs_dict[start_time]
-                self.driver.AddLeases(job['hostname'], \
+                self.driver.slab_api.AddLeases(job['hostname'], \
                     sfa_slice, int(job['start_time']), \
                     int(job['duration']))
         return leases
@@ -177,7 +177,7 @@ class SlabSlices:
         deleted_nodes = []
 
         if 'node_ids' in sfa_slice:
-            nodes = self.driver.GetNodes(sfa_slice['list_node_ids'], \
+            nodes = self.driver.slab_api.GetNodes(sfa_slice['list_node_ids'], \
                 ['hostname'])
             current_slivers = [node['hostname'] for node in nodes]
     
@@ -195,7 +195,7 @@ class SlabSlices:
 
             if deleted_nodes:
                 #Delete the entire experience
-                self.driver.DeleteSliceFromNodes(sfa_slice)
+                self.driver.slab_api.DeleteSliceFromNodes(sfa_slice)
                 #self.driver.DeleteSliceFromNodes(sfa_slice['slice_hrn'], \
                                                                 #deleted_nodes)
             return nodes
@@ -204,7 +204,7 @@ class SlabSlices:
 
     def free_egre_key(self):
         used = set()
-        for tag in self.driver.GetSliceTags({'tagname': 'egre_key'}):
+        for tag in self.driver.slab_api.GetSliceTags({'tagname': 'egre_key'}):
             used.add(int(tag['value']))
 
         for i in range(1, 256):
@@ -226,41 +226,41 @@ class SlabSlices:
             # bind site
             try:
                 if site:
-                    self.driver.BindObjectToPeer('site', site['site_id'], \
+                    self.driver.slab_api.BindObjectToPeer('site', site['site_id'], \
                                         peer['shortname'], sfa_slice['site_id'])
             except Exception, error:
-                self.driver.DeleteSite(site['site_id'])
+                self.driver.slab_api.DeleteSite(site['site_id'])
                 raise error
             
             # bind slice
             try:
                 if sfa_slice:
-                    self.driver.BindObjectToPeer('slice', slice['slice_id'], \
+                    self.driver.slab_api.BindObjectToPeer('slice', slice['slice_id'], \
                                     peer['shortname'], sfa_slice['slice_id'])
             except Exception, error:
-                self.driver.DeleteSlice(sfa_slice['slice_id'])
+                self.driver.slab_api.DeleteSlice(sfa_slice['slice_id'])
                 raise error 
 
             # bind persons
             for person in persons:
                 try:
-                    self.driver.BindObjectToPeer('person', \
+                    self.driver.slab_api.BindObjectToPeer('person', \
                                     person['person_id'], peer['shortname'], \
                                     person['peer_person_id'])
 
                     for (key, remote_key_id) in zip(person['keys'], \
                                                         person['key_ids']):
                         try:
-                            self.driver.BindObjectToPeer( 'key', \
+                            self.driver.slab_api.BindObjectToPeer( 'key', \
                                             key['key_id'], peer['shortname'], \
                                             remote_key_id)
                         except:
-                            self.driver.DeleteKey(key['key_id'])
+                            self.driver.slab_api.DeleteKey(key['key_id'])
                             logger.log_exc("failed to bind key: %s \
                                             to peer: %s " % (key['key_id'], \
                                             peer['shortname']))
                 except Exception, error:
-                    self.driver.DeletePerson(person['person_id'])
+                    self.driver.slab_api.DeletePerson(person['person_id'])
                     raise error       
 
         return sfa_slice
@@ -277,7 +277,7 @@ class SlabSlices:
                                         #login_base %s slice_hrn %s" \
                                         #%(authority_name,login_base,slice_hrn)
         
-        #sites = self.driver.GetSites(login_base)
+        #sites = self.driver.slab_api.GetSites(login_base)
         #if not sites:
             ## create new site record
             #site = {'name': 'geni.%s' % authority_name,
@@ -289,9 +289,9 @@ class SlabSlices:
                     #'peer_site_id': None}
             #if peer:
                 #site['peer_site_id'] = slice_record.get('site_id', None)
-            #site['site_id'] = self.driver.AddSite(site)
+            #site['site_id'] = self.driver.slab_api.AddSite(site)
             ## exempt federated sites from monitor policies
-            #self.driver.AddSiteTag(site['site_id'], 'exempt_site_until', \
+            #self.driver.slab_api.AddSiteTag(site['site_id'], 'exempt_site_until', \
                                                                 #"20200101")
             
             ### is this still necessary?
@@ -306,7 +306,7 @@ class SlabSlices:
             #if peer:
                 ## unbind from peer so we can modify if necessary.
                 ## Will bind back later
-                #self.driver.UnBindObjectFromPeer('site', site['site_id'], \
+                #self.driver.slab_api.UnBindObjectFromPeer('site', site['site_id'], \
                                                             #peer['shortname']) 
         
         #return site        
@@ -315,7 +315,7 @@ class SlabSlices:
 
         #login_base = slice_hrn.split(".")[0]
         slicename = slice_hrn
-        slices_list = self.driver.GetSlices(slice_filter = slicename, \
+        slices_list = self.driver.slab_api.GetSlices(slice_filter = slicename, \
                                             slice_filter_type = 'slice_hrn') 
         sfa_slice = None                                 
         if slices_list:
@@ -332,26 +332,26 @@ class SlabSlices:
                     #slice['peer_slice_id'] = slice_record.get('slice_id', None)
                     ## unbind from peer so we can modify if necessary. 
                     ## Will bind back later
-                    #self.driver.UnBindObjectFromPeer('slice', \
+                    #self.driver.slab_api.UnBindObjectFromPeer('slice', \
                                                         #slice['slice_id'], \
                                                             #peer['shortname'])
                 #Update existing record (e.g. expires field) 
                     #it with the latest info.
                 ##if slice_record and slice['expires'] != slice_record['expires']:
-                    ##self.driver.UpdateSlice( slice['slice_id'], {'expires' : \
+                    ##self.driver.slab_api.UpdateSlice( slice['slice_id'], {'expires' : \
                                                         #slice_record['expires']})
         else:
             #Search for user in ldap based on email SA 14/11/12
-            ldap_user = self.driver.ldap.LdapFindUser(slice_record['user'])
+            ldap_user = self.driver.slab_api.ldap.LdapFindUser(slice_record['user'])
             logger.debug(" SLABSLICES \tverify_slice Oups \
                         slice_record %s peer %s sfa_peer %s ldap_user %s"\
                         %(slice_record, peer,sfa_peer ,ldap_user ))
             #User already registered in ldap, meaning user should be in SFA db
             #and hrn = sfa_auth+ uid           
             if ldap_user : 
-                hrn = self.driver.root_auth +'.'+ ldap_user['uid']
+                hrn = self.driver.slab_api.root_auth +'.'+ ldap_user['uid']
                 
-                user = self.driver.get_user_record(hrn)
+                user = self.driver.slab_api.get_user_record(hrn)
                 
                 logger.debug(" SLABSLICES \tverify_slice hrn %s USER %s" %(hrn, user))
                 sfa_slice = {'slice_hrn': slicename,
@@ -372,8 +372,8 @@ class SlabSlices:
                     sfa_slice['slice_id'] = slice_record['record_id']
             # add the slice  
             if sfa_slice:
-                self.driver.AddSlice(sfa_slice, user)                         
-            #slice['slice_id'] = self.driver.AddSlice(slice)
+                self.driver.slab_api.AddSlice(sfa_slice, user)                         
+            #slice['slice_id'] = self.driver.slab_api.AddSlice(slice)
             logger.debug("SLABSLICES \tverify_slice ADDSLICE OK") 
             #slice['node_ids']=[]
             #slice['person_ids'] = []
@@ -450,7 +450,7 @@ class SlabSlices:
             #Check user's in LDAP with GetPersons
             #Needed because what if the user has been deleted in LDAP but 
             #is still in SFA?
-            existing_users = self.driver.GetPersons(filter_user) 
+            existing_users = self.driver.slab_api.GetPersons(filter_user) 
             logger.debug(" \r\n SLABSLICE.PY \tverify_person  filter_user %s existing_users %s " \
                                                     %(filter_user, existing_users))               
             #User's in senslab LDAP               
@@ -473,7 +473,7 @@ class SlabSlices:
                 else:
                     req += users['email']
                     
-                ldap_reslt = self.driver.ldap.LdapSearch(req)
+                ldap_reslt = self.driver.slab_api.ldap.LdapSearch(req)
                 if ldap_reslt:
                     logger.debug(" SLABSLICE.PY \tverify_person users \
                                 USER already in Senslab \t ldap_reslt %s \
@@ -557,13 +557,13 @@ class SlabSlices:
             person['key_ids'] =  added_user.get('key_ids', [])
             #person['urn'] =   added_user['urn']
               
-            #person['person_id'] = self.driver.AddPerson(person)
-            person['uid'] = self.driver.AddPerson(person)
+            #person['person_id'] = self.driver.slab_api.AddPerson(person)
+            person['uid'] = self.driver.slab_api.AddPerson(person)
             
             logger.debug(" SLABSLICE \r\n \r\n  \t THE SECOND verify_person ppeersonne  %s" %(person))
             #Update slice_Record with the id now known to LDAP
             slice_record['login'] = person['uid']
-            #slice_record['reg_researchers'] = [self.driver.root_auth + '.' + person['uid']]
+            #slice_record['reg_researchers'] = [self.driver.slab_api.root_auth + '.' + person['uid']]
             #slice_record['reg-researchers'] =  slice_record['reg_researchers']
             
             #if peer:
@@ -571,14 +571,14 @@ class SlabSlices:
             added_persons.append(person)
            
             # enable the account 
-            #self.driver.UpdatePerson(slice_record['reg_researchers'][0], added_user_email)
+            #self.driver.slab_api.UpdatePerson(slice_record['reg_researchers'][0], added_user_email)
             
             # add person to site
-            #self.driver.AddPersonToSite(added_user_id, login_base)
+            #self.driver.slab_api.AddPersonToSite(added_user_id, login_base)
 
             #for key_string in added_user.get('keys', []):
                 #key = {'key':key_string, 'key_type':'ssh'}
-                #key['key_id'] = self.driver.AddPersonKey(person['person_id'], \
+                #key['key_id'] = self.driver.slab_api.AddPersonKey(person['person_id'], \
                                                 #                       key)
                 #person['keys'].append(key)
 
@@ -590,12 +590,12 @@ class SlabSlices:
                 #self.registry.register_peer_object(self.credential, peer_dict)
         #for added_slice_user_hrn in \
                                 #added_slice_user_hrns.union(added_user_hrns):
-            #self.driver.AddPersonToSlice(added_slice_user_hrn, \
+            #self.driver.slab_api.AddPersonToSlice(added_slice_user_hrn, \
                                                     #slice_record['name'])
         #for added_slice_user_id in \
                                     #added_slice_user_ids.union(added_user_ids):
             # add person to the slice 
-            #self.driver.AddPersonToSlice(added_slice_user_id, \
+            #self.driver.slab_api.AddPersonToSlice(added_slice_user_id, \
                                                 #slice_record['name'])
             # if this is a peer record then it 
             # should already be bound to a peer.
@@ -609,7 +609,7 @@ class SlabSlices:
         key_ids = []
         for person in persons:
             key_ids.extend(person['key_ids'])
-        keylist = self.driver.GetKeys(key_ids, ['key_id', 'key'])
+        keylist = self.driver.slab_api.GetKeys(key_ids, ['key_id', 'key'])
         keydict = {}
         for key in keylist:
             keydict[key['key']] = key['key_id']     
@@ -631,20 +631,20 @@ class SlabSlices:
                     try:
                         if peer:
                             person = persondict[user['email']]
-                            self.driver.UnBindObjectFromPeer('person', \
+                            self.driver.slab_api.UnBindObjectFromPeer('person', \
                                         person['person_id'], peer['shortname'])
                         key['key_id'] = \
-                                self.driver.AddPersonKey(user['email'], key)
+                                self.driver.slab_api.AddPersonKey(user['email'], key)
                         if peer:
                             key_index = user_keys.index(key['key'])
                             remote_key_id = user['key_ids'][key_index]
-                            self.driver.BindObjectToPeer('key', \
+                            self.driver.slab_api.BindObjectToPeer('key', \
                                             key['key_id'], peer['shortname'], \
                                             remote_key_id)
                             
                     finally:
                         if peer:
-                            self.driver.BindObjectToPeer('person', \
+                            self.driver.slab_api.BindObjectToPeer('person', \
                                     person['person_id'], peer['shortname'], \
                                     user['person_id'])
         
@@ -656,9 +656,9 @@ class SlabSlices:
                 if keydict[existing_key_id] in removed_keys:
 
                     if peer:
-                        self.driver.UnBindObjectFromPeer('key', \
+                        self.driver.slab_api.UnBindObjectFromPeer('key', \
                                         existing_key_id, peer['shortname'])
-                    self.driver.DeleteKey(existing_key_id)
+                    self.driver.slab_api.DeleteKey(existing_key_id)
  
 
     #def verify_slice_attributes(self, slice, requested_slice_attributes, \
@@ -667,7 +667,7 @@ class SlabSlices:
         #filter = {'category': '*slice*'}
         #if not admin:
             #filter['|roles'] = ['user']
-        #slice_attributes = self.driver.GetTagTypes(filter)
+        #slice_attributes = self.driver.slab_api.GetTagTypes(filter)
         #valid_slice_attribute_names = [attribute['tagname'] \
                                             #for attribute in slice_attributes]
 
@@ -675,7 +675,7 @@ class SlabSlices:
         #added_slice_attributes = []
         #removed_slice_attributes = []
         #ignored_slice_attribute_names = []
-        #existing_slice_attributes = self.driver.GetSliceTags({'slice_id': \
+        #existing_slice_attributes = self.driver.slab_api.GetSliceTags({'slice_id': \
                                                             #slice['slice_id']})
 
         ## get attributes that should be removed
@@ -718,7 +718,7 @@ class SlabSlices:
         ## remove stale attributes
         #for attribute in removed_slice_attributes:
             #try:
-                #self.driver.DeleteSliceTag(attribute['slice_tag_id'])
+                #self.driver.slab_api.DeleteSliceTag(attribute['slice_tag_id'])
             #except Exception, error:
                 #self.logger.warn('Failed to remove sliver attribute. name: \
                                 #%s, value: %s, node_id: %s\nCause:%s'\
@@ -727,7 +727,7 @@ class SlabSlices:
         ## add requested_attributes
         #for attribute in added_slice_attributes:
             #try:
-                #self.driver.AddSliceTag(slice['name'], attribute['name'], \
+                #self.driver.slab_api.AddSliceTag(slice['name'], attribute['name'], \
                             #attribute['value'], attribute.get('node_id', None))
             #except Exception, error:
                 #self.logger.warn('Failed to add sliver attribute. name: %s, \
