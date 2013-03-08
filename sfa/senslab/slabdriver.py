@@ -142,10 +142,11 @@ class SlabTestbedAPI():
         return server_timestamp, server_tz
     
 
-    def DeleteJobs(self, job_id, slice_hrn):
+    def DeleteJobs(self, job_id, username):        
+        logger.debug("SLABDRIVER \tDeleteJobs jobid  %s username %s " %(job_id, username))
         if not job_id or job_id is -1:
             return
-        username  = slice_hrn.split(".")[-1].rstrip("_slice")
+        #username  = slice_hrn.split(".")[-1].rstrip("_slice")
         reqdict = {}
         reqdict['method'] = "delete"
         reqdict['strval'] = str(job_id)
@@ -654,8 +655,8 @@ class SlabTestbedAPI():
                     added_nodes %s slice_user %s" %(jobid, added_nodes, slice_user))
             
         
-            __configure_experiment(jobid, added_nodes)
-            __launch_senslab_experiment(jobid) 
+            #__configure_experiment(jobid, added_nodes)
+            #__launch_senslab_experiment(jobid) 
             
         return jobid
         
@@ -696,8 +697,12 @@ class SlabTestbedAPI():
     
     #Delete the jobs from job_senslab table
     def DeleteSliceFromNodes(self, slice_record):
-        for job_id in slice_record['oar_job_id']:
-            self.DeleteJobs(job_id, slice_record['hrn'])
+        logger.debug("SLABDRIVER \t  DeleteSliceFromNodese %s " %(slice_record))
+        if isinstance(slice_record['oar_job_id'],list):
+            for job_id in slice_record['oar_job_id']:
+                self.DeleteJobs(job_id, slice_record['user'])
+        else:
+            self.DeleteJobs(slice_record['oar_job_id'],slice_record['user'])
         return   
     
  
@@ -797,22 +802,22 @@ class SlabTestbedAPI():
                     #resa['slice_hrn'] = resa_user_dict[resa['user']]['slice_info']['hrn']
                     #resa['slice_id'] = hrn_to_urn(resa['slice_hrn'], 'slice')
                 
-    
-                resa['component_id_list'] = []
-                resa['hrn'] = Xrn(resa['slice_id']).get_hrn()
-                #Transform the hostnames into urns (component ids)
-                for node in resa['reserved_nodes']:
-                    #resa['component_id_list'].append(hostname_to_urn(self.hrn, \
-                            #self.root_auth, node['hostname']))
-                    slab_xrn = slab_xrn_object(self.root_auth, node)
-                    resa['component_id_list'].append(slab_xrn.urn)
+                resa['slice_hrn'] = Xrn(resa['slice_id']).get_hrn()
+
+            resa['component_id_list'] = []    
+            #Transform the hostnames into urns (component ids)
+            for node in resa['reserved_nodes']:
+                #resa['component_id_list'].append(hostname_to_urn(self.hrn, \
+                        #self.root_auth, node['hostname']))
+                slab_xrn = slab_xrn_object(self.root_auth, node)
+                resa['component_id_list'].append(slab_xrn.urn)
                     
-                if lease_filter_dict:
-                    logger.debug("SLABDRIVER \tGetLeases resa_ %s \r\n leasefilter %s"\
-                                            %(resa,lease_filter_dict)) 
+            if lease_filter_dict:
+                logger.debug("SLABDRIVER \tGetLeases resa_ %s \r\n leasefilter %s"\
+                                        %(resa,lease_filter_dict)) 
                         
-                    if lease_filter_dict['name'] == resa['hrn']:
-                        reservation_list.append(resa)
+                if lease_filter_dict['name'] == resa['slice_hrn']:
+                    reservation_list.append(resa)
                         
         if lease_filter_dict is None:
             reservation_list = unfiltered_reservation_list
@@ -1085,25 +1090,34 @@ class SlabTestbedAPI():
                 
             #If several jobs for one slice , put the slice record into 
             # each lease information dict
+           
+           
             for lease in leases_list : 
                 slicerec_dict = {} 
-                
-                reserved_list = lease['reserved_nodes']
-                
-                slicerec_dict['oar_job_id'] = lease['lease_id']
-                slicerec_dict.update({'list_node_ids':{'hostname':reserved_list}})   
-                slicerec_dict.update({'node_ids':lease['reserved_nodes']})
-                
-                #Update lease dict with the slice record
-                if fixed_slicerec_dict:
-                    fixed_slicerec_dict['oar_job_id'] = []
-                    fixed_slicerec_dict['oar_job_id'].append(slicerec_dict['oar_job_id'])
-                    slicerec_dict.update(fixed_slicerec_dict)
-                    #slicerec_dict.update({'hrn':\
-                                    #str(fixed_slicerec_dict['slice_hrn'])})
+                logger.debug("SLABDRIVER.PY  \tGetSlices slice_filter %s   \
+                        \ lease['slice_hrn'] %s" \
+                        %(slice_filter, lease['slice_hrn']))
+                if slice_filter_type =='slice_hrn' and lease['slice_hrn'] == slice_filter:
+                    reserved_list = lease['reserved_nodes']
+                    slicerec_dict['slice_hrn'] = lease['slice_hrn']
+                    slicerec_dict['hrn'] = lease['slice_hrn']
+                    slicerec_dict['user'] = lease['user']
+                    slicerec_dict['oar_job_id'] = lease['lease_id']
+                    slicerec_dict.update({'list_node_ids':{'hostname':reserved_list}})   
+                    slicerec_dict.update({'node_ids':lease['reserved_nodes']})
                     
-    
-                return_slicerec_dictlist.append(slicerec_dict)
+                    #Update lease dict with the slice record
+                    if fixed_slicerec_dict:
+                        fixed_slicerec_dict['oar_job_id'] = []
+                        fixed_slicerec_dict['oar_job_id'].append(slicerec_dict['oar_job_id'])
+                        slicerec_dict.update(fixed_slicerec_dict)
+                        #slicerec_dict.update({'hrn':\
+                                        #str(fixed_slicerec_dict['slice_hrn'])})
+                                        
+                    return_slicerec_dictlist.append(slicerec_dict)    
+                    logger.debug("SLABDRIVER.PY  \tGetSlices  \
+                        OHOHOHOH %s" %(return_slicerec_dictlist ))
+                    
                 logger.debug("SLABDRIVER.PY  \tGetSlices  \
                         slicerec_dict %s return_slicerec_dictlist %s \
                         lease['reserved_nodes'] \
@@ -1657,19 +1671,22 @@ class SlabDriver(Driver):
             #used when there is another 
             #senslab testbed, which is not the case 14/08/12 . 
             
-            logger.debug("SLABDRIVER.PY delete_sliver peer %s" %(peer))
+            logger.debug("SLABDRIVER.PY delete_sliver peer %s \r\n \t sfa_slice %s " %(peer, sfa_slice))
             try:
-                if peer:
-                    self.slab_api.UnBindObjectFromPeer('slice', \
-                                            sfa_slice['record_id_slice'], \
-                                            peer, None)
+                #if peer:
+                    #self.slab_api.UnBindObjectFromPeer('slice', \
+                                            #sfa_slice['record_id_slice'], \
+                                            #peer, None)
                 self.slab_api.DeleteSliceFromNodes(sfa_slice)
-            finally:
-                if peer:
-                    self.slab_api.BindObjectToPeer('slice', \
-                                            sfa_slice['record_id_slice'], \
-                                            peer, sfa_slice['peer_slice_id'])
-            return 1
+                return True
+            except :
+                return False
+            #finally:
+                #if peer:
+                    #self.slab_api.BindObjectToPeer('slice', \
+                                            #sfa_slice['record_id_slice'], \
+                                            #peer, sfa_slice['peer_slice_id'])
+            #return 1
                 
     
     # first 2 args are None in case of resource discovery

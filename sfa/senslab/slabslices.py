@@ -20,18 +20,23 @@ class SlabSlices:
         
         # get this slice's authority (site)
         slice_authority = get_authority(hrn)
-        site_authority = slice_authority
+        #Senslab stuff
+        #This slice belongs to the current site
+        if slice_authority ==  self.driver.slab_api.root_auth:
+            site_authority = slice_authority
+            return None
+       
+        site_authority = get_authority(slice_authority).lower()
         # get this site's authority (sfa root authority or sub authority)
-        #site_authority = get_authority(slice_authority).lower()
+
         logger.debug("SLABSLICES \ get_peer slice_authority  %s \
                     site_authority %s hrn %s" %(slice_authority, \
                                         site_authority, hrn))
-        #This slice belongs to the current site
-        if site_authority == self.driver.slab_api.root_auth :
-            return None
+        
+            
         # check if we are already peered with this site_authority, if so
         #peers = self.driver.slab_api.GetPeers({})  
-        peers = self.driver.slab_api.GetPeers(peer_filter = slice_authority)
+        peers = self.driver.slab_api.GetPeers(peer_filter = site_authority)
         for peer_record in peers:
           
             if site_authority == peer_record.hrn:
