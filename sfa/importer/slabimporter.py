@@ -68,7 +68,10 @@ class SlabImporter:
 
         #retrieve all existing SFA objects
         all_records = dbsession.query(RegRecord).all()
-      
+        
+        # initialize record.stale to True by default, then mark stale=False on the ones that are in use
+        for record in all_records: 
+            record.stale = True
         #create hash by (type,hrn) 
         #used  to know if a given record is already known to SFA 
        
@@ -82,9 +85,6 @@ class SlabImporter:
         self.records_by_type_pointer = \
             dict ( [ ( (str(record.type),record.pointer) , record ) for record in all_records  if record.pointer != -1] )
 
-        # initialize record.stale to True by default, then mark stale=False on the ones that are in use
-        for record in all_records: 
-            record.stale = True
         
         nodes_listdict  = slabdriver.slab_api.GetNodes()
         nodes_by_id = dict([(node['node_id'],node) for node in nodes_listdict])
@@ -340,7 +340,7 @@ class SlabImporter:
                 print>>sys.stderr,"SlabImporter: stale records: hrn %s %s" \
                                             %(record.hrn,record.stale)
             try:        
-                stale=record.stale
+                stale = record.stale
             except:     
                 stale=True
                 self.logger.warning("stale not found with %s"%record)
