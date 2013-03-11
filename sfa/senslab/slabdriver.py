@@ -420,14 +420,14 @@ class SlabTestbedAPI():
         return
     
     @staticmethod
-    def __add_person_to_db(self, user_dict):
+    def __add_person_to_db(user_dict):
 
         check_if_exists = dbsession.query(RegUser).filter_by(email = user_dict['email']).first()
         #user doesn't exists
         if not check_if_exists:
             logger.debug("__add_person_to_db \t Adding %s \r\n \r\n \
             _________________________________________________________________________\
-            " %(user_dict['hrn']))
+            " %(user_dict))
             hrn = user_dict['hrn'] 
             user_record = RegUser(hrn=hrn , pointer= '-1', authority=get_authority(hrn), \
                                                     email=user_dict['email'], gid = None)
@@ -449,7 +449,9 @@ class SlabTestbedAPI():
         
         """
         ret = self.ldap.LdapAddUser(record)
-        logger.debug("SLABDRIVER AddPerson return code %s \r\n "%(ret))
+        
+        record['hrn'] = self.root_auth + '.' + ret['uid']
+        logger.debug("SLABDRIVER AddPerson return code %s record %s \r\n "%(ret,record))
         self.__add_person_to_db(record)
         return ret['uid']
     

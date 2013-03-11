@@ -352,14 +352,8 @@ class SlabSlices:
                         slice_record %s peer %s sfa_peer %s ldap_user %s"\
                         %(slice_record, peer,sfa_peer ,ldap_user ))
             #User already registered in ldap, meaning user should be in SFA db
-            #and hrn = sfa_auth+ uid           
-            if ldap_user : 
-                hrn = self.driver.slab_api.root_auth +'.'+ ldap_user['uid']
-                
-                user = self.driver.get_user_record(hrn)
-                
-                logger.debug(" SLABSLICES \tverify_slice hrn %s USER %s" %(hrn, user))
-                sfa_slice = {'slice_hrn': slicename,
+            #and hrn = sfa_auth+ uid   
+            sfa_slice = {'hrn': slicename,
                      #'url': slice_record.get('url', slice_hrn), 
                      #'description': slice_record.get('description', slice_hrn)
                      'node_list' : [],
@@ -369,15 +363,35 @@ class SlabSlices:
                      'slice_id' : slice_record['record_id'],
                      'reg-researchers':slice_record['reg-researchers'],
                      #'record_id_slice': slice_record['record_id'],
-                     'peer_authority':str(peer.hrn)
+                     'peer_authority':str(sfa_peer)
                     
-                     }
+                     }        
+            if ldap_user : 
+                hrn = self.driver.slab_api.root_auth +'.'+ ldap_user['uid']
+                
+                user = self.driver.get_user_record(hrn)
+                
+                logger.debug(" SLABSLICES \tverify_slice hrn %s USER %s" %(hrn, user))
+                #sfa_slice = {'slice_hrn': slicename,
+                     ##'url': slice_record.get('url', slice_hrn), 
+                     ##'description': slice_record.get('description', slice_hrn)
+                     #'node_list' : [],
+                     #'authority' : slice_record['authority'],
+                     #'gid':slice_record['gid'],
+                     ##'record_id_user' : user.record_id,
+                     #'slice_id' : slice_record['record_id'],
+                     #'reg-researchers':slice_record['reg-researchers'],
+                     ##'record_id_slice': slice_record['record_id'],
+                     #'peer_authority':str(peer.hrn)
+                    
+                     #}
+                     # add the slice  
+                if sfa_slice :
+                    self.driver.slab_api.AddSlice(sfa_slice, user)  
                      
                 if peer:
                     sfa_slice['slice_id'] = slice_record['record_id']
-            # add the slice  
-            if sfa_slice:
-                self.driver.slab_api.AddSlice(sfa_slice, user)                         
+                                   
             #slice['slice_id'] = self.driver.slab_api.AddSlice(slice)
             logger.debug("SLABSLICES \tverify_slice ADDSLICE OK") 
             #slice['node_ids']=[]
