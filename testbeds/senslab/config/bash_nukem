@@ -3,10 +3,10 @@
 # Configuration first : set the local repository
 # where the code can be found
 # Test number of arguments 
-if (( ! $# == 3 ))
+if (( ! $# == 2 ))
 then
-    echo " Usage : bash_nukem repository_directory vm (should be senslab or senslab2) and \
-    federation option (0 (not federated),1(other senslab) , 2(ple) 3 (senslab and ple))"
+    echo " Usage : bash_nukem repository_directory vm  and \
+    federation option (0 (not federated),1(firexp)"
     echo  $#
     exit
 fi
@@ -19,22 +19,13 @@ then
    
 fi
 
-# Set which vm we are working on (sfa-vm or sfa-vm2)
-if [[ $2 = "senslab" || $2 = "senslab2" ]]
-then
-    vm=$2
-    echo $vm
-else
-    echo "Vm options should be senslab or senslab2, not " $2
-    exit 
-fi
 
-if [ $vm = "senslab" ]
-then
-    federation_commented_line_nb=2
-else
-    federation_commented_line_nb=3
-fi
+# if [ $vm = "senslab" ]
+# then
+#     federation_commented_line_nb=2
+# else
+#     federation_commented_line_nb=3
+# fi
 
 # First restart sfa (prevents stalling when connecting
 # to the DB and dropping tables)
@@ -45,8 +36,8 @@ sudo sfaadmin.py registry nuke
 
 # Drop table in slab_sfa
 # to avoid duplicates.
-psql -d slab_sfa -U sfa -W -q -c "drop table slice_senslab;"
-psql -d slab_sfa -U sfa -W -q -c "drop table slab_xp;"
+
+psql -d slab_sfa -U sfadbuser -W -q -c "drop table slab_xp;"
 
 # ATTENTION :Save the config file /etc/sfa/sfa_config
 # before continuing
