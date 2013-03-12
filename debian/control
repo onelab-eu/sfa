@@ -12,7 +12,7 @@ Description: Server-side for SFA, generic implementation derived from PlanetLab
 
 Package: sfa-common
 Architecture: any
-Depends: python (>= 2.7), python-openssl (>= 0.7), python-m2crypto, python-dateutil, python-lxml, python-libxslt1, python-zsi
+Depends: python (>= 2.7), python-openssl (>= 0.7), python-m2crypto, python-dateutil, python-lxml, python-libxslt1, python-zsi, xmlsec1
 Description: Python libraries for SFA, generic implementation derived from PlanetLab
 
 Package: sfa-flashpolicy
@@ -42,7 +42,7 @@ Description: the SFA layer around NITOS
 
 Package: sfa-senslab
 Architecture: any
-Depends: sfa-common
+Depends: sfa-common, python-passlib, python-ldap
 Description: the SFA layer around SensLab
 
 Package: sfa-dummy
