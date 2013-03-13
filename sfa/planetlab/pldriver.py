@@ -745,8 +745,11 @@ class PlDriver (Driver):
         slices.verify_slice_links(slice, rspec.version.get_link_requests(), nodes)
 
         # add/remove leases
-        rspec_requested_leases = rspec.version.get_leases()
-        leases = slices.verify_slice_leases(slice, rspec_requested_leases, peer)
+        try:
+           rspec_requested_leases = rspec.version.get_leases()
+           leases = slices.verify_slice_leases(slice, rspec_requested_leases, peer)
+        except:
+           pass
         #requested_leases = []
         #kept_leases = []
         #for lease in rspec.version.get_leases():
