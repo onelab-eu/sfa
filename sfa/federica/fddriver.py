@@ -56,7 +56,7 @@ class FdDriver (PlDriver):
     def list_slices (self, creds, options):
         # the issue is that federica returns the list of slice's urn in a string format
         # this is why this dirty hack is needed until federica fixes it. 
-        slices_str = self.shell.listSlices()['value'][1:-2]
+        slices_str = self.shell.listSlices()['value'][1:-1]
         slices_list = slices_str.split(", ")
         return slices_list
 
