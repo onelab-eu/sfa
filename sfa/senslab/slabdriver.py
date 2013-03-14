@@ -640,46 +640,12 @@ class SlabTestbedAPI():
             return None
         
         
-        def __configure_experiment(jobid, added_nodes):
-            # second step : configure the experiment
-            # we need to store the nodes in a yaml (well...) file like this :
-            # [1,56,23,14,45,75] with name /tmp/sfa<jobid>.json
-            tmp_dir = '/tmp/sfa/'
-            if not os.path.exists(tmp_dir):
-                os.makedirs(tmp_dir)
-            job_file = open(tmp_dir + str(jobid) + '.json', 'w')
-            job_file.write('[')
-            job_file.write(str(added_nodes[0].strip('node')))
-            for node in added_nodes[1:len(added_nodes)] :
-                job_file.write(', '+ node.strip('node'))
-            job_file.write(']')
-            job_file.close()
-            return 
-        
-        def __launch_senslab_experiment(jobid):   
-            # third step : call the senslab-experiment wrapper
-            #command= "java -jar target/sfa-1.0-jar-with-dependencies.jar 
-            # "+str(jobid)+" "+slice_user
-            javacmdline = "/usr/bin/java"
-            jarname = \
-                "/opt/senslabexperimentwrapper/sfa-1.0-jar-with-dependencies.jar"
 
-            output = subprocess.Popen([javacmdline, "-jar", jarname, str(jobid), \
-                                slice_user],stdout=subprocess.PIPE).communicate()[0]
-    
-            logger.debug("SLABDRIVER \t __configure_experiment wrapper returns%s " \
-                                                                    %(output))
-            return 
-        
-        
         
         if jobid :
             logger.debug("SLABDRIVER \tLaunchExperimentOnOAR jobid %s \
                     added_nodes %s slice_user %s" %(jobid, added_nodes, slice_user))
             
-        
-            #__configure_experiment(jobid, added_nodes)
-            #__launch_senslab_experiment(jobid) 
             
         return jobid
         
