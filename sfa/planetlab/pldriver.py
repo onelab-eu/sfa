@@ -778,7 +778,10 @@ class PlDriver (Driver):
         if not slices:
             return True
         slice = slices[0]
-    
+        
+        # leases
+        leases = self.shell.GetLeases({'name': slicename})
+        leases_ids = [lease['lease_id'] for lease in leases ]
         # determine if this is a peer slice
         # xxx I wonder if this would not need to use PlSlices.get_peer instead 
         # in which case plc.peers could be deprecated as this here
@@ -788,6 +791,8 @@ class PlDriver (Driver):
             if peer:
                 self.shell.UnBindObjectFromPeer('slice', slice['slice_id'], peer)
             self.shell.DeleteSliceFromNodes(slicename, slice['node_ids'])
+            if len(leases_ids) > 0:
+                self.shell.DeleteLeases(leases_ids)
         finally:
             if peer:
                 self.shell.BindObjectToPeer('slice', slice['slice_id'], peer, slice['peer_slice_id'])
