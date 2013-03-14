@@ -135,11 +135,11 @@ def TestLdap(job_id = None):
     #ret = ldap_server.LdapSearch('(uid=grayson)', [])
     #print "\r\n Nightwing \tldap_server.LdapSearch ids = %s %s" %('grayson',ret )
 
-    ret = ldap_server.LdapAddUser(datanight)
-    print "\r\n Nightwing \tLdapAddUser ", ret 
+    #ret = ldap_server.LdapAddUser(datanight)
+    #print "\r\n Nightwing \tLdapAddUser ", ret 
     
-    ret = ldap_server.LdapResetPassword(record_night)
-    print "\r\n Nightwing  \tLdapResetPassword de %s : %s" % (record_night, ret)
+    #ret = ldap_server.LdapResetPassword(record_night)
+    #print "\r\n Nightwing  \tLdapResetPassword de %s : %s" % (record_night, ret)
     
     ret = ldap_server.LdapDeleteUser(record_night)
     print "\r\n Nightwing   \tLdapDeleteUser ", ret 
@@ -258,22 +258,22 @@ def TestSlabDriver(job_id = None):
         job_id = job_id[0]
     slabdriver = SlabDriver(Config())
     
-    nodes = slabdriver.GetReservedNodes()
-    print " \r\n \r\n GetReservedNodes", nodes
+    #nodes = slabdriver.slab_api.GetReservedNodes()
+    #print " \r\n \r\n GetReservedNodes", nodes
     
-    sl = slabdriver.GetSlices(slice_filter='senslab.avakian_slice', slice_filter_type='slice_hrn') 
-    print "\r\n \r\nGetSlices", sl[0]
+    #sl = slabdriver.slab_api.GetSlices(slice_filter='senslab.avakian_slice', slice_filter_type='slice_hrn') 
+    #print "\r\n \r\nGetSlices", sl[0]
     
-    sl = slabdriver.GetSlices(slice_filter='20', slice_filter_type='record_id_user')  
-    print "\r\n \r\nGetSlices", sl
+    #sl = slabdriver.slab_api.GetSlices(slice_filter='20', slice_filter_type='record_id_user')  
+    #print "\r\n \r\nGetSlices", sl
     
-    sl = slabdriver.GetSlices()  
-    print "\r\n \r\nGetSlices", sl
+    #sl = slabdriver.slab_api.GetSlices()  
+    #print "\r\n \r\nGetSlices", sl
     
-    persons = slabdriver.GetPersons()
+    persons = slabdriver.slab_api.GetPersons()
     print "\r\n \r\n  GetPersons", persons
     
-    leases = slabdriver.GetLeases(login='avakian')
+    leases = slabdriver.slab_api.GetLeases(login='avakian')
     print "\r\n \r\n  GetLeases", leases
 
 
@@ -331,34 +331,48 @@ def  TestSfi(filename = None):
      /home/savakian/flab-sfa/test_rspec/my_lyon_nodes.rspec")
       
 def TestSQL(arg = None):
-    from sfa.storage.model import make_record, RegSlice
+    from sfa.storage.model import make_record, RegSlice, RegRecord
     from sfa.storage.alchemy import dbsession
     from sqlalchemy.orm.collections import InstrumentedList 
     
     from sqlalchemy.orm import joinedload 
     
-    solo_query_slice_list = dbsession.query(RegSlice).options(joinedload('reg_researchers')).filter_by(hrn='senslab.avakian_slice').first()
-    print "\r\n \r\n ===========      query_slice_list  RegSlice \
-    joinedload('reg_researchers')   senslab.avakian  first \r\n \t ", \
-    solo_query_slice_list.__dict__
+    #solo_query_slice_list = dbsession.query(RegSlice).options(joinedload('reg_researchers')).filter_by(hrn='senslab.avakian_slice').first()
+    #print "\r\n \r\n ===========      query_slice_list  RegSlice \
+    #joinedload('reg_researchers')   senslab.avakian  first \r\n \t ", \
+    #solo_query_slice_list.__dict__
       
-    query_slice_list = dbsession.query(RegSlice).options(joinedload('reg_researchers')).all()             
-    print "\r\n \r\n ===========      query_slice_list RegSlice \
-    joinedload('reg_researchers')   ALL  \r\n \t", \
-    query_slice_list[0].__dict__ 
+    #query_slice_list = dbsession.query(RegSlice).options(joinedload('reg_researchers')).all()             
+    #print "\r\n \r\n ===========      query_slice_list RegSlice \
+    #joinedload('reg_researchers')   ALL  \r\n \t", \
+    #query_slice_list[0].__dict__ 
     
-    return_slicerec_dictlist = []
-    record = query_slice_list[0]
-    print "\r\n \r\n ===========   \r\n \t", record 
+    #return_slicerec_dictlist = []
+    #record = query_slice_list[0]
+    #print "\r\n \r\n ===========   \r\n \t", record 
     
-    tmp = record.__dict__
-    print "\r\n \r\n ===========   \r\n \t", tmp 
-    tmp['reg_researchers'] = tmp['reg_researchers'][0].__dict__
-    print "\r\n \r\n ===========   \r\n \t", tmp 
-        #del tmp['reg_researchers']['_sa_instance_state']
-    return_slicerec_dictlist.append(tmp)
+    #tmp = record.__dict__
+    #print "\r\n \r\n ===========   \r\n \t", tmp 
+    #tmp['reg_researchers'] = tmp['reg_researchers'][0].__dict__
+    #print "\r\n \r\n ===========   \r\n \t", tmp 
+        ##del tmp['reg_researchers']['_sa_instance_state']
+    #return_slicerec_dictlist.append(tmp)
         
-    print "\r\n \r\n ===========   \r\n \t", return_slicerec_dictlist
+    #print "\r\n \r\n ===========   \r\n \t", return_slicerec_dictlist
+    
+    all_records = dbsession.query(RegRecord).all()
+      
+        #create hash by (type,hrn) 
+        #used  to know if a given record is already known to SFA 
+       
+    records_by_type_hrn = \
+            dict ( [ ( (record.type,record.hrn) , record ) for record in all_records ] )
+    for (rec_type, rec) in records_by_type_hrn :
+        if rec_type == 'user':
+            print>>sys.stderr,"\r\n SLABIMPORT \t keys %s rec %s \r\n" %(rec_type, rec )
+            
+    users_rec_by_email = \
+            dict ( [ (record.email, record) for record in all_records if record.type == 'user' ] )
     
     
 def RunAll( arg ):

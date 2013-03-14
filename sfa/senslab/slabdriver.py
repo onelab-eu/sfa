@@ -9,6 +9,9 @@ from sfa.storage.alchemy import dbsession
 from sfa.storage.model import RegRecord, RegUser, RegSlice, RegKey
 from sqlalchemy.orm import joinedload
 
+from sfa.trust.certificate import Keypair, convert_public_key
+from sfa.trust.gid import create_uuid
+from sfa.trust.hierarchy import Hierarchy
 
 from sfa.managers.driver import Driver
 from sfa.rspecs.version_manager import VersionManager
@@ -330,7 +333,7 @@ class SlabTestbedAPI():
         during lease/sliver creation.
         """
  
-        sfa_record = RegSlice(hrn=slice_record['slice_hrn'], 
+        sfa_record = RegSlice(hrn=slice_record['hrn'], 
                                 gid=slice_record['gid'], 
                                 pointer=slice_record['slice_id'],
                                 authority=slice_record['authority'])
@@ -427,10 +430,28 @@ class SlabTestbedAPI():
         if not check_if_exists:
             logger.debug("__add_person_to_db \t Adding %s \r\n \r\n \
             _________________________________________________________________________\
-            " %(user_dict))
+            " %(user_dict)) 
             hrn = user_dict['hrn'] 
+            person_urn = hrn_to_urn(hrn, 'user')
+            pubkey = user_dict['pkey']
+            try:
+                pkey = convert_public_key(pubkey)
+            except TypeError:
+                #key not good. create another pkey
+                self.logger.warn('__add_person_to_db: unable to convert public \
+                                    key for %s' %(hrn ))
+                pkey = Keypair(create=True)
+           
+           
+            if pubkey is not None and pkey is not None :
+                hierarchy = Hierarchy()
+                person_gid = hierarchy.create_gid(person_urn, create_uuid(), pkey)
+                if user_dict['email']:
+                    logger.debug("__add_person_to_db \r\n \r\n SLAB IMPORTER PERSON EMAIL OK email %s " %(user_dict['email']))
+                    person_gid.set_email(user_dict['email'])
+                    
             user_record = RegUser(hrn=hrn , pointer= '-1', authority=get_authority(hrn), \
-                                                    email=user_dict['email'], gid = None)
+                                                    email=user_dict['email'], gid = person_gid)
             user_record.reg_keys = [RegKey(user_dict['pkey'])]
             user_record.just_created()
             dbsession.add (user_record)
