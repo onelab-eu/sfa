@@ -3,7 +3,7 @@ from sfa.util.xml import XpathFilter
 from sfa.util.xrn import Xrn
 
 from sfa.rspecs.elements.element import Element
-from sfa.rspecs.elements.node import Node
+from sfa.rspecs.elements.node import NodeElement
 from sfa.rspecs.elements.sliver import Sliver
 from sfa.rspecs.elements.location import Location
 from sfa.rspecs.elements.position_3d import Position3D
@@ -147,7 +147,7 @@ class NITOSv1Node:
     def get_node_objs(node_elems):
         nodes = []    
         for node_elem in node_elems:
-            node = Node(node_elem.attrib, node_elem)
+            node = NodeElement(node_elem.attrib, node_elem)
             if 'site_id' in node_elem.attrib:
                 node['authority_id'] = node_elem.attrib['site_id']
             # get location
@@ -169,7 +169,7 @@ class NITOSv1Node:
             # get slivers
             node['slivers'] = NITOSv1Sliver.get_slivers(node_elem)
             # get tags
-            node['tags'] =  NITOSv1PLTag.get_pl_tags(node_elem, ignore=Node.fields+["hardware_type"])
+            node['tags'] =  NITOSv1PLTag.get_pl_tags(node_elem, ignore=NodeElement.fields+["hardware_type"])
             # get hardware types
             hardware_type_elems = node_elem.xpath('./default:hardware_type | ./hardware_type')
             node['hardware_types'] = [hw_type.get_instance(HardwareType) for hw_type in hardware_type_elems]
