@@ -999,9 +999,9 @@ or with an slice hrn, shows currently provisioned resources
                 # just request the version the client wants
                 api_options['geni_rspec_version'] = version_manager.get_version(options.rspec_version).to_dict()
             else:
-                api_options['geni_rspec_version'] = {'type': 'geni', 'version': '3.0'}
+                api_options['geni_rspec_version'] = {'type': 'geni', 'version': '3'}
         else:
-            api_options['geni_rspec_version'] = {'type': 'geni', 'version': '3.0'}
+            api_options['geni_rspec_version'] = {'type': 'geni', 'version': '3'}
         result = server.ListResources (creds, api_options)
         value = ReturnValue.get_value(result)
         if self.options.raw:
