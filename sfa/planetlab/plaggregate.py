@@ -398,7 +398,7 @@ class PlAggregate:
             rspec.version.add_links(links)
 
         if not options.get('list_leases') or options.get('list_leases') and options['list_leases'] != 'resources':
-           leases = self.get_leases(slice_xrn, slice)
+           leases = self.get_leases()
            rspec.version.add_leases(leases)
 
         return rspec.toxml()
