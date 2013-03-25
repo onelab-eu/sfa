@@ -21,9 +21,6 @@ class SFAv1Sliver:
             if tags:
                 for tag in tags:
                     SFAv1Sliver.add_sliver_attribute(sliver_elem, tag['tagname'], tag['value'])
-            if sliver.get('sliver_id'):
-                name = PlXrn(xrn=sliver.get('sliver_id')).pl_slicename()
-                sliver_elem.set('name', name)
 
     @staticmethod
     def add_sliver_attribute(xml, name, value):

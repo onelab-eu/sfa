@@ -5,6 +5,7 @@ from sfa.rspecs.version import RSpecVersion
 from sfa.rspecs.elements.versions.pgv2Link import PGv2Link
 from sfa.rspecs.elements.versions.pgv2Node import PGv2Node
 from sfa.rspecs.elements.versions.pgv2SliverType import PGv2SliverType
+from sfa.rspecs.elements.versions.pgv2Lease import PGv2Lease
  
 class PGv2(RSpecVersion):
     type = 'ProtoGENI'
@@ -143,6 +144,7 @@ class PGv2(RSpecVersion):
                 # set the sliver id
                 #slice_id = sliver_info.get('slice_id', -1)
                 #node_id = sliver_info.get('node_id', -1)
+                #sliver_id = Xrn(xrn=sliver_urn, type='slice', id=str(node_id)).get_urn()
                 #node_elem.set('sliver_id', sliver_id)
 
             # add the sliver type elemnt    
@@ -175,10 +177,10 @@ class PGv2(RSpecVersion):
     # Leases
 
     def get_leases(self, filter=None):
-        return []
+        return PGv2Lease.get_leases(self.xml, filter)
 
     def add_leases(self, leases, network = None, no_dupes=False):
-        return None
+        PGv2Lease.add_leases(self.xml, leases)
 
     # Utility
 
@@ -193,13 +195,20 @@ class PGv2(RSpecVersion):
 
         nodes = in_rspec.version.get_nodes()
         # protogeni rspecs need to advertise the availabel sliver types
+        main_nodes = []
         for node in nodes:
+            if not node['component_name']:
+                # this node element is part of a lease
+                continue
             if not node.has_key('sliver') or not node['sliver']:
                 node['sliver'] = {'name': 'plab-vserver'}
-            
-        self.add_nodes(nodes)
+                main_nodes.append(node)
+        self.add_nodes(main_nodes)
         self.add_links(in_rspec.version.get_links())
         
+        # Leases
+        leases = in_rspec.version.get_leases()
+        self.add_leases(leases)
         #
         #rspec = RSpec(in_rspec)
         #for child in rspec.xml.iterchildren():

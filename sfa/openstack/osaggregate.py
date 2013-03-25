@@ -24,6 +24,7 @@ from sfa.planetlab.plxrn import PlXrn
 from sfa.openstack.osxrn import OSXrn, hrn_to_os_slicename
 from sfa.rspecs.version_manager import VersionManager
 from sfa.openstack.security_group import SecurityGroup
+from sfa.server.threadmanager import ThreadManager
 from sfa.util.sfalogging import logger
 
 def pubkeys_to_user_data(pubkeys):
@@ -242,7 +243,6 @@ class OSAggregate:
                        'plos_sliver_type': self.shell.nova_manager.flavors.find(id=instance.flavor['id']).name,
                         }
 
-
         return geni_sliver
                         
     def get_aggregate_nodes(self):
@@ -320,6 +320,11 @@ class OSAggregate:
                                              cidr_ip = rule.get('cidr_ip'), 
                                              port_range = rule.get('port_range'), 
                                              icmp_type_code = rule.get('icmp_type_code'))
+            # Open ICMP by default
+            security_group.add_rule_to_group(group_name,
+                                             protocol = "icmp",
+                                             cidr_ip = "0.0.0.0/0",
+                                             icmp_type_code = "-1:-1")
         return group_name
 
     def add_rule_to_security_group(self, group_name, **kwds):
@@ -353,6 +358,7 @@ class OSAggregate:
         files = {'/root/.ssh/authorized_keys': authorized_keys}
         rspec = RSpec(rspec)
         requested_instances = defaultdict(list)
+        
         # iterate over clouds/zones/nodes
         slivers = []
         for node in rspec.version.get_nodes_with_slivers():
@@ -366,6 +372,8 @@ class OSAggregate:
                     image = instance.get('disk_image')
                     if image and isinstance(image, list):
                         image = image[0]
+                    else:
+                        raise InvalidRSpec("Must specify a disk_image for each VM")
                     image_id = self.driver.shell.nova_manager.images.find(name=image['name'])
                     fw_rules = instance.get('fw_rules', [])
                     group_name = self.create_security_group(instance_name, fw_rules)

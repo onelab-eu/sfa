@@ -50,7 +50,7 @@ ALL += $(foreach bundle,$(BUNDLES-LR),$(word 2,$(subst @, ,$(bundle)))-lr)
 
 all: $(ALL)
 
-ple: auto-ple-reg auto-ple-sa-lr.out
+ple: auto-ple-reg auto-ple-sa-lr
 
 ####################
 define bundle_scan_target

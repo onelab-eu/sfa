@@ -319,8 +319,11 @@ class PlAggregate:
                        }
         return geni_sliver        
 
-    def get_leases(self, slice=None, options={}):
+    def get_leases(self, slice_xrn=None, slice=None, options={}):
         
+        if slice_xrn and not slice:
+            return []
+
         now = int(time.time())
         filter={}
         filter.update({'clip':now})
@@ -346,10 +349,13 @@ class PlAggregate:
             site_id=lease['site_id']
             site=sites_dict[site_id]
 
-            rspec_lease['lease_id'] = lease['lease_id']
-            rspec_lease['component_id'] = PlXrn(self.driver.hrn, hostname=lease['hostname']).urn
-            slice_hrn = slicename_to_hrn(self.driver.hrn, lease['name'])
-            slice_urn = hrn_to_urn(slice_hrn, 'slice')
+            rspec_lease['component_id'] = hostname_to_urn(self.driver.hrn, site['login_base'], lease['hostname'])
+            if slice_xrn:
+                slice_urn = slice_xrn
+                slice_hrn = urn_to_hrn(slice_urn)
+            else:
+                slice_hrn = slicename_to_hrn(self.driver.hrn, lease['name'])
+                slice_urn = hrn_to_urn(slice_hrn, 'slice')
             rspec_lease['slice_id'] = slice_urn
             rspec_lease['start_time'] = lease['t_from']
             rspec_lease['duration'] = (lease['t_until'] - lease['t_from']) / grain
@@ -390,6 +396,11 @@ class PlAggregate:
             # add links
             links = self.get_links(sites, nodes_dict, interfaces)        
             rspec.version.add_links(links)
+
+        if not options.get('list_leases') or options.get('list_leases') and options['list_leases'] != 'resources':
+           leases = self.get_leases(slice_xrn, slice)
+           rspec.version.add_leases(leases)
+
         return rspec.toxml()
 
     def describe(self, urns, version=None, options={}):

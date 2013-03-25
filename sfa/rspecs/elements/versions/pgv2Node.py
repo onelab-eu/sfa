@@ -12,6 +12,7 @@ from sfa.rspecs.elements.pltag import PLTag
 from sfa.rspecs.elements.versions.pgv2Services import PGv2Services     
 from sfa.rspecs.elements.versions.pgv2SliverType import PGv2SliverType     
 from sfa.rspecs.elements.versions.pgv2Interface import PGv2Interface     
+from sfa.rspecs.elements.granularity import Granularity
 
 from sfa.planetlab.plxrn import xrn_to_hostname
 
@@ -34,6 +35,11 @@ class PGv2Node:
             # set location
             if node.get('location'):
                 node_elem.add_instance('location', node['location'], Location.fields)       
+
+            # set granularity
+            if node['exclusive'] == "true":
+                granularity = node.get('granularity')
+                node_elem.add_instance('granularity', granularity, granularity.fields)
             # set interfaces
             PGv2Interface.add_interfaces(node_elem, node.get('interfaces'))
             #if node.get('interfaces'):
@@ -55,7 +61,6 @@ class PGv2Node:
                     for initscript in node.get('pl_initscripts', []):
                         slivers['tags'].append({'name': 'initscript', 'value': initscript['name']})
             PGv2SliverType.add_slivers(node_elem, slivers)
-        
         return node_elems
 
     @staticmethod
@@ -88,6 +93,11 @@ class PGv2Node:
             locations = [location_elem.get_instance(Location) for location_elem in location_elems]
             if len(locations) > 0:
                 node['location'] = locations[0]
+
+            # get granularity
+            granularity_elems = node_elem.xpath('./default:granularity | ./granularity')
+            if len(granularity_elems) > 0:
+                node['granularity'] = granularity_elems[0].get_instance(Granularity)
 
             # get interfaces
             iface_elems = node_elem.xpath('./default:interface | ./interface')

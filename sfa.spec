@@ -1,6 +1,6 @@
 %define name sfa
 %define version 2.1
-%define taglevel 13
+%define taglevel 25
 
 %define release %{taglevel}%{?pldistro:.%{pldistro}}%{?date:.%{date}}
 %global python_sitearch	%( python -c "from distutils.sysconfig import get_python_lib; print get_python_lib(1)" )
@@ -21,23 +21,11 @@ Packager: PlanetLab Central <support@planet-lab.org>
 Distribution: PlanetLab %{plrelease}
 URL: %{SCMURL}
 
-Summary: the SFA python libraries
+Summary: Server-side for SFA, generic implementation derived from PlanetLab 
 Group: Applications/System
 BuildRequires: make
+BuildRequires: python-setuptools
 
-Requires: python >= 2.5
-Requires: pyOpenSSL >= 0.7
-Requires: m2crypto
-Requires: xmlsec1-openssl-devel
-Requires: libxslt-python
-Requires: python-ZSI
-# for uuidgen - used in db password generation
-# on f8 this actually comes with e2fsprogs, go figure
-Requires: util-linux-ng
-# xmlbuilder depends on lxml
-Requires: python-lxml
-Requires: python-setuptools
-Requires: python-dateutil
 # for the registry
 Requires: postgresql >= 8.2, postgresql-server >= 8.2
 Requires: postgresql-python
@@ -47,29 +35,28 @@ Requires: python-sqlalchemy
 Requires: python-migrate
 # the eucalyptus aggregate uses this module
 Requires: python-xmlbuilder
+# for uuidgen - used in db password generation
+# on f8 this actually comes with e2fsprogs, go figure
+Requires: util-linux-ng
+# and the SFA libraries of course
+Requires: sfa-common
  
-# python 2.5 has uuid module added, for python 2.4 we still need it.
-# we can't really check for if we can load uuid as a python module,
-# it'll be installed by "devel.pkgs". we have the epel repository so
-# python-uuid will be provided. but we can test for the python
-# version.
-# %define has_py24 %( python -c "import sys;sys.exit(sys.version_info[0:2] == (2,4))" 2> /dev/null; echo $? )
-# %if %has_py24
-#
-# this also didn't work very well. I'll just check for distroname - baris
-#%if %{distroname} == "centos5"
-#Requires: python-uuid
-#%endif
-
-%package flashpolicy
-Summary: SFA support for flash clients
+%package common
+Summary: Python libraries for SFA, generic implementation derived from PlanetLab
 Group: Applications/System
-Requires: sfa
+Requires: python >= 2.7
+Requires: pyOpenSSL >= 0.7
+Requires: m2crypto
+Requires: python-dateutil
+Requires: python-lxml
+Requires: libxslt-python
+Requires: python-ZSI
+Requires: xmlsec1-openssl-devel
 
 %package client
-Summary: the SFA experimenter-side CLI
+Summary: sfi, the SFA experimenter-side CLI
 Group: Applications/System
-Requires: sfa
+Requires: sfa-common
 Requires: pyOpenSSL >= 0.7
 
 %package plc
@@ -77,14 +64,28 @@ Summary: the SFA layer around MyPLC
 Group: Applications/System
 Requires: sfa
 
-%package cm
-Summary: the SFA layer around MyPLC NodeManager
+%package flashpolicy
+Summary: SFA support for flash clients
 Group: Applications/System
 Requires: sfa
-Requires: pyOpenSSL >= 0.6
 
 %package federica
 Summary: the SFA layer around Federica
+Group: Applications/System
+Requires: sfa
+
+%package nitos
+Summary: the SFA layer around NITOS
+Group: Applications/System
+Requires: sfa
+
+%package senslab
+Summary: the SFA layer around SensLab
+Group: Applications/System
+Requires: sfa
+
+%package dummy
+Summary: the SFA layer around a Dummy Testbed 
 Group: Applications/System
 Requires: sfa
 
@@ -101,13 +102,15 @@ Provides: python-xmlbuilder
 %package tests
 Summary: unit tests suite for SFA
 Group: Applications/System
-Requires: sfa
+Requires: sfa-common
 
-%description
-This package provides the python libraries for the PlanetLab implementation of SFA
+%description 
+This package provides the registry, aggregate manager and slice
+managers for SFA.  In most cases it is advisable to install additional
+package for a given testbed, like e.g. sfa-plc for a PlanetLab tesbed.
 
-%description flashpolicy
-This package provides support for adobe flash client applications.  
+%description common
+This package contains the python libraries for SFA both client and server-side.
 
 %description client
 This package provides the client side of the SFA API, in particular
@@ -117,12 +120,20 @@ sfi.py, together with other utilities.
 This package implements the SFA interface which serves as a layer
 between the existing PlanetLab interfaces and the SFA API.
 
-%description cm
-This package implements the SFA interface which serves as a layer
-between the existing PlanetLab NodeManager interfaces and the SFA API.
+%description flashpolicy
+This package provides support for adobe flash client applications.  
 
 %description federica
 The SFA driver for FEDERICA.
+
+%description nitos
+The SFA driver for NITOS.
+
+%description senslab
+The SFA driver for SensLab.
+
+%description dummy
+The SFA driver for a Dummy Testbed.
 
 %description sfatables
 sfatables is a tool for defining access and admission control policies
@@ -150,17 +161,6 @@ make VERSIONTAG="%{version}-%{taglevel}" SCMURL="%{SCMURL}" install DESTDIR="$RP
 rm -rf $RPM_BUILD_ROOT
 
 %files
-%{python_sitelib}/sfa/__init__.py*
-%{python_sitelib}/sfa/trust
-%{python_sitelib}/sfa/storage
-%{python_sitelib}/sfa/util
-%{python_sitelib}/sfa/server
-%{python_sitelib}/sfa/methods
-%{python_sitelib}/sfa/generic
-%{python_sitelib}/sfa/managers
-%{python_sitelib}/sfa/importer
-%{python_sitelib}/sfa/rspecs
-%{python_sitelib}/sfa/client
 /etc/init.d/sfa
 %{_bindir}/sfa-start.py*
 %{_bindir}/sfaadmin.py*
@@ -176,9 +176,18 @@ rm -rf $RPM_BUILD_ROOT
 /usr/share/sfa/examples
 /var/www/html/wsdl/*.wsdl
 
-%files flashpolicy
-%{_bindir}/sfa_flashpolicy.py*
-/etc/sfa/sfa_flashpolicy_config.xml
+%files common
+%{python_sitelib}/sfa/__init__.py*
+%{python_sitelib}/sfa/trust
+%{python_sitelib}/sfa/storage
+%{python_sitelib}/sfa/util
+%{python_sitelib}/sfa/server
+%{python_sitelib}/sfa/methods
+%{python_sitelib}/sfa/generic
+%{python_sitelib}/sfa/managers
+%{python_sitelib}/sfa/importer
+%{python_sitelib}/sfa/rspecs
+%{python_sitelib}/sfa/client
 
 %files client
 %config (noreplace) /etc/sfa/sfi_config
@@ -201,15 +210,22 @@ rm -rf $RPM_BUILD_ROOT
 /etc/sfa/xml.xsd
 /etc/sfa/protogeni-rspec-common.xsd
 /etc/sfa/topology
-%{_bindir}/gen-sfa-cm-config.py*
 
-%files cm
-/etc/init.d/sfa-cm
-%{_bindir}/sfa_component_setup.py*
-# cron jobs here 
+%files flashpolicy
+%{_bindir}/sfa_flashpolicy.py*
+/etc/sfa/sfa_flashpolicy_config.xml
 
 %files federica
 %{python_sitelib}/sfa/federica
+
+%files nitos
+%{python_sitelib}/sfa/nitos
+
+%files senslab
+%{python_sitelib}/sfa/senslab
+
+%files dummy
+%{python_sitelib}/sfa/dummy
 
 %files sfatables
 /etc/sfatables/*
@@ -235,20 +251,97 @@ fi
 %postun
 [ "$1" -ge "1" ] && { service sfa dbdump ; service sfa restart ; }
 
-### sfa-cm installs the 'sfa-cm' service
-%post cm
-chkconfig --add sfa-cm
-
-%preun cm
-if [ "$1" = 0 ] ; then
-   /sbin/service sfa-cm stop || :
-   /sbin/chkconfig --del sfa-cm || :
-fi
-
-%postun cm
-[ "$1" -ge "1" ] && service sfa-cm restart || :
+#### sfa-cm installs the 'sfa-cm' service
+#%post cm
+#chkconfig --add sfa-cm
+#
+#%preun cm
+#if [ "$1" = 0 ] ; then
+#   /sbin/service sfa-cm stop || :
+#   /sbin/chkconfig --del sfa-cm || :
+#fi
+#
+#%postun cm
+#[ "$1" -ge "1" ] && service sfa-cm restart || :
 
 %changelog
+* Tue Feb 26 2013 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-2.1-25
+- sfi and sfaadmin list now share the same display code for related objs
+- support for advertising alternate api urls - for other API versions - api_versions.xml
+- cleaned up GID class
+- senslab: improved importer
+- senslab: add site to SlabLocation from Location
+- senslab: new class JsonPage
+- senslab:  fix debian packaging
+- federica: fix list_slices
+
+* Tue Jan 29 2013 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-2.1-24
+- merged the senslab driver from git.f-lab.fr
+- merged the teagle flavour
+- debian packaging should work much better
+- added debug messsages for when db connection fails
+
+* Sun Jan 20 2013 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-2.1-23
+- minor fix in registry
+- fix for sfi gid, use clientbootstrap
+- support for debians and ubuntus (packaging and initscript)
+- deprecated cm package altogether
+- pl flavour, minor fix for tags
+- various fixes for the dummy flavour
+
+* Sun Dec 16 2012 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-2.1-22
+- suited (and required) to run with plcapi-5.1-5 b/c of changes to AddPerson
+- tweaks in nitos importer
+- improvements to sfaadmin check-gid
+
+* Tue Dec 11 2012 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-2.1-21
+- PL importer: minor fixes for corner cases
+- PL importer: also handles last_updated more accurately
+- sfi update can be used to select a key among several in PL
+- sfi add/update usage message fixes (no more record)
+- new feature sfaadmin registry check_gid [-a]
+
+* Mon Dec 03 2012 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-2.1-20
+- fix 2 major bugs in PL importer
+- esp. wrt GID management against PLC key
+
+* Wed Nov 28 2012 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-2.1-19
+- nicer sfi delegate, can handle multiple delegations and for authorities(pi) as well
+
+* Wed Nov 28 2012 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-2.1-18
+- support fordelegation in sfaclientlib
+- sfi delegate fixed
+- other delegation-related sfi option trashed
+- new config (based on ini format)
+- new dummy driver and related package
+- pl importer has more explicit error messages
+- credential dump shows expiration
+
+* Tue Oct 16 2012 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-2.1-17
+- bugfix in forwarding Resolve requests
+- various fixes in the nitos driver wrt keys and users
+
+* Mon Oct 01 2012 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-2.1-16
+- various tweaks for the nitos driver
+
+* Wed Sep 26 2012 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-2.1-15
+- first stab at a driver for the NITOS/OMF testbed (sep. pkg)
+- deeper cleanup of the data-dependencies between SFA and the testbed
+- in particular, sfi create issues Resolve(details=False)
+- for that purpose, Resolve exposes reg-* keys for SFA builtins
+- which in turn allows sfi list to show PIs, slice members and keys
+- NOTE: sfa-config-tty is known to be broken w/ less frequently used func's
+- Shows stacktrace when startup fails (DB conn, wrong flavour, etc..)
+
+* Mon Sep 17 2012 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-2.1-14
+- configurable data-dir (/var/lib/sfa)
+- no more dependent on myplc-config
+- some support for hrns with _ instead of \.
+- fix for PL importing in presence of gpg keys
+- DeleteSliver returns True instead of 1 in case of success
+- Various improvements on the openstack/nova side
+- new package sfa-nitos
+
 * Wed Jul 11 2012 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-2.1-13
 - bugfix that prevented to call 'sfi create' - (was broken in sfa-2.1-12)
 - sfi to remove expired credentials

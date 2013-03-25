@@ -1,0 +1,52 @@
+#!/bin/bash 
+if (( ! $# == 2 ))
+then
+    echo " Usage : bash_test takes 2 arguments : one jobid and one of the following:"
+    echo " LDAP/ OAR / driver "
+    echo  $#
+    exit
+fi
+
+sfi.py list senslab2
+echo " =================    SFI.PY RESOURCES            ============="
+sfi.py resources
+
+echo " ================= SFI.PY RESOURCES -R SLAB        ============="
+sfi.py resources -r slab
+
+echo " =================    SFI.PY RESOURCES -L ALL      ============="
+sfi.py resources -l all
+
+echo " ================= SFI.PY RESOURCES -R SLAB -L ALL ============="
+sfi.py resources -r slab -l all
+
+echo " ================= SFI.PY RESOURCES -L ALL > avakian_adv.rspec ============="
+sfi.py resources -l all > /home/savakian/flab-sfa/avakian_adv.rspec
+
+echo " ================= SFI.PY RESOURCES avakian_adv.rspec ============="
+sfi.py resources senslab2.avakian_slice
+
+
+echo " =================    SFI.PY SHOW SLICE   ============="
+sfi.py show senslab2.avakian_slice
+
+echo " =================    SFI.PY SHOW USER   ============="
+sfi.py show senslab2.avakian
+
+echo " =================    SFI.PY SHOW NODE   ============="
+sfi.py show senslab2.node67.grenoble.senslab.info
+
+echo " =================    SFI.PY SLICES       ============="
+sfi.py slices
+
+echo " =================    SFI.PY STATUS SLICE   ============="
+sfi.py status senslab2.avakian_slice
+
+echo " =================    SFI.PY CREATE SLICE   ============="
+sfi.py create senslab2.avakian_slice /home/savakian/flab-sfa/avakian_adv.rspec
+
+# echo " =================    SFI.PY DELETE SLICE   ============="
+# sfi.py delete senslab2.avakian_slice
+
+echo "\r\n"
+echo " PYTHON TEST ", $1, $2

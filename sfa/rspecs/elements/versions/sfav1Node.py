@@ -57,10 +57,16 @@ class SFAv1Node:
             if location:
                 node_elem.add_instance('location', location, Location.fields)
 
-            # add granularity of the reservation system
-            granularity = node.get('granularity')
-            if granularity:
-                node_elem.add_instance('granularity', granularity, granularity.fields)
+            # add exclusive tag to distinguish between Reservable and Shared nodes
+            exclusive_elem = node_elem.add_element('exclusive')
+            if node.get('exclusive') and node.get('exclusive') == 'true':
+                exclusive_elem.set_text('TRUE')
+                # add granularity of the reservation system
+                granularity = node.get('granularity')
+                if granularity:
+                    node_elem.add_instance('granularity', granularity, granularity.fields)
+            else:
+                exclusive_elem.set_text('FALSE')
 
 
             if isinstance(node.get('interfaces'), list):
@@ -74,8 +80,18 @@ class SFAv1Node:
             tags = node.get('tags', [])
             if tags:
                 for tag in tags:
-                    tag_elem = node_elem.add_element(tag['tagname'])
-                    tag_elem.set_text(tag['value'])
+                    # backdoor for FITeagle
+                    # Alexander Willner <alexander.willner@tu-berlin.de>
+                    if tag['tagname']=="fiteagle_settings":
+                        tag_elem = node_elem.add_element(tag['tagname'])
+                        for subtag in tag['value']:
+                            subtag_elem = tag_elem.add_element('setting')
+                            subtag_elem.set('name', str(subtag['tagname']))
+                            subtag_elem.set('description', str(subtag['description']))
+                            subtag_elem.set_text(subtag['value'])
+                    else:
+                        tag_elem = node_elem.add_element(tag['tagname'])
+                        tag_elem.set_text(tag['value'])
             SFAv1Sliver.add_slivers(node_elem, node.get('slivers', []))
 
     @staticmethod 

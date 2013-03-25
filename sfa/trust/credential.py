@@ -1076,6 +1076,9 @@ class Credential(object):
             print "  gidIssuer:"
             self.get_signature().get_issuer_gid().dump(8, dump_parents)
 
+        if self.expiration:
+            print "  expiration:", self.expiration.isoformat()
+
         gidObject = self.get_gid_object()
         if gidObject:
             result += "  gidObject:\n"

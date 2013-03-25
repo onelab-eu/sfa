@@ -32,11 +32,42 @@ class SFAv1Lease:
         else:
             network_elem = xml
          
-        lease_elems = []       
-        for lease in leases:
-            lease_fields = ['lease_id', 'component_id', 'slice_id', 'start_time', 'duration']
-            lease_elem = network_elem.add_instance('lease', lease, lease_fields)
+        # group the leases by slice and timeslots
+        grouped_leases = []
+
+        while leases:
+             slice_id = leases[0]['slice_id']
+             start_time = leases[0]['start_time']
+             duration = leases[0]['duration']
+             group = []
+
+             for lease in leases:
+                  if slice_id == lease['slice_id'] and start_time == lease['start_time'] and duration == lease['duration']:
+                      group.append(lease)
+
+             grouped_leases.append(group)
+
+             for lease1 in group:
+                  leases.remove(lease1)
+
+        lease_elems = []
+        for lease in grouped_leases:
+            #lease_fields = ['lease_id', 'component_id', 'slice_id', 'start_time', 'duration']
+            lease_fields = ['slice_id', 'start_time', 'duration']
+            lease_elem = network_elem.add_instance('lease', lease[0], lease_fields)
             lease_elems.append(lease_elem)
+
+            # add nodes of this lease
+            for node in lease:
+                 lease_elem.add_instance('node', node, ['component_id'])
+
+
+
+#        lease_elems = []       
+#        for lease in leases:
+#            lease_fields = ['lease_id', 'component_id', 'slice_id', 'start_time', 'duration']
+#            lease_elem = network_elem.add_instance('lease', lease, lease_fields)
+#            lease_elems.append(lease_elem)
 
 
     @staticmethod
@@ -47,16 +78,34 @@ class SFAv1Lease:
 
     @staticmethod
     def get_lease_objs(lease_elems):
-        leases = []    
+        leases = []
         for lease_elem in lease_elems:
-            lease = Lease(lease_elem.attrib, lease_elem)
-            if lease.get('lease_id'):
-               lease['lease_id'] = lease_elem.attrib['lease_id']
-            lease['component_id'] = lease_elem.attrib['component_id']
-            lease['slice_id'] = lease_elem.attrib['slice_id']
-            lease['start_time'] = lease_elem.attrib['start_time']
-            lease['duration'] = lease_elem.attrib['duration']
+            #get nodes
+            node_elems = lease_elem.xpath('./default:node | ./node')
+            for node_elem in node_elems:
+                 lease = Lease(lease_elem.attrib, lease_elem)
+                 lease['slice_id'] = lease_elem.attrib['slice_id']
+                 lease['start_time'] = lease_elem.attrib['start_time']
+                 lease['duration'] = lease_elem.attrib['duration']
+                 lease['component_id'] = node_elem.attrib['component_id']
+                 leases.append(lease)
 
-            leases.append(lease)
-        return leases            
+        return leases
+
+
+
+
+
+#        leases = []    
+#        for lease_elem in lease_elems:
+#            lease = Lease(lease_elem.attrib, lease_elem)
+#            if lease.get('lease_id'):
+#               lease['lease_id'] = lease_elem.attrib['lease_id']
+#            lease['component_id'] = lease_elem.attrib['component_id']
+#            lease['slice_id'] = lease_elem.attrib['slice_id']
+#            lease['start_time'] = lease_elem.attrib['start_time']
+#            lease['duration'] = lease_elem.attrib['duration']
+
+#            leases.append(lease)
+#        return leases            
 

@@ -88,7 +88,7 @@ def handle_input_kind (filename, options, kind):
     elif kind=="credential":
         cred = Credential(filename = filename)
         print '--------------------',filename,'IS A',kind
-        cred.dump(dump_parents = options.dump_parents)
+        cred.dump(dump_parents = options.dump_parents, show_xml=options.show_xml)
         if options.extract_gids:
             print '--------------------',filename,'embedded GIDS'
             extract_gids(cred, extract_parents = options.dump_parents)
@@ -107,7 +107,8 @@ display info on input files"""
     parser.add_option("-g", "--extract-gids", action="store_true", dest="extract_gids", default=False, help="Extract GIDs from credentials")
     parser.add_option("-p", "--dump-parents", action="store_true", dest="dump_parents", default=False, help="Show parents")
     parser.add_option("-e", "--extensions", action="store_true", dest="show_extensions", default="False", help="Show certificate extensions")
-    parser.add_option("-v", "--verbose", action='count', dest='verbose', default=0)
+    parser.add_option("-v", "--verbose", action='count', dest='verbose', default=0, help="More and more verbose")
+    parser.add_option("-x", "--xml", action='store_true', dest='show_xml', default=False, help="dumps xml tree (cred. only)")
     (options, args) = parser.parse_args()
 
     logger.setLevelFromOptVerbose(options.verbose)

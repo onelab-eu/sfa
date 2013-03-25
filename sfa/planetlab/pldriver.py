@@ -164,7 +164,7 @@ class PlDriver (Driver):
                 self.shell.AddPersonKey(pointer, {'key_type' : 'ssh', 'key' : pub_key})
 
         elif type == 'node':
-            login_base = PlXrn(xrn=sfa_record['authority'],type='node').pl_login_base()
+            login_base = PlXrn(xrn=sfa_record['authority'],type='authority').pl_login_base()
             nodes = self.shell.GetNodes([pl_record['hostname']])
             if not nodes:
                 pointer = self.shell.AddNode(login_base, pl_record)
@@ -178,6 +178,7 @@ class PlDriver (Driver):
     def update (self, old_sfa_record, new_sfa_record, hrn, new_key):
         pointer = old_sfa_record['pointer']
         type = old_sfa_record['type']
+        new_key_pointer = None
 
         # new_key implemented for users only
         if new_key and type not in [ 'user' ]:
@@ -216,20 +217,19 @@ class PlDriver (Driver):
                 keys = person['key_ids']
                 keys = self.shell.GetKeys(person['key_ids'])
                 
-                # Delete all stale keys
                 key_exists = False
                 for key in keys:
-                    if new_key != key['key']:
-                        self.shell.DeleteKey(key['key_id'])
-                    else:
+                    if new_key == key['key']:
                         key_exists = True
+                        new_key_pointer = key['key_id']
+                        break
                 if not key_exists:
-                    self.shell.AddPersonKey(pointer, {'key_type': 'ssh', 'key': new_key})
+                    new_key_pointer = self.shell.AddPersonKey(pointer, {'key_type': 'ssh', 'key': new_key})
     
         elif type == "node":
             self.shell.UpdateNode(pointer, new_sfa_record)
 
-        return True
+        return (pointer, new_key_pointer)
         
 
     ##########
@@ -658,20 +658,12 @@ class PlDriver (Driver):
         slices.verify_slice_links(slice, rspec.version.get_link_requests(), nodes)
 
         # add/remove leases
-        requested_leases = []
-        kept_leases = []
-        for lease in rspec.version.get_leases():
-            requested_lease = {}
-            if not lease.get('lease_id'):
-               requested_lease['hostname'] = xrn_to_hostname(lease.get('component_id').strip())
-               requested_lease['start_time'] = lease.get('start_time')
-               requested_lease['duration'] = lease.get('duration')
-            else:
-               kept_leases.append(int(lease['lease_id']))
-            if requested_lease.get('hostname'):
-                requested_leases.append(requested_lease)
+        try:
+           rspec_requested_leases = rspec.version.get_leases()
+           leases = slices.verify_slice_leases(slice, rspec_requested_leases, peer)
+        except:
+           pass
 
-        leases = slices.verify_slice_leases(slice, requested_leases, kept_leases, peer)
         # handle MyPLC peer association.
         # only used by plc and ple.
         slices.handle_peer(site, slice, None, peer)
@@ -735,7 +727,7 @@ class PlDriver (Driver):
                  'geni_allocation_status': 'geni_unallocated',
                  'geni_expires': datetime_to_string(utcparse(sliver['expires']))})  
         return geni_slivers
-    
+
     def renew (self, urns, expiration_time, options={}):
         aggregate = PlAggregate(self)
         slivers = aggregate.get_slivers(urns)
