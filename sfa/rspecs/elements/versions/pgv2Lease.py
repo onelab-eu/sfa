@@ -1,7 +1,7 @@
 from sfa.util.xrn import Xrn
 from sfa.util.xml import XpathFilter
 
-from sfa.rspecs.elements.node import Node
+from sfa.rspecs.elements.node import NodeElement
 from sfa.rspecs.elements.sliver import Sliver
 from sfa.rspecs.elements.location import Location
 from sfa.rspecs.elements.hardware_type import HardwareType
