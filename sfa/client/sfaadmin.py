@@ -367,8 +367,6 @@ class AggregateCommands(Commands):
     def resources(self, rspec_version='GENI'):
         """Display the available resources at an aggregate"""  
         options = {'geni_rspec_version': rspec_version}
-        if xrn:
-            options['geni_slice_urn'] = Xrn(xrn, 'slice').get_urn()
         resources = self.api.manager.ListResources(self.api, {}, options)
         print resources
     
