@@ -369,7 +369,7 @@ def TestSQL(arg = None):
             dict ( [ ( (record.type,record.hrn) , record ) for record in all_records ] )
     for (rec_type, rec) in records_by_type_hrn :
         if rec_type == 'user':
-            print>>sys.stderr,"\r\n SLABIMPORT \t keys %s rec %s \r\n" %(rec_type, rec )
+            print >>sys.stderr,"\r\n SLABIMPORT \t keys %s rec %s \r\n" %(rec_type, rec )
             
     users_rec_by_email = \
             dict ( [ (record.email, record) for record in all_records if record.type == 'user' ] )
