@@ -124,20 +124,7 @@ class SlabAggregate:
         # get the granularity in second for the reservation system
         grain = self.driver.slab_api.GetLeaseGranularity()
         
-        # Commenting this part since all nodes should be returned, 
-        # even if a slice is provided
-        #if slice :
-        #    if 'node_ids' in slice and slice['node_ids']:
-        #        #first case, a non empty slice was provided
-        #        filter['hostname'] = slice['node_ids']
-        #        tags_filter=filter.copy()
-        #        nodes = self.driver.slab_api.GetNodes(filter['hostname'])
-        #    else :
-        #        #second case, a slice was provided, but is empty
-        #        nodes={}
-        #else :
-        #    #third case, no slice was provided
-        #    nodes = self.driver.slab_api.GetNodes()
+      
         nodes = self.driver.slab_api.GetNodes()
         #geni_available = options.get('geni_available')    
         #if geni_available:
@@ -150,9 +137,10 @@ class SlabAggregate:
         #interface_ids = []
         #tag_ids = []
         nodes_dict = {}
-        for node in nodes:
+        
+        #for node in nodes:
            
-            nodes_dict[node['node_id']] = node
+            #nodes_dict[node['node_id']] = node
         #logger.debug("SLABAGGREGATE api get_nodes nodes  %s "\
                                                              #%(nodes ))
         # get sites
@@ -181,13 +169,7 @@ class SlabAggregate:
         logger.debug("SLABAGGREGATE api get_nodes slice_nodes_list  %s "\
                                                              %(slice_nodes_list)) 
         for node in nodes:
-            # skip whitelisted nodes
-            #if node['slice_ids_whitelist']:
-                #if not slice or slice['slice_id'] not in node['slice_ids_whitelist']:
-                    #continue
-            #rspec_node = Node()
-            #logger.debug("SLABAGGREGATE api get_nodes node  %s "\
-                                                             #%(node)) 
+            nodes_dict[node['node_id']] = node
             if slice_nodes_list == [] or node['hostname'] in slice_nodes_list:
                    
                 rspec_node = SlabNode()
@@ -222,12 +204,7 @@ class SlabAggregate:
                 rspec_node['exclusive'] = 'true'
                 rspec_node['hardware_types'] = [HardwareType({'name': \
                                                 'slab-node'})]
-    
-                # only doing this because protogeni rspec needs
-                # to advertise available initscripts 
-                # add site/interface info to nodes.
-                # assumes that sites, interfaces and tags have already been             
-                #prepared.
+
 
                 location = SlabLocation({'country':'France','site': \
                                             node['site']})
