@@ -65,7 +65,7 @@ class RSpec:
     def register_rspec_element(self, element_type, element_name, element_path):
         if element_type not in RSpecElements:
             raise InvalidRSpecElement(element_type, extra="no such element type: %s. Must specify a valid RSpecElement" % element_type)
-        self.elements[element_type] = RSpecElement(element_type, element_name, element_path)
+        self.elements[element_type] = RSpecElement(element_type, element_path)
 
     def get_rspec_element(self, element_type):
         if element_type not in self.elements:
