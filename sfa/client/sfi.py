@@ -264,7 +264,6 @@ class Sfi:
         ("remove", "name"),
         ("resources", ""),
         ("describe", "slice_hrn"),
-        ("create", "slice_hrn rspec"),
         ("allocate", "slice_hrn rspec"),
         ("provision", "slice_hrn"),
         ("action", "slice_hrn action"), 
@@ -333,7 +332,7 @@ class Sfi:
                                help="set extra/testbed-dependent flags, e.g. --extra enabled=true")
 
         # user specifies remote aggregate/sm/component                          
-        if command in ("resources", "describe", "allocate", "provision", "create", "delete", "allocate", "provision", 
+        if command in ("resources", "describe", "allocate", "provision", "delete", "allocate", "provision", 
                        "action", "shutdown",  "get_ticket", "renew", "status"):
             parser.add_option("-d", "--delegate", dest="delegate", default=None, 
                              action="store_true",
@@ -341,7 +340,7 @@ class Sfi:
                                   "authority in set of credentials for this call")
 
         # show_credential option
-        if command in ("list","resources", "describe", "provision", "allocate", "create","add","update","remove","slices","delete","status","renew"):
+        if command in ("list","resources", "describe", "provision", "allocate", "add","update","remove","slices","delete","status","renew"):
             parser.add_option("-C","--credential",dest='show_credential',action='store_true',default=False,
                               help="show credential(s) used in human-readable form")
         # registy filter option
@@ -374,8 +373,7 @@ class Sfi:
                                 choices=("all", "resources", "leases"), default="resources")
 
 
-        # 'create' does return the new rspec, makes sense to save that too
-        if command in ("resources", "describe", "allocate", "provision", "show", "list", "gid", 'create'):
+        if command in ("resources", "describe", "allocate", "provision", "show", "list", "gid"):
            parser.add_option("-o", "--output", dest="file",
                             help="output XML to file", metavar="FILE", default=None)
 
@@ -1090,81 +1088,6 @@ or with an slice hrn, shows currently provisioned resources
             display_rspec(value, options.format)
 
         return 
-
-    def create(self, options, args):
-        """
-        create or update named slice with given rspec
-        """
-        server = self.sliceapi()
-
-        # xxx do we need to check usage (len(args)) ?
-        # slice urn
-        slice_hrn = args[0]
-        slice_urn = hrn_to_urn(slice_hrn, 'slice')
-
-        # credentials
-        creds = [self.slice_credential_string(slice_hrn)]
-
-        delegated_cred = None
-        server_version = self.get_cached_server_version(server)
-        if server_version.get('interface') == 'slicemgr':
-            # delegate our cred to the slice manager
-            # do not delegate cred to slicemgr...not working at the moment
-            pass
-            #if server_version.get('hrn'):
-            #    delegated_cred = self.delegate_cred(slice_cred, server_version['hrn'])
-            #elif server_version.get('urn'):
-            #    delegated_cred = self.delegate_cred(slice_cred, urn_to_hrn(server_version['urn']))
-
-        if options.show_credential:
-            show_credentials(creds)
-
-        # rspec
-        rspec_file = self.get_rspec_file(args[1])
-        rspec = open(rspec_file).read()
-
-        # users
-        # need to pass along user keys to the aggregate.
-        # users = [
-        #  { urn: urn:publicid:IDN+emulab.net+user+alice
-        #    keys: [<ssh key A>, <ssh key B>]
-        #  }]
-        users = []
-        # xxx Thierry 2012 sept. 21
-        # contrary to what I was first thinking, calling Resolve with details=False does not yet work properly here
-        # I am turning details=True on again on a - hopefully - temporary basis, just to get this whole thing to work again
-        slice_records = self.registry().Resolve(slice_urn, [self.my_credential_string])
-        # slice_records = self.registry().Resolve(slice_urn, [self.my_credential_string], {'details':True})
-        if slice_records and 'reg-researchers' in slice_records[0] and slice_records[0]['reg-researchers']:
-            slice_record = slice_records[0]
-            user_hrns = slice_record['reg-researchers']
-            user_urns = [hrn_to_urn(hrn, 'user') for hrn in user_hrns]
-            user_records = self.registry().Resolve(user_urns, [self.my_credential_string])
-
-            if 'sfa' not in server_version:
-                users = pg_users_arg(user_records)
-                rspec = RSpec(rspec)
-                rspec.filter({'component_manager_id': server_version['urn']})
-                rspec = RSpecConverter.to_pg_rspec(rspec.toxml(), content_type='request')
-            else:
-                users = sfa_users_arg(user_records, slice_record)
-
-        # do not append users, keys, or slice tags. Anything
-        # not contained in this request will be removed from the slice
-
-        api_options = {}
-        api_options ['append'] = False
-        api_options ['call_id'] = unique_call_id()
-        result = server.CreateSliver(slice_urn, creds, rspec, users, *self.ois(server, api_options))
-        value = ReturnValue.get_value(result)
-        if self.options.raw:
-            save_raw_to_file(result, self.options.raw, self.options.rawformat, self.options.rawbanner)
-        if options.file is not None:
-            save_rspec_to_file (value, options.file)
-        if (self.options.raw is None) and (options.file is None):
-            print value
-
-        return value
 
     def delete(self, options, args):
         """

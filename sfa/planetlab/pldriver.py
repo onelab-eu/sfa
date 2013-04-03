@@ -621,7 +621,7 @@ class PlDriver (Driver):
     
     def status (self, urns, options={}):
         aggregate = PlAggregate(self)
-        desc =  aggregate.describe(urns)
+        desc =  aggregate.describe(urns, version='GENI 3')
         status = {'geni_urn': desc['geni_urn'],
                   'geni_slivers': desc['geni_slivers']}
         return status
@@ -737,7 +737,7 @@ class PlDriver (Driver):
         requested_time = utcparse(expiration_time)
         record = {'expires': int(datetime_to_epoch(requested_time))}
         self.shell.UpdateSlice(slice['slice_id'], record)
-        description = self.describe(urns, None, options)
+        description = self.describe(urns, 'GENI 3', options)
         return description['geni_slivers']
             
 

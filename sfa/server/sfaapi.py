@@ -211,6 +211,7 @@ class SfaApi (XmlrpcApi):
         code = {
             'geni_code': GENICODE.SUCCESS, 
             'am_type': 'sfa',
+            'am_code': None,
         }
         if isinstance(result, SfaFault):
             code['geni_code'] = result.faultCode

@@ -248,9 +248,10 @@ class PlAggregate:
                          'type': 'plab-vserver',
                          'tags': []})
         rspec_node['sliver_id'] = rspec_sliver['sliver_id']
-        rspec_node['client_id'] = sliver_allocations[sliver['urn']].client_id
-        if sliver_allocations[sliver['urn']].component_id:
-            rspec_node['component_id'] = sliver_allocations[sliver['urn']].component_id
+        if sliver['urn'] in sliver_allocations:
+            rspec_node['client_id'] = sliver_allocations[sliver['urn']].client_id
+            if sliver_allocations[sliver['urn']].component_id:
+                rspec_node['component_id'] = sliver_allocations[sliver['urn']].component_id
         rspec_node['slivers'] = [rspec_sliver]
 
         # slivers always provide the ssh service
@@ -319,7 +320,7 @@ class PlAggregate:
                        }
         return geni_sliver        
 
-    def get_leases(self, slice_xrn=None, slice=None, options={}):
+    def get_leases(self, slice=None, options={}):
         
         if slice_xrn and not slice:
             return []
@@ -350,12 +351,8 @@ class PlAggregate:
             site=sites_dict[site_id]
 
             rspec_lease['component_id'] = hostname_to_urn(self.driver.hrn, site['login_base'], lease['hostname'])
-            if slice_xrn:
-                slice_urn = slice_xrn
-                slice_hrn = urn_to_hrn(slice_urn)
-            else:
-                slice_hrn = slicename_to_hrn(self.driver.hrn, lease['name'])
-                slice_urn = hrn_to_urn(slice_hrn, 'slice')
+            slice_hrn = slicename_to_hrn(self.driver.hrn, lease['name'])
+            slice_urn = hrn_to_urn(slice_hrn, 'slice')
             rspec_lease['slice_id'] = slice_urn
             rspec_lease['start_time'] = lease['t_from']
             rspec_lease['duration'] = (lease['t_until'] - lease['t_from']) / grain

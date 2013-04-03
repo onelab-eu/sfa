@@ -337,7 +337,7 @@ class SliceManager:
                 result['aggregate'] = aggregate
                 return result
             except:
-                logger.log_exc('Something wrong in _RenewSliver with URL %s'%server.url)
+                logger.log_exc('Something wrong in _Renew with URL %s'%server.url)
                 return {'aggregate': aggregate, 'exc_info': traceback.format_exc(),
                         'code': {'geni_code': -1},
                         'value': False, 'output': ""}
@@ -381,7 +381,7 @@ class SliceManager:
         def _Delete(server, xrn, creds, options):
             return server.Delete(xrn, creds, options)
 
-        (hrn, type) = urn_to_hrn(xrn)
+        (hrn, type) = urn_to_hrn(xrn[0])
         # get the callers hrn
         valid_cred = api.auth.checkCredentials(creds, 'deletesliver', hrn)[0]
         caller_hrn = Credential(cred=valid_cred).get_gid_caller().get_hrn()
@@ -398,7 +398,7 @@ class SliceManager:
                 continue
             interface = api.aggregates[aggregate]
             server = api.server_proxy(interface, cred)
-            threads.run(_DeleteSliver, server, xrn, [cred], options)
+            threads.run(_Delete, server, xrn, [cred], options)
         threads.get_results()
         return 1
     
@@ -442,7 +442,7 @@ class SliceManager:
         }
 
    
-    def Describe(self, api, xrns, creds, options):
+    def Describe(self, api, creds, xrns, options):
         def _Describe(server, xrn, creds, options):
             return server.Describe(xrn, creds, options)
 
@@ -456,7 +456,7 @@ class SliceManager:
         for aggregate in api.aggregates:
             interface = api.aggregates[aggregate]
             server = api.server_proxy(interface, cred)
-            threads.run (_Describe, server, slice_xrn, [cred], options)
+            threads.run (_Describe, server, xrns, [cred], options)
         results = [ReturnValue.get_value(result) for result in threads.get_results()]
 
         # get rid of any void result - e.g. when call_id was hit, where by convention we return {}
@@ -466,6 +466,7 @@ class SliceManager:
         if not results : return {}
 
         # otherwise let's merge stuff
+        version_manager = VersionManager()
         manifest_version = version_manager._get_version('GENI', '3', 'manifest')
         result_rspec = RSpec(version=manifest_version)
         geni_slivers = []
@@ -473,8 +474,8 @@ class SliceManager:
         for result in results:
             try:
                 geni_urn = result['geni_urn']
-                result_rspec.version.merge(ReturnValue.get_value(result['result']['geni_rspec']))
-                geni_slivers.extend(result['result']['geni_slivers'])
+                result_rspec.version.merge(ReturnValue.get_value(result['geni_rspec']))
+                geni_slivers.extend(result['geni_slivers'])
             except:
                 api.logger.log_exc("SM.Provision: Failed to merge aggregate rspec")
         return {

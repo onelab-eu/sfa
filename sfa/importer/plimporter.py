@@ -367,8 +367,13 @@ class PlImporter:
                     self.logger.log_exc("PlImporter: failed to import person %d %s"%(person['person_id'],person['email']))
     
             # maintain the list of PIs for a given site
+            # for the record, Jordan had proposed the following addition as a welcome hotfix to a previous version:
+            # site_pis = list(set(site_pis)) 
+            # this was likely due to a bug in the above logic, that had to do with disabled persons
+            # being improperly handled, and where the whole loop on persons
+            # could be performed twice with the same person...
+            # so hopefully we do not need to eliminate duplicates explicitly here anymore
             site_record.reg_pis = list(site_pis)
-            site_record.reg_pis = site_pis
             dbsession.commit()
 
             # import slices
@@ -399,9 +404,11 @@ class PlImporter:
                     if slice_id != slice_record.pointer:
                         self.logger.info("updating record (slice) pointer")
                         slice_record.pointer = slice_id
-                        dbsession.commit()             
+                        dbsession.commit() 
                     # xxx update the record ...
-                    #self.logger.warning ("Slice update not yet implemented")
+                    # given that we record the current set of users anyways, there does not seem to be much left to do here
+                    # self.logger.warning ("Slice update not yet implemented on slice %s (%s)"%(slice_hrn,slice['name']))
+                    #pass
                 # record current users affiliated with the slice
                 slice_record.reg_researchers = \
                     [ self.locate_by_type_pointer ('user',user_id) for user_id in slice['person_ids'] ]

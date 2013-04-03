@@ -5,14 +5,13 @@ from sfa.util.sfalogging import logger
 
 from sfa.rspecs.rspec import RSpec
 from sfa.rspecs.elements.hardware_type import HardwareType
-from sfa.rspecs.elements.node import Node
+from sfa.rspecs.elements.node import NodeElement
 from sfa.rspecs.elements.link import Link
 from sfa.rspecs.elements.sliver import Sliver
 from sfa.rspecs.elements.login import Login
 from sfa.rspecs.elements.location import Location
 from sfa.rspecs.elements.position_3d import Position3D
 from sfa.rspecs.elements.interface import Interface
-from sfa.rspecs.elements.services import Services
 from sfa.rspecs.elements.pltag import PLTag
 from sfa.rspecs.elements.lease import Lease
 from sfa.rspecs.elements.granularity import Granularity
