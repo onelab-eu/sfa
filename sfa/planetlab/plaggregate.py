@@ -311,6 +311,9 @@ class PlAggregate:
                     op_status = 'geni_unknown'
             else:
                 allocation_status = 'geni_unallocated'    
+        else:
+            allocation_status = 'geni_unallocated'
+            op_status = 'geni_failed'
         # required fields
         geni_sliver = {'geni_sliver_urn': rspec_node['sliver_id'],
                        'geni_expires': rspec_node['expires'],
@@ -322,9 +325,6 @@ class PlAggregate:
 
     def get_leases(self, slice=None, options={}):
         
-        if slice_xrn and not slice:
-            return []
-
         now = int(time.time())
         filter={}
         filter.update({'clip':now})
