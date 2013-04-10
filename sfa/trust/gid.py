@@ -74,6 +74,7 @@ class GID(Certificate):
     # @param string If string!=None, load the GID from a string
     # @param filename If filename!=None, load the GID from a file
     # @param lifeDays life of GID in days - default is 1825==5 years
+    # @param email Email address to put in subjectAltName - default is None
 
     def __init__(self, create=False, subject=None, string=None, filename=None, uuid=None, hrn=None, urn=None, lifeDays=1825, email=None):
         self.uuid = None
