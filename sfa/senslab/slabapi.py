@@ -34,12 +34,17 @@ class SlabTestbedAPI():
                 
     #TODO clean GetPeers. 05/07/12SA   
     @staticmethod     
-    def GetPeers ( auth = None, peer_filter=None, return_fields_list=None):
+    def GetPeers ( auth = None, peer_filter=None ):
+        """ Gathers registered authorities in SFA DB and looks for specific peer
+        if peer_filter is specified. 
+        :returns list of records.
+     
+        """
 
         existing_records = {}
         existing_hrns_by_types = {}
         logger.debug("SLABDRIVER \tGetPeers auth = %s, peer_filter %s, \
-                    return_field %s " %(auth , peer_filter, return_fields_list))
+                    " %(auth , peer_filter))
         all_records = dbsession.query(RegRecord).filter(RegRecord.type.like('%authority%')).all()
         
         for record in all_records:
@@ -68,8 +73,8 @@ class SlabTestbedAPI():
             pass
                 
         return_records = records_list
-        if not peer_filter and not return_fields_list:
-            return records_list
+        #if not peer_filter :
+            #return records_list
 
        
         logger.debug("SLABDRIVER \tGetPeer return_records %s " \
@@ -696,12 +701,12 @@ class SlabTestbedAPI():
     def update_jobs_in_slabdb( job_oar_list, jobs_psql):
         #Get all the entries in slab_xp table
         
+        set_jobs_psql = set(jobs_psql)
 
-        jobs_psql = set(jobs_psql)
-        kept_jobs = set(job_oar_list).intersection(jobs_psql)
+        kept_jobs = set(job_oar_list).intersection(set_jobs_psql)
         logger.debug ( "\r\n \t\ update_jobs_in_slabdb jobs_psql %s \r\n \t \
-            job_oar_list %s kept_jobs %s "%(jobs_psql, job_oar_list, kept_jobs))
-        deleted_jobs = set(jobs_psql).difference(kept_jobs)
+            job_oar_list %s kept_jobs %s "%(set_jobs_psql, job_oar_list, kept_jobs))
+        deleted_jobs = set_jobs_psql.difference(kept_jobs)
         deleted_jobs = list(deleted_jobs)
         if len(deleted_jobs) > 0:
             slab_dbsession.query(SenslabXP).filter(SenslabXP.job_id.in_(deleted_jobs)).delete(synchronize_session='fetch')
@@ -726,8 +731,8 @@ class SlabTestbedAPI():
         job_oar_list = []
         
         jobs_psql_query = slab_dbsession.query(SenslabXP).all()
-        jobs_psql_dict =  [ (row.job_id, row.__dict__ )for row in jobs_psql_query ]
-        jobs_psql_dict = dict(jobs_psql_dict)
+        jobs_psql_dict = dict( [ (row.job_id, row.__dict__ )for row in jobs_psql_query ])
+        #jobs_psql_dict = jobs_psql_dict)
         logger.debug("SLABDRIVER \tGetLeases jobs_psql_dict %s"\
                                             %(jobs_psql_dict))
         jobs_psql_id_list =  [ row.job_id for row in jobs_psql_query ]
@@ -742,42 +747,14 @@ class SlabTestbedAPI():
             #If there is information on the job in SLAB DB (slice used and job id) 
             if resa['lease_id'] in jobs_psql_dict:
                 job_info = jobs_psql_dict[resa['lease_id']]
-                logger.debug("SLABDRIVER \tGetLeases resa_user_dict %s"\
-                                            %(resa_user_dict))        
+                logger.debug("SLABDRIVER \tGetLeases job_info %s"\
+                                            %(job_info))        
                 resa['slice_hrn'] = job_info['slice_hrn']
                 resa['slice_id'] = hrn_to_urn(resa['slice_hrn'], 'slice')
                 
              #Assume it is a senslab slice:   
             else:
-                resa['slice_id'] =  hrn_to_urn(self.root_auth+'.'+ resa['user'] +"_slice"  , 'slice')            
-            #if resa['user'] not in resa_user_dict: 
-                #logger.debug("SLABDRIVER \tGetLeases userNOTIN ")
-                #ldap_info = self.ldap.LdapSearch('(uid='+resa['user']+')')
-                #if ldap_info:
-                    #ldap_info = ldap_info[0][1]
-                    ##Get the backref :relationship table reg-researchers 
-                    #user = dbsession.query(RegUser).options(joinedload('reg_slices_as_researcher')).filter_by(email = \
-                                                    #ldap_info['mail'][0])
-                    #if user:
-                        #user = user.first()
-                        #user = user.__dict__
-                        #slice_info =  user['reg_slices_as_researcher'][0].__dict__
-                    ##Separated in case user not in database : 
-                    ##record_id not defined SA 17/07//12
-                    
-                    ##query_slice_info = slab_dbsession.query(SenslabXP).filter_by(record_id_user = user.record_id)
-                    ##if query_slice_info:
-                        ##slice_info = query_slice_info.first()
-                    ##else:
-                        ##slice_info = None
-                        
-                    #resa_user_dict[resa['user']] = {}
-                    #resa_user_dict[resa['user']]['ldap_info'] = user
-                    #resa_user_dict[resa['user']]['slice_info'] = slice_info
-                    
-                    #resa['slice_hrn'] = resa_user_dict[resa['user']]['slice_info']['hrn']
-                    #resa['slice_id'] = hrn_to_urn(resa['slice_hrn'], 'slice')
-                
+                resa['slice_id'] =  hrn_to_urn(self.root_auth+'.'+ resa['user'] +"_slice"  , 'slice')              
                 resa['slice_hrn'] = Xrn(resa['slice_id']).get_hrn()
 
             resa['component_id_list'] = []    
@@ -1021,7 +998,7 @@ class SlabTestbedAPI():
                 
         if slicerec:
             fixed_slicerec_dict = slicerec
-            #At this point if the there is no login it means 
+            #At this point if there is no login it means 
             #record_id_user filter has been used for filtering
             #if login is None :
                 ##If theslice record is from senslab
