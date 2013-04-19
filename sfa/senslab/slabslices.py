@@ -513,6 +513,7 @@ class SlabSlices:
         #requested_user_ids = users_by_id.keys() 
         #requested_user_hrns = users_by_hrn.keys()
         requested_user_emails = users_by_email.keys()
+        requested_user_hrns = [users_by_email[user]['hrn'] for user in users_by_email]
         logger.debug("SLABSLICE.PY \tverify_person  \
                        users_by_email  %s " %( users_by_email)) 
         #logger.debug("SLABSLICE.PY \tverify_person  \
