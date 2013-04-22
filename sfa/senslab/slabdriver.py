@@ -91,7 +91,7 @@ class SlabDriver(Driver):
                     logger.debug("SLABDRIVER \tfill_record_info \
                         TYPE SLICE RECUSER record['hrn'] %s ecord['oar_job_id']\
                          %s " %(record['hrn'], record['oar_job_id']))
-                         del record['reg_researchers']
+                    del record['reg_researchers']
                     try:
                         for rec in recslice_list: 
                             logger.debug("SLABDRIVER\r\n  \t  fill_record_info oar_job_id %s " %(rec['oar_job_id']))
