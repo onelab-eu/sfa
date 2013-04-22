@@ -1,5 +1,5 @@
 M2Crypto==0.21.1
-SOAPpy==0.12.0
+SOAPpy
 SQLAlchemy==0.7.8
 Tempita==0.5.1
 ZSI==2.1-a1
