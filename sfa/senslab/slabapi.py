@@ -717,7 +717,14 @@ class SlabTestbedAPI():
         
     
     def GetLeases(self, lease_filter_dict=None, login=None):
-        
+        """ 
+        Two purposes:
+        -Fetch all the jobs from OAR (running, waiting..)
+        complete the reservation information with slice hrn
+        found in slabxp table. If not available in the table,
+        assume it is a senslab slice.
+       - Updates the slab table, deleting jobs when necessary.
+        :returns reservation_list, list of dictionaries. """
         
         unfiltered_reservation_list = self.GetReservedNodes(login)
 
@@ -742,9 +749,10 @@ class SlabTestbedAPI():
         for resa in unfiltered_reservation_list:
             logger.debug("SLABDRIVER \tGetLeases USER %s"\
                                             %(resa['user']))   
-            #Cosntruct list of jobs (runing, waiting..) in oar 
+            #Construct list of jobs (runing, waiting..) in oar 
             job_oar_list.append(resa['lease_id'])  
-            #If there is information on the job in SLAB DB (slice used and job id) 
+            #If there is information on the job in SLAB DB ]
+            #(slice used and job id) 
             if resa['lease_id'] in jobs_psql_dict:
                 job_info = jobs_psql_dict[resa['lease_id']]
                 logger.debug("SLABDRIVER \tGetLeases job_info %s"\
@@ -752,62 +760,32 @@ class SlabTestbedAPI():
                 resa['slice_hrn'] = job_info['slice_hrn']
                 resa['slice_id'] = hrn_to_urn(resa['slice_hrn'], 'slice')
                 
-             #Assume it is a senslab slice:   
+            #otherwise, assume it is a senslab slice:   
             else:
-                resa['slice_id'] =  hrn_to_urn(self.root_auth+'.'+ resa['user'] +"_slice"  , 'slice')              
+                resa['slice_id'] =  hrn_to_urn(self.root_auth+'.'+ \
+                                         resa['user'] +"_slice"  , 'slice')              
                 resa['slice_hrn'] = Xrn(resa['slice_id']).get_hrn()
 
             resa['component_id_list'] = []    
             #Transform the hostnames into urns (component ids)
             for node in resa['reserved_nodes']:
-                #resa['component_id_list'].append(hostname_to_urn(self.hrn, \
-                        #self.root_auth, node['hostname']))
+                
                 slab_xrn = slab_xrn_object(self.root_auth, node)
                 resa['component_id_list'].append(slab_xrn.urn)
                     
             if lease_filter_dict:
-                logger.debug("SLABDRIVER \tGetLeases resa_ %s \r\n leasefilter %s"\
-                                        %(resa,lease_filter_dict)) 
+                logger.debug("SLABDRIVER \tGetLeases resa_ %s \
+                        \r\n leasefilter %s" %(resa, lease_filter_dict)) 
                         
                 if lease_filter_dict['name'] == resa['slice_hrn']:
                     reservation_list.append(resa)
                         
         if lease_filter_dict is None:
             reservation_list = unfiltered_reservation_list
-                #else:
-                    #del unfiltered_reservation_list[unfiltered_reservation_list.index(resa)]
-
+               
                     
         self.update_jobs_in_slabdb(job_oar_list, jobs_psql_id_list)
                 
-        #for resa in unfiltered_reservation_list:
-            
-            
-            ##Put the slice_urn  
-            #if resa['user'] in resa_user_dict:
-                #resa['slice_hrn'] = resa_user_dict[resa['user']]['slice_info']['hrn']
-                #resa['slice_id'] = hrn_to_urn(resa['slice_hrn'], 'slice')    
-                ##Put the slice_urn 
-                ##resa['slice_id'] = hrn_to_urn(slice_info.slice_hrn, 'slice')
-                #resa['component_id_list'] = []
-                ##Transform the hostnames into urns (component ids)
-                #for node in resa['reserved_nodes']:
-                    ##resa['component_id_list'].append(hostname_to_urn(self.hrn, \
-                            ##self.root_auth, node['hostname']))
-                    #slab_xrn = slab_xrn_object(self.root_auth, node)
-                    #resa['component_id_list'].append(slab_xrn.urn)
-        
-        ##Filter the reservation list if necessary
-        ##Returns all the leases associated with a given slice
-        #if lease_filter_dict:
-            #logger.debug("SLABDRIVER \tGetLeases lease_filter_dict %s"\
-                                            #%(lease_filter_dict))
-            #for resa in unfiltered_reservation_list:
-                #if lease_filter_dict['name'] == resa['slice_hrn']:
-                    #reservation_list.append(resa)
-        #else:
-            #reservation_list = unfiltered_reservation_list
-            
         logger.debug(" SLABDRIVER.PY \tGetLeases reservation_list %s"\
                                                     %(reservation_list))
         return reservation_list
@@ -976,9 +954,9 @@ class SlabTestbedAPI():
             
     def _get_slice_records(self, slice_filter = None, \
                     slice_filter_type = None):
+      
        
-        #login = None
-    
+        
         #Get list of slices based on the slice hrn
         if slice_filter_type == 'slice_hrn':
             
@@ -1009,7 +987,8 @@ class SlabTestbedAPI():
                   
                   
                   
-    def GetSlices(self, slice_filter = None, slice_filter_type = None, login=None):
+    def GetSlices(self, slice_filter = None, slice_filter_type = None, \
+                                                                    login=None):
         """ Get the slice records from the slab db. 
         Returns a slice ditc if slice_filter  and slice_filter_type 
         are specified.
@@ -1026,16 +1005,16 @@ class SlabTestbedAPI():
             fixed_slicerec_dict = \
                             self._get_slice_records(slice_filter, slice_filter_type)
             slice_hrn = fixed_slicerec_dict['hrn']
-            #login, fixed_slicerec_dict = \
-                            #self._get_slice_records(slice_filter, slice_filter_type)
+   
             logger.debug(" SLABDRIVER \tGetSlices login %s \
-                            slice record %s slice_filter %s slice_filter_type %s "\
-                            %(login, fixed_slicerec_dict,slice_filter, slice_filter_type))
+                            slice record %s slice_filter %s \
+                            slice_filter_type %s " %(login, \
+                            fixed_slicerec_dict, slice_filter, \
+                            slice_filter_type))
     
             
             #Now we have the slice record fixed_slicerec_dict, get the 
             #jobs associated to this slice
-            #leases_list = self.GetReservedNodes(username = login)
             leases_list = self.GetLeases(login = login)
             #If no job is running or no job scheduled 
             #return only the slice record           
@@ -1052,12 +1031,11 @@ class SlabTestbedAPI():
                         \ lease['slice_hrn'] %s" \
                         %(slice_filter, lease['slice_hrn']))
                 if  lease['slice_hrn'] == slice_hrn:
-                    reserved_list = lease['reserved_nodes']
                     slicerec_dict['slice_hrn'] = lease['slice_hrn']
                     slicerec_dict['hrn'] = lease['slice_hrn']
                     slicerec_dict['user'] = lease['user']
                     slicerec_dict['oar_job_id'] = lease['lease_id']
-                    slicerec_dict.update({'list_node_ids':{'hostname':reserved_list}})   
+                    slicerec_dict.update({'list_node_ids':{'hostname':lease['reserved_nodes']}})   
                     slicerec_dict.update({'node_ids':lease['reserved_nodes']})
                     
                     #Update lease dict with the slice record
@@ -1090,8 +1068,7 @@ class SlabTestbedAPI():
             #put them in dict format 
             #query_slice_list = dbsession.query(RegRecord).all()           
             query_slice_list = dbsession.query(RegSlice).options(joinedload('reg_researchers')).all()          
-            #query_slice_list = dbsession.query(RegRecord).filter_by(type='slice').all()
-            #query_slice_list = slab_dbsession.query(SenslabXP).all()
+
             return_slicerec_dictlist = []
             for record in query_slice_list: 
                 tmp = record.__dict__
@@ -1119,10 +1096,8 @@ class SlabTestbedAPI():
                         logger.debug("SLABDRIVER.PY  \tGetSlices lease %s "\
                                                                  %(lease ))
 
-                        reserved_list = lease['reserved_nodes']
-
                         slicerec_dict.update({'node_ids':lease['reserved_nodes']})
-                        slicerec_dict.update({'list_node_ids':{'hostname':reserved_list}}) 
+                        slicerec_dict.update({'list_node_ids':{'hostname':lease['reserved_nodes']}}) 
                         slicerec_dict.update(fixed_slicerec_dict)
                         #slicerec_dict.update({'hrn':\
                                     #str(fixed_slicerec_dict['slice_hrn'])})
@@ -1198,25 +1173,7 @@ class SlabTestbedAPI():
 
         return slab_record
 
-    
 
-            
-    def __transforms_timestamp_into_date(self, xp_utc_timestamp = None):
-        """ Transforms unix timestamp into valid OAR date format """
-        
-        #Used in case of a scheduled experiment (not immediate)
-        #To run an XP immediately, don't specify date and time in RSpec 
-        #They will be set to None. 
-        if xp_utc_timestamp:
-            #transform the xp_utc_timestamp into server readable time  
-            xp_server_readable_date = datetime.fromtimestamp(int(\
-                                xp_utc_timestamp)).strftime(self.time_format)
-
-            return xp_server_readable_date
-            
-        else:
-            return None
-        
    
 
      

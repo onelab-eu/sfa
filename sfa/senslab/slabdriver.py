@@ -91,14 +91,16 @@ class SlabDriver(Driver):
                     logger.debug("SLABDRIVER \tfill_record_info \
                         TYPE SLICE RECUSER record['hrn'] %s ecord['oar_job_id']\
                          %s " %(record['hrn'], record['oar_job_id']))
+                         del record['reg_researchers']
                     try:
                         for rec in recslice_list: 
                             logger.debug("SLABDRIVER\r\n  \t  fill_record_info oar_job_id %s " %(rec['oar_job_id']))
-                            del record['reg_researchers']
+                            
                             record['node_ids'] = [ self.slab_api.root_auth + hostname for hostname in rec['node_ids']]
                     except KeyError:
                         pass
-
+                        
+                    
                     logger.debug( "SLABDRIVER.PY \t fill_record_info SLICE \
                                     recslice_list  %s \r\n \t RECORD %s \r\n \
                                     \r\n" %(recslice_list, record)) 
