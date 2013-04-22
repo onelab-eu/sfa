@@ -2,7 +2,7 @@ M2Crypto==0.21.1
 SOAPpy
 SQLAlchemy==0.7.8
 Tempita==0.5.1
-ZSI==2.1-a1
+ZSI
 argparse==1.2.1
 chardet==2.0.1
 decorator==3.3.3
