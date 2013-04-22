@@ -4,7 +4,7 @@ SQLAlchemy==0.7.8
 Tempita==0.5.1
 ZSI
 argparse==1.2.1
-chardet==2.0.1
+chardet
 decorator==3.3.3
 ## FIXME: could not find svn URL in dependency_links for this package:
 ##distribute==0.6.24dev-r0
