@@ -1,0 +1,24 @@
+M2Crypto==0.21.1
+SOAPpy==0.12.0
+SQLAlchemy==0.7.8
+Tempita==0.5.1
+ZSI==2.1-a1
+argparse==1.2.1
+chardet==2.0.1
+decorator==3.3.3
+## FIXME: could not find svn URL in dependency_links for this package:
+##distribute==0.6.24dev-r0
+fpconst==0.7.2
+lxml==2.3.2
+passlib==1.5.3
+psycopg2==2.4.5
+pyOpenSSL==0.13
+python-apt==0.8.8.1
+python-dateutil==1.5
+python-debian==0.1.21
+python-debianbts==1.11
+python-ldap==2.4.10
+reportbug==6.4.3
+sqlalchemy-migrate==0.7.2
+wsgiref==0.1.2
+
