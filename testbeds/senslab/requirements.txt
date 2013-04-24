@@ -14,11 +14,11 @@ passlib==1.5.3
 psycopg2==2.4.5
 pyOpenSSL==0.13
 python-apt
-python-dateutil==1.5
-python-debian==0.1.21
-python-debianbts==1.11
-python-ldap==2.4.10
-reportbug==6.4.3
-sqlalchemy-migrate==0.7.2
-wsgiref==0.1.2
+python-dateutil
+python-debian
+python-debianbts
+python-ldap
+reportbug
+sqlalchemy-migrate
+wsgiref
 
