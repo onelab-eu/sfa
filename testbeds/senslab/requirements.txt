@@ -13,7 +13,7 @@ lxml==2.3.2
 passlib==1.5.3
 psycopg2==2.4.5
 pyOpenSSL==0.13
-python-apt==0.8.8.1
+python-apt
 python-dateutil==1.5
 python-debian==0.1.21
 python-debianbts==1.11
