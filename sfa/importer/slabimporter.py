@@ -26,6 +26,29 @@ class SlabImporter:
         self.auth_hierarchy = auth_hierarchy
         self.logger = loc_logger
         self.logger.setLevelDebug()
+        #retrieve all existing SFA objects
+        self.all_records = dbsession.query(RegRecord).all()
+        
+        # initialize record.stale to True by default, 
+        # then mark stale=False on the ones that are in use
+        for record in self.all_records: 
+            record.stale = True
+        #create hash by (type,hrn) 
+        #used  to know if a given record is already known to SFA 
+        self.records_by_type_hrn = \
+            dict([( (record.type,record.hrn), record) \
+                                        for record in self.all_records])
+
+        self.users_rec_by_email = \
+            dict([ (record.email, record) \
+                for record in self.all_records if record.type == 'user'])
+            
+        # create hash by (type,pointer) 
+        self.records_by_type_pointer = \
+            dict([ ( (str(record.type), record.pointer) , record) \
+                for record in self.all_records  if record.pointer != -1])
+            
+            
         
     @staticmethod
     def hostname_to_hrn_escaped(root_auth, hostname):
@@ -55,60 +78,10 @@ class SlabImporter:
             return
         self.records_by_type_hrn [ rec_tuple ] = record
         
-    def import_sites(self) :
-            
-    def run (self, options):
-        config = Config()
-
-        slabdriver = SlabDriver(config)
-        
-        #Create special slice table for senslab 
-        
-        if not slabdriver.db.exists('slab_xp'):
-            slabdriver.db.createtable()
-            self.logger.info ("SlabImporter.run:  slab_xp table created ")
-
-        #retrieve all existing SFA objects
-        all_records = dbsession.query(RegRecord).all()
-        
-        # initialize record.stale to True by default, 
-        # then mark stale=False on the ones that are in use
-        for record in all_records: 
-            record.stale = True
-        #create hash by (type,hrn) 
-        #used  to know if a given record is already known to SFA 
-       
-        self.records_by_type_hrn = \
-            dict([( (record.type,record.hrn), record) \
-                                        for record in all_records])
-
-        self.users_rec_by_email = \
-            dict([ (record.email, record) \
-                for record in all_records if record.type == 'user'])
-            
-        # create hash by (type,pointer) 
-        self.records_by_type_pointer = \
-            dict([ ( (str(record.type), record.pointer) , record) \
-                for record in all_records  if record.pointer != -1])
-
-        
+    def import_sites_and_nodes(self, slabdriver):
+        sites_listdict  = slabdriver.slab_api.GetSites()  
         nodes_listdict  = slabdriver.slab_api.GetNodes()
         nodes_by_id = dict([(node['node_id'],node) for node in nodes_listdict])
-        sites_listdict  = slabdriver.slab_api.GetSites()
-        
-        ldap_person_listdict = slabdriver.slab_api.GetPersons()
-        print>>sys.stderr,"\r\n SLABIMPORT \t ldap_person_listdict %s \r\n" \
-                %(ldap_person_listdict)
-        slices_listdict = slabdriver.slab_api.GetSlices()
-        #try:
-            #slices_by_userid = \
-                #dict([(one_slice['reg_researchers']['record_id'], one_slice ) \
-                #for one_slice in slices_listdict ])
-        #except TypeError:
-            #self.logger.log_exc("SlabImporter: failed to create list \
-                        #of slices by user id.") 
-            #pass
- 
         for site in sites_listdict:
             site_hrn = _get_site_hrn(site) 
             site_record = self.find_record_by_type_hrn ('authority', site_hrn)
@@ -132,64 +105,100 @@ class SlabImporter:
                 except SQLAlchemyError:
                     # if the site import fails then there is no point in 
                     # trying to import the
-                    # site's child records (node, slices, persons), so skip them.
+                    # site's child records(node, slices, persons), so skip them.
                     self.logger.log_exc("SlabImporter: failed to import site. \
                         Skipping child records") 
                     continue
             else:
                 # xxx update the record ...
                 pass
-            site_record.stale = False 
             
-         # import node records in site
-            for node_id in site['node_ids']:
+            
+            site_record.stale = False
+            self.import_nodes(site['node_ids'], nodes_by_id, slabdriver)
+            
+            return 
+        
+    def import_nodes(self, node_ids, nodes_by_id, slabdriver) :
+        
+        for node_id in node_ids:
+            try:
+                node = nodes_by_id[node_id]
+            except KeyError:
+                self.logger.warning ("SlabImporter: cannot find node_id %s \
+                        - ignored" %(node_id))
+                continue             
+            escaped_hrn =  \
+            self.hostname_to_hrn_escaped(slabdriver.slab_api.root_auth, \
+            node['hostname'])
+            print>>sys.stderr, "\r\n \r\n SLABIMPORTER node %s " %(node)               
+            hrn =  node['hrn']
+
+
+            # xxx this sounds suspicious
+            if len(hrn) > 64: hrn = hrn[:64]
+            node_record = self.find_record_by_type_hrn( 'node', hrn )
+            if not node_record:
+                pkey = Keypair(create=True)
+                urn = hrn_to_urn(escaped_hrn, 'node') 
+                node_gid = \
+                    self.auth_hierarchy.create_gid(urn, \
+                    create_uuid(), pkey)
+                    
+                def slab_get_authority(hrn):
+                    return hrn.split(".")[0]
+                    
+                node_record = RegNode(hrn=hrn, gid=node_gid, 
+                                    pointer = '-1',
+                                    authority=slab_get_authority(hrn))
                 try:
-                    node = nodes_by_id[node_id]
-                except KeyError:
-                    self.logger.warning ("SlabImporter: cannot find node_id %s \
-                            - ignored" %(node_id))
-                    continue             
-                escaped_hrn =  \
-                self.hostname_to_hrn_escaped(slabdriver.slab_api.root_auth, \
-                node['hostname'])
-                print>>sys.stderr, "\r\n \r\n SLABIMPORTER node %s " %(node)               
-                hrn =  node['hrn']
-
-
-                # xxx this sounds suspicious
-                if len(hrn) > 64: hrn = hrn[:64]
-                node_record = self.find_record_by_type_hrn( 'node', hrn )
-                if not node_record:
-                    pkey = Keypair(create=True)
-                    urn = hrn_to_urn(escaped_hrn, 'node') 
-                    node_gid = \
-                        self.auth_hierarchy.create_gid(urn, \
-                        create_uuid(), pkey)
                         
-                    def slab_get_authority(hrn):
-                        return hrn.split(".")[0]
-                        
-                    node_record = RegNode(hrn=hrn, gid=node_gid, 
-                                        pointer = '-1',
-                                        authority=slab_get_authority(hrn))
-                    try:
-                         
-                        node_record.just_created()
-                        dbsession.add(node_record)
-                        dbsession.commit()
-                        self.logger.info("SlabImporter: imported node: %s" \
-                                    % node_record)  
-                        self.update_just_added_records_dict(node_record)
-                    except SQLAlchemyError:
-                        self.logger.log_exc("SlabImporter: \
-                                        failed to import node") 
-                else:
-                    # xxx update the record ...
-                    pass
-                node_record.stale=False
+                    node_record.just_created()
+                    dbsession.add(node_record)
+                    dbsession.commit()
+                    self.logger.info("SlabImporter: imported node: %s" \
+                                % node_record)  
+                    self.update_just_added_records_dict(node_record)
+                except SQLAlchemyError:
+                    self.logger.log_exc("SlabImporter: \
+                                    failed to import node") 
+            else:
+                # xxx update the record ...
+                pass
+            node_record.stale=False
                     
-                    
-        # import persons
+     # return a tuple pubkey (a plc key object) and pkey (a Keypair object)
+
+    def init_person_key (self, person, slab_key):
+        pubkey = None
+        if  person['pkey']:
+            # randomly pick first key in set
+            pubkey = slab_key
+            
+            try:
+                pkey = convert_public_key(pubkey)
+            except TypeError:
+                #key not good. create another pkey
+                self.logger.warn('SlabImporter: \
+                                    unable to convert public \
+                                    key for %s' %person['hrn'])
+                pkey = Keypair(create=True)
+            
+        else:
+            # the user has no keys. 
+            #Creating a random keypair for the user's gid
+            self.logger.warn("SlabImporter: person %s does not have a  \
+                        public key" %(person['hrn']))
+            pkey = Keypair(create=True) 
+        return (pubkey, pkey)
+                                
+        
+    def import_persons_and_slices(self, slabdriver):
+        ldap_person_listdict = slabdriver.slab_api.GetPersons()
+        print>>sys.stderr,"\r\n SLABIMPORT \t ldap_person_listdict %s \r\n" \
+                %(ldap_person_listdict)   
+        
+         # import persons
         for person in ldap_person_listdict : 
             
             self.logger.info("SlabImporter: person :" %(person))
@@ -211,7 +220,8 @@ class SlabImporter:
             #Check if user using person['email'] form LDAP is already registered
             #in SFA. One email = one person. In this case, do not create another
             #record for this person
-            #person_hrn returned by GetPerson based on senslab root auth + uid ldap
+            #person_hrn returned by GetPerson based on senslab root auth + 
+            #uid ldap
             user_record = self.find_record_by_type_hrn('user', person_hrn)
             
             if not user_record and  person['email'] in self.users_rec_by_email:
@@ -221,37 +231,11 @@ class SlabImporter:
                 
             
             slice_record = self.find_record_by_type_hrn ('slice', slice_hrn)
-            
-            # return a tuple pubkey (a plc key object) and pkey (a Keypair object)
-            def init_person_key (person, slab_key):
-                pubkey = None
-                if  person['pkey']:
-                    # randomly pick first key in set
-                    pubkey = slab_key
                     
-                    try:
-                        pkey = convert_public_key(pubkey)
-                    except TypeError:
-                        #key not good. create another pkey
-                        self.logger.warn('SlabImporter: \
-                                            unable to convert public \
-                                            key for %s' % person_hrn)
-                        pkey = Keypair(create=True)
-                    
-                else:
-                    # the user has no keys. 
-                    #Creating a random keypair for the user's gid
-                    self.logger.warn("SlabImporter: person %s does not have a  \
-                                public key" %(person_hrn))
-                    pkey = Keypair(create=True) 
-                return (pubkey, pkey)
-                            
-                
-           
             slab_key = person['pkey']
             # new person
             if not user_record:
-                (pubkey,pkey) = init_person_key (person, slab_key )
+                (pubkey,pkey) = self.init_person_key(person, slab_key)
                 if pubkey is not None and pkey is not None :
                     person_gid = \
                     self.auth_hierarchy.create_gid(person_urn, \
@@ -300,7 +284,7 @@ class SlabImporter:
                 if new_key:
                     print>>sys.stderr,"SlabImporter: \t \t USER UPDATE \
                         person: %s" %(person['hrn'])
-                    (pubkey,pkey) = init_person_key (person, slab_key)
+                    (pubkey,pkey) = self.init_person_key (person, slab_key)
                     person_gid = \
                         self.auth_hierarchy.create_gid(person_urn, \
                         create_uuid(), pkey)
@@ -321,68 +305,98 @@ class SlabImporter:
                 self.logger.log_exc("SlabImporter: \
                 failed to update person  %s"%(person)) 
             
-            
-            #try:
-                #single_slice = slices_by_userid[user_record.record_id]
-            #except KeyError:
-                #self.logger.warning ("SlabImporter: \
-                #cannot locate slices_by_userid[user_record.record_id] %s - \
-                #ignored" %(user_record))  
-                    
-            if not slice_record :
-                
-                pkey = Keypair(create=True)
-                urn = hrn_to_urn(slice_hrn, 'slice')
-                slice_gid = \
-                    self.auth_hierarchy.create_gid(urn, \
-                    create_uuid(), pkey)
-                slice_record = RegSlice (hrn=slice_hrn, gid=slice_gid, 
-                                            pointer='-1',
-                                            authority=get_authority(slice_hrn))
-                try:
-                    slice_record.just_created()
-                    dbsession.add(slice_record)
-                    dbsession.commit()
-                    
-                    #Serial id created after commit
-                    #Get it
-                    sl_rec = dbsession.query(RegSlice).filter(RegSlice.hrn.match(slice_hrn)).all()
-                    
-                   
-                    self.update_just_added_records_dict ( slice_record )
-
-                except SQLAlchemyError:
-                    self.logger.log_exc("SlabImporter: failed to import slice")
-                    
-            #No slice update upon import in senslab 
-            else:
-                # xxx update the record ...
-                self.logger.warning ("Slice update not yet implemented")
-                pass
-            # record current users affiliated with the slice
-
-
-            slice_record.reg_researchers =  [user_record]
-            try:
-                dbsession.commit()
-                slice_record.stale = False 
-            except SQLAlchemyError:
-                self.logger.log_exc("SlabImporter: failed to update slice")
+            self.import_slice(slice_hrn, slice_record,user_record)
+           
                        
-  
+    def import_slice(self, slice_hrn, slice_record, user_record):
+        
+        if not slice_record :
+            
+            pkey = Keypair(create=True)
+            urn = hrn_to_urn(slice_hrn, 'slice')
+            slice_gid = \
+                self.auth_hierarchy.create_gid(urn, \
+                create_uuid(), pkey)
+            slice_record = RegSlice (hrn=slice_hrn, gid=slice_gid, 
+                                        pointer='-1',
+                                        authority=get_authority(slice_hrn))
+            try:
+                slice_record.just_created()
+                dbsession.add(slice_record)
+                dbsession.commit()
+                
+                #Serial id created after commit
+                #Get it
+                #sl_rec = dbsession.query(RegSlice).filter(RegSlice.hrn.match(slice_hrn)).all()
+                
+                
+                self.update_just_added_records_dict ( slice_record )
+
+            except SQLAlchemyError:
+                self.logger.log_exc("SlabImporter: failed to import slice")
+                
+        #No slice update upon import in senslab 
+        else:
+            # xxx update the record ...
+            self.logger.warning ("Slice update not yet implemented")
+            pass
+        # record current users affiliated with the slice
+
+
+        slice_record.reg_researchers =  [user_record]
+        try:
+            dbsession.commit()
+            slice_record.stale = False 
+        except SQLAlchemyError:
+            self.logger.log_exc("SlabImporter: failed to update slice")
+            
+             
+    def run (self, options):
+        config = Config()
+
+        slabdriver = SlabDriver(config)
+        
+        #Create special slice table for senslab 
+        
+        if not slabdriver.db.exists('slab_xp'):
+            slabdriver.db.createtable()
+            self.logger.info ("SlabImporter.run:  slab_xp table created ")
+
+
+        self.import_sites_and_nodes(slabdriver)
+            
+        self.import_persons_and_slices(slabdriver)
+        #slices_listdict = slabdriver.slab_api.GetSlices()
+        #try:
+            #slices_by_userid = \
+                #dict([(one_slice['reg_researchers']['record_id'], one_slice ) \
+                #for one_slice in slices_listdict ])
+        #except TypeError:
+            #self.logger.log_exc("SlabImporter: failed to create list \
+                        #of slices by user id.") 
+            #pass
+ 
+         
+            
+         # import node records in site
+            
+                    
+       
+           
+            
                  
          ### remove stale records
         # special records must be preserved
         system_hrns = [slabdriver.hrn, slabdriver.slab_api.root_auth,  \
                                         slabdriver.hrn+ '.slicemanager']
-        for record in all_records: 
+        for record in self.all_records: 
             if record.hrn in system_hrns: 
                 record.stale = False
             if record.peer_authority:
                 record.stale = False
           
 
-        for record in all_records: 
+        for record in self.all_records: 
             if record.type == 'user':
                 print>>sys.stderr,"SlabImporter: stale records: hrn %s %s" \
                                             %(record.hrn,record.stale)
