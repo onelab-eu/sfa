@@ -1,5 +1,13 @@
-PROJECT=sfa
-VERSION=$(shell python -c "from sfa.util.version import version_tag; print version_tag" | sed -e s,-,.,)
+# Warning, this is called from the build with the following variables set 
+# (see build/Makefile and target_debian)
+# (.) TARBALL
+# (.) VERSION
+# (.) RELEASE
+# (.) NAME
+#
+PROJECT=$(NAME)
+#PYVERSION=$(shell python -c "from sfa.util.version import version_tag; print version_tag" | sed -e s,-,.,)
+DEBVERSION=$(VERSION).$(RELEASE)
 DATE=$(shell date -u +"%a, %d %b %Y %T")
 DEBIAN_TARBALL=../$(PROJECT)_$(VERSION).orig.tar.bz2
 
@@ -8,7 +16,7 @@ debian: debian/changelog debian.source debian.package
 force:
 
 debian/changelog: debian/changelog.in
-	sed -e "s|@VERSION@|$(VERSION)|" -e "s|@DATE@|$(DATE)|" debian/changelog.in > debian/changelog
+	sed -e "s|@VERSION@|$(DEBVERSION)|" -e "s|@DATE@|$(DATE)|" debian/changelog.in > debian/changelog
 
 # TARBALL is passed from the main build (/build/Makefile) to the 'make debian' call
 debian.source: force 
