@@ -18,7 +18,7 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot
 
 Vendor: PlanetLab
 Packager: PlanetLab Central <support@planet-lab.org>
-Distribution: PlanetLab %{plrelease}
+Distribution: PlanetLab
 URL: %{SCMURL}
 
 Summary: Server-side for SFA, generic implementation derived from PlanetLab 
