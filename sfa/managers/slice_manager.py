@@ -433,7 +433,7 @@ class SliceManager:
         for result in results:
             try:
                 geni_urn = result['geni_urn']
-                geni_slivers.extend(result['result']['geni_slivers'])
+                geni_slivers.extend(result['geni_slivers'])
             except:
                 api.logger.log_exc("SM.Provision: Failed to merge aggregate rspec")
         return {
