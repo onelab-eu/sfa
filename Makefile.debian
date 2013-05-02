@@ -1,15 +1,16 @@
-# Warning, this is called from the build with the following variables set 
+# This is called from the build with the following variables set 
 # (see build/Makefile and target_debian)
-# (.) TARBALL
-# (.) VERSION
-# (.) RELEASE
-# (.) NAME
+# (.) RPMTARBALL
+# (.) RPMVERSION
+# (.) RPMRELEASE
+# (.) RPMNAME
 #
-PROJECT=$(NAME)
+PROJECT=$(RPMNAME)
 #PYVERSION=$(shell python -c "from sfa.util.version import version_tag; print version_tag" | sed -e s,-,.,)
-DEBVERSION=$(VERSION).$(RELEASE)
+DEBVERSION=$(RPMVERSION).$(RPMRELEASE)
+DEBTARBALL=../$(PROJECT)_$(DEBVERSION).orig.tar.bz2
+
 DATE=$(shell date -u +"%a, %d %b %Y %T")
-DEBIAN_TARBALL=../$(PROJECT)_$(VERSION).orig.tar.bz2
 
 debian: debian/changelog debian.source debian.package
 
@@ -20,7 +21,7 @@ debian/changelog: debian/changelog.in
 
 # TARBALL is passed from the main build (/build/Makefile) to the 'make debian' call
 debian.source: force 
-	rsync -a $(TARBALL) $(DEBIAN_TARBALL)
+	rsync -a $(RPMTARBALL) $(DEBTARBALL)
 
 debian.package:
 	debuild -uc -us -b 
