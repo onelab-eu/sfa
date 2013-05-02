@@ -155,7 +155,7 @@ make VERSIONTAG="%{version}-%{taglevel}" SCMURL="%{SCMURL}"
 
 %install
 rm -rf $RPM_BUILD_ROOT
-make VERSIONTAG="%{version}-%{taglevel}" SCMURL="%{SCMURL}" install DESTDIR="$RPM_BUILD_ROOT"
+make RPMVERSION="%{version}" RPMRELEASE="%{taglevel}" SCMURL="%{SCMURL}" DESTDIR="$RPM_BUILD_ROOT" install 
 
 %clean
 rm -rf $RPM_BUILD_ROOT

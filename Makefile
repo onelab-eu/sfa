@@ -16,10 +16,11 @@ uninstall: python-uninstall tests-uninstall
 .PHONY: all install clean uninstall
 
 ##########
-rpmversion:=$(shell rpm -q --specfile sfa.spec --queryformat="%{version}\n" | head -1)
+# in general overridden (set by the specfile); but can be called right away
+RPMVERSION:=$(shell rpm -q --specfile sfa.spec --queryformat="%{version}\n" | head -1)
 # somehow %{taglevel} is empty, turns out %{release} has what we want
-rpmtaglevel:=$(shell rpm -q --specfile sfa.spec --queryformat="%{release}\n" 2> /dev/null | head -1)
-VERSIONTAG=$(rpmversion)-$(rpmtaglevel)
+RPMRELEASE:=$(shell rpm -q --specfile sfa.spec --queryformat="%{release}\n" 2> /dev/null | head -1)
+VERSIONTAG=$(RPMVERSION)-$(RPMRELEASE)
 SCMURL=should-be-redefined-by-specfile
 
 python: version
