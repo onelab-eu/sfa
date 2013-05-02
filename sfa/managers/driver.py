@@ -75,46 +75,61 @@ class Driver:
     # 'geni_request_rspec_versions' and 'geni_ad_rspec_versions' are mandatory
     def aggregate_version (self): return {}
 
-    # the answer to ListSlices, a list of slice urns
-    def list_slices (self, creds, options):
-        return []
-
     # answer to ListResources
-    # first 2 args are None in case of resource discovery
-    # expected : rspec (xml string)
-    def list_resources (self, slice_urn, slice_hrn, creds, options):
+    # returns : advertisment rspec (xml string)
+    def list_resources (self, version=None, options={}):
         return "dummy Driver.list_resources needs to be redefined"
 
-    # the answer to SliverStatus on a given slice
-    def sliver_status (self, slice_urn, slice_hrn): return {}
+    # the answer to Describe on a slice or a set of the slivers in a slice
+    # returns: a struct:
+    #{
+    #  geni_rspec: <geni.rspec, a Manifest RSpec>
+    #  geni_urn: <string slice urn of the containing slice>
+    #  geni_slivers: [
+    #              {
+    #                geni_sliver_urn: <string sliver urn>
+    #                geni_expires: <dateTime.rfc3339 allocation expiration string, as in geni_expires from SliversStatus>,
+    #                geni_allocation_status: <string sliver state - e.g. geni_allocated or geni_provisioned >,
+    #                geni_operational_status: <string sliver operational state>,
+    #                geni_error: <optional string. The field may be omitted entirely but may not be null/None, explaining any failure for a sliver.>
+    #              },
+    #              ...
+    #                ]
+    #}
+    def describe (self, urns, version, options={}):
+        return "dummy Driver.describe needs to be redefined"
 
-    # the answer to CreateSliver on a given slice
-    # expected to return a valid rspec 
-    # identical to ListResources after the slice was modified
-    def create_sliver (self, slice_urn, slice_hrn, creds, rspec_string, users, options):
-        return "dummy Driver.create_sliver needs to be redefined"
+    # the answer to Allocate on a given slicei or a set of the slivers in a slice
+    # returns: same struct as for describe.
+    def allocate (self, urn, rspec_string, expiration, options={}):
+        return "dummy Driver.allocate needs to be redefined"
 
-    # the answer to DeleteSliver on a given slice
-    def delete_sliver (self, slice_urn, slice_hrn, creds, options):
-        return "dummy Driver.delete_sliver needs to be redefined"
+    # the answer to Provision on a given slice or a set of the slivers in a slice
+    # returns: same struct as for describe.
+    def provision(self, urns, options={}):
+        return "dummy Driver.provision needs to be redefined"
 
-    # the answer to RenewSliver
-    # expected to return a boolean to indicate success
-    def renew_sliver (self, slice_urn, slice_hrn, creds, expiration_time, options):
+    # the answer to PerformOperationalAction on a given slice or a set of the slivers in a slice
+    # returns: struct containing "geni_slivers" list of the struct returned by describe.
+    def perform_operational_action (self, urns, action, options={}):
+        return "dummy Driver.perform_operational_action needs to be redefined"
+
+    # the answer to Status on a given slice or a set of the slivers in a slice
+    # returns: struct containing "geni_urn" and "geni_slivers" list of the struct returned by describe.
+    def status (self, urns, options={}): 
+        return "dummy Driver.status needs to be redefined"
+
+    # the answer to Renew on a given slice or a set of the slivers in a slice
+    # returns: struct containing "geni_slivers" list of the struct returned by describe.
+    def renew (self, urns, expiration_time, options={}):
+        return "dummy Driver.renew needs to be redefined"
+
+    # the answer to Delete on a given slice
+    # returns: struct containing "geni_slivers" list of the struct returned by describe.
+    def delete(self, urns, options={}):
+        return "dummy Driver.delete needs to be redefined"
+
+    # the answer to Shutdown on a given slice
+    # returns: boolean
+    def shutdown (self, xrn, options={}):
         return False
-
-    # the answer to start_slice/stop_slice
-    # 1 means success, otherwise raise exception
-    def start_slice (self, slice_urn, slice_xrn, creds):
-        return 1
-    def stop_slice (self, slice_urn, slice_xrn, creds):
-        return 1
-    # somehow this one does not have creds - not implemented in PL anyways
-    def reset_slice (self, slice_urn, slice_xrn, creds):
-        return 1
-
-    # the answer to GetTicket
-    # expected is a ticket, i.e. a certificate, as a string
-    def get_ticket (self, slice_urn, slice_xrn, creds, rspec, options):
-        return "dummy Driver.get_ticket needs to be redefined"
-
