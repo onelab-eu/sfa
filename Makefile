@@ -61,11 +61,35 @@ wsdl-clean:
 
 .PHONY: wsdl wsdl-install wsdl-clean
 
-##########
-debian: version
-	$(MAKE) -f Makefile.debian debian
-debian.clean: 
-	$(MAKE) -f Makefile.debian clean
+######################################## debian packaging
+# The 'debian' target is called from the build with the following variables set 
+# (see build/Makefile and target_debian)
+# (.) RPMTARBALL
+# (.) RPMVERSION
+# (.) RPMRELEASE
+# (.) RPMNAME
+#
+PROJECT=$(RPMNAME)
+DEBVERSION=$(RPMVERSION).$(RPMRELEASE)
+DEBTARBALL=../$(PROJECT)_$(DEBVERSION).orig.tar.bz2
+
+DATE=$(shell date -u +"%a, %d %b %Y %T")
+
+debian: debian/changelog debian.source debian.package
+
+debian/changelog: debian/changelog.in
+	sed -e "s|@VERSION@|$(DEBVERSION)|" -e "s|@DATE@|$(DATE)|" debian/changelog.in > debian/changelog
+
+debian.source: force 
+	rsync -a $(RPMTARBALL) $(DEBTARBALL)
+
+debian.package:
+	debuild -uc -us -b 
+
+debian.clean:
+	$(MAKE) -f debian/rules clean
+	rm -rf build/ MANIFEST ../*.tar.gz ../*.dsc ../*.build
+	find . -name '*.pyc' -delete
 
 ##########
 tests-install:
