@@ -370,22 +370,6 @@ class AggregateCommands(Commands):
         resources = self.api.manager.ListResources(self.api, [], options)
         print resources
         
-    @args('-x', '--xrn', dest='xrn', metavar='<xrn>', help='slice hrn/urn (mandatory)')
-    @args('-r', '--rspec', dest='rspec', metavar='<rspec>', help='rspec file (mandatory)')  
-    @args('-u', '--user'dd, dest='user', metavar='<user>', help='hrn/urn of slice user (mandatory)')  
-    @args('-k', '--key', dest='key', metavar='<key>', help="path to user's public key file (mandatory)")  
-    def create(self, xrn, rspec, user, key):
-        """Allocate slivers"""
-        xrn = Xrn(xrn, 'slice')
-        slice_urn=xrn.get_urn()
-        rspec_string = open(rspec).read()
-        user_xrn = Xrn(user, 'user')
-        user_urn = user_xrn.get_urn()
-        user_key_string = open(key).read()
-        users = [{'urn': user_urn, 'keys': [user_key_string]}]
-        options={}
-        self.api.manager.CreateSliver(self, slice_urn, [], rspec_string, users, options) 
-
 
     @args('-x', '--xrn', dest='xrn', metavar='<xrn>', help='slice hrn/urn (mandatory)')
     @args('-r', '--rspec', dest='rspec', metavar='<rspec>', help='rspec file (mandatory)')
