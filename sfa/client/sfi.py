@@ -271,8 +271,6 @@ class Sfi:
         ("status", "slice_hrn"),
         ("renew", "slice_hrn time"),
         ("shutdown", "slice_hrn"),
-        ("get_ticket", "slice_hrn rspec"),
-        ("redeem_ticket", "ticket"),
         ("delegate", "to_hrn"),
         ("gid", "[name]"),
         ("trusted", "cred"),
@@ -333,7 +331,7 @@ class Sfi:
 
         # user specifies remote aggregate/sm/component                          
         if command in ("resources", "describe", "allocate", "provision", "delete", "allocate", "provision", 
-                       "action", "shutdown",  "get_ticket", "renew", "status"):
+                       "action", "shutdown", "renew", "status"):
             parser.add_option("-d", "--delegate", dest="delegate", default=None, 
                              action="store_true",
                              help="Include a credential delegated to the user's root"+\
@@ -1001,8 +999,7 @@ or version information about sfi itself
     # show rspec for named slice
     def resources(self, options, args):
         """
-        discover available resources
-or with an slice hrn, shows currently provisioned resources
+        discover available resources (ListResources)
         """
         server = self.sliceapi()
 
@@ -1052,7 +1049,7 @@ or with an slice hrn, shows currently provisioned resources
 
     def describe(self, options, args):
         """
-        Shows currently provisioned resources.
+        shows currently allocated/provisioned resources of the named slice or set of slivers (Describe) 
         """
         server = self.sliceapi()
 
@@ -1091,7 +1088,7 @@ or with an slice hrn, shows currently provisioned resources
 
     def delete(self, options, args):
         """
-        delete named slice (DeleteSliver)
+        de-allocate and de-provision all or named slivers of the slice (Delete)
         """
         server = self.sliceapi()
 
@@ -1117,6 +1114,9 @@ or with an slice hrn, shows currently provisioned resources
         return value
 
     def allocate(self, options, args):
+        """
+         allocate resources to the named slice (Allocate)
+        """
         server = self.sliceapi()
         server_version = self.get_cached_server_version(server)
         slice_hrn = args[0]
@@ -1156,6 +1156,9 @@ or with an slice hrn, shows currently provisioned resources
         
 
     def provision(self, options, args):
+        """
+        provision already allocated resources of named slice (Provision)
+        """
         server = self.sliceapi()
         server_version = self.get_cached_server_version(server)
         slice_hrn = args[0]
@@ -1212,7 +1215,7 @@ or with an slice hrn, shows currently provisioned resources
 
     def status(self, options, args):
         """
-        retrieve slice status (SliverStatus)
+        retrieve the status of the slivers belonging to tne named slice (Status)
         """
         server = self.sliceapi()
 
@@ -1236,47 +1239,6 @@ or with an slice hrn, shows currently provisioned resources
         else:
             print value
 
-    def start(self, options, args):
-        """
-        start named slice (Start)
-        """
-        server = self.sliceapi()
-
-        # the slice urn
-        slice_hrn = args[0]
-        slice_urn = hrn_to_urn(slice_hrn, 'slice') 
-        
-        # cred
-        slice_cred = self.slice_credential_string(args[0])
-        creds = [slice_cred]
-        # xxx Thierry - does this not need an api_options as well ?
-        result = server.Start(slice_urn, creds)
-        value = ReturnValue.get_value(result)
-        if self.options.raw:
-            save_raw_to_file(result, self.options.raw, self.options.rawformat, self.options.rawbanner)
-        else:
-            print value
-        return value
-    
-    def stop(self, options, args):
-        """
-        stop named slice (Stop)
-        """
-        server = self.sliceapi()
-        # slice urn
-        slice_hrn = args[0]
-        slice_urn = hrn_to_urn(slice_hrn, 'slice') 
-        # cred
-        slice_cred = self.slice_credential_string(args[0])
-        creds = [slice_cred]
-        result =  server.Stop(slice_urn, creds)
-        value = ReturnValue.get_value(result)
-        if self.options.raw:
-            save_raw_to_file(result, self.options.raw, self.options.rawformat, self.options.rawbanner)
-        else:
-            print value
-        return value
-    
     # reset named slice
     def action(self, options, args):
         """
@@ -1351,72 +1313,6 @@ or with an slice hrn, shows currently provisioned resources
             print value
         return value         
     
-
-    def get_ticket(self, options, args):
-        """
-        get a ticket for the specified slice
-        """
-        server = self.sliceapi()
-        # slice urn
-        slice_hrn, rspec_path = args[0], args[1]
-        slice_urn = hrn_to_urn(slice_hrn, 'slice')
-        # creds
-        slice_cred = self.slice_credential_string(slice_hrn)
-        creds = [slice_cred]
-        # rspec
-        rspec_file = self.get_rspec_file(rspec_path) 
-        rspec = open(rspec_file).read()
-        # options and call_id when supported
-        api_options = {}
-        api_options['call_id']=unique_call_id()
-        # get ticket at the server
-        ticket_string = server.GetTicket(slice_urn, creds, rspec, *self.ois(server,api_options))
-        # save
-        file = os.path.join(self.options.sfi_dir, get_leaf(slice_hrn) + ".ticket")
-        self.logger.info("writing ticket to %s"%file)
-        ticket = SfaTicket(string=ticket_string)
-        ticket.save_to_file(filename=file, save_parents=True)
-
-    def redeem_ticket(self, options, args):
-        """
-        Connects to nodes in a slice and redeems a ticket
-(slice hrn is retrieved from the ticket)
-        """
-        ticket_file = args[0]
-        
-        # get slice hrn from the ticket
-        # use this to get the right slice credential 
-        ticket = SfaTicket(filename=ticket_file)
-        ticket.decode()
-        ticket_string = ticket.save_to_string(save_parents=True)
-
-        slice_hrn = ticket.gidObject.get_hrn()
-        slice_urn = hrn_to_urn(slice_hrn, 'slice') 
-        #slice_hrn = ticket.attributes['slivers'][0]['hrn']
-        slice_cred = self.slice_credential_string(slice_hrn)
-        
-        # get a list of node hostnames from the RSpec 
-        tree = etree.parse(StringIO(ticket.rspec))
-        root = tree.getroot()
-        hostnames = root.xpath("./network/site/node/hostname/text()")
-        
-        # create an xmlrpc connection to the component manager at each of these
-        # components and gall redeem_ticket
-        connections = {}
-        for hostname in hostnames:
-            try:
-                self.logger.info("Calling redeem_ticket at %(hostname)s " % locals())
-                cm_url="http://%s:%s/"%(hostname,CM_PORT)
-                server = SfaServerProxy(cm_url, self.private_key, self.my_gid)
-                server = self.server_proxy(hostname, CM_PORT, self.private_key, 
-                                           timeout=self.options.timeout, verbose=self.options.debug)
-                server.RedeemTicket(ticket_string, slice_cred)
-                self.logger.info("Success")
-            except socket.gaierror:
-                self.logger.error("redeem_ticket failed on %s: Component Manager not accepting requests"%hostname)
-            except Exception, e:
-                self.logger.log_exc(e.message)
-        return
 
     def gid(self, options, args):
         """
