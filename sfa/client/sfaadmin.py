@@ -49,7 +49,7 @@ class RegistryCommands(Commands):
         pprinter.pprint(version)
 
     @args('-x', '--xrn', dest='xrn', metavar='<xrn>', help='authority to list (hrn/urn - mandatory)') 
-    @args('-t', '--type', dest='type', metavar='<type>', help='object type', default=None) 
+    @args('-t', '--type', dest='type', metavar='<type>', help='object type', default='all') 
     @args('-r', '--recursive', dest='recursive', metavar='<recursive>', help='list all child records', 
           action='store_true', default=False)
     @args('-v', '--verbose', dest='verbose', action='store_true', default=False)
