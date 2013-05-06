@@ -658,11 +658,8 @@ class PlDriver (Driver):
         slices.verify_slice_links(slice, rspec.version.get_link_requests(), nodes)
 
         # add/remove leases
-        try:
-           rspec_requested_leases = rspec.version.get_leases()
-           leases = slices.verify_slice_leases(slice, rspec_requested_leases, peer)
-        except:
-           pass
+        rspec_requested_leases = rspec.version.get_leases()
+        leases = slices.verify_slice_leases(slice, rspec_requested_leases, peer)
 
         # handle MyPLC peer association.
         # only used by plc and ple.

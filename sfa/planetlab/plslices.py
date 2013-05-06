@@ -1,3 +1,4 @@
+import time
 from types import StringTypes
 from collections import defaultdict
 
@@ -7,7 +8,7 @@ from sfa.util.xrn import Xrn, get_leaf, get_authority, urn_to_hrn
 from sfa.rspecs.rspec import RSpec
 from sfa.planetlab.vlink import VLink
 from sfa.planetlab.topology import Topology
-from sfa.planetlab.plxrn import PlXrn, hrn_to_pl_slicename
+from sfa.planetlab.plxrn import PlXrn, hrn_to_pl_slicename, xrn_to_hostname
 from sfa.storage.model import SliverAllocation
 from sfa.storage.alchemy import dbsession
 
