@@ -18,7 +18,7 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot
 
 Vendor: PlanetLab
 Packager: PlanetLab Central <support@planet-lab.org>
-Distribution: PlanetLab %{plrelease}
+Distribution: PlanetLab
 URL: %{SCMURL}
 
 Summary: Server-side for SFA, generic implementation derived from PlanetLab 
@@ -155,7 +155,7 @@ make VERSIONTAG="%{version}-%{taglevel}" SCMURL="%{SCMURL}"
 
 %install
 rm -rf $RPM_BUILD_ROOT
-make VERSIONTAG="%{version}-%{taglevel}" SCMURL="%{SCMURL}" install DESTDIR="$RPM_BUILD_ROOT"
+make RPMVERSION="%{version}" RPMRELEASE="%{taglevel}" SCMURL="%{SCMURL}" DESTDIR="$RPM_BUILD_ROOT" install 
 
 %clean
 rm -rf $RPM_BUILD_ROOT

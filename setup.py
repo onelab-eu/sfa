@@ -9,7 +9,11 @@ from glob import glob
 import shutil
 from distutils.core import setup
 
-from sfa.util.version import version_tag
+# while cleaning up we might not have this..
+try:
+    from sfa.util.version import version_tag
+except:
+    version_tag='cleaningup'
 
 scripts = glob("clientbin/*.py") + \
     [ 
