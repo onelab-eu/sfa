@@ -16,9 +16,6 @@ from sfa.storage.model import RegRecord, RegAuthority, RegSlice, RegNode, \
 from sqlalchemy.exc import SQLAlchemyError
 
 
-def _get_site_hrn(site):
-    hrn = site['name'] 
-    return hrn
 
 class SlabImporter:
     
@@ -52,11 +49,26 @@ class SlabImporter:
         
     @staticmethod
     def hostname_to_hrn_escaped(root_auth, hostname):
+        """ Returns a node's hrn based on its hostname and the root 
+        authority and by removing special caracters from the hostname.
+        
+        :param root_auth: root authority name
+        :param hostname: nodes's hostname
+        :type  root_auth: string
+        :type hostname: string
+        :rtype: string
+        """
         return '.'.join( [root_auth, Xrn.escape(hostname)] )
 
 
     @staticmethod
     def slicename_to_hrn(person_hrn):
+        """Returns the slicename associated to a given person's hrn
+        
+        :param person_hrn: user's hrn
+        :type person_hrn: string
+        :rtype: string
+        """
         return  (person_hrn +'_slice')
     
     def add_options (self, parser):
@@ -64,13 +76,21 @@ class SlabImporter:
         pass
     
     def find_record_by_type_hrn(self, record_type, hrn):
+        """Returns the record associated with a given hrn and hrn type.
+        Returns None if the key tuple is not in dictionary. 
+        """
         return self.records_by_type_hrn.get ( (record_type, hrn), None)
     
     def locate_by_type_pointer (self, record_type, pointer):
-        ret = self.records_by_type_pointer.get ( (record_type, pointer), None)
-        return ret
+        """Returns the record corresponding to the key pointer and record
+        type. Returns None if the record does not exist and is not in the
+        records_by_type_pointer dictionnary."""
+        return self.records_by_type_pointer.get ( (record_type, pointer), None)
+        
     
     def update_just_added_records_dict (self, record):
+        """Updates the records_by_type_hrn dictionnary if record has just been
+        created."""
         rec_tuple = (record.type, record.hrn)
         if rec_tuple in self.records_by_type_hrn:
             self.logger.warning ("SlabImporter.update_just_added_records_dict:\
@@ -79,11 +99,14 @@ class SlabImporter:
         self.records_by_type_hrn [ rec_tuple ] = record
         
     def import_sites_and_nodes(self, slabdriver):
+        """ Gets all the sites and nodes from OAR, process the information,
+        creates hrns and RegAuthority for sites, and feed them to the database.
+        For each site, import the site's nodes to the DB."""
         sites_listdict  = slabdriver.slab_api.GetSites()  
         nodes_listdict  = slabdriver.slab_api.GetNodes()
-        nodes_by_id = dict([(node['node_id'],node) for node in nodes_listdict])
+        nodes_by_id = dict([(node['node_id'], node) for node in nodes_listdict])
         for site in sites_listdict:
-            site_hrn = _get_site_hrn(site) 
+            site_hrn = site['name']
             site_record = self.find_record_by_type_hrn ('authority', site_hrn)
             if not site_record:
                 try:
@@ -119,9 +142,13 @@ class SlabImporter:
             
             return 
         
-    def import_nodes(self, node_ids, nodes_by_id, slabdriver) :
-        
-        for node_id in node_ids:
+    def import_nodes(self, site_node_ids, nodes_by_id, slabdriver) :
+        """  Creates appropriated hostnames and RegNode record for
+        each node in site_node_ids, based on the information given by the
+        dict nodes_by_id made from data from OAR. Saves the records to the
+        DB."""
+       
+        for node_id in site_node_ids:
             try:
                 node = nodes_by_id[node_id]
             except KeyError:
@@ -131,7 +158,7 @@ class SlabImporter:
             escaped_hrn =  \
             self.hostname_to_hrn_escaped(slabdriver.slab_api.root_auth, \
             node['hostname'])
-            print>>sys.stderr, "\r\n \r\n SLABIMPORTER node %s " %(node)               
+            self.logger.info("SLABIMPORTER node %s " %(node))               
             hrn =  node['hrn']
 
 
@@ -165,7 +192,7 @@ class SlabImporter:
             else:
                 # xxx update the record ...
                 pass
-            node_record.stale=False
+            node_record.stale = False
                     
      # return a tuple pubkey (a plc key object) and pkey (a Keypair object)
 
@@ -305,13 +332,12 @@ class SlabImporter:
                 self.logger.log_exc("SlabImporter: \
                 failed to update person  %s"%(person)) 
             
-            self.import_slice(slice_hrn, slice_record,user_record)
+            self.import_slice(slice_hrn, slice_record, user_record)
            
                        
     def import_slice(self, slice_hrn, slice_record, user_record):
         
-        if not slice_record :
-            
+        if not slice_record :           
             pkey = Keypair(create=True)
             urn = hrn_to_urn(slice_hrn, 'slice')
             slice_gid = \
@@ -398,8 +424,8 @@ class SlabImporter:
 
         for record in self.all_records: 
             if record.type == 'user':
-                print>>sys.stderr,"SlabImporter: stale records: hrn %s %s" \
-                                            %(record.hrn,record.stale)
+                self.logger.info("SlabImporter: stale records: hrn %s %s" \
+                                            %(record.hrn,record.stale) )
             try:        
                 stale = record.stale
             except :     
