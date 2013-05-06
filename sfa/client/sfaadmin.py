@@ -374,23 +374,23 @@ class AggregateCommands(Commands):
     @args('-x', '--xrn', dest='xrn', metavar='<xrn>', help='slice hrn/urn (mandatory)')
     @args('-r', '--rspec', dest='rspec', metavar='<rspec>', help='rspec file (mandatory)')
     def allocate(self, xrn, rspec):
-    """Allocate slivers"""
-    xrn = Xrn(xrn, 'slice')
-    slice_urn=xrn.get_urn()
-    rspec_string = open(rspec).read()
-    options={}
-    manifest = self.api.manager.Allocate(self.api, slice_urn, [], rspec_string, options)
-    print manifest
+        """Allocate slivers"""
+        xrn = Xrn(xrn, 'slice')
+        slice_urn=xrn.get_urn()
+        rspec_string = open(rspec).read()
+        options={}
+        manifest = self.api.manager.Allocate(self.api, slice_urn, [], rspec_string, options)
+        print manifest
 
 
     @args('-x', '--xrn', dest='xrn', metavar='<xrn>', help='slice hrn/urn (mandatory)')
     def provision(self, xrn):
-    """Provision slivers"""
-    xrn = Xrn(xrn, 'slice')
-    slice_urn=xrn.get_urn()
-    options={}
-    manifest = self.api.manager.provision(self.api, [slice_urn], [], options)
-    print manifest
+        """Provision slivers"""
+        xrn = Xrn(xrn, 'slice')
+        slice_urn=xrn.get_urn()
+        options={}
+        manifest = self.api.manager.provision(self.api, [slice_urn], [], options)
+        print manifest
 
 
 
