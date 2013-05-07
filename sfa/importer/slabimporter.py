@@ -64,7 +64,9 @@ class SlabImporter:
         
     @staticmethod
     def hostname_to_hrn_escaped(root_auth, hostname):
-        """ Returns a node's hrn based on its hostname and the root 
+        """ 
+        
+        Returns a node's hrn based on its hostname and the root 
         authority and by removing special caracters from the hostname.
         
         :param root_auth: root authority name
@@ -78,7 +80,9 @@ class SlabImporter:
 
     @staticmethod
     def slicename_to_hrn(person_hrn):
-        """Returns the slicename associated to a given person's hrn.
+        """
+        
+        Returns the slicename associated to a given person's hrn.
         
         :param person_hrn: user's hrn
         :type person_hrn: string
@@ -91,7 +95,9 @@ class SlabImporter:
         pass
     
     def find_record_by_type_hrn(self, record_type, hrn):
-        """Returns the record associated with a given hrn and hrn type.
+        """
+        
+        Returns the record associated with a given hrn and hrn type.
         Returns None if the key tuple is not in dictionary. 
         
         :param record_type: the record's type (slice, node, authority...)
@@ -105,7 +111,9 @@ class SlabImporter:
         return self.records_by_type_hrn.get ( (record_type, hrn), None)
     
     def locate_by_type_pointer (self, record_type, pointer):
-        """Returns the record corresponding to the key pointer and record
+        """
+        
+        Returns the record corresponding to the key pointer and record
         type. Returns None if the record does not exist and is not in the
         records_by_type_pointer dictionnary.
         
@@ -121,7 +129,9 @@ class SlabImporter:
         
     
     def update_just_added_records_dict (self, record):
-        """Updates the records_by_type_hrn dictionnary if the record has 
+        """
+        
+        Updates the records_by_type_hrn dictionnary if the record has 
         just been created.
         
         :param record: Record to add in the records_by_type_hrn dict.
@@ -135,7 +145,9 @@ class SlabImporter:
         self.records_by_type_hrn [ rec_tuple ] = record
         
     def import_sites_and_nodes(self, slabdriver):
-        """ Gets all the sites and nodes from OAR, process the information,
+        """ 
+        
+        Gets all the sites and nodes from OAR, process the information,
         creates hrns and RegAuthority for sites, and feed them to the database.
         For each site, import the site's nodes to the DB by calling 
         import_nodes.
@@ -186,7 +198,9 @@ class SlabImporter:
             return 
         
     def import_nodes(self, site_node_ids, nodes_by_id, slabdriver) :
-        """  Creates appropriate hostnames and RegNode records for
+        """  
+        
+        Creates appropriate hostnames and RegNode records for
         each node in site_node_ids, based on the information given by the
         dict nodes_by_id that was made from data from OAR. 
         Saves the records to the DB.
@@ -251,7 +265,9 @@ class SlabImporter:
                     
 
     def init_person_key (self, person, slab_key):
-        """ Returns a tuple pubkey and pkey.
+        """ 
+        
+        Returns a tuple pubkey and pkey.
         
         :param person Person's data.
         :type person: dict
@@ -285,6 +301,7 @@ class SlabImporter:
         
     def import_persons_and_slices(self, slabdriver):
         """
+        
         Gets user data from LDAP, process the information.
         Creates hrn for the user's slice, the user's gid, creates
         the RegUser record associated with user. Creates the RegKey record
@@ -414,11 +431,12 @@ class SlabImporter:
                        
     def import_slice(self, slice_hrn, slice_record, user_record):
         """
+         
          Create RegSlice record according to the slice hrn if the slice
          does not exist yet.Creates a relationship with the user record 
          associated with the slice.
          Commit the record to the database.
-         TODO: Update the record if a slice record already exists.
+        
          
         :param slice_hrn: Human readable name of the slice.
         :type slice_hrn: string
@@ -427,6 +445,7 @@ class SlabImporter:
         :param user_record: user record found in the DB if any.
         :type user_record: RegUser
         
+        .. todo::Update the record if a slice record already exists.
         """
         if not slice_record :           
             pkey = Keypair(create=True)

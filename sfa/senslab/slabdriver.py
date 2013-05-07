@@ -1,16 +1,9 @@
-import os
-
-from datetime import datetime
-
 from sfa.util.faults import SliverDoesNotExist, UnknownSfaType
 from sfa.util.sfalogging import logger
 from sfa.storage.alchemy import dbsession
-from sfa.storage.model import RegRecord, RegUser, RegSlice, RegKey
-from sqlalchemy.orm import joinedload
+from sfa.storage.model import RegRecord
 
-from sfa.trust.certificate import Keypair, convert_public_key
-from sfa.trust.gid import create_uuid
-from sfa.trust.hierarchy import Hierarchy
+
 
 from sfa.managers.driver import Driver
 from sfa.rspecs.version_manager import VersionManager
@@ -18,14 +11,12 @@ from sfa.rspecs.rspec import RSpec
 
 from sfa.util.xrn import Xrn, hrn_to_urn, get_authority
 
-from sfa.senslab.OARrestapi import  OARrestapi
-from sfa.senslab.LDAPapi import LDAPapi
 
-from sfa.senslab.slabpostgres import SlabDB, slab_dbsession, SenslabXP
+from sfa.senslab.slabpostgres import SlabDB
                                                      
                                                                 
-from sfa.senslab.slabaggregate import SlabAggregate, slab_xrn_to_hostname, \
-                                                            slab_xrn_object
+from sfa.senslab.slabaggregate import SlabAggregate, slab_xrn_to_hostname
+                                                            
 from sfa.senslab.slabslices import SlabSlices
 
 
@@ -38,29 +29,57 @@ class SlabDriver(Driver):
     
     Contains methods compliant with the SFA standard and the testbed
     infrastructure (calls to LDAP and OAR).
+    
+   .. seealso:: Driver class
+    
     """
     def __init__(self, config):
+        """ 
+        
+        Sets the senslab SFA config parameters ,
+        instanciates the testbed api and the senslab database.
+        
+        :param config: senslab SFA configuration object
+        :type config: Config object
+        """
         Driver.__init__ (self, config)
         self.config = config
-        self.hrn = config.SFA_INTERFACE_HRN
 
         self.db = SlabDB(config, debug = False)
         self.slab_api = SlabTestbedAPI(config)
         self.cache = None
         
     def augment_records_with_testbed_info (self, record_list ):
-        """ Adds specific testbed info to the records. """
+        """ 
+        
+        Adds specific testbed info to the records. 
+        
+        :param record_list: list of sfa dictionaries records
+        :type record_list: list
+        :return: list of records with extended information in each record
+        :rtype: list
+        """
         return self.fill_record_info (record_list)
     
     def fill_record_info(self, record_list):
         """
-        Given a SFA record, fill in the senslab specific and SFA specific
+        For each SFA record, fill in the senslab specific and SFA specific
         fields in the record. 
+        
+        :param record_list: list of sfa dictionaries records
+        :type record_list: list
+        :return: list of records with extended information in each record
+        :rtype: list
+        
+        .. warnings:: Should not be modifying record_list directly because modi
+        fication are kept outside the method's scope. Howerver, there is no 
+        other way to do it given the way it's called in registry manager.
         """
                     
         logger.debug("SLABDRIVER \tfill_record_info records %s " %(record_list))
         if not isinstance(record_list, list):
-            record_list = [record_list]
+            #record_list = [record_list]
+
             
         try:
             for record in record_list:
@@ -70,16 +89,17 @@ class SlabDriver(Driver):
                 if str(record['type']) == 'slice':
                     if 'reg_researchers' in record and \
                     isinstance(record['reg_researchers'], list) :
-                        record['reg_researchers'] = record['reg_researchers'][0].__dict__
+                        record['reg_researchers'] = \
+                            record['reg_researchers'][0].__dict__
                         record.update({'PI':[record['reg_researchers']['hrn']],
-                                'researcher': [record['reg_researchers']['hrn']],
-                                'name':record['hrn'], 
-                                'oar_job_id':[],
-                                'node_ids': [],
-                                'person_ids':[record['reg_researchers']['record_id']],
-                                'geni_urn':'',  #For client_helper.py compatibility
-                                'keys':'',  #For client_helper.py compatibility
-                                'key_ids':''})  #For client_helper.py compatibility
+                            'researcher': [record['reg_researchers']['hrn']],
+                            'name':record['hrn'], 
+                            'oar_job_id':[],
+                            'node_ids': [],
+                            'person_ids':[record['reg_researchers']['record_id']],
+                            'geni_urn':'',  #For client_helper.py compatibility
+                            'keys':'',  #For client_helper.py compatibility
+                            'key_ids':''})  #For client_helper.py compatibility
                         
                         
                     #Get slab slice record and oar job id if any.
@@ -94,9 +114,12 @@ class SlabDriver(Driver):
                     del record['reg_researchers']
                     try:
                         for rec in recslice_list: 
-                            logger.debug("SLABDRIVER\r\n  \t  fill_record_info oar_job_id %s " %(rec['oar_job_id']))
+                            logger.debug("SLABDRIVER\r\n  \t  \
+                            fill_record_info oar_job_id %s " \
+                            %(rec['oar_job_id']))
                             
-                            record['node_ids'] = [ self.slab_api.root_auth + hostname for hostname in rec['node_ids']]
+                            record['node_ids'] = [ self.slab_api.root_auth + \
+                                    hostname for hostname in rec['node_ids']]
                     except KeyError:
                         pass
                         
@@ -114,14 +137,15 @@ class SlabDriver(Driver):
                             slice_filter_type = 'record_id_user')
                                             
                     logger.debug( "SLABDRIVER.PY \t fill_record_info TYPE USER \
-                                                recslice_list %s \r\n \t RECORD %s \r\n" %(recslice_list , record)) 
+                                recslice_list %s \r\n \t RECORD %s \r\n" \
+                                %(recslice_list , record)) 
                     #Append slice record in records list, 
                     #therefore fetches user and slice info again(one more loop)
                     #Will update PIs and researcher for the slice
                    
                     recuser = recslice_list[0]['reg_researchers']
                     logger.debug( "SLABDRIVER.PY \t fill_record_info USER  \
-                                                recuser %s \r\n \r\n" %(recuser)) 
+                                            recuser %s \r\n \r\n" %(recuser)) 
                     recslice = {}
                     recslice = recslice_list[0]
                     recslice.update({'PI':[recuser['hrn']],
@@ -159,17 +183,27 @@ class SlabDriver(Driver):
             logger.log_exc("SLABDRIVER \t fill_record_info  EXCEPTION %s"\
                                                                      %(error))
                               
-        return
+        return record_list
                     
                     
     def sliver_status(self, slice_urn, slice_hrn):
-        """Receive a status request for slice named urn/hrn 
+        """
+        
+        Receive a status request for slice named urn/hrn 
         urn:publicid:IDN+senslab+nturro_slice hrn senslab.nturro_slice
         shall return a structure as described in
         http://groups.geni.net/geni/wiki/GAPI_AM_API_V2#SliverStatus
         NT : not sure if we should implement this or not, but used by sface.
         
+        :param slice_urn: slice urn
+        :type slice_urn: string
+        :param slice_hrn: slice hrn
+        :type slice_hrn: string
+        
+        .. note:: UNUSED. sface deprecated. SA May 7th 2013
+        
         """
+        
         
         #First get the slice with the slice hrn
         slice_list =  self.slab_api.GetSlices(slice_filter = slice_hrn, \
@@ -258,16 +292,38 @@ class SlabDriver(Driver):
             return result  
                 
     @staticmethod                
-    def get_user_record( hrn):        
-        """ Returns the user record based on the hrn from the SFA DB """
+    def get_user_record(hrn):        
+        """ 
+        
+        Returns the user record based on the hrn from the SFA DB .
+        
+        :param hrn: user's hrn
+        :type hrn: string
+        :return : user record from SFA database
+        :rtype: RegUser
+        
+        """
         return dbsession.query(RegRecord).filter_by(hrn = hrn).first() 
          
      
     def testbed_name (self): 
+        """ 
+        
+        Returns testbed's name. 
+        
+        :rtype: string
+        """
         return self.hrn
          
     # 'geni_request_rspec_versions' and 'geni_ad_rspec_versions' are mandatory
     def aggregate_version (self):
+        """
+        
+        Returns the testbed's supported rspec advertisement and 
+        request versions.
+        
+        :rtype: dict
+        """
         version_manager = VersionManager()
         ad_rspec_versions = []
         request_rspec_versions = []
@@ -285,7 +341,12 @@ class SlabDriver(Driver):
                
     def create_sliver (self, slice_urn, slice_hrn, creds, rspec_string, \
                                                              users, options):
-        """  """
+        """ 
+        
+        Creates the leases and slivers.
+        
+        
+        """
         aggregate = SlabAggregate(self)
         
         slices = SlabSlices(self)
