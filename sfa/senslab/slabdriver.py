@@ -78,7 +78,7 @@ class SlabDriver(Driver):
                     
         logger.debug("SLABDRIVER \tfill_record_info records %s " %(record_list))
         if not isinstance(record_list, list):
-            #record_list = [record_list]
+            record_list = [record_list]
 
             
         try:
@@ -337,13 +337,110 @@ class SlabDriver(Driver):
             'geni_request_rspec_versions': request_rspec_versions,
             'geni_ad_rspec_versions': ad_rspec_versions,
             }  
-               
-               
+            
+   
+         
+    def _get_requested_leases_list(self, rspec):
+        """
+        Process leases in rspec depending on the rspec version (format)
+        type. Find the lease requests in the rspec and creates
+        a lease request list with the mandatory information ( nodes,
+        start time and duration) of the valid leases (duration above or equal
+        to the senslab experiment minimum duration).
+        
+        :param rspec: rspec request received. 
+        :type rspec: RSpec
+        :return: list of lease requests found in the rspec
+        :rtype: list
+        """
+        requested_lease_list = []
+        for lease in rspec.version.get_leases():
+            single_requested_lease = {}
+            logger.debug("SLABDRIVER.PY \tcreate_sliver lease %s " %(lease))
+            
+            if not lease.get('lease_id'):
+                if get_authority(lease['component_id']) == \
+                                            self.slab_api.root_auth:
+                    single_requested_lease['hostname'] = \
+                                        slab_xrn_to_hostname(\
+                                        lease.get('component_id').strip())
+                    single_requested_lease['start_time'] = \
+                                                        lease.get('start_time')
+                    single_requested_lease['duration'] = lease.get('duration')
+                    #Check the experiment's duration is valid before adding
+                    #the lease to the requested leases list
+                    duration_in_seconds = \
+                            int(single_requested_lease['duration'])*60
+                    if duration_in_seconds > self.slab_api.GetLeaseGranularity():
+                        requested_lease_list.append(single_requested_lease)
+                        
+                    return requested_lease_list
+                        
+    @staticmethod                    
+    def _group_leases_by_start_time(requested_lease_list):
+        """
+        Create dict of leases by start_time, regrouping nodes reserved
+        at the same time, for the same amount of time so as to 
+        define one job on OAR.
+        
+        :param requested_lease_list: list of leases
+        :type requested_lease_list: list
+        :return: Dictionary with key = start time, value = list of leases
+        with the same start time. 
+        :rtype: dictionary
+        """
+
+        requested_job_dict = {}
+        for lease in requested_lease_list:
+            
+            #In case it is an asap experiment start_time is empty
+            if lease['start_time'] == '':
+                lease['start_time'] = '0' 
+                
+            if lease['start_time'] not in requested_job_dict:
+                if isinstance(lease['hostname'], str):
+                    #lease['hostname'] = [lease['hostname']]
+                    lease['hostname'] =  list(lease['hostname'])
+                    
+                requested_job_dict[lease['start_time']] = lease
+                
+            else :
+                job_lease = requested_job_dict[lease['start_time']]
+                if lease['duration'] == job_lease['duration'] :
+                    job_lease['hostname'].append(lease['hostname'])  
+                                 
+        return requested_job_dict
+                
+    def _process_requested_jobs(self, rspec):
+        """
+        Turns the requested leases and information into a dictionary 
+        of requested jobs, grouped by starting time.
+        
+        :param rspec: RSpec received
+        :type rspec : RSpec
+        :rtype: dictionary 
+        """
+        requested_lease_list = self._get_requested_leases_list(rspec)
+        job_dict =  self._group_leases_by_start_time(requested_lease_list) 
+        
+        return job_dict
+                
     def create_sliver (self, slice_urn, slice_hrn, creds, rspec_string, \
                                                              users, options):
         """ 
         
-        Creates the leases and slivers.
+        Creates the leases and slivers for the users from the information 
+        found in the rspec string.
+        Launch experiment on OAR if the requested leases is valid. Delete
+        no longer requested leases.
+        
+
+        :param creds: user's credentials 
+        :type creds: string
+        :param users: user record list
+        :type users: list
+        :param options:
+        :type options:
         
         
         """
@@ -385,70 +482,26 @@ class SlabDriver(Driver):
                                                     sfa_peer, options=options)                                           
         #requested_attributes returned by rspec.version.get_slice_attributes() 
         #unused, removed SA 13/08/12
-        rspec.version.get_slice_attributes()
+        #rspec.version.get_slice_attributes()
 
         logger.debug("SLABDRIVER.PY create_sliver slice %s " %(sfa_slice))
 
         # add/remove slice from nodes 
        
-        requested_slivers = [node.get('component_id') \
-                            for node in rspec.version.get_nodes_with_slivers()\
-                            if node.get('authority_id') is self.slab_api.root_auth]
-        l = [ node for node in rspec.version.get_nodes_with_slivers() ]
-        logger.debug("SLADRIVER \tcreate_sliver requested_slivers \
-                                    requested_slivers %s  listnodes %s" \
-                                    %(requested_slivers,l))
+        #requested_slivers = [node.get('component_id') \
+                            #for node in rspec.version.get_nodes_with_slivers()\
+                            #if node.get('authority_id') is self.slab_api.root_auth]
+        #l = [ node for node in rspec.version.get_nodes_with_slivers() ]
+        #logger.debug("SLADRIVER \tcreate_sliver requested_slivers \
+                                    #requested_slivers %s  listnodes %s" \
+                                    #%(requested_slivers,l))
         #verify_slice_nodes returns nodes, but unused here. Removed SA 13/08/12.
         #slices.verify_slice_nodes(sfa_slice, requested_slivers, peer) 
         
-        # add/remove leases
-        requested_lease_list = []
 
-
-
-        for lease in rspec.version.get_leases():
-            single_requested_lease = {}
-            logger.debug("SLABDRIVER.PY \tcreate_sliver lease %s " %(lease))
-            
-            if not lease.get('lease_id'):
-                if get_authority(lease['component_id']) == self.slab_api.root_auth:
-                    single_requested_lease['hostname'] = \
-                                        slab_xrn_to_hostname(\
-                                        lease.get('component_id').strip())
-                    single_requested_lease['start_time'] = \
-                                                        lease.get('start_time')
-                    single_requested_lease['duration'] = lease.get('duration')
-                    #Check the experiment's duration is valid before adding
-                    #the lease to the requested leases list
-                    duration_in_seconds = \
-                            int(single_requested_lease['duration'])*60
-                    if duration_in_seconds > self.slab_api.GetLeaseGranularity():
-                        requested_lease_list.append(single_requested_lease)
-                     
-        #Create dict of leases by start_time, regrouping nodes reserved
-        #at the same
-        #time, for the same amount of time = one job on OAR
-        requested_job_dict = {}
-        for lease in requested_lease_list:
-            
-            #In case it is an asap experiment start_time is empty
-            if lease['start_time'] == '':
-                lease['start_time'] = '0' 
-                
-            if lease['start_time'] not in requested_job_dict:
-                if isinstance(lease['hostname'], str):
-                    lease['hostname'] =  [lease['hostname']]
-                    
-                requested_job_dict[lease['start_time']] = lease
-                
-            else :
-                job_lease = requested_job_dict[lease['start_time']]
-                if lease['duration'] == job_lease['duration'] :
-                    job_lease['hostname'].append(lease['hostname'])
-                    
-          
-                
-                        
+        requested_job_dict = self._process_requested_jobs(rspec)
+                   
+             
         logger.debug("SLABDRIVER.PY \tcreate_sliver  requested_job_dict %s "\
                                                      %(requested_job_dict))    
         #verify_slice_leases returns the leases , but the return value is unused
@@ -461,6 +514,17 @@ class SlabDriver(Driver):
         
         
     def delete_sliver (self, slice_urn, slice_hrn, creds, options):
+        """
+        Deletes the lease associated with the slice hrn and the credentials
+        if the slice belongs to senslab.
+        
+        :return: 1 if the slice to delete was not found on senslab, 
+        True if the deletion was successful, False otherwise otherwise. 
+        
+        .. note:: Should really be named delete_leases because senslab does 
+        not have any slivers, but only deals with leases. However, SFA api only
+        have delete_sliver define so far. SA 13.05/2013
+        """
         
         sfa_slice_list  = self.slab_api.GetSlices(slice_filter = slice_hrn, \
                                             slice_filter_type = 'slice_hrn')
@@ -468,7 +532,7 @@ class SlabDriver(Driver):
         if not sfa_slice_list:
             return 1
         
-        #Delete all in the slice
+        #Delete all leases in the slice
         for sfa_slice in sfa_slice_list:
 
         
@@ -477,30 +541,29 @@ class SlabDriver(Driver):
             # determine if this is a peer slice
         
             peer = slices.get_peer(slice_hrn) 
-            #TODO delete_sliver SA : UnBindObjectFromPeer should be 
-            #used when there is another 
-            #senslab testbed, which is not the case 14/08/12 . 
-            
-            logger.debug("SLABDRIVER.PY delete_sliver peer %s \r\n \t sfa_slice %s " %(peer, sfa_slice))
+
+            logger.debug("SLABDRIVER.PY delete_sliver peer %s \
+            \r\n \t sfa_slice %s " %(peer, sfa_slice))
             try:
-                #if peer:
-                    #self.slab_api.UnBindObjectFromPeer('slice', \
-                                            #sfa_slice['record_id_slice'], \
-                                            #peer, None)
+              
                 self.slab_api.DeleteSliceFromNodes(sfa_slice)
                 return True
             except :
                 return False
-            #finally:
-                #if peer:
-                    #self.slab_api.BindObjectToPeer('slice', \
-                                            #sfa_slice['record_id_slice'], \
-                                            #peer, sfa_slice['peer_slice_id'])
-            #return 1
-                
+           
     
-    # first 2 args are None in case of resource discovery
     def list_resources (self, slice_urn, slice_hrn, creds, options):
+        """
+        List resources from the senslab aggregate and returns a Rspec
+        with resources found when slice_urn and slice_hrn are None 
+        (in case of resource discovery).
+        If a slice hrn and urn are provided, list experiment's slice
+        nodes in a rspec format. 
+        
+        :return: rspec string in xml
+        :rtype: string 
+        """
+        
         #cached_requested = options.get('cached', True) 
     
         version_manager = VersionManager()
@@ -516,11 +579,13 @@ class SlabDriver(Driver):
                                         
         # Adding the list_leases option to the caching key
         if options.get('list_leases'):
-            version_string = version_string + "_"+options.get('list_leases', 'default')
+            version_string = version_string + "_" + \
+            options.get('list_leases', 'default')
             
         # Adding geni_available to caching key
         if options.get('geni_available'):
-            version_string = version_string + "_" + str(options.get('geni_available'))
+            version_string = version_string + "_" + \
+                str(options.get('geni_available'))
     
         # look in cache first
         #if cached_requested and self.cache and not slice_hrn:

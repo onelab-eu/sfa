@@ -59,6 +59,22 @@ class SlabSlices:
 
         
     def verify_slice_leases(self, sfa_slice, requested_jobs_dict, peer):
+        """ 
+        Compare requested leases with the leases already scheduled/
+        running in OAR. If necessary, delete and recreate modified leases,
+        and delete no longer requested ones. 
+        
+        :param sfa_slice: sfa slice record
+        :param requested_jobs_dict: dictionary of requested leases
+        :param peer: sfa peer
+        
+        :type sfa_slice: dict
+        :type requested_jobs_dict: dict 
+        :type peer:
+        :return: leases list of dictionary 
+        :rtype: list
+        
+        """
 
         logger.debug("SLABSLICES verify_slice_leases sfa_slice %s \
                         "%( sfa_slice))
