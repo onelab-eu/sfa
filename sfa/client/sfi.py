@@ -505,11 +505,13 @@ use this if you mean an authority instead""")
 
         try:
             self.dispatch(command, command_options, command_args)
+        except SystemExit:
+            return 1
         except:
             self.logger.log_exc ("sfi command %s failed"%command)
-            sys.exit(1)
+            return 1
 
-        return
+        return 0
     
     ####################
     def read_config(self):
