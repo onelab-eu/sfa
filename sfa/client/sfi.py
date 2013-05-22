@@ -272,10 +272,25 @@ class Sfi:
         ("renew", "slice_hrn time"),
         ("shutdown", "slice_hrn"),
         ("delegate", "to_hrn"),
+        ("myslice", ""),
         ("gid", "[name]"),
         ("trusted", "cred"),
         ("config", ""),
         ]
+    examples = {
+        'myslice' : """
+$ less +/myslice myslice sfi_config
+[myslice]
+backend  = 'http://manifold.pl.sophia.inria.fr:7080'
+delegate = 'ple.upmc.slicebrowser'
+user     = 'thierry'
+
+$ sfi  myslice
+   Will make sure all your credentials are up-to-date (that is: refresh expired ones)
+   then compute delegated credentials for user 'ple.upmc.slicebrowser'
+   and upload them all on myslice backend, using manifold id as specified in 'user'
+"""
+        }
 
     def print_command_help (self, options):
         verbose=getattr(options,'verbose')
@@ -461,12 +476,15 @@ use this if you mean an authority instead""")
         self.sfi_parser.print_help()
         print "==================== Specific command usage"
         self.command_parser.print_help()
+        if self.command in Sfi.examples:
+            print "==================== Example"
+            print Sfi.examples[self.command]
 
     #
     # Main: parse arguments and dispatch to command
     #
     def dispatch(self, command, command_options, command_args):
-        method=getattr(self, command,None)
+        method=getattr(self, command, None)
         if not method:
             print "Unknown command %s"%command
             return
@@ -495,13 +513,14 @@ use this if you mean an authority instead""")
             self.print_command_help(options)
             sys.exit(1)
         # second pass options parsing
+        self.command=command
         self.command_parser = self.create_command_parser(command)
         (command_options, command_args) = self.command_parser.parse_args(args[1:])
         self.command_options = command_options
 
         self.read_config () 
         self.bootstrap ()
-        self.logger.debug("Command=%s" % command)
+        self.logger.debug("Command=%s" % self.command)
 
         try:
             self.dispatch(command, command_options, command_args)
@@ -527,7 +546,10 @@ use this if you mean an authority instead""")
                 # we need to preload the sections we want parsed 
                 # from the shell config
                 config.add_section('sfi')
+                # sface users should be able to use this same file to configure their stuff
                 config.add_section('sface')
+                # manifold users should be able to specify their backend server here for sfi delegate
+                config.add_section('myslice')
                 config.load(config_file)
                 # back up old config
                 shutil.move(config_file, shell_config_file)
@@ -1380,9 +1402,18 @@ or version information about sfi itself
             delegated_credential.save_to_file(filename, save_parents=True)
             self.logger.info("delegated credential for %s to %s and wrote to %s"%(message,to_hrn,filename))
     
+    def myslice (self, options, args):
+        """ This helper is for refreshing your credentials at myslice; it will
+ * compute all the slices that you currently have credentials on
+ * refresh all your credentials (you as a user and pi, your slices)
+ * upload them to the manifold backend server
+   for that last phase, sfi_config is read to look for the [myslice] section, and 
+   namely the 'backend', 'delegate' and 'user' settings"""
+        pass
+
     def trusted(self, options, args):
         """
-        return uhe trusted certs at this interface (get_trusted_certs)
+        return the trusted certs at this interface (get_trusted_certs)
         """ 
         trusted_certs = self.registry().get_trusted_certs()
         for trusted_cert in trusted_certs:
