@@ -43,6 +43,7 @@ from sfa.client.sfaserverproxy import SfaServerProxy, ServerException
 from sfa.client.client_helper import pg_users_arg, sfa_users_arg
 from sfa.client.return_value import ReturnValue
 from sfa.client.candidates import Candidates
+from sfa.client.manifolduploader import ManifoldUploader
 
 CM_PORT=12346
 
@@ -224,6 +225,35 @@ def load_record_from_file(filename):
 import uuid
 def unique_call_id(): return uuid.uuid4().urn
 
+########## a simple model for maintaing 3 doc attributes per command (instead of just one)
+# essentially for the methods that implement a subcommand like sfi list
+# we need to keep track of
+# (*) doc         a few lines that tell what it does, still located in __doc__
+# (*) args_string a simple one-liner that describes mandatory arguments
+# (*) example     well, one or several releant examples
+# 
+# since __doc__ only accounts for one, we use this simple mechanism below
+# however we keep doc in place for easier migration
+
+from functools import wraps
+
+# we use a list as well as a dict so we can keep track of the order
+commands_list=[]
+commands_dict={}
+
+def register_command (args_string, example):
+    def wrap(m): 
+        name=getattr(m,'__name__')
+        doc=getattr(m,'__doc__',"-- missing doc --")
+        commands_list.append(name)
+        commands_dict[name]=(doc, args_string, example)
+        @wraps(m)
+        def new_method (*args, **kwds): return m(*args, **kwds)
+        return new_method
+    return wrap
+
+##########
+
 class Sfi:
     
     # dirty hack to make this class usable from the outside
@@ -251,48 +281,8 @@ class Sfi:
         self.authority = None
         self.logger = sfi_logger
         self.logger.enable_console()
-        self.available_names = [ tuple[0] for tuple in Sfi.available ]
-        self.available_dict = dict (Sfi.available)
-   
-    # tuples command-name expected-args in the order in which they should appear in the help
-    available = [ 
-        ("version", ""),  
-        ("list", "authority"),
-        ("show", "name"),
-        ("add", "[record]"),
-        ("update", "[record]"),
-        ("remove", "name"),
-        ("resources", ""),
-        ("describe", "slice_hrn"),
-        ("allocate", "slice_hrn rspec"),
-        ("provision", "slice_hrn"),
-        ("action", "slice_hrn action"), 
-        ("delete", "slice_hrn"),
-        ("status", "slice_hrn"),
-        ("renew", "slice_hrn time"),
-        ("shutdown", "slice_hrn"),
-        ("delegate", "to_hrn"),
-        ("myslice", ""),
-        ("gid", "[name]"),
-        ("trusted", "cred"),
-        ("config", ""),
-        ]
-    examples = {
-        'myslice' : """
-$ less +/myslice myslice sfi_config
-[myslice]
-backend  = 'http://manifold.pl.sophia.inria.fr:7080'
-delegate = 'ple.upmc.slicebrowser'
-user     = 'thierry'
 
-$ sfi  myslice
-   Will make sure all your credentials are up-to-date (that is: refresh expired ones)
-   then compute delegated credentials for user 'ple.upmc.slicebrowser'
-   and upload them all on myslice backend, using manifold id as specified in 'user'
-"""
-        }
-
-    def print_command_help (self, options):
+    def print_commands_help (self, options):
         verbose=getattr(options,'verbose')
         format3="%18s %-15s %s"
         line=80*'-'
@@ -302,30 +292,31 @@ $ sfi  myslice
         else:
             print line
             self.create_parser().print_help()
-        for command in self.available_names:
-            args=self.available_dict[command]
-            method=getattr(self,command,None)
-            doc=""
-            if method: doc=getattr(method,'__doc__',"")
-            if not doc: doc="*** no doc found ***"
-            doc=doc.strip(" \t\n")
-            doc=doc.replace("\n","\n"+35*' ')
+        for (command, (doc, args_string, example)) in commands_dict.iteritems():
             if verbose:
                 print line
-            print format3%(command,args,doc)
+            doc=doc.strip(" \t\n")
+            doc=doc.replace("\n","\n"+35*' ')
+            print format3%(command,args_string,doc)
             if verbose:
                 self.create_command_parser(command).print_help()
 
     def create_command_parser(self, command):
-        if command not in self.available_dict:
+        if command not in commands_dict:
             msg="Invalid command\n"
             msg+="Commands: "
-            msg += ','.join(self.available_names)            
+            msg += ','.join(commands_list)            
             self.logger.critical(msg)
             sys.exit(2)
 
-        parser = OptionParser(usage="sfi [sfi_options] %s [cmd_options] %s" \
-                                     % (command, self.available_dict[command]))
+        # retrieve args_string
+        (_, args_string, __) = commands_dict[command]
+
+        parser = OptionParser(add_help_option=False,
+                              usage="sfi [sfi_options] %s [cmd_options] %s"
+                              % (command, args_string))
+        parser.add_option ("-h","--help",dest='command_help',action='store_true',default=False,
+                           help="Summary of one command usage")
 
         if command in ("add", "update"):
             parser.add_option('-x', '--xrn', dest='xrn', metavar='<xrn>', help='object hrn/urn (mandatory)')
@@ -432,8 +423,9 @@ use this if you mean an authority instead""")
     def create_parser(self):
 
         # Generate command line parser
-        parser = OptionParser(usage="sfi [sfi_options] command [cmd_options] [cmd_args]",
-                             description="Commands: %s"%(" ".join(self.available_names)))
+        parser = OptionParser(add_help_option=False,
+                              usage="sfi [sfi_options] command [cmd_options] [cmd_args]",
+                              description="Commands: %s"%(" ".join(commands_list)))
         parser.add_option("-r", "--registry", dest="registry",
                          help="root registry", metavar="URL", default=None)
         parser.add_option("-s", "--sliceapi", dest="sm", default=None, metavar="URL",
@@ -463,8 +455,8 @@ use this if you mean an authority instead""")
                          help="point to the private key file to use if not yet installed in sfi_dir")
         parser.add_option("-t", "--timeout", dest="timeout", default=None,
                          help="Amout of time to wait before timing out the request")
-        parser.add_option("-?", "--commands", 
-                         action="store_true", dest="command_help", default=False,
+        parser.add_option("-h", "--help", 
+                         action="store_true", dest="commands_help", default=False,
                          help="one page summary on commands & exit")
         parser.disable_interspersed_args()
 
@@ -474,11 +466,12 @@ use this if you mean an authority instead""")
     def print_help (self):
         print "==================== Generic sfi usage"
         self.sfi_parser.print_help()
-        print "==================== Specific command usage"
+        print "\n==================== Specific usage for %s"%self.command
         self.command_parser.print_help()
-        if self.command in Sfi.examples:
-            print "==================== Example"
-            print Sfi.examples[self.command]
+        (_,__,example)=commands_dict[self.command]
+        if example:
+            print "\n==================== %s example"%self.command
+            print example
 
     #
     # Main: parse arguments and dispatch to command
@@ -493,8 +486,8 @@ use this if you mean an authority instead""")
     def main(self):
         self.sfi_parser = self.create_parser()
         (options, args) = self.sfi_parser.parse_args()
-        if options.command_help: 
-            self.print_command_help(options)
+        if options.commands_help: 
+            self.print_commands_help(options)
             sys.exit(1)
         self.options = options
 
@@ -502,15 +495,15 @@ use this if you mean an authority instead""")
 
         if len(args) <= 0:
             self.logger.critical("No command given. Use -h for help.")
-            self.print_command_help(options)
+            self.print_commands_help(options)
             return -1
     
         # complete / find unique match with command set
-        command_candidates = Candidates (self.available_names)
+        command_candidates = Candidates (commands_list)
         input = args[0]
         command = command_candidates.only_match(input)
         if not command:
-            self.print_command_help(options)
+            self.print_commands_help(options)
             sys.exit(1)
         # second pass options parsing
         self.command=command
@@ -833,6 +826,7 @@ use this if you mean an authority instead""")
     # Registry-related commands
     #==========================================================================
 
+    @register_command("","")
     def version(self, options, args):
         """
         display an SFA server version (GetVersion)
@@ -853,6 +847,7 @@ or version information about sfi itself
             pprinter = PrettyPrinter(indent=4)
             pprinter.pprint(version)
 
+    @register_command("authority","")
     def list(self, options, args):
         """
         list entries in named authority registry (List)
@@ -880,6 +875,7 @@ or version information about sfi itself
             save_records_to_file(options.file, list, options.fileformat)
         return
     
+    @register_command("name","")
     def show(self, options, args):
         """
         show details about named registry record (Resolve)
@@ -911,6 +907,7 @@ or version information about sfi itself
             save_records_to_file(options.file, record_dicts, options.fileformat)
         return
     
+    @register_command("[record]","")
     def add(self, options, args):
         "add record into registry by using the command options (Recommended) or from xml file (Register)"
         auth_cred = self.my_authority_credential_string()
@@ -943,6 +940,7 @@ or version information about sfi itself
                 record_dict['last_name'] = record_dict['hrn'] 
         return self.registry().Register(record_dict, auth_cred)
     
+    @register_command("[record]","")
     def update(self, options, args):
         "update record into registry by using the command options (Recommended) or from xml file (Update)"
         record_dict = {}
@@ -984,6 +982,7 @@ or version information about sfi itself
             show_credentials(cred)
         return self.registry().Update(record_dict, cred)
   
+    @register_command("name","")
     def remove(self, options, args):
         "remove registry record by name (Remove)"
         auth_cred = self.my_authority_credential_string()
@@ -1002,6 +1001,7 @@ or version information about sfi itself
     # Slice-related commands
     # ==================================================================
 
+    @register_command("","")
     def slices(self, options, args):
         "list instantiated slices (ListSlices) - returns urn's"
         server = self.sliceapi()
@@ -1021,6 +1021,7 @@ or version information about sfi itself
         return
 
     # show rspec for named slice
+    @register_command("[slice_hrn]","")
     def resources(self, options, args):
         """
         discover available resources (ListResources)
@@ -1071,6 +1072,7 @@ or version information about sfi itself
 
         return
 
+    @register_command("slice_hrn","")
     def describe(self, options, args):
         """
         shows currently allocated/provisioned resources of the named slice or set of slivers (Describe) 
@@ -1110,6 +1112,7 @@ or version information about sfi itself
 
         return 
 
+    @register_command("slice_hrn","")
     def delete(self, options, args):
         """
         de-allocate and de-provision all or named slivers of the slice (Delete)
@@ -1137,6 +1140,7 @@ or version information about sfi itself
             print value
         return value
 
+    @register_command("slice_hrn rspec","")
     def allocate(self, options, args):
         """
          allocate resources to the named slice (Allocate)
@@ -1175,10 +1179,10 @@ or version information about sfi itself
             save_rspec_to_file (value, options.file)
         if (self.options.raw is None) and (options.file is None):
             print value
-
         return value
         
 
+    @register_command("slice_hrn","")
     def provision(self, options, args):
         """
         provision already allocated resources of named slice (Provision)
@@ -1237,6 +1241,7 @@ or version information about sfi itself
             print value
         return value     
 
+    @register_command("slice_hrn","")
     def status(self, options, args):
         """
         retrieve the status of the slivers belonging to tne named slice (Status)
@@ -1262,11 +1267,13 @@ or version information about sfi itself
             save_raw_to_file(result, self.options.raw, self.options.rawformat, self.options.rawbanner)
         else:
             print value
+        # Thierry: seemed to be missing
+        return value
 
-    # reset named slice
+    @register_command("slice_hrn action","")
     def action(self, options, args):
         """
-        Perform the named operational action on the named slivers
+        Perform the named operational action on these slivers
         """
         server = self.sliceapi()
         api_options = {}
@@ -1289,6 +1296,7 @@ or version information about sfi itself
             print value
         return value
 
+    @register_command("slice_hrn time","")
     def renew(self, options, args):
         """
         renew slice (RenewSliver)
@@ -1318,6 +1326,7 @@ or version information about sfi itself
         return value
 
 
+    @register_command("slice_hrn","")
     def shutdown(self, options, args):
         """
         shutdown named slice (Shutdown)
@@ -1338,6 +1347,7 @@ or version information about sfi itself
         return value         
     
 
+    @register_command("[name]","")
     def gid(self, options, args):
         """
         Create a GID (CreateGid)
@@ -1356,6 +1366,7 @@ or version information about sfi itself
         GID(string=gid).save_to_file(filename)
          
 
+    @register_command("to_hrn","")
     def delegate (self, options, args):
         """
         (locally) create delegate credential for use by given hrn
@@ -1402,15 +1413,39 @@ or version information about sfi itself
             delegated_credential.save_to_file(filename, save_parents=True)
             self.logger.info("delegated credential for %s to %s and wrote to %s"%(message,to_hrn,filename))
     
+    ####################
+    @register_command("","""$ less +/myslice myslice sfi_config
+[myslice]
+backend  = 'http://manifold.pl.sophia.inria.fr:7080'
+delegate = 'ple.upmc.slicebrowser'
+user     = 'thierry'
+
+$ sfi myslice
+
+  will first collect the slices that you are part of, then make sure
+  all your credentials are up-to-date (that is: refresh expired ones)
+  then compute delegated credentials for user 'ple.upmc.slicebrowser'
+  and upload them all on myslice backend, using manifold id as
+  specified in 'user'
+"""
+)
     def myslice (self, options, args):
+
         """ This helper is for refreshing your credentials at myslice; it will
- * compute all the slices that you currently have credentials on
- * refresh all your credentials (you as a user and pi, your slices)
- * upload them to the manifold backend server
-   for that last phase, sfi_config is read to look for the [myslice] section, and 
-   namely the 'backend', 'delegate' and 'user' settings"""
+  * compute all the slices that you currently have credentials on
+  * refresh all your credentials (you as a user and pi, your slices)
+  * upload them to the manifold backend server
+  for last phase, sfi_config is read to look for the [myslice] section, 
+  and namely the 'backend', 'delegate' and 'user' settings"""
+
+        ##########
+        if len(args)>0:
+            self.print_help()
+            sys.exit(1)
+        # ManifoldUploader
         pass
 
+    @register_command("cred","")
     def trusted(self, options, args):
         """
         return the trusted certs at this interface (get_trusted_certs)
@@ -1423,6 +1458,7 @@ or version information about sfi itself
             self.logger.debug('Sfi.trusted -> %r'%cert.get_subject())
         return 
 
+    @register_command("","")
     def config (self, options, args):
         "Display contents of current config"
         self.show_config()
