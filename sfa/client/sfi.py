@@ -796,6 +796,11 @@ use this if you mean an authority instead""")
     #==========================================================================
 
     @register_command("","")
+    def config (self, options, args):
+        "Display contents of current config"
+        self.show_config()
+
+    @register_command("","")
     def version(self, options, args):
         """
         display an SFA server version (GetVersion)
@@ -1486,7 +1491,8 @@ $ sfi myslice
         # ManifoldUploader
         pass
 
-    @register_command("cred","")
+# Thierry: I'm turning this off, no idea what it's used for
+#    @register_command("cred","")
     def trusted(self, options, args):
         """
         return the trusted certs at this interface (get_trusted_certs)
@@ -1499,7 +1505,3 @@ $ sfi myslice
             self.logger.debug('Sfi.trusted -> %r'%cert.get_subject())
         return 
 
-    @register_command("","")
-    def config (self, options, args):
-        "Display contents of current config"
-        self.show_config()
