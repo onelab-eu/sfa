@@ -27,6 +27,7 @@ class RSpec:
             self.create(version)
         else:
             raise InvalidRSpec("No RSpec or version specified. Must specify a valid rspec string or a valid version") 
+
     def create(self, version=None):
         """
         Create root element
@@ -41,7 +42,6 @@ class RSpec:
         expires_ts = (now + timedelta(hours=1)).strftime(date_format) 
         self.xml.set('expires', expires_ts)
         self.xml.set('generated', generated_ts)
-
 
     def parse_xml(self, xml, version=None):
         self.xml.parse_xml(xml)
