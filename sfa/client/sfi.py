@@ -245,6 +245,7 @@ def register_command (args_string, example):
     def wrap(m): 
         name=getattr(m,'__name__')
         doc=getattr(m,'__doc__',"-- missing doc --")
+        doc=doc.strip(" \t\n")
         commands_list.append(name)
         commands_dict[name]=(doc, args_string, example)
         @wraps(m)
@@ -281,7 +282,9 @@ class Sfi:
         self.authority = None
         self.logger = sfi_logger
         self.logger.enable_console()
+        self.command=None
 
+    ### suitable if no reasonable command has been provided
     def print_commands_help (self, options):
         verbose=getattr(options,'verbose')
         format3="%18s %-15s %s"
@@ -295,11 +298,23 @@ class Sfi:
         for (command, (doc, args_string, example)) in commands_dict.iteritems():
             if verbose:
                 print line
-            doc=doc.strip(" \t\n")
             doc=doc.replace("\n","\n"+35*' ')
             print format3%(command,args_string,doc)
             if verbose:
                 self.create_command_parser(command).print_help()
+            
+    ### now if a known command was found we can be more verbose on that one
+    def print_help (self):
+        print "==================== Generic sfi usage"
+        self.sfi_parser.print_help()
+        (doc,_,example)=commands_dict[self.command]
+        print "\n==================== Purpose of %s"%self.command
+        print doc
+        print "\n==================== Specific usage for %s"%self.command
+        self.command_parser.print_help()
+        if example:
+            print "\n==================== %s example"%self.command
+            print example
 
     def create_command_parser(self, command):
         if command not in commands_dict:
@@ -315,7 +330,7 @@ class Sfi:
         parser = OptionParser(add_help_option=False,
                               usage="sfi [sfi_options] %s [cmd_options] %s"
                               % (command, args_string))
-        parser.add_option ("-h","--help",dest='command_help',action='store_true',default=False,
+        parser.add_option ("-h","--help",dest='help',action='store_true',default=False,
                            help="Summary of one command usage")
 
         if command in ("add", "update"):
@@ -456,22 +471,12 @@ use this if you mean an authority instead""")
         parser.add_option("-t", "--timeout", dest="timeout", default=None,
                          help="Amout of time to wait before timing out the request")
         parser.add_option("-h", "--help", 
-                         action="store_true", dest="commands_help", default=False,
+                         action="store_true", dest="help", default=False,
                          help="one page summary on commands & exit")
         parser.disable_interspersed_args()
 
         return parser
         
-
-    def print_help (self):
-        print "==================== Generic sfi usage"
-        self.sfi_parser.print_help()
-        print "\n==================== Specific usage for %s"%self.command
-        self.command_parser.print_help()
-        (_,__,example)=commands_dict[self.command]
-        if example:
-            print "\n==================== %s example"%self.command
-            print example
 
     #
     # Main: parse arguments and dispatch to command
@@ -486,7 +491,7 @@ use this if you mean an authority instead""")
     def main(self):
         self.sfi_parser = self.create_parser()
         (options, args) = self.sfi_parser.parse_args()
-        if options.commands_help: 
+        if options.help: 
             self.print_commands_help(options)
             sys.exit(1)
         self.options = options
@@ -509,6 +514,9 @@ use this if you mean an authority instead""")
         self.command=command
         self.command_parser = self.create_command_parser(command)
         (command_options, command_args) = self.command_parser.parse_args(args[1:])
+        if command_options.help:
+            self.print_help()
+            sys.exit(1)
         self.command_options = command_options
 
         self.read_config () 
