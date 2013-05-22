@@ -2,8 +2,6 @@
 #
 # Script for basic access to the SFA configuration file store.
 #
-# $Id$
-#
 
 import sys
 import os
