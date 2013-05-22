@@ -29,12 +29,12 @@ class ManifoldUploader:
 
     # platform is a name internal to the manifold deployment, 
     # that maps to a testbed, like e.g. 'ple'
-    def __init__ (self, url=None, platform=None, username=None, password=None, debug=False):
+    def __init__ (self, logger, url=None, platform=None, username=None, password=None, ):
         self._url=url
         self._platform=platform
         self._username=username
         self._password=password
-        self.debug=debug
+        self.logger=logger
 
     def username (self):
         if not self._username: 
@@ -60,16 +60,18 @@ class ManifoldUploader:
         return self._url            
 
     # does the job for one credential
-    # expects the credential (string) and an optional filename (for messaging)
+    # expects the credential (string) and an optional message for reporting
     # return True upon success and False otherwise
-    def upload (self, delegated_credential, filename=None):
+    def upload (self, delegated_credential, message=None):
         url=self.url()
         platform=self.platform()
         username=self.username()
         password=self.password()
         auth = {'AuthMethod': 'password', 'Username': username, 'AuthString': password}
+        if not message: message=""
 
         try:
+            self.logger.debug("Connecting manifold url %s"%url)
             manifold = xmlrpclib.Server(url, allow_none = 1)
             # the code for a V2 interface
             query= { 'action':       'update',
@@ -78,36 +80,42 @@ class ManifoldUploader:
                      'params':       {'credential': delegated_credential, },
                      }
             try:
+                self.logger.debug("Trying v2 method Update %s"%message)
                 retcod2=manifold.Update (auth, query)
             except Exception,e:
                 # xxx we need a constant constant for UNKNOWN, how about using 1
                 MANIFOLD_UNKNOWN=1
                 retcod2={'code':MANIFOLD_UNKNOWN,'output':"%s"%e}
             if retcod2['code']==0:
-                if filename: print filename,
-                print 'v2 upload OK'
+                info=""
+                if message: info += message+" "
+                info += 'v2 upload OK'
+                self.logger.info(info)
                 return True
             #print delegated_credential, "upload failed,",retcod['output'], \
             #    "with code",retcod['code']
             # the code for V1
             try:
+                self.logger.debug("Trying v1 method AddCredential %s"%message)
                 retcod1=manifold.AddCredential(auth, delegated_credential, platform)
             except Exception,e:
                 retcod1=e
             if retcod1==1:
-                if filename: print filename,
-                print 'v1 upload OK'
+                info=""
+                if message: info += message+" "
+                info += 'v1 upload OK'
+                self.logger.info(message)
                 return True
             # everything has failed, let's report
-            if filename: print "Could not upload",filename
-            else: print "Could not upload credential"
-            print "  V2 Update returned code",retcod2['code'],"and error",retcod2['output']
-            print "  V1 AddCredential returned code",retcod1,"(expected 1)"
+            if message: self.logger.error("Could not upload %s"%message)
+            else: self.logger.error("Could not upload credential")
+            self.logger.info("  V2 Update returned code %s and error %s"%(retcod2['code'],retcod2['output']))
+            self.logger.info("  V1 AddCredential returned code %s (expected 1)"%retcod1)
             return False
         except Exception, e:
-            if filename: print "Could not upload",filename,e
-            else: print "Could not upload credential",e
-            if self.debug:
+            if message: self.logger.error("Could not upload %s %s"%(message,e))
+            else:        self.logger.error("Could not upload credential %s"%e)
+            if self.logger.debugEnabled():
                 import traceback
                 traceback.print_exc()
 
@@ -125,17 +133,16 @@ def main ():
                          help='the manifold username')
     parser.add_argument ('-P','--password',dest='password',action='store',default=None,
                          help='the manifold password')
-    parser.add_argument ('-d','--debug',dest='debug',action='store_true',default=False,
-                         help='turn on debug mode')
     args = parser.parse_args ()
     
+    from sfa.util.sfalogging import sfi_logger
     uploader = ManifoldUploader (url=args.url, platform=args.platform,
                                  username=args.username, password=args.password,
-                                 debug=args.debug)
+                                 logger=sfi_logger)
     for filename in args.credential_files:
         with file(filename) as f:
             result=uploader.upload (f.read(),filename)
-            if args.debug: print '... result',result
+            sfi_logger.info('... result=%s'%result)
 
 if __name__ == '__main__':
     main()

@@ -273,9 +273,11 @@ class Sfi:
         self.authority = None
         self.logger = sfi_logger
         self.logger.enable_console()
+        ### various auxiliary material that we keep at hand 
         self.command=None
         self.config=None
         self.config_file=None
+        self.client_bootstrap=None
 
     ### suitable if no reasonable command has been provided
     def print_commands_help (self, options):
@@ -405,7 +407,7 @@ class Sfi:
                              metavar="slice_hrn", help="delegate cred. for slice HRN")
            parser.add_option("-a", "--auths", dest='delegate_auths',action='append',default=[],
                              metavar='auth_hrn', help="delegate cred for auth HRN")
-           # this primarily is a shorthand for -a my_hrn^
+           # this primarily is a shorthand for -a my_hrn
            parser.add_option("-p", "--pi", dest='delegate_pi', default=None, action='store_true',
                              help="delegate your PI credentials, so s.t. like -a your_hrn^")
            parser.add_option("-A","--to-authority",dest='delegate_to_authority',action='store_true',default=False,
@@ -1393,7 +1395,7 @@ use this if you mean an authority instead""")
         self.logger.info("writing %s gid to %s" % (target_hrn, filename))
         GID(string=gid).save_to_file(filename)
          
-
+    ####################
     @register_command("to_hrn","""$ sfi delegate -u -p -s ple.inria.heartbeat -s ple.inria.omftest ple.upmc.slicebrowser
 
   will locally create a set of delegated credentials for the benefit of ple.upmc.slicebrowser
@@ -1458,21 +1460,26 @@ use this if you mean an authority instead""")
     ####################
     @register_command("","""$ less +/myslice sfi_config
 [myslice]
-backend  = 'http://manifold.pl.sophia.inria.fr:7080'
+backend  = http://manifold.pl.sophia.inria.fr:7080
 # the HRN that myslice uses, so that we are delegating to
-delegate = 'ple.upmc.slicebrowser'
+delegate = ple.upmc.slicebrowser
 # platform - this is a myslice concept
-platform = 'ple'
+platform = ple
 # username - as of this writing (May 2013) a simple login name
-user     = 'thierry'
+username = thierry
 
 $ sfi myslice
-
   will first collect the slices that you are part of, then make sure
   all your credentials are up-to-date (read: refresh expired ones)
   then compute delegated credentials for user 'ple.upmc.slicebrowser'
   and upload them all on myslice backend, using 'platform' and 'user'.
   A password will be prompted for the upload part.
+
+$ sfi -v myslice  -- or sfi -vv myslice
+  same but with more and more verbosity
+
+$ sfi m
+  is synonym to sfi myslice as no other command starts with an 'm'
 """
 ) # register_command
     def myslice (self, options, args):
@@ -1488,10 +1495,68 @@ $ sfi myslice
         if len(args)>0:
             self.print_help()
             sys.exit(1)
-        # ManifoldUploader
-        pass
 
-# Thierry: I'm turning this off, no idea what it's used for
+        ### the rough sketch goes like this
+        # (a) rain check for sufficient config in sfi_config
+        # we don't allow to override these settings for now
+        myslice_dict={}
+        myslice_keys=['backend', 'delegate', 'platform', 'username']
+        for key in myslice_keys:
+            full_key="MYSLICE_" + key.upper()
+            value=getattr(self.config,full_key,None)
+            if value:   myslice_dict[key]=value
+            else:       print "Unsufficient config, missing key %s in [myslice] section of sfi_config"%key
+        if len(myslice_dict) != len(myslice_keys):
+            sys.exit(1)
+
+        # (b) figure whether we are PI for the authority where we belong
+        sfi_logger.info("Resolving our own id")
+        my_records=self.registry().Resolve(self.user,self.my_credential_string)
+        if len(my_records)!=1: print "Cannot Resolve %s -- exiting"%self.user; sys.exit(1)
+        my_record=my_records[0]
+        sfi_logger.info("Checking for authorities that we are PI for")
+        my_auths = my_record['reg-pi-authorities']
+        sfi_logger.debug("Found %d authorities: %s"%(len(my_auths),my_auths))
+
+        # (c) get the set of slices that we are in
+        sfi_logger.info("Checking for slices that we are member of")
+        my_slices=my_record['reg-slices']
+        sfi_logger.debug("Found %d slices: %s"%(len(my_slices),my_slices))
+
+        # (d) make sure we have *valid* credentials for all these
+        hrn_credentials=[]
+        hrn_credentials.append ( (self.user, 'user', self.my_credential_string,) )
+        for auth_hrn in my_auths:
+            hrn_credentials.append ( (auth_hrn, 'auth', self.authority_credential_string(auth_hrn),) )
+        for slice_hrn in my_slices:
+            hrn_credentials.append ( (slice_hrn, 'slice', self.slice_credential_string (slice_hrn),) )
+
+        # (e) check for the delegated version of these
+        # xxx todo add an option -a/-A? like for 'sfi delegate' for when we ever 
+        # switch to myslice using an authority instead of a user
+        delegatee_type='user'
+        delegatee_hrn=myslice_dict['delegate']
+        hrn_delegated_credentials = [
+            (hrn, htype, self.client_bootstrap.delegate_credential_string (credential, delegatee_hrn, delegatee_type),)
+            for (hrn, htype, credential) in hrn_credentials ]
+
+        # (f) and finally upload them to manifold server
+        # xxx todo add an option so the password can be set on the command line
+        # (but *NOT* in the config file) so other apps can leverage this
+        uploader = ManifoldUploader (logger=sfi_logger,
+                                     url=myslice_dict['backend'],
+                                     platform=myslice_dict['platform'],
+                                     username=myslice_dict['username'])
+        for (hrn,htype,delegated_credential) in hrn_delegated_credentials:
+            sfi_logger.info("Uploading delegated credential for %s (%s)"%(hrn,htype))
+            uploader.upload(delegated_credential,message=hrn)
+        # at first I thought we would want to save these,
+        # like 'sfi delegate does' but on second thought
+        # it is probably not helpful as people would not
+        # need to run 'sfi delegate' at all anymore
+        return
+
+# Thierry: I'm turning this off as a command, no idea what it's used for
 #    @register_command("cred","")
     def trusted(self, options, args):
         """
