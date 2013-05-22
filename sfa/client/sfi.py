@@ -295,7 +295,9 @@ class Sfi:
         else:
             print line
             self.create_parser().print_help()
-        for (command, (doc, args_string, example)) in commands_dict.iteritems():
+        # preserve order from the code
+        for command in commands_list:
+            (doc, args_string, example) = commands_dict[command]
             if verbose:
                 print line
             doc=doc.replace("\n","\n"+35*' ')
@@ -313,7 +315,7 @@ class Sfi:
         print "\n==================== Specific usage for %s"%self.command
         self.command_parser.print_help()
         if example:
-            print "\n==================== %s example"%self.command
+            print "\n==================== %s example(s)"%self.command
             print example
 
     def create_command_parser(self, command):
@@ -549,7 +551,8 @@ use this if you mean an authority instead""")
                 config.add_section('sfi')
                 # sface users should be able to use this same file to configure their stuff
                 config.add_section('sface')
-                # manifold users should be able to specify their backend server here for sfi delegate
+                # manifold users should be able to specify the details 
+                # of their backend server here for 'sfi myslice'
                 config.add_section('myslice')
                 config.load(config_file)
                 # back up old config
@@ -838,7 +841,7 @@ use this if you mean an authority instead""")
     def version(self, options, args):
         """
         display an SFA server version (GetVersion)
-or version information about sfi itself
+  or version information about sfi itself
         """
         if options.version_local:
             version=version_core()
@@ -1029,7 +1032,7 @@ or version information about sfi itself
         return
 
     # show rspec for named slice
-    @register_command("[slice_hrn]","")
+    @register_command("","")
     def resources(self, options, args):
         """
         discover available resources (ListResources)
@@ -1083,7 +1086,8 @@ or version information about sfi itself
     @register_command("slice_hrn","")
     def describe(self, options, args):
         """
-        shows currently allocated/provisioned resources of the named slice or set of slivers (Describe) 
+        shows currently allocated/provisioned resources 
+        of the named slice or set of slivers (Describe) 
         """
         server = self.sliceapi()
 
@@ -1374,10 +1378,24 @@ or version information about sfi itself
         GID(string=gid).save_to_file(filename)
          
 
-    @register_command("to_hrn","")
+    @register_command("to_hrn","""$ sfi delegate -u -p -s ple.inria.heartbeat -s ple.inria.omftest ple.upmc.slicebrowser
+
+  will locally create a set of delegated credentials for the benefit of ple.upmc.slicebrowser
+  the set of credentials in the scope for this call would be
+  (*) ple.inria.thierry_parmentelat.user_for_ple.upmc.slicebrowser.user.cred
+      as per -u/--user
+  (*) ple.inria.pi_for_ple.upmc.slicebrowser.user.cred
+      as per -p/--pi
+  (*) ple.inria.heartbeat.slice_for_ple.upmc.slicebrowser.user.cred
+  (*) ple.inria.omftest.slice_for_ple.upmc.slicebrowser.user.cred
+      because of the two -s options
+
+""")
     def delegate (self, options, args):
         """
         (locally) create delegate credential for use by given hrn
+  make sure to check for 'sfi myslice' instead if you plan
+  on using MySlice
         """
         if len(args) != 1:
             self.print_help()
@@ -1422,21 +1440,25 @@ or version information about sfi itself
             self.logger.info("delegated credential for %s to %s and wrote to %s"%(message,to_hrn,filename))
     
     ####################
-    @register_command("","""$ less +/myslice myslice sfi_config
+    @register_command("","""$ less +/myslice sfi_config
 [myslice]
 backend  = 'http://manifold.pl.sophia.inria.fr:7080'
+# the HRN that myslice uses, so that we are delegating to
 delegate = 'ple.upmc.slicebrowser'
+# platform - this is a myslice concept
+platform = 'ple'
+# username - as of this writing (May 2013) a simple login name
 user     = 'thierry'
 
 $ sfi myslice
 
   will first collect the slices that you are part of, then make sure
-  all your credentials are up-to-date (that is: refresh expired ones)
+  all your credentials are up-to-date (read: refresh expired ones)
   then compute delegated credentials for user 'ple.upmc.slicebrowser'
-  and upload them all on myslice backend, using manifold id as
-  specified in 'user'
+  and upload them all on myslice backend, using 'platform' and 'user'.
+  A password will be prompted for the upload part.
 """
-)
+) # register_command
     def myslice (self, options, args):
 
         """ This helper is for refreshing your credentials at myslice; it will
