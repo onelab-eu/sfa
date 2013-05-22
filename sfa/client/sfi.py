@@ -283,6 +283,8 @@ class Sfi:
         self.logger = sfi_logger
         self.logger.enable_console()
         self.command=None
+        self.config=None
+        self.config_file=None
 
     ### suitable if no reasonable command has been provided
     def print_commands_help (self, options):
@@ -569,6 +571,7 @@ use this if you mean an authority instead""")
                 self.logger.log_exc("Could not read config file %s"%config_file)
             sys.exit(1)
      
+        self.config=config
         errors = 0
         # Set SliceMgr URL
         if (self.options.sm is not None):
@@ -918,9 +921,12 @@ use this if you mean an authority instead""")
             save_records_to_file(options.file, record_dicts, options.fileformat)
         return
     
-    @register_command("[record]","")
+    @register_command("[xml-filename]","")
     def add(self, options, args):
-        "add record into registry by using the command options (Recommended) or from xml file (Register)"
+        """add record into registry (Register) 
+  from command line options (recommended) 
+  old-school method involving an xml file still supported"""
+
         auth_cred = self.my_authority_credential_string()
         if options.show_credential:
             show_credentials(auth_cred)
@@ -951,9 +957,11 @@ use this if you mean an authority instead""")
                 record_dict['last_name'] = record_dict['hrn'] 
         return self.registry().Register(record_dict, auth_cred)
     
-    @register_command("[record]","")
+    @register_command("[xml-filename]","")
     def update(self, options, args):
-        "update record into registry by using the command options (Recommended) or from xml file (Update)"
+        """update record into registry (Update) 
+  from command line options (recommended) 
+  old-school method involving an xml file still supported"""
         record_dict = {}
         if len(args) > 0:
             record_filepath = args[0]
