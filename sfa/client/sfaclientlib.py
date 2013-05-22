@@ -199,7 +199,7 @@ class SfaClientBootstrap:
         valid = True
         cred = Credential(filename=filename)
         # check if credential is expires
-        if cred.get_expiration() < datetime.now():
+        if cred.get_expiration() < datetime.utcnow():
             valid = False
         return valid
     
