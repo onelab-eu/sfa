@@ -126,12 +126,12 @@ force:
 
 ##########
 # a lot of stuff in the working dir is just noise
-scan:
+files:
 	@find . -type f | egrep -v '^\./\.|/\.git/|/\.svn/|TAGS|AA-|~$$|egg-info|\.(py[co]|doc|html|pdf|png|svg|out|bak|dg|pickle)$$' 
 tags:	
-	$(MAKE) scan | xargs etags
+	$(MAKE) files | xargs etags
 
-.PHONY: scan tags
+.PHONY: files tags
 
 signatures:
 	(cd sfa/methods; grep 'def.*call' *.py > SIGNATURES)
