@@ -275,7 +275,8 @@ class Sfi:
         self.logger.enable_console()
         ### various auxiliary material that we keep at hand 
         self.command=None
-        self.config=None
+        # need to call this other than just 'config' as we have a command/method with that name
+        self.config_instance=None
         self.config_file=None
         self.client_bootstrap=None
 
@@ -557,7 +558,7 @@ use this if you mean an authority instead""")
                 self.logger.log_exc("Could not read config file %s"%config_file)
             sys.exit(1)
      
-        self.config=config
+        self.config_instance=config
         errors = 0
         # Set SliceMgr URL
         if (self.options.sm is not None):
@@ -1503,7 +1504,7 @@ $ sfi m
         myslice_keys=['backend', 'delegate', 'platform', 'username']
         for key in myslice_keys:
             full_key="MYSLICE_" + key.upper()
-            value=getattr(self.config,full_key,None)
+            value=getattr(self.config_instance,full_key,None)
             if value:   myslice_dict[key]=value
             else:       print "Unsufficient config, missing key %s in [myslice] section of sfi_config"%key
         if len(myslice_dict) != len(myslice_keys):
