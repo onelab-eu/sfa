@@ -25,8 +25,8 @@ SCMURL=should-be-redefined-by-specfile
 
 python: version
 
-version: sfa/util/version.py
-sfa/util/version.py: sfa/util/version.py.in
+version: sfa/util/version.py 
+sfa/util/version.py: sfa/util/version.py.in force
 	sed -e "s,@VERSIONTAG@,$(VERSIONTAG),g" -e "s,@SCMURL@,$(SCMURL),g" sfa/util/version.py.in > $@
 
 xmlbuilder-install:
