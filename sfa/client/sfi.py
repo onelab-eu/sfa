@@ -331,6 +331,10 @@ class Sfi:
         parser.add_option ("-h","--help",dest='help',action='store_true',default=False,
                            help="Summary of one command usage")
 
+        if command in ("config"):
+            parser.add_option('-m', '--myslice', dest='myslice', action='store_true', default=False,
+                              help='how myslice config variables as well')
+
         if command in ("add", "update"):
             parser.add_option('-x', '--xrn', dest='xrn', metavar='<xrn>', help='object hrn/urn (mandatory)')
             parser.add_option('-t', '--type', dest='type', metavar='<type>', help='object type', default=None)
@@ -600,17 +604,6 @@ use this if you mean an authority instead""")
         if errors:
            sys.exit(1)
 
-    def show_config (self):
-        print "From configuration file %s"%self.config_file
-        flags=[ 
-            ('SFI_USER','user'),
-            ('SFI_AUTH','authority'),
-            ('SFI_SM','sm_url'),
-            ('SFI_REGISTRY','reg_url'),
-            ]
-        for (external_name, internal_name) in flags:
-            print "%s='%s'"%(external_name,getattr(self,internal_name))
-
     #
     # Get various credential and spec files
     #
@@ -801,7 +794,26 @@ use this if you mean an authority instead""")
     @register_command("","")
     def config (self, options, args):
         "Display contents of current config"
-        self.show_config()
+        print "# From configuration file %s"%self.config_file
+        flags=[ ('sfi', [ ('registry','reg_url'),
+                          ('auth','authority'),
+                          ('user','user'),
+                          ('sm','sm_url'),
+                          ]),
+                ]
+        if options.myslice:
+            flags.append ( ('myslice', ['backend', 'delegate', 'platform', 'username'] ) )
+
+        for (section, tuples) in flags:
+            print "[%s]"%section
+            try:
+                for (external_name, internal_name) in tuples:
+                    print "%-20s = %s"%(external_name,getattr(self,internal_name))
+            except:
+                for name in tuples:
+                    varname="%s_%s"%(section.upper(),name.upper())
+                    value=getattr(self.config_instance,varname)
+                    print "%-20s = %s"%(name,value)
 
     @register_command("","")
     def version(self, options, args):
