@@ -81,10 +81,12 @@ class ManifoldUploader:
         if not message: message=""
 
         try:
+            # looks like the current implementation of manifold server
+            # won't be happy with several calls issued in the same session
 #            manifold=self.proxy()
             url=self.url()
             self.logger.debug("Connecting manifold url %s"%url)
-            manifold = xmlrpclib.Server(url, allow_none = 1)
+            manifold = xmlrpclib.ServerProxy(url, allow_none = True)
             # the code for a V2 interface
             query= { 'action':     'update',
                      'object':     'local:account',
