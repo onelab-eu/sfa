@@ -1523,14 +1523,14 @@ $ sfi m
         my_records=self.registry().Resolve(self.user,self.my_credential_string)
         if len(my_records)!=1: print "Cannot Resolve %s -- exiting"%self.user; sys.exit(1)
         my_record=my_records[0]
-        sfi_logger.info("Checking for authorities that we are PI for")
         my_auths = my_record['reg-pi-authorities']
-        sfi_logger.debug("Found %d authorities: %s"%(len(my_auths),my_auths))
+        sfi_logger.info("Found %d authorities that we are PI for"%len(my_auths))
+        sfi_logger.debug("They are %s"%(my_auths))
 
         # (c) get the set of slices that we are in
-        sfi_logger.info("Checking for slices that we are member of")
         my_slices=my_record['reg-slices']
-        sfi_logger.debug("Found %d slices: %s"%(len(my_slices),my_slices))
+        sfi_logger.info("Found %d slices that we are member of"%len(my_slices))
+        sfi_logger.debug("They are: %s"%(my_slices))
 
         # (d) make sure we have *valid* credentials for all these
         hrn_credentials=[]
@@ -1545,9 +1545,10 @@ $ sfi m
         # switch to myslice using an authority instead of a user
         delegatee_type='user'
         delegatee_hrn=myslice_dict['delegate']
-        hrn_delegated_credentials = [
-            (hrn, htype, self.client_bootstrap.delegate_credential_string (credential, delegatee_hrn, delegatee_type),)
-            for (hrn, htype, credential) in hrn_credentials ]
+        hrn_delegated_credentials = []
+        for (hrn, htype, credential) in hrn_credentials:
+            sfi_logger.info("Computing delegated credential for %s (%s)"%(hrn,htype))
+            hrn_delegated_credentials.append ((hrn, htype, self.client_bootstrap.delegate_credential_string (credential, delegatee_hrn, delegatee_type),))
 
         # (f) and finally upload them to manifold server
         # xxx todo add an option so the password can be set on the command line
@@ -1556,6 +1557,7 @@ $ sfi m
                                      url=myslice_dict['backend'],
                                      platform=myslice_dict['platform'],
                                      username=myslice_dict['username'])
+        uploader.prompt_all()
         for (hrn,htype,delegated_credential) in hrn_delegated_credentials:
             sfi_logger.info("Uploading delegated credential for %s (%s)"%(hrn,htype))
             uploader.upload(delegated_credential,message=hrn)
