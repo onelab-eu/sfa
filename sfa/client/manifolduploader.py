@@ -135,6 +135,7 @@ class ManifoldUploader:
             if self.logger.debugEnabled():
                 import traceback
                 traceback.print_exc()
+            return False
 
 ### this is mainly for unit testing this class but can come in handy as well
 def main ():

@@ -1527,18 +1527,18 @@ $ sfi m
             sys.exit(1)
 
         # (b) figure whether we are PI for the authority where we belong
-        sfi_logger.info("Resolving our own id")
+        self.logger.info("Resolving our own id")
         my_records=self.registry().Resolve(self.user,self.my_credential_string)
         if len(my_records)!=1: print "Cannot Resolve %s -- exiting"%self.user; sys.exit(1)
         my_record=my_records[0]
         my_auths = my_record['reg-pi-authorities']
-        sfi_logger.info("Found %d authorities that we are PI for"%len(my_auths))
-        sfi_logger.debug("They are %s"%(my_auths))
+        self.logger.info("Found %d authorities that we are PI for"%len(my_auths))
+        self.logger.debug("They are %s"%(my_auths))
 
         # (c) get the set of slices that we are in
         my_slices=my_record['reg-slices']
-        sfi_logger.info("Found %d slices that we are member of"%len(my_slices))
-        sfi_logger.debug("They are: %s"%(my_slices))
+        self.logger.info("Found %d slices that we are member of"%len(my_slices))
+        self.logger.debug("They are: %s"%(my_slices))
 
         # (d) make sure we have *valid* credentials for all these
         hrn_credentials=[]
@@ -1557,27 +1557,32 @@ $ sfi m
         for (hrn, htype, credential) in hrn_credentials:
             delegated_credential = self.client_bootstrap.delegate_credential_string (credential, delegatee_hrn, delegatee_type)
             hrn_delegated_credentials.append ((hrn, htype, delegated_credential, ))
-            # inspect
-            inspect=Credential(string=delegated_credential)
-            expire_datetime=inspect.get_expiration()
-            sfi_logger.info("Delegated credential for %s (%s) expires on %s"%(hrn,htype,expire_datetime))
 
         # (f) and finally upload them to manifold server
         # xxx todo add an option so the password can be set on the command line
         # (but *NOT* in the config file) so other apps can leverage this
-        uploader = ManifoldUploader (logger=sfi_logger,
+        uploader = ManifoldUploader (logger=self.logger,
                                      url=myslice_dict['backend'],
                                      platform=myslice_dict['platform'],
                                      username=myslice_dict['username'],
                                      password=options.password)
         uploader.prompt_all()
+        (count_all,count_success)=(0,0)
         for (hrn,htype,delegated_credential) in hrn_delegated_credentials:
-            sfi_logger.info("Uploading delegated credential for %s (%s)"%(hrn,htype))
-            uploader.upload(delegated_credential,message="%s (%s)"%(hrn,htype))
+            # inspect
+            inspect=Credential(string=delegated_credential)
+            expire_datetime=inspect.get_expiration()
+            message="%s (%s) [exp:%s]"%(hrn,htype,expire_datetime)
+            if uploader.upload(delegated_credential,message=message):
+                count_success+=1
+            count_all+=1
+
+        self.logger.info("Successfully uploaded %d/%d credentials"%(count_success,count_all))
         # at first I thought we would want to save these,
         # like 'sfi delegate does' but on second thought
         # it is probably not helpful as people would not
         # need to run 'sfi delegate' at all anymore
+        if count_success != count_all: sys.exit(1)
         return
 
 # Thierry: I'm turning this off as a command, no idea what it's used for
