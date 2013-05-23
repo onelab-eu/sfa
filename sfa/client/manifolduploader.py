@@ -35,35 +35,45 @@ class ManifoldUploader:
         self._username=username
         self._password=password
         self.logger=logger
+        self._proxy=None
 
     def username (self):
-        if not self._username: 
+        if not self._username:
             self._username=raw_input("Enter your manifold username: ")
-        return self._username            
+        return self._username
 
     def password (self):
-        if not self._password: 
+        if not self._password:
             username=self.username()
             self._password=getpass.getpass("Enter password for manifold user %s: "%username)
-        return self._password            
+        return self._password
 
     def platform (self):
-        if not self._platform: 
+        if not self._platform:
             self._platform=raw_input("Enter your manifold platform [%s]: "%DEFAULT_PLATFORM)
             if self._platform.strip()=="": self._platform = DEFAULT_PLATFORM
-        return self._platform            
+        return self._platform
 
     def url (self):
-        if not self._url: 
+        if not self._url:
             self._url=raw_input("Enter the URL for your manifold API [%s]: "%DEFAULT_URL)
             if self._url.strip()=="": self._url = DEFAULT_URL
-        return self._url            
+        return self._url
+
+    def prompt_all(self):
+        self.username(); self.password(); self.platform(); self.url()
+
+    def proxy (self):
+        if not self._proxy:
+            url=self.url()
+            self.logger.debug("Connecting manifold url %s"%url)
+            self._proxy = xmlrpclib.ServerProxy(url, allow_none = True)
+        return self._proxy
 
     # does the job for one credential
     # expects the credential (string) and an optional message for reporting
     # return True upon success and False otherwise
     def upload (self, delegated_credential, message=None):
-        url=self.url()
         platform=self.platform()
         username=self.username()
         password=self.password()
@@ -71,32 +81,34 @@ class ManifoldUploader:
         if not message: message=""
 
         try:
+#            manifold=self.proxy()
+            url=self.url()
             self.logger.debug("Connecting manifold url %s"%url)
             manifold = xmlrpclib.Server(url, allow_none = 1)
             # the code for a V2 interface
-            query= { 'action':       'update',
-                     'fact_table':   'local:account',
-                     'filters':      [ ['platform', '=', platform] ] ,
-                     'params':       {'credential': delegated_credential, },
+            query= { 'action':     'update',
+                     'object':     'local:account',
+                     'filters':    [ ['platform', '=', platform] ] ,
+                     'params':     {'credential': delegated_credential, },
                      }
             try:
-                self.logger.debug("Trying v2 method Update %s"%message)
+                self.logger.debug("Trying v2 method Update@%s %s"%(platform,message))
                 retcod2=manifold.Update (auth, query)
             except Exception,e:
                 # xxx we need a constant constant for UNKNOWN, how about using 1
                 MANIFOLD_UNKNOWN=1
-                retcod2={'code':MANIFOLD_UNKNOWN,'output':"%s"%e}
+                retcod2={'code':MANIFOLD_UNKNOWN,'description':"%s"%e}
             if retcod2['code']==0:
                 info=""
                 if message: info += message+" "
                 info += 'v2 upload OK'
                 self.logger.info(info)
                 return True
-            #print delegated_credential, "upload failed,",retcod['output'], \
+            #print delegated_credential, "upload failed,",retcod['description'], \
             #    "with code",retcod['code']
             # the code for V1
             try:
-                self.logger.debug("Trying v1 method AddCredential %s"%message)
+                self.logger.debug("Trying v1 method AddCredential@%s %s"%(platform,message))
                 retcod1=manifold.AddCredential(auth, delegated_credential, platform)
             except Exception,e:
                 retcod1=e
@@ -109,7 +121,12 @@ class ManifoldUploader:
             # everything has failed, let's report
             if message: self.logger.error("Could not upload %s"%message)
             else: self.logger.error("Could not upload credential")
-            self.logger.info("  V2 Update returned code %s and error %s"%(retcod2['code'],retcod2['output']))
+            if 'code' in retcod2 and 'description' in retcod2:
+                self.logger.info("  V2 Update returned code %s and error >>%s<<"%(retcod2['code'],retcod2['description']))
+                self.logger.debug("****** full retcod2")
+                for (k,v) in retcod2.items(): self.logger.debug("**** %s: %s"%(k,v))
+            else:
+                self.logger.info("  V2 Update returned %s"%retcod2)
             self.logger.info("  V1 AddCredential returned code %s (expected 1)"%retcod1)
             return False
         except Exception, e:
@@ -133,12 +150,17 @@ def main ():
                          help='the manifold username')
     parser.add_argument ('-P','--password',dest='password',action='store',default=None,
                          help='the manifold password')
+    parser.add_argument ('-v','--verbose',dest='verbose',action='count',default=0,
+                         help='more and more verbose')
     args = parser.parse_args ()
     
     from sfa.util.sfalogging import sfi_logger
+    sfi_logger.enable_console()
+    sfi_logger.setLevelFromOptVerbose(args.verbose)
     uploader = ManifoldUploader (url=args.url, platform=args.platform,
                                  username=args.username, password=args.password,
                                  logger=sfi_logger)
+
     for filename in args.credential_files:
         with file(filename) as f:
             result=uploader.upload (f.read(),filename)
