@@ -299,7 +299,7 @@ class Sfi:
             print line
         else:
             print line
-            self.create_parser().print_help()
+            self.create_global_parser().print_help()
         # preserve order from the code
         for command in commands_list:
             (doc, args_string, example) = commands_dict[command]
