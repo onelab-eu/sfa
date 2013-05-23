@@ -314,6 +314,49 @@ class Sfi:
             print "\n==================== %s example(s)"%self.command
             print example
 
+    def create_global_parser(self):
+
+        # Generate command line parser
+        parser = OptionParser(add_help_option=False,
+                              usage="sfi [sfi_options] command [cmd_options] [cmd_args]",
+                              description="Commands: %s"%(" ".join(commands_list)))
+        parser.add_option("-r", "--registry", dest="registry",
+                         help="root registry", metavar="URL", default=None)
+        parser.add_option("-s", "--sliceapi", dest="sm", default=None, metavar="URL",
+                         help="slice API - in general a SM URL, but can be used to talk to an aggregate")
+        parser.add_option("-R", "--raw", dest="raw", default=None,
+                          help="Save raw, unparsed server response to a file")
+        parser.add_option("", "--rawformat", dest="rawformat", type="choice",
+                          help="raw file format ([text]|pickled|json)", default="text",
+                          choices=("text","pickled","json"))
+        parser.add_option("", "--rawbanner", dest="rawbanner", default=None,
+                          help="text string to write before and after raw output")
+        parser.add_option("-d", "--dir", dest="sfi_dir",
+                         help="config & working directory - default is %default",
+                         metavar="PATH", default=Sfi.default_sfi_dir())
+        parser.add_option("-u", "--user", dest="user",
+                         help="user name", metavar="HRN", default=None)
+        parser.add_option("-a", "--auth", dest="auth",
+                         help="authority name", metavar="HRN", default=None)
+        parser.add_option("-v", "--verbose", action="count", dest="verbose", default=0,
+                         help="verbose mode - cumulative")
+        parser.add_option("-D", "--debug",
+                          action="store_true", dest="debug", default=False,
+                          help="Debug (xml-rpc) protocol messages")
+        # would it make sense to use ~/.ssh/id_rsa as a default here ?
+        parser.add_option("-k", "--private-key",
+                         action="store", dest="user_private_key", default=None,
+                         help="point to the private key file to use if not yet installed in sfi_dir")
+        parser.add_option("-t", "--timeout", dest="timeout", default=None,
+                         help="Amout of time to wait before timing out the request")
+        parser.add_option("-h", "--help", 
+                         action="store_true", dest="help", default=False,
+                         help="one page summary on commands & exit")
+        parser.disable_interspersed_args()
+
+        return parser
+        
+
     def create_command_parser(self, command):
         if command not in commands_dict:
             msg="Invalid command\n"
@@ -430,49 +473,6 @@ use this if you mean an authority instead""")
         return parser
 
         
-    def create_parser(self):
-
-        # Generate command line parser
-        parser = OptionParser(add_help_option=False,
-                              usage="sfi [sfi_options] command [cmd_options] [cmd_args]",
-                              description="Commands: %s"%(" ".join(commands_list)))
-        parser.add_option("-r", "--registry", dest="registry",
-                         help="root registry", metavar="URL", default=None)
-        parser.add_option("-s", "--sliceapi", dest="sm", default=None, metavar="URL",
-                         help="slice API - in general a SM URL, but can be used to talk to an aggregate")
-        parser.add_option("-R", "--raw", dest="raw", default=None,
-                          help="Save raw, unparsed server response to a file")
-        parser.add_option("", "--rawformat", dest="rawformat", type="choice",
-                          help="raw file format ([text]|pickled|json)", default="text",
-                          choices=("text","pickled","json"))
-        parser.add_option("", "--rawbanner", dest="rawbanner", default=None,
-                          help="text string to write before and after raw output")
-        parser.add_option("-d", "--dir", dest="sfi_dir",
-                         help="config & working directory - default is %default",
-                         metavar="PATH", default=Sfi.default_sfi_dir())
-        parser.add_option("-u", "--user", dest="user",
-                         help="user name", metavar="HRN", default=None)
-        parser.add_option("-a", "--auth", dest="auth",
-                         help="authority name", metavar="HRN", default=None)
-        parser.add_option("-v", "--verbose", action="count", dest="verbose", default=0,
-                         help="verbose mode - cumulative")
-        parser.add_option("-D", "--debug",
-                          action="store_true", dest="debug", default=False,
-                          help="Debug (xml-rpc) protocol messages")
-        # would it make sense to use ~/.ssh/id_rsa as a default here ?
-        parser.add_option("-k", "--private-key",
-                         action="store", dest="user_private_key", default=None,
-                         help="point to the private key file to use if not yet installed in sfi_dir")
-        parser.add_option("-t", "--timeout", dest="timeout", default=None,
-                         help="Amout of time to wait before timing out the request")
-        parser.add_option("-h", "--help", 
-                         action="store_true", dest="help", default=False,
-                         help="one page summary on commands & exit")
-        parser.disable_interspersed_args()
-
-        return parser
-        
-
     #
     # Main: parse arguments and dispatch to command
     #
@@ -484,7 +484,7 @@ use this if you mean an authority instead""")
         return method(command_options, command_args)
 
     def main(self):
-        self.sfi_parser = self.create_parser()
+        self.sfi_parser = self.create_global_parser()
         (options, args) = self.sfi_parser.parse_args()
         if options.help: 
             self.print_commands_help(options)
