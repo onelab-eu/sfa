@@ -976,7 +976,7 @@ use this if you mean an authority instead""")
             show_credentials(cred)
         return self.registry().Update(record_dict, cred)
   
-    @register_command("name","")
+    @register_command("hrn","")
     def remove(self, options, args):
         "remove registry record by name (Remove)"
         auth_cred = self.my_authority_credential_string()
