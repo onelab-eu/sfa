@@ -299,7 +299,7 @@ class Sfi:
             print line
         else:
             print line
-            self.create_global_parser().print_help()
+            self.create_parser_global().print_help()
         # preserve order from the code
         for command in commands_list:
             (doc, args_string, example) = commands_dict[command]
@@ -308,7 +308,7 @@ class Sfi:
             doc=doc.replace("\n","\n"+35*' ')
             print format3%(command,args_string,doc)
             if verbose:
-                self.create_command_parser(command).print_help()
+                self.create_parser_command(command).print_help()
             
     ### now if a known command was found we can be more verbose on that one
     def print_help (self):
@@ -323,7 +323,7 @@ class Sfi:
             print "\n==================== %s example(s)"%self.command
             print example
 
-    def create_global_parser(self):
+    def create_parser_global(self):
         # Generate command line parser
         parser = OptionParser(add_help_option=False,
                               usage="sfi [sfi_options] command [cmd_options] [cmd_args]",
@@ -365,7 +365,7 @@ class Sfi:
         return parser
         
 
-    def create_command_parser(self, command):
+    def create_parser_command(self, command):
         if command not in commands_dict:
             msg="Invalid command\n"
             msg+="Commands: "
@@ -385,6 +385,14 @@ class Sfi:
         if command in ("config"):
             parser.add_option('-m', '--myslice', dest='myslice', action='store_true', default=False,
                               help='how myslice config variables as well')
+
+        if command in ("version"):
+            parser.add_option("-R","--registry-version",
+                              action="store_true", dest="version_registry", default=False,
+                              help="probe registry version instead of sliceapi")
+            parser.add_option("-l","--local",
+                              action="store_true", dest="version_local", default=False,
+                              help="display version of the local client")
 
         if command in ("add", "update"):
             parser.add_option('-x', '--xrn', dest='xrn', metavar='<xrn>', help='object hrn/urn (mandatory)')
@@ -476,15 +484,11 @@ class Sfi:
            parser.add_option("-A","--to-authority",dest='delegate_to_authority',action='store_true',default=False,
                              help="""by default the mandatory argument is expected to be a user, 
 use this if you mean an authority instead""")
-        
-        if command in ("version"):
-            parser.add_option("-R","--registry-version",
-                              action="store_true", dest="version_registry", default=False,
-                              help="probe registry version instead of sliceapi")
-            parser.add_option("-l","--local",
-                              action="store_true", dest="version_local", default=False,
-                              help="display version of the local client")
 
+        if command in ("myslice"):
+            parser.add_option("-p","--password",dest='password',action='store',default=None,
+                              help="specify mainfold password on the command line")
+        
         return parser
 
         
@@ -499,7 +503,7 @@ use this if you mean an authority instead""")
         return method(command_options, command_args)
 
     def main(self):
-        self.sfi_parser = self.create_global_parser()
+        self.sfi_parser = self.create_parser_global()
         (options, args) = self.sfi_parser.parse_args()
         if options.help: 
             self.print_commands_help(options)
@@ -522,7 +526,7 @@ use this if you mean an authority instead""")
             sys.exit(1)
         # second pass options parsing
         self.command=command
-        self.command_parser = self.create_command_parser(command)
+        self.command_parser = self.create_parser_command(command)
         (command_options, command_args) = self.command_parser.parse_args(args[1:])
         if command_options.help:
             self.print_help()
@@ -1547,8 +1551,12 @@ $ sfi m
         delegatee_hrn=myslice_dict['delegate']
         hrn_delegated_credentials = []
         for (hrn, htype, credential) in hrn_credentials:
-            sfi_logger.info("Computing delegated credential for %s (%s)"%(hrn,htype))
-            hrn_delegated_credentials.append ((hrn, htype, self.client_bootstrap.delegate_credential_string (credential, delegatee_hrn, delegatee_type),))
+            delegated_credential = self.client_bootstrap.delegate_credential_string (credential, delegatee_hrn, delegatee_type)
+            hrn_delegated_credentials.append ((hrn, htype, delegated_credential, ))
+            # inspect
+            inspect=Credential(string=delegated_credential)
+            expire_datetime=inspect.get_expiration()
+            sfi_logger.info("Delegated credential for %s (%s) expires on %s"%(hrn,htype,expire_datetime))
 
         # (f) and finally upload them to manifold server
         # xxx todo add an option so the password can be set on the command line
@@ -1556,11 +1564,12 @@ $ sfi m
         uploader = ManifoldUploader (logger=sfi_logger,
                                      url=myslice_dict['backend'],
                                      platform=myslice_dict['platform'],
-                                     username=myslice_dict['username'])
+                                     username=myslice_dict['username'],
+                                     password=options.password)
         uploader.prompt_all()
         for (hrn,htype,delegated_credential) in hrn_delegated_credentials:
             sfi_logger.info("Uploading delegated credential for %s (%s)"%(hrn,htype))
-            uploader.upload(delegated_credential,message=hrn)
+            uploader.upload(delegated_credential,message="%s (%s)"%(hrn,htype))
         # at first I thought we would want to save these,
         # like 'sfi delegate does' but on second thought
         # it is probably not helpful as people would not
