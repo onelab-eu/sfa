@@ -1,7 +1,7 @@
 from sfa.util.sfalogging import logger
 from sfa.util.xml import XpathFilter
 from sfa.util.xrn import Xrn
-
+from sfa.util.sfatime import utcparse, datetime_to_string, datetime_to_epoch
 
 
 #from sfa.rspecs.elements.versions.sfav1PLTag import SFAv1PLTag
@@ -26,6 +26,8 @@ class Slabv1Lease:
          
         lease_elems = []       
         for lease in leases:
+            lease['start_time'] = datetime_to_string(utcparse(lease['start_time']))
+
             lease_fields = ['lease_id', 'component_id', 'slice_id', 'start_time', 'duration']
             lease_elem = network_elem.add_instance('lease', lease, lease_fields)
             lease_elems.append(lease_elem)
@@ -46,7 +48,7 @@ class Slabv1Lease:
             for node_elem in node_elems:
                  lease = Lease(lease_elem.attrib, lease_elem)
                  lease['slice_id'] = lease_elem.attrib['slice_id']
-                 lease['start_time'] = lease_elem.attrib['start_time']
+                 lease['start_time'] = datetime_to_epoch(utcparse(lease_elem.attrib['start_time']))
                  lease['duration'] = lease_elem.attrib['duration']
                  lease['component_id'] = node_elem.attrib['component_id']
                  leases.append(lease)
