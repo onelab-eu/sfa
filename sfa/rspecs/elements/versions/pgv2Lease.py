@@ -1,5 +1,6 @@
 from sfa.util.xrn import Xrn
 from sfa.util.xml import XpathFilter
+from sfa.util.sfatime import utcparse, datetime_to_string, datetime_to_epoch
 
 from sfa.rspecs.elements.node import Node
 from sfa.rspecs.elements.sliver import Sliver
@@ -39,6 +40,8 @@ class PGv2Lease:
 
         lease_elems = []
         for lease in grouped_leases:
+            lease[0]['start_time'] = datetime_to_string(utcparse(lease[0]['start_time']))
+
             lease_fields = ['slice_id', 'start_time', 'duration']
             lease_elem = xml.add_instance('lease', lease[0], lease_fields)
             lease_elems.append(lease_elem)
@@ -64,7 +67,7 @@ class PGv2Lease:
             for node_elem in node_elems:
                  lease = Lease(lease_elem.attrib, lease_elem)
                  lease['slice_id'] = lease_elem.attrib['slice_id']
-                 lease['start_time'] = lease_elem.attrib['start_time']
+                 lease['start_time'] = datetime_to_epoch(utcparse(lease_elem.attrib['start_time']))
                  lease['duration'] = lease_elem.attrib['duration']
                  lease['component_id'] = node_elem.attrib['component_id']
                  leases.append(lease)

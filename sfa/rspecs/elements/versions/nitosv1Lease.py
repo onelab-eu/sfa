@@ -1,6 +1,7 @@
 from sfa.util.sfalogging import logger
 from sfa.util.xml import XpathFilter
 from sfa.util.xrn import Xrn
+from sfa.util.sfatime import utcparse, datetime_to_string, datetime_to_epoch
 
 from sfa.rspecs.elements.element import Element
 from sfa.rspecs.elements.node import Node
@@ -53,7 +54,8 @@ class NITOSv1Lease:
          
         lease_elems = []       
         for lease in grouped_leases:
-            #lease_fields = ['lease_id', 'component_id', 'slice_id', 'start_time', 'duration']
+            lease[0]['start_time'] = datetime_to_string(utcparse(lease[0]['start_time']))
+
             lease_fields = ['slice_id', 'start_time', 'duration']
             lease_elem = network_elem.add_instance('lease', lease[0], lease_fields)
             lease_elems.append(lease_elem)
@@ -65,6 +67,7 @@ class NITOSv1Lease:
             # add reserved channels of this lease
             #channels = [{'channel_id': 1}, {'channel_id': 2}]
             for channel in channels:
+                 channel['start_time'] = datetime_to_string(utcparse(channel['start_time']))
                  if channel['slice_id'] == lease[0]['slice_id'] and channel['start_time'] == lease[0]['start_time'] and channel['duration'] == lease[0]['duration']:
                      lease_elem.add_instance('channel', channel, ['channel_num'])
             
@@ -85,7 +88,7 @@ class NITOSv1Lease:
             for node_elem in node_elems:
                  lease = Lease(lease_elem.attrib, lease_elem)
                  lease['slice_id'] = lease_elem.attrib['slice_id']
-                 lease['start_time'] = lease_elem.attrib['start_time']
+                 lease['start_time'] = datetime_to_epoch(utcparse(lease_elem.attrib['start_time']))
                  lease['duration'] = lease_elem.attrib['duration']
                  lease['component_id'] = node_elem.attrib['component_id']
                  leases.append(lease)
@@ -94,7 +97,7 @@ class NITOSv1Lease:
             for channel_elem in channel_elems:
                  channel = Channel(channel_elem.attrib, channel_elem)
                  channel['slice_id'] = lease_elem.attrib['slice_id']
-                 channel['start_time'] = lease_elem.attrib['start_time']
+                 channel['start_time'] = datetime_to_epoch(utcparse(lease_elem.attrib['start_time']))
                  channel['duration'] = lease_elem.attrib['duration']
                  channel['channel_num'] = channel_elem.attrib['channel_num']
                  channels.append(channel)
