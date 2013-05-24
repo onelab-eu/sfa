@@ -473,6 +473,10 @@ use this if you mean an authority instead""")
         if command in ("myslice"):
             parser.add_option("-p","--password",dest='password',action='store',default=None,
                               help="specify mainfold password on the command line")
+            parser.add_option("-s", "--slice", dest="delegate_slices",action='append',default=[],
+                             metavar="slice_hrn", help="delegate cred. for slice HRN")
+            parser.add_option("-a", "--auths", dest='delegate_auths',action='append',default=[],
+                             metavar='auth_hrn', help="delegate PI cred for auth HRN")
         
         return parser
 
@@ -1512,7 +1516,6 @@ $ sfi m
         if len(args)>0:
             self.print_help()
             sys.exit(1)
-
         ### the rough sketch goes like this
         # (a) rain check for sufficient config in sfi_config
         # we don't allow to override these settings for now
@@ -1531,14 +1534,25 @@ $ sfi m
         my_records=self.registry().Resolve(self.user,self.my_credential_string)
         if len(my_records)!=1: print "Cannot Resolve %s -- exiting"%self.user; sys.exit(1)
         my_record=my_records[0]
-        my_auths = my_record['reg-pi-authorities']
-        self.logger.info("Found %d authorities that we are PI for"%len(my_auths))
-        self.logger.debug("They are %s"%(my_auths))
+        my_auths_all = my_record['reg-pi-authorities']
+        self.logger.info("Found %d authorities that we are PI for"%len(my_auths_all))
+        self.logger.debug("They are %s"%(my_auths_all))
+        
+        my_auths = my_auths_all
+        if options.delegate_auths:
+            my_auths = list(set(my_auths_all).intersection(set(options.delegate_auths)))
 
+        self.logger.info("Delegate PI creds for authorities: %s"%my_auths        )
         # (c) get the set of slices that we are in
-        my_slices=my_record['reg-slices']
-        self.logger.info("Found %d slices that we are member of"%len(my_slices))
-        self.logger.debug("They are: %s"%(my_slices))
+        my_slices_all=my_record['reg-slices']
+        self.logger.info("Found %d slices that we are member of"%len(my_slices_all))
+        self.logger.debug("They are: %s"%(my_slices_all))
+ 
+        my_slices = my_slices_all
+        if options.delegate_slices:
+            my_slices = list(set(my_slices_all).intersection(set(options.delegate_slices)))
+
+        self.logger.info("Delegate slice creds for slices: %s"%my_slices)
 
         # (d) make sure we have *valid* credentials for all these
         hrn_credentials=[]
