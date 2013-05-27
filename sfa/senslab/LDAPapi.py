@@ -331,7 +331,16 @@ class LDAPapi :
         
     def make_ldap_attributes_from_record(self, record):
         """When addind a new user to Senslab's LDAP, creates an attributes 
-        dictionnary from the SFA record.
+        dictionnary from the SFA record understandable by LDAP.
+        User is automatically validated (account enabled) and described
+        as a SFA USER FROM OUTSIDE SENSLAB'. 
+        :param record: must contain the following keys and values:
+        first_name, last_name, mail, pkey (ssh key).
+        :type record: dict
+        
+        :return: dictionary of attributes using LDAP data structure
+        model.
+        :rtype: dict
         
         """
 
@@ -394,8 +403,19 @@ class LDAPapi :
 
 
     def LdapAddUser(self, record) :
-        """Add SFA user to LDAP if it is not in LDAP  yet. """
-        logger.debug(" \r\n \t LDAP LdapAddUser \r\n\r\n =====================================================\r\n ")
+        """Add SFA user to LDAP if it is not in LDAP  yet. 
+        :param record: dictionnary with the user's data. 
+        
+        :return: a dictionary with the status (Fail= False, Success= True)
+        and the uid of the newly added user if successful, or the error
+        meassage it is not. Dict has keys bool and message in case of failure,
+        and bool uid in case of success.
+        :rtype: dict
+        
+        ..seealso: make_ldap_filters_from_record
+        
+        """
+        logger.debug(" \r\n \t LDAP LdapAddUser \r\n\r\n ================\r\n ")
         user_ldap_attrs = self.make_ldap_attributes_from_record(record)
 
         
@@ -672,7 +692,7 @@ class LDAPapi :
                 
             results =  {	
                         'type': 'user',
-                        'pkey': ldapentry['sshPublicKey'][0],
+                        'pkey': ldapentry['sshPublicKey'],
                         #'uid': ldapentry[1]['uid'][0],
                         'uid': tmpname ,
                         'email':tmpemail,
