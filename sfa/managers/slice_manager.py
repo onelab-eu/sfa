@@ -501,7 +501,7 @@ class SliceManager:
                 continue
             interface = api.aggregates[aggregate]
             server = api.server_proxy(interface, cred)    
-            threads.run(server.PerformOperationalAction, xrn, cred, action, options)
+            threads.run(server.PerformOperationalAction, xrn, [cred], action, options)
         threads.get_results()    
         return 1
      
