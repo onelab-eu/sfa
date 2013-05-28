@@ -746,7 +746,7 @@ class PlDriver (Driver):
             raise UnsupportedOperation(action)
 
         # fault if sliver is not full allocated (operational status is geni_pending_allocation)
-        description = self.describe(urns, None, options)
+        description = self.describe(urns, 'GENI 3', options)
         for sliver in description['geni_slivers']:
             if sliver['geni_operational_status'] == 'geni_pending_allocation':
                 raise UnsupportedOperation(action, "Sliver must be fully allocated (operational status is not geni_pending_allocation)")
@@ -754,7 +754,7 @@ class PlDriver (Driver):
         # Perform Operational Action Here
         #
 
-        geni_slivers = self.describe(urns, None, options)['geni_slivers']
+        geni_slivers = self.describe(urns, 'GENI 3', options)['geni_slivers']
         return geni_slivers
 
     # set the 'enabled' tag to 0
