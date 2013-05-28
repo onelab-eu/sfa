@@ -190,7 +190,7 @@ class V2ToV3Adapter:
 
 
             else: 
-                # same as v2 (list_resources and registry methods) 
+                # same as v2 ( registry methods) 
                 result=getattr(self.driver, name)(*args, **kwds)
             return result
         return func
