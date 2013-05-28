@@ -14,10 +14,7 @@ class V2ToV3Adapter:
     def __init__ (self, config):
         flavour = config.SFA_GENERIC_FLAVOUR
         # to be cleaned
-        if flavour == "pl":
-            from sfa.planetlab.pldriver import PlDriver
-            self.driver = PlDriver(config)
-        elif flavour == "nitos":
+        if flavour == "nitos":
             from sfa.nitos.nitosdriver import NitosDriver
             self.driver = NitosDriver(config)
         elif flavour == "fd":
