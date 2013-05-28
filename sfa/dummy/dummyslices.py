@@ -103,7 +103,7 @@ class DummySlices:
             slice['user_ids'] = []
         else:
             slice = slices[0]
-            if slice_record.get('expires'):
+            if slice_record and slice_record.get('expires'):
                 requested_expires = int(datetime_to_epoch(utcparse(slice_record['expires'])))
                 if requested_expires and slice['expires'] != requested_expires:
                     self.driver.shell.UpdateSlice( {'slice_id': slice['slice_id'], 'fields':{'expires' : requested_expires}})

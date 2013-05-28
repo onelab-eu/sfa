@@ -424,9 +424,10 @@ class DummyDriver (Driver):
         # find out where this slice is currently running
         slice_name = hrn_to_dummy_slicename(slice_hrn)
         
-        slice = self.shell.GetSlices({'slice_name': slice_name})
+        slices = self.shell.GetSlices({'slice_name': slice_name})
         if len(slices) == 0:        
             raise SliverDoesNotExist("%s (used %s as slicename internally)" % (slice_hrn, slicename))
+        slice = slices[0]
         
         # report about the local nodes only
         nodes = self.shell.GetNodes({'node_ids':slice['node_ids']})
@@ -463,7 +464,7 @@ class DummyDriver (Driver):
             res = {}
             res['dummy_hostname'] = node['hostname']
             res['geni_expires'] = datetime_to_string(utcparse(slice['expires']))
-            sliver_id = Xrn(slice_urn, type='slice', id=node['node_id'], authority=self.hrn).urn
+            sliver_id = Xrn(slice_urn, type='slice', id=node['node_id']).urn
             res['geni_urn'] = sliver_id
             res['geni_status'] = 'ready'
             res['geni_error'] = ''
