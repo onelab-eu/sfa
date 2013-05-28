@@ -86,7 +86,7 @@ class NitosAggregate:
 
         rspec_nodes = []
         for node in nodes:
-            rspec_node = Node()
+            rspec_node = NodeElement()
             site_name = self.driver.testbedInfo['name']
             rspec_node['component_id'] = hostname_to_urn(self.driver.hrn, site_name, node['hostname'])
             rspec_node['component_name'] = node['hostname']

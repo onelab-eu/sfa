@@ -5,7 +5,7 @@ from sfa.rspecs.rspec import RSpec
 #from sfa.rspecs.elements.location import Location
 from sfa.rspecs.elements.hardware_type import HardwareType
 from sfa.rspecs.elements.login import Login
-from sfa.rspecs.elements.services import Services
+from sfa.rspecs.elements.services import ServicesElement
 from sfa.rspecs.elements.sliver import Sliver
 from sfa.rspecs.elements.lease import Lease
 from sfa.rspecs.elements.granularity import Granularity
@@ -258,7 +258,7 @@ class SlabAggregate:
                     
                     # slivers always provide the ssh service
                     login = Login({'authentication': 'ssh-keys', 'hostname': node['hostname'], 'port':'22', 'username': sliver['name']})
-                    service = Services({'login': login})
+                    service = ServicesElement({'login': login})
                     rspec_node['services'] = [service]
                 rspec_nodes.append(rspec_node)
 

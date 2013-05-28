@@ -5,13 +5,13 @@ from sfa.util.sfalogging import logger
 
 from sfa.rspecs.rspec import RSpec
 from sfa.rspecs.elements.hardware_type import HardwareType
-from sfa.rspecs.elements.node import Node
+from sfa.rspecs.elements.node import NodeElement
 from sfa.rspecs.elements.link import Link
 from sfa.rspecs.elements.sliver import Sliver
 from sfa.rspecs.elements.login import Login
 from sfa.rspecs.elements.location import Location
 from sfa.rspecs.elements.interface import Interface
-from sfa.rspecs.elements.services import Services
+from sfa.rspecs.elements.services import ServicesElement
 from sfa.rspecs.elements.pltag import PLTag
 from sfa.rspecs.elements.lease import Lease
 from sfa.rspecs.elements.granularity import Granularity
@@ -66,7 +66,7 @@ class DummyAggregate:
         
         rspec_nodes = []
         for node in nodes:
-            rspec_node = Node()
+            rspec_node = NodeElement()
             # xxx how to retrieve site['login_base']
             site=self.driver.testbedInfo
             rspec_node['component_id'] = hostname_to_urn(self.driver.hrn, site['name'], node['hostname'])
@@ -90,7 +90,7 @@ class DummyAggregate:
                 
                 # slivers always provide the ssh service
                 login = Login({'authentication': 'ssh-keys', 'hostname': node['hostname'], 'port':'22', 'username': slice['slice_name']})
-                service = Services({'login': login})
+                service = ServicesElement({'login': login})
                 rspec_node['services'] = [service]
             rspec_nodes.append(rspec_node)
         return rspec_nodes
