@@ -399,8 +399,11 @@ class SliceManager:
             interface = api.aggregates[aggregate]
             server = api.server_proxy(interface, cred)
             threads.run(_Delete, server, xrn, [cred], options)
-        threads.get_results()
-        return 1
+        
+        results = []
+        for result in threads.get_results():
+            results += ReturnValue.get_value(result)
+        return results
     
     
     # first draft at a merging SliverStatus
