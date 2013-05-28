@@ -9,4 +9,5 @@ import sfa.federica.fddriver
 class fd (pl):
 
     def driver_class (self) :
-        return sfa.federica.fddriver.FdDriver
+        import sfa.managers.v2_to_v3_adapter
+        return sfa.managers.v2_to_v3_adapter.V2ToV3Adapter

@@ -30,8 +30,8 @@ class slab (Generic):
 
     # driver class for server-side services, talk to the whole testbed
     def driver_class (self):
-        import sfa.senslab.slabdriver
-        return sfa.senslab.slabdriver.SlabDriver
+        import sfa.managers.v2_to_v3_adapter
+        return sfa.managers.v2_to_v3_adapter.V2ToV3Adapter
 
     # slab does not have a component manager yet
     # manager class
