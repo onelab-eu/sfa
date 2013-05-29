@@ -203,7 +203,13 @@ class PlAggregate:
             rspec_node['available'] = 'true'
         else:
             rspec_node['available'] = 'false'
-        rspec_node['exclusive'] = 'false'
+
+        #distinguish between Shared and Reservable nodes
+        if node['node_type'] == 'reservable':
+            rspec_node['exclusive'] = 'true'
+        else:
+            rspec_node['exclusive'] = 'false'
+
         rspec_node['hardware_types'] = [HardwareType({'name': 'plab-pc'}),
                                         HardwareType({'name': 'pc'})]
         # only doing this because protogeni rspec needs
