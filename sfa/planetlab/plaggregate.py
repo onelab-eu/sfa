@@ -193,7 +193,7 @@ class PlAggregate:
         rspec_node = NodeElement()
         # xxx how to retrieve site['login_base']
         site=sites[node['site_id']]
-        rspec_node['component_id'] = PlXrn(self.driver.hrn, hostname=node['hostname']).get_urn()
+        rspec_node['component_id'] = hostname_to_urn(self.driver.hrn, site['login_base'], node['hostname'])
         rspec_node['component_name'] = node['hostname']
         rspec_node['component_manager_id'] = Xrn(self.driver.hrn, 'authority+cm').get_urn()
         rspec_node['authority_id'] = hrn_to_urn(PlXrn.site_hrn(self.driver.hrn, site['login_base']), 'authority+sa')
