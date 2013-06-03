@@ -173,7 +173,7 @@ class SlabAggregate:
         slice_nodes_list = []
         logger.debug("SLABAGGREGATE api get_nodes slice_nodes_list  %s "\
                                                              %(slices )) 
-        if slices is not []:
+        if slices is not None:
             for one_slice in slices:
                 try:
                     slice_nodes_list = one_slice['node_ids']

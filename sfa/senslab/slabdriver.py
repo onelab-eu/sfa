@@ -416,7 +416,11 @@ class SlabDriver(Driver):
         :rtype: dictionary 
         """
         requested_lease_list = self._get_requested_leases_list(rspec)
+        logger.debug("SLABDRIVER _process_requested_jobs requested_lease_list \
+        %s"%(requested_lease_list))
         job_dict =  self._group_leases_by_start_time(requested_lease_list) 
+        logger.debug("SLABDRIVER _process_requested_jobs  job_dict\
+        %s"%(job_dict))
         
         return job_dict
                 
