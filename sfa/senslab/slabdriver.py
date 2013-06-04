@@ -366,10 +366,10 @@ class SlabDriver(Driver):
                     #the lease to the requested leases list
                     duration_in_seconds = \
                             int(single_requested_lease['duration'])*60
-                    if duration_in_seconds > self.slab_api.GetLeaseGranularity():
+                    if duration_in_seconds > GetMinExperimentDurationInSec() :
                         requested_lease_list.append(single_requested_lease)
                         
-                    return requested_lease_list
+        return requested_lease_list
                         
     @staticmethod                    
     def _group_leases_by_start_time(requested_lease_list):
@@ -394,8 +394,8 @@ class SlabDriver(Driver):
                 
             if lease['start_time'] not in requested_job_dict:
                 if isinstance(lease['hostname'], str):
-                    #lease['hostname'] = [lease['hostname']]
-                    lease['hostname'] =  list(lease['hostname'])
+                    lease['hostname'] = [lease['hostname']]
+
                     
                 requested_job_dict[lease['start_time']] = lease
                 
