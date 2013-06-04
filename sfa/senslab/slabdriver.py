@@ -366,7 +366,7 @@ class SlabDriver(Driver):
                     #the lease to the requested leases list
                     duration_in_seconds = \
                             int(single_requested_lease['duration'])*60
-                    if duration_in_seconds > GetMinExperimentDurationInSec() :
+                    if duration_in_seconds > self.slab_api.GetMinExperimentDurationInSec() :
                         requested_lease_list.append(single_requested_lease)
                         
         return requested_lease_list
