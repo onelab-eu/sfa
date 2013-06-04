@@ -5,11 +5,12 @@ import time
 dummy_url = "http://localhost:8080"
 dummy_api = xmlrpclib.ServerProxy(dummy_url)
 
-# Edit the parameters with your user info:
+# Add a user:
 my_user_id = dummy_api.AddUser({'email': 'john.doe@test.net', 'user_name': 'john.doe', 'keys': ['copy here your ssh-rsa public key']})
-# Your user will be attached with the slice named : slice2 :
+# Attach the user with the slice named : slice2 :
 dummy_api.AddUserToSlice({'slice_id': 2, 'user_id': my_user_id})
 
-
-print dummy_api.GetUsers()[-1]
-print dummy_api.GetSlices()[-1]
+# Display the list of users
+print dummy_api.GetUsers()
+# Display the list of slices
+print dummy_api.GetSlices()

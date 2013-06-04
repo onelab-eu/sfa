@@ -19,8 +19,8 @@ STEP-BY-STEP GUIDE :
 # sfa-config-tty
 Enter command (u for usual changes, w to save, ? for help) u
 == sfa_generic_flavour : [dummy] dummy ("dummy" flavour)
-== sfa_interface_hrn : [pla] pla   (Choose your Authority name)           
-== sfa_registry_root_auth : [pla] pla (Choose your Authority name)
+== sfa_interface_hrn : [pla] topdomain   (Choose your Authority name)           
+== sfa_registry_root_auth : [pla] topdomain (Choose your Authority name)
 == sfa_registry_host : [localhost] localhost
 == sfa_aggregate_host : [localhost] localhost
 == sfa_sm_host : [localhost] localhost
@@ -44,22 +44,27 @@ SFA: Aggregate                                             [  OK  ]
 SFA: SliceMgr                                              [  OK  ]
 Enter command (u for usual changes, w to save, ? for help) q
 
-4. Add your user to the dummy testbed and attach it to a slice:
-
-Edit /usr/lib/python2.7/site-packages/sfa/dummy/dummy_testbed_api_client.py with your user info and run:
- 
-# python /usr/lib/python2.7/site-packages/sfa/dummy/dummy_testbed_api_client.py 
-
 5. Import Dummy testbed data to SFA (users, slices, nodes):
 
 # sfaadmin.py reg import_registry
 
+5. Create a user and a slice:
+
+# sfaadmin.py reg register -t user -x topdomain.dummy.bob -k /root/.ssh/id_rsa.pub -e bob@dummy.net
+# sfaadmin.py reg register -t slice -x topdomain.dummy.bob_slice -r topdomain.dummy.bob
+
 6. Configure you SFI client (http://svn.planet-lab.org/wiki/SFATutorialConfigureSFA#ConfigureSFAClientSFI)
+Example of sfi_config:
+[sfi]
+auth = topdomain.dummy
+user = topdomain.dummy.bob
+registry = http://localhost:12345/
+sm = http://localhost:12346/
 
 7. Make a test: 
 update the following command with your already configured Authority name. 
 
-# sfi.py list pla.dummy 
+# sfi.py list topdomain.dummy 
 
 8. Now continue testing SFA, have a look at the dummy driver code and write your testbed driver for SFA... Enjoy.
 

@@ -32,7 +32,7 @@ def FilterList(myfilter, mylist):
              if 'ids' in key:
                  pass
              else:
-                 if myfilter[key] != item[key]:
+                 if isinstance(myfilter[key], str) and myfilter[key] != item[key] or isinstance(myfilter[key], list) and item[key] not in myfilter[key]:
                      result.remove(item)
                      break
     return result
