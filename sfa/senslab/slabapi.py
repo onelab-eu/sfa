@@ -42,6 +42,9 @@ class SlabTestbedAPI():
         return
      
      
+    @staticmethod
+    def GetMinExperimentDurationInSec():
+        return 600
                 
     @staticmethod     
     def GetPeers (peer_filter=None ):
@@ -1228,7 +1231,9 @@ class SlabTestbedAPI():
             
             #Now we have the slice record fixed_slicerec_dict, get the 
             #jobs associated to this slice
-            leases_list = self.GetLeases(login = login)
+            leases_list = []
+            if login is not None:
+                leases_list = self.GetLeases(login = login)
             #If no job is running or no job scheduled 
             #return only the slice record           
             if leases_list == [] and fixed_slicerec_dict:

@@ -310,8 +310,8 @@ class SlabAggregate:
    
       
 #from plc/aggregate.py 
-    def get_rspec(self, slice_xrn=None, login=None, version = None, options
-    =None):
+    def get_rspec(self, slice_xrn=None, login=None, version = None, \
+                options=None):
 
         rspec = None
         version_manager = VersionManager()	
@@ -335,21 +335,22 @@ class SlabAggregate:
 
         
         #if slice and 'expires' in slice:
-           #rspec.xml.set('expires',  datetime_to_epoch(slice['expires']))
+           #rspec.xml.set('expires',\
+                #datetime_to_string(utcparse(slice['expires']))
          # add sliver defaults
         #nodes, links = self.get_nodes(slice, slivers)
         logger.debug("\r\n \r\n SlabAggregate \tget_rspec *** \
                                         slice_xrn %s slices  %s\r\n \r\n"\
                                             %(slice_xrn, slices)) 
                                             
-        try:                                    
+        if options is not None:                                    
             lease_option = options['list_leases']
-        except KeyError:
+        else:
             #If no options are specified, at least print the resources
             lease_option = 'all'
            #if slice_xrn :
                #lease_option = 'all'
-            pass 
+          
         
         if lease_option in ['all', 'resources']:
         #if not options.get('list_leases') or options.get('list_leases') 
