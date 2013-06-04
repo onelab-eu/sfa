@@ -5,7 +5,7 @@ from sfa.util.sfalogging import logger
 from sfa.storage.alchemy import dbsession
 from sqlalchemy.orm import joinedload
 from sfa.storage.model import RegRecord, RegUser, RegSlice, RegKey
-from sfa.senslab.slabpostgres import SlabDB, slab_dbsession, SenslabXP
+from sfa.senslab.slabpostgres import slab_dbsession, SenslabXP
 
 from sfa.senslab.OARrestapi import  OARrestapi
 from sfa.senslab.LDAPapi import LDAPapi
@@ -15,36 +15,48 @@ from sfa.util.xrn import Xrn, hrn_to_urn, get_authority
 from sfa.trust.certificate import Keypair, convert_public_key
 from sfa.trust.gid import create_uuid
 from sfa.trust.hierarchy import Hierarchy
-
-                                                                
-from sfa.senslab.slabaggregate import SlabAggregate, slab_xrn_to_hostname, \
-                                                            slab_xrn_object
+                
+from sfa.senslab.slabaggregate import slab_xrn_object
 
 class SlabTestbedAPI():
+    """ Class enabled to use LDAP and OAR api calls. """
     
     def __init__(self, config):
+        """Creates an instance of OARrestapi and LDAPapi which will be used to
+        issue calls to OAR or LDAP methods.
+        Set the time format  and the testbed granularity used for OAR 
+        reservation and leases. 
+        
+        :param config: configuration object from sfa.util.config
+        :type config: Config object 
+        """
         self.oar = OARrestapi()
         self.ldap = LDAPapi()
         self.time_format = "%Y-%m-%d %H:%M:%S"
         self.root_auth = config.SFA_REGISTRY_ROOT_AUTH
-        self.grain = 600 # 10 mins lease
+        self.grain = 1 # 10 mins lease minimum
+        #import logging, logging.handlers
+        #from sfa.util.sfalogging import _SfaLogger
+        #sql_logger = _SfaLogger(loggername = 'sqlalchemy.engine', \
+                                                    #level=logging.DEBUG)
         return
      
      
                 
-    #TODO clean GetPeers. 05/07/12SA   
     @staticmethod     
-    def GetPeers ( auth = None, peer_filter=None ):
+    def GetPeers (peer_filter=None ):
         """ Gathers registered authorities in SFA DB and looks for specific peer
         if peer_filter is specified. 
-        :returns list of records.
+        :param peer_filter: name of the site authority looked for.
+        :type peer_filter: string
+        :return: list of records.
      
         """
 
         existing_records = {}
         existing_hrns_by_types = {}
-        logger.debug("SLABDRIVER \tGetPeers auth = %s, peer_filter %s, \
-                    " %(auth , peer_filter))
+        logger.debug("SLABDRIVER \tGetPeers peer_filter %s, \
+                    " %(peer_filter))
         all_records = dbsession.query(RegRecord).filter(RegRecord.type.like('%authority%')).all()
         
         for record in all_records:
@@ -73,10 +85,6 @@ class SlabTestbedAPI():
             pass
                 
         return_records = records_list
-        #if not peer_filter :
-            #return records_list
-
-       
         logger.debug("SLABDRIVER \tGetPeer return_records %s " \
                                                     %(return_records))
         return return_records
@@ -88,8 +96,15 @@ class SlabTestbedAPI():
     #over the records' list
     def GetPersons(self, person_filter=None):
         """
-        person_filter should be a list of dictionnaries when not set to None.
-        Returns a list of users whose accounts are enabled found in ldap.
+        Get the enabled users and their properties from Senslab LDAP. 
+        If a filter is specified, looks for the user whose properties match
+        the filter, otherwise returns the whole enabled users'list.
+        :param person_filter: Must be a list of dictionnaries 
+        with users properties when not set to None.
+        :param person_filter: list of dict
+        :return:Returns a list of users whose accounts are enabled 
+        found in ldap.
+        :rtype: list of dicts
        
         """
         logger.debug("SLABDRIVER \tGetPersons person_filter %s" \
@@ -120,23 +135,29 @@ class SlabTestbedAPI():
         return person_list
 
 
-
-
-    def GetTimezone(self):
-        """ Get the OAR servier time and timezone.
-        Unused SA 16/11/12"""
-        server_timestamp, server_tz = self.oar.parser.\
-                                            SendRequest("GET_timezone")
-        return server_timestamp, server_tz
-    
-
-
+    #def GetTimezone(self):
+        #""" Returns the OAR server time and timezone.
+        #Unused SA 30/05/13"""
+        #server_timestamp, server_tz = self.oar.parser.\
+                                            #SendRequest("GET_timezone")
+        #return server_timestamp, server_tz
 
     def DeleteJobs(self, job_id, username): 
         
-        """Delete a job on OAR given its job id and the username assoaciated. 
-        Posts a delete request to OAR."""       
-        logger.debug("SLABDRIVER \tDeleteJobs jobid  %s username %s " %(job_id, username))
+        """ Deletes the job with the specified job_id and username on OAR by
+        posting a delete request to OAR.
+        
+        :param job_id: job id in OAR.
+        :param username: user's senslab login in LDAP. 
+        :type job_id:integer
+        :type username: string
+        
+        :return: dictionary with the job id and if delete has been successful
+        (True) or no (False)
+        :rtype: dict
+        """       
+        logger.debug("SLABDRIVER \tDeleteJobs jobid  %s username %s "\
+                                 %(job_id, username))
         if not job_id or job_id is -1:
             return
 
@@ -147,9 +168,13 @@ class SlabTestbedAPI():
 
         answer = self.oar.POSTRequestToOARRestAPI('DELETE_jobs_id', \
                                                     reqdict,username)
+        if answer['status'] == 'Delete request registered':
+            ret = {job_id : True }
+        else:
+            ret = {job_id :False }
         logger.debug("SLABDRIVER \tDeleteJobs jobid  %s \r\n answer %s \
                                 username %s" %(job_id, answer, username))
-        return answer
+        return ret
 
             
         
@@ -193,10 +218,19 @@ class SlabTestbedAPI():
 
         
     def GetJobsResources(self, job_id, username = None):
-        """ Gets the list of nodes associated with the job_id. 
+        """ Gets the list of nodes associated with the job_id and username 
+        if provided. 
         Transforms the senslab hostnames to the corresponding
         SFA nodes hrns.
-        Rertuns dict key :'node_ids' , value : hostnames list """
+        Rertuns dict key :'node_ids' , value : hostnames list 
+        :param username: user's LDAP login
+        :paran job_id: job's OAR identifier.
+        :type username: string
+        :type job_id: integer
+        
+        :return: dicionary with nodes' hostnames belonging to the job.
+        :rtype: dict
+        """
 
         req = "GET_jobs_id_resources"
        
@@ -216,55 +250,73 @@ class SlabTestbedAPI():
         return job_info
 
             
-    def get_info_on_reserved_nodes(self, job_info, node_list_name):
-        #Get the list of the testbed nodes records and make a 
-        #dictionnary keyed on the hostname out of it
-        node_list_dict = self.GetNodes() 
-        #node_hostname_list = []
-        node_hostname_list = [node['hostname'] for node in node_list_dict] 
-        #for node in node_list_dict:
-            #node_hostname_list.append(node['hostname'])
-        node_dict = dict(zip(node_hostname_list, node_list_dict))
-        try :
-            reserved_node_hostname_list = []
-            for index in range(len(job_info[node_list_name])):
-               #job_info[node_list_name][k] = 
-                reserved_node_hostname_list[index] = \
-                        node_dict[job_info[node_list_name][index]]['hostname']
+    #def get_info_on_reserved_nodes(self, job_info, node_list_name):
+        #"""
+        #..warning:unused  SA 23/05/13
+        #"""
+        ##Get the list of the testbed nodes records and make a 
+        ##dictionnary keyed on the hostname out of it
+        #node_list_dict = self.GetNodes() 
+        ##node_hostname_list = []
+        #node_hostname_list = [node['hostname'] for node in node_list_dict] 
+        ##for node in node_list_dict:
+            ##node_hostname_list.append(node['hostname'])
+        #node_dict = dict(zip(node_hostname_list, node_list_dict))
+        #try :
+            #reserved_node_hostname_list = []
+            #for index in range(len(job_info[node_list_name])):
+               ##job_info[node_list_name][k] = 
+                #reserved_node_hostname_list[index] = \
+                        #node_dict[job_info[node_list_name][index]]['hostname']
                             
-            logger.debug("SLABDRIVER \t get_info_on_reserved_nodes \
-                        reserved_node_hostname_list %s" \
-                        %(reserved_node_hostname_list))
-        except KeyError:
-            logger.error("SLABDRIVER \t get_info_on_reserved_nodes KEYERROR " )
+            #logger.debug("SLABDRIVER \t get_info_on_reserved_nodes \
+                        #reserved_node_hostname_list %s" \
+                        #%(reserved_node_hostname_list))
+        #except KeyError:
+            #logger.error("SLABDRIVER \t get_info_on_reserved_nodes KEYERROR " )
             
-        return reserved_node_hostname_list  
+        #return reserved_node_hostname_list  
             
     def GetNodesCurrentlyInUse(self):
-        """Returns a list of all the nodes already involved in an oar job"""
+        """Returns a list of all the nodes already involved in an oar running 
+        job.
+        :rtype: list of nodes hostnames. 
+        """
         return self.oar.parser.SendRequest("GET_running_jobs") 
     
     def __get_hostnames_from_oar_node_ids(self, resource_id_list ):
+        """Get the hostnames of the nodes from their OAR identifiers.
+        Get the list of nodes dict using GetNodes and find the hostname
+        associated with the identifier.
+        :param resource_id_list: list of nodes identifiers
+        :returns: list of node hostnames.
+        """
         full_nodes_dict_list = self.GetNodes()
         #Put the full node list into a dictionary keyed by oar node id
         oar_id_node_dict = {}
         for node in full_nodes_dict_list:
             oar_id_node_dict[node['oar_id']] = node
-            
-        #logger.debug("SLABDRIVER \t  __get_hostnames_from_oar_node_ids\
-                        #oar_id_node_dict %s" %(oar_id_node_dict))
-
-        hostname_dict_list = [] 
+   
+        hostname_list = [] 
         for resource_id in resource_id_list:
             #Because jobs requested "asap" do not have defined resources
             if resource_id is not "Undefined":
-                hostname_dict_list.append(\
+                hostname_list.append(\
                         oar_id_node_dict[resource_id]['hostname'])
                 
             #hostname_list.append(oar_id_node_dict[resource_id]['hostname'])
-        return hostname_dict_list 
+        return hostname_list 
         
     def GetReservedNodes(self, username = None):
+        """ Get list of leases. Get the leases for the username if specified,
+        otherwise get all the leases. Finds the nodes hostnames for each
+        OAR node identifier.
+        :param username: user's LDAP login
+        :type username: string
+        :return: list of reservations dict
+        :rtype: dict list
+        """
+        
         #Get the nodes in use and the reserved nodes
         reservation_dict_list = \
                         self.oar.parser.SendRequest("GET_reserved_nodes", \
@@ -282,7 +334,20 @@ class SlabTestbedAPI():
      
     def GetNodes(self, node_filter_dict = None, return_fields_list = None):
         """
-        node_filter_dict : dictionnary of lists
+        
+        Make a list of senslab nodes and their properties from information
+        given by OAR. Search for specific nodes if some filters are specified. 
+        Nodes properties returned if no return_fields_list given:
+        'hrn','archi','mobile','hostname','site','boot_state','node_id', 
+        'radio','posx','posy','oar_id','posz'.  
+        
+        :param node_filter_dict: dictionnary of lists with node properties
+        :type node_filter_dict: dict
+        :param return_fields_list: list of specific fields the user wants to be 
+        returned.
+        :type return_fields_list: list
+        :return: list of dictionaries with node properties
+        :rtype: list
         
         """
         node_dict_by_id = self.oar.parser.SendRequest("GET_resources_full")
@@ -320,8 +385,15 @@ class SlabTestbedAPI():
                                     
     @staticmethod
     def AddSlice(slice_record, user_record):
-        """Add slice to the sfa tables. Called by verify_slice
-        during lease/sliver creation.
+        """Add slice to the local senslab sfa tables if the slice comes
+        from a federated site and is not yet in the senslab sfa DB,
+        although the user has already a LDAP login.
+        Called by verify_slice during lease/sliver creation.
+        :param slice_record: record of slice, must contain hrn, gid, slice_id
+        and authority of the slice. 
+        :type slice_record: dictionary
+        :param user_record: record of the user
+        :type user_record: RegUser
         """
  
         sfa_record = RegSlice(hrn=slice_record['hrn'], 
@@ -338,43 +410,33 @@ class SlabTestbedAPI():
         sfa_record.reg_researchers =  [user_record]
         dbsession.commit()       
      
-        #Update the senslab table with the new slice                     
-        #slab_slice = SenslabXP( slice_hrn = slice_record['slice_hrn'], \
-                        #record_id_slice = sfa_record.record_id , \
-                        #record_id_user = slice_record['record_id_user'], \
-                        #peer_authority = slice_record['peer_authority'])
-                        
-        #logger.debug("SLABDRIVER.PY \tAddSlice slice_record %s \
-                                    #slab_slice %s sfa_record %s" \
-                                    #%(slice_record,slab_slice, sfa_record))
-        #slab_dbsession.add(slab_slice)
-        #slab_dbsession.commit()
         return
+    
+    #GetSites unused, SA 27/05/13   
+    #def GetSites(self, site_filter_name_list = None, return_fields_list = None):
+        #site_dict = self.oar.parser.SendRequest("GET_sites")
+        ##site_dict : dict where the key is the sit ename
+        #return_site_list = []
+        #if not ( site_filter_name_list or return_fields_list):
+            #return_site_list = site_dict.values()
+            #return return_site_list
         
-    def GetSites(self, site_filter_name_list = None, return_fields_list = None):
-        site_dict = self.oar.parser.SendRequest("GET_sites")
-        #site_dict : dict where the key is the sit ename
-        return_site_list = []
-        if not ( site_filter_name_list or return_fields_list):
-            return_site_list = site_dict.values()
-            return return_site_list
-        
-        for site_filter_name in site_filter_name_list:
-            if site_filter_name in site_dict:
-                if return_fields_list:
-                    for field in return_fields_list:
-                        tmp = {}
-                        try:
-                            tmp[field] = site_dict[site_filter_name][field]
-                        except KeyError:
-                            logger.error("GetSites KeyError %s "%(field))
-                            return None
-                    return_site_list.append(tmp)
-                else:
-                    return_site_list.append( site_dict[site_filter_name])
+        #for site_filter_name in site_filter_name_list:
+            #if site_filter_name in site_dict:
+                #if return_fields_list:
+                    #for field in return_fields_list:
+                        #tmp = {}
+                        #try:
+                            #tmp[field] = site_dict[site_filter_name][field]
+                        #except KeyError:
+                            #logger.error("GetSites KeyError %s "%(field))
+                            #return None
+                    #return_site_list.append(tmp)
+                #else:
+                    #return_site_list.append( site_dict[site_filter_name])
             
 
-        return return_site_list
+        #return return_site_list
 
 
    
@@ -386,42 +448,58 @@ class SlabTestbedAPI():
         Users and techs can only delete themselves. PIs can only 
         delete themselves and other non-PIs at their sites. 
         ins can delete anyone.
-        Returns 1 if successful, faults otherwise.
-        FROM PLC API DOC
-        
+        :param person_record: user's record
+        :type person_record: dict
+        :return:  True if successful, False otherwise.
+        :rtype: boolean
+ 
         """
         #Disable user account in senslab LDAP
         ret = self.ldap.LdapMarkUserAsDeleted(person_record)
         logger.warning("SLABDRIVER DeletePerson %s " %(person_record))
-        return ret
+        return ret['bool']
     
-    #TODO Check DeleteSlice, check rights 05/07/2012 SA
+    
     def DeleteSlice(self, slice_record):
-        """ Deletes the specified slice.
-         Senslab : Kill the job associated with the slice if there is one
-         using DeleteSliceFromNodes.
-         Updates the slice record in slab db to remove the slice nodes.
+        """ Deletes the specified slice and kills the jobs associated with 
+         the slice if any,  using DeleteSliceFromNodes.
+   
+         :return: True if all the jobs in the slice have been deleted,
+         or the list of jobs that could not be deleted otherwise.
+         :rtype: list or boolean 
          
-         Users may only delete slices of which they are members. PIs may 
-         delete any of the slices at their sites, or any slices of which 
-         they are members. Admins may delete any slice.
-         Returns 1 if successful, faults otherwise.
-         FROM PLC API DOC
-        
         """
-        self.DeleteSliceFromNodes(slice_record)
-        logger.warning("SLABDRIVER DeleteSlice %s "%(slice_record))
-        return
+        ret = self.DeleteSliceFromNodes(slice_record)
+        delete_failed = None
+        for job_id in ret:
+            if False in ret[job_id]:
+                if delete_failed is None:
+                    delete_failed = []
+                delete_failed.append(job_id)
+                    
+        logger.info("SLABDRIVER DeleteSlice %s  answer %s"%(slice_record, \
+                    delete_failed))
+        return delete_failed or True
     
     @staticmethod
     def __add_person_to_db(user_dict):
-
-        check_if_exists = dbsession.query(RegUser).filter_by(email = user_dict['email']).first()
+        """
+        Add a federated user straight to db when the user issues a lease 
+        request with senslab nodes and that he has not registered with senslab
+        yet (that is he does not have a LDAP entry yet).
+        Uses parts of the routines in SlabImport when importing user from LDAP.
+        Called by AddPerson, right after LdapAddUser.
+        :param user_dict: Must contain email, hrn and pkey to get a GID
+        and be added to the SFA db.
+        :type user_dict: dict
+        
+        """
+        check_if_exists = \
+        dbsession.query(RegUser).filter_by(email = user_dict['email']).first()
         #user doesn't exists
         if not check_if_exists:
             logger.debug("__add_person_to_db \t Adding %s \r\n \r\n \
-            _________________________________________________________________________\
-            " %(user_dict)) 
+                                            " %(user_dict)) 
             hrn = user_dict['hrn'] 
             person_urn = hrn_to_urn(hrn, 'user')
             pubkey = user_dict['pkey']
@@ -436,80 +514,85 @@ class SlabTestbedAPI():
            
             if pubkey is not None and pkey is not None :
                 hierarchy = Hierarchy()
-                person_gid = hierarchy.create_gid(person_urn, create_uuid(), pkey)
+                person_gid = hierarchy.create_gid(person_urn, create_uuid(), \
+                                pkey)
                 if user_dict['email']:
-                    logger.debug("__add_person_to_db \r\n \r\n SLAB IMPORTER PERSON EMAIL OK email %s " %(user_dict['email']))
+                    logger.debug("__add_person_to_db \r\n \r\n \
+                        SLAB IMPORTER PERSON EMAIL OK email %s "\
+                        %(user_dict['email']))
                     person_gid.set_email(user_dict['email'])
                     
-            user_record = RegUser(hrn=hrn , pointer= '-1', authority=get_authority(hrn), \
-                                                    email=user_dict['email'], gid = person_gid)
+            user_record = RegUser(hrn=hrn , pointer= '-1', \
+                                    authority=get_authority(hrn), \
+                                    email=user_dict['email'], gid = person_gid)
             user_record.reg_keys = [RegKey(user_dict['pkey'])]
             user_record.just_created()
             dbsession.add (user_record)
             dbsession.commit()
         return 
         
-    #TODO AddPerson 04/07/2012 SA
-    #def AddPerson(self, auth,  person_fields=None): 
-    def AddPerson(self, record):#TODO fixing 28/08//2012 SA
+
+    def AddPerson(self, record):
         """Adds a new account. Any fields specified in records are used, 
-        otherwise defaults are used.
-        Accounts are disabled by default. To enable an account, 
-        use UpdatePerson().
-        Returns the new person_id (> 0) if successful, faults otherwise. 
-        FROM PLC API DOC
-        
+        otherwise defaults are used. Creates an appropriate login by calling 
+        LdapAddUser.
+        :param record: dictionary with the sfa user's properties.
+        :return: The uid of the added person if sucessful, otherwise returns 
+        the error message from LDAP.
+        :rtype: interger or string
         """
         ret = self.ldap.LdapAddUser(record)
         
-        record['hrn'] = self.root_auth + '.' + ret['uid']
-        logger.debug("SLABDRIVER AddPerson return code %s record %s \r\n "\
-                                                            %(ret, record))
-        self.__add_person_to_db(record)
-        return ret['uid']
+        if ret['bool'] is True:
+            record['hrn'] = self.root_auth + '.' + ret['uid']
+            logger.debug("SLABDRIVER AddPerson return code %s record %s \r\n "\
+                                                                %(ret, record))
+            self.__add_person_to_db(record)
+            return ret['uid']
+        else:
+            return ret['message']
     
-    #TODO AddPersonToSite 04/07/2012 SA
-    def AddPersonToSite (self, auth, person_id_or_email, \
-                                                site_id_or_login_base=None):
-        """  Adds the specified person to the specified site. If the person is 
-        already a member of the site, no errors are returned. Does not change 
-        the person's primary site.
-        Returns 1 if successful, faults otherwise.
-        FROM PLC API DOC
-        
-        """
-        logger.warning("SLABDRIVER AddPersonToSite EMPTY - DO NOTHING \r\n ")
-        return
     
-    #TODO AddRoleToPerson : Not sure if needed in senslab 04/07/2012 SA
-    def AddRoleToPerson(self, auth, role_id_or_name, person_id_or_email):
-        """Grants the specified role to the person.
-        PIs can only grant the tech and user roles to users and techs at their 
-        sites. Admins can grant any role to any user.
-        Returns 1 if successful, faults otherwise.
-        FROM PLC API DOC
-        
-        """
-        logger.warning("SLABDRIVER AddRoleToPerson EMPTY - DO NOTHING \r\n ")
-        return
-    
+   
     #TODO AddPersonKey 04/07/2012 SA
-    def AddPersonKey(self, auth, person_id_or_email, key_fields=None):
-        """Adds a new key to the specified account.
+    def AddPersonKey(self, person_uid, old_attributes_dict, new_key_dict):
+        """Adds a new key to the specified account. Adds the key to the
+        senslab ldap, provided that the person_uid is valid.
         Non-admins can only modify their own keys.
-        Returns the new key_id (> 0) if successful, faults otherwise.
-        FROM PLC API DOC
         
+        :param person_uid: user's senslab login in LDAP
+        :param old_attributes_dict: dict with the user's old sshPublicKey 
+        :param new_key_dict:dict with the user's new sshPublicKey
+        :type person_uid: string
+
+        
+        :rtype: Boolean
+        :return: True if the key has been modified, False otherwise.
+       
         """
+        ret = self.ldap.LdapModify(person_uid, old_attributes_dict, \
+                                                                new_key_dict)
         logger.warning("SLABDRIVER AddPersonKey EMPTY - DO NOTHING \r\n ")
-        return
+        return ret['bool']
     
-    def DeleteLeases(self, leases_id_list, slice_hrn ):        
+    def DeleteLeases(self, leases_id_list, slice_hrn ):   
+        """
+        Deletes several leases, based on their job ids and the slice
+        they are associated with. Uses DeleteJobs to delete the jobs
+        on OAR. Note that one slice can contain multiple jobs, and in this case
+        all the jobs in the leases_id_list MUST belong to ONE slice,
+        since there is only one slice hrn provided here. 
+        :param leases_id_list: list of job ids that belong to the slice whose
+        slice hrn is provided.
+        :param slice_hrn: the slice hrn . 
+        ..warning: Does not have a return value since there was no easy
+        way to handle failure when dealing with multiple job delete. Plus,
+        there was no easy way to report it to the user.
+        """     
         logger.debug("SLABDRIVER DeleteLeases leases_id_list %s slice_hrn %s \
                 \r\n " %(leases_id_list, slice_hrn))
         for job_id in leases_id_list:
             self.DeleteJobs(job_id, slice_hrn)
-        
 
         return 
 
@@ -525,7 +608,9 @@ class SlabTestbedAPI():
             #  additional delay for /bin/sleep command to
             # take in account  prologue and epilogue scripts execution
             # int walltimeAdditionalDelay = 240;  additional delay
-            desired_walltime = duration 
+            # Put the duration in seconds first
+            desired_walltime = duration * 60
+            
             total_walltime = desired_walltime + 240 #+4 min Update SA 23/10/12
             sleep_walltime = desired_walltime  # 0 sec added Update SA 23/10/12
             walltime = []
@@ -575,7 +660,8 @@ class SlabTestbedAPI():
 
 
         walltime, sleep_walltime = \
-                    SlabTestbedAPI._process_walltime(int(lease_dict['lease_duration'])*lease_dict['grain'])
+                    SlabTestbedAPI._process_walltime(\
+                                     int(lease_dict['lease_duration']))
 
 
         reqdict['resource'] += ",walltime=" + str(walltime[0]) + \
@@ -587,8 +673,9 @@ class SlabTestbedAPI():
         #They will be set to None.
         if lease_dict['lease_start_time'] is not '0':
             #Readable time accepted by OAR
-            start_time = datetime.fromtimestamp(int(lease_dict['lease_start_time'])).\
-                                                    strftime(lease_dict['time_format'])
+            start_time = datetime.fromtimestamp( \
+                int(lease_dict['lease_start_time'])).\
+                strftime(lease_dict['time_format'])
             reqdict['reservation'] = start_time
         #If there is not start time, Immediate XP. No need to add special 
         # OAR parameters
@@ -603,6 +690,16 @@ class SlabTestbedAPI():
                   
     def LaunchExperimentOnOAR(self, added_nodes, slice_name, \
                         lease_start_time, lease_duration, slice_user=None):
+        
+        """
+        Create a job request structure based on the information provided 
+        and post the job on OAR. 
+        :param added_nodes: list of nodes that belong to the described lease.
+        :param slice_name: the slice hrn associated to the lease.
+        :param lease_start_time: timestamp of the lease startting time.
+        :param lease_duration: lease durationin minutes
+        
+        """
         lease_dict = {}
         lease_dict['lease_start_time'] = lease_start_time
         lease_dict['lease_duration'] = lease_duration
@@ -622,8 +719,8 @@ class SlabTestbedAPI():
                              \r\n "  %(reqdict))  
        
         answer = self.oar.POSTRequestToOARRestAPI('POST_job', \
-                                                            reqdict, slice_user)
-        logger.debug("SLABDRIVER \tLaunchExperimentOnOAR jobid   %s " %(answer))
+                                                reqdict, slice_user)
+        logger.debug("SLABDRIVER \tLaunchExperimentOnOAR jobid  %s " %(answer))
         try:       
             jobid = answer['id']
         except KeyError:
@@ -636,7 +733,8 @@ class SlabTestbedAPI():
         
         if jobid :
             logger.debug("SLABDRIVER \tLaunchExperimentOnOAR jobid %s \
-                    added_nodes %s slice_user %s" %(jobid, added_nodes, slice_user))
+                    added_nodes %s slice_user %s" %(jobid, added_nodes, \
+                                                            slice_user))
             
             
         return jobid
@@ -644,6 +742,22 @@ class SlabTestbedAPI():
         
     def AddLeases(self, hostname_list, slice_record, \
                                         lease_start_time, lease_duration):
+        
+        """Creates a job in OAR corresponding to the information provided
+        as parameters. Adds the job id and the slice hrn in the senslab 
+        database so that we are able to know which slice has which nodes.
+        
+        :param hostname_list: list of nodes' OAR hostnames. 
+        :param slice_record: sfa slice record, must contain login and hrn.
+        :param lease_start_time: starting time , unix timestamp format
+        :param lease_duration: duration in minutes
+        
+        :type hostname_list: list
+        :type slice_record: dict
+        :type lease_start_time: integer
+        :type lease_duration: integer
+        
+        """
         logger.debug("SLABDRIVER \r\n \r\n \t AddLeases hostname_list %s  \
                 slice_record %s lease_start_time %s lease_duration %s  "\
                  %( hostname_list, slice_record , lease_start_time, \
@@ -652,16 +766,22 @@ class SlabTestbedAPI():
         #tmp = slice_record['reg-researchers'][0].split(".")
         username = slice_record['login']
         #username = tmp[(len(tmp)-1)]
-        job_id = self.LaunchExperimentOnOAR(hostname_list, slice_record['hrn'], \
-                                    lease_start_time, lease_duration, username)
-        start_time = datetime.fromtimestamp(int(lease_start_time)).strftime(self.time_format)
+        job_id = self.LaunchExperimentOnOAR(hostname_list, \
+                                    slice_record['hrn'], \
+                                    lease_start_time, lease_duration, \
+                                    username)
+        start_time = \
+                datetime.fromtimestamp(int(lease_start_time)).\
+                strftime(self.time_format)
         end_time = lease_start_time + lease_duration
 
-        import logging, logging.handlers
-        from sfa.util.sfalogging import _SfaLogger
-        logger.debug("SLABDRIVER \r\n \r\n \t AddLeases TURN ON LOGGING SQL %s %s %s "%(slice_record['hrn'], job_id, end_time))
-        sql_logger = _SfaLogger(loggername = 'sqlalchemy.engine', level=logging.DEBUG)
-        logger.debug("SLABDRIVER \r\n \r\n \t AddLeases %s %s %s " %(type(slice_record['hrn']), type(job_id), type(end_time)))
+        
+        logger.debug("SLABDRIVER \r\n \r\n \t AddLeases TURN ON LOGGING SQL \
+                        %s %s %s "%(slice_record['hrn'], job_id, end_time))
+                        
+       
+        logger.debug("SLABDRIVER \r\n \r\n \t AddLeases %s %s %s " \
+                %(type(slice_record['hrn']), type(job_id), type(end_time)))
         
         slab_ex_row = SenslabXP(slice_hrn = slice_record['hrn'], \
                 job_id = job_id, end_time= end_time)
@@ -671,36 +791,60 @@ class SlabTestbedAPI():
         slab_dbsession.add(slab_ex_row)
         slab_dbsession.commit()
         
-        logger.debug("SLABDRIVER \t AddLeases hostname_list start_time %s " %(start_time))
+        logger.debug("SLABDRIVER \t AddLeases hostname_list start_time %s " \
+                %(start_time))
         
         return
     
     
     #Delete the jobs from job_senslab table
     def DeleteSliceFromNodes(self, slice_record):
+        """ Deletes all the running or scheduled jobs of a given slice 
+        given its record. 
+        :param slice_record: record of the slice
+        :type slice_record: dict
+        
+        :return: dict of the jobs'deletion status. Success= True, Failure=
+        False, for each job id.
+        :rtype: dict
+        """
         logger.debug("SLABDRIVER \t  DeleteSliceFromNodese %s " %(slice_record))
-        if isinstance(slice_record['oar_job_id'], list):
+       
+        if isinstance(slice_record['oar_job_id'], list): 
+            oar_bool_answer = {}
             for job_id in slice_record['oar_job_id']:
-                self.DeleteJobs(job_id, slice_record['user'])
+                ret = self.DeleteJobs(job_id, slice_record['user'])
+                
+                oar_bool_answer.update(ret)
+
         else:
-            self.DeleteJobs(slice_record['oar_job_id'], slice_record['user'])
-        return   
+            oar_bool_answer = [self.DeleteJobs(slice_record['oar_job_id'], \
+                            slice_record['user'])]
+        
+        return oar_bool_answer
+           
     
  
     def GetLeaseGranularity(self):
-        """ Returns the granularity of Senslab testbed.
-        OAR returns seconds for experiments duration.
-        Defined in seconds. 
-        Experiments which last less than 10 min are invalid"""
-        
-        
+        """ Returns the granularity of an experiment in the Senslab testbed.
+        OAR uses seconds for experiments duration , the granulaity is also 
+        defined in seconds.  
+        Experiments which last less than 10 min (600 sec) are invalid"""
         return self.grain
     
     
     @staticmethod
     def update_jobs_in_slabdb( job_oar_list, jobs_psql):
-        #Get all the entries in slab_xp table
-        
+        """ Cleans the slab db by deleting expired and cancelled jobs.
+        Compares the list of job ids given by OAR with the job ids that
+        are already in the database, deletes the jobs that are no longer in 
+        the OAR job id list.
+        :param  job_oar_list: list of job ids coming from OAR
+        :type job_oar_list: list
+        :param job_psql: list of job ids cfrom the database. 
+        type job_psql: list
+        """
+        #Turn the list into a set
         set_jobs_psql = set(jobs_psql)
 
         kept_jobs = set(job_oar_list).intersection(set_jobs_psql)
@@ -717,14 +861,19 @@ class SlabTestbedAPI():
         
     
     def GetLeases(self, lease_filter_dict=None, login=None):
-        """ 
+        """ Get the list of leases from OAR with complete information
+        about which slice owns which jobs and nodes.
         Two purposes:
         -Fetch all the jobs from OAR (running, waiting..)
         complete the reservation information with slice hrn
         found in slabxp table. If not available in the table,
         assume it is a senslab slice.
-       - Updates the slab table, deleting jobs when necessary.
-        :returns reservation_list, list of dictionaries. """
+        -Updates the slab table, deleting jobs when necessary.
+        :return: reservation_list, list of dictionaries with 'lease_id',
+        'reserved_nodes','slice_id', 'state', 'user', 'component_id_list',
+        'slice_hrn', 'resource_ids', 't_from', 't_until'
+        :rtype: list
+        """
         
         unfiltered_reservation_list = self.GetReservedNodes(login)
 
@@ -734,11 +883,10 @@ class SlabTestbedAPI():
          unfiltered_reservation_list %s " %(login, unfiltered_reservation_list))
         #Create user dict first to avoid looking several times for
         #the same user in LDAP SA 27/07/12
-        resa_user_dict = {}
         job_oar_list = []
         
         jobs_psql_query = slab_dbsession.query(SenslabXP).all()
-        jobs_psql_dict = dict( [ (row.job_id, row.__dict__ )for row in jobs_psql_query ])
+        jobs_psql_dict = dict([(row.job_id, row.__dict__ ) for row in jobs_psql_query ])
         #jobs_psql_dict = jobs_psql_dict)
         logger.debug("SLABDRIVER \tGetLeases jobs_psql_dict %s"\
                                             %(jobs_psql_dict))
@@ -795,111 +943,148 @@ class SlabTestbedAPI():
 
 #TODO FUNCTIONS SECTION 04/07/2012 SA
 
-    #TODO : Is UnBindObjectFromPeer still necessary ? Currently does nothing
-    #04/07/2012 SA
-    @staticmethod
-    def UnBindObjectFromPeer( auth, object_type, object_id, shortname):
-        """ This method is a hopefully temporary hack to let the sfa correctly
-        detach the objects it creates from a remote peer object. This is 
-        needed so that the sfa federation link can work in parallel with 
-        RefreshPeer, as RefreshPeer depends on remote objects being correctly 
-        marked.
-        Parameters:
-        auth : struct, API authentication structure
-            AuthMethod : string, Authentication method to use 
-        object_type : string, Object type, among 'site','person','slice',
-        'node','key'
-        object_id : int, object_id
-        shortname : string, peer shortname 
-        FROM PLC DOC
+    ##TODO : Is UnBindObjectFromPeer still necessary ? Currently does nothing
+    ##04/07/2012 SA
+    #@staticmethod
+    #def UnBindObjectFromPeer( auth, object_type, object_id, shortname):
+        #""" This method is a hopefully temporary hack to let the sfa correctly
+        #detach the objects it creates from a remote peer object. This is 
+        #needed so that the sfa federation link can work in parallel with 
+        #RefreshPeer, as RefreshPeer depends on remote objects being correctly 
+        #marked.
+        #Parameters:
+        #auth : struct, API authentication structure
+            #AuthMethod : string, Authentication method to use 
+        #object_type : string, Object type, among 'site','person','slice',
+        #'node','key'
+        #object_id : int, object_id
+        #shortname : string, peer shortname 
+        #FROM PLC DOC
         
-        """
-        logger.warning("SLABDRIVER \tUnBindObjectFromPeer EMPTY-\
-                        DO NOTHING \r\n ")
-        return 
+        #"""
+        #logger.warning("SLABDRIVER \tUnBindObjectFromPeer EMPTY-\
+                        #DO NOTHING \r\n ")
+        #return 
     
-    #TODO Is BindObjectToPeer still necessary ? Currently does nothing 
-    #04/07/2012 SA
-    def BindObjectToPeer(self, auth, object_type, object_id, shortname=None, \
-                                                    remote_object_id=None):
-        """This method is a hopefully temporary hack to let the sfa correctly 
-        attach the objects it creates to a remote peer object. This is needed 
-        so that the sfa federation link can work in parallel with RefreshPeer, 
-        as RefreshPeer depends on remote objects being correctly marked.
-        Parameters:
-        shortname : string, peer shortname 
-        remote_object_id : int, remote object_id, set to 0 if unknown 
-        FROM PLC API DOC
+    ##TODO Is BindObjectToPeer still necessary ? Currently does nothing 
+    ##04/07/2012 SA
+    #|| Commented out 28/05/13 SA
+    #def BindObjectToPeer(self, auth, object_type, object_id, shortname=None, \
+                                                    #remote_object_id=None):
+        #"""This method is a hopefully temporary hack to let the sfa correctly 
+        #attach the objects it creates to a remote peer object. This is needed 
+        #so that the sfa federation link can work in parallel with RefreshPeer, 
+        #as RefreshPeer depends on remote objects being correctly marked.
+        #Parameters:
+        #shortname : string, peer shortname 
+        #remote_object_id : int, remote object_id, set to 0 if unknown 
+        #FROM PLC API DOC
         
-        """
-        logger.warning("SLABDRIVER \tBindObjectToPeer EMPTY - DO NOTHING \r\n ")
-        return
+        #"""
+        #logger.warning("SLABDRIVER \tBindObjectToPeer EMPTY - DO NOTHING \r\n ")
+        #return
     
-    #TODO UpdateSlice 04/07/2012 SA
-    #Funciton should delete and create another job since oin senslab slice=job
-    def UpdateSlice(self, auth, slice_id_or_name, slice_fields=None):    
-        """Updates the parameters of an existing slice with the values in 
-        slice_fields.
-        Users may only update slices of which they are members. 
-        PIs may update any of the slices at their sites, or any slices of 
-        which they are members. Admins may update any slice.
-        Only PIs and admins may update max_nodes. Slices cannot be renewed
-        (by updating the expires parameter) more than 8 weeks into the future.
-         Returns 1 if successful, faults otherwise.
-        FROM PLC API DOC
+    ##TODO UpdateSlice 04/07/2012 SA || Commented out 28/05/13 SA
+    ##Funciton should delete and create another job since oin senslab slice=job
+    #def UpdateSlice(self, auth, slice_id_or_name, slice_fields=None):    
+        #"""Updates the parameters of an existing slice with the values in 
+        #slice_fields.
+        #Users may only update slices of which they are members. 
+        #PIs may update any of the slices at their sites, or any slices of 
+        #which they are members. Admins may update any slice.
+        #Only PIs and admins may update max_nodes. Slices cannot be renewed
+        #(by updating the expires parameter) more than 8 weeks into the future.
+         #Returns 1 if successful, faults otherwise.
+        #FROM PLC API DOC
         
-        """  
-        logger.warning("SLABDRIVER UpdateSlice EMPTY - DO NOTHING \r\n ")
-        return
-    
-    #TODO UpdatePerson 04/07/2012 SA
-    def UpdatePerson(self, slab_hrn, federated_hrn, person_fields=None):
-        """Updates a person. Only the fields specified in person_fields 
-        are updated, all other fields are left untouched.
-        Users and techs can only update themselves. PIs can only update
-        themselves and other non-PIs at their sites.
-        Returns 1 if successful, faults otherwise.
-        FROM PLC API DOC
+        #"""  
+        #logger.warning("SLABDRIVER UpdateSlice EMPTY - DO NOTHING \r\n ")
+        #return
+        
+    #Unused SA 30/05/13, we only update the user's key or we delete it.
+    ##TODO UpdatePerson 04/07/2012 SA
+    #def UpdatePerson(self, slab_hrn, federated_hrn, person_fields=None):
+        #"""Updates a person. Only the fields specified in person_fields 
+        #are updated, all other fields are left untouched.
+        #Users and techs can only update themselves. PIs can only update
+        #themselves and other non-PIs at their sites.
+        #Returns 1 if successful, faults otherwise.
+        #FROM PLC API DOC
          
-        """
-        #new_row = FederatedToSenslab(slab_hrn, federated_hrn)
-        #slab_dbsession.add(new_row)
-        #slab_dbsession.commit()
+        #"""
+        ##new_row = FederatedToSenslab(slab_hrn, federated_hrn)
+        ##slab_dbsession.add(new_row)
+        ##slab_dbsession.commit()
         
-        logger.debug("SLABDRIVER UpdatePerson EMPTY - DO NOTHING \r\n ")
-        return
+        #logger.debug("SLABDRIVER UpdatePerson EMPTY - DO NOTHING \r\n ")
+        #return
     
-    #TODO GetKeys 04/07/2012 SA
-    def GetKeys(self, auth, key_filter=None, return_fields=None):
-        """Returns an array of structs containing details about keys. 
+    @staticmethod
+    def GetKeys(key_filter=None):
+        """Returns a dict of dict based on the key string. Each dict entry
+        contains the key id, the ssh key, the user's email and the 
+        user's hrn.
         If key_filter is specified and is an array of key identifiers, 
-        or a struct of key attributes, only keys matching the filter 
-        will be returned. If return_fields is specified, only the 
-        specified details will be returned.
+        only keys matching the filter will be returned. 
 
         Admin may query all keys. Non-admins may only query their own keys.
         FROM PLC API DOC
         
+        :return: dict with ssh key as key and dicts as value.
+        :rtype: dict
         """
-        logger.warning("SLABDRIVER  GetKeys EMPTY - DO NOTHING \r\n ")
-        return
+        if key_filter is None:
+            keys = dbsession.query(RegKey).options(joinedload('reg_user')).all()
+        else :
+            keys = dbsession.query(RegKey).options(joinedload('reg_user')).filter(RegKey.key.in_(key_filter)).all()
+                
+        key_dict = {}
+        for key in keys:
+            key_dict[key.key] = {'key_id': key.key_id, 'key': key.key, \
+                            'email': key.reg_user.email, 'hrn':key.reg_user.hrn}
+                            
+        #ldap_rslt = self.ldap.LdapSearch({'enabled']=True})
+        #user_by_email = dict((user[1]['mail'][0], user[1]['sshPublicKey']) \
+                                        #for user in ldap_rslt)
+           
+        logger.debug("SLABDRIVER  GetKeys  -key_dict %s \r\n " %(key_dict))
+        return key_dict
     
-    #TODO DeleteKey 04/07/2012 SA
-    def DeleteKey(self, key_id):
-        """  Deletes a key.
-         Non-admins may only delete their own keys.
-         Returns 1 if successful, faults otherwise.
-         FROM PLC API DOC
-         
+    #TODO : test
+    def DeleteKey(self, user_record, key_string):
+        """  Deletes a key in the LDAP entry of the specified user.
+        Removes the key_string from the user's key list and updates the LDAP
+        user's entry with the new key attributes.
+        :param key_string: The ssh key to remove
+        :param user_record: User's record
+        :type key_string: string
+        :type user_record: dict
+        :return: True if sucessful, False if not.
+        :rtype: Boolean
+ 
         """
-        logger.warning("SLABDRIVER  DeleteKey EMPTY - DO NOTHING \r\n ")
-        return
+        all_user_keys = user_record['keys']
+        all_user_keys.remove(key_string)
+        new_attributes  = {'sshPublicKey':all_user_keys}
+        ret = self.ldap.LdapModifyUser(user_record, new_attributes)
+        logger.debug("SLABDRIVER  DeleteKey  %s- "%(ret))
+        return ret['bool']
 
      
      
                     
     @staticmethod           
     def _sql_get_slice_info( slice_filter ):
+        """
+        Get the slice record based on the slice hrn. Fetch the record of the 
+        user associated with the slice by usingjoinedload based on t
+        he reg_researcher relationship.
+        :param slice_filter: the slice hrn we are looking for
+        :type slice_filter: string
+        :return: the slice record enhanced with the user's information if the
+        slice was found, None it wasn't. 
+        :rtype: dict or None.
+        """
         #DO NOT USE RegSlice - reg_researchers to get the hrn 
         #of the user otherwise will mess up the RegRecord in 
         #Resolve, don't know why - SA 08/08/2012
@@ -925,6 +1110,14 @@ class SlabTestbedAPI():
             
     @staticmethod       
     def _sql_get_slice_info_from_user(slice_filter ): 
+        """
+        Get the slice record based on the user recordid by using a joinedload 
+        on the relationship reg_slices_as_researcher. Format the sql record
+        into a dict with the mandatory fields for user and slice.
+        :return: dict with slice record and user record if the record was found
+        based on the user's id, None if not..
+        :rtype:dict or None..
+        """
         #slicerec = dbsession.query(RegRecord).filter_by(record_id = slice_filter).first()
         raw_slicerec = dbsession.query(RegUser).options(joinedload('reg_slices_as_researcher')).filter_by(record_id = slice_filter).first()
         #raw_slicerec = dbsession.query(RegRecord).filter_by(record_id = slice_filter).first()
@@ -954,8 +1147,19 @@ class SlabTestbedAPI():
             
     def _get_slice_records(self, slice_filter = None, \
                     slice_filter_type = None):
-      
-       
+        """
+        Get the slice record depending on the slice filter and its type.
+        :param slice_filter: Can be either the slice hrn or the user's record
+        id.
+        :type slice_filter: string
+        :param slice_filter_type: describes the slice filter type used, can be
+        slice_hrn or record_id_user
+        :type: string      
+        :return: the slice record
+        :rtype:dict 
+        ..seealso:_sql_get_slice_info_from_user
+        ..seealso: _sql_get_slice_info
+        """
         
         #Get list of slices based on the slice hrn
         if slice_filter_type == 'slice_hrn':
@@ -989,12 +1193,21 @@ class SlabTestbedAPI():
                   
     def GetSlices(self, slice_filter = None, slice_filter_type = None, \
                                                                     login=None):
-        """ Get the slice records from the slab db. 
-        Returns a slice ditc if slice_filter  and slice_filter_type 
-        are specified.
-        Returns a list of slice dictionnaries if there are no filters
+        """ Get the slice records from the slab db and add lease information
+        if any. 
+        
+        :param slice_filter: can be the slice hrn or slice record id in the db
+        depending on the slice_filter_type.
+        :param slice_filter_type: defines the type of the filtering used, Can be 
+        either 'slice_hrn' or "record_id'.
+        :type slice_filter: string
+        :type slice_filter_type: string
+        :return: a slice dict if slice_filter  and slice_filter_type 
+        are specified and a matching entry is found in the db. The result
+        is put into a list.Or a list of slice dictionnaries if no filters are
         specified. 
        
+        :rtype: list
         """
         #login = None
         authorized_filter_types_list = ['slice_hrn', 'record_id_user']
@@ -1069,7 +1282,6 @@ class SlabTestbedAPI():
             #query_slice_list = dbsession.query(RegRecord).all()           
             query_slice_list = dbsession.query(RegSlice).options(joinedload('reg_researchers')).all()          
 
-            return_slicerec_dictlist = []
             for record in query_slice_list: 
                 tmp = record.__dict__
                 tmp['reg_researchers'] = tmp['reg_researchers'][0].__dict__
@@ -1112,66 +1324,60 @@ class SlabTestbedAPI():
         
 
 
-          
-    ##
-    # Convert SFA fields to PLC fields for use when registering up updating
-    # registry record in the PLC database
-    #
-    # @param type type of record (user, slice, ...)
-    # @param hrn human readable name
-    # @param sfa_fields dictionary of SFA fields
-    # @param slab_fields dictionary of PLC fields (output)
-    @staticmethod
-    def sfa_fields_to_slab_fields(sfa_type, hrn, record):
+    #Update slice unused, therefore  sfa_fields_to_slab_fields unused
+    #SA 30/05/13
+    #@staticmethod
+    #def sfa_fields_to_slab_fields(sfa_type, hrn, record):
+        #"""
+        #"""
 
-
-        slab_record = {}
-        #for field in record:
-        #    slab_record[field] = record[field]
+        #slab_record = {}
+        ##for field in record:
+        ##    slab_record[field] = record[field]
  
-        if sfa_type == "slice":
-            #instantion used in get_slivers ? 
-            if not "instantiation" in slab_record:
-                slab_record["instantiation"] = "senslab-instantiated"
-            #slab_record["hrn"] = hrn_to_pl_slicename(hrn)     
-            #Unused hrn_to_pl_slicename because Slab's hrn already 
-            #in the appropriate form SA 23/07/12
-            slab_record["hrn"] = hrn 
-            logger.debug("SLABDRIVER.PY sfa_fields_to_slab_fields \
-                        slab_record %s  " %(slab_record['hrn']))
-            if "url" in record:
-                slab_record["url"] = record["url"]
-            if "description" in record:
-                slab_record["description"] = record["description"]
-            if "expires" in record:
-                slab_record["expires"] = int(record["expires"])
+        #if sfa_type == "slice":
+            ##instantion used in get_slivers ? 
+            #if not "instantiation" in slab_record:
+                #slab_record["instantiation"] = "senslab-instantiated"
+            ##slab_record["hrn"] = hrn_to_pl_slicename(hrn)     
+            ##Unused hrn_to_pl_slicename because Slab's hrn already 
+            ##in the appropriate form SA 23/07/12
+            #slab_record["hrn"] = hrn 
+            #logger.debug("SLABDRIVER.PY sfa_fields_to_slab_fields \
+                        #slab_record %s  " %(slab_record['hrn']))
+            #if "url" in record:
+                #slab_record["url"] = record["url"]
+            #if "description" in record:
+                #slab_record["description"] = record["description"]
+            #if "expires" in record:
+                #slab_record["expires"] = int(record["expires"])
                 
-        #nodes added by OAR only and then imported to SFA
-        #elif type == "node":
-            #if not "hostname" in slab_record:
-                #if not "hostname" in record:
-                    #raise MissingSfaInfo("hostname")
-                #slab_record["hostname"] = record["hostname"]
-            #if not "model" in slab_record:
-                #slab_record["model"] = "geni"
+        ##nodes added by OAR only and then imported to SFA
+        ##elif type == "node":
+            ##if not "hostname" in slab_record:
+                ##if not "hostname" in record:
+                    ##raise MissingSfaInfo("hostname")
+                ##slab_record["hostname"] = record["hostname"]
+            ##if not "model" in slab_record:
+                ##slab_record["model"] = "geni"
                 
-        #One authority only 
-        #elif type == "authority":
-            #slab_record["login_base"] = hrn_to_slab_login_base(hrn)
+        ##One authority only 
+        ##elif type == "authority":
+            ##slab_record["login_base"] = hrn_to_slab_login_base(hrn)
 
-            #if not "name" in slab_record:
-                #slab_record["name"] = hrn
+            ##if not "name" in slab_record:
+                ##slab_record["name"] = hrn
 
-            #if not "abbreviated_name" in slab_record:
-                #slab_record["abbreviated_name"] = hrn
+            ##if not "abbreviated_name" in slab_record:
+                ##slab_record["abbreviated_name"] = hrn
 
-            #if not "enabled" in slab_record:
-                #slab_record["enabled"] = True
+            ##if not "enabled" in slab_record:
+                ##slab_record["enabled"] = True
 
-            #if not "is_public" in slab_record:
-                #slab_record["is_public"] = True
+            ##if not "is_public" in slab_record:
+                ##slab_record["is_public"] = True
 
-        return slab_record
+        #return slab_record
 
 
    

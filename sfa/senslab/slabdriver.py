@@ -188,7 +188,6 @@ class SlabDriver(Driver):
                     
     def sliver_status(self, slice_urn, slice_hrn):
         """
-        
         Receive a status request for slice named urn/hrn 
         urn:publicid:IDN+senslab+nturro_slice hrn senslab.nturro_slice
         shall return a structure as described in
@@ -199,9 +198,7 @@ class SlabDriver(Driver):
         :type slice_urn: string
         :param slice_hrn: slice hrn
         :type slice_hrn: string
-        
-        .. note:: UNUSED. sface deprecated. SA May 7th 2013
-        
+
         """
         
         
@@ -294,7 +291,6 @@ class SlabDriver(Driver):
     @staticmethod                
     def get_user_record(hrn):        
         """ 
-        
         Returns the user record based on the hrn from the SFA DB .
         
         :param hrn: user's hrn
@@ -308,7 +304,6 @@ class SlabDriver(Driver):
      
     def testbed_name (self): 
         """ 
-        
         Returns testbed's name. 
         
         :rtype: string
@@ -421,14 +416,18 @@ class SlabDriver(Driver):
         :rtype: dictionary 
         """
         requested_lease_list = self._get_requested_leases_list(rspec)
+        logger.debug("SLABDRIVER _process_requested_jobs requested_lease_list \
+        %s"%(requested_lease_list))
         job_dict =  self._group_leases_by_start_time(requested_lease_list) 
+        logger.debug("SLABDRIVER _process_requested_jobs  job_dict\
+        %s"%(job_dict))
         
         return job_dict
                 
     def create_sliver (self, slice_urn, slice_hrn, creds, rspec_string, \
                                                              users, options):
         """ 
-        
+        Answer to CreateSliver.
         Creates the leases and slivers for the users from the information 
         found in the rspec string.
         Launch experiment on OAR if the requested leases is valid. Delete
@@ -441,6 +440,10 @@ class SlabDriver(Driver):
         :type users: list
         :param options:
         :type options:
+        
+        :return: a valid Rspec for the slice which has just been 
+        modified.
+        :rtype: RSpec
         
         
         """
@@ -516,7 +519,7 @@ class SlabDriver(Driver):
     def delete_sliver (self, slice_urn, slice_hrn, creds, options):
         """
         Deletes the lease associated with the slice hrn and the credentials
-        if the slice belongs to senslab.
+        if the slice belongs to senslab. Answer to DeleteSliver.
         
         :return: 1 if the slice to delete was not found on senslab, 
         True if the deletion was successful, False otherwise otherwise. 
@@ -554,12 +557,14 @@ class SlabDriver(Driver):
     
     def list_resources (self, slice_urn, slice_hrn, creds, options):
         """
-        List resources from the senslab aggregate and returns a Rspec
-        with resources found when slice_urn and slice_hrn are None 
+        List resources from the senslab aggregate and returns a Rspec 
+        advertisement with resources found when slice_urn and slice_hrn are None 
         (in case of resource discovery).
         If a slice hrn and urn are provided, list experiment's slice
-        nodes in a rspec format. 
-        
+        nodes in a rspec format. Answer to ListResources.
+        Caching unused. 
+        :param options: options used when listing resources (list_leases, info,
+        geni_available) 
         :return: rspec string in xml
         :rtype: string 
         """
@@ -597,8 +602,7 @@ class SlabDriver(Driver):
     
         #panos: passing user-defined options
         aggregate = SlabAggregate(self)
-        #origin_hrn = Credential(string=creds[0]).get_gid_caller().get_hrn()
-        #options.update({'origin_hrn':origin_hrn})
+       
         rspec =  aggregate.get_rspec(slice_xrn=slice_urn, \
                                         version=rspec_version, options=options)
        
@@ -611,6 +615,16 @@ class SlabDriver(Driver):
         
         
     def list_slices (self, creds, options):
+        """
+        Answer to ListSlices.
+        List slices belonging to senslab, returns slice urns list. 
+        No caching used. Options unused but are defined in the SFA method
+        api prototype. 
+        
+        :return: slice urns list
+        :rtype: list
+        
+        """
         # look in cache first
         #if self.cache:
             #slices = self.cache.get('slices')
@@ -640,16 +654,35 @@ class SlabDriver(Driver):
         Adding new user, slice, node or site should not be handled
         by SFA.
         
-        Adding nodes = OAR
+        ..warnings:: should not be used. Different components are in charge of 
+        doing this task. Adding nodes = OAR
         Adding users = LDAP Senslab
         Adding slice = Import from LDAP users
         Adding site = OAR
+        
+        :param sfa_record: record provided by the client of the 
+        Register API call. 
+        :type sfa_record: dict
         """
         return -1
             
       
     def update (self, old_sfa_record, new_sfa_record, hrn, new_key):
-        """No site or node record update allowed in Senslab."""
+        """No site or node record update allowed in Senslab.
+        The only modifications authorized here are key deletion/addition 
+        on an existing user and password change.
+        On an existing user, CAN NOT BE MODIFIED:
+        'first_name', 'last_name', 'email'
+         DOES NOT EXIST IN SENSLAB:
+         'phone', 'url', 'bio','title', 'accepted_aup',
+        A slice is bound to its user, so modifying the user's ssh key should
+        modify the slice's GID after an import procedure. 
+        
+        :param old_sfa_record: what is in the db for this hrn
+        :param new_sfa_record: what was passed to the Update call
+        
+        ..seealso:: update in driver.py. 
+        """
         
         pointer = old_sfa_record['pointer']
         old_sfa_record_type = old_sfa_record['type']
@@ -658,53 +691,60 @@ class SlabDriver(Driver):
         if new_key and old_sfa_record_type not in [ 'user' ]:
             raise UnknownSfaType(old_sfa_record_type)
         
-        #if (type == "authority"):
-            #self.shell.UpdateSite(pointer, new_sfa_record)
     
-        if old_sfa_record_type == "slice":
-            slab_record = self.slab_api.sfa_fields_to_slab_fields(old_sfa_record_type, \
-                                                hrn, new_sfa_record)
-            if 'name' in slab_record:
-                slab_record.pop('name')
-                #Prototype should be UpdateSlice(self,
-                #auth, slice_id_or_name, slice_fields)
-                #Senslab cannot update slice since slice = job
-                #so we must delete and create another job
-                self.slab_api.UpdateSlice(pointer, slab_record)
-    
-        elif old_sfa_record_type == "user":
+        if old_sfa_record_type == "user":
             update_fields = {}
             all_fields = new_sfa_record
             for key in all_fields.keys():
-                if key in ['first_name', 'last_name', 'title', 'email',
-                           'password', 'phone', 'url', 'bio', 'accepted_aup',
-                           'enabled']:
+                if key in ['key', 'password']:
                     update_fields[key] = all_fields[key]
-            self.slab_api.UpdatePerson(pointer, update_fields)
+           
     
             if new_key:
                 # must check this key against the previous one if it exists
-                persons = self.slab_api.GetPersons(['key_ids'])
+                persons = self.slab_api.GetPersons([old_sfa_record])
                 person = persons[0]
-                keys = person['key_ids']
-                keys = self.slab_api.GetKeys(person['key_ids'])
+                keys = [person['pkey']]
+                #Get all the person's keys
+                keys_dict = self.slab_api.GetKeys(keys)
                 
-                # Delete all stale keys
+                # Delete all stale keys, meaning the user has only one key
+                #at a time
+                #TODO: do we really want to delete all the other keys?
+                #Is this a problem with the GID generation to have multiple 
+                #keys? SA 30/05/13
                 key_exists = False
-                for key in keys:
-                    if new_key != key['key']:
-                        self.slab_api.DeleteKey(key['key_id'])
-                    else:
-                        key_exists = True
-                if not key_exists:
-                    self.slab_api.AddPersonKey(pointer, {'key_type': 'ssh', \
-                                                    'key': new_key})
-
-
+                if key in keys_dict:
+                    key_exists = True
+                else:
+                    #remove all the other keys
+                    for key in keys_dict:
+                        self.slab_api.DeleteKey(person, key)
+                    self.slab_api.AddPersonKey(person, \
+                    {'sshPublicKey': person['pkey']},{'sshPublicKey': new_key} )
+                    #self.slab_api.AddPersonKey(person, {'key_type': 'ssh', \
+                                                    #'key': new_key})
         return True
         
 
     def remove (self, sfa_record):
+        """
+        Removes users only. Mark the user as disabled in
+        LDAP. The user and his slice are then deleted from the db by running an 
+        import on the registry.
+        
+       
+        
+        :param sfa_record: record is the existing sfa record in the db 
+        :type sfa_record: dict
+        
+        ..warning::As fas as the slice is concerned, here only the leases are
+        removed from the slice. The slice is record itself is not removed from 
+        the db. 
+        TODO : REMOVE SLICE FROM THE DB AS WELL? SA 14/05/2013, 
+        
+        TODO: return boolean for the slice part 
+        """
         sfa_record_type = sfa_record['type']
         hrn = sfa_record['hrn']
         if sfa_record_type == 'user':
@@ -716,16 +756,15 @@ class SlabDriver(Driver):
             #accesible.
             if person :
                 #Mark account as disabled in ldap
-                self.slab_api.DeletePerson(sfa_record)
+                return self.slab_api.DeletePerson(sfa_record)
+
         elif sfa_record_type == 'slice':
             if self.slab_api.GetSlices(slice_filter = hrn, \
                                     slice_filter_type = 'slice_hrn'):
-                self.slab_api.DeleteSlice(sfa_record)
+                ret = self.slab_api.DeleteSlice(sfa_record)
 
-        #elif type == 'authority':
-            #if self.GetSites(pointer):
-                #self.DeleteSite(pointer)
 
-        return True
+
+            return True
             
             

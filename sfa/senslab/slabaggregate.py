@@ -1,4 +1,4 @@
-import time
+#import time
 from sfa.util.xrn import hrn_to_urn, urn_to_hrn, get_authority
 
 from sfa.rspecs.rspec import RSpec
@@ -25,6 +25,8 @@ def slab_xrn_object(root_auth, hostname):
     """Attributes are urn and hrn.
     Get the hostname using slab_xrn_to_hostname on the urn.
     
+    :return: the senslab node's xrn
+    :rtype: Xrn 
     """
     return Xrn('.'.join( [root_auth, Xrn.escape(hostname)]), type='node')
 
@@ -46,11 +48,28 @@ class SlabAggregate:
 
     def get_slice_and_slivers(self, slice_xrn, login=None):
         """
-        Returns a dict of slivers keyed on the sliver's node_id
+        Get the slices and the associated leases if any from the senslab
+        testbed. For each slice, get the nodes in the  associated lease
+        and create a sliver with the necessary info and insertinto the sliver
+        dictionary, keyed on the node hostnames.
+        Returns a dict of slivers based on the sliver's node_id.
+        Called by get_rspec.
+        
+        
+        :param slice_xrn: xrn of the slice
+        :param login: user's login on senslab ldap
+        
+        :type slice_xrn: string
+        :type login: string
+        :reutnr : a list of slices dict and a dictionary of Sliver object
+        :rtype: (list, dict)
+        
+        ..note: There is no slivers in senslab, only leases. 
+        
         """
         slivers = {}
         sfa_slice = None
-        if not slice_xrn:
+        if slice_xrn is None:
             return (sfa_slice, slivers)
         slice_urn = hrn_to_urn(slice_xrn, 'slice')
         slice_hrn, _ = urn_to_hrn(slice_xrn)
@@ -63,15 +82,12 @@ class SlabAggregate:
         logger.debug("Slabaggregate api \tget_slice_and_slivers \
                         sfa_slice %s \r\n slices %s self.driver.hrn %s" \
                         %(sfa_slice, slices, self.driver.hrn))
-        if not slices:
+        if slices ==  []:
             return (sfa_slice, slivers)
-        #if isinstance(sfa_slice, list):
-            #sfa_slice = slices[0]
-        #else:
-            #sfa_slice = slices
+
 
         # sort slivers by node id , if there is a job
-        #and therfore, node allocated to this slice
+        #and therefore, node allocated to this slice
         for sfa_slice in slices:
             try:
                 node_ids_list =  sfa_slice['node_ids']  
@@ -108,7 +124,7 @@ class SlabAggregate:
             
 
         
-    def get_nodes(self, slices=None, slivers=[], options={}):
+    def get_nodes(self, slices=None, slivers=[], options=None):
         # NT: the semantic of this function is not clear to me :
         # if slice is not defined, then all the nodes should be returned
         # if slice is defined, we should return only the nodes that 
@@ -151,12 +167,13 @@ class SlabAggregate:
         #node_tags = self.get_node_tags(tags_filter)
         
         #if slices, this means we got to list all the nodes given to this slice
-        # Make a list of all the nodes in the slice before getting their attributes
+        # Make a list of all the nodes in the slice before getting their 
+        #attributes
         rspec_nodes = []
         slice_nodes_list = []
         logger.debug("SLABAGGREGATE api get_nodes slice_nodes_list  %s "\
                                                              %(slices )) 
-        if slices:
+        if slices is not None:
             for one_slice in slices:
                 try:
                     slice_nodes_list = one_slice['node_ids']
@@ -167,7 +184,7 @@ class SlabAggregate:
                    
         reserved_nodes = self.driver.slab_api.GetNodesCurrentlyInUse()
         logger.debug("SLABAGGREGATE api get_nodes slice_nodes_list  %s "\
-                                                             %(slice_nodes_list)) 
+                                                        %(slice_nodes_list)) 
         for node in nodes:
             nodes_dict[node['node_id']] = node
             if slice_nodes_list == [] or node['hostname'] in slice_nodes_list:
@@ -186,13 +203,14 @@ class SlabAggregate:
                 rspec_node['component_id'] = slab_xrn.urn
                 rspec_node['component_name'] = node['hostname']  
                 rspec_node['component_manager_id'] = \
-                                hrn_to_urn(self.driver.slab_api.root_auth, 'authority+sa')
+                                hrn_to_urn(self.driver.slab_api.root_auth, \
+                                'authority+sa')
                 
                 # Senslab's nodes are federated : there is only one authority 
                 # for all Senslab sites, registered in SFA.
                 # Removing the part including the site 
                 # in authority_id SA 27/07/12
-                rspec_node['authority_id'] = rspec_node['component_manager_id']  
+                rspec_node['authority_id'] = rspec_node['component_manager_id'] 
     
                 # do not include boot state (<available> element)
                 #in the manifest rspec
@@ -206,7 +224,7 @@ class SlabAggregate:
                                                 'slab-node'})]
 
 
-                location = SlabLocation({'country':'France','site': \
+                location = SlabLocation({'country':'France', 'site': \
                                             node['site']})
                 rspec_node['location'] = location
 
@@ -234,22 +252,35 @@ class SlabAggregate:
                     rspec_node['slivers'] = [sliver]
                     
                     # slivers always provide the ssh service
-                    login = Login({'authentication': 'ssh-keys', 'hostname': node['hostname'], 'port':'22', 'username': sliver['name']})
+                    login = Login({'authentication': 'ssh-keys', \
+                            'hostname': node['hostname'], 'port':'22', \
+                            'username': sliver['name']})
                     service = Services({'login': login})
                     rspec_node['services'] = [service]
                 rspec_nodes.append(rspec_node)
 
         return (rspec_nodes)       
-
-    def get_leases(self, slice_record = None, options = {}):
+    #def get_all_leases(self, slice_record = None):
+    def get_all_leases(self):
+        """
+        Get list of lease dictionaries which all have the mandatory keys 
+        ('lease_id', 'hostname', 'site_id', 'name', 'start_time', 'duration').
+        All the leases running or scheduled are returned. 
+        
+        
+        ..note::There is no filtering of leases within a given time frame.
+        All the running or scheduled leases are returned. options 
+        removed SA 15/05/2013
+        
+        
+        """
     
-        now = int(time.time())
-        lease_filter = {'clip': now }
+        #now = int(time.time())
+        #lease_filter = {'clip': now }
 
         #if slice_record:
             #lease_filter.update({'name': slice_record['name']})
-        return_fields = ['lease_id', 'hostname', 'site_id', \
-                            'name', 'start_time', 'duration']
+
         #leases = self.driver.slab_api.GetLeases(lease_filter)
         leases = self.driver.slab_api.GetLeases()
         grain = self.driver.slab_api.GetLeaseGranularity()
@@ -263,7 +294,7 @@ class SlabAggregate:
                 #site = node['site_id']
                 slab_xrn = slab_xrn_object(self.driver.slab_api.root_auth, node)
                 rspec_lease['component_id'] = slab_xrn.urn
-                #rspec_lease['component_id'] = hostname_to_urn(self.driver.hrn, \
+                #rspec_lease['component_id'] = hostname_to_urn(self.driver.hrn,\
                                         #site, node['hostname'])
                 try:
                     rspec_lease['slice_id'] = lease['slice_id']
@@ -277,25 +308,10 @@ class SlabAggregate:
         return rspec_leases    
         
    
-        #rspec_leases = []
-        #for lease in leases:
-       
-            #rspec_lease = Lease()
-            
-            ## xxx how to retrieve site['login_base']
-
-            #rspec_lease['lease_id'] = lease['lease_id']
-            #rspec_lease['component_id'] = hostname_to_urn(self.driver.hrn, \
-                                        #site['login_base'], lease['hostname'])
-            #slice_hrn = slicename_to_hrn(self.driver.hrn, lease['name'])
-            #slice_urn = hrn_to_urn(slice_hrn, 'slice')
-            #rspec_lease['slice_id'] = slice_urn
-            #rspec_lease['t_from'] = lease['t_from']
-            #rspec_lease['t_until'] = lease['t_until']          
-            #rspec_leases.append(rspec_lease)
-        #return rspec_leases   
+      
 #from plc/aggregate.py 
-    def get_rspec(self, slice_xrn=None, login=None, version = None, options={}):
+    def get_rspec(self, slice_xrn=None, login=None, version = None, options
+    =None):
 
         rspec = None
         version_manager = VersionManager()	
@@ -304,7 +320,7 @@ class SlabAggregate:
                     version.type %s  version.version %s options %s \r\n" \
                     %(version,version.type,version.version,options))
 
-        if not slice_xrn:
+        if slice_xrn is None:
             rspec_version = version_manager._get_version(version.type, \
                                                     version.version, 'ad')
 
@@ -322,7 +338,8 @@ class SlabAggregate:
            #rspec.xml.set('expires',  datetime_to_epoch(slice['expires']))
          # add sliver defaults
         #nodes, links = self.get_nodes(slice, slivers)
-        logger.debug("\r\n \r\n SlabAggregate \tget_rspec ******* slice_xrn %s slices  %s\r\n \r\n"\
+        logger.debug("\r\n \r\n SlabAggregate \tget_rspec *** \
+                                        slice_xrn %s slices  %s\r\n \r\n"\
                                             %(slice_xrn, slices)) 
                                             
         try:                                    
@@ -335,9 +352,11 @@ class SlabAggregate:
             pass 
         
         if lease_option in ['all', 'resources']:
-        #if not options.get('list_leases') or options.get('list_leases') and options['list_leases'] != 'leases':
+        #if not options.get('list_leases') or options.get('list_leases') 
+        #and options['list_leases'] != 'leases':
             nodes = self.get_nodes(slices, slivers) 
-            logger.debug("\r\n \r\n SlabAggregate \ lease_option %s get rspec  ******* nodes %s"\
+            logger.debug("\r\n \r\n SlabAggregate \ lease_option %s \
+                                        get rspec  ******* nodes %s"\
                                             %(lease_option, nodes[0]))
 
             sites_set = set([node['location']['site'] for node in nodes] )    
@@ -347,7 +366,7 @@ class SlabAggregate:
             if slice_xrn :
                 #Get user associated with this slice
                 #user = dbsession.query(RegRecord).filter_by(record_id = \
-                                                #slices['record_id_user']).first()
+                                            #slices['record_id_user']).first()
 
                 #ldap_username = (user.hrn).split('.')[1]
                 
@@ -358,7 +377,8 @@ class SlabAggregate:
                 ldap_username = tmp[1].split('_')[0]
               
                 if version.type == "Slab":
-                    rspec.version.add_connection_information(ldap_username, sites_set)
+                    rspec.version.add_connection_information(ldap_username, \
+                                                        sites_set)
 
             default_sliver = slivers.get('default_sliver', [])
             if default_sliver:
@@ -367,10 +387,10 @@ class SlabAggregate:
                         default_sliver%s \r\n" %(default_sliver))
                 for attrib in default_sliver:
                     rspec.version.add_default_sliver_attribute(attrib, \
-                                                               default_sliver[attrib])  
-        if lease_option in ['all','leases']:                                                         
-        #if options.get('list_leases') or options.get('list_leases') and options['list_leases'] != 'resources':
-            leases = self.get_leases(slices)
+                                                        default_sliver[attrib]) 
+        if lease_option in ['all','leases']:
+            #leases = self.get_all_leases(slices)
+            leases = self.get_all_leases()
             rspec.version.add_leases(leases)
             
         #logger.debug("SlabAggregate \tget_rspec ******* rspec_toxml %s \r\n"\
