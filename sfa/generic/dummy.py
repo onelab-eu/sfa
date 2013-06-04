@@ -25,6 +25,6 @@ class dummy (Generic):
 
     # driver class for server-side services, talk to the whole testbed
     def driver_class (self):
-        import sfa.managers.v2_to_v3_adapter
-        return sfa.managers.v2_to_v3_adapter.V2ToV3Adapter
+        import sfa.dummy.dummydriver
+        return sfa.dummy.dummydriver.DummyDriver
 
