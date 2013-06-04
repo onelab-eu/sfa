@@ -252,15 +252,10 @@ class SlabAggregate:
                     rspec_node['slivers'] = [sliver]
                     
                     # slivers always provide the ssh service
-<<<<<<< HEAD
-                    login = Login({'authentication': 'ssh-keys', 'hostname': node['hostname'], 'port':'22', 'username': sliver['name']})
-                    service = ServicesElement({'login': login})
-=======
                     login = Login({'authentication': 'ssh-keys', \
                             'hostname': node['hostname'], 'port':'22', \
                             'username': sliver['name']})
                     service = Services({'login': login})
->>>>>>> 1de733e... Adding check to ensure the required expirement is of 10 min
                     rspec_node['services'] = [service]
                 rspec_nodes.append(rspec_node)
 
