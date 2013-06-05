@@ -611,9 +611,11 @@ class SlabTestbedAPI():
             #  additional delay for /bin/sleep command to
             # take in account  prologue and epilogue scripts execution
             # int walltimeAdditionalDelay = 240;  additional delay
+            #for prologue/epilogue execution = $SERVER_PROLOGUE_EPILOGUE_TIMEOUT 
+            #in oar.conf
             # Put the duration in seconds first
-            desired_walltime = duration * 60
-            
+            #desired_walltime = duration * 60
+            desired_walltime = duration
             total_walltime = desired_walltime + 240 #+4 min Update SA 23/10/12
             sleep_walltime = desired_walltime  # 0 sec added Update SA 23/10/12
             walltime = []

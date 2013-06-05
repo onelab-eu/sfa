@@ -218,9 +218,9 @@ class SlabDriver(Driver):
         #for single_slice in slice_list:
             #for node in single_slice['node_ids']:
                 #slice_nodes_list.append(node['hostname'])
-        for node in one_slice:
-            slice_nodes_list.append(node['hostname'])
-            
+        #for node in one_slice:
+            #slice_nodes_list.append(node['hostname'])
+        slice_nodes_list = one_slice['list_node_ids']['hostname']   
         #Get all the corresponding nodes details    
         nodes_all = self.slab_api.GetNodes({'hostname':slice_nodes_list},
                                 ['node_id', 'hostname','site','boot_state'])
@@ -365,7 +365,7 @@ class SlabDriver(Driver):
                     #Check the experiment's duration is valid before adding
                     #the lease to the requested leases list
                     duration_in_seconds = \
-                            int(single_requested_lease['duration'])*60
+                            int(single_requested_lease['duration'])
                     if duration_in_seconds > self.slab_api.GetMinExperimentDurationInSec() :
                         requested_lease_list.append(single_requested_lease)
                         
