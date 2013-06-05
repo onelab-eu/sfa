@@ -415,31 +415,31 @@ class SlabTestbedAPI():
      
         return
     
-    #GetSites unused, SA 27/05/13   
-    #def GetSites(self, site_filter_name_list = None, return_fields_list = None):
-        #site_dict = self.oar.parser.SendRequest("GET_sites")
-        ##site_dict : dict where the key is the sit ename
-        #return_site_list = []
-        #if not ( site_filter_name_list or return_fields_list):
-            #return_site_list = site_dict.values()
-            #return return_site_list
+
+    def GetSites(self, site_filter_name_list = None, return_fields_list = None):
+        site_dict = self.oar.parser.SendRequest("GET_sites")
+        #site_dict : dict where the key is the sit ename
+        return_site_list = []
+        if not ( site_filter_name_list or return_fields_list):
+            return_site_list = site_dict.values()
+            return return_site_list
         
-        #for site_filter_name in site_filter_name_list:
-            #if site_filter_name in site_dict:
-                #if return_fields_list:
-                    #for field in return_fields_list:
-                        #tmp = {}
-                        #try:
-                            #tmp[field] = site_dict[site_filter_name][field]
-                        #except KeyError:
-                            #logger.error("GetSites KeyError %s "%(field))
-                            #return None
-                    #return_site_list.append(tmp)
-                #else:
-                    #return_site_list.append( site_dict[site_filter_name])
+        for site_filter_name in site_filter_name_list:
+            if site_filter_name in site_dict:
+                if return_fields_list:
+                    for field in return_fields_list:
+                        tmp = {}
+                        try:
+                            tmp[field] = site_dict[site_filter_name][field]
+                        except KeyError:
+                            logger.error("GetSites KeyError %s "%(field))
+                            return None
+                    return_site_list.append(tmp)
+                else:
+                    return_site_list.append( site_dict[site_filter_name])
             
 
-        #return return_site_list
+        return return_site_list
 
 
    
