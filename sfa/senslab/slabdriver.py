@@ -220,7 +220,7 @@ class SlabDriver(Driver):
                 #slice_nodes_list.append(node['hostname'])
         #for node in one_slice:
             #slice_nodes_list.append(node['hostname'])
-        slice_nodes_list = one_slice['list_node_ids']['hostname']   
+        slice_nodes_list = one_slice['node_ids']
         #Get all the corresponding nodes details    
         nodes_all = self.slab_api.GetNodes({'hostname':slice_nodes_list},
                                 ['node_id', 'hostname','site','boot_state'])
@@ -235,8 +235,8 @@ class SlabDriver(Driver):
             top_level_status = 'empty' 
             result = {}
             result.fromkeys(\
-                ['geni_urn','pl_login','geni_status','geni_resources'], None)
-            result['pl_login'] = one_slice['reg_researchers']['hrn']
+                ['geni_urn','geni_error', 'pl_login','geni_status','geni_resources'], None)
+            result['pl_login'] = one_slice['reg_researchers'][0].hrn
             logger.debug("Slabdriver - sliver_status Sliver status \
                                         urn %s hrn %s single_slice  %s \r\n " \
                                         %(slice_urn, slice_hrn, single_slice))
@@ -255,23 +255,23 @@ class SlabDriver(Driver):
             result['geni_urn'] = slice_urn
 
             resources = []
-            for node in single_slice['node_ids']:
+            for node_hostname in single_slice['node_ids']:
                 res = {}
-                #res['slab_hostname'] = node['hostname']
-                #res['slab_boot_state'] = node['boot_state']
+                res['slab_hostname'] = node_hostname
+                res['slab_boot_state'] = nodeall_byhostname[node_hostname]['boot_state']
                 
-                res['pl_hostname'] = node['hostname']
-                res['pl_boot_state'] = \
-                            nodeall_byhostname[node['hostname']]['boot_state']
+                #res['pl_hostname'] = node['hostname']
+                #res['pl_boot_state'] = \
+                            #nodeall_byhostname[node['hostname']]['boot_state']
                 #res['pl_last_contact'] = strftime(self.time_format, \
                                                     #gmtime(float(timestamp)))
                 sliver_id =  Xrn(slice_urn, type='slice', \
-                        id=nodeall_byhostname[node['hostname']]['node_id'], \
+                        id=nodeall_byhostname[node_hostname]['node_id'], \
                         authority=self.hrn).urn
     
                 res['geni_urn'] = sliver_id 
-                node_name  = node['hostname']
-                if nodeall_byhostname[node_name]['boot_state'] == 'Alive':
+                #node_name  = node['hostname']
+                if nodeall_byhostname[node_hostname]['boot_state'] == 'Alive':
 
                     res['geni_status'] = 'ready'
                 else:
