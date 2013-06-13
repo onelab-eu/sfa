@@ -549,7 +549,7 @@ class PlSlices:
                 'email': added_user_id,
                 'peer_person_id': None,
                 'keys': [],
-                'key_ids': added_user.get('key_ids', []),
+                #'key_ids': added_user.get('key_ids', []),
             }
             person['person_id'] = self.driver.shell.AddPerson(person)
             if peer:
