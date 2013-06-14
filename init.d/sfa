@@ -315,7 +315,7 @@ function start() {
         
     [ "$SFA_SM_ENABLED" == 1 -o "$SFA_SM_ENABLED" == True ] && action "SFA: SliceMgr" daemon /usr/bin/sfa-start.py -s -d $OPTIONS
 
-    [ "$SFA_FLASHPOLICY_ENABLED" == 1 ] && \
+    [ "$SFA_FLASHPOLICY_ENABLED" == 1 -o "$SFA_FLASHPOLICY_ENABLED" == True ] && \
         action "Flash Policy Server" daemon /usr/bin/sfa_flashpolicy.py --file="$SFA_FLASHPOLICY_CONFIG_FILE" --port=$SFA_FLASHPOLICY_PORT -d
 
     touch $SFALOCK
@@ -361,4 +361,3 @@ case "$1" in
 esac
 
 exit $RETVAL
-
