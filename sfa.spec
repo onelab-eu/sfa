@@ -1,6 +1,6 @@
 %define name sfa
 %define version 2.1
-%define taglevel 25
+%define taglevel 26
 
 %define release %{taglevel}%{?pldistro:.%{pldistro}}%{?date:.%{date}}
 %global python_sitearch	%( python -c "from distutils.sysconfig import get_python_lib; print get_python_lib(1)" )
@@ -265,6 +265,26 @@ fi
 #[ "$1" -ge "1" ] && service sfa-cm restart || :
 
 %changelog
+* Tue Jun 18 2013 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-2.1-26
+- -- core
+- do start flash policy server when configured
+- fix PLCInvalidArgument
+- fix sfaadmin.py list
+- fix version number of GENIv3 RSpec in sfi.py
+- Add support of leases in PGv2 and GENIv3 RSpecs
+- pldriver.delete_sliver removes leases as well
+- -- senslab
+- handling user creation in the senslab LDAP when a user from a federated testbed creates a lease using senslab resources
+- changed lease granularity to 1 minute.
+- add check to ensure the required expirement is of 10 min duration minimum
+- fix sliver_status
+- fix leases management
+- fixed GetSlices, delete_sliver and DeleteJobs
+- cleanup and code documention - removed unused functions and methods
+- changed some return values to be easier to handle for the most part
+- refactored slabimport module
+- added a Jenkins configuration file to test automated deployment, which is not working yet
+
 * Tue Feb 26 2013 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-2.1-25
 - sfi and sfaadmin list now share the same display code for related objs
 - support for advertising alternate api urls - for other API versions - api_versions.xml
