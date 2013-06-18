@@ -1218,6 +1218,21 @@ use this if you mean an authority instead""")
         rspec = open(rspec_file).read()
         api_options = {}
         api_options ['call_id'] = unique_call_id()
+        # users
+        sfa_users = []
+        geni_users = []
+        slice_records = self.registry().Resolve(slice_urn, [self.my_credential_string])
+        if slice_records and 'reg-researchers' in slice_records[0] and slice_records[0]['reg-researchers']!=[]:
+            slice_record = slice_records[0]
+            user_hrns = slice_record['reg-researchers']
+            user_urns = [hrn_to_urn(hrn, 'user') for hrn in user_hrns]
+            user_records = self.registry().Resolve(user_urns, [self.my_credential_string])
+            sfa_users = sfa_users_arg(user_records, slice_record)
+            geni_users = pg_users_arg(user_records)
+
+        api_options['sfa_users'] = sfa_users
+        api_options['geni_users'] = geni_users
+
         result = server.Allocate(slice_urn, creds, rspec, api_options)
         value = ReturnValue.get_value(result)
         if self.options.raw:
@@ -1270,9 +1285,9 @@ use this if you mean an authority instead""")
         #  }]
         users = []
         slice_records = self.registry().Resolve(slice_urn, [self.my_credential_string])
-        if slice_records and 'researcher' in slice_records[0] and slice_records[0]['researcher']!=[]:
+        if slice_records and 'reg-researchers' in slice_records[0] and slice_records[0]['reg-researchers']!=[]:
             slice_record = slice_records[0]
-            user_hrns = slice_record['researcher']
+            user_hrns = slice_record['reg-researchers']
             user_urns = [hrn_to_urn(hrn, 'user') for hrn in user_hrns]
             user_records = self.registry().Resolve(user_urns, [self.my_credential_string])
             users = pg_users_arg(user_records)
