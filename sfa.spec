@@ -1,6 +1,6 @@
 %define name sfa
 %define version 3.0
-%define taglevel 0
+%define taglevel 1
 
 %define release %{taglevel}%{?pldistro:.%{pldistro}}%{?date:.%{date}}
 %global python_sitearch	%( python -c "from distutils.sysconfig import get_python_lib; print get_python_lib(1)" )
@@ -265,6 +265,14 @@ fi
 #[ "$1" -ge "1" ] && service sfa-cm restart || :
 
 %changelog
+* Wed Jun 19 2013 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-3.0-1
+- AM API v3-based first implementation.
+- planetlab native V3 driver
+- dummy native V3 driver
+- introduction of v2_to_v3_adapter
+- lease times in RFC3339 date format, not epoch
+- mostly in line with geni-v2 for non-v3 issues like packaging and all
+
 * Tue Feb 26 2013 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-2.1-25
 - sfi and sfaadmin list now share the same display code for related objs
 - support for advertising alternate api urls - for other API versions - api_versions.xml
