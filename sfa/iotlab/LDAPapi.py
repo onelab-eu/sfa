@@ -62,11 +62,7 @@ class ldap_co:
         try:
             self.ldapserv = ldap.open(self.ldapHost)
         except ldap.LDAPError, error:
-<<<<<<< HEAD:sfa/iotlab/LDAPapi.py
             return {'bool': False, 'message': error}
-=======
-            return {'bool' : False, 'message' : error }
->>>>>>> 3fe7429... SA:sfa/senslab/LDAPapi.py
 
         # Bind with authentification
         if(bind):
@@ -77,10 +73,6 @@ class ldap_co:
 
     def bind(self):
         """ Binding method.
-<<<<<<< HEAD:sfa/iotlab/LDAPapi.py
-
-=======
->>>>>>> 3fe7429... SA:sfa/senslab/LDAPapi.py
         :return: dictionary with the bind status. True if Successful,
         False if not and in this case the error message( {'bool', 'message'} )
         :rtype: dict
@@ -109,12 +101,8 @@ class ldap_co:
         try:
             self.ldapserv.unbind_s()
         except ldap.LDAPError, error:
-<<<<<<< HEAD:sfa/iotlab/LDAPapi.py
             return {'bool': False, 'message': error}
 
-=======
-            return {'bool' : False, 'message' : error }
->>>>>>> 3fe7429... SA:sfa/senslab/LDAPapi.py
 
 class LoginPassword():
     """
@@ -128,14 +116,10 @@ class LoginPassword():
 
         Sets password  and login maximum length, and defines the characters
         that can be found in a random generated password.
-<<<<<<< HEAD:sfa/iotlab/LDAPapi.py
 
-=======
->>>>>>> 3fe7429... SA:sfa/senslab/LDAPapi.py
         """
         self.login_max_length = 8
         self.length_password = 8
-<<<<<<< HEAD:sfa/iotlab/LDAPapi.py
         self.chars_password = ['!', '$', '(',')', '*', '+', ',', '-', '.',
                                '0', '1', '2', '3', '4', '5', '6', '7', '8',
                                '9', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H',
@@ -145,20 +129,6 @@ class LoginPassword():
                                'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q',
                                'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
                                '\'']
-=======
-        self.chars_password = [ '!', '$', '(',')', '*', '+', ',', '-', '.', \
-                                '0', '1', '2', '3', '4', '5', '6', '7', '8', \
-                                '9', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', \
-                                'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', \
-                                'R', 'S', 'T',  'U', 'V', 'W', 'X', 'Y', 'Z', \
-                                '_', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', \
-                                'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p' ,'q', \
-                                'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', \
-                                '\'']
-
-
-
->>>>>>> 3fe7429... SA:sfa/senslab/LDAPapi.py
 
     @staticmethod
     def clean_user_names(record):
@@ -176,7 +146,6 @@ class LoginPassword():
         """
         if 'first_name' in record and 'last_name' in record:
             #Remove all special characters from first_name/last name
-<<<<<<< HEAD:sfa/iotlab/LDAPapi.py
             lower_first_name = record['first_name'].replace('-', '')\
                 .replace('_', '').replace('[', '')\
                 .replace(']', '').replace(' ', '')\
@@ -185,16 +154,6 @@ class LoginPassword():
                 .replace('_', '').replace('[', '')\
                 .replace(']', '').replace(' ', '')\
                 .lower()
-=======
-            lower_first_name = record['first_name'].replace('-','')\
-                                            .replace('_','').replace('[','')\
-                                            .replace(']','').replace(' ','')\
-                                            .lower()
-            lower_last_name = record['last_name'].replace('-','')\
-                                            .replace('_','').replace('[','')\
-                                            .replace(']','').replace(' ','')\
-                                            .lower()
->>>>>>> 3fe7429... SA:sfa/senslab/LDAPapi.py
             return lower_first_name, lower_last_name
         else:
             return None, None
@@ -328,11 +287,7 @@ class LoginPassword():
         :return: Returns encrypted password.
         :rtype:string
         """
-<<<<<<< HEAD:sfa/iotlab/LDAPapi.py
         #Keep consistency with Java Iotlab's LDAP API
-=======
-        #Keep consistency with Java Senslab's LDAP API
->>>>>>> 3fe7429... SA:sfa/senslab/LDAPapi.py
         #RFC2307SSHAPasswordEncryptor so set the salt size to 8 bytes
         return lssha.encrypt(password, salt_size = 8)
 
@@ -370,20 +325,12 @@ class LDAPapi :
         (four characters minimum length). Get proper last name and
         first name so that the user's login can be generated.
 
-=======
-        Generate login for adding a new user in LDAP Directory
-        (four characters minimum length). Get proper last name and
-        first name so that the user's login can be generated.
->>>>>>> 3fe7429... SA:sfa/senslab/LDAPapi.py
         :param record: Record must contain first_name and last_name.
         :param record: dict
         :return: the generated login for the user described with record if the
         login generation is successful, None if it fails.
         :rtype: string or None
-<<<<<<< HEAD:sfa/iotlab/LDAPapi.py
 
-=======
->>>>>>> 3fe7429... SA:sfa/senslab/LDAPapi.py
         """
         #For compatibility with other ldap func
         if 'mail' in record and 'email' not in record:
@@ -489,13 +436,8 @@ class LDAPapi :
 
             #Hrn should not be part of the filter because the hrn
             #presented by a certificate of a SFA user not imported in
-<<<<<<< HEAD:sfa/iotlab/LDAPapi.py
             #Iotlab  does not include the iotlab login in it
             #Plus, the SFA user may already have an account with iotlab
-=======
-            #Senslab  does not include the senslab login in it
-            #Plus, the SFA user may already have an account with senslab
->>>>>>> 3fe7429... SA:sfa/senslab/LDAPapi.py
             #using another login.
 
 
@@ -516,11 +458,7 @@ class LDAPapi :
         return req_ldap
 
     def make_ldap_attributes_from_record(self, record):
-<<<<<<< HEAD:sfa/iotlab/LDAPapi.py
         """When adding a new user to Iotlab's LDAP, creates an attributes
-=======
-        """When adding a new user to Senslab's LDAP, creates an attributes
->>>>>>> 3fe7429... SA:sfa/senslab/LDAPapi.py
         dictionnary from the SFA record understandable by LDAP.
         Generates the user's LDAP login.
         User is automatically validated (account enabled) and described
@@ -569,17 +507,10 @@ class LDAPapi :
 
 
         #Password is automatically generated because SFA user don't go
-<<<<<<< HEAD:sfa/iotlab/LDAPapi.py
         #through the Iotlab website  used to register new users,
         #There is no place in SFA where users can enter such information
         #yet.
         #If the user wants to set his own password , he must go to the Iotlab
-=======
-        #through the Senslab website  used to register new users,
-        #There is no place in SFA where users can enter such information
-        #yet.
-        #If the user wants to set his own password , he must go to the Senslab
->>>>>>> 3fe7429... SA:sfa/senslab/LDAPapi.py
         #website.
         password = self.login_pwd.generate_password()
         attrs['userPassword'] = self.login_pwd.encrypt_password(password)
@@ -650,11 +581,7 @@ class LDAPapi :
 
             except ldap.LDAPError, error:
                 logger.log_exc("LDAP Add Error %s" %error)
-<<<<<<< HEAD:sfa/iotlab/LDAPapi.py
                 return {'bool': False, 'message': error}
-=======
-                return {'bool' : False, 'message' : error }
->>>>>>> 3fe7429... SA:sfa/senslab/LDAPapi.py
 
             self.conn.close()
             return {'bool': True, 'uid':user_ldap_attrs['uid']}
@@ -923,11 +850,7 @@ class LDAPapi :
                                             %(error))
                 return
 
-<<<<<<< HEAD:sfa/iotlab/LDAPapi.py
         return results
-=======
-            return results
->>>>>>> 3fe7429... SA:sfa/senslab/LDAPapi.py
 
     def _process_ldap_info_for_one_user(self, record, result_data):
         """
@@ -959,15 +882,9 @@ class LDAPapi :
             parent_hrn = get_authority(hrn)
             if parent_hrn != self.authname:
                 peer_authority = parent_hrn
-<<<<<<< HEAD:sfa/iotlab/LDAPapi.py
             #In case the user was not imported from Iotlab LDAP
             #but from another federated site, has an account in
             #iotlab but currently using his hrn from federated site
-=======
-            #In case the user was not imported from Senslab LDAP
-            #but from another federated site, has an account in
-            #senslab but currently using his hrn from federated site
->>>>>>> 3fe7429... SA:sfa/senslab/LDAPapi.py
             #then the login is different from the one found in its hrn
             if tmpname != hrn.split('.')[1]:
                 hrn = None
@@ -999,20 +916,12 @@ class LDAPapi :
                      expected_fields=None):
         """
         Search a SFA user with a hrn. User should be already registered
-<<<<<<< HEAD:sfa/iotlab/LDAPapi.py
         in Iotlab LDAP.
-=======
-        in Senslab LDAP.
->>>>>>> 3fe7429... SA:sfa/senslab/LDAPapi.py
         :param record: sfa user's record. Should contain first_name,last_name,
         email or mail. If no record is provided, returns all the users found
         in LDAP.
         :type record: dict
-<<<<<<< HEAD:sfa/iotlab/LDAPapi.py
         :param is_user_enabled: is the user's iotlab account already valid.
-=======
-        :param is_user_enabled: is the user's senslab account already valid.
->>>>>>> 3fe7429... SA:sfa/senslab/LDAPapi.py
         :type is_user_enabled: Boolean.
         :return: LDAP entries from ldap matching the filter provided. Returns
         a single entry if one filter has been given and a list of
