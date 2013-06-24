@@ -837,7 +837,7 @@ class LDAPapi :
                                             %(error))
                 return
 
-            return results
+        return results
 
     def _process_ldap_info_for_one_user(self, record, result_data):
         """
