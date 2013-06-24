@@ -23,9 +23,15 @@ def iotlab_xrn_to_hostname(xrn):
 
 def iotlab_xrn_object(root_auth, hostname):
     """Attributes are urn and hrn.
+<<<<<<< HEAD:sfa/iotlab/iotlabaggregate.py
     Get the hostname using iotlab_xrn_to_hostname on the urn.
 
     :return: the iotlab node's xrn
+=======
+    Get the hostname using slab_xrn_to_hostname on the urn.
+
+    :return: the senslab node's xrn
+>>>>>>> 3fe7429... SA:sfa/senslab/slabaggregate.py
     :rtype: Xrn
     """
     return Xrn('.'.join( [root_auth, Xrn.escape(hostname)]), type='node')
@@ -57,14 +63,22 @@ class IotlabAggregate:
 
 
         :param slice_xrn: xrn of the slice
+<<<<<<< HEAD:sfa/iotlab/iotlabaggregate.py
         :param login: user's login on iotlab ldap
+=======
+        :param login: user's login on senslab ldap
+>>>>>>> 3fe7429... SA:sfa/senslab/slabaggregate.py
 
         :type slice_xrn: string
         :type login: string
         :reutnr : a list of slices dict and a dictionary of Sliver object
         :rtype: (list, dict)
 
+<<<<<<< HEAD:sfa/iotlab/iotlabaggregate.py
         ..note: There is no slivers in iotlab, only leases.
+=======
+        ..note: There is no slivers in senslab, only leases.
+>>>>>>> 3fe7429... SA:sfa/senslab/slabaggregate.py
 
         """
         slivers = {}
@@ -101,15 +115,24 @@ class IotlabAggregate:
                 sliver_xrn.set_authority(self.driver.hrn)
                 sliver = Sliver({'sliver_id':sliver_xrn.urn,
                                 'name': sfa_slice['hrn'],
+<<<<<<< HEAD:sfa/iotlab/iotlabaggregate.py
                                 'type': 'iotlab-node',
+=======
+                                'type': 'slab-node',
+>>>>>>> 3fe7429... SA:sfa/senslab/slabaggregate.py
                                 'tags': []})
 
                 slivers[node] = sliver
 
 
         #Add default sliver attribute :
+<<<<<<< HEAD:sfa/iotlab/iotlabaggregate.py
         #connection information for iotlab
         if get_authority (sfa_slice['hrn']) == self.driver.iotlab_api.root_auth:
+=======
+        #connection information for senslab
+        if get_authority (sfa_slice['hrn']) == self.driver.slab_api.root_auth:
+>>>>>>> 3fe7429... SA:sfa/senslab/slabaggregate.py
             tmp = sfa_slice['hrn'].split('.')
             ldap_username = tmp[1].split('_')[0]
             ssh_access = None
@@ -138,16 +161,27 @@ class IotlabAggregate:
         #tags_filter = {}
 
         # get the granularity in second for the reservation system
+<<<<<<< HEAD:sfa/iotlab/iotlabaggregate.py
         grain = self.driver.iotlab_api.GetLeaseGranularity()
 
 
         nodes = self.driver.iotlab_api.GetNodes()
+=======
+        grain = self.driver.slab_api.GetLeaseGranularity()
+
+
+        nodes = self.driver.slab_api.GetNodes()
+>>>>>>> 3fe7429... SA:sfa/senslab/slabaggregate.py
         #geni_available = options.get('geni_available')
         #if geni_available:
             #filter['boot_state'] = 'boot'
 
         #filter.update({'peer_id': None})
+<<<<<<< HEAD:sfa/iotlab/iotlabaggregate.py
         #nodes = self.driver.iotlab_api.GetNodes(filter['hostname'])
+=======
+        #nodes = self.driver.slab_api.GetNodes(filter['hostname'])
+>>>>>>> 3fe7429... SA:sfa/senslab/slabaggregate.py
 
         #site_ids = []
         #interface_ids = []
@@ -182,14 +216,22 @@ class IotlabAggregate:
                 #for node in one_slice['node_ids']:
                     #slice_nodes_list.append(node)
 
+<<<<<<< HEAD:sfa/iotlab/iotlabaggregate.py
         reserved_nodes = self.driver.iotlab_api.GetNodesCurrentlyInUse()
+=======
+        reserved_nodes = self.driver.slab_api.GetNodesCurrentlyInUse()
+>>>>>>> 3fe7429... SA:sfa/senslab/slabaggregate.py
         logger.debug("SLABAGGREGATE api get_nodes slice_nodes_list  %s "\
                                                         %(slice_nodes_list))
         for node in nodes:
             nodes_dict[node['node_id']] = node
             if slice_nodes_list == [] or node['hostname'] in slice_nodes_list:
 
+<<<<<<< HEAD:sfa/iotlab/iotlabaggregate.py
                 rspec_node = IotlabNode()
+=======
+                rspec_node = SlabNode()
+>>>>>>> 3fe7429... SA:sfa/senslab/slabaggregate.py
                 # xxx how to retrieve site['login_base']
                 #site_id=node['site_id']
                 #site=sites_dict[site_id]
@@ -198,16 +240,27 @@ class IotlabAggregate:
                 rspec_node['archi'] = node['archi']
                 rspec_node['radio'] = node['radio']
 
+<<<<<<< HEAD:sfa/iotlab/iotlabaggregate.py
                 iotlab_xrn = iotlab_xrn_object(self.driver.iotlab_api.root_auth, \
                                                     node['hostname'])
                 rspec_node['component_id'] = iotlab_xrn.urn
+=======
+                slab_xrn = slab_xrn_object(self.driver.slab_api.root_auth, \
+                                                    node['hostname'])
+                rspec_node['component_id'] = slab_xrn.urn
+>>>>>>> 3fe7429... SA:sfa/senslab/slabaggregate.py
                 rspec_node['component_name'] = node['hostname']
                 rspec_node['component_manager_id'] = \
                                 hrn_to_urn(self.driver.iotlab_api.root_auth, \
                                 'authority+sa')
 
+<<<<<<< HEAD:sfa/iotlab/iotlabaggregate.py
                 # Iotlab's nodes are federated : there is only one authority
                 # for all Iotlab sites, registered in SFA.
+=======
+                # Senslab's nodes are federated : there is only one authority
+                # for all Senslab sites, registered in SFA.
+>>>>>>> 3fe7429... SA:sfa/senslab/slabaggregate.py
                 # Removing the part including the site
                 # in authority_id SA 27/07/12
                 rspec_node['authority_id'] = rspec_node['component_manager_id']
@@ -229,7 +282,11 @@ class IotlabAggregate:
                 rspec_node['location'] = location
 
 
+<<<<<<< HEAD:sfa/iotlab/iotlabaggregate.py
                 position = IotlabPosition()
+=======
+                position = SlabPosition()
+>>>>>>> 3fe7429... SA:sfa/senslab/slabaggregate.py
                 for field in position :
                     try:
                         position[field] = node[field]
@@ -329,7 +386,11 @@ class IotlabAggregate:
                                                 version.version, 'manifest')
 
         slices, slivers = self.get_slice_and_slivers(slice_xrn, login)
+<<<<<<< HEAD:sfa/iotlab/iotlabaggregate.py
         #at this point sliver may be empty if no iotlab job
+=======
+        #at this point sliver may be empty if no senslab job
+>>>>>>> 3fe7429... SA:sfa/senslab/slabaggregate.py
         #is running for this user/slice.
         rspec = RSpec(version=rspec_version, user_options=options)
 
@@ -356,7 +417,11 @@ class IotlabAggregate:
         #if not options.get('list_leases') or options.get('list_leases')
         #and options['list_leases'] != 'leases':
             nodes = self.get_nodes(slices, slivers)
+<<<<<<< HEAD:sfa/iotlab/iotlabaggregate.py
             logger.debug("\r\n \r\n IotlabAggregate \ lease_option %s \
+=======
+            logger.debug("\r\n \r\n SlabAggregate \ lease_option %s \
+>>>>>>> 3fe7429... SA:sfa/senslab/slabaggregate.py
                                         get rspec  ******* nodes %s"\
                                             %(lease_option, nodes[0]))
 
@@ -394,6 +459,10 @@ class IotlabAggregate:
             leases = self.get_all_leases()
             rspec.version.add_leases(leases)
 
+<<<<<<< HEAD:sfa/iotlab/iotlabaggregate.py
         #logger.debug("IotlabAggregate \tget_rspec ******* rspec_toxml %s \r\n"\
+=======
+        #logger.debug("SlabAggregate \tget_rspec ******* rspec_toxml %s \r\n"\
+>>>>>>> 3fe7429... SA:sfa/senslab/slabaggregate.py
                                             #%(rspec.toxml()))
         return rspec.toxml()
