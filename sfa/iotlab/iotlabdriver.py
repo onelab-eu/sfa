@@ -12,19 +12,19 @@ from sfa.rspecs.rspec import RSpec
 from sfa.util.xrn import Xrn, hrn_to_urn, get_authority
 
 
-from sfa.senslab.slabpostgres import SlabDB
+from sfa.iotlab.iotlabpostgres import IotlabDB
 
 
-from sfa.senslab.slabaggregate import SlabAggregate, slab_xrn_to_hostname
+from sfa.iotlab.iotlabaggregate import IotlabAggregate, iotlab_xrn_to_hostname
 
-from sfa.senslab.slabslices import SlabSlices
-
-
-from sfa.senslab.slabapi import SlabTestbedAPI
+from sfa.iotlab.iotlabslices import IotlabSlices
 
 
-class SlabDriver(Driver):
-    """ Senslab Driver class inherited from Driver generic class.
+from sfa.iotlab.iotlabapi import IotlabTestbedAPI
+
+
+class IotlabDriver(Driver):
+    """ Iotlab Driver class inherited from Driver generic class.
 
     Contains methods compliant with the SFA standard and the testbed
     infrastructure (calls to LDAP and OAR).
@@ -35,17 +35,17 @@ class SlabDriver(Driver):
     def __init__(self, config):
         """
 
-        Sets the senslab SFA config parameters ,
-        instanciates the testbed api and the senslab database.
+        Sets the iotlab SFA config parameters ,
+        instanciates the testbed api and the iotlab database.
 
-        :param config: senslab SFA configuration object
+        :param config: iotlab SFA configuration object
         :type config: Config object
         """
         Driver.__init__ (self, config)
         self.config = config
 
-        self.db = SlabDB(config, debug = False)
-        self.slab_api = SlabTestbedAPI(config)
+        self.db = IotlabDB(config, debug = False)
+        self.iotlab_api = IotlabTestbedAPI(config)
         self.cache = None
 
     def augment_records_with_testbed_info (self, record_list ):
@@ -62,7 +62,7 @@ class SlabDriver(Driver):
 
     def fill_record_info(self, record_list):
         """
-        For each SFA record, fill in the senslab specific and SFA specific
+        For each SFA record, fill in the iotlab specific and SFA specific
         fields in the record.
 
         :param record_list: list of sfa dictionaries records
@@ -75,7 +75,7 @@ class SlabDriver(Driver):
         other way to do it given the way it's called in registry manager.
         """
 
-        logger.debug("SLABDRIVER \tfill_record_info records %s " %(record_list))
+        logger.debug("IOTLABDRIVER \tfill_record_info records %s " %(record_list))
         if not isinstance(record_list, list):
             record_list = [record_list]
 
@@ -84,7 +84,7 @@ class SlabDriver(Driver):
             for record in record_list:
                 #If the record is a SFA slice record, then add information
                 #about the user of this slice. This kind of
-                #information is in the Senslab's DB.
+                #information is in the Iotlab's DB.
                 if str(record['type']) == 'slice':
                     if 'reg_researchers' in record and \
                     isinstance(record['reg_researchers'], list) :
@@ -101,41 +101,41 @@ class SlabDriver(Driver):
                             'key_ids':''})  #For client_helper.py compatibility
 
 
-                    #Get slab slice record and oar job id if any.
-                    recslice_list = self.slab_api.GetSlices(slice_filter = \
+                    #Get iotlab slice record and oar job id if any.
+                    recslice_list = self.iotlab_api.GetSlices(slice_filter = \
                                                 str(record['hrn']),\
                                                 slice_filter_type = 'slice_hrn')
 
 
-                    logger.debug("SLABDRIVER \tfill_record_info \
+                    logger.debug("IOTLABDRIVER \tfill_record_info \
                         TYPE SLICE RECUSER record['hrn'] %s ecord['oar_job_id']\
                          %s " %(record['hrn'], record['oar_job_id']))
                     del record['reg_researchers']
                     try:
                         for rec in recslice_list:
-                            logger.debug("SLABDRIVER\r\n  \t  \
+                            logger.debug("IOTLABDRIVER\r\n  \t  \
                             fill_record_info oar_job_id %s " \
                             %(rec['oar_job_id']))
 
-                            record['node_ids'] = [ self.slab_api.root_auth + \
+                            record['node_ids'] = [ self.iotlab_api.root_auth + \
                                     hostname for hostname in rec['node_ids']]
                     except KeyError:
                         pass
 
 
-                    logger.debug( "SLABDRIVER.PY \t fill_record_info SLICE \
+                    logger.debug( "IOTLABDRIVER.PY \t fill_record_info SLICE \
                                     recslice_list  %s \r\n \t RECORD %s \r\n \
                                     \r\n" %(recslice_list, record))
 
                 if str(record['type']) == 'user':
                     #The record is a SFA user record.
-                    #Get the information about his slice from Senslab's DB
+                    #Get the information about his slice from Iotlab's DB
                     #and add it to the user record.
-                    recslice_list = self.slab_api.GetSlices(\
+                    recslice_list = self.iotlab_api.GetSlices(\
                             slice_filter = record['record_id'],\
                             slice_filter_type = 'record_id_user')
 
-                    logger.debug( "SLABDRIVER.PY \t fill_record_info TYPE USER \
+                    logger.debug( "IOTLABDRIVER.PY \t fill_record_info TYPE USER \
                                 recslice_list %s \r\n \t RECORD %s \r\n" \
                                 %(recslice_list , record))
                     #Append slice record in records list,
@@ -143,7 +143,7 @@ class SlabDriver(Driver):
                     #Will update PIs and researcher for the slice
 
                     recuser = recslice_list[0]['reg_researchers']
-                    logger.debug( "SLABDRIVER.PY \t fill_record_info USER  \
+                    logger.debug( "IOTLABDRIVER.PY \t fill_record_info USER  \
                                             recuser %s \r\n \r\n" %(recuser))
                     recslice = {}
                     recslice = recslice_list[0]
@@ -164,22 +164,22 @@ class SlabDriver(Driver):
 
 
                     #GetPersons takes [] as filters
-                    user_slab = self.slab_api.GetPersons([record])
+                    user_iotlab = self.iotlab_api.GetPersons([record])
 
 
-                    record.update(user_slab[0])
+                    record.update(user_iotlab[0])
                     #For client_helper.py compatibility
                     record.update( { 'geni_urn':'',
                     'keys':'',
                     'key_ids':'' })
                     record_list.append(recslice)
 
-                    logger.debug("SLABDRIVER.PY \tfill_record_info ADDING SLICE\
+                    logger.debug("IOTLABDRIVER.PY \tfill_record_info ADDING SLICE\
                                 INFO TO USER records %s" %(record_list))
 
 
         except TypeError, error:
-            logger.log_exc("SLABDRIVER \t fill_record_info  EXCEPTION %s"\
+            logger.log_exc("IOTLABDRIVER \t fill_record_info  EXCEPTION %s"\
                                                                      %(error))
 
         return record_list
@@ -188,7 +188,7 @@ class SlabDriver(Driver):
     def sliver_status(self, slice_urn, slice_hrn):
         """
         Receive a status request for slice named urn/hrn
-        urn:publicid:IDN+senslab+nturro_slice hrn senslab.nturro_slice
+        urn:publicid:IDN+iotlab+nturro_slice hrn iotlab.nturro_slice
         shall return a structure as described in
         http://groups.geni.net/geni/wiki/GAPI_AM_API_V2#SliverStatus
         NT : not sure if we should implement this or not, but used by sface.
@@ -202,7 +202,7 @@ class SlabDriver(Driver):
 
 
         #First get the slice with the slice hrn
-        slice_list =  self.slab_api.GetSlices(slice_filter = slice_hrn, \
+        slice_list =  self.iotlab_api.GetSlices(slice_filter = slice_hrn, \
                                     slice_filter_type = 'slice_hrn')
 
         if len(slice_list) is 0:
@@ -221,7 +221,7 @@ class SlabDriver(Driver):
             #slice_nodes_list.append(node['hostname'])
         slice_nodes_list = one_slice['node_ids']
         #Get all the corresponding nodes details
-        nodes_all = self.slab_api.GetNodes({'hostname':slice_nodes_list},
+        nodes_all = self.iotlab_api.GetNodes({'hostname':slice_nodes_list},
                                 ['node_id', 'hostname','site','boot_state'])
         nodeall_byhostname = dict([(one_node['hostname'], one_node) \
                                             for one_node in nodes_all])
@@ -248,7 +248,7 @@ class SlabDriver(Driver):
 
             top_level_status = 'ready'
 
-            #A job is running on Senslab for this slice
+            #A job is running on Iotlab for this slice
             # report about the local nodes that are in the slice only
 
             result['geni_urn'] = slice_urn
@@ -256,8 +256,8 @@ class SlabDriver(Driver):
             resources = []
             for node_hostname in single_slice['node_ids']:
                 res = {}
-                res['slab_hostname'] = node_hostname
-                res['slab_boot_state'] = nodeall_byhostname[node_hostname]['boot_state']
+                res['iotlab_hostname'] = node_hostname
+                res['iotlab_boot_state'] = nodeall_byhostname[node_hostname]['boot_state']
 
                 #res['pl_hostname'] = node['hostname']
                 #res['pl_boot_state'] = \
@@ -283,7 +283,7 @@ class SlabDriver(Driver):
 
             result['geni_status'] = top_level_status
             result['geni_resources'] = resources
-            logger.debug("SLABDRIVER \tsliver_statusresources %s res %s "\
+            logger.debug("IOTLABDRIVER \tsliver_statusresources %s res %s "\
                                                     %(resources,res))
             return result
 
@@ -340,7 +340,7 @@ class SlabDriver(Driver):
         type. Find the lease requests in the rspec and creates
         a lease request list with the mandatory information ( nodes,
         start time and duration) of the valid leases (duration above or equal
-        to the senslab experiment minimum duration).
+        to the iotlab experiment minimum duration).
 
         :param rspec: rspec request received.
         :type rspec: RSpec
@@ -350,13 +350,13 @@ class SlabDriver(Driver):
         requested_lease_list = []
         for lease in rspec.version.get_leases():
             single_requested_lease = {}
-            logger.debug("SLABDRIVER.PY \t_get_requested_leases_list lease %s " %(lease))
+            logger.debug("IOTLABDRIVER.PY \t_get_requested_leases_list lease %s " %(lease))
 
             if not lease.get('lease_id'):
                 if get_authority(lease['component_id']) == \
-                                            self.slab_api.root_auth:
+                                            self.iotlab_api.root_auth:
                     single_requested_lease['hostname'] = \
-                                        slab_xrn_to_hostname(\
+                                        iotlab_xrn_to_hostname(\
                                         lease.get('component_id').strip())
                     single_requested_lease['start_time'] = \
                                                         lease.get('start_time')
@@ -365,7 +365,7 @@ class SlabDriver(Driver):
                     #the lease to the requested leases list
                     duration_in_seconds = \
                             int(single_requested_lease['duration'])
-                    if duration_in_seconds >= self.slab_api.GetMinExperimentDurationInSec() :
+                    if duration_in_seconds >= self.iotlab_api.GetMinExperimentDurationInSec() :
                         requested_lease_list.append(single_requested_lease)
 
         return requested_lease_list
@@ -415,10 +415,10 @@ class SlabDriver(Driver):
         :rtype: dictionary
         """
         requested_lease_list = self._get_requested_leases_list(rspec)
-        logger.debug("SLABDRIVER _process_requested_jobs requested_lease_list \
+        logger.debug("IOTLABDRIVER _process_requested_jobs requested_lease_list \
         %s"%(requested_lease_list))
         job_dict =  self._group_leases_by_start_time(requested_lease_list)
-        logger.debug("SLABDRIVER _process_requested_jobs  job_dict\
+        logger.debug("IOTLABDRIVER _process_requested_jobs  job_dict\
         %s"%(job_dict))
 
         return job_dict
@@ -446,9 +446,9 @@ class SlabDriver(Driver):
 
 
         """
-        aggregate = SlabAggregate(self)
+        aggregate = IotlabAggregate(self)
 
-        slices = SlabSlices(self)
+        slices = IotlabSlices(self)
         peer = slices.get_peer(slice_hrn)
         sfa_peer = slices.get_sfa_peer(slice_hrn)
         slice_record = None
@@ -458,7 +458,7 @@ class SlabDriver(Driver):
 
         if users:
             slice_record = users[0].get('slice_record', {})
-            logger.debug("SLABDRIVER.PY \t ===============create_sliver \t\
+            logger.debug("IOTLABDRIVER.PY \t ===============create_sliver \t\
                                         creds %s \r\n \r\n users %s" \
                                         %(creds, users))
             slice_record['user'] = {'keys':users[0]['keys'], \
@@ -466,7 +466,7 @@ class SlabDriver(Driver):
                                     'hrn':slice_record['reg-researchers'][0]}
         # parse rspec
         rspec = RSpec(rspec_string)
-        logger.debug("SLABDRIVER.PY \t create_sliver \trspec.version \
+        logger.debug("IOTLABDRIVER.PY \t create_sliver \trspec.version \
                                         %s slice_record %s users %s" \
                                         %(rspec.version,slice_record, users))
 
@@ -486,13 +486,13 @@ class SlabDriver(Driver):
         #unused, removed SA 13/08/12
         #rspec.version.get_slice_attributes()
 
-        logger.debug("SLABDRIVER.PY create_sliver slice %s " %(sfa_slice))
+        logger.debug("IOTLABDRIVER.PY create_sliver slice %s " %(sfa_slice))
 
         # add/remove slice from nodes
 
         #requested_slivers = [node.get('component_id') \
                             #for node in rspec.version.get_nodes_with_slivers()\
-                            #if node.get('authority_id') is self.slab_api.root_auth]
+                            #if node.get('authority_id') is self.iotlab_api.root_auth]
         #l = [ node for node in rspec.version.get_nodes_with_slivers() ]
         #logger.debug("SLADRIVER \tcreate_sliver requested_slivers \
                                     #requested_slivers %s  listnodes %s" \
@@ -504,7 +504,7 @@ class SlabDriver(Driver):
         requested_job_dict = self._process_requested_jobs(rspec)
 
 
-        logger.debug("SLABDRIVER.PY \tcreate_sliver  requested_job_dict %s "\
+        logger.debug("IOTLABDRIVER.PY \tcreate_sliver  requested_job_dict %s "\
                                                      %(requested_job_dict))
         #verify_slice_leases returns the leases , but the return value is unused
         #here. Removed SA 13/08/12
@@ -518,17 +518,17 @@ class SlabDriver(Driver):
     def delete_sliver (self, slice_urn, slice_hrn, creds, options):
         """
         Deletes the lease associated with the slice hrn and the credentials
-        if the slice belongs to senslab. Answer to DeleteSliver.
+        if the slice belongs to iotlab. Answer to DeleteSliver.
 
-        :return: 1 if the slice to delete was not found on senslab,
+        :return: 1 if the slice to delete was not found on iotlab,
         True if the deletion was successful, False otherwise otherwise.
 
-        .. note:: Should really be named delete_leases because senslab does
+        .. note:: Should really be named delete_leases because iotlab does
         not have any slivers, but only deals with leases. However, SFA api only
         have delete_sliver define so far. SA 13.05/2013
         """
 
-        sfa_slice_list  = self.slab_api.GetSlices(slice_filter = slice_hrn, \
+        sfa_slice_list  = self.iotlab_api.GetSlices(slice_filter = slice_hrn, \
                                             slice_filter_type = 'slice_hrn')
 
         if not sfa_slice_list:
@@ -538,17 +538,17 @@ class SlabDriver(Driver):
         for sfa_slice in sfa_slice_list:
 
 
-            logger.debug("SLABDRIVER.PY delete_sliver slice %s" %(sfa_slice))
-            slices = SlabSlices(self)
+            logger.debug("IOTLABDRIVER.PY delete_sliver slice %s" %(sfa_slice))
+            slices = IotlabSlices(self)
             # determine if this is a peer slice
 
             peer = slices.get_peer(slice_hrn)
 
-            logger.debug("SLABDRIVER.PY delete_sliver peer %s \
+            logger.debug("IOTLABDRIVER.PY delete_sliver peer %s \
             \r\n \t sfa_slice %s " %(peer, sfa_slice))
             try:
 
-                self.slab_api.DeleteSliceFromNodes(sfa_slice)
+                self.iotlab_api.DeleteSliceFromNodes(sfa_slice)
                 return True
             except :
                 return False
@@ -556,7 +556,7 @@ class SlabDriver(Driver):
 
     def list_resources (self, slice_urn, slice_hrn, creds, options):
         """
-        List resources from the senslab aggregate and returns a Rspec
+        List resources from the iotlab aggregate and returns a Rspec
         advertisement with resources found when slice_urn and slice_hrn are None
         (in case of resource discovery).
         If a slice hrn and urn are provided, list experiment's slice
@@ -595,12 +595,12 @@ class SlabDriver(Driver):
         #if cached_requested and self.cache and not slice_hrn:
             #rspec = self.cache.get(version_string)
             #if rspec:
-                #logger.debug("SlabDriver.ListResources: \
+                #logger.debug("IotlabDriver.ListResources: \
                                     #returning cached advertisement")
                 #return rspec
 
         #panos: passing user-defined options
-        aggregate = SlabAggregate(self)
+        aggregate = IotlabAggregate(self)
 
         rspec =  aggregate.get_rspec(slice_xrn=slice_urn, \
                                         version=rspec_version, options=options)
@@ -616,7 +616,7 @@ class SlabDriver(Driver):
     def list_slices (self, creds, options):
         """
         Answer to ListSlices.
-        List slices belonging to senslab, returns slice urns list.
+        List slices belonging to iotlab, returns slice urns list.
         No caching used. Options unused but are defined in the SFA method
         api prototype.
 
@@ -633,16 +633,16 @@ class SlabDriver(Driver):
 
         # get data from db
 
-        slices = self.slab_api.GetSlices()
-        logger.debug("SLABDRIVER.PY \tlist_slices hrn %s \r\n \r\n" %(slices))
-        slice_hrns = [slab_slice['hrn'] for slab_slice in slices]
+        slices = self.iotlab_api.GetSlices()
+        logger.debug("IOTLABDRIVER.PY \tlist_slices hrn %s \r\n \r\n" %(slices))
+        slice_hrns = [iotlab_slice['hrn'] for iotlab_slice in slices]
 
         slice_urns = [hrn_to_urn(slice_hrn, 'slice') \
                                                 for slice_hrn in slice_hrns]
 
         # cache the result
         #if self.cache:
-            #logger.debug ("SlabDriver.list_slices stores value in cache")
+            #logger.debug ("IotlabDriver.list_slices stores value in cache")
             #self.cache.add('slices', slice_urns)
 
         return slice_urns
@@ -655,7 +655,7 @@ class SlabDriver(Driver):
 
         ..warnings:: should not be used. Different components are in charge of
         doing this task. Adding nodes = OAR
-        Adding users = LDAP Senslab
+        Adding users = LDAP Iotlab
         Adding slice = Import from LDAP users
         Adding site = OAR
 
@@ -667,7 +667,7 @@ class SlabDriver(Driver):
 
 
     def update (self, old_sfa_record, new_sfa_record, hrn, new_key):
-        """No site or node record update allowed in Senslab.
+        """No site or node record update allowed in Iotlab.
         The only modifications authorized here are key deletion/addition
         on an existing user and password change.
         On an existing user, CAN NOT BE MODIFIED:
@@ -701,11 +701,11 @@ class SlabDriver(Driver):
 
             if new_key:
                 # must check this key against the previous one if it exists
-                persons = self.slab_api.GetPersons([old_sfa_record])
+                persons = self.iotlab_api.GetPersons([old_sfa_record])
                 person = persons[0]
                 keys = [person['pkey']]
                 #Get all the person's keys
-                keys_dict = self.slab_api.GetKeys(keys)
+                keys_dict = self.iotlab_api.GetKeys(keys)
 
                 # Delete all stale keys, meaning the user has only one key
                 #at a time
@@ -718,10 +718,10 @@ class SlabDriver(Driver):
                 else:
                     #remove all the other keys
                     for key in keys_dict:
-                        self.slab_api.DeleteKey(person, key)
-                    self.slab_api.AddPersonKey(person, \
+                        self.iotlab_api.DeleteKey(person, key)
+                    self.iotlab_api.AddPersonKey(person, \
                     {'sshPublicKey': person['pkey']},{'sshPublicKey': new_key} )
-                    #self.slab_api.AddPersonKey(person, {'key_type': 'ssh', \
+                    #self.iotlab_api.AddPersonKey(person, {'key_type': 'ssh', \
                                                     #'key': new_key})
         return True
 
@@ -748,19 +748,19 @@ class SlabDriver(Driver):
         hrn = sfa_record['hrn']
         if sfa_record_type == 'user':
 
-            #get user from senslab ldap
-            person = self.slab_api.GetPersons(sfa_record)
-            #No registering at a given site in Senslab.
-            #Once registered to the LDAP, all senslab sites are
+            #get user from iotlab ldap
+            person = self.iotlab_api.GetPersons(sfa_record)
+            #No registering at a given site in Iotlab.
+            #Once registered to the LDAP, all iotlab sites are
             #accesible.
             if person :
                 #Mark account as disabled in ldap
-                return self.slab_api.DeletePerson(sfa_record)
+                return self.iotlab_api.DeletePerson(sfa_record)
 
         elif sfa_record_type == 'slice':
-            if self.slab_api.GetSlices(slice_filter = hrn, \
+            if self.iotlab_api.GetSlices(slice_filter = hrn, \
                                     slice_filter_type = 'slice_hrn'):
-                ret = self.slab_api.DeleteSlice(sfa_record)
+                ret = self.iotlab_api.DeleteSlice(sfa_record)
 
 
 

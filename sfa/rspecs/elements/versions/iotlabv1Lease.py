@@ -10,11 +10,11 @@ from sfa.rspecs.elements.lease import Lease
 
 
 
-class Slabv1Lease:
+class Iotlabv1Lease:
 
     @staticmethod
     def add_leases(xml, leases):
-        
+
         network_elems = xml.xpath('//network')
         if len(network_elems) > 0:
             network_elem = network_elems[0]
@@ -23,8 +23,8 @@ class Slabv1Lease:
             network_elem = xml.add_element('network', name = network_urn)
         else:
             network_elem = xml
-         
-        lease_elems = []       
+
+        lease_elems = []
         for lease in leases:
             lease['start_time'] = datetime_to_string(utcparse(lease['start_time']))
 
@@ -37,7 +37,7 @@ class Slabv1Lease:
     def get_leases(xml, filter={}):
         xpath = '//lease%s | //default:lease%s' % (XpathFilter.xpath(filter), XpathFilter.xpath(filter))
         lease_elems = xml.xpath(xpath)
-        return Slabv1Lease.get_lease_objs(lease_elems)
+        return Iotlabv1Lease.get_lease_objs(lease_elems)
 
     @staticmethod
     def get_lease_objs(lease_elems):

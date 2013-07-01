@@ -1,4 +1,4 @@
-#!/bin/bash 
+#!/bin/bash
 if (( ! $# == 2 ))
 then
     echo " Usage : bash_test takes 2 arguments : one jobid and one of the following:"
@@ -12,13 +12,13 @@ echo " =================    SFI.PY RESOURCES            ============="
 sfi.py resources
 
 echo " ================= SFI.PY RESOURCES -R SLAB        ============="
-sfi.py resources -r slab
+sfi.py resources -r iotlab
 
 echo " =================    SFI.PY RESOURCES -L ALL      ============="
 sfi.py resources -l all
 
 echo " ================= SFI.PY RESOURCES -R SLAB -L ALL ============="
-sfi.py resources -r slab -l all
+sfi.py resources -r iotlab -l all
 
 echo " ================= SFI.PY RESOURCES -L ALL > avakian_adv.rspec ============="
 sfi.py resources -l all > /home/savakian/flab-sfa/avakian_adv.rspec

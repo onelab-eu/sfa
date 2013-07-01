@@ -7,52 +7,59 @@ from sfa.rspecs.elements.location import Location
 from sfa.rspecs.elements.hardware_type import HardwareType
 from sfa.rspecs.elements.element import Element
 from sfa.rspecs.elements.interface import Interface
-from sfa.rspecs.elements.versions.slabv1Sliver import Slabv1Sliver
+from sfa.rspecs.elements.versions.iotlabv1Sliver import Iotlabv1Sliver
 from sfa.util.sfalogging import logger
 
+<<<<<<< HEAD:sfa/rspecs/elements/versions/slabv1Node.py
 class SlabNode(NodeElement):
     #First get the fields already defined in the class Node
     fields = list(NodeElement.fields)
     #Extend it with senslab's specific fields
+=======
+class IotlabNode(Node):
+    #First get the fields already defined in the class Node
+    fields = list(Node.fields)
+    #Extend it with iotlab's specific fields
+>>>>>>> 7cb1e78... Renaming Senslab into Iotlab.:sfa/rspecs/elements/versions/iotlabv1Node.py
     fields.extend (['archi', 'radio', 'mobile','position'])
-    
 
-class SlabPosition(Element):
+
+class IotlabPosition(Element):
     fields = ['posx', 'posy','posz']
-    
-class SlabLocation(Location):
+
+class IotlabLocation(Location):
     fields = list(Location.fields)
     fields.extend (['site'])
-    
 
 
 
-class Slabv1Node:
-    
+
+class Iotlabv1Node:
+
     @staticmethod
     def add_connection_information(xml, ldap_username, sites_set):
-        """ Adds login and ssh connection info in the network item in 
-        the xml. Does not create the network element, therefore 
+        """ Adds login and ssh connection info in the network item in
+        the xml. Does not create the network element, therefore
         should be used after add_nodes, which creates the network item.
-        
+
         """
         logger.debug(" add_connection_information " )
         #Get network item in the xml
-        network_elems = xml.xpath('//network')  
+        network_elems = xml.xpath('//network')
         if len(network_elems) > 0:
             network_elem = network_elems[0]
 
-        slab_network_dict = {}
-        slab_network_dict['login'] = ldap_username
- 
-        slab_network_dict['ssh'] = \
-            ['ssh ' + ldap_username + '@'+site+'.senslab.info' \
+        iotlab_network_dict = {}
+        iotlab_network_dict['login'] = ldap_username
+
+        iotlab_network_dict['ssh'] = \
+            ['ssh ' + ldap_username + '@'+site+'.iotlab.info' \
             for site in sites_set]
         network_elem.set('ssh', \
-                unicode(slab_network_dict['ssh']))
-        network_elem.set('login', unicode( slab_network_dict['login']))
+                unicode(iotlab_network_dict['ssh']))
+        network_elem.set('login', unicode( iotlab_network_dict['login']))
 
-        
+
     @staticmethod
     def add_nodes(xml, nodes):
         #Add network item in the xml
@@ -65,8 +72,8 @@ class Slabv1Node:
                                         name = Xrn(network_urn).get_hrn())
         else:
             network_elem = xml
-       
-        logger.debug("slabv1Node \t add_nodes  nodes %s \r\n "%(nodes[0]))
+
+        logger.debug("iotlabv1Node \t add_nodes  nodes %s \r\n "%(nodes[0]))
         node_elems = []
         #Then add nodes items to the network item in the xml
         for node in nodes:
@@ -75,19 +82,19 @@ class Slabv1Node:
                                                     'boot_state', 'mobile']
             node_elem = network_elem.add_instance('node', node, node_fields)
             node_elems.append(node_elem)
-            
+
             #Set the attibutes of this node element
-            for attribute in node: 
+            for attribute in node:
             # set component name
                 if attribute is 'component_id':
                     component_name = node['component_name']
                     node_elem.set('component_name', component_name)
-                    
-            # set hardware types, extend fields to add Senslab's architecture
+
+            # set hardware types, extend fields to add Iotlab's architecture
             #and radio type
-                
+
                 if attribute is 'hardware_types':
-                    for hardware_type in node.get('hardware_types', []): 
+                    for hardware_type in node.get('hardware_types', []):
                         fields = HardwareType.fields
                         fields.extend(['archi','radio'])
                         node_elem.add_instance('hardware_types', node, fields)
@@ -95,7 +102,7 @@ class Slabv1Node:
             # set location
                 if attribute is 'location':
                     node_elem.add_instance('location', node['location'], \
-                                                        SlabLocation.fields)
+                                                        IotlabLocation.fields)
              # add granularity of the reservation system
              #TODO put the granularity in network instead SA 18/07/12
                 if attribute is 'granularity' :
@@ -103,8 +110,8 @@ class Slabv1Node:
                     if granularity:
                         node_elem.add_instance('granularity', \
                                     granularity, granularity.fields)
-                
-          
+
+
             # set available element
                 if attribute is 'boot_state':
                     if node.get('boot_state').lower() == 'alive':
@@ -114,71 +121,76 @@ class Slabv1Node:
                         available_elem = node_elem.add_element('available', \
                                                                 now='false')
 
-            #set position 
+            #set position
                 if attribute is 'position':
                     node_elem.add_instance('position', node['position'], \
-                                                        SlabPosition.fields)
+                                                        IotlabPosition.fields)
             ## add services
-            #PGv2Services.add_services(node_elem, node.get('services', [])) 
+            #PGv2Services.add_services(node_elem, node.get('services', []))
             # add slivers
                 if attribute is 'slivers':
                     slivers = node.get('slivers', [])
                     if not slivers:
                     # we must still advertise the available sliver types
-                        slivers = Sliver({'type': 'slab-node'})
+                        slivers = Sliver({'type': 'iotlab-node'})
                     # we must also advertise the available initscripts
                     #slivers['tags'] = []
-                    #if node.get('pl_initscripts'): 
+                    #if node.get('pl_initscripts'):
                         #for initscript in node.get('pl_initscripts', []):
                             #slivers['tags'].append({'name': 'initscript', \
                                                     #'value': initscript['name']})
-           
-                    Slabv1Sliver.add_slivers(node_elem, slivers)
-        return node_elems
-                    
 
-            
+                    Iotlabv1Sliver.add_slivers(node_elem, slivers)
+        return node_elems
+
+
+
     @staticmethod
     def get_nodes(xml, filter={}):
         xpath = '//node%s | //default:node%s' % (XpathFilter.xpath(filter), \
                                                     XpathFilter.xpath(filter))
-        node_elems = xml.xpath(xpath)  
-        return Slabv1Node.get_node_objs(node_elems)
+        node_elems = xml.xpath(xpath)
+        return Iotlabv1Node.get_node_objs(node_elems)
 
-    @staticmethod 
+    @staticmethod
     def get_nodes_with_slivers(xml, sliver_filter={}):
 
         xpath = '//node[count(sliver)>0] | \
-                                //default:node[count(default:sliver) > 0]' 
-        node_elems = xml.xpath(xpath)    
+                                //default:node[count(default:sliver) > 0]'
+        node_elems = xml.xpath(xpath)
         logger.debug("SLABV1NODE \tget_nodes_with_slivers  \
                                 node_elems %s"%(node_elems))
-        return Slabv1Node.get_node_objs(node_elems)            
+        return Iotlabv1Node.get_node_objs(node_elems)
 
     @staticmethod
     def get_node_objs(node_elems):
         nodes = []
         for node_elem in node_elems:
+<<<<<<< HEAD:sfa/rspecs/elements/versions/slabv1Node.py
             node = NodeElement(node_elem.attrib, node_elem)
             nodes.append(node) 
+=======
+            node = Node(node_elem.attrib, node_elem)
+            nodes.append(node)
+>>>>>>> 7cb1e78... Renaming Senslab into Iotlab.:sfa/rspecs/elements/versions/iotlabv1Node.py
             if 'component_id' in node_elem.attrib:
                 node['authority_id'] = \
                     Xrn(node_elem.attrib['component_id']).get_authority_urn()
-            
+
             # get hardware types
             hardware_type_elems = node_elem.xpath('./default:hardware_type | \
                                                             ./hardware_type')
             node['hardware_types'] = [hw_type.get_instance(HardwareType) \
                                             for hw_type in hardware_type_elems]
-            
+
             # get location
             location_elems = node_elem.xpath('./default:location | ./location')
             locations = [location_elem.get_instance(Location) \
                                             for location_elem in location_elems]
             if len(locations) > 0:
                 node['location'] = locations[0]
-                
-            
+
+
             # get interfaces
             iface_elems = node_elem.xpath('./default:interface | ./interface')
             node['interfaces'] = [iface_elem.get_instance(Interface) \
@@ -188,15 +200,15 @@ class Slabv1Node:
             #node['services'] = PGv2Services.get_services(node_elem)
 
             # get slivers
-            node['slivers'] = Slabv1Sliver.get_slivers(node_elem)    
+            node['slivers'] = Iotlabv1Sliver.get_slivers(node_elem)
             available_elems = node_elem.xpath('./default:available | \
                                                                 ./available')
             if len(available_elems) > 0 and 'name' in available_elems[0].attrib:
-                if available_elems[0].attrib.get('now', '').lower() == 'true': 
+                if available_elems[0].attrib.get('now', '').lower() == 'true':
                     node['boot_state'] = 'boot'
-                else: 
-                    node['boot_state'] = 'disabled' 
-                    
+                else:
+                    node['boot_state'] = 'disabled'
+
         logger.debug("SLABV1NODE \tget_nodes_objs  \
                                 #nodes %s"%(nodes))
         return nodes
@@ -204,7 +216,7 @@ class Slabv1Node:
 
     @staticmethod
     def add_slivers(xml, slivers):
-        logger.debug("SLABv1NODE \tadd_slivers ")
+        logger.debug("Iotlabv1NODE \tadd_slivers ")
         component_ids = []
         for sliver in slivers:
             filter_sliver = {}
@@ -213,23 +225,23 @@ class Slabv1Node:
                 sliver = {}
             elif 'component_id' in sliver and sliver['component_id']:
                 filter_sliver['component_id'] = '*%s*' % sliver['component_id']
-            if not filter_sliver: 
+            if not filter_sliver:
                 continue
-            nodes = Slabv1Node.get_nodes(xml, filter_sliver)
+            nodes = Iotlabv1Node.get_nodes(xml, filter_sliver)
             if not nodes:
                 continue
             node = nodes[0]
-            Slabv1Sliver.add_slivers(node, sliver)
+            Iotlabv1Sliver.add_slivers(node, sliver)
 
     @staticmethod
     def remove_slivers(xml, hostnames):
         for hostname in hostnames:
-            nodes = Slabv1Node.get_nodes(xml, \
+            nodes = Iotlabv1Node.get_nodes(xml, \
                                     {'component_id': '*%s*' % hostname})
             for node in nodes:
-                slivers = Slabv1Sliver.get_slivers(node.element)
+                slivers = Iotlabv1Sliver.get_slivers(node.element)
                 for sliver in slivers:
-                    node.element.remove(sliver.element) 
+                    node.element.remove(sliver.element)
 
-        
-                                    
+
+
