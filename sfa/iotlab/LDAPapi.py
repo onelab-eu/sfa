@@ -30,7 +30,7 @@ class ldap_co:
     """ Set admin login and server configuration variables."""
 
     def __init__(self):
-        #Senslab PROD LDAP parameters
+        #Iotlab PROD LDAP parameters
         self.ldapserv = None
         ldap_config = LdapConfig()
         self.config = ldap_config
@@ -278,7 +278,7 @@ class LoginPassword():
         :return: Returns encrypted password.
         :rtype:string
         """
-        #Keep consistency with Java Senslab's LDAP API
+        #Keep consistency with Java Iotlab's LDAP API
         #RFC2307SSHAPasswordEncryptor so set the salt size to 8 bytes
         return lssha.encrypt(password, salt_size = 8)
 
@@ -423,8 +423,8 @@ class LDAPapi :
 
             #Hrn should not be part of the filter because the hrn
             #presented by a certificate of a SFA user not imported in
-            #Senslab  does not include the senslab login in it
-            #Plus, the SFA user may already have an account with senslab
+            #Iotlab  does not include the iotlab login in it
+            #Plus, the SFA user may already have an account with iotlab
             #using another login.
 
 
@@ -445,7 +445,7 @@ class LDAPapi :
         return req_ldap
 
     def make_ldap_attributes_from_record(self, record):
-        """When adding a new user to Senslab's LDAP, creates an attributes
+        """When adding a new user to Iotlab's LDAP, creates an attributes
         dictionnary from the SFA record understandable by LDAP.
         Generates the user's LDAP login.
         User is automatically validated (account enabled) and described
@@ -494,10 +494,10 @@ class LDAPapi :
 
 
         #Password is automatically generated because SFA user don't go
-        #through the Senslab website  used to register new users,
+        #through the Iotlab website  used to register new users,
         #There is no place in SFA where users can enter such information
         #yet.
-        #If the user wants to set his own password , he must go to the Senslab
+        #If the user wants to set his own password , he must go to the Iotlab
         #website.
         password = self.login_pwd.generate_password()
         attrs['userPassword'] = self.login_pwd.encrypt_password(password)
@@ -506,7 +506,7 @@ class LDAPapi :
         #Set to 0 to disable the account, -1 to enable it,
         attrs['shadowExpire'] = '-1'
 
-        #Motivation field in Senslab
+        #Motivation field in Iotlab
         attrs['description'] = 'SFA USER FROM OUTSIDE SENSLAB'
 
         attrs['ou'] = 'SFA'         #Optional: organizational unit
@@ -869,9 +869,9 @@ class LDAPapi :
             parent_hrn = get_authority(hrn)
             if parent_hrn != self.authname:
                 peer_authority = parent_hrn
-            #In case the user was not imported from Senslab LDAP
+            #In case the user was not imported from Iotlab LDAP
             #but from another federated site, has an account in
-            #senslab but currently using his hrn from federated site
+            #iotlab but currently using his hrn from federated site
             #then the login is different from the one found in its hrn
             if tmpname != hrn.split('.')[1]:
                 hrn = None
@@ -903,12 +903,12 @@ class LDAPapi :
                      expected_fields=None):
         """
         Search a SFA user with a hrn. User should be already registered
-        in Senslab LDAP.
+        in Iotlab LDAP.
         :param record: sfa user's record. Should contain first_name,last_name,
         email or mail. If no record is provided, returns all the users found
         in LDAP.
         :type record: dict
-        :param is_user_enabled: is the user's senslab account already valid.
+        :param is_user_enabled: is the user's iotlab account already valid.
         :type is_user_enabled: Boolean.
         :return: LDAP entries from ldap matching the filter provided. Returns
         a single entry if one filter has been given and a list of

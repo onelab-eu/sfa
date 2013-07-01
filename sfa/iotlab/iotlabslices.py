@@ -4,53 +4,53 @@ from sfa.util.sfalogging import logger
 
 MAXINT =  2L**31-1
 
-class SlabSlices:
+class IotlabSlices:
 
     rspec_to_slice_tag = {'max_rate':'net_max_rate'}
-    
-    
+
+
     def __init__(self, driver):
         """
         Get the reference to the driver here.
         """
         self.driver = driver
-        
-    
+
+
     def get_peer(self, xrn):
         """
         Find the authority of a resources based on its xrn.
-        If the authority is Senslab (local) return None,
-        Otherwise, look up in the DB if Senslab is federated with this site
-        authority and returns its DB record if it is the case, 
+        If the authority is Iotlab (local) return None,
+        Otherwise, look up in the DB if Iotlab is federated with this site
+        authority and returns its DB record if it is the case,
         """
         hrn, hrn_type = urn_to_hrn(xrn)
-        #Does this slice belong to a local site or a peer senslab site?
+        #Does this slice belong to a local site or a peer iotlab site?
         peer = None
-        
+
         # get this slice's authority (site)
         slice_authority = get_authority(hrn)
-        #Senslab stuff
+        #Iotlab stuff
         #This slice belongs to the current site
-        if slice_authority ==  self.driver.slab_api.root_auth:
+        if slice_authority ==  self.driver.iotlab_api.root_auth:
             site_authority = slice_authority
             return None
-       
+
         site_authority = get_authority(slice_authority).lower()
         # get this site's authority (sfa root authority or sub authority)
 
-        logger.debug("SLABSLICES \ get_peer slice_authority  %s \
+        logger.debug("IOTLABSLICES \ get_peer slice_authority  %s \
                     site_authority %s hrn %s" %(slice_authority, \
                                         site_authority, hrn))
-        
-            
+
+
         # check if we are already peered with this site_authority
         #if so find the peer record
-        peers = self.driver.slab_api.GetPeers(peer_filter = site_authority)
+        peers = self.driver.iotlab_api.GetPeers(peer_filter = site_authority)
         for peer_record in peers:
-          
+
             if site_authority == peer_record.hrn:
                 peer = peer_record
-        logger.debug(" SLABSLICES \tget_peer peer  %s " %(peer))
+        logger.debug(" IOTLABSLICES \tget_peer peer  %s " %(peer))
         return peer
 
     def get_sfa_peer(self, xrn):
@@ -66,66 +66,66 @@ class SlabSlices:
 
         return sfa_peer
 
-        
+
     def verify_slice_leases(self, sfa_slice, requested_jobs_dict, peer):
-        """ 
+        """
         Compare requested leases with the leases already scheduled/
         running in OAR. If necessary, delete and recreate modified leases,
-        and delete no longer requested ones. 
-        
+        and delete no longer requested ones.
+
         :param sfa_slice: sfa slice record
         :param requested_jobs_dict: dictionary of requested leases
         :param peer: sfa peer
-        
+
         :type sfa_slice: dict
-        :type requested_jobs_dict: dict 
+        :type requested_jobs_dict: dict
         :type peer:
-        :return: leases list of dictionary 
+        :return: leases list of dictionary
         :rtype: list
-        
+
         """
 
-        logger.debug("SLABSLICES verify_slice_leases sfa_slice %s \
+        logger.debug("IOTLABSLICES verify_slice_leases sfa_slice %s \
                         "%( sfa_slice))
-        #First get the list of current leases from OAR          
-        leases = self.driver.slab_api.GetLeases({'name':sfa_slice['hrn']})
-        logger.debug("SLABSLICES verify_slice_leases requested_jobs_dict %s \
+        #First get the list of current leases from OAR
+        leases = self.driver.iotlab_api.GetLeases({'name':sfa_slice['hrn']})
+        logger.debug("IOTLABSLICES verify_slice_leases requested_jobs_dict %s \
                         leases %s "%(requested_jobs_dict, leases ))
-        
+
         current_nodes_reserved_by_start_time = {}
         requested_nodes_by_start_time = {}
         leases_by_start_time = {}
         reschedule_jobs_dict = {}
 
-        
-        #Create reduced dictionary with key start_time and value 
+
+        #Create reduced dictionary with key start_time and value
         # the list of nodes
         #-for the leases already registered by OAR first
         # then for the new leases requested by the user
-        
+
         #Leases already scheduled/running in OAR
         for lease in leases :
             current_nodes_reserved_by_start_time[lease['t_from']] = \
                     lease['reserved_nodes']
             leases_by_start_time[lease['t_from']] = lease
-            
+
         #First remove job whose duration is too short
         for job in requested_jobs_dict.values():
-            if job['duration'] < self.driver.slab_api.GetLeaseGranularity():
+            if job['duration'] < self.driver.iotlab_api.GetLeaseGranularity():
                 del requested_jobs_dict[job['start_time']]
-        
-        #Requested jobs     
+
+        #Requested jobs
         for start_time in requested_jobs_dict:
             requested_nodes_by_start_time[int(start_time)]  = \
-                    requested_jobs_dict[start_time]['hostname']            
+                    requested_jobs_dict[start_time]['hostname']
         #Check if there is any difference between the leases already
-        #registered in OAR and the requested jobs.   
+        #registered in OAR and the requested jobs.
         #Difference could be:
         #-Lease deleted in the requested jobs
         #-Added/removed nodes
-        #-Newly added lease 
+        #-Newly added lease
 
-        logger.debug("SLABSLICES verify_slice_leases \
+        logger.debug("IOTLABSLICES verify_slice_leases \
                         requested_nodes_by_start_time %s \
                         "%(requested_nodes_by_start_time ))
         #Find all deleted leases
@@ -136,17 +136,17 @@ class SlabSlices:
                             for start_time in start_time_list]
 
 
-            
+
         #Find added or removed nodes in exisiting leases
-        for start_time in requested_nodes_by_start_time: 
-            logger.debug("SLABSLICES verify_slice_leases  start_time %s \
+        for start_time in requested_nodes_by_start_time:
+            logger.debug("IOTLABSLICES verify_slice_leases  start_time %s \
                          "%( start_time))
             if start_time in current_nodes_reserved_by_start_time:
-                
+
                 if requested_nodes_by_start_time[start_time] == \
                     current_nodes_reserved_by_start_time[start_time]:
                     continue
-                
+
                 else:
                     update_node_set = \
                             set(requested_nodes_by_start_time[start_time])
@@ -162,46 +162,46 @@ class SlabSlices:
                     removed_nodes = \
                         old_nodes_set.difference(\
                         requested_nodes_by_start_time[start_time])
-                    logger.debug("SLABSLICES verify_slice_leases \
+                    logger.debug("IOTLABSLICES verify_slice_leases \
                         shared_nodes %s  added_nodes %s removed_nodes %s"\
                         %(shared_nodes, added_nodes,removed_nodes ))
-                    #If the lease is modified, delete it before 
+                    #If the lease is modified, delete it before
                     #creating it again.
                     #Add the deleted lease job id in the list
-                    #WARNING :rescheduling does not work if there is already  
-                    # 2 running/scheduled jobs because deleting a job 
+                    #WARNING :rescheduling does not work if there is already
+                    # 2 running/scheduled jobs because deleting a job
                     #takes time SA 18/10/2012
                     if added_nodes or removed_nodes:
                         deleted_leases.append(\
                             leases_by_start_time[start_time]['lease_id'])
-                        #Reschedule the job 
+                        #Reschedule the job
                         if added_nodes or shared_nodes:
                             reschedule_jobs_dict[str(start_time)] = \
                                         requested_jobs_dict[str(start_time)]
 
-            else: 
+            else:
                     #New lease
-                    
+
                 job = requested_jobs_dict[str(start_time)]
-                logger.debug("SLABSLICES \
+                logger.debug("IOTLABSLICES \
                 NEWLEASE slice %s  job %s"\
-                %(sfa_slice, job)) 
-                self.driver.slab_api.AddLeases(job['hostname'], \
+                %(sfa_slice, job))
+                self.driver.iotlab_api.AddLeases(job['hostname'], \
                         sfa_slice, int(job['start_time']), \
                         int(job['duration']))
 
         #Deleted leases are the ones with lease id not declared in the Rspec
         if deleted_leases:
-            self.driver.slab_api.DeleteLeases(deleted_leases, sfa_slice['hrn'])
-            logger.debug("SLABSLICES \
+            self.driver.iotlab_api.DeleteLeases(deleted_leases, sfa_slice['hrn'])
+            logger.debug("IOTLABSLICES \
                     verify_slice_leases slice %s deleted_leases %s"\
                     %(sfa_slice, deleted_leases))
-                    
-                    
-        if reschedule_jobs_dict : 
+
+
+        if reschedule_jobs_dict :
             for start_time in  reschedule_jobs_dict:
                 job = reschedule_jobs_dict[start_time]
-                self.driver.slab_api.AddLeases(job['hostname'], \
+                self.driver.iotlab_api.AddLeases(job['hostname'], \
                     sfa_slice, int(job['start_time']), \
                     int(job['duration']))
         return leases
@@ -211,10 +211,10 @@ class SlabSlices:
         deleted_nodes = []
 
         if 'node_ids' in sfa_slice:
-            nodes = self.driver.slab_api.GetNodes(sfa_slice['list_node_ids'], \
+            nodes = self.driver.iotlab_api.GetNodes(sfa_slice['list_node_ids'], \
                 ['hostname'])
             current_slivers = [node['hostname'] for node in nodes]
-    
+
             # remove nodes not in rspec
             deleted_nodes = list(set(current_slivers).\
                                                 difference(requested_slivers))
@@ -223,22 +223,22 @@ class SlabSlices:
                                         #difference(current_slivers))
 
 
-            logger.debug("SLABSLICES \tverify_slice_nodes slice %s\
+            logger.debug("IOTLABSLICES \tverify_slice_nodes slice %s\
                                          \r\n \r\n deleted_nodes %s"\
                                         %(sfa_slice, deleted_nodes))
 
             if deleted_nodes:
                 #Delete the entire experience
-                self.driver.slab_api.DeleteSliceFromNodes(sfa_slice)
+                self.driver.iotlab_api.DeleteSliceFromNodes(sfa_slice)
                 #self.driver.DeleteSliceFromNodes(sfa_slice['slice_hrn'], \
                                                                 #deleted_nodes)
             return nodes
 
-            
+
 
     def free_egre_key(self):
         used = set()
-        for tag in self.driver.slab_api.GetSliceTags({'tagname': 'egre_key'}):
+        for tag in self.driver.iotlab_api.GetSliceTags({'tagname': 'egre_key'}):
             used.add(int(tag['value']))
 
         for i in range(1, 256):
@@ -250,39 +250,39 @@ class SlabSlices:
 
         return str(key)
 
-  
-       
-                        
-     
+
+
+
+
 
     def verify_slice(self, slice_hrn, slice_record, peer, sfa_peer):
 
         #login_base = slice_hrn.split(".")[0]
         slicename = slice_hrn
-        slices_list = self.driver.slab_api.GetSlices(slice_filter = slicename, \
-                                            slice_filter_type = 'slice_hrn') 
-        sfa_slice = None                                 
+        slices_list = self.driver.iotlab_api.GetSlices(slice_filter = slicename, \
+                                            slice_filter_type = 'slice_hrn')
+        sfa_slice = None
         if slices_list:
             for sl in slices_list:
-            
+
                 logger.debug("SLABSLICE \tverify_slice slicename %s \
                                     slices_list %s sl %s \ slice_record %s"\
                                     %(slicename, slices_list,sl, \
                                     slice_record))
                 sfa_slice = sl
                 sfa_slice.update(slice_record)
-               
+
         else:
             #Search for user in ldap based on email SA 14/11/12
-            ldap_user = self.driver.slab_api.ldap.LdapFindUser(\
+            ldap_user = self.driver.iotlab_api.ldap.LdapFindUser(\
                                                     slice_record['user'])
-            logger.debug(" SLABSLICES \tverify_slice Oups \
+            logger.debug(" IOTLABSLICES \tverify_slice Oups \
                         slice_record %s sfa_peer %s ldap_user %s"\
                         %(slice_record, sfa_peer, ldap_user ))
             #User already registered in ldap, meaning user should be in SFA db
-            #and hrn = sfa_auth+ uid   
+            #and hrn = sfa_auth+ uid
             sfa_slice = {'hrn': slicename,
-                     #'url': slice_record.get('url', slice_hrn), 
+                     #'url': slice_record.get('url', slice_hrn),
                      #'description': slice_record.get('description', slice_hrn)
                      'node_list' : [],
                      'authority' : slice_record['authority'],
@@ -292,17 +292,17 @@ class SlabSlices:
                      'reg-researchers':slice_record['reg-researchers'],
                      #'record_id_slice': slice_record['record_id'],
                      'peer_authority':str(sfa_peer)
-                    
-                     }        
-            if ldap_user : 
-                hrn = self.driver.slab_api.root_auth +'.'+ ldap_user['uid']
-                
+
+                     }
+            if ldap_user :
+                hrn = self.driver.iotlab_api.root_auth +'.'+ ldap_user['uid']
+
                 user = self.driver.get_user_record(hrn)
-                
-                logger.debug(" SLABSLICES \tverify_slice hrn %s USER %s" \
+
+                logger.debug(" IOTLABSLICES \tverify_slice hrn %s USER %s" \
                                                             %(hrn, user))
                 #sfa_slice = {'slice_hrn': slicename,
-                     ##'url': slice_record.get('url', slice_hrn), 
+                     ##'url': slice_record.get('url', slice_hrn),
                      ##'description': slice_record.get('description', slice_hrn)
                      #'node_list' : [],
                      #'authority' : slice_record['authority'],
@@ -312,83 +312,83 @@ class SlabSlices:
                      #'reg-researchers':slice_record['reg-researchers'],
                      ##'record_id_slice': slice_record['record_id'],
                      #'peer_authority':str(peer.hrn)
-                    
+
                      #}
-                     # add the slice  
+                     # add the slice
                 if sfa_slice :
-                    self.driver.slab_api.AddSlice(sfa_slice, user)  
-                     
+                    self.driver.iotlab_api.AddSlice(sfa_slice, user)
+
                 if peer:
                     sfa_slice['slice_id'] = slice_record['record_id']
-                                   
-            #slice['slice_id'] = self.driver.slab_api.AddSlice(slice)
-            logger.debug("SLABSLICES \tverify_slice ADDSLICE OK") 
+
+            #slice['slice_id'] = self.driver.iotlab_api.AddSlice(slice)
+            logger.debug("IOTLABSLICES \tverify_slice ADDSLICE OK")
             #slice['node_ids']=[]
             #slice['person_ids'] = []
             #if peer:
                 #sfa_slice['peer_slice_id'] = slice_record.get('slice_id', None)
             # mark this slice as an sfa peer record
             #if sfa_peer:
-                #peer_dict = {'type': 'slice', 'hrn': slice_hrn, 
+                #peer_dict = {'type': 'slice', 'hrn': slice_hrn,
                              #'peer_authority': sfa_peer, 'pointer': \
                                                     #slice['slice_id']}
                 #self.registry.register_peer_object(self.credential, peer_dict)
-            
 
-       
+
+
         return sfa_slice
 
 
     def verify_persons(self, slice_hrn, slice_record, users,  peer, sfa_peer, \
                                                                 options={}):
-        """ 
-        users is a record list. Records can either be local records 
-        or users records from known and trusted federated sites. 
-        If the user is from another site that senslab doesn't trust yet,
-        then Resolve will raise an error before getting to create_sliver. 
         """
-        #TODO SA 21/08/12 verify_persons Needs review 
-        
-        logger.debug("SLABSLICES \tverify_persons \tslice_hrn  %s  \
+        users is a record list. Records can either be local records
+        or users records from known and trusted federated sites.
+        If the user is from another site that iotlab doesn't trust yet,
+        then Resolve will raise an error before getting to create_sliver.
+        """
+        #TODO SA 21/08/12 verify_persons Needs review
+
+        logger.debug("IOTLABSLICES \tverify_persons \tslice_hrn  %s  \
         \t slice_record %s\r\n users %s \t peer %s "\
-        %( slice_hrn, slice_record, users,  peer)) 
-        users_by_id = {}  
-        #users_by_hrn = {} 
+        %( slice_hrn, slice_record, users,  peer))
+        users_by_id = {}
+        #users_by_hrn = {}
         users_by_email = {}
         #users_dict : dict whose keys can either be the user's hrn or its id.
-        #Values contains only id and hrn 
+        #Values contains only id and hrn
         users_dict = {}
-        
+
         #First create dicts by hrn and id for each user in the user record list:
         for info in users:
-            
+
             if 'slice_record' in info :
-                slice_rec = info['slice_record'] 
+                slice_rec = info['slice_record']
                 user = slice_rec['user']
 
-            if 'email' in user:  
+            if 'email' in user:
                 users_by_email[user['email']] = user
                 users_dict[user['email']] = user
-                
+
             #if 'hrn' in user:
                 #users_by_hrn[user['hrn']] = user
                 #users_dict[user['hrn']] = user
-        
+
         logger.debug( "SLABSLICE.PY \t verify_person  \
                         users_dict %s \r\n user_by_email %s \r\n \
                         \tusers_by_id %s " \
                         %(users_dict,users_by_email, users_by_id))
-        
+
         existing_user_ids = []
         #existing_user_hrns = []
         existing_user_emails = []
         existing_users = []
-        # Check if user is in Senslab LDAP using its hrn.
-        # Assuming Senslab is centralised :  one LDAP for all sites, 
+        # Check if user is in Iotlab LDAP using its hrn.
+        # Assuming Iotlab is centralised :  one LDAP for all sites,
         # user'as record_id unknown from LDAP
         # LDAP does not provide users id, therefore we rely on hrns containing
         # the login of the user.
-        # If the hrn is not a senslab hrn, the user may not be in LDAP.
+        # If the hrn is not a iotlab hrn, the user may not be in LDAP.
 
         if users_by_email :
             #Construct the list of filters (list of dicts) for GetPersons
@@ -396,96 +396,96 @@ class SlabSlices:
             for email in users_by_email :
                 filter_user.append (users_by_email[email])
             #Check user's in LDAP with GetPersons
-            #Needed because what if the user has been deleted in LDAP but 
+            #Needed because what if the user has been deleted in LDAP but
             #is still in SFA?
-            existing_users = self.driver.slab_api.GetPersons(filter_user) 
+            existing_users = self.driver.iotlab_api.GetPersons(filter_user)
             logger.debug(" \r\n SLABSLICE.PY \tverify_person  filter_user \
                                                 %s existing_users %s " \
                                                 %(filter_user, existing_users))
-            #User's in senslab LDAP               
+            #User's in iotlab LDAP
             if existing_users:
                 for user in existing_users :
                     users_dict[user['email']].update(user)
                     existing_user_emails.append(\
                                         users_dict[user['email']]['email'])
-                    
-                
-            # User from another known trusted federated site. Check 
-            # if a senslab account matching the email has already been created.
-            else: 
+
+
+            # User from another known trusted federated site. Check
+            # if a iotlab account matching the email has already been created.
+            else:
                 req = 'mail='
                 if isinstance(users, list):
-                    
-                    req += users[0]['email']  
+
+                    req += users[0]['email']
                 else:
                     req += users['email']
-                    
-                ldap_reslt = self.driver.slab_api.ldap.LdapSearch(req)
-                
+
+                ldap_reslt = self.driver.iotlab_api.ldap.LdapSearch(req)
+
                 if ldap_reslt:
                     logger.debug(" SLABSLICE.PY \tverify_person users \
-                                USER already in Senslab \t ldap_reslt %s \
-                                "%( ldap_reslt)) 
+                                USER already in Iotlab \t ldap_reslt %s \
+                                "%( ldap_reslt))
                     existing_users.append(ldap_reslt[1])
-                 
+
                 else:
                     #User not existing in LDAP
                     #TODO SA 21/08/12 raise smthg to add user or add it auto ?
                     #new_record = {}
                     #new_record['pkey'] = users[0]['keys'][0]
                     #new_record['mail'] = users[0]['email']
-                  
+
                     logger.debug(" SLABSLICE.PY \tverify_person users \
                                 not in ldap ...NEW ACCOUNT NEEDED %s \r\n \t \
                                 ldap_reslt %s "  %(users, ldap_reslt))
-   
+
         requested_user_emails = users_by_email.keys()
         requested_user_hrns = \
                         [users_by_email[user]['hrn'] for user in users_by_email]
         logger.debug("SLABSLICE.PY \tverify_person  \
-                       users_by_email  %s " %( users_by_email)) 
+                       users_by_email  %s " %( users_by_email))
         #logger.debug("SLABSLICE.PY \tverify_person  \
-                        #user_by_hrn %s " %( users_by_hrn)) 
-      
-   
+                        #user_by_hrn %s " %( users_by_hrn))
+
+
         #Check that the user of the slice in the slice record
-        #matches one of the existing users 
+        #matches one of the existing users
         try:
             if slice_record['PI'][0] in requested_user_hrns:
             #if slice_record['record_id_user'] in requested_user_ids and \
                                 #slice_record['PI'][0] in requested_user_hrns:
                 logger.debug(" SLABSLICE  \tverify_person ['PI']\
                                             slice_record %s" %(slice_record))
-           
+
         except KeyError:
             pass
-            
-      
+
+
         # users to be added, removed or updated
-        #One user in one senslab slice : there should be no need
+        #One user in one iotlab slice : there should be no need
         #to remove/ add any user from/to a slice.
-        #However a user from SFA which is not registered in Senslab yet
+        #However a user from SFA which is not registered in Iotlab yet
         #should be added to the LDAP.
         added_user_emails = set(requested_user_emails).\
                                         difference(set(existing_user_emails))
-       
+
 
         #self.verify_keys(existing_slice_users, updated_users_list, \
                                                             #peer, append)
 
         added_persons = []
         # add new users
-        
+
         #requested_user_email is in existing_user_emails
         if len(added_user_emails) == 0:
-           
+
             slice_record['login'] = users_dict[requested_user_emails[0]]['uid']
             logger.debug(" SLABSLICE  \tverify_person QUICK DIRTY %s" \
                         %(slice_record))
-            
-            
+
+
         for added_user_email in added_user_emails:
-            #hrn, type = urn_to_hrn(added_user['urn'])  
+            #hrn, type = urn_to_hrn(added_user['urn'])
             added_user = users_dict[added_user_email]
             logger.debug(" SLABSLICE \r\n \r\n  \t THE SECOND verify_person \
                                          added_user %s" %(added_user))
@@ -501,12 +501,12 @@ class SlabSlices:
             person['email'] = added_user['email']
             person['key_ids'] =  added_user.get('key_ids', [])
             #person['urn'] =   added_user['urn']
-              
-            #person['person_id'] = self.driver.slab_api.AddPerson(person)
-            ret = self.driver.slab_api.AddPerson(person)
+
+            #person['person_id'] = self.driver.iotlab_api.AddPerson(person)
+            ret = self.driver.iotlab_api.AddPerson(person)
             if type(ret) == int :
-                person['uid'] = ret 
-            
+                person['uid'] = ret
+
             logger.debug(" SLABSLICE \r\n \r\n  \t THE SECOND verify_person\
                                              personne  %s" %(person))
             #Update slice_Record with the id now known to LDAP
@@ -514,26 +514,26 @@ class SlabSlices:
 
             added_persons.append(person)
 
-        
+
         return added_persons
-            
+
     #Unused
     def verify_keys(self, persons, users, peer, options={}):
-        # existing keys 
+        # existing keys
         key_ids = []
         for person in persons:
             key_ids.extend(person['key_ids'])
-        keylist = self.driver.slab_api.GetKeys(key_ids, ['key_id', 'key'])
-        
+        keylist = self.driver.iotlab_api.GetKeys(key_ids, ['key_id', 'key'])
+
         keydict = {}
         for key in keylist:
-            keydict[key['key']] = key['key_id']     
+            keydict[key['key']] = key['key_id']
         existing_keys = keydict.keys()
-        
+
         persondict = {}
         for person in persons:
-            persondict[person['email']] = person    
-    
+            persondict[person['email']] = person
+
         # add new keys
         requested_keys = []
         updated_persons = []
@@ -549,34 +549,33 @@ class SlabSlices:
                     #try:
                         ##if peer:
                             #person = persondict[user['email']]
-                            #self.driver.slab_api.UnBindObjectFromPeer('person',
+                            #self.driver.iotlab_api.UnBindObjectFromPeer('person',
                                         #person['person_id'], peer['shortname'])
-                    ret = self.driver.slab_api.AddPersonKey(\
+                    ret = self.driver.iotlab_api.AddPersonKey(\
                                                             user['email'], key)
                         #if peer:
                             #key_index = user_keys.index(key['key'])
                             #remote_key_id = user['key_ids'][key_index]
-                            #self.driver.slab_api.BindObjectToPeer('key', \
+                            #self.driver.iotlab_api.BindObjectToPeer('key', \
                                             #key['key_id'], peer['shortname'], \
                                             #remote_key_id)
-                            
+
                     #finally:
                         #if peer:
-                            #self.driver.slab_api.BindObjectToPeer('person', \
+                            #self.driver.iotlab_api.BindObjectToPeer('person', \
                                     #person['person_id'], peer['shortname'], \
                                     #user['person_id'])
-        
+
         # remove old keys (only if we are not appending)
         append = options.get('append', True)
-        if append == False: 
+        if append == False:
             removed_keys = set(existing_keys).difference(requested_keys)
             for key in removed_keys:
                     #if peer:
-                        #self.driver.slab_api.UnBindObjectFromPeer('key', \
+                        #self.driver.iotlab_api.UnBindObjectFromPeer('key', \
                                         #key, peer['shortname'])
 
                 user = users_by_key_string[key]
-                self.driver.slab_api.DeleteKey(user, key)
- 
+                self.driver.iotlab_api.DeleteKey(user, key)
+
         return
-    

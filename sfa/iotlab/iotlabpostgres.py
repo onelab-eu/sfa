@@ -19,20 +19,20 @@ slice_table = {'record_id_user': 'integer PRIMARY KEY references X ON DELETE \
 CASCADE ON UPDATE CASCADE','oar_job_id':'integer DEFAULT -1',  \
 'record_id_slice':'integer', 'slice_hrn':'text NOT NULL'}
 
-#Dict with all the specific senslab tables
-tablenames_dict = {'slab_xp': slice_table}
+#Dict with all the specific iotlab tables
+tablenames_dict = {'iotlab_xp': slice_table}
 
 
-SlabBase = declarative_base()
+IotlabBase = declarative_base()
 
 
-        
-class SenslabXP (SlabBase):
-    """ SQL alchemy class to manipulate slice_senslab table in 
-    slab_sfa database.
-    
+
+class IotlabXP (IotlabBase):
+    """ SQL alchemy class to manipulate slice_iotlab table in
+    iotlab_sfa database.
+
     """
-    __tablename__ = 'slab_xp' 
+    __tablename__ = 'iotlab_xp'
 
 
     slice_hrn = Column(String)
@@ -42,10 +42,10 @@ class SenslabXP (SlabBase):
 
     #oar_job_id = Column( Integer,default = -1)
     #node_list = Column(postgresql.ARRAY(String), nullable =True)
-    
+
     def __init__ (self, slice_hrn =None, job_id=None,  end_time=None):
         """
-        Defines a row of the slice_senslab table
+        Defines a row of the slice_iotlab table
         """
         if slice_hrn:
             self.slice_hrn = slice_hrn
@@ -53,37 +53,37 @@ class SenslabXP (SlabBase):
             self.job_id = job_id
         if end_time:
             self.end_time = end_time
-            
-            
+
+
     def __repr__(self):
         """Prints the SQLAlchemy record to the format defined
         by the function.
         """
-        result = "<slab_xp : slice_hrn = %s , job_id %s end_time = %s" \
+        result = "<iotlab_xp : slice_hrn = %s , job_id %s end_time = %s" \
             %(self.slice_hrn, self.job_id, self.end_time)
         result += ">"
         return result
-          
-   
-          
-class SlabDB:
+
+
+
+class IotlabDB:
     """ SQL Alchemy connection class.
     From alchemy.py
     """
     def __init__(self, config, debug = False):
-        self.sl_base = SlabBase
-        dbname = "slab_sfa"
+        self.sl_base = IotlabBase
+        dbname = "iotlab_sfa"
         if debug == True :
             l_echo_pool = True
-            l_echo = True 
+            l_echo = True
         else :
             l_echo_pool = False
-            l_echo = False 
+            l_echo = False
 
-        self.slab_session = None
+        self.iotlab_session = None
         # the former PostgreSQL.py used the psycopg2 directly and was doing
         #self.connection.set_client_encoding("UNICODE")
-        # it's unclear how to achieve this in sqlalchemy, nor if it's needed 
+        # it's unclear how to achieve this in sqlalchemy, nor if it's needed
         # at all
         # http://www.sqlalchemy.org/docs/dialects/postgresql.html#unicode
         # we indeed have /var/lib/pgsql/data/postgresql.conf where
@@ -99,79 +99,79 @@ class SlabDB:
                                     config.SFA_DB_PORT, dbname)
         for url in [ unix_url, tcp_url ] :
             try:
-                self.slab_engine = create_engine (url, echo_pool = \
+                self.iotlab_engine = create_engine (url, echo_pool = \
                                             l_echo_pool, echo = l_echo)
                 self.check()
                 self.url = url
                 return
             except:
                 pass
-        self.slab_engine = None
+        self.iotlab_engine = None
         raise Exception, "Could not connect to database"
-    
-    
-    
+
+
+
     def check (self):
         """ Cehck if a table exists by trying a selection
-        on the table. 
-        
+        on the table.
+
         """
-        self.slab_engine.execute ("select 1").scalar()
-        
-        
+        self.iotlab_engine.execute ("select 1").scalar()
+
+
     def session (self):
         """
         Creates a SQLalchemy session. Once the session object is created
-        it should be used throughout the code for all the operations on 
+        it should be used throughout the code for all the operations on
         tables for this given database.
-        
-        """ 
-        if self.slab_session is None:
+
+        """
+        if self.iotlab_session is None:
             Session = sessionmaker()
-            self.slab_session = Session(bind = self.slab_engine)
-        return self.slab_session
-        
-    def close_session(self): 
+            self.iotlab_session = Session(bind = self.iotlab_engine)
+        return self.iotlab_session
+
+    def close_session(self):
         """
-        Closes connection to database. 
-        
+        Closes connection to database.
+
         """
-        if self.slab_session is None: return
-        self.slab_session.close()
-        self.slab_session = None   
-        
+        if self.iotlab_session is None: return
+        self.iotlab_session.close()
+        self.iotlab_session = None
+
 
     def exists(self, tablename):
         """
         Checks if the table specified as tablename exists.
-    
+
         """
-       
+
         try:
-            metadata = MetaData (bind=self.slab_engine)
+            metadata = MetaData (bind=self.iotlab_engine)
             table = Table (tablename, metadata, autoload=True)
             return True
-        
+
         except NoSuchTableError:
             logger.log_exc("SLABPOSTGRES tablename %s does not exists" \
                             %(tablename))
             return False
-       
-    
+
+
     def createtable(self):
         """
-        Creates all the table sof the engine.  
+        Creates all the table sof the engine.
         Uses the global dictionnary holding the tablenames and the table schema.
-    
+
         """
 
-        logger.debug("SLABPOSTGRES createtable SlabBase.metadata.sorted_tables \
-            %s \r\n engine %s" %(SlabBase.metadata.sorted_tables , slab_engine))
-        SlabBase.metadata.create_all(slab_engine)
+        logger.debug("SLABPOSTGRES createtable IotlabBase.metadata.sorted_tables \
+            %s \r\n engine %s" %(IotlabBase.metadata.sorted_tables , iotlab_engine))
+        IotlabBase.metadata.create_all(iotlab_engine)
         return
-    
 
 
-slab_alchemy = SlabDB(Config())
-slab_engine = slab_alchemy.slab_engine
-slab_dbsession = slab_alchemy.session()
+
+iotlab_alchemy = IotlabDB(Config())
+iotlab_engine = iotlab_alchemy.iotlab_engine
+iotlab_dbsession = iotlab_alchemy.session()
