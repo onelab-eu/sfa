@@ -46,21 +46,23 @@ class ldap_co:
         self.ldapSearchScope = ldap.SCOPE_SUBTREE
 
 
-    def connect(self, bind = True):
+    def connect(self, bind=True):
         """
         Enables connection to the LDAP server.
         :param bind : Set the bind parameter to True if a bind is needed
         (for add/modify/delete operations).
         Set to False otherwise.
+
         :type bind : boolean
         :return: dictionary with status of the connection. True if Successful,
         False if not and in this case the error message( {'bool', 'message'} )
         :rtype:dict
+
         """
         try:
             self.ldapserv = ldap.open(self.ldapHost)
         except ldap.LDAPError, error:
-            return {'bool' : False, 'message' : error }
+            return {'bool': False, 'message': error}
 
         # Bind with authentification
         if(bind):
@@ -71,6 +73,7 @@ class ldap_co:
 
     def bind(self):
         """ Binding method.
+
         :return: dictionary with the bind status. True if Successful,
         False if not and in this case the error message( {'bool', 'message'} )
         :rtype: dict
@@ -86,65 +89,72 @@ class ldap_co:
                                     self.ldapAdminPassword)
 
         except ldap.LDAPError, error:
-            return {'bool' : False, 'message' : error }
+            return {'bool': False, 'message': error}
 
         return {'bool': True}
 
     def close(self):
         """ Close the LDAP connection.
+
         Can throw an exception if the unbinding fails.
+
         """
         try:
             self.ldapserv.unbind_s()
         except ldap.LDAPError, error:
-            return {'bool' : False, 'message' : error }
+            return {'bool': False, 'message': error}
+
 
 class LoginPassword():
     """
+
     Class to handle login and password generation, using custom login generation
     algorithm.
+
     """
     def __init__(self):
         """
+
         Sets password  and login maximum length, and defines the characters
         that can be found in a random generated password.
+
         """
-        self.login_max_length  = 8
+        self.login_max_length = 8
         self.length_password = 8
-        self.chars_password = [ '!', '$', '(',')', '*', '+', ',', '-', '.', \
-                                '0', '1', '2', '3', '4', '5', '6', '7', '8', \
-                                '9', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', \
-                                'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', \
-                                'R', 'S', 'T',  'U', 'V', 'W', 'X', 'Y', 'Z', \
-                                '_', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', \
-                                'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p' ,'q', \
-                                'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', \
-                                '\'']
-
-
-
+        self.chars_password = ['!', '$', '(',')', '*', '+', ',', '-', '.',
+                               '0', '1', '2', '3', '4', '5', '6', '7', '8',
+                               '9', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H',
+                               'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q',
+                               'R', 'S', 'T',  'U', 'V', 'W', 'X', 'Y', 'Z',
+                               '_', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h',
+                               'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q',
+                               'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
+                               '\'']
 
     @staticmethod
     def clean_user_names(record):
         """
+
         Removes special characters such as
         '-', '_' , '[', ']' and ' ' from the first name and last name.
+
         :param record: user's record
         :type record:dict
         :return: lower_first_name and lower_last_name if they were found
         in the user's record. Return None, none otherwise.
         :rtype: string, string or None, None.
+
         """
         if 'first_name' in record and 'last_name' in record:
             #Remove all special characters from first_name/last name
-            lower_first_name = record['first_name'].replace('-','')\
-                                            .replace('_','').replace('[','')\
-                                            .replace(']','').replace(' ','')\
-                                            .lower()
-            lower_last_name = record['last_name'].replace('-','')\
-                                            .replace('_','').replace('[','')\
-                                            .replace(']','').replace(' ','')\
-                                            .lower()
+            lower_first_name = record['first_name'].replace('-', '')\
+                .replace('_', '').replace('[', '')\
+                .replace(']', '').replace(' ', '')\
+                .lower()
+            lower_last_name = record['last_name'].replace('-', '')\
+                .replace('_', '').replace('[', '')\
+                .replace(']', '').replace(' ', '')\
+                .lower()
             return lower_first_name, lower_last_name
         else:
             return None, None
@@ -310,14 +320,17 @@ class LDAPapi :
 
     def LdapGenerateUniqueLogin(self, record):
         """
+
         Generate login for adding a new user in LDAP Directory
         (four characters minimum length). Get proper last name and
         first name so that the user's login can be generated.
+
         :param record: Record must contain first_name and last_name.
         :param record: dict
         :return: the generated login for the user described with record if the
         login generation is successful, None if it fails.
         :rtype: string or None
+
         """
         #For compatibility with other ldap func
         if 'mail' in record and 'email' not in record:
@@ -568,7 +581,7 @@ class LDAPapi :
 
             except ldap.LDAPError, error:
                 logger.log_exc("LDAP Add Error %s" %error)
-                return {'bool' : False, 'message' : error }
+                return {'bool': False, 'message': error}
 
             self.conn.close()
             return {'bool': True, 'uid':user_ldap_attrs['uid']}
