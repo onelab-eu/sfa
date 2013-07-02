@@ -3,7 +3,7 @@ from copy import deepcopy
 
 from sfa.rspecs.version import RSpecVersion
 import sys
-from sfa.rspecs.elements.versions.iotlabv1Lease import Iotlabv1Lease
+# from sfa.rspecs.elements.versions.iotlabv1Lease import Iotlabv1Lease
 from sfa.rspecs.elements.versions.iotlabv1Node import Iotlabv1Node
 from sfa.rspecs.elements.versions.iotlabv1Sliver import Iotlabv1Sliver
 
@@ -12,7 +12,12 @@ from sfa.rspecs.elements.versions.sfav1Lease import SFAv1Lease
 
 from sfa.util.sfalogging import logger
 
+
 class Iotlabv1(RSpecVersion):
+    """
+    Defines Iotlab style RSpec and associated methods to parse and create a
+    valid Iotlab XML Rspec.
+    """
     #enabled = True
     type = 'Slab'
     content_type = 'ad'
@@ -38,7 +43,6 @@ class Iotlabv1(RSpecVersion):
                     network_elem in network_elems]
         return networks
 
-
     def add_network(self, network):
         network_tags = self.xml.xpath('//network[@name="%s"]' % network)
         if not network_tags:
@@ -47,9 +51,7 @@ class Iotlabv1(RSpecVersion):
             network_tag = network_tags[0]
         return network_tag
 
-
     # Nodes
-
     def get_nodes(self, filter=None):
         return Iotlabv1Node.get_nodes(self.xml, filter)
 
