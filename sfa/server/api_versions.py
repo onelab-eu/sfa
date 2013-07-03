@@ -39,7 +39,8 @@ class ApiVersions:
             if isinstance(value, list):
                 for item in value:
                     if isinstance(item, dict) and \
-                       set(ApiVersions.required_fields).issubset(item.keys()):
+                       set(ApiVersions.required_fields).issubset(item.keys()) and \
+                       item['version'] != '' and item['url'] != '':
                         versions[str(item['version'])] = item['url']
         return versions  
                 
