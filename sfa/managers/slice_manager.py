@@ -47,7 +47,7 @@ class SliceManager:
                 ad_rspec_versions.append(rspec_version.to_dict())
             if rspec_version.content_type in ['*', 'request']:
                 request_rspec_versions.append(rspec_version.to_dict())
-        xrn=Xrn(api.hrn, 'authority+sa')
+        xrn=Xrn(api.hrn, type='authority+sm')
         version_more = {
             'interface':'slicemgr',
             'sfa': 2,
