@@ -11,7 +11,7 @@ class AggregateManager:
     # essentially a union of the core version, the generic version (this code) and
     # whatever the driver needs to expose
     def GetVersion(self, api, options):
-        xrn=Xrn(api.hrn, , type='authority+am')
+        xrn=Xrn(api.hrn, type='authority+am')
         version = version_core()
         geni_api_versions = ApiVersions().get_versions()
         geni_api_versions['2'] = 'http://%s:%s' % (api.config.SFA_AGGREGATE_HOST, api.config.SFA_AGGREGATE_PORT)
