@@ -222,7 +222,7 @@ rm -rf $RPM_BUILD_ROOT
 %{python_sitelib}/sfa/nitos
 
 %files senslab
-%{python_sitelib}/sfa/senslab
+%{python_sitelib}/sfa/iotlab
 
 %files dummy
 %{python_sitelib}/sfa/dummy
