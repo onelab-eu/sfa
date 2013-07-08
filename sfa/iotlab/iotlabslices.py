@@ -80,7 +80,7 @@ class IotlabSlices:
         :type sfa_slice: dict
         :type requested_jobs_dict: dict
         :type peer:
-        :return: leases list of dictionary
+        :returns: leases list of dictionary
         :rtype: list
 
         """

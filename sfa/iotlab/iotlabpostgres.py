@@ -76,7 +76,7 @@ class IotlabDB:
         if debug == True :
             l_echo_pool = True
             l_echo = True
-        else :
+        else:
             l_echo_pool = False
             l_echo = False
 
@@ -117,6 +117,7 @@ class IotlabDB:
 
         """
         self.iotlab_engine.execute ("select 1").scalar()
+
 
 
     def session (self):

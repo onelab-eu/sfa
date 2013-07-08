@@ -25,7 +25,7 @@ def iotlab_xrn_object(root_auth, hostname):
     """Attributes are urn and hrn.
     Get the hostname using iotlab_xrn_to_hostname on the urn.
 
-    :return: the iotlab node's xrn
+    :returns: the iotlab node's xrn
     :rtype: Xrn
     """
     return Xrn('.'.join( [root_auth, Xrn.escape(hostname)]), type='node')
@@ -377,7 +377,7 @@ class IotlabAggregate:
                 tmp = ldap_username.split('.')
                 ldap_username = tmp[1].split('_')[0]
 
-                if version.type == "Slab":
+                if version.type == "Iotlab":
                     rspec.version.add_connection_information(ldap_username, \
                                                         sites_set)
 

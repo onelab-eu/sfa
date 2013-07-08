@@ -3,8 +3,6 @@ from sfa.util.sfalogging import logger
 from sfa.storage.alchemy import dbsession
 from sfa.storage.model import RegRecord
 
-
-
 from sfa.managers.driver import Driver
 from sfa.rspecs.version_manager import VersionManager
 from sfa.rspecs.rspec import RSpec
@@ -14,9 +12,7 @@ from sfa.util.xrn import Xrn, hrn_to_urn, get_authority
 
 from sfa.iotlab.iotlabpostgres import IotlabDB
 
-
 from sfa.iotlab.iotlabaggregate import IotlabAggregate, iotlab_xrn_to_hostname
-
 from sfa.iotlab.iotlabslices import IotlabSlices
 
 
@@ -29,7 +25,7 @@ class IotlabDriver(Driver):
     Contains methods compliant with the SFA standard and the testbed
     infrastructure (calls to LDAP and OAR).
 
-    ..seealso:: Driver class
+    .. seealso::: Driver class
 
     """
     def __init__(self, config):
@@ -55,7 +51,7 @@ class IotlabDriver(Driver):
 
         :param record_list: list of sfa dictionaries records
         :type record_list: list
-        :return: list of records with extended information in each record
+        :returns: list of records with extended information in each record
         :rtype: list
         """
         return self.fill_record_info (record_list)
@@ -67,7 +63,7 @@ class IotlabDriver(Driver):
 
         :param record_list: list of sfa dictionaries records
         :type record_list: list
-        :return: list of records with extended information in each record
+        :returns: list of records with extended information in each record
         :rtype: list
 
         .. warnings:: Should not be modifying record_list directly because modi
@@ -344,7 +340,7 @@ class IotlabDriver(Driver):
 
         :param rspec: rspec request received.
         :type rspec: RSpec
-        :return: list of lease requests found in the rspec
+        :returns: list of lease requests found in the rspec
         :rtype: list
         """
         requested_lease_list = []
@@ -379,7 +375,7 @@ class IotlabDriver(Driver):
 
         :param requested_lease_list: list of leases
         :type requested_lease_list: list
-        :return: Dictionary with key = start time, value = list of leases
+        :returns: Dictionary with key = start time, value = list of leases
         with the same start time.
         :rtype: dictionary
         """
@@ -398,7 +394,7 @@ class IotlabDriver(Driver):
 
                 requested_job_dict[lease['start_time']] = lease
 
-            else :
+            else:
                 job_lease = requested_job_dict[lease['start_time']]
                 if lease['duration'] == job_lease['duration'] :
                     job_lease['hostname'].append(lease['hostname'])
@@ -440,7 +436,7 @@ class IotlabDriver(Driver):
         :param options:
         :type options:
 
-        :return: a valid Rspec for the slice which has just been
+        :returns: a valid Rspec for the slice which has just been
         modified.
         :rtype: RSpec
 
@@ -520,7 +516,7 @@ class IotlabDriver(Driver):
         Deletes the lease associated with the slice hrn and the credentials
         if the slice belongs to iotlab. Answer to DeleteSliver.
 
-        :return: 1 if the slice to delete was not found on iotlab,
+        :returns: 1 if the slice to delete was not found on iotlab,
         True if the deletion was successful, False otherwise otherwise.
 
         .. note:: Should really be named delete_leases because iotlab does
@@ -564,7 +560,7 @@ class IotlabDriver(Driver):
         Caching unused.
         :param options: options used when listing resources (list_leases, info,
         geni_available)
-        :return: rspec string in xml
+        :returns: rspec string in xml
         :rtype: string
         """
 
@@ -607,7 +603,7 @@ class IotlabDriver(Driver):
 
         # cache the result
         #if self.cache and not slice_hrn:
-            #logger.debug("Slab.ListResources: stores advertisement in cache")
+            #logger.debug("Iotlab.ListResources: stores advertisement in cache")
             #self.cache.add(version_string, rspec)
 
         return rspec
@@ -620,7 +616,7 @@ class IotlabDriver(Driver):
         No caching used. Options unused but are defined in the SFA method
         api prototype.
 
-        :return: slice urns list
+        :returns: slice urns list
         :rtype: list
 
         """
@@ -680,7 +676,7 @@ class IotlabDriver(Driver):
         :param old_sfa_record: what is in the db for this hrn
         :param new_sfa_record: what was passed to the Update call
 
-        ..seealso:: update in driver.py.
+        .. seealso::: update in driver.py.
         """
 
         pointer = old_sfa_record['pointer']

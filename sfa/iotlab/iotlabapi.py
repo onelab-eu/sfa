@@ -52,7 +52,7 @@ class IotlabTestbedAPI():
         if peer_filter is specified.
         :param peer_filter: name of the site authority looked for.
         :type peer_filter: string
-        :return: list of records.
+        :returns: list of records.
 
         """
 
@@ -77,7 +77,7 @@ class IotlabTestbedAPI():
         try:
             if peer_filter:
                 records_list.append(existing_records[(peer_filter,'authority')])
-            else :
+            else:
                 for hrn in existing_hrns_by_types['authority']:
                     records_list.append(existing_records[(hrn,'authority')])
 
@@ -105,7 +105,7 @@ class IotlabTestbedAPI():
         :param person_filter: Must be a list of dictionnaries
         with users properties when not set to None.
         :param person_filter: list of dict
-        :return:Returns a list of users whose accounts are enabled
+        :returns:Returns a list of users whose accounts are enabled
         found in ldap.
         :rtype: list of dicts
 
@@ -155,7 +155,7 @@ class IotlabTestbedAPI():
         :type job_id:integer
         :type username: string
 
-        :return: dictionary with the job id and if delete has been successful
+        :returns: dictionary with the job id and if delete has been successful
         (True) or no (False)
         :rtype: dict
         """
@@ -231,7 +231,7 @@ class IotlabTestbedAPI():
         :type username: string
         :type job_id: integer
 
-        :return: dicionary with nodes' hostnames belonging to the job.
+        :returns: dicionary with nodes' hostnames belonging to the job.
         :rtype: dict
         """
 
@@ -316,7 +316,7 @@ class IotlabTestbedAPI():
         OAR node identifier.
         :param username: user's LDAP login
         :type username: string
-        :return: list of reservations dict
+        :returns: list of reservations dict
         :rtype: dict list
         """
 
@@ -349,7 +349,7 @@ class IotlabTestbedAPI():
         :param return_fields_list: list of specific fields the user wants to be
         returned.
         :type return_fields_list: list
-        :return: list of dictionaries with node properties
+        :returns: list of dictionaries with node properties
         :rtype: list
 
         """
@@ -452,7 +452,7 @@ class IotlabTestbedAPI():
         ins can delete anyone.
         :param person_record: user's record
         :type person_record: dict
-        :return:  True if successful, False otherwise.
+        :returns:  True if successful, False otherwise.
         :rtype: boolean
 
         """
@@ -466,7 +466,7 @@ class IotlabTestbedAPI():
         """ Deletes the specified slice and kills the jobs associated with
          the slice if any,  using DeleteSliceFromNodes.
 
-         :return: True if all the jobs in the slice have been deleted,
+         :returns: True if all the jobs in the slice have been deleted,
          or the list of jobs that could not be deleted otherwise.
          :rtype: list or boolean
 
@@ -520,7 +520,7 @@ class IotlabTestbedAPI():
                                 pkey)
                 if user_dict['email']:
                     logger.debug("__add_person_to_db \r\n \r\n \
-                        SLAB IMPORTER PERSON EMAIL OK email %s "\
+                        IOTLAB IMPORTER PERSON EMAIL OK email %s "\
                         %(user_dict['email']))
                     person_gid.set_email(user_dict['email'])
 
@@ -539,7 +539,7 @@ class IotlabTestbedAPI():
         otherwise defaults are used. Creates an appropriate login by calling
         LdapAddUser.
         :param record: dictionary with the sfa user's properties.
-        :return: The uid of the added person if sucessful, otherwise returns
+        :returns: The uid of the added person if sucessful, otherwise returns
         the error message from LDAP.
         :rtype: interger or string
         """
@@ -569,7 +569,7 @@ class IotlabTestbedAPI():
 
 
         :rtype: Boolean
-        :return: True if the key has been modified, False otherwise.
+        :returns: True if the key has been modified, False otherwise.
 
         """
         ret = self.ldap.LdapModify(person_uid, old_attributes_dict, \
@@ -808,7 +808,7 @@ class IotlabTestbedAPI():
         :param slice_record: record of the slice
         :type slice_record: dict
 
-        :return: dict of the jobs'deletion status. Success= True, Failure=
+        :returns: dict of the jobs'deletion status. Success= True, Failure=
         False, for each job id.
         :rtype: dict
         """
@@ -873,7 +873,7 @@ class IotlabTestbedAPI():
         found in iotlab_xp table. If not available in the table,
         assume it is a iotlab slice.
         -Updates the iotlab table, deleting jobs when necessary.
-        :return: reservation_list, list of dictionaries with 'lease_id',
+        :returns: reservation_list, list of dictionaries with 'lease_id',
         'reserved_nodes','slice_id', 'state', 'user', 'component_id_list',
         'slice_hrn', 'resource_ids', 't_from', 't_until'
         :rtype: list
@@ -903,7 +903,7 @@ class IotlabTestbedAPI():
                                             %(resa['user']))
             #Construct list of jobs (runing, waiting..) in oar
             job_oar_list.append(resa['lease_id'])
-            #If there is information on the job in SLAB DB ]
+            #If there is information on the job in IOTLAB DB ]
             #(slice used and job id)
             if resa['lease_id'] in jobs_psql_dict:
                 job_info = jobs_psql_dict[resa['lease_id']]
@@ -1034,12 +1034,12 @@ class IotlabTestbedAPI():
         Admin may query all keys. Non-admins may only query their own keys.
         FROM PLC API DOC
 
-        :return: dict with ssh key as key and dicts as value.
+        :returns: dict with ssh key as key and dicts as value.
         :rtype: dict
         """
         if key_filter is None:
             keys = dbsession.query(RegKey).options(joinedload('reg_user')).all()
-        else :
+        else:
             keys = dbsession.query(RegKey).options(joinedload('reg_user')).filter(RegKey.key.in_(key_filter)).all()
 
         key_dict = {}
@@ -1063,7 +1063,7 @@ class IotlabTestbedAPI():
         :param user_record: User's record
         :type key_string: string
         :type user_record: dict
-        :return: True if sucessful, False if not.
+        :returns: True if sucessful, False if not.
         :rtype: Boolean
 
         """
@@ -1085,7 +1085,7 @@ class IotlabTestbedAPI():
         he reg_researcher relationship.
         :param slice_filter: the slice hrn we are looking for
         :type slice_filter: string
-        :return: the slice record enhanced with the user's information if the
+        :returns: the slice record enhanced with the user's information if the
         slice was found, None it wasn't.
         :rtype: dict or None.
         """
@@ -1109,7 +1109,7 @@ class IotlabTestbedAPI():
             #del slicerec['reg_researchers']['_sa_instance_state']
             return slicerec
 
-        else :
+        else:
             return None
 
     @staticmethod
@@ -1118,7 +1118,7 @@ class IotlabTestbedAPI():
         Get the slice record based on the user recordid by using a joinedload
         on the relationship reg_slices_as_researcher. Format the sql record
         into a dict with the mandatory fields for user and slice.
-        :return: dict with slice record and user record if the record was found
+        :returns: dict with slice record and user record if the record was found
         based on the user's id, None if not..
         :rtype:dict or None..
         """
@@ -1159,10 +1159,10 @@ class IotlabTestbedAPI():
         :param slice_filter_type: describes the slice filter type used, can be
         slice_hrn or record_id_user
         :type: string
-        :return: the slice record
+        :returns: the slice record
         :rtype:dict
-        ..seealso:_sql_get_slice_info_from_user
-        ..seealso: _sql_get_slice_info
+        .. seealso::_sql_get_slice_info_from_user
+        .. seealso:: _sql_get_slice_info
         """
 
         #Get list of slices based on the slice hrn
@@ -1206,7 +1206,7 @@ class IotlabTestbedAPI():
         either 'slice_hrn' or "record_id'.
         :type slice_filter: string
         :type slice_filter_type: string
-        :return: a slice dict if slice_filter  and slice_filter_type
+        :returns: a slice dict if slice_filter  and slice_filter_type
         are specified and a matching entry is found in the db. The result
         is put into a list.Or a list of slice dictionnaries if no filters are
         specified.
@@ -1346,7 +1346,7 @@ class IotlabTestbedAPI():
             #if not "instantiation" in iotlab_record:
                 #iotlab_record["instantiation"] = "iotlab-instantiated"
             ##iotlab_record["hrn"] = hrn_to_pl_slicename(hrn)
-            ##Unused hrn_to_pl_slicename because Slab's hrn already
+            ##Unused hrn_to_pl_slicename because Iotlab's hrn already
             ##in the appropriate form SA 23/07/12
             #iotlab_record["hrn"] = hrn
             #logger.debug("IOTLABDRIVER.PY sfa_fields_to_iotlab_fields \

@@ -362,7 +362,7 @@ class IotlabImporter:
                     self.auth_hierarchy.create_gid(person_urn, \
                     create_uuid(), pkey)
                     if person['email']:
-                        self.logger.debug( "SLAB IMPORTER \
+                        self.logger.debug( "IOTLAB IMPORTER \
                             PERSON EMAIL OK email %s " %(person['email']))
                         person_gid.set_email(person['email'])
                         user_record = RegUser(hrn=person_hrn, \
