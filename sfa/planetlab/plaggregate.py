@@ -329,7 +329,7 @@ class PlAggregate:
             if default_sliver:
                 default_sliver_attribs = default_sliver.get('tags', [])
                 for attrib in default_sliver_attribs:
-                    logger.info(attrib)
+                    logger.info("adding default sliver attribute xrn=%s attrib=%s"%(slice_xrn,attrib))
                     rspec.version.add_default_sliver_attribute(attrib['tagname'], attrib['value'])
         
         if not options.get('list_leases') or options.get('list_leases') and options['list_leases'] != 'resources':
