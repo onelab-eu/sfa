@@ -138,7 +138,7 @@ class IotlabDriver(Driver):
 
                     logger.debug("IOTLABDRIVER.PY \t fill_record_info \
                         TYPE USER recslice_list %s \r\n \t RECORD %s \r\n"
-                                 % (recslice_list, record)
+                                 % (recslice_list, record))
                     #Append slice record in records list,
                     #therefore fetches user and slice info again(one more loop)
                     #Will update PIs and researcher for the slice
