@@ -41,7 +41,7 @@ class IotlabDriver(Driver):
         Driver.__init__ (self, config)
         self.config = config
 
-        self.db = IotlabDB(config, debug = False)
+        # self.db = IotlabDB(config, debug = False)
         self.iotlab_api = IotlabTestbedAPI(config)
         self.cache = None
 

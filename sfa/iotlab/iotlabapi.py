@@ -35,7 +35,7 @@ class IotlabTestbedAPI():
         self.ldap = LDAPapi()
         self.time_format = "%Y-%m-%d %H:%M:%S"
         self.root_auth = config.SFA_REGISTRY_ROOT_AUTH
-        self.grain = 1 # 10 mins lease minimum
+        self.grain = 1 # 10 mins lease minimum, 1 sec granularity
         #import logging, logging.handlers
         #from sfa.util.sfalogging import _SfaLogger
         #sql_logger = _SfaLogger(loggername = 'sqlalchemy.engine', \

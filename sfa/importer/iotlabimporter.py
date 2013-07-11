@@ -2,7 +2,7 @@ from sfa.util.config import Config
 from sfa.util.xrn import Xrn, get_authority, hrn_to_urn
 
 from sfa.iotlab.iotlabdriver import IotlabDriver
-
+from sfa.iotlab.iotlabpostgres import IotlabDB, Iotlab_xp
 from sfa.trust.certificate import Keypair, convert_public_key
 from sfa.trust.gid import create_uuid
 
@@ -495,11 +495,11 @@ class IotlabImporter:
         config = Config()
 
         iotlabdriver = IotlabDriver(config)
-
+        iotlab_db = IotlabDB(config)
         #Create special slice table for iotlab
 
-        if not iotlabdriver.db.exists('iotlab_xp'):
-            iotlabdriver.db.createtable()
+        if not iotlab_db.exists('iotlab_xp'):
+            iotlab_db.createtable()
             self.logger.info ("IotlabImporter.run:  iotlab_xp table created ")
 
 

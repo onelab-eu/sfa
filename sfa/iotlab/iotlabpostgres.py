@@ -77,17 +77,15 @@ class IotlabDB(object):
     class Singleton:
         """
         Class used with this Python singleton design pattern
-            @todo Add all variables, and methods needed for the
-            Singleton class below
         """
 
         def __init__(self, config, debug = False):
             self.iotlab_engine = None
             self.iotlab_session = None
-            self.create_engine(config, debug)
+            self.create_iotlab_engine(config, debug)
             self.session()
 
-        def create_engine(self, config, debug = False):
+        def create_iotlab_engine(self, config, debug = False):
 
 
             if debug == True:
@@ -157,6 +155,7 @@ class IotlabDB(object):
                 return
             self.iotlab_session.close()
             self.iotlab_session = None
+
 
         def update_jobs_in_iotlabdb(self, job_oar_list, jobs_psql):
             """ Cleans the iotlab db by deleting expired and cancelled jobs.
