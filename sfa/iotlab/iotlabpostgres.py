@@ -1,6 +1,5 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-
 from sfa.util.config import Config
 from sfa.util.sfalogging import logger
 
@@ -66,80 +65,138 @@ class IotlabXP (IotlabBase):
 
 
 
-class IotlabDB:
+class IotlabDB(object):
     """ SQL Alchemy connection class.
     From alchemy.py
     """
+    # Stores the unique Singleton instance-
+    _connection_singleton = None
+    _dbname = "iotlab_sfa"
+
+
+    class Singleton:
+        """
+        Class used with this Python singleton design pattern
+            @todo Add all variables, and methods needed for the
+            Singleton class below
+        """
+
+        def __init__(self, config, debug = False):
+            self.iotlab_engine = None
+            self.iotlab_session = None
+            self.create_engine(config, debug)
+            self.session()
+
+        def create_engine(self, config, debug = False):
+
+
+            if debug == True:
+                l_echo_pool = True
+                l_echo = True
+            else:
+                l_echo_pool = False
+                l_echo = False
+             # the former PostgreSQL.py used the psycopg2 directly and was doing
+            #self.connection.set_client_encoding("UNICODE")
+            # it's unclear how to achieve this in sqlalchemy, nor if it's needed
+            # at all
+            # http://www.sqlalchemy.org/docs/dialects/postgresql.html#unicode
+            # we indeed have /var/lib/pgsql/data/postgresql.conf where
+            # this setting is unset, it might be an angle to tweak that if need
+            # be try a unix socket first
+            #  - omitting the hostname does the trick
+            unix_url = "postgresql+psycopg2://%s:%s@:%s/%s"% \
+                (config.SFA_DB_USER, config.SFA_DB_PASSWORD, \
+                                        config.SFA_DB_PORT, IotlabDB._dbname)
+
+            # the TCP fallback method
+            tcp_url = "postgresql+psycopg2://%s:%s@%s:%s/%s"% \
+                (config.SFA_DB_USER, config.SFA_DB_PASSWORD, config.SFA_DB_HOST, \
+                                        config.SFA_DB_PORT, IotlabDB._dbname)
+
+            print "URL", tcp_url , unix_url
+            for url in [ unix_url, tcp_url ] :
+                try:
+                    self.iotlab_engine = create_engine (url, echo_pool =
+                                                l_echo_pool, echo = l_echo)
+                    self.check()
+                    self.url = url
+                    return
+                except:
+                    pass
+                self.iotlab_engine = None
+
+
+            raise Exception, "Could not connect to database"
+
+        def check (self):
+            """ Check if a table exists by trying a selection
+            on the table.
+
+            """
+            self.iotlab_engine.execute ("select 1").scalar()
+
+
+        def session (self):
+            """
+            Creates a SQLalchemy session. Once the session object is created
+            it should be used throughout the code for all the operations on
+            tables for this given database.
+
+            """
+            if self.iotlab_session is None:
+                Session = sessionmaker()
+                self.iotlab_session = Session(bind = self.iotlab_engine)
+                print "\r\n \r\n \r\n OOOOOOOOOHHHHHHHHH YEEEEEEEEEEEEEAH"
+            return self.iotlab_session
+
+        def close_session(self):
+            """
+            Closes connection to database.
+
+            """
+            if self.iotlab_session is None:
+                return
+            self.iotlab_session.close()
+            self.iotlab_session = None
+
+
+
+
     def __init__(self, config, debug = False):
         self.sl_base = IotlabBase
-        dbname = "iotlab_sfa"
-        if debug == True :
-            l_echo_pool = True
-            l_echo = True
-        else:
-            l_echo_pool = False
-            l_echo = False
 
-        self.iotlab_session = None
-        # the former PostgreSQL.py used the psycopg2 directly and was doing
-        #self.connection.set_client_encoding("UNICODE")
-        # it's unclear how to achieve this in sqlalchemy, nor if it's needed
-        # at all
-        # http://www.sqlalchemy.org/docs/dialects/postgresql.html#unicode
-        # we indeed have /var/lib/pgsql/data/postgresql.conf where
-        # this setting is unset, it might be an angle to tweak that if need be
-        # try a unix socket first - omitting the hostname does the trick
-        unix_url = "postgresql+psycopg2://%s:%s@:%s/%s"% \
-            (config.SFA_DB_USER, config.SFA_DB_PASSWORD, \
-                                    config.SFA_DB_PORT, dbname)
+         # Check whether we already have an instance
+        if IotlabDB._connection_singleton is None:
+            IotlabDB._connection_singleton = IotlabDB.Singleton(config, debug)
 
-        # the TCP fallback method
-        tcp_url = "postgresql+psycopg2://%s:%s@%s:%s/%s"% \
-            (config.SFA_DB_USER, config.SFA_DB_PASSWORD, config.SFA_DB_HOST, \
-                                    config.SFA_DB_PORT, dbname)
-        for url in [ unix_url, tcp_url ] :
-            try:
-                self.iotlab_engine = create_engine (url, echo_pool = \
-                                            l_echo_pool, echo = l_echo)
-                self.check()
-                self.url = url
-                return
-            except:
-                pass
-        self.iotlab_engine = None
-        raise Exception, "Could not connect to database"
+        # Store instance reference as the only member in the handle
+        self._EventHandler_singleton = IotlabDB._connection_singleton
 
 
 
-    def check (self):
-        """ Cehck if a table exists by trying a selection
-        on the table.
-
+    def __getattr__(self, aAttr):
         """
-        self.iotlab_engine.execute ("select 1").scalar()
+        Delegate access to implementation.
 
-
-
-    def session (self):
+        :param attr: Attribute wanted.
+        :return: Attribute
         """
-        Creates a SQLalchemy session. Once the session object is created
-        it should be used throughout the code for all the operations on
-        tables for this given database.
+        return getattr(self._connection_singleton, aAttr)
 
-        """
-        if self.iotlab_session is None:
-            Session = sessionmaker()
-            self.iotlab_session = Session(bind = self.iotlab_engine)
-        return self.iotlab_session
 
-    def close_session(self):
-        """
-        Closes connection to database.
 
-        """
-        if self.iotlab_session is None: return
-        self.iotlab_session.close()
-        self.iotlab_session = None
+    # def __setattr__(self, aAttr, aValue):
+    #     """Delegate access to implementation.
+
+    #      :param attr: Attribute wanted.
+    #      :param value: Vaule to be set.
+    #      :return: Result of operation.
+    #      """
+    #     return setattr(self._connection_singleton, aAttr, aValue)
+
+
+
 
 
     def exists(self, tablename):
@@ -167,12 +224,12 @@ class IotlabDB:
         """
 
         logger.debug("SLABPOSTGRES createtable IotlabBase.metadata.sorted_tables \
-            %s \r\n engine %s" %(IotlabBase.metadata.sorted_tables , iotlab_engine))
-        IotlabBase.metadata.create_all(iotlab_engine)
+            %s \r\n engine %s" %(IotlabBase.metadata.sorted_tables , self.iotlab_engine))
+        IotlabBase.metadata.create_all(self.iotlab_engine)
         return
 
 
 
-iotlab_alchemy = IotlabDB(Config())
-iotlab_engine = iotlab_alchemy.iotlab_engine
-iotlab_dbsession = iotlab_alchemy.session()
+# iotlab_alchemy = IotlabDB(Config())
+# iotlab_engine = iotlab_alchemy.iotlab_engine
+# iotlab_dbsession = iotlab_alchemy.session()

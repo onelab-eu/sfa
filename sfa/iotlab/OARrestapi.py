@@ -13,20 +13,15 @@ from sfa.util.config import Config
 from sfa.util.sfalogging import logger
 
 
-OAR_REQUEST_POST_URI_DICT = {'POST_job':{'uri': '/oarapi/jobs.json'},
-                            'DELETE_jobs_id':{'uri':'/oarapi/jobs/id.json'},
-                            }
-
-POST_FORMAT = {'json' : {'content':"application/json", 'object':json},}
-
-#OARpostdatareqfields = {'resource' :"/nodes=", 'command':"sleep", \
-                        #'workdir':"/home/", 'walltime':""}
-
-
-
 class JsonPage:
-    """Class used to manipulate jsopn pages given by OAR."""
+
+    """Class used to manipulate json pages given by OAR.
+    """
+
     def __init__(self):
+        """Defines attributes to manipulate and parse the json pages.
+
+        """
         #All are boolean variables
         self.concatenate = False
         #Indicates end of data, no more pages to be loaded.
@@ -38,11 +33,13 @@ class JsonPage:
         self.raw_json = None
 
     def FindNextPage(self):
-        """ Gets next data page from OAR when the query's results
-        are too big to  be transmitted in a single page.
-        Uses the "links' item in the json returned to check if
-        an additionnal page has to be loaded.
-        Returns : next page , next offset query
+        """
+        Gets next data page from OAR when the query's results
+            are too big to  be transmitted in a single page.
+            Uses the "links' item in the json returned to check if
+            an additionnal page has to be loaded.
+
+        :returns: next page , next offset query
         """
         if "links" in self.raw_json:
             for page in self.raw_json['links']:
@@ -53,7 +50,7 @@ class JsonPage:
                     print>>sys.stderr, "\r\n \t FindNextPage NEXT LINK"
                     return
 
-        if self.concatenate :
+        if self.concatenate:
             self.end = True
             self.next_page = False
             self.next_offset = None
@@ -79,7 +76,6 @@ class JsonPage:
             tmp['items'].extend(page['items'])
         return tmp
 
-
     def ResetNextPage(self):
         self.next_page = True
         self.next_offset = None
@@ -88,10 +84,21 @@ class JsonPage:
 
 
 class OARrestapi:
-    def __init__(self, config_file =  '/etc/sfa/oar_config.py'):
+
+    # classes attributes
+
+    OAR_REQUEST_POST_URI_DICT = {'POST_job': {'uri': '/oarapi/jobs.json'},
+                                 'DELETE_jobs_id': \
+                                 {'uri': '/oarapi/jobs/id.json'},
+                                 }
+
+    POST_FORMAT = {'json': {'content': "application/json", 'object': json}}
+
+    #OARpostdatareqfields = {'resource' :"/nodes=", 'command':"sleep", \
+                            #'workdir':"/home/", 'walltime':""}
+
+    def __init__(self, config_file='/etc/sfa/oar_config.py'):
         self.oarserver = {}
-
-
         self.oarserver['uri'] = None
         self.oarserver['postformat'] = 'json'
 
@@ -108,23 +115,25 @@ class OARrestapi:
         #logger.setLevelDebug()
         self.oarserver['ip'] = self.OAR_IP
         self.oarserver['port'] = self.OAR_PORT
-        self.jobstates  = ['Terminated', 'Hold', 'Waiting', 'toLaunch', \
-                            'toError', 'toAckReservation', 'Launching', \
-                            'Finishing', 'Running', 'Suspended', 'Resuming',\
-                            'Error']
+        self.jobstates = ['Terminated', 'Hold', 'Waiting', 'toLaunch',
+                          'toError', 'toAckReservation', 'Launching',
+                          'Finishing', 'Running', 'Suspended', 'Resuming',
+                          'Error']
 
         self.parser = OARGETParser(self)
 
 
-    def GETRequestToOARRestAPI(self, request, strval=None, next_page=None, username = None ):
+    def GETRequestToOARRestAPI(self, request, strval=None,
+                            next_page=None, username=None):
         self.oarserver['uri'] = \
-                            OARGETParser.OARrequests_uri_dict[request]['uri']
+            OARGETParser.OARrequests_uri_dict[request]['uri']
         #Get job details with username
         if 'owner' in OARGETParser.OARrequests_uri_dict[request] and username:
-            self.oarserver['uri'] +=  OARGETParser.OARrequests_uri_dict[request]['owner'] + username
+            self.oarserver['uri'] += \
+                OARGETParser.OARrequests_uri_dict[request]['owner'] + username
         headers = {}
         data = json.dumps({})
-        logger.debug("OARrestapi \tGETRequestToOARRestAPI %s" %(request))
+        logger.debug("OARrestapi \tGETRequestToOARRestAPI %s" % (request))
         if strval:
             self.oarserver['uri'] = self.oarserver['uri'].\
                                             replace("id",str(strval))
@@ -171,7 +180,7 @@ class OARrestapi:
 
         #first check that all params for are OK
         try:
-            self.oarserver['uri'] = OAR_REQUEST_POST_URI_DICT[request]['uri']
+            self.oarserver['uri'] = self.OAR_REQUEST_POST_URI_DICT[request]['uri']
 
         except KeyError:
             logger.log_exc("OARrestapi \tPOSTRequestToOARRestAPI request not \
@@ -184,7 +193,7 @@ class OARrestapi:
 
         data = json.dumps(datadict)
         headers = {'X-REMOTE_IDENT':username, \
-                'content-type': POST_FORMAT['json']['content'], \
+                'content-type': self.POST_FORMAT['json']['content'], \
                 'content-length':str(len(data))}
         try :
 
@@ -236,7 +245,7 @@ def AddNodeRadio(tuplelist, value):
 def AddMobility(tuplelist, value):
     if value is 0:
         tuplelist.append(('mobile', 'False'))
-    else :
+    else:
         tuplelist.append(('mobile', 'True'))
 
 def AddPosX(tuplelist, value):
@@ -315,7 +324,7 @@ class OARGETParser:
                     api_timezone = self.json_page.raw_json['api_timezone'],
                     api_timestamp = self.json_page.raw_json['api_timestamp'],
                     oar_version = self.json_page.raw_json['oar_version'] )
-        else :
+        else:
             self.version_json_dict.update(api_version = \
                         self.json_page.raw_json['api'] ,
                         apilib_version = self.json_page.raw_json['apilib'],
