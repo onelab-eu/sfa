@@ -114,7 +114,6 @@ class IotlabDB(object):
                 (config.SFA_DB_USER, config.SFA_DB_PASSWORD, config.SFA_DB_HOST, \
                                         config.SFA_DB_PORT, IotlabDB._dbname)
 
-            print "URL", tcp_url , unix_url
             for url in [ unix_url, tcp_url ] :
                 try:
                     self.iotlab_engine = create_engine (url, echo_pool =
@@ -147,7 +146,6 @@ class IotlabDB(object):
             if self.iotlab_session is None:
                 Session = sessionmaker()
                 self.iotlab_session = Session(bind = self.iotlab_engine)
-                print "\r\n \r\n \r\n OOOOOOOOOHHHHHHHHH YEEEEEEEEEEEEEAH"
             return self.iotlab_session
 
         def close_session(self):

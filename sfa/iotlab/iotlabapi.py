@@ -793,8 +793,8 @@ class IotlabTestbedAPI():
 
         logger.debug("IOTLABDRIVER \r\n \r\n \t AddLeases iotlab_ex_row %s" \
                 %(iotlab_ex_row))
-        self.iotlab_db.iotlab_dbsession.add(iotlab_ex_row)
-        self.iotlab_db.iotlab_dbsession.commit()
+        self.iotlab_db.iotlab_session.add(iotlab_ex_row)
+        self.iotlab_db.iotlab_session.commit()
 
         logger.debug("IOTLABDRIVER \t AddLeases hostname_list start_time %s " \
                 %(start_time))
@@ -858,8 +858,8 @@ class IotlabTestbedAPI():
         deleted_jobs = set_jobs_psql.difference(kept_jobs)
         deleted_jobs = list(deleted_jobs)
         if len(deleted_jobs) > 0:
-            self.iotlab_db.iotlab_dbsession.query(IotlabXP).filter(IotlabXP.job_id.in_(deleted_jobs)).delete(synchronize_session='fetch')
-            self.iotlab_db.iotlab_dbsession.commit()
+            self.iotlab_db.iotlab_session.query(IotlabXP).filter(IotlabXP.job_id.in_(deleted_jobs)).delete(synchronize_session='fetch')
+            self.iotlab_db.iotlab_session.commit()
 
         return
 
@@ -890,7 +890,7 @@ class IotlabTestbedAPI():
         #the same user in LDAP SA 27/07/12
         job_oar_list = []
 
-        jobs_psql_query = self.iotlab_db.iotlab_dbsession.query(IotlabXP).all()
+        jobs_psql_query = self.iotlab_db.iotlab_session.query(IotlabXP).all()
         jobs_psql_dict = dict([(row.job_id, row.__dict__ ) for row in jobs_psql_query ])
         #jobs_psql_dict = jobs_psql_dict)
         logger.debug("IOTLABDRIVER \tGetLeases jobs_psql_dict %s"\
@@ -1018,8 +1018,8 @@ class IotlabTestbedAPI():
 
         #"""
         ##new_row = FederatedToIotlab(iotlab_hrn, federated_hrn)
-        ##self.iotlab_db.iotlab_dbsession.add(new_row)
-        ##self.iotlab_db.iotlab_dbsession.commit()
+        ##self.iotlab_db.iotlab_session.add(new_row)
+        ##self.iotlab_db.iotlab_session.commit()
 
         #logger.debug("IOTLABDRIVER UpdatePerson EMPTY - DO NOTHING \r\n ")
         #return
