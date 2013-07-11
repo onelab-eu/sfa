@@ -937,7 +937,7 @@ class IotlabTestbedAPI():
             reservation_list = unfiltered_reservation_list
 
 
-        self.update_jobs_in_iotlabdb(job_oar_list, jobs_psql_id_list)
+        self.iotlab_db.update_jobs_in_iotlabdb(job_oar_list, jobs_psql_id_list)
 
         logger.debug(" IOTLABDRIVER.PY \tGetLeases reservation_list %s"\
                                                     %(reservation_list))

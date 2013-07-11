@@ -158,7 +158,7 @@ class IotlabDB(object):
             self.iotlab_session.close()
             self.iotlab_session = None
 
-        def update_jobs_in_iotlabdb( job_oar_list, jobs_psql):
+        def update_jobs_in_iotlabdb(self, job_oar_list, jobs_psql):
             """ Cleans the iotlab db by deleting expired and cancelled jobs.
             Compares the list of job ids given by OAR with the job ids that
             are already in the database, deletes the jobs that are no longer in
