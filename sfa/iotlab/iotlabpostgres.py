@@ -158,6 +158,29 @@ class IotlabDB(object):
             self.iotlab_session.close()
             self.iotlab_session = None
 
+        def update_jobs_in_iotlabdb( job_oar_list, jobs_psql):
+            """ Cleans the iotlab db by deleting expired and cancelled jobs.
+            Compares the list of job ids given by OAR with the job ids that
+            are already in the database, deletes the jobs that are no longer in
+            the OAR job id list.
+            :param  job_oar_list: list of job ids coming from OAR
+            :type job_oar_list: list
+            :param job_psql: list of job ids cfrom the database.
+            type job_psql: list
+            """
+            #Turn the list into a set
+            set_jobs_psql = set(jobs_psql)
+
+            kept_jobs = set(job_oar_list).intersection(set_jobs_psql)
+            logger.debug ( "\r\n \t\ update_jobs_in_iotlabdb jobs_psql %s \r\n \t \
+                job_oar_list %s kept_jobs %s "%(set_jobs_psql, job_oar_list, kept_jobs))
+            deleted_jobs = set_jobs_psql.difference(kept_jobs)
+            deleted_jobs = list(deleted_jobs)
+            if len(deleted_jobs) > 0:
+                self.iotlab_session.query(IotlabXP).filter(IotlabXP.job_id.in_(deleted_jobs)).delete(synchronize_session='fetch')
+                self.iotlab_session.commit()
+
+            return
 
 
 
