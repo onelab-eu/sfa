@@ -1,21 +1,20 @@
-#import sys
 from httplib import HTTPConnection, HTTPException, NotConnected
 import json
-#import datetime
-#from time import gmtime, strftime
+from sfa.util.config import Config
+from sfa.util.sfalogging import logger
 import os.path
 import sys
-#import urllib
-#import urllib2
-from sfa.util.config import Config
-#from sfa.util.xrn import hrn_to_urn, get_authority, Xrn, get_leaf
-
-from sfa.util.sfalogging import logger
 
 
 class JsonPage:
 
     """Class used to manipulate json pages given by OAR.
+
+    In case the json answer from a GET request is too big to fit in one json
+    page, this class provides helper methods to retrieve all the pages and
+    store them in a list before putting them into one single json dictionary,
+    facilitating the parsing.
+
     """
 
     def __init__(self):
@@ -34,12 +33,11 @@ class JsonPage:
 
     def FindNextPage(self):
         """
-        Gets next data page from OAR when the query's results
-            are too big to  be transmitted in a single page.
-            Uses the "links' item in the json returned to check if
-            an additionnal page has to be loaded.
+        Gets next data page from OAR when the query's results are too big to
+        be transmitted in a single page. Uses the "links' item in the json
+        returned to check if an additionnal page has to be loaded. Updates
+        object attributes next_page, next_offset, and end.
 
-        :returns: next page , next offset query
         """
         if "links" in self.raw_json:
             for page in self.raw_json['links']:
@@ -47,7 +45,6 @@ class JsonPage:
                     self.concatenate = True
                     self.next_page = True
                     self.next_offset = "?" + page['href'].split("?")[1]
-                    print>>sys.stderr, "\r\n \t FindNextPage NEXT LINK"
                     return
 
         if self.concatenate:
@@ -67,6 +64,24 @@ class JsonPage:
 
     @staticmethod
     def ConcatenateJsonPages(saved_json_list):
+        """
+        If the json answer is too big to be contained in a single page,
+        all the pages have to be loaded and saved before being appended to the
+        first page.
+
+        :param saved_json_list: list of all the stored pages, including the
+            first page.
+        :type saved_json_list: list
+        :returns: Returns a dictionary with all the pages saved in the
+            saved_json_list. The key of the dictionary is 'items'.
+        :rtype: dict
+
+
+        .. seealso:: SendRequest
+        .. warning:: Assumes the apilib is 0.2.10 (with the 'items' key in the
+            raw json dictionary)
+
+        """
         #reset items list
 
         tmp = {}
@@ -77,6 +92,12 @@ class JsonPage:
         return tmp
 
     def ResetNextPage(self):
+        """
+        Resets all the Json page attributes (next_page, next_offset,
+        concatenate, end). Has to be done before getting another json answer
+        so that the previous page status does not affect the new json load.
+
+        """
         self.next_page = True
         self.next_offset = None
         self.concatenate = False
@@ -84,11 +105,15 @@ class JsonPage:
 
 
 class OARrestapi:
+    """Class used to connect to the OAR server and to send GET and POST
+    requests.
+
+    """
 
     # classes attributes
 
     OAR_REQUEST_POST_URI_DICT = {'POST_job': {'uri': '/oarapi/jobs.json'},
-                                 'DELETE_jobs_id': \
+                                 'DELETE_jobs_id':
                                  {'uri': '/oarapi/jobs/id.json'},
                                  }
 
@@ -125,6 +150,33 @@ class OARrestapi:
 
     def GETRequestToOARRestAPI(self, request, strval=None,
                             next_page=None, username=None):
+
+        """Makes a GET request to OAR.
+
+        Fetch the uri associated with the resquest stored in
+        OARrequests_uri_dict, adds the username if needed and if available, adds
+        strval to the request uri if needed, connects to OAR and issues the GET
+        request. Gets the json reply.
+
+        :param request: One of the known get requests that are keys in the
+            OARrequests_uri_dict.
+        :param strval: used when a job id has to be specified.
+        :param next_page: used to tell OAR to send the next page for this
+            Get request. Is appended to the GET uri.
+        :param username: used when a username has to be specified, when looking
+            for jobs scheduled by a particular user  for instance.
+
+        :type request: string
+        :type strval: integer
+        :type next_page: boolean
+        :type username: string
+
+
+        :returns: a json dictionary if OAR successfully processed the GET
+        request.
+
+        .. seealso:: OARrequests_uri_dict
+        """
         self.oarserver['uri'] = \
             OARGETParser.OARrequests_uri_dict[request]['uri']
         #Get job details with username
@@ -211,7 +263,7 @@ class OARrestapi:
 
         try:
             answer = json.loads(resp)
-            logger.debug("POSTRequestToOARRestAPI : answer %s" %(answer))
+            logger.debug("POSTRequestToOARRestAPI : answer %s" % (answer))
             return answer
 
         except ValueError, error:
@@ -220,73 +272,222 @@ class OARrestapi:
             #raise ServerError("Failed to parse Server Response:" + answer)
 
 
+class ParsingResourcesFull():
+    """
+    Class dedicated to parse the json response from a GET_resources_full from
+    OAR.
 
-def AddOarNodeId(tuplelist, value):
-    """ Adds Oar internal node id to the nodes attributes """
-
-    tuplelist.append(('oar_id', int(value)))
-
-
-def AddNodeNetworkAddr(dictnode, value):
-    #Inserts new key. The value associated is a tuple list
-    node_id = value
-
-    dictnode[node_id] = [('node_id', node_id),('hostname', node_id) ]
-
-    return node_id
-
-def AddNodeSite(tuplelist, value):
-    tuplelist.append(('site', str(value)))
-
-def AddNodeRadio(tuplelist, value):
-    tuplelist.append(('radio', str(value)))
+    """
+    def __init__(self):
+        self.resources_fulljson_dict = {
+        'network_address': self.AddNodeNetworkAddr,
+        'site':  self.AddNodeSite,
+        # 'radio':  self.AddNodeRadio,
+        'mobile':  self.AddMobility,
+        'x':  self.AddPosX,
+        'y':  self.AddPosY,
+        'z': self.AddPosZ,
+        'archi': self.AddHardwareType,
+        'state': self.AddBootState,
+        'id': self.AddOarNodeId,
+        }
 
 
-def AddMobility(tuplelist, value):
-    if value is 0:
-        tuplelist.append(('mobile', 'False'))
-    else:
-        tuplelist.append(('mobile', 'True'))
 
-def AddPosX(tuplelist, value):
-    tuplelist.append(('posx', value))
+    def AddOarNodeId(self, tuplelist, value):
+        """Adds Oar internal node id to the nodes' attributes.
 
-def AddPosY(tuplelist, value):
-    tuplelist.append(('posy', value))
+        Appends tuple ('oar_id', node_id) to the tuplelist. Used by ParseNodes.
 
-def AddPosZ(tuplelist, value):
-    tuplelist.append(('posz', value))
+        .. seealso:: ParseNodes
 
-def AddBootState(tuplelist, value):
-    tuplelist.append(('boot_state', str(value)))
+        """
 
-#Insert a new node into the dictnode dictionary
-def AddNodeId(dictnode, value):
-    #Inserts new key. The value associated is a tuple list
-    node_id = int(value)
+        tuplelist.append(('oar_id', int(value)))
 
-    dictnode[node_id] = [('node_id', node_id)]
-    return node_id
 
-def AddHardwareType(tuplelist, value):
-    value_list = value.split(':')
-    tuplelist.append(('archi', value_list[0]))
-    tuplelist.append(('radio', value_list[1]))
+    def AddNodeNetworkAddr(self, dictnode, value):
+        """First parsing function to be called to parse the json returned by OAR
+        answering a GET_resources (/oarapi/resources.json) request.
+
+        When a new node is found in the json, this function is responsible for
+        creating a new entry in the dictionary for storing information on this
+        specific node. The key is the node network address, which is also the
+        node's hostname.
+        The value associated with the key is a tuple list.It contains all
+        the nodes attributes. The tuplelist will later be turned into a dict.
+
+        :param dictnode: should be set to the OARGETParser atribute node_dictlist.
+            It will store the information on the nodes.
+        :param value: the node_id is the network_address in the raw json.
+        :type value: string
+        :type dictnode: dictionary
+
+        .. seealso: ParseResources, ParseNodes
+        """
+
+        node_id = value
+        dictnode[node_id] = [('node_id', node_id),('hostname', node_id) ]
+
+        return node_id
+
+    def AddNodeSite(self, tuplelist, value):
+        """Add the site's node to the dictionary.
+
+
+        :param tuplelist: tuple list on which to add the node's site. Contains the
+            other node attributes as well.
+        :param value: value to add to the tuple list, in this case the node's site.
+        :type tuplelist: list
+        :type value: string
+
+        .. seealso:: AddNodeNetworkAddr
+
+        """
+        tuplelist.append(('site', str(value)))
+
+    # def AddNodeRadio(tuplelist, value):
+    #     """Add thenode's radio chipset type to the tuple list.
+
+    #     :param tuplelist: tuple list on which to add the node's mobility status. The
+    #         tuplelist is the value associated with the node's id in the OARGETParser
+    #          's dictionary node_dictlist.
+    #     :param value: name of the radio chipset on the node.
+    #     :type tuplelist: list
+    #     :type value: string
+
+    #     .. seealso:: AddNodeNetworkAddr
+
+    #     """
+    #     tuplelist.append(('radio', str(value)))
+
+
+    def AddMobility(self, tuplelist, value):
+        """Add if the node is a mobile node or not to the tuple list.
+
+        :param tuplelist: tuple list on which to add the node's mobility status. The
+            tuplelist is the value associated with the node's id in the OARGETParser
+             's dictionary node_dictlist.
+        :param value: tells if a node is a mobile node or not. The value is found
+            in the json.
+
+        :type tuplelist: list
+        :type value: integer
+
+        .. seealso:: AddNodeNetworkAddr
+
+        """
+        if value is 0:
+            tuplelist.append(('mobile', 'False'))
+        else:
+            tuplelist.append(('mobile', 'True'))
+
+
+    def AddPosX(self, tuplelist, value):
+        """Add the node's position on the x axis.
+
+        :param tuplelist: tuple list on which to add the node's position . The
+            tuplelist is the value associated with the node's id in the OARGETParser
+             's dictionary node_dictlist.
+        :param value: the position x.
+
+        :type tuplelist: list
+        :type value: integer
+
+         .. seealso:: AddNodeNetworkAddr
+
+        """
+        tuplelist.append(('posx', value ))
+
+
+
+    def AddPosY(self, tuplelist, value):
+        """Add the node's position on the y axis.
+
+        :param tuplelist: tuple list on which to add the node's position . The
+            tuplelist is the value associated with the node's id in the OARGETParser
+             's dictionary node_dictlist.
+        :param value: the position y.
+
+        :type tuplelist: list
+        :type value: integer
+
+         .. seealso:: AddNodeNetworkAddr
+
+        """
+        tuplelist.append(('posy', value))
+
+
+
+    def AddPosZ(self, tuplelist, value):
+        """Add the node's position on the z axis.
+
+        :param tuplelist: tuple list on which to add the node's position . The
+            tuplelist is the value associated with the node's id in the OARGETParser
+             's dictionary node_dictlist.
+        :param value: the position z.
+
+        :type tuplelist: list
+        :type value: integer
+
+         .. seealso:: AddNodeNetworkAddr
+
+        """
+
+        tuplelist.append(('posz', value))
+
+
+
+    def AddBootState(tself, tuplelist, value):
+        """Add the node's state, Alive or Suspected.
+
+        :param tuplelist: tuple list on which to add the node's state . The
+            tuplelist is the value associated with the node's id in the OARGETParser
+             's dictionary node_dictlist.
+        :param value: node's state.
+
+        :type tuplelist: list
+        :type value: string
+
+         .. seealso:: AddNodeNetworkAddr
+
+        """
+        tuplelist.append(('boot_state', str(value)))
+
+
+    def AddHardwareType(self, tuplelist, value):
+        """Add the node's hardware model and radio chipset type to the tuple
+        list.
+
+        :param tuplelist: tuple list on which to add the node's architecture
+            and radio chipset type.
+        :param value: hardware type: radio chipset. The value contains both the
+            architecture and the radio chipset, separated by a colon.
+        :type tuplelist: list
+        :type value: string
+
+        .. seealso:: AddNodeNetworkAddr
+
+        """
+
+        value_list = value.split(':')
+        tuplelist.append(('archi', value_list[0]))
+        tuplelist.append(('radio', value_list[1]))
 
 
 class OARGETParser:
-    resources_fulljson_dict = {
-        'network_address' : AddNodeNetworkAddr,
-        'site': AddNodeSite,
-        'radio': AddNodeRadio,
-        'mobile': AddMobility,
-        'x': AddPosX,
-        'y': AddPosY,
-        'z':AddPosZ,
-        'archi':AddHardwareType,
-        'state':AddBootState,
-        'id' : AddOarNodeId,
-        }
+    # resources_fulljson_dict = {
+    #     'network_address': AddNodeNetworkAddr,
+    #     'site': AddNodeSite,
+    #     # 'radio': AddNodeRadio,
+    #     'mobile': AddMobility,
+    #     'x': AddPosX,
+    #     'y': AddPosY,
+    #     'z':AddPosZ,
+    #     'archi':AddHardwareType,
+    #     'state':AddBootState,
+    #     'id' : AddOarNodeId,
+    #     }
 
 
     def __init__(self, srv) :
@@ -306,7 +507,7 @@ class OARGETParser:
         self.node_dictlist = {}
 
         self.json_page = JsonPage()
-
+        self.parsing_resourcesfull = ParsingResourcesFull()
         self.site_dict = {}
         self.SendRequest("GET_version")
 
@@ -315,60 +516,107 @@ class OARGETParser:
 
 
     def ParseVersion(self) :
-        #print self.json_page.raw_json
-        #print >>sys.stderr, self.json_page.raw_json
+        """Parses the OAR answer to the GET_version ( /oarapi/version.json.)
+
+        Finds the OAR apilib version currently used. Has an impact on the json
+        structure returned by OAR, so the version has to be known before trying
+        to parse the jsons returned after a get request has been issued.
+        Updates the attribute version_json_dict.
+
+
+        """
+
         if 'oar_version' in self.json_page.raw_json :
-            self.version_json_dict.update(api_version = \
+            self.version_json_dict.update(api_version =
                                         self.json_page.raw_json['api_version'],
-                    apilib_version = self.json_page.raw_json['apilib_version'],
-                    api_timezone = self.json_page.raw_json['api_timezone'],
-                    api_timestamp = self.json_page.raw_json['api_timestamp'],
-                    oar_version = self.json_page.raw_json['oar_version'] )
+                    apilib_version=self.json_page.raw_json['apilib_version'],
+                    api_timezone=self.json_page.raw_json['api_timezone'],
+                    api_timestamp=self.json_page.raw_json['api_timestamp'],
+                    oar_version=self.json_page.raw_json['oar_version'])
         else:
-            self.version_json_dict.update(api_version = \
-                        self.json_page.raw_json['api'] ,
-                        apilib_version = self.json_page.raw_json['apilib'],
-                        api_timezone = self.json_page.raw_json['api_timezone'],
-                        api_timestamp = self.json_page.raw_json['api_timestamp'],
-                        oar_version = self.json_page.raw_json['oar'] )
+            self.version_json_dict.update(api_version =
+                        self.json_page.raw_json['api'],
+                        apilib_version=self.json_page.raw_json['apilib'],
+                        api_timezone=self.json_page.raw_json['api_timezone'],
+                        api_timestamp=self.json_page.raw_json['api_timestamp'],
+                        oar_version=self.json_page.raw_json['oar'])
 
         print self.version_json_dict['apilib_version']
 
 
-    def ParseTimezone(self) :
+    def ParseTimezone(self):
+        """Get the timezone used by OAR.
+
+        Get the timezone from the answer to the GET_timezone request.
+        :return: api_timestamp and api timezone.
+        :rype: integer, integer
+
+        .. warning:: unused.
+        """
         api_timestamp = self.json_page.raw_json['api_timestamp']
         api_tz = self.json_page.raw_json['timezone']
         return api_timestamp, api_tz
 
-    def ParseJobs(self) :
+    def ParseJobs(self):
+        """Called when a GET_jobs request has been issued to OAR.
+
+        Corresponds to /oarapi/jobs.json uri. Currently returns the raw json
+        information dict.
+        :returns: json_page.raw_json
+        :rtype: dictionary
+
+        .. warning:: Does not actually parse the information in the json. SA
+            15/07/13.
+
+        """
         self.jobs_list = []
         print " ParseJobs "
         return self.json_page.raw_json
 
-    def ParseJobsTable(self) :
+    def ParseJobsTable(self):
+        """In case we need to use the job table in the future.
+
+        Associated with the GET_jobs_table : '/oarapi/jobs/table.json uri.
+        .. warning:: NOT USED. DOES NOTHING.
+        """
         print "ParseJobsTable"
 
-    def ParseJobsDetails (self):
-        # currently, this function is not used a lot,
-        #so i have no idea what be usefull to parse,
-        #returning the full json. NT
+    def ParseJobsDetails(self):
+        """Currently only returns the same json in self.json_page.raw_json.
+
+        .. todo:: actually parse the json
+        .. warning:: currently, this function is not used a lot, so I have no
+            idea what could  be useful to parse, returning the full json. NT
+        """
+
         #logger.debug("ParseJobsDetails %s " %(self.json_page.raw_json))
         return self.json_page.raw_json
 
 
     def ParseJobsIds(self):
+        """Associated with the GET_jobs_id OAR request.
 
-        job_resources = ['wanted_resources', 'name', 'id', 'start_time', \
-                        'state','owner','walltime','message']
+        Parses the json dict (OAR answer) to the GET_jobs_id request
+        /oarapi/jobs/id.json.
 
 
-        job_resources_full = ['launching_directory', 'links', \
-            'resubmit_job_id', 'owner', 'events', 'message', \
-            'scheduled_start', 'id', 'array_id',  'exit_code', \
-            'properties', 'state','array_index', 'walltime', \
-            'type', 'initial_request', 'stop_time', 'project',\
-            'start_time',  'dependencies','api_timestamp','submission_time', \
-            'reservation', 'stdout_file', 'types', 'cpuset_name', \
+        :returns: dictionary whose keys are listed in the local variable
+            job_resources and values that are in the json dictionary returned
+            by OAR with the job information.
+        :rtype: dict
+
+        """
+        job_resources = ['wanted_resources', 'name', 'id', 'start_time',
+                        'state', 'owner', 'walltime', 'message']
+
+
+        job_resources_full = ['launching_directory', 'links',
+            'resubmit_job_id', 'owner', 'events', 'message',
+            'scheduled_start', 'id', 'array_id',  'exit_code',
+            'properties', 'state','array_index', 'walltime',
+            'type', 'initial_request', 'stop_time', 'project',
+            'start_time',  'dependencies','api_timestamp','submission_time',
+            'reservation', 'stdout_file', 'types', 'cpuset_name',
             'name',  'wanted_resources','queue','stderr_file','command']
 
 
@@ -452,7 +700,10 @@ class OARGETParser:
                 nodes.append(node['network_address'])
         return nodes
 
+    def ChangeRawJsonDependingOnApilibVersion(self):
 
+        if self.version_json_dict['apilib_version'] != "0.2.10" :
+            self.json_page.raw_json = self.json_page.raw_json['items']
 
     def ParseDeleteJobs(self):
         """ No need to parse anything in this function.A POST
@@ -472,8 +723,7 @@ class OARGETParser:
         logger.debug("OARRESTAPI ParseResourcesFull________________________ ")
         #print self.json_page.raw_json[1]
         #resources are listed inside the 'items' list from the json
-        if self.version_json_dict['apilib_version'] != "0.2.10" :
-            self.json_page.raw_json = self.json_page.raw_json['items']
+        self.ChangeRawJsonDependingOnApilibVersion()
         self.ParseNodes()
         self.ParseSites()
         return self.node_dictlist
@@ -483,12 +733,10 @@ class OARGETParser:
         ParseResourcesFull is used instead.
 
         """
-        if self.version_json_dict['apilib_version'] != "0.2.10" :
-            self.json_page.raw_json = self.json_page.raw_json['items']
+        self.ChangeRawJsonDependingOnApilibVersion()
         self.ParseNodes()
         self.ParseSites()
         return self.site_dict
-
 
 
     def ParseNodes(self):
@@ -498,20 +746,22 @@ class OARGETParser:
 
         """
         node_id = None
-        keys = self.resources_fulljson_dict.keys()
+        _resources_fulljson_dict = \
+            self.parsing_resourcesfull.resources_fulljson_dict
+        keys = _resources_fulljson_dict.keys()
         keys.sort()
 
         for dictline in self.json_page.raw_json:
             node_id = None
             # dictionary is empty and/or a new node has to be inserted
-            node_id = self.resources_fulljson_dict['network_address'](\
+            node_id = _resources_fulljson_dict['network_address'](\
                                 self.node_dictlist, dictline['network_address'])
             for k in keys:
                 if k in dictline:
                     if k == 'network_address':
                         continue
 
-                    self.resources_fulljson_dict[k](\
+                    _resources_fulljson_dict[k](\
                                     self.node_dictlist[node_id], dictline[k])
 
             #The last property has been inserted in the property tuple list,
@@ -521,8 +771,20 @@ class OARGETParser:
             node_id = None
 
     @staticmethod
-    def iotlab_hostname_to_hrn( root_auth,  hostname):
-        return root_auth + '.'+ hostname
+    def iotlab_hostname_to_hrn(root_auth,  hostname):
+        """
+        Transforms a node hostname into a SFA hrn.
+
+        :param root_auth: Name of the root authority of the SFA server. In
+            our case, it is set to iotlab.
+        :param hostname: node's hotname, given by OAR.
+        :type root_auth: string
+        :type hostname: string
+        :returns: inserts the root_auth and '.' before the hostname.
+        :rtype: string
+
+        """
+        return root_auth + '.' + hostname
 
 
 

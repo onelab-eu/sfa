@@ -60,6 +60,7 @@ class IotlabDriver(Driver):
 
     def fill_record_info(self, record_list):
         """
+
         For each SFA record, fill in the iotlab specific and SFA specific
             fields in the record.
 
@@ -68,9 +69,9 @@ class IotlabDriver(Driver):
         :returns: list of records with extended information in each record
         :rtype: list
 
-        .. warnings:: Should not be modifying record_list directly because modi
-        fication are kept outside the method's scope. Howerver, there is no
-        other way to do it given the way it's called in registry manager.
+        .. warning:: Should not be modifying record_list directly because modi
+            fication are kept outside the method's scope. Howerver, there is no
+            other way to do it given the way it's called in registry manager.
 
         """
 
@@ -303,7 +304,7 @@ class IotlabDriver(Driver):
 
         :param hrn: user's hrn
         :type hrn: string
-        :return : user record from SFA database
+        :returns: user record from SFA database
         :rtype: RegUser
 
         """

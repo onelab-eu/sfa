@@ -14,11 +14,10 @@ import os.path
 
 class LdapConfig():
     """
-    Ldap configuration class@make_ldap_filters_from_record and sets the
-        ldap IP address, password, people dn, web dn, group dn
-        . All these settings were defined in a separate
-        file  ldap_config.py to avoid sharing them in the SFA git as it contains
-        sensible information.
+    Ldap configuration class loads the configuration file and sets the
+    ldap IP address, password, people dn, web dn, group dn. All these settings
+    were defined in a separate file  ldap_config.py to avoid sharing them in
+    the SFA git as it contains sensible information.
 
     """
     def __init__(self, config_file='/etc/sfa/ldap_config.py'):
@@ -121,14 +120,14 @@ class LoginPassword():
     """
 
     Class to handle login and password generation, using custom login generation
-        algorithm.
+    algorithm.
 
     """
     def __init__(self):
         """
 
-        Sets password  and login maximum length, and defines the characters
-            that can be found in a random generated password.
+        Sets password  and login maximum length, and defines the characters that
+        can be found in a random generated password.
 
         """
         self.login_max_length = 8
@@ -147,8 +146,8 @@ class LoginPassword():
     def clean_user_names(record):
         """
 
-        Removes special characters such as
-            '-', '_' , '[', ']' and ' ' from the first name and last name.
+        Removes special characters such as '-', '_' , '[', ']' and ' ' from the
+        first name and last name.
 
         :param record: user's record
         :type record: dict
@@ -176,10 +175,10 @@ class LoginPassword():
         """
 
         When there is no valid first name and last name in the record,
-            the email is used to generate the login. Here, we assume the email
-            is firstname.lastname@something.smthg. The first name and last names
-            are extracted from the email, special charcaters are removed and
-            they are changed into lower case.
+        the email is used to generate the login. Here, we assume the email
+        is firstname.lastname@something.smthg. The first name and last names
+        are extracted from the email, special charcaters are removed and
+        they are changed into lower case.
 
         :param record: user's data
         :type record: dict
@@ -214,8 +213,8 @@ class LoginPassword():
     def get_user_firstname_lastname(self, record):
         """
 
-        Get the user first name and last name from the information
-            we have in the record.
+        Get the user first name and last name from the information we have in
+        the record.
 
         :param record: user's information
         :type record: dict
@@ -238,9 +237,9 @@ class LoginPassword():
     def choose_sets_chars_for_login(self, lower_first_name, lower_last_name):
         """
 
-        Algorithm to select sets of characters from the first name and
-            last name, depending on the lenght of the last name and the
-            maximum login length which in our case is set to 8 characters.
+        Algorithm to select sets of characters from the first name and last
+        name, depending on the lenght of the last name and the maximum login
+        length which in our case is set to 8 characters.
 
         :param lower_first_name: user's first name in lower case.
         :param lower_last_name: usr's last name in lower case.
@@ -285,8 +284,8 @@ class LoginPassword():
         """
 
         Generate a password upon  adding a new user in LDAP Directory
-            (8 characters length). The generated password is composed
-            of characters from the charsPassword list.
+        (8 characters length). The generated password is composed of characters
+        from the chars_password list.
 
         :returns: the randomly generated password
         :rtype: string
@@ -305,8 +304,8 @@ class LoginPassword():
     def encrypt_password(password):
         """
 
-        Use passlib library to make a RFC2307 LDAP encrypted password
-            salt size = 8, use sha-1 algorithm.
+        Use passlib library to make a RFC2307 LDAP encrypted password salt size
+        is 8, use sha-1 algorithm.
 
         :param password:  password not encrypted.
         :type password: string
@@ -484,10 +483,9 @@ class LDAPapi:
         """
 
         When adding a new user to Iotlab's LDAP, creates an attributes
-            dictionnary from the SFA record understandable by LDAP.
-            Generates the user's LDAP login.
-            User is automatically validated (account enabled) and described
-            as a SFA USER FROM OUTSIDE IOTLAB.
+        dictionnary from the SFA record understandable by LDAP. Generates the
+        user's LDAP login.User is automatically validated (account enabled)
+        and described as a SFA USER FROM OUTSIDE IOTLAB.
 
         :param record: must contain the following keys and values:
             first_name, last_name, mail, pkey (ssh key).
@@ -659,7 +657,7 @@ class LDAPapi:
 
     def LdapModify(self, dn, old_attributes_dict, new_attributes_dict):
         """ Modifies a LDAP entry, replaces user's old attributes with
-            the new ones given.
+        the new ones given.
 
         :param dn: user's absolute name  in the LDAP hierarchy.
         :param old_attributes_dict: old user's attributes. Keys must match
@@ -691,9 +689,9 @@ class LDAPapi:
         """
 
         Gets the record from one user based on the user sfa recordand changes
-            the attributes according to the specified new_attributes.
-            Do not use this if we need to modify the uid. Use a ModRDN
-            #operation instead ( modify relative DN )
+        the attributes according to the specified new_attributes. Do not use
+        this if we need to modify the uid. Use a ModRDN operation instead
+        ( modify relative DN ).
 
         :param user_record: sfa user record.
         :param new_attributes_dict: new user attributes, keys must be the
@@ -751,18 +749,18 @@ class LDAPapi:
     def LdapMarkUserAsDeleted(self, record):
         """
 
-        Sets shadowExpire to 0, disabling the user in LDAP.
-            Calls LdapModifyUser to change the shadowExpire of the user.
+        Sets shadowExpire to 0, disabling the user in LDAP. Calls LdapModifyUser
+        to change the shadowExpire of the user.
 
         :param record: the record of the user who has to be disabled.
             Should contain first_name,last_name, email or mail, and if the
             record is enabled or not. If the dict record does not have all of
             these, must at least contain the user's email.
         :type record: dict
-        :returns:  bool True if successful or bool False if not
+        :returns: {bool: True} if successful or {bool: False} if not
         :rtype: dict
 
-        .. seealso:: LdapModifyUser , make_ldap_attributes_from_record
+        .. seealso:: LdapModifyUser, make_ldap_attributes_from_record
         """
 
         new_attrs = {}
@@ -799,9 +797,8 @@ class LDAPapi:
 
     def LdapSearch(self, req_ldap=None, expected_fields=None):
         """
-        Used to search directly in LDAP, by using ldap filters and
-            return fields.
-            When req_ldap is None, returns all the entries in the LDAP.
+        Used to search directly in LDAP, by using ldap filters and return
+        fields. When req_ldap is None, returns all the entries in the LDAP.
 
         :param req_ldap: ldap style request, with appropriate filters,
              example: (cn=*).

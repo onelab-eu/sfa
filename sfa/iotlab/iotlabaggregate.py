@@ -49,11 +49,11 @@ class IotlabAggregate:
     def get_slice_and_slivers(self, slice_xrn, login=None):
         """
         Get the slices and the associated leases if any from the iotlab
-        testbed. For each slice, get the nodes in the  associated lease
-        and create a sliver with the necessary info and insertinto the sliver
-        dictionary, keyed on the node hostnames.
-        Returns a dict of slivers based on the sliver's node_id.
-        Called by get_rspec.
+            testbed. For each slice, get the nodes in the  associated lease
+            and create a sliver with the necessary info and insertinto the
+            sliver bdictionary, keyed on the node hostnames.
+            Returns a dict of slivers based on the sliver's node_id.
+            Called by get_rspec.
 
 
         :param slice_xrn: xrn of the slice
@@ -61,7 +61,7 @@ class IotlabAggregate:
 
         :type slice_xrn: string
         :type login: string
-        :reutnr : a list of slices dict and a dictionary of Sliver object
+        :returns: a list of slices dict and a dictionary of Sliver object
         :rtype: (list, dict)
 
         ..note: There is no slivers in iotlab, only leases.
@@ -93,7 +93,8 @@ class IotlabAggregate:
                 node_ids_list =  sfa_slice['node_ids']
             except KeyError:
                 logger.log_exc("SLABAGGREGATE \t \
-                                        get_slice_and_slivers No nodes in the slice - KeyError ")
+                            get_slice_and_slivers No nodes in the slice \
+                            - KeyError ")
                 continue
 
             for node in node_ids_list:
