@@ -170,10 +170,8 @@ class OARrestapi:
         :type strval: integer
         :type next_page: boolean
         :type username: string
-
-
         :returns: a json dictionary if OAR successfully processed the GET
-        request.
+            request.
 
         .. seealso:: OARrequests_uri_dict
         """
@@ -232,7 +230,8 @@ class OARrestapi:
 
         #first check that all params for are OK
         try:
-            self.oarserver['uri'] = self.OAR_REQUEST_POST_URI_DICT[request]['uri']
+            self.oarserver['uri'] = \
+                self.OAR_REQUEST_POST_URI_DICT[request]['uri']
 
         except KeyError:
             logger.log_exc("OARrestapi \tPOSTRequestToOARRestAPI request not \
@@ -279,6 +278,15 @@ class ParsingResourcesFull():
 
     """
     def __init__(self):
+        """
+        Set the parsing dictionary. Works like a switch case, if the key is
+        found in the dictionary, then the associated function is called.
+        This is used in ParseNodes to create an usable dictionary from
+        the Json returned by OAR when issuing a GET resources full request.
+
+        .. seealso:: ParseNodes
+
+        """
         self.resources_fulljson_dict = {
         'network_address': self.AddNodeNetworkAddr,
         'site':  self.AddNodeSite,
@@ -317,8 +325,8 @@ class ParsingResourcesFull():
         The value associated with the key is a tuple list.It contains all
         the nodes attributes. The tuplelist will later be turned into a dict.
 
-        :param dictnode: should be set to the OARGETParser atribute node_dictlist.
-            It will store the information on the nodes.
+        :param dictnode: should be set to the OARGETParser atribute
+            node_dictlist. It will store the information on the nodes.
         :param value: the node_id is the network_address in the raw json.
         :type value: string
         :type dictnode: dictionary
@@ -335,9 +343,10 @@ class ParsingResourcesFull():
         """Add the site's node to the dictionary.
 
 
-        :param tuplelist: tuple list on which to add the node's site. Contains the
-            other node attributes as well.
-        :param value: value to add to the tuple list, in this case the node's site.
+        :param tuplelist: tuple list on which to add the node's site.
+            Contains the other node attributes as well.
+        :param value: value to add to the tuple list, in this case the node's
+            site.
         :type tuplelist: list
         :type value: string
 
@@ -349,8 +358,9 @@ class ParsingResourcesFull():
     # def AddNodeRadio(tuplelist, value):
     #     """Add thenode's radio chipset type to the tuple list.
 
-    #     :param tuplelist: tuple list on which to add the node's mobility status. The
-    #         tuplelist is the value associated with the node's id in the OARGETParser
+    #     :param tuplelist: tuple list on which to add the node's mobility
+                # status. The tuplelist is the value associated with the node's
+                # id in the OARGETParser
     #          's dictionary node_dictlist.
     #     :param value: name of the radio chipset on the node.
     #     :type tuplelist: list
@@ -365,9 +375,9 @@ class ParsingResourcesFull():
     def AddMobility(self, tuplelist, value):
         """Add if the node is a mobile node or not to the tuple list.
 
-        :param tuplelist: tuple list on which to add the node's mobility status. The
-            tuplelist is the value associated with the node's id in the OARGETParser
-             's dictionary node_dictlist.
+        :param tuplelist: tuple list on which to add the node's mobility status.
+            The tuplelist is the value associated with the node's id in the
+            OARGETParser's dictionary node_dictlist.
         :param value: tells if a node is a mobile node or not. The value is found
             in the json.
 
@@ -387,8 +397,8 @@ class ParsingResourcesFull():
         """Add the node's position on the x axis.
 
         :param tuplelist: tuple list on which to add the node's position . The
-            tuplelist is the value associated with the node's id in the OARGETParser
-             's dictionary node_dictlist.
+            tuplelist is the value associated with the node's id in the
+            OARGETParser's dictionary node_dictlist.
         :param value: the position x.
 
         :type tuplelist: list
@@ -405,8 +415,8 @@ class ParsingResourcesFull():
         """Add the node's position on the y axis.
 
         :param tuplelist: tuple list on which to add the node's position . The
-            tuplelist is the value associated with the node's id in the OARGETParser
-             's dictionary node_dictlist.
+            tuplelist is the value associated with the node's id in the
+            OARGETParser's dictionary node_dictlist.
         :param value: the position y.
 
         :type tuplelist: list
@@ -423,8 +433,8 @@ class ParsingResourcesFull():
         """Add the node's position on the z axis.
 
         :param tuplelist: tuple list on which to add the node's position . The
-            tuplelist is the value associated with the node's id in the OARGETParser
-             's dictionary node_dictlist.
+            tuplelist is the value associated with the node's id in the
+            OARGETParser's dictionary node_dictlist.
         :param value: the position z.
 
         :type tuplelist: list
@@ -442,8 +452,8 @@ class ParsingResourcesFull():
         """Add the node's state, Alive or Suspected.
 
         :param tuplelist: tuple list on which to add the node's state . The
-            tuplelist is the value associated with the node's id in the OARGETParser
-             's dictionary node_dictlist.
+            tuplelist is the value associated with the node's id in the
+            OARGETParser 's dictionary node_dictlist.
         :param value: node's state.
 
         :type tuplelist: list
@@ -522,7 +532,6 @@ class OARGETParser:
         structure returned by OAR, so the version has to be known before trying
         to parse the jsons returned after a get request has been issued.
         Updates the attribute version_json_dict.
-
 
         """
 
@@ -643,7 +652,6 @@ class OARGETParser:
         for resource in self.json_page.raw_json['items']:
             job_resources.append(resource['id'])
 
-        #logger.debug("OARESTAPI \tParseJobsIdResources %s" %(self.json_page.raw_json))
         return job_resources
 
     def ParseResources(self) :
@@ -668,8 +676,8 @@ class OARGETParser:
                 job['t_until'] = int(json_element['scheduled_start']) + \
                                                 int(json_element['walltime'])
                 #Get resources id list for the job
-                job['resource_ids'] = \
-                    [ node_dict['id'] for node_dict in json_element['resources']]
+                job['resource_ids'] = [ node_dict['id'] for node_dict
+                                        in json_element['resources']]
             else:
                 job['t_from'] = "As soon as possible"
                 job['t_until'] = "As soon as possible"
@@ -702,7 +710,7 @@ class OARGETParser:
 
     def ChangeRawJsonDependingOnApilibVersion(self):
 
-        if self.version_json_dict['apilib_version'] != "0.2.10" :
+        if self.version_json_dict['apilib_version'] != "0.2.10":
             self.json_page.raw_json = self.json_page.raw_json['items']
 
     def ParseDeleteJobs(self):
@@ -806,14 +814,13 @@ class OARGETParser:
                 if node['node_id'] not in nodes_per_site[node['site']]:
                     nodes_per_site[node['site']].append(node['node_id'])
 
-        #Create a site dictionary whose key is site_login_base (name of the site)
-        # and value is a dictionary of properties, including the list
-        #of the node_ids
+        #Create a site dictionary whose key is site_login_base
+        # (name of the site) and value is a dictionary of properties,
+        # including the list of the node_ids
         for node_id in self.node_dictlist:
             node  = self.node_dictlist[node_id]
-            #node.update({'hrn':self.iotlab_hostname_to_hrn(self.interface_hrn, \
-                                            #node['site'],node['hostname'])})
-            node.update({'hrn':self.iotlab_hostname_to_hrn(self.interface_hrn, node['hostname'])})
+            node.update({'hrn':self.iotlab_hostname_to_hrn(self.interface_hrn,
+                                                           node['hostname'])})
             self.node_dictlist.update({node_id:node})
 
             if node['site'] not in self.site_dict:
@@ -821,26 +828,14 @@ class OARGETParser:
                     'site':node['site'],
                     'node_ids':nodes_per_site[node['site']],
                     'latitude':"48.83726",
-                    'longitude':"- 2.10336",'name':config.SFA_REGISTRY_ROOT_AUTH,
+                    'longitude':"- 2.10336",
+                    'name': config.SFA_REGISTRY_ROOT_AUTH,
                     'pcu_ids':[], 'max_slices':None, 'ext_consortium_id':None,
                     'max_slivers':None, 'is_public':True, 'peer_site_id': None,
                     'abbreviated_name':"iotlab", 'address_ids': [],
                     'url':"http,//www.senslab.info", 'person_ids':[],
                     'site_tag_ids':[], 'enabled': True,  'slice_ids':[],
                     'date_created': None, 'peer_id': None }
-            #if node['site_login_base'] not in self.site_dict.keys():
-                #self.site_dict[node['site_login_base']] = {'login_base':node['site_login_base'],
-                                                        #'node_ids':nodes_per_site[node['site_login_base']],
-                                                        #'latitude':"48.83726",
-                                                        #'longitude':"- 2.10336",'name':"senslab",
-                                                        #'pcu_ids':[], 'max_slices':None, 'ext_consortium_id':None,
-                                                        #'max_slivers':None, 'is_public':True, 'peer_site_id': None,
-                                                        #'abbreviated_name':"senslab", 'address_ids': [],
-                                                        #'url':"http,//www.senslab.info", 'person_ids':[],
-                                                        #'site_tag_ids':[], 'enabled': True,  'slice_ids':[],
-                                                        #'date_created': None, 'peer_id': None }
-
-
 
 
     OARrequests_uri_dict = {
@@ -914,4 +909,3 @@ class OARGETParser:
         else:
             logger.error("OARRESTAPI OARGetParse __init__ : ERROR_REQUEST " \
                                                                  %(request))
-

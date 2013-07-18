@@ -147,18 +147,20 @@ class IotlabTestbedAPI():
         #return server_timestamp, server_tz
 
     def DeleteJobs(self, job_id, username):
+        """
 
-        """ Deletes the job with the specified job_id and username on OAR by
-        posting a delete request to OAR.
+        Deletes the job with the specified job_id and username on OAR by
+            posting a delete request to OAR.
 
         :param job_id: job id in OAR.
         :param username: user's iotlab login in LDAP.
-        :type job_id:integer
+        :type job_id: integer
         :type username: string
 
         :returns: dictionary with the job id and if delete has been successful
-        (True) or no (False)
+            (True) or no (False)
         :rtype: dict
+
         """
         logger.debug("IOTLABDRIVER \tDeleteJobs jobid  %s username %s "\
                                  %(job_id, username))
@@ -340,15 +342,15 @@ class IotlabTestbedAPI():
         """
 
         Make a list of iotlab nodes and their properties from information
-        given by OAR. Search for specific nodes if some filters are specified.
-        Nodes properties returned if no return_fields_list given:
-        'hrn','archi','mobile','hostname','site','boot_state','node_id',
-        'radio','posx','posy','oar_id','posz'.
+            given by OAR. Search for specific nodes if some filters are
+            specified. Nodes properties returned if no return_fields_list given:
+            'hrn','archi','mobile','hostname','site','boot_state','node_id',
+            'radio','posx','posy','oar_id','posz'.
 
         :param node_filter_dict: dictionnary of lists with node properties
         :type node_filter_dict: dict
         :param return_fields_list: list of specific fields the user wants to be
-        returned.
+            returned.
         :type return_fields_list: list
         :returns: list of dictionaries with node properties
         :rtype: list
@@ -389,15 +391,19 @@ class IotlabTestbedAPI():
 
     @staticmethod
     def AddSlice(slice_record, user_record):
-        """Add slice to the local iotlab sfa tables if the slice comes
-        from a federated site and is not yet in the iotlab sfa DB,
-        although the user has already a LDAP login.
-        Called by verify_slice during lease/sliver creation.
+        """
+
+        Add slice to the local iotlab sfa tables if the slice comes
+            from a federated site and is not yet in the iotlab sfa DB,
+            although the user has already a LDAP login.
+            Called by verify_slice during lease/sliver creation.
+
         :param slice_record: record of slice, must contain hrn, gid, slice_id
-        and authority of the slice.
+            and authority of the slice.
         :type slice_record: dictionary
         :param user_record: record of the user
         :type user_record: RegUser
+
         """
 
         sfa_record = RegSlice(hrn=slice_record['hrn'],
@@ -447,29 +453,35 @@ class IotlabTestbedAPI():
 
     #TODO : Check rights to delete person
     def DeletePerson(self, person_record):
-        """ Disable an existing account in iotlab LDAP.
+        """Disable an existing account in iotlab LDAP.
+
         Users and techs can only delete themselves. PIs can only
-        delete themselves and other non-PIs at their sites.
-        ins can delete anyone.
+            delete themselves and other non-PIs at their sites.
+            ins can delete anyone.
+
         :param person_record: user's record
         :type person_record: dict
         :returns:  True if successful, False otherwise.
         :rtype: boolean
 
+        .. todo:: CHECK THAT ONLY THE USER OR ADMIN CAN DEL HIMSELF.
         """
         #Disable user account in iotlab LDAP
         ret = self.ldap.LdapMarkUserAsDeleted(person_record)
-        logger.warning("IOTLABDRIVER DeletePerson %s " %(person_record))
+        logger.warning("IOTLABDRIVER DeletePerson %s " % (person_record))
         return ret['bool']
 
-
     def DeleteSlice(self, slice_record):
-        """ Deletes the specified slice and kills the jobs associated with
-         the slice if any,  using DeleteSliceFromNodes.
+        """Deletes the specified slice and kills the jobs associated with
+            the slice if any,  using DeleteSliceFromNodes.
 
-         :returns: True if all the jobs in the slice have been deleted,
-         or the list of jobs that could not be deleted otherwise.
-         :rtype: list or boolean
+        :param slice_record: record of the slice, must contain oar_job_id, user
+        :type slice_record: dict
+        :returns: True if all the jobs in the slice have been deleted,
+            or the list of jobs that could not be deleted otherwise.
+        :rtype: list or boolean
+
+         .. seealso:: DeleteSliceFromNodes
 
         """
         ret = self.DeleteSliceFromNodes(slice_record)
@@ -536,13 +548,17 @@ class IotlabTestbedAPI():
 
 
     def AddPerson(self, record):
-        """Adds a new account. Any fields specified in records are used,
-        otherwise defaults are used. Creates an appropriate login by calling
-        LdapAddUser.
+        """
+
+        Adds a new account. Any fields specified in records are used,
+            otherwise defaults are used. Creates an appropriate login by calling
+            LdapAddUser.
+
         :param record: dictionary with the sfa user's properties.
         :returns: The uid of the added person if sucessful, otherwise returns
-        the error message from LDAP.
+            the error message from LDAP.
         :rtype: interger or string
+
         """
         ret = self.ldap.LdapAddUser(record)
 
@@ -560,12 +576,13 @@ class IotlabTestbedAPI():
     #TODO AddPersonKey 04/07/2012 SA
     def AddPersonKey(self, person_uid, old_attributes_dict, new_key_dict):
         """Adds a new key to the specified account. Adds the key to the
-        iotlab ldap, provided that the person_uid is valid.
+            iotlab ldap, provided that the person_uid is valid.
+
         Non-admins can only modify their own keys.
 
         :param person_uid: user's iotlab login in LDAP
         :param old_attributes_dict: dict with the user's old sshPublicKey
-        :param new_key_dict:dict with the user's new sshPublicKey
+        :param new_key_dict: dict with the user's new sshPublicKey
         :type person_uid: string
 
 
@@ -578,19 +595,24 @@ class IotlabTestbedAPI():
         logger.warning("IOTLABDRIVER AddPersonKey EMPTY - DO NOTHING \r\n ")
         return ret['bool']
 
-    def DeleteLeases(self, leases_id_list, slice_hrn ):
+    def DeleteLeases(self, leases_id_list, slice_hrn):
         """
+
         Deletes several leases, based on their job ids and the slice
-        they are associated with. Uses DeleteJobs to delete the jobs
-        on OAR. Note that one slice can contain multiple jobs, and in this case
-        all the jobs in the leases_id_list MUST belong to ONE slice,
-        since there is only one slice hrn provided here.
+            they are associated with. Uses DeleteJobs to delete the jobs
+            on OAR. Note that one slice can contain multiple jobs, and in this
+            case all the jobs in the leases_id_list MUST belong to ONE slice,
+            since there is only one slice hrn provided here.
+
         :param leases_id_list: list of job ids that belong to the slice whose
-        slice hrn is provided.
-        :param slice_hrn: the slice hrn .
-        ..warning: Does not have a return value since there was no easy
-        way to handle failure when dealing with multiple job delete. Plus,
-        there was no easy way to report it to the user.
+            slice hrn is provided.
+        :param slice_hrn: the slice hrn.
+        :type slice_hrn: string
+
+        .. warning:: Does not have a return value since there was no easy
+            way to handle failure when dealing with multiple job delete. Plus,
+            there was no easy way to report it to the user.
+
         """
         logger.debug("IOTLABDRIVER DeleteLeases leases_id_list %s slice_hrn %s \
                 \r\n " %(leases_id_list, slice_hrn))
@@ -804,14 +826,18 @@ class IotlabTestbedAPI():
 
     #Delete the jobs from job_iotlab table
     def DeleteSliceFromNodes(self, slice_record):
-        """ Deletes all the running or scheduled jobs of a given slice
-        given its record.
-        :param slice_record: record of the slice
+        """
+
+        Deletes all the running or scheduled jobs of a given slice
+            given its record.
+
+        :param slice_record: record of the slice, must contain oar_job_id, user
         :type slice_record: dict
 
         :returns: dict of the jobs'deletion status. Success= True, Failure=
-        False, for each job id.
+            False, for each job id.
         :rtype: dict
+
         """
         logger.debug("IOTLABDRIVER \t  DeleteSliceFromNodese %s " %(slice_record))
 
@@ -866,18 +892,22 @@ class IotlabTestbedAPI():
 
 
     def GetLeases(self, lease_filter_dict=None, login=None):
-        """ Get the list of leases from OAR with complete information
-        about which slice owns which jobs and nodes.
-        Two purposes:
-        -Fetch all the jobs from OAR (running, waiting..)
-        complete the reservation information with slice hrn
-        found in iotlab_xp table. If not available in the table,
-        assume it is a iotlab slice.
-        -Updates the iotlab table, deleting jobs when necessary.
+        """
+
+        Get the list of leases from OAR with complete information
+            about which slice owns which jobs and nodes.
+            Two purposes:
+            -Fetch all the jobs from OAR (running, waiting..)
+            complete the reservation information with slice hrn
+            found in iotlab_xp table. If not available in the table,
+            assume it is a iotlab slice.
+            -Updates the iotlab table, deleting jobs when necessary.
+
         :returns: reservation_list, list of dictionaries with 'lease_id',
-        'reserved_nodes','slice_id', 'state', 'user', 'component_id_list',
-        'slice_hrn', 'resource_ids', 't_from', 't_until'
+            'reserved_nodes','slice_id', 'state', 'user', 'component_id_list',
+            'slice_hrn', 'resource_ids', 't_from', 't_until'
         :rtype: list
+
         """
 
         unfiltered_reservation_list = self.GetReservedNodes(login)
@@ -1057,9 +1087,11 @@ class IotlabTestbedAPI():
 
     #TODO : test
     def DeleteKey(self, user_record, key_string):
-        """  Deletes a key in the LDAP entry of the specified user.
+        """Deletes a key in the LDAP entry of the specified user.
+
         Removes the key_string from the user's key list and updates the LDAP
-        user's entry with the new key attributes.
+            user's entry with the new key attributes.
+
         :param key_string: The ssh key to remove
         :param user_record: User's record
         :type key_string: string
@@ -1082,12 +1114,14 @@ class IotlabTestbedAPI():
     def _sql_get_slice_info( slice_filter ):
         """
         Get the slice record based on the slice hrn. Fetch the record of the
-        user associated with the slice by usingjoinedload based on t
-        he reg_researcher relationship.
+        user associated with the slice by using joinedload based on the
+        reg_researcher relationship.
+
         :param slice_filter: the slice hrn we are looking for
         :type slice_filter: string
         :returns: the slice record enhanced with the user's information if the
-        slice was found, None it wasn't.
+            slice was found, None it wasn't.
+
         :rtype: dict or None.
         """
         #DO NOT USE RegSlice - reg_researchers to get the hrn
@@ -1195,24 +1229,24 @@ class IotlabTestbedAPI():
             return fixed_slicerec_dict
 
 
-
-    def GetSlices(self, slice_filter = None, slice_filter_type = None, \
-                                                                    login=None):
-        """ Get the slice records from the iotlab db and add lease information
-        if any.
+    def GetSlices(self, slice_filter=None, slice_filter_type=None,
+                  login=None):
+        """Get the slice records from the iotlab db and add lease information
+            if any.
 
         :param slice_filter: can be the slice hrn or slice record id in the db
-        depending on the slice_filter_type.
+            depending on the slice_filter_type.
         :param slice_filter_type: defines the type of the filtering used, Can be
-        either 'slice_hrn' or "record_id'.
+            either 'slice_hrn' or "record_id'.
         :type slice_filter: string
         :type slice_filter_type: string
         :returns: a slice dict if slice_filter  and slice_filter_type
-        are specified and a matching entry is found in the db. The result
-        is put into a list.Or a list of slice dictionnaries if no filters are
-        specified.
+            are specified and a matching entry is found in the db. The result
+            is put into a list.Or a list of slice dictionnaries if no filters
+            arespecified.
 
         :rtype: list
+
         """
         #login = None
         authorized_filter_types_list = ['slice_hrn', 'record_id_user']
@@ -1220,14 +1254,14 @@ class IotlabTestbedAPI():
 
         #First try to get information on the slice based on the filter provided
         if slice_filter_type in authorized_filter_types_list:
-            fixed_slicerec_dict = \
-                            self._get_slice_records(slice_filter, slice_filter_type)
+            fixed_slicerec_dict = self._get_slice_records(slice_filter,
+                                                          slice_filter_type)
             slice_hrn = fixed_slicerec_dict['hrn']
 
             logger.debug(" IOTLABDRIVER \tGetSlices login %s \
                             slice record %s slice_filter %s \
-                            slice_filter_type %s " %(login, \
-                            fixed_slicerec_dict, slice_filter, \
+                            slice_filter_type %s " % (login,
+                            fixed_slicerec_dict, slice_filter,
                             slice_filter_type))
 
 
@@ -1235,7 +1269,7 @@ class IotlabTestbedAPI():
             #jobs associated to this slice
             leases_list = []
 
-            leases_list = self.GetLeases(login = login)
+            leases_list = self.GetLeases(login=login)
             #If no job is running or no job scheduled
             #return only the slice record
             if leases_list == [] and fixed_slicerec_dict:
@@ -1244,24 +1278,27 @@ class IotlabTestbedAPI():
             #If several jobs for one slice , put the slice record into
             # each lease information dict
 
-
             for lease in leases_list :
                 slicerec_dict = {}
                 logger.debug("IOTLABDRIVER.PY  \tGetSlices slice_filter %s   \
-                        \ lease['slice_hrn'] %s" \
-                        %(slice_filter, lease['slice_hrn']))
-                if  lease['slice_hrn'] == slice_hrn:
+                        \ lease['slice_hrn'] %s"
+                        % (slice_filter, lease['slice_hrn']))
+                if lease['slice_hrn'] == slice_hrn:
                     slicerec_dict['slice_hrn'] = lease['slice_hrn']
                     slicerec_dict['hrn'] = lease['slice_hrn']
                     slicerec_dict['user'] = lease['user']
                     slicerec_dict['oar_job_id'] = lease['lease_id']
-                    slicerec_dict.update({'list_node_ids':{'hostname':lease['reserved_nodes']}})
-                    slicerec_dict.update({'node_ids':lease['reserved_nodes']})
+                    slicerec_dict.update(
+                        {'list_node_ids':
+                        {'hostname': lease['reserved_nodes']}
+                        })
+                    slicerec_dict.update({'node_ids': lease['reserved_nodes']})
 
                     #Update lease dict with the slice record
                     if fixed_slicerec_dict:
                         fixed_slicerec_dict['oar_job_id'] = []
-                        fixed_slicerec_dict['oar_job_id'].append(slicerec_dict['oar_job_id'])
+                        fixed_slicerec_dict['oar_job_id'].append(
+                                                slicerec_dict['oar_job_id'])
                         slicerec_dict.update(fixed_slicerec_dict)
                         #slicerec_dict.update({'hrn':\
                                         #str(fixed_slicerec_dict['slice_hrn'])})
