@@ -1,3 +1,8 @@
+"""
+File providing methods to generate valid RSpecs for the Iotlab testbed.
+Contains methods to get information on slice, slivers, nodes and leases,
+formatting them and turn it into a RSpec.
+"""
 from sfa.util.xrn import hrn_to_urn, urn_to_hrn, get_authority
 
 from sfa.rspecs.rspec import RSpec
@@ -138,7 +143,6 @@ class IotlabAggregate:
         logger.debug("IOTLABAGGREGATE api get_slice_and_slivers  slivers %s "
                      % (slivers))
         return (slices, slivers)
-
 
 
     def get_nodes(self, slices=None, slivers=[], options=None):
@@ -286,8 +290,8 @@ class IotlabAggregate:
         :rtype: dict
 
         .. note::There is no filtering of leases within a given time frame.
-        All the running or scheduled leases are returned. options
-        removed SA 15/05/2013
+            All the running or scheduled leases are returned. options
+            removed SA 15/05/2013
 
 
         """

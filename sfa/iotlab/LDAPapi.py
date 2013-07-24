@@ -1,15 +1,26 @@
+"""
+This API is adapted for OpenLDAP.
+The file contains all LDAP classes and methods needed to:
+ - Load the LDAP connection configuration file (login, address..) with
+    LdapConfig
+ - Connect to LDAP with ldap_co
+ - Create a unique LDAP login and password for a user based on his email or
+    last name and first name with LoginPassword.
+ -  Manage entries in LDAP using SFA records with LDAPapi
+ (Search, Add, Delete, Modify)
+
+"""
 import random
 from passlib.hash import ldap_salted_sha1 as lssha
+
 from sfa.util.xrn import get_authority
-import ldap
+from sfa.util.sfalogging import logger
 from sfa.util.config import Config
 
-
+import ldap
 import ldap.modlist as modlist
-from sfa.util.sfalogging import logger
-import os.path
 
-#API for OpenLDAP
+import os.path
 
 
 class LdapConfig():
@@ -34,7 +45,7 @@ class LdapConfig():
             self.config_path = os.path.dirname(config_file)
         except IOError:
             raise IOError, "Could not find or load the configuration file: %s" \
-                            % config_file
+                % config_file
 
 
 class ldap_co:
@@ -86,7 +97,7 @@ class ldap_co:
         """ Binding method.
 
         :returns: dictionary with the bind status. True if Successful,
-            False if not and in this case the error message( {'bool', 'message'} )
+            False if not and in this case the error message({'bool','message'})
         :rtype: dict
 
         """
@@ -96,8 +107,8 @@ class ldap_co:
 
             # Bind/authenticate with a user with apropriate
             #rights to add objects
-            self.ldapserv.simple_bind_s(self.ldapAdminDN, \
-                                    self.ldapAdminPassword)
+            self.ldapserv.simple_bind_s(self.ldapAdminDN,
+                                        self.ldapAdminPassword)
 
         except ldap.LDAPError, error:
             return {'bool': False, 'message': error}
@@ -108,6 +119,9 @@ class ldap_co:
         """ Close the LDAP connection.
 
         Can throw an exception if the unbinding fails.
+        :returns: dictionary with the bind status if fails.
+            False if not and in this case the error message({'bool','message'})
+        :rtype: dict or None
 
         """
         try:
@@ -378,12 +392,15 @@ class LDAPapi:
                     try:
                         login = \
                             lower_first_name[0:index] + \
-                            lower_last_name[0:self.login_pwd.login_max_length-index]
+                            lower_last_name[0:
+                                            self.login_pwd.login_max_length
+                                            - index]
                         login_filter = '(uid=' + login + ')'
                     except KeyError:
                         print "lower_first_name - lower_last_name too short"
 
-            logger.debug("LDAP.API \t LdapGenerateUniqueLogin login %s" % (login))
+            logger.debug("LDAP.API \t LdapGenerateUniqueLogin login %s"
+                         % (login))
             return login
 
         except ldap.LDAPError, error:

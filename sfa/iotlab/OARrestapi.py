@@ -1,9 +1,18 @@
+"""
+File used to handle issuing request to OAR and parse OAR's JSON responses.
+Contains the following classes:
+- JsonPage : handles multiple pages OAR answers.
+- OARRestapi : handles issuing POST or GET requests to OAR.
+- ParsingResourcesFull : dedicated to parsing OAR's answer to a get resources
+full request.
+- OARGETParser : handles parsing the Json answers to different GET requests.
+
+"""
 from httplib import HTTPConnection, HTTPException, NotConnected
 import json
 from sfa.util.config import Config
 from sfa.util.sfalogging import logger
 import os.path
-import sys
 
 
 class JsonPage:
@@ -136,7 +145,7 @@ class OARrestapi:
 
         except IOError:
             raise IOError, "Could not find or load the configuration file: %s" \
-                            % config_file
+                % config_file
         #logger.setLevelDebug()
         self.oarserver['ip'] = self.OAR_IP
         self.oarserver['port'] = self.OAR_PORT
@@ -149,7 +158,7 @@ class OARrestapi:
 
 
     def GETRequestToOARRestAPI(self, request, strval=None,
-                            next_page=None, username=None):
+                               next_page=None, username=None):
 
         """Makes a GET request to OAR.
 
@@ -186,7 +195,7 @@ class OARrestapi:
         logger.debug("OARrestapi \tGETRequestToOARRestAPI %s" % (request))
         if strval:
             self.oarserver['uri'] = self.oarserver['uri'].\
-                                            replace("id",str(strval))
+                replace("id", str(strval))
 
         if next_page:
             self.oarserver['uri'] += next_page
@@ -195,21 +204,21 @@ class OARrestapi:
             headers['X-REMOTE_IDENT'] = username
 
         logger.debug("OARrestapi: \t  GETRequestToOARRestAPI  \
-                        self.oarserver['uri'] %s strval %s" \
-                        %(self.oarserver['uri'], strval))
-        try :
+                        self.oarserver['uri'] %s strval %s"
+                     % (self.oarserver['uri'], strval))
+        try:
             #seems that it does not work if we don't add this
             headers['content-length'] = '0'
 
-            conn = HTTPConnection(self.oarserver['ip'], \
-                                                self.oarserver['port'])
+            conn = HTTPConnection(self.oarserver['ip'],
+                                  self.oarserver['port'])
             conn.request("GET", self.oarserver['uri'], data, headers)
-            resp = ( conn.getresponse()).read()
+            resp = (conn.getresponse()).read()
             conn.close()
 
-        except HTTPException, error :
-            logger.log_exc("GET_OAR_SRVR : Problem with OAR server : %s " \
-                                                                    %(error))
+        except HTTPException, error:
+            logger.log_exc("GET_OAR_SRVR : Problem with OAR server : %s "
+                           % (error))
             #raise ServerError("GET_OAR_SRVR : Could not reach OARserver")
         try:
             js_dict = json.loads(resp)
@@ -217,8 +226,8 @@ class OARrestapi:
             return js_dict
 
         except ValueError, error:
-            logger.log_exc("Failed to parse Server Response: %s ERROR %s"\
-                                                            %(js_dict, error))
+            logger.log_exc("Failed to parse Server Response: %s ERROR %s"
+                           % (js_dict, error))
             #raise ServerError("Failed to parse Server Response:" + js)
 
 
@@ -486,24 +495,14 @@ class ParsingResourcesFull():
 
 
 class OARGETParser:
-    # resources_fulljson_dict = {
-    #     'network_address': AddNodeNetworkAddr,
-    #     'site': AddNodeSite,
-    #     # 'radio': AddNodeRadio,
-    #     'mobile': AddMobility,
-    #     'x': AddPosX,
-    #     'y': AddPosY,
-    #     'z':AddPosZ,
-    #     'archi':AddHardwareType,
-    #     'state':AddBootState,
-    #     'id' : AddOarNodeId,
-    #     }
+    """Class providing parsing methods associated to specific GET requests.
 
+    """
 
-    def __init__(self, srv) :
+    def __init__(self, srv):
         self.version_json_dict = {
-            'api_version' : None , 'apilib_version' :None,\
-            'api_timezone': None, 'api_timestamp': None, 'oar_version': None ,}
+            'api_version': None, 'apilib_version': None,
+            'api_timezone': None, 'api_timestamp': None, 'oar_version': None}
         self.config = Config()
         self.interface_hrn = self.config.SFA_INTERFACE_HRN
         self.timezone_json_dict = {
@@ -519,13 +518,11 @@ class OARGETParser:
         self.json_page = JsonPage()
         self.parsing_resourcesfull = ParsingResourcesFull()
         self.site_dict = {}
+        self.jobs_list = []
         self.SendRequest("GET_version")
 
 
-
-
-
-    def ParseVersion(self) :
+    def ParseVersion(self):
         """Parses the OAR answer to the GET_version ( /oarapi/version.json.)
 
         Finds the OAR apilib version currently used. Has an impact on the json
@@ -535,20 +532,20 @@ class OARGETParser:
 
         """
 
-        if 'oar_version' in self.json_page.raw_json :
-            self.version_json_dict.update(api_version =
-                                        self.json_page.raw_json['api_version'],
-                    apilib_version=self.json_page.raw_json['apilib_version'],
-                    api_timezone=self.json_page.raw_json['api_timezone'],
-                    api_timestamp=self.json_page.raw_json['api_timestamp'],
-                    oar_version=self.json_page.raw_json['oar_version'])
+        if 'oar_version' in self.json_page.raw_json:
+            self.version_json_dict.update(
+                api_version=self.json_page.raw_json['api_version'],
+                apilib_version=self.json_page.raw_json['apilib_version'],
+                api_timezone=self.json_page.raw_json['api_timezone'],
+                api_timestamp=self.json_page.raw_json['api_timestamp'],
+                oar_version=self.json_page.raw_json['oar_version'])
         else:
-            self.version_json_dict.update(api_version =
-                        self.json_page.raw_json['api'],
-                        apilib_version=self.json_page.raw_json['apilib'],
-                        api_timezone=self.json_page.raw_json['api_timezone'],
-                        api_timestamp=self.json_page.raw_json['api_timestamp'],
-                        oar_version=self.json_page.raw_json['oar'])
+            self.version_json_dict.update(
+                api_version=self.json_page.raw_json['api'],
+                apilib_version=self.json_page.raw_json['apilib'],
+                api_timezone=self.json_page.raw_json['api_timezone'],
+                api_timestamp=self.json_page.raw_json['api_timestamp'],
+                oar_version=self.json_page.raw_json['oar'])
 
         print self.version_json_dict['apilib_version']
 
@@ -616,17 +613,19 @@ class OARGETParser:
 
         """
         job_resources = ['wanted_resources', 'name', 'id', 'start_time',
-                        'state', 'owner', 'walltime', 'message']
+                         'state', 'owner', 'walltime', 'message']
 
-
-        job_resources_full = ['launching_directory', 'links',
+        # Unused variable providing the contents of the json dict returned from
+        # get job resources full request
+        job_resources_full = [
+            'launching_directory', 'links',
             'resubmit_job_id', 'owner', 'events', 'message',
-            'scheduled_start', 'id', 'array_id',  'exit_code',
-            'properties', 'state','array_index', 'walltime',
+            'scheduled_start', 'id', 'array_id', 'exit_code',
+            'properties', 'state', 'array_index', 'walltime',
             'type', 'initial_request', 'stop_time', 'project',
-            'start_time',  'dependencies','api_timestamp','submission_time',
+            'start_time',  'dependencies', 'api_timestamp', 'submission_time',
             'reservation', 'stdout_file', 'types', 'cpuset_name',
-            'name',  'wanted_resources','queue','stderr_file','command']
+            'name', 'wanted_resources', 'queue', 'stderr_file', 'command']
 
 
         job_info = self.json_page.raw_json
@@ -654,7 +653,7 @@ class OARGETParser:
 
         return job_resources
 
-    def ParseResources(self) :
+    def ParseResources(self):
         """ Parses the json produced by a get_resources request on oar."""
 
         #logger.debug("OARESTAPI \tParseResources " )
@@ -663,30 +662,37 @@ class OARGETParser:
         self.ParseNodes()
 
     def ParseReservedNodes(self):
-        """  Returns an array containing the list of the reserved nodes """
+        """  Returns an array containing the list of the jobs scheduled
+        with the reserved nodes if available.
+
+        :returns: list of job dicts, each dict containing the following keys:
+            t_from, t_until, resources_ids (of the reserved nodes for this job).
+            If the information is not available, default values will be set for
+            these keys. The other keys are : state, lease_id and user.
+        :rtype: list
+
+        """
 
         #resources are listed inside the 'items' list from the json
         reservation_list = []
         job = {}
         #Parse resources info
-        for json_element in  self.json_page.raw_json['items']:
+        for json_element in self.json_page.raw_json['items']:
             #In case it is a real reservation (not asap case)
             if json_element['scheduled_start']:
                 job['t_from'] = json_element['scheduled_start']
                 job['t_until'] = int(json_element['scheduled_start']) + \
-                                                int(json_element['walltime'])
+                    int(json_element['walltime'])
                 #Get resources id list for the job
-                job['resource_ids'] = [ node_dict['id'] for node_dict
-                                        in json_element['resources']]
+                job['resource_ids'] = [node_dict['id'] for node_dict
+                                       in json_element['resources']]
             else:
                 job['t_from'] = "As soon as possible"
                 job['t_until'] = "As soon as possible"
                 job['resource_ids'] = ["Undefined"]
 
-
             job['state'] = json_element['state']
             job['lease_id'] = json_element['id']
-
 
             job['user'] = json_element['owner']
             #logger.debug("OARRestapi \tParseReservedNodes job %s" %(job))
@@ -699,16 +705,31 @@ class OARGETParser:
         """ Gets the list of nodes currently in use from the attributes of the
         running jobs.
 
+        :returns: list of hostnames, the nodes that are currently involved in
+            running jobs.
+        :rtype: list
+
+
         """
-        logger.debug("OARESTAPI \tParseRunningJobs__________________________ ")
+        logger.debug("OARESTAPI \tParseRunningJobs_________________ ")
         #resources are listed inside the 'items' list from the json
         nodes = []
-        for job in  self.json_page.raw_json['items']:
+        for job in self.json_page.raw_json['items']:
             for node in job['nodes']:
                 nodes.append(node['network_address'])
         return nodes
 
     def ChangeRawJsonDependingOnApilibVersion(self):
+        """
+        Check if the OAR apilib version is different from 0.2.10, in which case
+        the Json answer is also dict instead as a plain list.
+
+        .. warning:: the whole code is assuming the json contains a 'items' key
+        .. seealso:: ConcatenateJsonPages, ParseJobs, ParseReservedNodes,
+            ParseJobsIdResources, ParseResources, ParseRunningJobs
+        .. todo:: Clean the whole code. Either suppose the  apilib will always
+            provide the 'items' key, or handle different options.
+        """
 
         if self.version_json_dict['apilib_version'] != "0.2.10":
             self.json_page.raw_json = self.json_page.raw_json['items']
@@ -720,15 +741,19 @@ class OARGETParser:
         """
         return
 
-    def ParseResourcesFull(self) :
+    def ParseResourcesFull(self):
         """ This method is responsible for parsing all the attributes
         of all the nodes returned by OAR when issuing a get resources full.
         The information from the nodes and the sites are separated.
         Updates the node_dictlist so that the dictionnary of the platform's
         nodes is available afterwards.
 
+        :returns: node_dictlist, a list of dictionaries about the nodes and
+            their properties.
+        :rtype: list
+
         """
-        logger.debug("OARRESTAPI ParseResourcesFull________________________ ")
+        logger.debug("OARRESTAPI ParseResourcesFull___________ ")
         #print self.json_page.raw_json[1]
         #resources are listed inside the 'items' list from the json
         self.ChangeRawJsonDependingOnApilibVersion()
@@ -736,9 +761,16 @@ class OARGETParser:
         self.ParseSites()
         return self.node_dictlist
 
-    def ParseResourcesFullSites(self) :
-        """ UNUSED. Originally used to get information from the sites.
-        ParseResourcesFull is used instead.
+    def ParseResourcesFullSites(self):
+        """ Called by GetSites which is unused.
+        Originally used to get information from the sites, with for each site
+        the list of nodes it has, along with their properties.
+
+        :return: site_dict, dictionary of sites
+        :rtype: dict
+
+        .. warning:: unused
+        .. seealso:: GetSites (IotlabTestbedAPI)
 
         """
         self.ChangeRawJsonDependingOnApilibVersion()
@@ -762,15 +794,15 @@ class OARGETParser:
         for dictline in self.json_page.raw_json:
             node_id = None
             # dictionary is empty and/or a new node has to be inserted
-            node_id = _resources_fulljson_dict['network_address'](\
-                                self.node_dictlist, dictline['network_address'])
+            node_id = _resources_fulljson_dict['network_address'](
+                self.node_dictlist, dictline['network_address'])
             for k in keys:
                 if k in dictline:
                     if k == 'network_address':
                         continue
 
-                    _resources_fulljson_dict[k](\
-                                    self.node_dictlist[node_id], dictline[k])
+                    _resources_fulljson_dict[k](
+                        self.node_dictlist[node_id], dictline[k])
 
             #The last property has been inserted in the property tuple list,
             #reset node_id
@@ -794,8 +826,6 @@ class OARGETParser:
         """
         return root_auth + '.' + hostname
 
-
-
     def ParseSites(self):
         """ Returns a list of dictionnaries containing the sites' attributes."""
 
@@ -805,7 +835,7 @@ class OARGETParser:
                                                         #%(self.node_dictlist))
         # Create a list of nodes per site_id
         for node_id in self.node_dictlist:
-            node  = self.node_dictlist[node_id]
+            node = self.node_dictlist[node_id]
 
             if node['site'] not in nodes_per_site:
                 nodes_per_site[node['site']] = []
@@ -818,94 +848,106 @@ class OARGETParser:
         # (name of the site) and value is a dictionary of properties,
         # including the list of the node_ids
         for node_id in self.node_dictlist:
-            node  = self.node_dictlist[node_id]
-            node.update({'hrn':self.iotlab_hostname_to_hrn(self.interface_hrn,
-                                                           node['hostname'])})
-            self.node_dictlist.update({node_id:node})
+            node = self.node_dictlist[node_id]
+            node.update({'hrn': self.iotlab_hostname_to_hrn(self.interface_hrn,
+                                                            node['hostname'])})
+            self.node_dictlist.update({node_id: node})
 
             if node['site'] not in self.site_dict:
                 self.site_dict[node['site']] = {
-                    'site':node['site'],
-                    'node_ids':nodes_per_site[node['site']],
-                    'latitude':"48.83726",
-                    'longitude':"- 2.10336",
+                    'site': node['site'],
+                    'node_ids': nodes_per_site[node['site']],
+                    'latitude': "48.83726",
+                    'longitude': "- 2.10336",
                     'name': config.SFA_REGISTRY_ROOT_AUTH,
-                    'pcu_ids':[], 'max_slices':None, 'ext_consortium_id':None,
-                    'max_slivers':None, 'is_public':True, 'peer_site_id': None,
-                    'abbreviated_name':"iotlab", 'address_ids': [],
-                    'url':"http,//www.senslab.info", 'person_ids':[],
-                    'site_tag_ids':[], 'enabled': True,  'slice_ids':[],
-                    'date_created': None, 'peer_id': None }
-
+                    'pcu_ids': [], 'max_slices': None,
+                    'ext_consortium_id': None,
+                    'max_slivers': None, 'is_public': True,
+                    'peer_site_id': None,
+                    'abbreviated_name': "iotlab", 'address_ids': [],
+                    'url': "https://portal.senslab.info", 'person_ids': [],
+                    'site_tag_ids': [], 'enabled': True,  'slice_ids': [],
+                    'date_created': None, 'peer_id': None
+                }
 
     OARrequests_uri_dict = {
         'GET_version':
-                {'uri':'/oarapi/version.json', 'parse_func': ParseVersion},
-        'GET_timezone':
-                {'uri':'/oarapi/timezone.json' ,'parse_func': ParseTimezone },
-        'GET_jobs':
-                {'uri':'/oarapi/jobs.json','parse_func': ParseJobs},
-        'GET_jobs_id':
-                {'uri':'/oarapi/jobs/id.json','parse_func': ParseJobsIds},
-        'GET_jobs_id_resources':
-                {'uri':'/oarapi/jobs/id/resources.json',\
-                'parse_func': ParseJobsIdResources},
-        'GET_jobs_table':
-                {'uri':'/oarapi/jobs/table.json','parse_func': ParseJobsTable},
-        'GET_jobs_details':
-                {'uri':'/oarapi/jobs/details.json',\
-                'parse_func': ParseJobsDetails},
-        'GET_reserved_nodes':
-                {'uri':
-                '/oarapi/jobs/details.json?state=Running,Waiting,Launching',\
-                'owner':'&user=',
-                'parse_func':ParseReservedNodes},
+        {'uri': '/oarapi/version.json', 'parse_func': ParseVersion},
 
+        'GET_timezone':
+        {'uri': '/oarapi/timezone.json', 'parse_func': ParseTimezone},
+
+        'GET_jobs':
+        {'uri': '/oarapi/jobs.json', 'parse_func': ParseJobs},
+
+        'GET_jobs_id':
+        {'uri': '/oarapi/jobs/id.json', 'parse_func': ParseJobsIds},
+
+        'GET_jobs_id_resources':
+        {'uri': '/oarapi/jobs/id/resources.json',
+        'parse_func': ParseJobsIdResources},
+
+        'GET_jobs_table':
+        {'uri': '/oarapi/jobs/table.json', 'parse_func': ParseJobsTable},
+
+        'GET_jobs_details':
+        {'uri': '/oarapi/jobs/details.json', 'parse_func': ParseJobsDetails},
+
+        'GET_reserved_nodes':
+        {'uri':
+        '/oarapi/jobs/details.json?state=Running,Waiting,Launching',
+        'owner': '&user=', 'parse_func': ParseReservedNodes},
 
         'GET_running_jobs':
-                {'uri':'/oarapi/jobs/details.json?state=Running',\
-                'parse_func':ParseRunningJobs},
+        {'uri': '/oarapi/jobs/details.json?state=Running',
+        'parse_func': ParseRunningJobs},
+
         'GET_resources_full':
-                {'uri':'/oarapi/resources/full.json',\
-                'parse_func': ParseResourcesFull},
+        {'uri': '/oarapi/resources/full.json',
+        'parse_func': ParseResourcesFull},
+
         'GET_sites':
-                {'uri':'/oarapi/resources/full.json',\
-                'parse_func': ParseResourcesFullSites},
+        {'uri': '/oarapi/resources/full.json',
+        'parse_func': ParseResourcesFullSites},
+
         'GET_resources':
-                {'uri':'/oarapi/resources.json' ,'parse_func': ParseResources},
+        {'uri': '/oarapi/resources.json', 'parse_func': ParseResources},
+
         'DELETE_jobs_id':
-                {'uri':'/oarapi/jobs/id.json' ,'parse_func': ParseDeleteJobs}
-        }
+        {'uri': '/oarapi/jobs/id.json', 'parse_func': ParseDeleteJobs}}
 
 
-
-
-    def SendRequest(self, request, strval = None , username = None):
+    def SendRequest(self, request, strval=None, username=None):
         """ Connects to OAR , sends the valid GET requests and uses
         the appropriate json parsing functions.
 
+        :returns: calls to the appropriate parsing function, associated with the
+            GET request
+        :rtype: depends on the parsing function called.
+
+        .. seealso:: OARrequests_uri_dict
         """
         save_json = None
 
         self.json_page.ResetNextPage()
         save_json = []
 
-        if request in self.OARrequests_uri_dict :
+        if request in self.OARrequests_uri_dict:
             while self.json_page.next_page:
-                self.json_page.raw_json = self.server.GETRequestToOARRestAPI(\
-                                                request, \
-                                                strval, \
-                                                self.json_page.next_offset, \
-                                                username)
+                self.json_page.raw_json = self.server.GETRequestToOARRestAPI(
+                    request,
+                    strval,
+                    self.json_page.next_offset,
+                    username)
                 self.json_page.FindNextPage()
                 if self.json_page.concatenate:
                     save_json.append(self.json_page.raw_json)
 
-            if self.json_page.concatenate and self.json_page.end :
+            if self.json_page.concatenate and self.json_page.end:
                 self.json_page.raw_json = \
                     self.json_page.ConcatenateJsonPages(save_json)
 
             return self.OARrequests_uri_dict[request]['parse_func'](self)
         else:
-            logger.error("OARRESTAPI OARGetParse __init__ : ERROR_REQUEST " \
-                                                                 %(request))
+            logger.error("OARRESTAPI OARGetParse __init__ : ERROR_REQUEST "
+                         % (request))

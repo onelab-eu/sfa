@@ -1,12 +1,22 @@
+"""
+This file defines the IotlabSlices class by which all the slice checkings
+upon lease creation are done.
+"""
 from sfa.util.xrn import get_authority, urn_to_hrn
 from sfa.util.sfalogging import logger
 
 MAXINT = 2L**31-1
 
+
 class IotlabSlices:
-
+    """
+    This class is responsible for checking the slice when creating a
+    lease or a sliver. Those checks include verifying that the user is valid,
+    that the slice is known from the testbed or from our peers, that the list
+    of nodes involved has not changed (in this case the lease is modified
+    accordingly).
+    """
     rspec_to_slice_tag = {'max_rate': 'net_max_rate'}
-
 
     def __init__(self, driver):
         """
@@ -42,18 +52,17 @@ class IotlabSlices:
         site_authority = get_authority(slice_authority).lower()
         # get this site's authority (sfa root authority or sub authority)
 
-        logger.debug("IOTLABSLICES \ get_peer slice_authority  %s \
+        logger.debug("IOTLABSLICES \t get_peer slice_authority  %s \
                     site_authority %s hrn %s"
-                    % (slice_authority, site_authority, hrn))
+                     % (slice_authority, site_authority, hrn))
 
         # check if we are already peered with this site_authority
         #if so find the peer record
         peers = self.driver.iotlab_api.GetPeers(peer_filter=site_authority)
         for peer_record in peers:
-
             if site_authority == peer_record.hrn:
                 peer = peer_record
-        logger.debug(" IOTLABSLICES \tget_peer peer  %s " %(peer))
+        logger.debug(" IOTLABSLICES \tget_peer peer  %s " % (peer))
         return peer
 
     def get_sfa_peer(self, xrn):
@@ -78,7 +87,6 @@ class IotlabSlices:
 
         return sfa_peer
 
-
     def verify_slice_leases(self, sfa_slice, requested_jobs_dict, peer):
         """
         Compare requested leases with the leases already scheduled/
@@ -87,11 +95,11 @@ class IotlabSlices:
 
         :param sfa_slice: sfa slice record
         :param requested_jobs_dict: dictionary of requested leases
-        :param peer: sfa peer
+        :param peer: sfa peer record
 
         :type sfa_slice: dict
         :type requested_jobs_dict: dict
-        :type peer:
+        :type peer: dict
         :returns: leases list of dictionary
         :rtype: list
 
@@ -237,6 +245,7 @@ class IotlabSlices:
         :returns: list requested nodes hostnames
         :rtype: list
 
+        .. warning:: UNUSED SQA 24/07/13
         .. seealso:: DeleteSliceFromNodes
         .. todo:: check what to do with the peer? Can not remove peer nodes from
             slice here. Anyway, in this case, the peer should have gotten the
@@ -536,10 +545,11 @@ class IotlabSlices:
                     #try:
                         ##if peer:
                             #person = persondict[user['email']]
-                            #self.driver.iotlab_api.UnBindObjectFromPeer('person',
-                                        #person['person_id'], peer['shortname'])
-                    ret = self.driver.iotlab_api.AddPersonKey(\
-                                                            user['email'], key)
+                            #self.driver.iotlab_api.UnBindObjectFromPeer(
+                                # 'person',person['person_id'],
+                                # peer['shortname'])
+                    ret = self.driver.iotlab_api.AddPersonKey(
+                        user['email'], key)
                         #if peer:
                             #key_index = user_keys.index(key['key'])
                             #remote_key_id = user['key_ids'][key_index]
@@ -555,7 +565,7 @@ class IotlabSlices:
 
         # remove old keys (only if we are not appending)
         append = options.get('append', True)
-        if append == False:
+        if append is False:
             removed_keys = set(existing_keys).difference(requested_keys)
             for key in removed_keys:
                     #if peer:

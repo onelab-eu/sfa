@@ -1,3 +1,6 @@
+"""
+Implements what a driver should provide for SFA to work.
+"""
 from sfa.util.faults import SliverDoesNotExist, UnknownSfaType
 from sfa.util.sfalogging import logger
 from sfa.storage.alchemy import dbsession
@@ -8,9 +11,6 @@ from sfa.rspecs.version_manager import VersionManager
 from sfa.rspecs.rspec import RSpec
 
 from sfa.util.xrn import Xrn, hrn_to_urn, get_authority
-
-
-from sfa.iotlab.iotlabpostgres import IotlabDB
 
 from sfa.iotlab.iotlabaggregate import IotlabAggregate, iotlab_xrn_to_hostname
 from sfa.iotlab.iotlabslices import IotlabSlices
@@ -38,14 +38,12 @@ class IotlabDriver(Driver):
         :type config: Config object
 
         """
-        Driver.__init__ (self, config)
+        Driver.__init__(self, config)
         self.config = config
-
-        # self.db = IotlabDB(config, debug = False)
         self.iotlab_api = IotlabTestbedAPI(config)
         self.cache = None
 
-    def augment_records_with_testbed_info (self, record_list ):
+    def augment_records_with_testbed_info(self, record_list):
         """
 
         Adds specific testbed info to the records.
@@ -56,7 +54,7 @@ class IotlabDriver(Driver):
         :rtype: list
 
         """
-        return self.fill_record_info (record_list)
+        return self.fill_record_info(record_list)
 
     def fill_record_info(self, record_list):
         """
@@ -87,22 +85,23 @@ class IotlabDriver(Driver):
                 #information is in the Iotlab's DB.
                 if str(record['type']) == 'slice':
                     if 'reg_researchers' in record and \
-                    isinstance(record['reg_researchers'], list) :
+                        isinstance(record['reg_researchers'], list):
                         record['reg_researchers'] = \
                             record['reg_researchers'][0].__dict__
-                        record.update({'PI':[record['reg_researchers']['hrn']],
-                            'researcher': [record['reg_researchers']['hrn']],
-                            'name':record['hrn'],
-                            'oar_job_id':[],
-                            'node_ids': [],
-                            'person_ids': [record['reg_researchers']
-                                           ['record_id']],
-                            # For client_helper.py compatibility
-                            'geni_urn': '',
-                            # For client_helper.py compatibility
-                            'keys': '',
-                            # For client_helper.py compatibility
-                            'key_ids': ''})
+                        record.update(
+                            {'PI': [record['reg_researchers']['hrn']],
+                             'researcher': [record['reg_researchers']['hrn']],
+                             'name': record['hrn'],
+                             'oar_job_id': [],
+                             'node_ids': [],
+                             'person_ids': [record['reg_researchers']
+                                            ['record_id']],
+                                # For client_helper.py compatibility
+                             'geni_urn': '',
+                                # For client_helper.py compatibility
+                             'keys': '',
+                                # For client_helper.py compatibility
+                             'key_ids': ''})
 
                     #Get iotlab slice record and oar job id if any.
                     recslice_list = self.iotlab_api.GetSlices(
@@ -120,8 +119,8 @@ class IotlabDriver(Driver):
                                          % (rec['oar_job_id']))
 
                             record['node_ids'] = [self.iotlab_api.root_auth +
-                                                   hostname for hostname in
-                                                   rec['node_ids']]
+                                                  hostname for hostname in
+                                                  rec['node_ids']]
                     except KeyError:
                         pass
 
@@ -145,52 +144,49 @@ class IotlabDriver(Driver):
                     #Will update PIs and researcher for the slice
 
                     recuser = recslice_list[0]['reg_researchers']
-                    logger.debug( "IOTLABDRIVER.PY \t fill_record_info USER  \
+                    logger.debug("IOTLABDRIVER.PY \t fill_record_info USER  \
                                             recuser %s \r\n \r\n" % (recuser))
                     recslice = {}
                     recslice = recslice_list[0]
-                    recslice.update({'PI':[recuser['hrn']],
-                        'researcher': [recuser['hrn']],
-                        'name':record['hrn'],
-                        'node_ids': [],
-                        'oar_job_id': [],
-                        'person_ids':[recuser['record_id']]})
+                    recslice.update(
+                        {'PI': [recuser['hrn']],
+                         'researcher': [recuser['hrn']],
+                         'name': record['hrn'],
+                         'node_ids': [],
+                         'oar_job_id': [],
+                         'person_ids': [recuser['record_id']]})
                     try:
                         for rec in recslice_list:
                             recslice['oar_job_id'].append(rec['oar_job_id'])
                     except KeyError:
                         pass
 
-                    recslice.update({'type':'slice', \
-                                                'hrn':recslice_list[0]['hrn']})
-
+                    recslice.update({'type': 'slice',
+                                     'hrn': recslice_list[0]['hrn']})
 
                     #GetPersons takes [] as filters
                     user_iotlab = self.iotlab_api.GetPersons([record])
 
-
                     record.update(user_iotlab[0])
                     #For client_helper.py compatibility
-                    record.update( { 'geni_urn':'',
-                    'keys':'',
-                    'key_ids':'' })
+                    record.update(
+                        {'geni_urn': '',
+                         'keys': '',
+                         'key_ids': ''})
                     record_list.append(recslice)
 
                     logger.debug("IOTLABDRIVER.PY \t \
                         fill_record_info ADDING SLICE\
                         INFO TO USER records %s" % (record_list))
 
-
         except TypeError, error:
-            logger.log_exc("IOTLABDRIVER \t fill_record_info  EXCEPTION %s"\
-                                                                 % (error))
+            logger.log_exc("IOTLABDRIVER \t fill_record_info  EXCEPTION %s"
+                           % (error))
 
         return record_list
 
-
     def sliver_status(self, slice_urn, slice_hrn):
         """
-
         Receive a status request for slice named urn/hrn
             urn:publicid:IDN+iotlab+nturro_slice hrn iotlab.nturro_slice
             shall return a structure as described in
@@ -204,7 +200,6 @@ class IotlabDriver(Driver):
 
         """
 
-
         #First get the slice with the slice hrn
         slice_list = self.iotlab_api.GetSlices(slice_filter=slice_hrn,
                                                slice_filter_type='slice_hrn')
@@ -215,39 +210,31 @@ class IotlabDriver(Driver):
         #Used for fetching the user info witch comes along the slice info
         one_slice = slice_list[0]
 
-
         #Make a list of all the nodes hostnames  in use for this slice
         slice_nodes_list = []
-        #for single_slice in slice_list:
-            #for node in single_slice['node_ids']:
-                #slice_nodes_list.append(node['hostname'])
-        #for node in one_slice:
-            #slice_nodes_list.append(node['hostname'])
         slice_nodes_list = one_slice['node_ids']
         #Get all the corresponding nodes details
-        nodes_all = self.iotlab_api.GetNodes({'hostname':slice_nodes_list},
-                                ['node_id', 'hostname','site','boot_state'])
-        nodeall_byhostname = dict([(one_node['hostname'], one_node) \
-                                            for one_node in nodes_all])
-
-
+        nodes_all = self.iotlab_api.GetNodes(
+            {'hostname': slice_nodes_list},
+            ['node_id', 'hostname', 'site', 'boot_state'])
+        nodeall_byhostname = dict([(one_node['hostname'], one_node)
+                                  for one_node in nodes_all])
 
         for single_slice in slice_list:
-
               #For compatibility
             top_level_status = 'empty'
             result = {}
             result.fromkeys(
-                ['geni_urn','geni_error', 'iotlab_login','geni_status',
-                'geni_resources'], None)
+                ['geni_urn', 'geni_error', 'iotlab_login', 'geni_status',
+                 'geni_resources'], None)
             # result.fromkeys(\
             #     ['geni_urn','geni_error', 'pl_login','geni_status',
             # 'geni_resources'], None)
             # result['pl_login'] = one_slice['reg_researchers'][0].hrn
             result['iotlab_login'] = one_slice['user']
             logger.debug("Slabdriver - sliver_status Sliver status \
-                                        urn %s hrn %s single_slice  %s \r\n " \
-                                        %(slice_urn, slice_hrn, single_slice))
+                            urn %s hrn %s single_slice  %s \r\n "
+                         % (slice_urn, slice_hrn, single_slice))
 
             if 'node_ids' not in single_slice:
                 #No job in the slice
@@ -267,15 +254,16 @@ class IotlabDriver(Driver):
                 res = {}
                 res['iotlab_hostname'] = node_hostname
                 res['iotlab_boot_state'] = \
-                        nodeall_byhostname[node_hostname]['boot_state']
+                    nodeall_byhostname[node_hostname]['boot_state']
 
                 #res['pl_hostname'] = node['hostname']
                 #res['pl_boot_state'] = \
                             #nodeall_byhostname[node['hostname']]['boot_state']
                 #res['pl_last_contact'] = strftime(self.time_format, \
                                                     #gmtime(float(timestamp)))
-                sliver_id = Xrn(slice_urn, type='slice', \
-                        id=nodeall_byhostname[node_hostname]['node_id']).urn
+                sliver_id = Xrn(
+                    slice_urn, type='slice',
+                    id=nodeall_byhostname[node_hostname]['node_id']).urn
 
                 res['geni_urn'] = sliver_id
                 #node_name  = node['hostname']
@@ -292,8 +280,8 @@ class IotlabDriver(Driver):
 
             result['geni_status'] = top_level_status
             result['geni_resources'] = resources
-            logger.debug("IOTLABDRIVER \tsliver_statusresources %s res %s "\
-                                                    %(resources,res))
+            logger.debug("IOTLABDRIVER \tsliver_statusresources %s res %s "
+                         % (resources, res))
             return result
 
     @staticmethod
@@ -308,26 +296,25 @@ class IotlabDriver(Driver):
         :rtype: RegUser
 
         """
-        return dbsession.query(RegRecord).filter_by(hrn = hrn).first()
+        return dbsession.query(RegRecord).filter_by(hrn=hrn).first()
 
-
-    def testbed_name (self):
+    def testbed_name(self):
         """
 
         Returns testbed's name.
-
+        :returns: testbed authority name.
         :rtype: string
 
         """
         return self.hrn
 
     # 'geni_request_rspec_versions' and 'geni_ad_rspec_versions' are mandatory
-    def aggregate_version (self):
+    def aggregate_version(self):
         """
 
-        Returns the testbed's supported rspec advertisement and
-            request versions.
-
+        Returns the testbed's supported rspec advertisement and request
+        versions.
+        :returns: rspec versions supported ad a dictionary.
         :rtype: dict
 
         """
@@ -340,12 +327,9 @@ class IotlabDriver(Driver):
             if rspec_version.content_type in ['*', 'request']:
                 request_rspec_versions.append(rspec_version.to_dict())
         return {
-            'testbed':self.testbed_name(),
+            'testbed': self.testbed_name(),
             'geni_request_rspec_versions': request_rspec_versions,
-            'geni_ad_rspec_versions': ad_rspec_versions,
-            }
-
-
+            'geni_ad_rspec_versions': ad_rspec_versions}
 
     def _get_requested_leases_list(self, rspec):
         """
@@ -368,18 +352,18 @@ class IotlabDriver(Driver):
 
             if not lease.get('lease_id'):
                 if get_authority(lease['component_id']) == \
-                                            self.iotlab_api.root_auth:
+                        self.iotlab_api.root_auth:
                     single_requested_lease['hostname'] = \
-                                        iotlab_xrn_to_hostname(\
-                                        lease.get('component_id').strip())
+                        iotlab_xrn_to_hostname(\
+                            lease.get('component_id').strip())
                     single_requested_lease['start_time'] = \
-                                                        lease.get('start_time')
+                        lease.get('start_time')
                     single_requested_lease['duration'] = lease.get('duration')
                     #Check the experiment's duration is valid before adding
                     #the lease to the requested leases list
                     duration_in_seconds = \
-                            int(single_requested_lease['duration'])
-                    if duration_in_seconds >= self.iotlab_api.GetMinExperimentDurationInSec() :
+                        int(single_requested_lease['duration'])
+                    if duration_in_seconds >= self.iotlab_api.GetMinExperimentDurationInSec():
                         requested_lease_list.append(single_requested_lease)
 
         return requested_lease_list
@@ -410,12 +394,11 @@ class IotlabDriver(Driver):
                 if isinstance(lease['hostname'], str):
                     lease['hostname'] = [lease['hostname']]
 
-
                 requested_job_dict[lease['start_time']] = lease
 
             else:
                 job_lease = requested_job_dict[lease['start_time']]
-                if lease['duration'] == job_lease['duration'] :
+                if lease['duration'] == job_lease['duration']:
                     job_lease['hostname'].append(lease['hostname'])
 
         return requested_job_dict
@@ -431,16 +414,16 @@ class IotlabDriver(Driver):
 
         """
         requested_lease_list = self._get_requested_leases_list(rspec)
-        logger.debug("IOTLABDRIVER _process_requested_jobs requested_lease_list \
-        %s"%(requested_lease_list))
-        job_dict =  self._group_leases_by_start_time(requested_lease_list)
+        logger.debug("IOTLABDRIVER _process_requested_jobs \
+            requested_lease_list  %s" % (requested_lease_list))
+        job_dict = self._group_leases_by_start_time(requested_lease_list)
         logger.debug("IOTLABDRIVER _process_requested_jobs  job_dict\
-        %s"%(job_dict))
+        %s" % (job_dict))
 
         return job_dict
 
-    def create_sliver (self, slice_urn, slice_hrn, creds, rspec_string, \
-                                                             users, options):
+    def create_sliver(self, slice_urn, slice_hrn, creds, rspec_string,
+                      users, options):
         """Answer to CreateSliver.
 
         Creates the leases and slivers for the users from the information
@@ -475,40 +458,39 @@ class IotlabDriver(Driver):
         if users:
             slice_record = users[0].get('slice_record', {})
             logger.debug("IOTLABDRIVER.PY \t ===============create_sliver \t\
-                                        creds %s \r\n \r\n users %s" \
-                                        %(creds, users))
-            slice_record['user'] = {'keys':users[0]['keys'], \
-                                    'email':users[0]['email'], \
-                                    'hrn':slice_record['reg-researchers'][0]}
+                            creds %s \r\n \r\n users %s"
+                         % (creds, users))
+            slice_record['user'] = {'keys': users[0]['keys'],
+                                    'email': users[0]['email'],
+                                    'hrn': slice_record['reg-researchers'][0]}
         # parse rspec
         rspec = RSpec(rspec_string)
         logger.debug("IOTLABDRIVER.PY \t create_sliver \trspec.version \
-                                        %s slice_record %s users %s" \
-                                        %(rspec.version,slice_record, users))
-
+                     %s slice_record %s users %s"
+                     % (rspec.version, slice_record, users))
 
         # ensure site record exists?
         # ensure slice record exists
-        #Removed options to verify_slice SA 14/08/12
-        sfa_slice = slices.verify_slice(slice_hrn, slice_record, peer, \
-                                                    sfa_peer)
+        #Removed options in verify_slice SA 14/08/12
+        #Removed peer record in  verify_slice SA 18/07/13
+        sfa_slice = slices.verify_slice(slice_hrn, slice_record, sfa_peer)
 
         # ensure person records exists
-        #verify_persons returns added persons but since the return value
+        #verify_persons returns added persons but the return value
         #is not used
-        slices.verify_persons(slice_hrn, sfa_slice, users, peer, \
-                                                    sfa_peer, options=options)
+        #Removed peer record and sfa_peer in  verify_persons SA 18/07/13
+        slices.verify_persons(slice_hrn, sfa_slice, users, options=options)
         #requested_attributes returned by rspec.version.get_slice_attributes()
         #unused, removed SA 13/08/12
         #rspec.version.get_slice_attributes()
 
-        logger.debug("IOTLABDRIVER.PY create_sliver slice %s " %(sfa_slice))
+        logger.debug("IOTLABDRIVER.PY create_sliver slice %s " % (sfa_slice))
 
         # add/remove slice from nodes
 
         #requested_slivers = [node.get('component_id') \
-                            #for node in rspec.version.get_nodes_with_slivers()\
-                            #if node.get('authority_id') is self.iotlab_api.root_auth]
+                    #for node in rspec.version.get_nodes_with_slivers()\
+                    #if node.get('authority_id') is self.iotlab_api.root_auth]
         #l = [ node for node in rspec.version.get_nodes_with_slivers() ]
         #logger.debug("SLADRIVER \tcreate_sliver requested_slivers \
                                     #requested_slivers %s  listnodes %s" \
@@ -516,59 +498,63 @@ class IotlabDriver(Driver):
         #verify_slice_nodes returns nodes, but unused here. Removed SA 13/08/12.
         #slices.verify_slice_nodes(sfa_slice, requested_slivers, peer)
 
-
         requested_job_dict = self._process_requested_jobs(rspec)
 
-
-        logger.debug("IOTLABDRIVER.PY \tcreate_sliver  requested_job_dict %s "\
-                                                     %(requested_job_dict))
+        logger.debug("IOTLABDRIVER.PY \tcreate_sliver  requested_job_dict %s "
+                     % (requested_job_dict))
         #verify_slice_leases returns the leases , but the return value is unused
         #here. Removed SA 13/08/12
-        slices.verify_slice_leases(sfa_slice, \
-                                    requested_job_dict, peer)
+        slices.verify_slice_leases(sfa_slice,
+                                   requested_job_dict, peer)
 
-        return aggregate.get_rspec(slice_xrn=slice_urn, \
-                login=sfa_slice['login'], version=rspec.version)
+        return aggregate.get_rspec(slice_xrn=slice_urn,
+                                   login=sfa_slice['login'],
+                                   version=rspec.version)
 
-
-    def delete_sliver (self, slice_urn, slice_hrn, creds, options):
+    def delete_sliver(self, slice_urn, slice_hrn, creds, options):
         """
         Deletes the lease associated with the slice hrn and the credentials
             if the slice belongs to iotlab. Answer to DeleteSliver.
+
+        :param slice_urn: urn of the slice
+        :param slice_hrn: name of the slice
+        :param creds: slice credenials
+        :type slice_urn: string
+        :type slice_hrn: string
+        :type creds: ? unused
 
         :returns: 1 if the slice to delete was not found on iotlab,
             True if the deletion was successful, False otherwise otherwise.
 
         .. note:: Should really be named delete_leases because iotlab does
             not have any slivers, but only deals with leases. However,
-            SFA api only have delete_sliver define so far. SA 13.05/2013
+            SFA api only have delete_sliver define so far. SA 13/05/2013
+        .. note:: creds are unused, and are not used either in the dummy driver
+             delete_sliver .
         """
 
-        sfa_slice_list  = self.iotlab_api.GetSlices(slice_filter = slice_hrn, \
-                                            slice_filter_type = 'slice_hrn')
+        sfa_slice_list = self.iotlab_api.GetSlices(
+            slice_filter=slice_hrn,
+            slice_filter_type='slice_hrn')
 
         if not sfa_slice_list:
             return 1
 
         #Delete all leases in the slice
         for sfa_slice in sfa_slice_list:
-
-
-            logger.debug("IOTLABDRIVER.PY delete_sliver slice %s" %(sfa_slice))
+            logger.debug("IOTLABDRIVER.PY delete_sliver slice %s" % (sfa_slice))
             slices = IotlabSlices(self)
             # determine if this is a peer slice
 
             peer = slices.get_peer(slice_hrn)
 
             logger.debug("IOTLABDRIVER.PY delete_sliver peer %s \
-            \r\n \t sfa_slice %s " %(peer, sfa_slice))
+                \r\n \t sfa_slice %s " % (peer, sfa_slice))
             try:
-
                 self.iotlab_api.DeleteSliceFromNodes(sfa_slice)
                 return True
-            except :
+            except:
                 return False
-
 
     def list_resources (self, slice_urn, slice_hrn, creds, options):
         """
@@ -580,11 +566,18 @@ class IotlabDriver(Driver):
             nodes in a rspec format. Answer to ListResources.
             Caching unused.
 
+        :param slice_urn: urn of the slice
+        :param slice_hrn: name of the slice
+        :param creds: slice credenials
+        :type slice_urn: string
+        :type slice_hrn: string
+        :type creds: ? unused
         :param options: options used when listing resources (list_leases, info,
             geni_available)
         :returns: rspec string in xml
         :rtype: string
 
+        .. note:: creds are unused
         """
 
         #cached_requested = options.get('cached', True)
@@ -592,13 +585,13 @@ class IotlabDriver(Driver):
         version_manager = VersionManager()
         # get the rspec's return format from options
         rspec_version = \
-                version_manager.get_version(options.get('geni_rspec_version'))
+            version_manager.get_version(options.get('geni_rspec_version'))
         version_string = "rspec_%s" % (rspec_version)
 
         #panos adding the info option to the caching key (can be improved)
         if options.get('info'):
             version_string = version_string + "_" + \
-                                        options.get('info', 'default')
+                options.get('info', 'default')
 
         # Adding the list_leases option to the caching key
         if options.get('list_leases'):
@@ -621,8 +614,8 @@ class IotlabDriver(Driver):
         #panos: passing user-defined options
         aggregate = IotlabAggregate(self)
 
-        rspec =  aggregate.get_rspec(slice_xrn=slice_urn, \
-                                        version=rspec_version, options=options)
+        rspec = aggregate.get_rspec(slice_xrn=slice_urn,
+                                    version=rspec_version, options=options)
 
         # cache the result
         #if self.cache and not slice_hrn:
@@ -632,7 +625,7 @@ class IotlabDriver(Driver):
         return rspec
 
 
-    def list_slices (self, creds, options):
+    def list_slices(self, creds, options):
         """Answer to ListSlices.
 
         List slices belonging to iotlab, returns slice urns list.
@@ -642,6 +635,7 @@ class IotlabDriver(Driver):
         :returns: slice urns list
         :rtype: list
 
+        .. note:: creds are unused
         """
         # look in cache first
         #if self.cache:
@@ -653,11 +647,12 @@ class IotlabDriver(Driver):
         # get data from db
 
         slices = self.iotlab_api.GetSlices()
-        logger.debug("IOTLABDRIVER.PY \tlist_slices hrn %s \r\n \r\n" %(slices))
+        logger.debug("IOTLABDRIVER.PY \tlist_slices hrn %s \r\n \r\n"
+                     % (slices))
         slice_hrns = [iotlab_slice['hrn'] for iotlab_slice in slices]
 
-        slice_urns = [hrn_to_urn(slice_hrn, 'slice') \
-                                                for slice_hrn in slice_hrns]
+        slice_urns = [hrn_to_urn(slice_hrn, 'slice')
+                      for slice_hrn in slice_hrns]
 
         # cache the result
         #if self.cache:
@@ -667,7 +662,7 @@ class IotlabDriver(Driver):
         return slice_urns
 
 
-    def register (self, sfa_record, hrn, pub_key):
+    def register(self, sfa_record, hrn, pub_key):
         """
         Adding new user, slice, node or site should not be handled
             by SFA.
@@ -681,12 +676,16 @@ class IotlabDriver(Driver):
         :param sfa_record: record provided by the client of the
             Register API call.
         :type sfa_record: dict
+        :param pub_key: public key of the user
+        :type pub_key: string
+
+        .. note:: DOES NOTHING. Returns -1.
 
         """
         return -1
 
 
-    def update (self, old_sfa_record, new_sfa_record, hrn, new_key):
+    def update(self, old_sfa_record, new_sfa_record, hrn, new_key):
         """
         No site or node record update allowed in Iotlab.
             The only modifications authorized here are key deletion/addition
@@ -700,18 +699,23 @@ class IotlabDriver(Driver):
 
         :param old_sfa_record: what is in the db for this hrn
         :param new_sfa_record: what was passed to the Update call
+        :param new_key: the new user's public key
+        :param hrn: the user's sfa hrn
+        :type old_sfa_record: dictionary
+        :type new_sfa_record: dictionary
+        :type pub_key: string
+        :type hrn: string
 
+         TODO: needs review
         .. seealso::: update in driver.py.
 
         """
-
         pointer = old_sfa_record['pointer']
         old_sfa_record_type = old_sfa_record['type']
 
         # new_key implemented for users only
-        if new_key and old_sfa_record_type not in [ 'user' ]:
+        if new_key and old_sfa_record_type not in ['user']:
             raise UnknownSfaType(old_sfa_record_type)
-
 
         if old_sfa_record_type == "user":
             update_fields = {}
@@ -719,7 +723,6 @@ class IotlabDriver(Driver):
             for key in all_fields.keys():
                 if key in ['key', 'password']:
                     update_fields[key] = all_fields[key]
-
 
             if new_key:
                 # must check this key against the previous one if it exists
@@ -741,21 +744,17 @@ class IotlabDriver(Driver):
                     #remove all the other keys
                     for key in keys_dict:
                         self.iotlab_api.DeleteKey(person, key)
-                    self.iotlab_api.AddPersonKey(person, \
-                    {'sshPublicKey': person['pkey']},{'sshPublicKey': new_key} )
-                    #self.iotlab_api.AddPersonKey(person, {'key_type': 'ssh', \
-                                                    #'key': new_key})
+                    self.iotlab_api.AddPersonKey(
+                        person, {'sshPublicKey': person['pkey']},
+                        {'sshPublicKey': new_key})
         return True
 
-
-    def remove (self, sfa_record):
+    def remove(self, sfa_record):
         """
 
         Removes users only. Mark the user as disabled in
             LDAP. The user and his slice are then deleted from the
             db by running an import on the registry.
-
-
 
         :param sfa_record: record is the existing sfa record in the db
         :type sfa_record: dict
@@ -763,6 +762,7 @@ class IotlabDriver(Driver):
         ..warning::As fas as the slice is concerned, here only the leases are
             removed from the slice. The slice is record itself is not removed
             from the db.
+        TODO: needs review
 
         TODO : REMOVE SLICE FROM THE DB AS WELL? SA 14/05/2013,
 
@@ -777,15 +777,12 @@ class IotlabDriver(Driver):
             #No registering at a given site in Iotlab.
             #Once registered to the LDAP, all iotlab sites are
             #accesible.
-            if person :
+            if person:
                 #Mark account as disabled in ldap
                 return self.iotlab_api.DeletePerson(sfa_record)
 
         elif sfa_record_type == 'slice':
-            if self.iotlab_api.GetSlices(slice_filter = hrn, \
-                                    slice_filter_type = 'slice_hrn'):
+            if self.iotlab_api.GetSlices(slice_filter=hrn,
+                                         slice_filter_type='slice_hrn'):
                 ret = self.iotlab_api.DeleteSlice(sfa_record)
-
-
-
             return True
