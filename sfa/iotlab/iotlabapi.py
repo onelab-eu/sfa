@@ -347,7 +347,7 @@ class IotlabTestbedAPI():
         #del resa['resource_ids']
         return reservation_dict_list
 
-    def GetNodes(self, node_filter_dict = None, return_fields_list = None):
+    def GetNodes(self, node_filter_dict=None, return_fields_list=None):
         """
 
         Make a list of iotlab nodes and their properties from information
@@ -356,7 +356,9 @@ class IotlabTestbedAPI():
             'hrn','archi','mobile','hostname','site','boot_state','node_id',
             'radio','posx','posy','oar_id','posz'.
 
-        :param node_filter_dict: dictionnary of lists with node properties
+        :param node_filter_dict: dictionnary of lists with node properties. For
+            instance, if you want to look for a specific node with its hrn,
+            the node_filter_dict should be {'hrn': [hrn_of_the_node]}
         :type node_filter_dict: dict
         :param return_fields_list: list of specific fields the user wants to be
             returned.
@@ -368,7 +370,7 @@ class IotlabTestbedAPI():
         node_dict_by_id = self.oar.parser.SendRequest("GET_resources_full")
         node_dict_list = node_dict_by_id.values()
         logger.debug (" IOTLABDRIVER GetNodes  node_filter_dict %s \
-            return_fields_list %s "%(node_filter_dict, return_fields_list))
+            return_fields_list %s " % (node_filter_dict, return_fields_list))
         #No  filtering needed return the list directly
         if not (node_filter_dict or return_fields_list):
             return node_dict_list
@@ -382,7 +384,7 @@ class IotlabTestbedAPI():
                     for value in node_filter_dict[filter_key]:
                         for node in node_dict_list:
                             if node[filter_key] == value:
-                                if return_fields_list :
+                                if return_fields_list:
                                     tmp = {}
                                     for k in return_fields_list:
                                         tmp[k] = node[k]
@@ -1306,6 +1308,7 @@ class IotlabTestbedAPI():
                         \t lease['slice_hrn'] %s"
                              % (slice_filter, lease['slice_hrn']))
                 if lease['slice_hrn'] == slice_hrn:
+                    slicerec_dict['oar_job_id'] = lease['lease_id']
                     #Update lease dict with the slice record
                     if fixed_slicerec_dict:
                         fixed_slicerec_dict['oar_job_id'] = []
@@ -1317,7 +1320,6 @@ class IotlabTestbedAPI():
                     slicerec_dict['slice_hrn'] = lease['slice_hrn']
                     slicerec_dict['hrn'] = lease['slice_hrn']
                     slicerec_dict['user'] = lease['user']
-                    slicerec_dict['oar_job_id'] = lease['lease_id']
                     slicerec_dict.update(
                         {'list_node_ids':
                         {'hostname': lease['reserved_nodes']}})
@@ -1374,13 +1376,13 @@ class IotlabTestbedAPI():
                         #for reserved_node in lease['reserved_nodes']:
                         logger.debug("IOTLABDRIVER.PY  \tGetSlices lease %s "
                                      % (lease))
-
+                        slicerec_dict.update(fixed_slicerec_dict)
                         slicerec_dict.update({'node_ids':
                                               lease['reserved_nodes']})
                         slicerec_dict.update({'list_node_ids':
                                              {'hostname':
                                              lease['reserved_nodes']}})
-                        slicerec_dict.update(fixed_slicerec_dict)
+
                         #slicerec_dict.update({'hrn':\
                                     #str(fixed_slicerec_dict['slice_hrn'])})
                         #return_slicerec_dictlist.append(slicerec_dict)

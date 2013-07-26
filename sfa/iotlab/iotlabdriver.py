@@ -80,12 +80,25 @@ class IotlabDriver(Driver):
 
         try:
             for record in record_list:
+
+                if str(record['type']) == 'node':
+                    # look for node info using GetNodes
+                    # the record is about one node only
+                    filter_dict = {'hrn': [record['hrn']]}
+                    node_info = self.iotlab_api.GetNodes(filter_dict)
+                    # the node_info is about one node only, but it is formatted
+                    # as a list
+                    record.update(node_info[0])
+                    logger.debug("IOTLABDRIVER.PY \t \
+                                  fill_record_info NODE" % (record))
+
                 #If the record is a SFA slice record, then add information
                 #about the user of this slice. This kind of
                 #information is in the Iotlab's DB.
                 if str(record['type']) == 'slice':
-                    if 'reg_researchers' in record and \
-                        isinstance(record['reg_researchers'], list):
+                    if 'reg_researchers' in record and isinstance(record
+                                                            ['reg_researchers'],
+                                                            list):
                         record['reg_researchers'] = \
                             record['reg_researchers'][0].__dict__
                         record.update(
@@ -119,8 +132,8 @@ class IotlabDriver(Driver):
                                          % (rec['oar_job_id']))
 
                             record['node_ids'] = [self.iotlab_api.root_auth +
-                                                  hostname for hostname in
-                                                  rec['node_ids']]
+                                                  '.' + hostname for hostname
+                                                  in rec['node_ids']]
                     except KeyError:
                         pass
 
