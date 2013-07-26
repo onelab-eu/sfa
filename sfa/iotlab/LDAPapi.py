@@ -426,10 +426,9 @@ class LDAPapi:
             max_uidnumber = self.ldapUserUidNumberMin
         #Otherwise, get the highest uidNumber
         else:
-
-            uidNumberList = [int(r[1]['uidNumber'][0])for r in result_data ]
+            uidNumberList = [int(r[1]['uidNumber'][0])for r in result_data]
             logger.debug("LDAPapi.py \tfind_max_uidNumber  \
-                                    uidNumberList %s " %(uidNumberList))
+                            uidNumberList %s " % (uidNumberList))
             max_uidnumber = max(uidNumberList) + 1
 
         return str(max_uidnumber)
@@ -460,15 +459,16 @@ class LDAPapi:
         req_ldap = ''
         req_ldapdict = {}
         if record :
-            if 'first_name' in record  and 'last_name' in record:
-                req_ldapdict['cn'] = str(record['first_name'])+" "\
-                                        + str(record['last_name'])
-            if 'email' in record :
+            if 'first_name' in record and 'last_name' in record:
+                if record['first_name'] != record['last_name']:
+                    req_ldapdict['cn'] = str(record['first_name'])+" "\
+                        + str(record['last_name'])
+            if 'email' in record:
                 req_ldapdict['mail'] = record['email']
             if 'mail' in record:
                 req_ldapdict['mail'] = record['mail']
             if 'enabled' in record:
-                if record['enabled'] == True :
+                if record['enabled'] is True:
                     req_ldapdict['shadowExpire'] = '-1'
                 else:
                     req_ldapdict['shadowExpire'] = '0'
@@ -479,18 +479,16 @@ class LDAPapi:
             #Plus, the SFA user may already have an account with iotlab
             #using another login.
 
-
-
             logger.debug("\r\n \t LDAP.PY make_ldap_filters_from_record \
-                                record %s req_ldapdict %s" \
-                                %(record, req_ldapdict))
+                                record %s req_ldapdict %s"
+                         % (record, req_ldapdict))
 
             for k in req_ldapdict:
-                req_ldap += '('+ str(k)+ '=' + str(req_ldapdict[k]) + ')'
-            if  len(req_ldapdict.keys()) >1 :
+                req_ldap += '(' + str(k) + '=' + str(req_ldapdict[k]) + ')'
+            if len(req_ldapdict.keys()) >1 :
                 req_ldap = req_ldap[:0]+"(&"+req_ldap[0:]
                 size = len(req_ldap)
-                req_ldap = req_ldap[:(size-1)] +')'+ req_ldap[(size-1):]
+                req_ldap = req_ldap[:(size-1)] + ')' + req_ldap[(size-1):]
         else:
             req_ldap = "(cn=*)"
 
@@ -584,14 +582,13 @@ class LDAPapi:
         logger.debug(" \r\n \t LDAP LdapAddUser \r\n\r\n ================\r\n ")
         user_ldap_attrs = self.make_ldap_attributes_from_record(record)
 
-
         #Check if user already in LDAP wih email, first name and last name
         filter_by = self.make_ldap_filters_from_record(user_ldap_attrs)
         user_exist = self.LdapSearch(filter_by)
         if user_exist:
             logger.warning(" \r\n \t LDAP LdapAddUser user %s %s \
-                        already exists" %(user_ldap_attrs['sn'], \
-                        user_ldap_attrs['mail']))
+                        already exists" % (user_ldap_attrs['sn'],
+                           user_ldap_attrs['mail']))
             return {'bool': False}
 
         #Bind to the server
@@ -642,7 +639,7 @@ class LDAPapi:
                 return {'bool': True}
 
             except ldap.LDAPError, error:
-                logger.log_exc("LDAP Delete Error %s" %error)
+                logger.log_exc("LDAP Delete Error %s" % error)
                 return {'bool': False, 'message': error}
 
     def LdapDeleteUser(self, record_filter):

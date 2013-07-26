@@ -99,11 +99,9 @@ class IotlabTestbedAPI():
             pass
 
         return_records = records_list
-        logger.debug("IOTLABDRIVER \tGetPeer return_records %s " \
-                                                    %(return_records))
+        logger.debug("IOTLABDRIVER \tGetPeer return_records %s "
+                     % (return_records))
         return return_records
-
-
 
     #TODO  : Handling OR request in make_ldap_filters_from_records
     #instead of the for loop
@@ -113,16 +111,17 @@ class IotlabTestbedAPI():
         Get the enabled users and their properties from Iotlab LDAP.
         If a filter is specified, looks for the user whose properties match
         the filter, otherwise returns the whole enabled users'list.
+
         :param person_filter: Must be a list of dictionnaries
-        with users properties when not set to None.
+            with users properties when not set to None.
         :param person_filter: list of dict
         :returns:Returns a list of users whose accounts are enabled
-        found in ldap.
+            found in ldap.
         :rtype: list of dicts
 
         """
-        logger.debug("IOTLABDRIVER \tGetPersons person_filter %s" \
-                                                    %(person_filter))
+        logger.debug("IOTLABDRIVER \tGetPersons person_filter %s"
+                     % (person_filter))
         person_list = []
         if person_filter and isinstance(person_filter, list):
         #If we are looking for a list of users (list of dict records)
@@ -131,8 +130,8 @@ class IotlabTestbedAPI():
 
                 #Get only enabled user accounts in iotlab LDAP :
                 #add a filter for make_ldap_filters_from_record
-                person = self.ldap.LdapFindUser(searched_attributes, \
-                                is_user_enabled=True)
+                person = self.ldap.LdapFindUser(searched_attributes,
+                                                is_user_enabled=True)
                 #If a person was found, append it to the list
                 if person:
                     person_list.append(person)
