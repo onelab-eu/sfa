@@ -172,6 +172,7 @@ class IotlabAggregate:
         # are part of this slice
         # but what is the role of the slivers parameter ?
         # So i assume that slice['node_ids'] will be the same as slivers for us
+        slice_nodes_list = []
         if slices is not None:
             for one_slice in slices:
                 try:
@@ -194,7 +195,7 @@ class IotlabAggregate:
         # Make a list of all the nodes in the slice before getting their
         #attributes
         rspec_nodes = []
-        slice_nodes_list = []
+
         logger.debug("IOTLABAGGREGATE api get_nodes slice_nodes_list  %s "
                      % (slices))
 
@@ -423,4 +424,6 @@ class IotlabAggregate:
         if lease_option in ['all','leases']:
             leases = self.get_all_leases()
             rspec.version.add_leases(leases)
+            logger.debug("IotlabAggregate \tget_rspec **** \
+                       FINAL RSPEC %s \r\n" % (rspec.toxml()))
         return rspec.toxml()

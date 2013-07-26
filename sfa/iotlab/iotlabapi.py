@@ -1306,6 +1306,14 @@ class IotlabTestbedAPI():
                         \t lease['slice_hrn'] %s"
                              % (slice_filter, lease['slice_hrn']))
                 if lease['slice_hrn'] == slice_hrn:
+                    #Update lease dict with the slice record
+                    if fixed_slicerec_dict:
+                        fixed_slicerec_dict['oar_job_id'] = []
+                        fixed_slicerec_dict['oar_job_id'].append(
+                            slicerec_dict['oar_job_id'])
+                        slicerec_dict.update(fixed_slicerec_dict)
+                        #slicerec_dict.update({'hrn':\
+                                        #str(fixed_slicerec_dict['slice_hrn'])})
                     slicerec_dict['slice_hrn'] = lease['slice_hrn']
                     slicerec_dict['hrn'] = lease['slice_hrn']
                     slicerec_dict['user'] = lease['user']
@@ -1315,14 +1323,7 @@ class IotlabTestbedAPI():
                         {'hostname': lease['reserved_nodes']}})
                     slicerec_dict.update({'node_ids': lease['reserved_nodes']})
 
-                    #Update lease dict with the slice record
-                    if fixed_slicerec_dict:
-                        fixed_slicerec_dict['oar_job_id'] = []
-                        fixed_slicerec_dict['oar_job_id'].append(
-                            slicerec_dict['oar_job_id'])
-                        slicerec_dict.update(fixed_slicerec_dict)
-                        #slicerec_dict.update({'hrn':\
-                                        #str(fixed_slicerec_dict['slice_hrn'])})
+
 
                     return_slicerec_dictlist.append(slicerec_dict)
                     logger.debug("IOTLABDRIVER.PY  \tGetSlices  \
