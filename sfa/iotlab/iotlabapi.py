@@ -1298,9 +1298,13 @@ class IotlabTestbedAPI():
             if leases_list == [] and fixed_slicerec_dict:
                 return_slicerec_dictlist.append(fixed_slicerec_dict)
 
+            # if the jobs running don't belong to the user/slice we are looking
+            # for
+            leases_hrn = [lease['slice_hrn'] for lease in leases_list]
+            if slice_hrn not in leases_hrn:
+                return_slicerec_dictlist.append(fixed_slicerec_dict)
             #If several jobs for one slice , put the slice record into
             # each lease information dict
-
             for lease in leases_list:
                 slicerec_dict = {}
                 logger.debug("IOTLABDRIVER.PY  \tGetSlices slice_filter %s   \
