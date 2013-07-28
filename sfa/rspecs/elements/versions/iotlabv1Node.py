@@ -1,7 +1,7 @@
 
 from sfa.util.xrn import Xrn
 from sfa.util.xml import XpathFilter
-from sfa.rspecs.elements.node import NodeElement
+from sfa.rspecs.elements.node import Node
 from sfa.rspecs.elements.sliver import Sliver
 from sfa.rspecs.elements.location import Location
 from sfa.rspecs.elements.hardware_type import HardwareType
@@ -10,17 +10,10 @@ from sfa.rspecs.elements.interface import Interface
 from sfa.rspecs.elements.versions.iotlabv1Sliver import Iotlabv1Sliver
 from sfa.util.sfalogging import logger
 
-<<<<<<< HEAD:sfa/rspecs/elements/versions/slabv1Node.py
-class SlabNode(NodeElement):
-    #First get the fields already defined in the class Node
-    fields = list(NodeElement.fields)
-    #Extend it with senslab's specific fields
-=======
 class IotlabNode(Node):
     #First get the fields already defined in the class Node
     fields = list(Node.fields)
     #Extend it with iotlab's specific fields
->>>>>>> 7cb1e78... Renaming Senslab into Iotlab.:sfa/rspecs/elements/versions/iotlabv1Node.py
     fields.extend (['archi', 'radio', 'mobile','position'])
 
 
@@ -166,13 +159,8 @@ class Iotlabv1Node:
     def get_node_objs(node_elems):
         nodes = []
         for node_elem in node_elems:
-<<<<<<< HEAD:sfa/rspecs/elements/versions/slabv1Node.py
-            node = NodeElement(node_elem.attrib, node_elem)
-            nodes.append(node) 
-=======
             node = Node(node_elem.attrib, node_elem)
             nodes.append(node)
->>>>>>> 7cb1e78... Renaming Senslab into Iotlab.:sfa/rspecs/elements/versions/iotlabv1Node.py
             if 'component_id' in node_elem.attrib:
                 node['authority_id'] = \
                     Xrn(node_elem.attrib['component_id']).get_authority_urn()

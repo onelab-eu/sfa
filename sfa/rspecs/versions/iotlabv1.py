@@ -19,7 +19,7 @@ class Iotlabv1(RSpecVersion):
     valid Iotlab XML Rspec.
     """
     #enabled = True
-    type = 'Slab'
+    type = 'Iotlab'
     content_type = 'ad'
     version = '1'
     #template = '<RSpec type="%s"></RSpec>' % type

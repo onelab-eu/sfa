@@ -30,13 +30,8 @@ class iotlab (Generic):
 
     # driver class for server-side services, talk to the whole testbed
     def driver_class (self):
-<<<<<<< HEAD:sfa/generic/slab.py
-        import sfa.managers.v2_to_v3_adapter
-        return sfa.managers.v2_to_v3_adapter.V2ToV3Adapter
-=======
         import sfa.iotlab.iotlabdriver
         return sfa.iotlab.iotlabdriver.IotlabDriver
->>>>>>> 7cb1e78... Renaming Senslab into Iotlab.:sfa/generic/iotlab.py
 
     # iotlab does not have a component manager yet
     # manager class

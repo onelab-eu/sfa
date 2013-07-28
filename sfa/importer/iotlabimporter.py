@@ -2,7 +2,7 @@ from sfa.util.config import Config
 from sfa.util.xrn import Xrn, get_authority, hrn_to_urn
 
 from sfa.iotlab.iotlabdriver import IotlabDriver
-
+from sfa.iotlab.iotlabpostgres import IotlabDB, Iotlab_xp
 from sfa.trust.certificate import Keypair, convert_public_key
 from sfa.trust.gid import create_uuid
 
@@ -15,17 +15,10 @@ from sqlalchemy.exc import SQLAlchemyError
 
 
 
-<<<<<<< HEAD:sfa/importer/iotlabimporter.py
 class IotlabImporter:
     """
     IotlabImporter class, generic importer_class. Used to populate the SFA DB
     with iotlab resources' records.
-=======
-class SlabImporter:
-    """
-    SlabImporter class, generic importer_class. Used to populate the SFA DB
-    with senslab resources' records.
->>>>>>> 3fe7429... SA:sfa/importer/slabimporter.py
     Used to update records when new resources, users or nodes, are added
     or deleted.
     """
@@ -151,11 +144,7 @@ class SlabImporter:
             return
         self.records_by_type_hrn [ rec_tuple ] = record
 
-<<<<<<< HEAD:sfa/importer/iotlabimporter.py
     def import_sites_and_nodes(self, iotlabdriver):
-=======
-    def import_sites_and_nodes(self, slabdriver):
->>>>>>> 3fe7429... SA:sfa/importer/slabimporter.py
         """
 
         Gets all the sites and nodes from OAR, process the information,
@@ -163,7 +152,6 @@ class SlabImporter:
         For each site, import the site's nodes to the DB by calling
         import_nodes.
 
-<<<<<<< HEAD:sfa/importer/iotlabimporter.py
         :param iotlabdriver: IotlabDriver object, used to have access to iotlabdriver
         methods and fetching info on sites and nodes.
         :type iotlabdriver: IotlabDriver
@@ -171,15 +159,6 @@ class SlabImporter:
 
         sites_listdict  = iotlabdriver.iotlab_api.GetSites()
         nodes_listdict  = iotlabdriver.iotlab_api.GetNodes()
-=======
-        :param slabdriver: SlabDriver object, used to have access to slabdriver
-        methods and fetching info on sites and nodes.
-        :type slabdriver: SlabDriver
-        """
-
-        sites_listdict  = slabdriver.slab_api.GetSites()
-        nodes_listdict  = slabdriver.slab_api.GetNodes()
->>>>>>> 3fe7429... SA:sfa/importer/slabimporter.py
         nodes_by_id = dict([(node['node_id'], node) for node in nodes_listdict])
         for site in sites_listdict:
             site_hrn = site['name']
@@ -198,22 +177,14 @@ class SlabImporter:
                     site_record.just_created()
                     dbsession.add(site_record)
                     dbsession.commit()
-<<<<<<< HEAD:sfa/importer/iotlabimporter.py
                     self.logger.info("IotlabImporter: imported authority (site) \
-=======
-                    self.logger.info("SlabImporter: imported authority (site) \
->>>>>>> 3fe7429... SA:sfa/importer/slabimporter.py
                          %s" % site_record)
                     self.update_just_added_records_dict(site_record)
                 except SQLAlchemyError:
                     # if the site import fails then there is no point in
                     # trying to import the
                     # site's child records(node, slices, persons), so skip them.
-<<<<<<< HEAD:sfa/importer/iotlabimporter.py
                     self.logger.log_exc("IotlabImporter: failed to import site. \
-=======
-                    self.logger.log_exc("SlabImporter: failed to import site. \
->>>>>>> 3fe7429... SA:sfa/importer/slabimporter.py
                         Skipping child records")
                     continue
             else:
@@ -222,19 +193,11 @@ class SlabImporter:
 
 
             site_record.stale = False
-<<<<<<< HEAD:sfa/importer/iotlabimporter.py
             self.import_nodes(site['node_ids'], nodes_by_id, iotlabdriver)
 
             return
 
     def import_nodes(self, site_node_ids, nodes_by_id, iotlabdriver):
-=======
-            self.import_nodes(site['node_ids'], nodes_by_id, slabdriver)
-
-            return
-
-    def import_nodes(self, site_node_ids, nodes_by_id, slabdriver):
->>>>>>> 3fe7429... SA:sfa/importer/slabimporter.py
         """
 
         Creates appropriate hostnames and RegNode records for
@@ -249,11 +212,7 @@ class SlabImporter:
         :type nodes_by_id: dictionary
         :param iotlabdriver:IotlabDriver object, used to have access to iotlabdriver
         attributes.
-<<<<<<< HEAD:sfa/importer/iotlabimporter.py
         :type iotlabdriver:IotlabDriver
-=======
-        :type slabdriver:SlabDriver
->>>>>>> 3fe7429... SA:sfa/importer/slabimporter.py
 
         """
 
@@ -267,11 +226,7 @@ class SlabImporter:
             escaped_hrn =  \
             self.hostname_to_hrn_escaped(iotlabdriver.iotlab_api.root_auth, \
             node['hostname'])
-<<<<<<< HEAD:sfa/importer/iotlabimporter.py
             self.logger.info("IOTLABIMPORTER node %s " %(node))
-=======
-            self.logger.info("SLABIMPORTER node %s " %(node))
->>>>>>> 3fe7429... SA:sfa/importer/slabimporter.py
             hrn =  node['hrn']
 
 
@@ -286,11 +241,7 @@ class SlabImporter:
                     self.auth_hierarchy.create_gid(urn, \
                     create_uuid(), pkey)
 
-<<<<<<< HEAD:sfa/importer/iotlabimporter.py
                 def iotlab_get_authority(hrn):
-=======
-                def slab_get_authority(hrn):
->>>>>>> 3fe7429... SA:sfa/importer/slabimporter.py
                     return hrn.split(".")[0]
 
                 node_record = RegNode(hrn=hrn, gid=node_gid,
@@ -301,44 +252,26 @@ class SlabImporter:
                     node_record.just_created()
                     dbsession.add(node_record)
                     dbsession.commit()
-<<<<<<< HEAD:sfa/importer/iotlabimporter.py
                     self.logger.info("IotlabImporter: imported node: %s" \
                                 % node_record)
                     self.update_just_added_records_dict(node_record)
                 except SQLAlchemyError:
                     self.logger.log_exc("IotlabImporter: \
-=======
-                    self.logger.info("SlabImporter: imported node: %s" \
-                                % node_record)
-                    self.update_just_added_records_dict(node_record)
-                except SQLAlchemyError:
-                    self.logger.log_exc("SlabImporter: \
->>>>>>> 3fe7429... SA:sfa/importer/slabimporter.py
                                     failed to import node")
             else:
                 #TODO:  xxx update the record ...
                 pass
             node_record.stale = False
-<<<<<<< HEAD:sfa/importer/iotlabimporter.py
 
 
     def init_person_key (self, person, iotlab_key):
-=======
-
-
-    def init_person_key (self, person, slab_key):
->>>>>>> 3fe7429... SA:sfa/importer/slabimporter.py
         """
 
         Returns a tuple pubkey and pkey.
 
         :param person Person's data.
         :type person: dict
-<<<<<<< HEAD:sfa/importer/iotlabimporter.py
         :param iotlab_key: SSH public key, from LDAP user's data.
-=======
-        :param slab_key: SSH public key, from LDAP user's data.
->>>>>>> 3fe7429... SA:sfa/importer/slabimporter.py
         RSA type supported.
         :type iotlab_key: string
         :rtype (string, Keypair)
@@ -346,11 +279,7 @@ class SlabImporter:
         pubkey = None
         if  person['pkey']:
             # randomly pick first key in set
-<<<<<<< HEAD:sfa/importer/iotlabimporter.py
             pubkey = iotlab_key
-=======
-            pubkey = slab_key
->>>>>>> 3fe7429... SA:sfa/importer/slabimporter.py
 
             try:
                 pkey = convert_public_key(pubkey)
@@ -370,11 +299,7 @@ class SlabImporter:
         return (pubkey, pkey)
 
 
-<<<<<<< HEAD:sfa/importer/iotlabimporter.py
     def import_persons_and_slices(self, iotlabdriver):
-=======
-    def import_persons_and_slices(self, slabdriver):
->>>>>>> 3fe7429... SA:sfa/importer/slabimporter.py
         """
 
         Gets user data from LDAP, process the information.
@@ -385,31 +310,18 @@ class SlabImporter:
         import the user's slice onto the database as well by calling
         import_slice.
 
-<<<<<<< HEAD:sfa/importer/iotlabimporter.py
         :param iotlabdriver:IotlabDriver object, used to have access to iotlabdriver
-=======
-        :param slabdriver:SlabDriver object, used to have access to slabdriver
->>>>>>> 3fe7429... SA:sfa/importer/slabimporter.py
         attributes.
         :type iotlabdriver:IotlabDriver
         """
-<<<<<<< HEAD:sfa/importer/iotlabimporter.py
         ldap_person_listdict = iotlabdriver.iotlab_api.GetPersons()
         self.logger.info("IOTLABIMPORT \t ldap_person_listdict %s \r\n" \
-=======
-        ldap_person_listdict = slabdriver.slab_api.GetPersons()
-        self.logger.info("SLABIMPORT \t ldap_person_listdict %s \r\n" \
->>>>>>> 3fe7429... SA:sfa/importer/slabimporter.py
                 %(ldap_person_listdict))
 
          # import persons
         for person in ldap_person_listdict :
 
-<<<<<<< HEAD:sfa/importer/iotlabimporter.py
             self.logger.info("IotlabImporter: person :" %(person))
-=======
-            self.logger.info("SlabImporter: person :" %(person))
->>>>>>> 3fe7429... SA:sfa/importer/slabimporter.py
             if 'ssh-rsa' not in person['pkey']:
                 #people with invalid ssh key (ssh-dss, empty, bullshit keys...)
                 #won't be imported
@@ -423,21 +335,13 @@ class SlabImporter:
             person_urn = hrn_to_urn(person_hrn, 'user')
 
 
-<<<<<<< HEAD:sfa/importer/iotlabimporter.py
             self.logger.info("IotlabImporter: users_rec_by_email %s " \
-=======
-            self.logger.info("SlabImporter: users_rec_by_email %s " \
->>>>>>> 3fe7429... SA:sfa/importer/slabimporter.py
                                             %(self.users_rec_by_email))
 
             #Check if user using person['email'] from LDAP is already registered
             #in SFA. One email = one person. In this case, do not create another
             #record for this person
-<<<<<<< HEAD:sfa/importer/iotlabimporter.py
             #person_hrn returned by GetPerson based on iotlab root auth +
-=======
-            #person_hrn returned by GetPerson based on senslab root auth +
->>>>>>> 3fe7429... SA:sfa/importer/slabimporter.py
             #uid ldap
             user_record = self.find_record_by_type_hrn('user', person_hrn)
 
@@ -449,11 +353,7 @@ class SlabImporter:
 
             slice_record = self.find_record_by_type_hrn ('slice', slice_hrn)
 
-<<<<<<< HEAD:sfa/importer/iotlabimporter.py
             iotlab_key = person['pkey']
-=======
-            slab_key = person['pkey']
->>>>>>> 3fe7429... SA:sfa/importer/slabimporter.py
             # new person
             if not user_record:
                 (pubkey, pkey) = self.init_person_key(person, iotlab_key)
@@ -462,7 +362,7 @@ class SlabImporter:
                     self.auth_hierarchy.create_gid(person_urn, \
                     create_uuid(), pkey)
                     if person['email']:
-                        self.logger.debug( "SLAB IMPORTER \
+                        self.logger.debug( "IOTLAB IMPORTER \
                             PERSON EMAIL OK email %s " %(person['email']))
                         person_gid.set_email(person['email'])
                         user_record = RegUser(hrn=person_hrn, \
@@ -491,11 +391,7 @@ class SlabImporter:
                             self.update_just_added_records_dict( user_record )
 
                         except SQLAlchemyError:
-<<<<<<< HEAD:sfa/importer/iotlabimporter.py
                             self.logger.log_exc("IotlabImporter: \
-=======
-                            self.logger.log_exc("SlabImporter: \
->>>>>>> 3fe7429... SA:sfa/importer/slabimporter.py
                                 failed to import person  %s"%(person))
             else:
                 # update the record ?
@@ -504,11 +400,7 @@ class SlabImporter:
                 sfa_keys = user_record.reg_keys
 
                 new_key = False
-<<<<<<< HEAD:sfa/importer/iotlabimporter.py
                 if iotlab_key is not sfa_keys :
-=======
-                if slab_key is not sfa_keys :
->>>>>>> 3fe7429... SA:sfa/importer/slabimporter.py
                     new_key = True
                 if new_key:
                     self.logger.info("IotlabImporter: \t \t USER UPDATE \
@@ -531,11 +423,7 @@ class SlabImporter:
                 dbsession.commit()
                 user_record.stale = False
             except SQLAlchemyError:
-<<<<<<< HEAD:sfa/importer/iotlabimporter.py
                 self.logger.log_exc("IotlabImporter: \
-=======
-                self.logger.log_exc("SlabImporter: \
->>>>>>> 3fe7429... SA:sfa/importer/slabimporter.py
                 failed to update person  %s"%(person))
 
             self.import_slice(slice_hrn, slice_record, user_record)
@@ -577,15 +465,9 @@ class SlabImporter:
                 self.update_just_added_records_dict ( slice_record )
 
             except SQLAlchemyError:
-<<<<<<< HEAD:sfa/importer/iotlabimporter.py
                 self.logger.log_exc("IotlabImporter: failed to import slice")
 
         #No slice update upon import in iotlab
-=======
-                self.logger.log_exc("SlabImporter: failed to import slice")
-
-        #No slice update upon import in senslab
->>>>>>> 3fe7429... SA:sfa/importer/slabimporter.py
         else:
             # xxx update the record ...
             self.logger.warning ("Slice update not yet implemented")
@@ -598,11 +480,7 @@ class SlabImporter:
             dbsession.commit()
             slice_record.stale = False
         except SQLAlchemyError:
-<<<<<<< HEAD:sfa/importer/iotlabimporter.py
             self.logger.log_exc("IotlabImporter: failed to update slice")
-=======
-            self.logger.log_exc("SlabImporter: failed to update slice")
->>>>>>> 3fe7429... SA:sfa/importer/slabimporter.py
 
 
     def run (self, options):
@@ -616,13 +494,12 @@ class SlabImporter:
         """
         config = Config()
 
-<<<<<<< HEAD:sfa/importer/iotlabimporter.py
         iotlabdriver = IotlabDriver(config)
-
+        iotlab_db = IotlabDB(config)
         #Create special slice table for iotlab
 
-        if not iotlabdriver.db.exists('iotlab_xp'):
-            iotlabdriver.db.createtable()
+        if not iotlab_db.exists('iotlab_xp'):
+            iotlab_db.createtable()
             self.logger.info ("IotlabImporter.run:  iotlab_xp table created ")
 
 
@@ -635,26 +512,6 @@ class SlabImporter:
         # special records must be preserved
         system_hrns = [iotlabdriver.hrn, iotlabdriver.iotlab_api.root_auth,  \
                                         iotlabdriver.hrn+ '.slicemanager']
-=======
-        slabdriver = SlabDriver(config)
-
-        #Create special slice table for senslab
-
-        if not slabdriver.db.exists('slab_xp'):
-            slabdriver.db.createtable()
-            self.logger.info ("SlabImporter.run:  slab_xp table created ")
-
-
-        # import site and node records in site into the SFA db.
-        self.import_sites_and_nodes(slabdriver)
-        #import users and slice into the SFA DB.
-        self.import_persons_and_slices(slabdriver)
-
-         ### remove stale records
-        # special records must be preserved
-        system_hrns = [slabdriver.hrn, slabdriver.slab_api.root_auth,  \
-                                        slabdriver.hrn+ '.slicemanager']
->>>>>>> 3fe7429... SA:sfa/importer/slabimporter.py
         for record in self.all_records:
             if record.hrn in system_hrns:
                 record.stale = False
