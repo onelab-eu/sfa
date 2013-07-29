@@ -384,11 +384,15 @@ class ParsingResourcesFull():
     def AddMobility(self, tuplelist, value):
         """Add if the node is a mobile node or not to the tuple list.
 
+        will also add which kind of mobility it is if the information
+        is available, supposing the information is formatted as a string
+        with the 2 information separated by a colon.
+
         :param tuplelist: tuple list on which to add the node's mobility status.
             The tuplelist is the value associated with the node's id in the
             OARGETParser's dictionary node_dictlist.
-        :param value: tells if a node is a mobile node or not. The value is found
-            in the json.
+        :param value: tells if a node is a mobile node or not. The value is
+            found in the json.
 
         :type tuplelist: list
         :type value: integer
@@ -396,6 +400,15 @@ class ParsingResourcesFull():
         .. seealso:: AddNodeNetworkAddr
 
         """
+        # future support of mobility type
+        if ":" in value:
+            value_list = value.split(':')
+            if value_list[0] is 0:
+                tuplelist.append(('mobile', 'False'))
+            else:
+               tuplelist.append(('mobile', 'True'))
+            tuplelist.append(('type', value_list[1]))
+
         if value is 0:
             tuplelist.append(('mobile', 'False'))
         else:
@@ -416,7 +429,7 @@ class ParsingResourcesFull():
          .. seealso:: AddNodeNetworkAddr
 
         """
-        tuplelist.append(('posx', value ))
+        tuplelist.append(('posx', value))
 
 
 
