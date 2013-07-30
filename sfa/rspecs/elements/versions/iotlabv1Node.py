@@ -1,7 +1,7 @@
 
 from sfa.util.xrn import Xrn
 from sfa.util.xml import XpathFilter
-from sfa.rspecs.elements.node import Node
+from sfa.rspecs.elements.node import NodeElement
 from sfa.rspecs.elements.sliver import Sliver
 from sfa.rspecs.elements.location import Location
 from sfa.rspecs.elements.hardware_type import HardwareType
@@ -159,7 +159,7 @@ class Iotlabv1Node:
     def get_node_objs(node_elems):
         nodes = []
         for node_elem in node_elems:
-            node = Node(node_elem.attrib, node_elem)
+            node = NodeElement(node_elem.attrib, node_elem)
             nodes.append(node)
             if 'component_id' in node_elem.attrib:
                 node['authority_id'] = \
