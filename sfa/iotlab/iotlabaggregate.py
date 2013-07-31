@@ -388,7 +388,7 @@ class IotlabAggregate:
                       slice_xrn %s slices  %s\r\n \r\n"
                      % (slice_xrn, slices))
 
-        if options is not None:
+        if options is not None and 'list_leases' in options:
             lease_option = options['list_leases']
         else:
             #If no options are specified, at least print the resources
