@@ -39,7 +39,7 @@ class IotlabLocation(Location):
 class IotlabMobility(Element):
     """ Class to give information of a node's mobility, and what kind of
     mobility it is (train, roomba robot ...) """
-    fields = ['mobile', 'type']
+    fields = ['mobile', 'mobility-type']
 
 
 
@@ -121,10 +121,9 @@ class Iotlabv1Node:
                         node_elem.add_instance('hardware_types', node, fields)
 
             # set mobility
-                if attribute is 'mobile':
-                    node.elem.add_instance('mobile', node['mobile'],
+                if attribute is 'mobility':
+                    node_elem.add_instance('mobility', node['mobility'],
                                            IotlabMobility.fields)
-
             # set location
                 if attribute is 'location':
                     node_elem.add_instance('location', node['location'],
@@ -132,7 +131,7 @@ class Iotlabv1Node:
 
              # add granularity of the reservation system
              #TODO put the granularity in network instead SA 18/07/12
-                if attribute is 'granularity' :
+                if attribute is 'granularity':
                     granularity = node['granularity']
                     if granularity:
                         node_elem.add_instance('granularity',
@@ -148,9 +147,12 @@ class Iotlabv1Node:
                                                                now='false')
 
             #set position
+                logger.debug("Iotlabv1Node position node_elem %s" % (node_elem))
                 if attribute is 'position':
                     node_elem.add_instance('position', node['position'],
                                            IotlabPosition.fields)
+                logger.debug("Iotlabv1Node position node[position] %s "
+                            % (node['position']))
             ## add services
             #PGv2Services.add_services(node_elem, node.get('services', []))
             # add slivers
