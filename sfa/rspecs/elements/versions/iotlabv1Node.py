@@ -10,9 +10,9 @@ from sfa.rspecs.elements.interface import Interface
 from sfa.rspecs.elements.versions.iotlabv1Sliver import Iotlabv1Sliver
 from sfa.util.sfalogging import logger
 
-class IotlabNode(Node):
+class IotlabNode(NodeElement):
     #First get the fields already defined in the class Node
-    fields = list(Node.fields)
+    fields = list(NodeElement.fields)
     #Extend it with iotlab's specific fields
     fields.extend (['archi', 'radio', 'mobile','position'])
 
