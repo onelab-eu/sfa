@@ -16,7 +16,7 @@ from sfa.rspecs.elements.granularity import Granularity
 from sfa.rspecs.version_manager import VersionManager
 
 from sfa.rspecs.elements.versions.iotlabv1Node import IotlabPosition, \
-    IotlabNode, IotlabLocation
+    IotlabNode, IotlabLocation, IotlabMobility
 
 from sfa.util.sfalogging import logger
 from sfa.util.xrn import Xrn
@@ -199,7 +199,6 @@ class IotlabAggregate:
         logger.debug("IOTLABAGGREGATE api get_nodes slice_nodes_list  %s "
                      % (slices))
 
-
         reserved_nodes = self.driver.iotlab_api.GetNodesCurrentlyInUse()
         logger.debug("IOTLABAGGREGATE api get_nodes slice_nodes_list  %s "
                      % (slice_nodes_list))
@@ -212,7 +211,7 @@ class IotlabAggregate:
                 #site_id=node['site_id']
                 #site=sites_dict[site_id]
 
-                rspec_node['mobile'] = node['mobile']
+                # rspec_node['mobile'] = node['mobile']
                 rspec_node['archi'] = node['archi']
                 rspec_node['radio'] = node['radio']
 
@@ -233,27 +232,35 @@ class IotlabAggregate:
                 # do not include boot state (<available> element)
                 #in the manifest rspec
 
-
                 rspec_node['boot_state'] = node['boot_state']
                 if node['hostname'] in reserved_nodes:
                     rspec_node['boot_state'] = "Reserved"
                 rspec_node['exclusive'] = 'true'
-                rspec_node['hardware_types'] = [HardwareType({'name': \
-                                                'iotlab-node'})]
+                rspec_node['hardware_types'] = [HardwareType({'name':
+                                               'iotlab-node'})]
 
 
-                location = IotlabLocation({'country':'France', 'site': \
+                location = IotlabLocation({'country':'France', 'site':
                                             node['site']})
                 rspec_node['location'] = location
 
+                # Adding mobility of the node in the rspec
+                mobility = IotlabMobility()
+                for field in mobility:
+                    try:
+                        mobility[field] = node[field]
+                    except KeyError, error:
+                        logger.log_exc("IOTLABAGGREGATE\t get_nodes \
+                                         mobility %s " % (error))
+                rspec_node['mobility'] = mobility
 
                 position = IotlabPosition()
-                for field in position :
+                for field in position:
                     try:
                         position[field] = node[field]
-                    except KeyError, error :
+                    except KeyError, error:
                         logger.log_exc("IOTLABAGGREGATE\t get_nodes \
-                                                        position %s "% (error))
+                                                        position %s " % (error))
 
                 rspec_node['position'] = position
                 #rspec_node['interfaces'] = []
@@ -270,9 +277,9 @@ class IotlabAggregate:
                     rspec_node['slivers'] = [sliver]
 
                     # slivers always provide the ssh service
-                    login = Login({'authentication': 'ssh-keys', \
-                            'hostname': node['hostname'], 'port':'22', \
-                            'username': sliver['name']})
+                    login = Login({'authentication': 'ssh-keys',
+                                   'hostname': node['hostname'], 'port': '22',
+                                   'username': sliver['name']})
                     service = Services({'login': login})
                     rspec_node['services'] = [service]
                 rspec_nodes.append(rspec_node)
@@ -381,7 +388,7 @@ class IotlabAggregate:
                       slice_xrn %s slices  %s\r\n \r\n"
                      % (slice_xrn, slices))
 
-        if options is not None:
+        if options is not None and 'list_leases' in options:
             lease_option = options['list_leases']
         else:
             #If no options are specified, at least print the resources

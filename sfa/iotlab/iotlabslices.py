@@ -305,7 +305,7 @@ class IotlabSlices:
         if slices_list:
             for sl in slices_list:
 
-                logger.debug("SLABSLICE \t verify_slice slicename %s \
+                logger.debug("IOTLABSLICES \t verify_slice slicename %s \
                                 slices_list %s sl %s \r slice_record %s"
                              % (slicename, slices_list, sl, slice_record))
                 sfa_slice = sl
@@ -392,7 +392,7 @@ class IotlabSlices:
                 users_by_email[user['email']] = user
                 users_dict[user['email']] = user
 
-        logger.debug("SLABSLICE.PY \t verify_person  \
+        logger.debug("IOTLABSLICES.PY \t verify_person  \
                         users_dict %s \r\n user_by_email %s \r\n \
                         \tusers_by_id %s "
                      % (users_dict, users_by_email, users_by_id))
@@ -413,7 +413,7 @@ class IotlabSlices:
             #Needed because what if the user has been deleted in LDAP but
             #is still in SFA?
             existing_users = self.driver.iotlab_api.GetPersons(filter_user)
-            logger.debug(" \r\n SLABSLICE.PY \tverify_person  filter_user \
+            logger.debug(" \r\n IOTLABSLICES.PY \tverify_person  filter_user \
                         %s existing_users %s "
                         % (filter_user, existing_users))
             #User is in iotlab LDAP
@@ -435,28 +435,28 @@ class IotlabSlices:
                 ldap_reslt = self.driver.iotlab_api.ldap.LdapSearch(req)
 
                 if ldap_reslt:
-                    logger.debug(" SLABSLICE.PY \tverify_person users \
+                    logger.debug(" IOTLABSLICES.PY \tverify_person users \
                                 USER already in Iotlab \t ldap_reslt %s \
                                 " % (ldap_reslt))
                     existing_users.append(ldap_reslt[1])
 
                 else:
                     #User not existing in LDAP
-                    logger.debug("SLABSLICE.PY \tverify_person users \
+                    logger.debug("IOTLABSLICES.PY \tverify_person users \
                                 not in ldap ...NEW ACCOUNT NEEDED %s \r\n \t \
                                 ldap_reslt %s " % (users, ldap_reslt))
 
         requested_user_emails = users_by_email.keys()
         requested_user_hrns = \
             [users_by_email[user]['hrn'] for user in users_by_email]
-        logger.debug("SLABSLICE.PY \tverify_person  \
+        logger.debug("IOTLABSLICES.PY \tverify_person  \
                        users_by_email  %s " % (users_by_email))
 
         #Check that the user of the slice in the slice record
         #matches one of the existing users
         try:
             if slice_record['PI'][0] in requested_user_hrns:
-                logger.debug(" SLABSLICE  \tverify_person ['PI']\
+                logger.debug(" IOTLABSLICES  \tverify_person ['PI']\
                                 slice_record %s" % (slice_record))
 
         except KeyError:
@@ -479,12 +479,12 @@ class IotlabSlices:
         #requested_user_email is in existing_user_emails
         if len(added_user_emails) == 0:
             slice_record['login'] = users_dict[requested_user_emails[0]]['uid']
-            logger.debug(" SLABSLICE  \tverify_person QUICK DIRTY %s"
+            logger.debug(" IOTLABSLICES  \tverify_person QUICK DIRTY %s"
                          % (slice_record))
 
         for added_user_email in added_user_emails:
             added_user = users_dict[added_user_email]
-            logger.debug(" SLABSLICE \r\n \r\n  \t THE SECOND verify_person \
+            logger.debug(" IOTLABSLICES \r\n \r\n  \t THE SECOND verify_person \
                          added_user %s" % (added_user))
             person = {}
             person['peer_person_id'] = None
@@ -502,7 +502,7 @@ class IotlabSlices:
             if type(ret) == int:
                 person['uid'] = ret
 
-            logger.debug(" SLABSLICE \r\n \r\n  \t THE SECOND verify_person\
+            logger.debug(" IOTLABSLICES \r\n \r\n  \t THE SECOND verify_person\
                            person %s" % (person))
             #Update slice_Record with the id now known to LDAP
             slice_record['login'] = person['uid']

@@ -380,6 +380,21 @@ class ParsingResourcesFull():
     #     """
     #     tuplelist.append(('radio', str(value)))
 
+    def AddMobilityType(self, tuplelist, value):
+        """Adds  which kind of mobility it is, train or roomba robot.
+
+        :param tuplelist: tuple list on which to add the node's mobility status.
+            The tuplelist is the value associated with the node's id in the
+            OARGETParser's dictionary node_dictlist.
+        :param value: tells if a node is a mobile node or not. The value is
+            found in the json.
+
+        :type tuplelist: list
+        :type value: integer
+
+        """
+        tuplelist.append(('mobility-type', str(value)))
+
 
     def AddMobility(self, tuplelist, value):
         """Add if the node is a mobile node or not to the tuple list.
@@ -387,8 +402,8 @@ class ParsingResourcesFull():
         :param tuplelist: tuple list on which to add the node's mobility status.
             The tuplelist is the value associated with the node's id in the
             OARGETParser's dictionary node_dictlist.
-        :param value: tells if a node is a mobile node or not. The value is found
-            in the json.
+        :param value: tells if a node is a mobile node or not. The value is
+            found in the json.
 
         :type tuplelist: list
         :type value: integer
@@ -396,6 +411,8 @@ class ParsingResourcesFull():
         .. seealso:: AddNodeNetworkAddr
 
         """
+        # future support of mobility type
+
         if value is 0:
             tuplelist.append(('mobile', 'False'))
         else:
@@ -416,7 +433,7 @@ class ParsingResourcesFull():
          .. seealso:: AddNodeNetworkAddr
 
         """
-        tuplelist.append(('posx', value ))
+        tuplelist.append(('posx', value))
 
 
 

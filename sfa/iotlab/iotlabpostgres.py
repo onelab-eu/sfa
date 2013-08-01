@@ -244,7 +244,7 @@ class IotlabDB(object):
             return True
 
         except NoSuchTableError:
-            logger.log_exc("SLABPOSTGRES tablename %s does not exist"
+            logger.log_exc("IOTLABPOSTGRES tablename %s does not exist"
                            % (tablename))
             return False
 
@@ -255,7 +255,7 @@ class IotlabDB(object):
 
         """
 
-        logger.debug("SLABPOSTGRES createtable \
+        logger.debug("IOTLABPOSTGRES createtable \
                     IotlabBase.metadata.sorted_tables %s \r\n engine %s"
                      % (IotlabBase.metadata.sorted_tables, self.iotlab_engine))
         IotlabBase.metadata.create_all(self.iotlab_engine)
