@@ -5,7 +5,7 @@ to the user, it should be done here.
 """
 from sfa.util.xrn import Xrn
 from sfa.util.xml import XpathFilter
-from sfa.rspecs.elements.node import NodeElement
+from sfa.rspecs.elements.node import Node
 from sfa.rspecs.elements.sliver import Sliver
 from sfa.rspecs.elements.location import Location
 from sfa.rspecs.elements.hardware_type import HardwareType
@@ -232,7 +232,7 @@ class Iotlabv1Node:
         """
         nodes = []
         for node_elem in node_elems:
-            node = NodeElement(node_elem.attrib, node_elem)
+            node = Node(node_elem.attrib, node_elem)
             nodes.append(node)
             if 'component_id' in node_elem.attrib:
                 node['authority_id'] = \
