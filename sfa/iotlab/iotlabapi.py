@@ -58,7 +58,7 @@ class IotlabTestbedAPI():
         return IotlabTestbedAPI._MINIMUM_DURATION
 
     @staticmethod
-    def GetPeers (peer_filter=None ):
+    def GetPeers(peer_filter=None ):
         """ Gathers registered authorities in SFA DB and looks for specific peer
         if peer_filter is specified.
         :param peer_filter: name of the site authority looked for.
@@ -69,7 +69,7 @@ class IotlabTestbedAPI():
 
         existing_records = {}
         existing_hrns_by_types = {}
-        logger.debug("IOTLABDRIVER \tGetPeers peer_filter %s, \
+        logger.debug("IOTLAB_API \tGetPeers peer_filter %s, \
                     " %(peer_filter))
         all_records = dbsession.query(RegRecord).filter(RegRecord.type.like('%authority%')).all()
 
@@ -81,7 +81,7 @@ class IotlabTestbedAPI():
                 existing_hrns_by_types[record.type].append(record.hrn)
 
 
-        logger.debug("IOTLABDRIVER \tGetPeer\texisting_hrns_by_types %s "\
+        logger.debug("IOTLAB_API \tGetPeer\texisting_hrns_by_types %s "\
                                              %( existing_hrns_by_types))
         records_list = []
 
@@ -92,14 +92,14 @@ class IotlabTestbedAPI():
                 for hrn in existing_hrns_by_types['authority']:
                     records_list.append(existing_records[(hrn,'authority')])
 
-            logger.debug("IOTLABDRIVER \tGetPeer \trecords_list  %s " \
+            logger.debug("IOTLAB_API \tGetPeer \trecords_list  %s " \
                                             %(records_list))
 
         except KeyError:
             pass
 
         return_records = records_list
-        logger.debug("IOTLABDRIVER \tGetPeer return_records %s "
+        logger.debug("IOTLAB_API \tGetPeer return_records %s "
                      % (return_records))
         return return_records
 
@@ -120,7 +120,7 @@ class IotlabTestbedAPI():
         :rtype: list of dicts
 
         """
-        logger.debug("IOTLABDRIVER \tGetPersons person_filter %s"
+        logger.debug("IOTLAB_API \tGetPersons person_filter %s"
                      % (person_filter))
         person_list = []
         if person_filter and isinstance(person_filter, list):
@@ -171,7 +171,7 @@ class IotlabTestbedAPI():
         :rtype: dict
 
         """
-        logger.debug("IOTLABDRIVER \tDeleteJobs jobid  %s username %s "
+        logger.debug("IOTLAB_API \tDeleteJobs jobid  %s username %s "
                      % (job_id, username))
         if not job_id or job_id is -1:
             return
@@ -186,7 +186,7 @@ class IotlabTestbedAPI():
             ret = {job_id: True}
         else:
             ret = {job_id: False}
-        logger.debug("IOTLABDRIVER \tDeleteJobs jobid  %s \r\n answer %s \
+        logger.debug("IOTLAB_API \tDeleteJobs jobid  %s \r\n answer %s \
                                 username %s" % (job_id, answer, username))
         return ret
 
@@ -205,19 +205,19 @@ class IotlabTestbedAPI():
         ##Get job info from OAR
         #job_info = self.oar.parser.SendRequest(req, job_id, username)
 
-        #logger.debug("IOTLABDRIVER \t GetJobsId  %s " %(job_info))
+        #logger.debug("IOTLAB_API \t GetJobsId  %s " %(job_info))
         #try:
             #if job_info['state'] == 'Terminated':
-                #logger.debug("IOTLABDRIVER \t GetJobsId job %s TERMINATED"\
+                #logger.debug("IOTLAB_API \t GetJobsId job %s TERMINATED"\
                                                             #%(job_id))
                 #return None
             #if job_info['state'] == 'Error':
-                #logger.debug("IOTLABDRIVER \t GetJobsId ERROR message %s "\
+                #logger.debug("IOTLAB_API \t GetJobsId ERROR message %s "\
                                                             #%(job_info))
                 #return None
 
         #except KeyError:
-            #logger.error("IOTLABDRIVER \tGetJobsId KeyError")
+            #logger.error("IOTLAB_API \tGetJobsId KeyError")
             #return None
 
         #parsed_job_info  = self.get_info_on_reserved_nodes(job_info, \
@@ -227,7 +227,7 @@ class IotlabTestbedAPI():
         ##with "node_ids"
         #job_info.update({'node_ids':parsed_job_info[node_list_k]})
         #del job_info[node_list_k]
-        #logger.debug(" \r\nIOTLABDRIVER \t GetJobsId job_info %s " %(job_info))
+        #logger.debug(" \r\nIOTLAB_API \t GetJobsId job_info %s " %(job_info))
         #return job_info
 
 
@@ -251,7 +251,7 @@ class IotlabTestbedAPI():
 
         #Get job resources list from OAR
         node_id_list = self.oar.parser.SendRequest(req, job_id, username)
-        logger.debug("IOTLABDRIVER \t GetJobsResources  %s " %(node_id_list))
+        logger.debug("IOTLAB_API \t GetJobsResources  %s " %(node_id_list))
 
         hostname_list = \
             self.__get_hostnames_from_oar_node_ids(node_id_list)
@@ -283,11 +283,11 @@ class IotlabTestbedAPI():
                 #reserved_node_hostname_list[index] = \
                         #node_dict[job_info[node_list_name][index]]['hostname']
 
-            #logger.debug("IOTLABDRIVER \t get_info_on_reserved_nodes \
+            #logger.debug("IOTLAB_API \t get_info_on_reserved_nodes \
                         #reserved_node_hostname_list %s" \
                         #%(reserved_node_hostname_list))
         #except KeyError:
-            #logger.error("IOTLABDRIVER \t get_info_on_reserved_nodes KEYERROR " )
+            #logger.error("IOTLAB_API \t get_info_on_reserved_nodes KEYERROR " )
 
         #return reserved_node_hostname_list
 
@@ -321,7 +321,7 @@ class IotlabTestbedAPI():
             #hostname_list.append(oar_id_node_dict[resource_id]['hostname'])
         return hostname_list
 
-    def GetReservedNodes(self, username = None):
+    def GetReservedNodes(self, username=None):
         """ Get list of leases. Get the leases for the username if specified,
         otherwise get all the leases. Finds the nodes hostnames for each
         OAR node identifier.
@@ -368,7 +368,7 @@ class IotlabTestbedAPI():
         """
         node_dict_by_id = self.oar.parser.SendRequest("GET_resources_full")
         node_dict_list = node_dict_by_id.values()
-        logger.debug (" IOTLABDRIVER GetNodes  node_filter_dict %s \
+        logger.debug (" IOTLAB_API GetNodes  node_filter_dict %s \
             return_fields_list %s " % (node_filter_dict, return_fields_list))
         #No  filtering needed return the list directly
         if not (node_filter_dict or return_fields_list):
@@ -420,7 +420,7 @@ class IotlabTestbedAPI():
                               gid=slice_record['gid'],
                               pointer=slice_record['slice_id'],
                               authority=slice_record['authority'])
-        logger.debug("IOTLABDRIVER.PY AddSlice  sfa_record %s user_record %s"
+        logger.debug("IOTLAB_API.PY AddSlice  sfa_record %s user_record %s"
                      % (sfa_record, user_record))
         sfa_record.just_created()
         dbsession.add(sfa_record)
@@ -486,7 +486,7 @@ class IotlabTestbedAPI():
         """
         #Disable user account in iotlab LDAP
         ret = self.ldap.LdapMarkUserAsDeleted(person_record)
-        logger.warning("IOTLABDRIVER DeletePerson %s " % (person_record))
+        logger.warning("IOTLAB_API DeletePerson %s " % (person_record))
         return ret['bool']
 
     def DeleteSlice(self, slice_record):
@@ -510,7 +510,7 @@ class IotlabTestbedAPI():
                     delete_failed = []
                 delete_failed.append(job_id)
 
-        logger.info("IOTLABDRIVER DeleteSlice %s  answer %s"%(slice_record, \
+        logger.info("IOTLAB_API DeleteSlice %s  answer %s"%(slice_record, \
                     delete_failed))
         return delete_failed or True
 
@@ -573,21 +573,23 @@ class IotlabTestbedAPI():
             LdapAddUser.
 
         :param record: dictionary with the sfa user's properties.
-        :returns: The uid of the added person if sucessful, otherwise returns
-            the error message from LDAP.
-        :rtype: interger or string
+        :returns: a dicitonary with the status. If successful, the dictionary
+            boolean is set to True and there is a 'uid' key with the new login
+            added to LDAP, otherwise the bool is set to False and a key
+            'message' is in the dictionary, with the error message.
+        :rtype: dict
 
         """
         ret = self.ldap.LdapAddUser(record)
 
         if ret['bool'] is True:
             record['hrn'] = self.root_auth + '.' + ret['uid']
-            logger.debug("IOTLABDRIVER AddPerson return code %s record %s \r\n "\
-                                                                %(ret, record))
+            logger.debug("IOTLAB_API AddPerson return code %s record %s  "
+                         % (ret, record))
             self.__add_person_to_db(record)
-            return ret['uid']
-        else:
-            return ret['message']
+        return ret
+
+
 
 
 
@@ -610,7 +612,7 @@ class IotlabTestbedAPI():
         """
         ret = self.ldap.LdapModify(person_uid, old_attributes_dict, \
                                                                 new_key_dict)
-        logger.warning("IOTLABDRIVER AddPersonKey EMPTY - DO NOTHING \r\n ")
+        logger.warning("IOTLAB_API AddPersonKey EMPTY - DO NOTHING \r\n ")
         return ret['bool']
 
     def DeleteLeases(self, leases_id_list, slice_hrn):
@@ -632,7 +634,7 @@ class IotlabTestbedAPI():
             there was no easy way to report it to the user.
 
         """
-        logger.debug("IOTLABDRIVER DeleteLeases leases_id_list %s slice_hrn %s \
+        logger.debug("IOTLAB_API DeleteLeases leases_id_list %s slice_hrn %s \
                 \r\n " %(leases_id_list, slice_hrn))
         for job_id in leases_id_list:
             self.DeleteJobs(job_id, slice_hrn)
@@ -755,21 +757,21 @@ class IotlabTestbedAPI():
         lease_dict['time_format'] = self.time_format
 
 
-        logger.debug("IOTLABDRIVER.PY \tLaunchExperimentOnOAR slice_user %s\
+        logger.debug("IOTLAB_API.PY \tLaunchExperimentOnOAR slice_user %s\
                              \r\n "  %(slice_user))
         #Create the request for OAR
         reqdict = self._create_job_structure_request_for_OAR(lease_dict)
          # first step : start the OAR job and update the job
-        logger.debug("IOTLABDRIVER.PY \tLaunchExperimentOnOAR reqdict %s\
+        logger.debug("IOTLAB_API.PY \tLaunchExperimentOnOAR reqdict %s\
                              \r\n "  %(reqdict))
 
         answer = self.oar.POSTRequestToOARRestAPI('POST_job', \
                                                 reqdict, slice_user)
-        logger.debug("IOTLABDRIVER \tLaunchExperimentOnOAR jobid  %s " %(answer))
+        logger.debug("IOTLAB_API \tLaunchExperimentOnOAR jobid  %s " %(answer))
         try:
             jobid = answer['id']
         except KeyError:
-            logger.log_exc("IOTLABDRIVER \tLaunchExperimentOnOAR \
+            logger.log_exc("IOTLAB_API \tLaunchExperimentOnOAR \
                                 Impossible to create job  %s "  %(answer))
             return None
 
@@ -777,7 +779,7 @@ class IotlabTestbedAPI():
 
 
         if jobid :
-            logger.debug("IOTLABDRIVER \tLaunchExperimentOnOAR jobid %s \
+            logger.debug("IOTLAB_API \tLaunchExperimentOnOAR jobid %s \
                     added_nodes %s slice_user %s" %(jobid, added_nodes, \
                                                             slice_user))
 
@@ -785,8 +787,8 @@ class IotlabTestbedAPI():
         return jobid
 
 
-    def AddLeases(self, hostname_list, slice_record, \
-                                        lease_start_time, lease_duration):
+    def AddLeases(self, hostname_list, slice_record,
+                  lease_start_time, lease_duration):
 
         """Creates a job in OAR corresponding to the information provided
         as parameters. Adds the job id and the slice hrn in the iotlab
@@ -803,7 +805,7 @@ class IotlabTestbedAPI():
         :type lease_duration: integer
 
         """
-        logger.debug("IOTLABDRIVER \r\n \r\n \t AddLeases hostname_list %s  \
+        logger.debug("IOTLAB_API \r\n \r\n \t AddLeases hostname_list %s  \
                 slice_record %s lease_start_time %s lease_duration %s  "\
                  %( hostname_list, slice_record , lease_start_time, \
                  lease_duration))
@@ -821,22 +823,22 @@ class IotlabTestbedAPI():
         end_time = lease_start_time + lease_duration
 
 
-        logger.debug("IOTLABDRIVER \r\n \r\n \t AddLeases TURN ON LOGGING SQL \
+        logger.debug("IOTLAB_API \r\n \r\n \t AddLeases TURN ON LOGGING SQL \
                         %s %s %s "%(slice_record['hrn'], job_id, end_time))
 
 
-        logger.debug("IOTLABDRIVER \r\n \r\n \t AddLeases %s %s %s " \
+        logger.debug("IOTLAB_API \r\n \r\n \t AddLeases %s %s %s " \
                 %(type(slice_record['hrn']), type(job_id), type(end_time)))
 
-        iotlab_ex_row = IotlabXP(slice_hrn = slice_record['hrn'], \
-                job_id = job_id, end_time= end_time)
+        iotlab_ex_row = IotlabXP(slice_hrn = slice_record['hrn'], job_id=job_id,
+                                 end_time= end_time)
 
-        logger.debug("IOTLABDRIVER \r\n \r\n \t AddLeases iotlab_ex_row %s" \
+        logger.debug("IOTLAB_API \r\n \r\n \t AddLeases iotlab_ex_row %s" \
                 %(iotlab_ex_row))
         self.iotlab_db.iotlab_session.add(iotlab_ex_row)
         self.iotlab_db.iotlab_session.commit()
 
-        logger.debug("IOTLABDRIVER \t AddLeases hostname_list start_time %s " \
+        logger.debug("IOTLAB_API \t AddLeases hostname_list start_time %s " \
                 %(start_time))
 
         return
@@ -857,7 +859,7 @@ class IotlabTestbedAPI():
         :rtype: dict
 
         """
-        logger.debug("IOTLABDRIVER \t  DeleteSliceFromNodes %s "
+        logger.debug("IOTLAB_API \t  DeleteSliceFromNodes %s "
                      % (slice_record))
 
         if isinstance(slice_record['oar_job_id'], list):
@@ -928,11 +930,11 @@ class IotlabTestbedAPI():
 
         """
 
-        unfiltered_reservation_list = self.GetReservedNodes(login)
+        unfiltered_reservation_list = self.GetReservedNodes()
 
         reservation_list = []
         #Find the slice associated with this user iotlab ldap uid
-        logger.debug(" IOTLABDRIVER.PY \tGetLeases login %s\
+        logger.debug(" IOTLAB_API.PY \tGetLeases login %s\
                         unfiltered_reservation_list %s "
                      % (login, unfiltered_reservation_list))
         #Create user dict first to avoid looking several times for
@@ -943,12 +945,12 @@ class IotlabTestbedAPI():
         jobs_psql_dict = dict([(row.job_id, row.__dict__)
                                for row in jobs_psql_query])
         #jobs_psql_dict = jobs_psql_dict)
-        logger.debug("IOTLABDRIVER \tGetLeases jobs_psql_dict %s"
+        logger.debug("IOTLAB_API \tGetLeases jobs_psql_dict %s"
                      % (jobs_psql_dict))
         jobs_psql_id_list = [row.job_id for row in jobs_psql_query]
 
         for resa in unfiltered_reservation_list:
-            logger.debug("IOTLABDRIVER \tGetLeases USER %s"
+            logger.debug("IOTLAB_API \tGetLeases USER %s"
                          % (resa['user']))
             #Construct list of jobs (runing, waiting..) in oar
             job_oar_list.append(resa['lease_id'])
@@ -956,7 +958,7 @@ class IotlabTestbedAPI():
             #(slice used and job id)
             if resa['lease_id'] in jobs_psql_dict:
                 job_info = jobs_psql_dict[resa['lease_id']]
-                logger.debug("IOTLABDRIVER \tGetLeases job_info %s"
+                logger.debug("IOTLAB_API \tGetLeases job_info %s"
                              % (job_info))
                 resa['slice_hrn'] = job_info['slice_hrn']
                 resa['slice_id'] = hrn_to_urn(resa['slice_hrn'], 'slice')
@@ -975,7 +977,7 @@ class IotlabTestbedAPI():
                 resa['component_id_list'].append(iotlab_xrn.urn)
 
             if lease_filter_dict:
-                logger.debug("IOTLABDRIVER \tGetLeases resa_ %s \
+                logger.debug("IOTLAB_API \tGetLeases resa_ %s \
                         \r\n leasefilter %s" % (resa, lease_filter_dict))
 
                 if lease_filter_dict['name'] == resa['slice_hrn']:
@@ -986,7 +988,7 @@ class IotlabTestbedAPI():
 
         self.iotlab_db.update_jobs_in_iotlabdb(job_oar_list, jobs_psql_id_list)
 
-        logger.debug(" IOTLABDRIVER.PY \tGetLeases reservation_list %s"
+        logger.debug(" IOTLAB_API.PY \tGetLeases reservation_list %s"
                      % (reservation_list))
         return reservation_list
 
@@ -1014,7 +1016,7 @@ class IotlabTestbedAPI():
         #FROM PLC DOC
 
         #"""
-        #logger.warning("IOTLABDRIVER \tUnBindObjectFromPeer EMPTY-\
+        #logger.warning("IOTLAB_API \tUnBindObjectFromPeer EMPTY-\
                         #DO NOTHING \r\n ")
         #return
 
@@ -1033,7 +1035,7 @@ class IotlabTestbedAPI():
         #FROM PLC API DOC
 
         #"""
-        #logger.warning("IOTLABDRIVER \tBindObjectToPeer EMPTY - DO NOTHING \r\n ")
+        #logger.warning("IOTLAB_API \tBindObjectToPeer EMPTY - DO NOTHING \r\n ")
         #return
 
     ##TODO UpdateSlice 04/07/2012 SA || Commented out 28/05/13 SA
@@ -1050,7 +1052,7 @@ class IotlabTestbedAPI():
         #FROM PLC API DOC
 
         #"""
-        #logger.warning("IOTLABDRIVER UpdateSlice EMPTY - DO NOTHING \r\n ")
+        #logger.warning("IOTLAB_API UpdateSlice EMPTY - DO NOTHING \r\n ")
         #return
 
     #Unused SA 30/05/13, we only update the user's key or we delete it.
@@ -1068,7 +1070,7 @@ class IotlabTestbedAPI():
         ##self.iotlab_db.iotlab_session.add(new_row)
         ##self.iotlab_db.iotlab_session.commit()
 
-        #logger.debug("IOTLABDRIVER UpdatePerson EMPTY - DO NOTHING \r\n ")
+        #logger.debug("IOTLAB_API UpdatePerson EMPTY - DO NOTHING \r\n ")
         #return
 
     @staticmethod
@@ -1100,7 +1102,7 @@ class IotlabTestbedAPI():
         #user_by_email = dict((user[1]['mail'][0], user[1]['sshPublicKey']) \
                                         #for user in ldap_rslt)
 
-        logger.debug("IOTLABDRIVER  GetKeys  -key_dict %s \r\n " % (key_dict))
+        logger.debug("IOTLAB_API  GetKeys  -key_dict %s \r\n " % (key_dict))
         return key_dict
 
     #TODO : test
@@ -1122,14 +1124,14 @@ class IotlabTestbedAPI():
         all_user_keys.remove(key_string)
         new_attributes = {'sshPublicKey':all_user_keys}
         ret = self.ldap.LdapModifyUser(user_record, new_attributes)
-        logger.debug("IOTLABDRIVER  DeleteKey  %s- " % (ret))
+        logger.debug("IOTLAB_API  DeleteKey  %s- " % (ret))
         return ret['bool']
 
 
 
 
     @staticmethod
-    def _sql_get_slice_info( slice_filter ):
+    def _sql_get_slice_info(slice_filter):
         """
         Get the slice record based on the slice hrn. Fetch the record of the
         user associated with the slice by using joinedload based on the
@@ -1154,7 +1156,7 @@ class IotlabTestbedAPI():
             #load_reg_researcher
             #raw_slicerec.reg_researchers
             raw_slicerec = raw_slicerec.__dict__
-            logger.debug(" IOTLABDRIVER \t  get_slice_info slice_filter %s  \
+            logger.debug(" IOTLAB_API \t  _sql_get_slice_info slice_filter %s  \
                             raw_slicerec %s" % (slice_filter, raw_slicerec))
             slicerec = raw_slicerec
             #only one researcher per slice so take the first one
@@ -1250,6 +1252,8 @@ class IotlabTestbedAPI():
                     #login = fixed_slicerec_dict['hrn'].split(".")[1].split("_")[0]
             #return login, fixed_slicerec_dict
             return fixed_slicerec_dict
+        else:
+            return None
 
 
     def GetSlices(self, slice_filter=None, slice_filter_type=None,
@@ -1279,9 +1283,13 @@ class IotlabTestbedAPI():
         if slice_filter_type in authorized_filter_types_list:
             fixed_slicerec_dict = self._get_slice_records(slice_filter,
                                                           slice_filter_type)
+            # if the slice was not found in the sfa db
+            if fixed_slicerec_dict is None:
+                return return_slicerec_dictlist
+
             slice_hrn = fixed_slicerec_dict['hrn']
 
-            logger.debug(" IOTLABDRIVER \tGetSlices login %s \
+            logger.debug(" IOTLAB_API \tGetSlices login %s \
                             slice record %s slice_filter %s \
                             slice_filter_type %s " % (login,
                             fixed_slicerec_dict, slice_filter,
@@ -1307,7 +1315,7 @@ class IotlabTestbedAPI():
             # each lease information dict
             for lease in leases_list:
                 slicerec_dict = {}
-                logger.debug("IOTLABDRIVER.PY  \tGetSlices slice_filter %s   \
+                logger.debug("IOTLAB_API.PY  \tGetSlices slice_filter %s   \
                         \t lease['slice_hrn'] %s"
                              % (slice_filter, lease['slice_hrn']))
                 if lease['slice_hrn'] == slice_hrn:
@@ -1331,16 +1339,16 @@ class IotlabTestbedAPI():
 
 
                     return_slicerec_dictlist.append(slicerec_dict)
-                    logger.debug("IOTLABDRIVER.PY  \tGetSlices  \
+                    logger.debug("IOTLAB_API.PY  \tGetSlices  \
                         OHOHOHOH %s" %(return_slicerec_dictlist))
 
-                logger.debug("IOTLABDRIVER.PY  \tGetSlices  \
+                logger.debug("IOTLAB_API.PY  \tGetSlices  \
                         slicerec_dict %s return_slicerec_dictlist %s \
                         lease['reserved_nodes'] \
                         %s" % (slicerec_dict, return_slicerec_dictlist,
                                lease['reserved_nodes']))
 
-            logger.debug("IOTLABDRIVER.PY  \tGetSlices  RETURN \
+            logger.debug("IOTLAB_API.PY  \tGetSlices  RETURN \
                         return_slicerec_dictlist  %s"
                           % (return_slicerec_dictlist))
 
@@ -1377,7 +1385,7 @@ class IotlabTestbedAPI():
                         slicerec_dict['oar_job_id'] = lease['lease_id']
 
                         #for reserved_node in lease['reserved_nodes']:
-                        logger.debug("IOTLABDRIVER.PY  \tGetSlices lease %s "
+                        logger.debug("IOTLAB_API.PY  \tGetSlices lease %s "
                                      % (lease))
                         slicerec_dict.update(fixed_slicerec_dict)
                         slicerec_dict.update({'node_ids':
@@ -1391,7 +1399,7 @@ class IotlabTestbedAPI():
                         #return_slicerec_dictlist.append(slicerec_dict)
                         fixed_slicerec_dict.update(slicerec_dict)
 
-            logger.debug("IOTLABDRIVER.PY  \tGetSlices RETURN \
+            logger.debug("IOTLAB_API.PY  \tGetSlices RETURN \
                         return_slicerec_dictlist %s \slice_filter %s " \
                         %(return_slicerec_dictlist, slice_filter))
 
@@ -1418,7 +1426,7 @@ class IotlabTestbedAPI():
             ##Unused hrn_to_pl_slicename because Iotlab's hrn already
             ##in the appropriate form SA 23/07/12
             #iotlab_record["hrn"] = hrn
-            #logger.debug("IOTLABDRIVER.PY sfa_fields_to_iotlab_fields \
+            #logger.debug("IOTLAB_API.PY sfa_fields_to_iotlab_fields \
                         #iotlab_record %s  " %(iotlab_record['hrn']))
             #if "url" in record:
                 #iotlab_record["url"] = record["url"]

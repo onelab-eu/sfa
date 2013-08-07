@@ -484,7 +484,7 @@ class IotlabSlices:
 
         for added_user_email in added_user_emails:
             added_user = users_dict[added_user_email]
-            logger.debug(" SLABSLICE \r\n \r\n  \t THE SECOND verify_person \
+            logger.debug(" IOTLABSLICES \r\n \r\n  \t  verify_person \
                          added_user %s" % (added_user))
             person = {}
             person['peer_person_id'] = None
@@ -499,13 +499,18 @@ class IotlabSlices:
             person['key_ids'] = added_user.get('key_ids', [])
 
             ret = self.driver.iotlab_api.AddPerson(person)
-            if type(ret) == int:
-                person['uid'] = ret
+            if 'uid' in ret:
+                # meaning bool is True and the AddPerson was successful
+                person['uid'] = ret['uid']
+                slice_record['login'] = person['uid']
+            else:
+                # error message in ret
+                logger.debug(" IOTLABSLICES ret message %s" %(ret))
 
             logger.debug(" SLABSLICE \r\n \r\n  \t THE SECOND verify_person\
                            person %s" % (person))
             #Update slice_Record with the id now known to LDAP
-            slice_record['login'] = person['uid']
+
 
             added_persons.append(person)
         return added_persons
