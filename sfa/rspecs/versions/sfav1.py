@@ -145,10 +145,15 @@ class SFAv1(RSpecVersion):
             if network:
                 network_tag = self.xml.xpath("//network[@name='%s']" % network)
             else:
-                network_tag = self.xml.xpath("//network")    
-            if isinstance(network_tag, list):
+                network_tag = self.xml.xpath("//network") 
+            if len(network_tag) > 0:
                 network_tag = network_tag[0]
+            elif network:
+                network_tag = self.add_network(network)
+            else:
+                network_tag = self.xml
             defaults = network_tag.add_element('sliver_defaults')
+            
         elif isinstance(defaults, list):
             defaults = defaults[0]
         SFAv1Sliver.add_sliver_attribute(defaults, name, value)
