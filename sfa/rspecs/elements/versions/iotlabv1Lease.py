@@ -2,8 +2,6 @@ from sfa.util.sfalogging import logger
 from sfa.util.xml import XpathFilter
 from sfa.util.xrn import Xrn
 
-#from sfa.rspecs.elements.versions.sfav1PLTag import SFAv1PLTag
-#from sfa.rspecs.elements.versions.pgv2Services import PGv2Services
 from sfa.rspecs.elements.lease import Lease
 
 

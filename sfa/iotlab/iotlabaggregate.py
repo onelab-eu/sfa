@@ -196,7 +196,7 @@ class IotlabAggregate:
         #attributes
         rspec_nodes = []
 
-        logger.debug("IOTLABAGGREGATE api get_nodes slice_nodes_list  %s "
+        logger.debug("IOTLABAGGREGATE api get_nodes slices  %s "
                      % (slices))
 
         reserved_nodes = self.driver.iotlab_api.GetNodesCurrentlyInUse()
@@ -400,27 +400,29 @@ class IotlabAggregate:
         #if not options.get('list_leases') or options.get('list_leases')
         #and options['list_leases'] != 'leases':
             nodes = self.get_nodes(slices, slivers)
-            logger.debug("\r\n \r\n IotlabAggregate \t lease_option %s \
+            logger.debug("\r\n")
+            logger.debug("IotlabAggregate \t lease_option %s \
                           get rspec  ******* nodes %s"
-                         % (lease_option, nodes[0]))
+                         % (lease_option, nodes))
 
             sites_set = set([node['location']['site'] for node in nodes])
 
             #In case creating a job,  slice_xrn is not set to None
             rspec.version.add_nodes(nodes)
-            if slice_xrn:
+            if slice_xrn and slices is not None:
                 #Get user associated with this slice
                 #for one_slice in slices :
                 ldap_username = slices[0]['hrn']
                 tmp = ldap_username.split('.')
                 ldap_username = tmp[1].split('_')[0]
-
+                logger.debug("IotlabAggregate \tget_rspec **** \
+                        version type %s \r\n" % (version.type))
                 if version.type == "Iotlab":
                     rspec.version.add_connection_information(
                         ldap_username, sites_set)
 
             default_sliver = slivers.get('default_sliver', [])
-            if default_sliver:
+            if default_sliver and len(nodes) is not 0:
                 #default_sliver_attribs = default_sliver.get('tags', [])
                 logger.debug("IotlabAggregate \tget_rspec **** \
                         default_sliver%s \r\n" % (default_sliver))
