@@ -420,7 +420,7 @@ class Sfi:
                                   "authority in set of credentials for this call")
 
         # show_credential option
-        if command in ("list","resources", "describe", "provision", "allocate", "add","update","remove","slices","delete","status","renew"):
+        if command in ("list","resources", "describe", "provision", "allocate", "add","update","remove","delete","status","renew"):
             parser.add_option("-C","--credential",dest='show_credential',action='store_true',default=False,
                               help="show credential(s) used in human-readable form")
         # registy filter option
@@ -1046,25 +1046,6 @@ use this if you mean an authority instead""")
     # ==================================================================
     # Slice-related commands
     # ==================================================================
-
-    @register_command("","")
-    def slices(self, options, args):
-        "list instantiated slices (ListSlices) - returns urn's"
-        server = self.sliceapi()
-        # creds
-        creds = [self.my_credential_string]
-        # options and call_id when supported
-        api_options = {}
-        api_options['call_id']=unique_call_id()
-        if options.show_credential:
-            show_credentials(creds)
-        result = server.ListSlices(creds, *self.ois(server,api_options))
-        value = ReturnValue.get_value(result)
-        if self.options.raw:
-            save_raw_to_file(result, self.options.raw, self.options.rawformat, self.options.rawbanner)
-        else:
-            display_list(value)
-        return
 
     # show rspec for named slice
     @register_command("","")
