@@ -350,7 +350,7 @@ class IotlabSlices:
 
         Checking that a user exist is based on the user's email. If the user is
         still not found in the LDAP, it means that the user comes from another
-        federated. In this case an account has to be created in LDAP
+        federated testbed. In this case an account has to be created in LDAP
         so as to enable the user to use the testbed, since we trust the testbed
         he comes from. This is done by calling AddPerson.
 

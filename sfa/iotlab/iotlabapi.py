@@ -69,8 +69,7 @@ class IotlabTestbedAPI():
 
         existing_records = {}
         existing_hrns_by_types = {}
-        logger.debug("IOTLAB_API \tGetPeers peer_filter %s, \
-                    " %(peer_filter))
+        logger.debug("IOTLAB_API \tGetPeers peer_filter %s " % (peer_filter))
         all_records = dbsession.query(RegRecord).filter(RegRecord.type.like('%authority%')).all()
 
         for record in all_records:
@@ -80,20 +79,20 @@ class IotlabTestbedAPI():
             else:
                 existing_hrns_by_types[record.type].append(record.hrn)
 
-
-        logger.debug("IOTLAB_API \tGetPeer\texisting_hrns_by_types %s "\
-                                             %( existing_hrns_by_types))
+        logger.debug("IOTLAB_API \tGetPeer\texisting_hrns_by_types %s "
+                     % (existing_hrns_by_types))
         records_list = []
 
         try:
             if peer_filter:
-                records_list.append(existing_records[(peer_filter,'authority')])
+                records_list.append(existing_records[(peer_filter,
+                                                     'authority')])
             else:
                 for hrn in existing_hrns_by_types['authority']:
-                    records_list.append(existing_records[(hrn,'authority')])
+                    records_list.append(existing_records[(hrn, 'authority')])
 
-            logger.debug("IOTLAB_API \tGetPeer \trecords_list  %s " \
-                                            %(records_list))
+            logger.debug("IOTLAB_API \tGetPeer \trecords_list  %s "
+                         % (records_list))
 
         except KeyError:
             pass
@@ -112,10 +111,11 @@ class IotlabTestbedAPI():
         If a filter is specified, looks for the user whose properties match
         the filter, otherwise returns the whole enabled users'list.
 
-        :param person_filter: Must be a list of dictionnaries
-            with users properties when not set to None.
-        :param person_filter: list of dict
-        :returns:Returns a list of users whose accounts are enabled
+        :param person_filter: Must be a list of dictionnaries with users
+            properties when not set to None.
+        :type person_filter: list of dict
+
+        :returns: Returns a list of users whose accounts are enabled
             found in ldap.
         :rtype: list of dicts
 

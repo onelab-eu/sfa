@@ -340,22 +340,21 @@ class IotlabAggregate:
     def get_rspec(self, slice_xrn=None, login=None, version=None,
                   options=None):
         """
-
         Returns xml rspec:
-            - a full advertisement rspec with the testbed resources if slice_xrn
-             is not specified.If a lease option is given, also returns the
-             leases scheduled on the testbed.
-            - a manifest Rspec with the leases and nodes in slice's leases
-            if slice_xrn is not None.
+        - a full advertisement rspec with the testbed resources if slice_xrn is
+        not specified.If a lease option is given, also returns the leases
+        scheduled on the testbed.
+        - a manifest Rspec with the leases and nodes in slice's leases if
+        slice_xrn is not None.
 
         :param slice_xrn: srn of the slice
+        :type slice_xrn: string
         :param login: user'uid (ldap login) on iotlab
+        :type login: string
         :param version: can be set to sfa or iotlab
+        :type version: RSpecVersion
         :param options: used to specify if the leases should also be included in
             the returned rspec.
-        :type slice_xrn: string
-        :type login: string
-        :type version: RSpecVersion
         :type options: dict
 
         :returns: Xml Rspec.

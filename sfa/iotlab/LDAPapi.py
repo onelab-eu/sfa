@@ -1,13 +1,12 @@
 """
-This API is adapted for OpenLDAP.
-The file contains all LDAP classes and methods needed to:
- - Load the LDAP connection configuration file (login, address..) with
-    LdapConfig
- - Connect to LDAP with ldap_co
- - Create a unique LDAP login and password for a user based on his email or
-    last name and first name with LoginPassword.
- -  Manage entries in LDAP using SFA records with LDAPapi
- (Search, Add, Delete, Modify)
+This API is adapted for OpenLDAP. The file contains all LDAP classes and methods
+needed to:
+- Load the LDAP connection configuration file (login, address..) with LdapConfig
+- Connect to LDAP with ldap_co
+- Create a unique LDAP login and password for a user based on his email or last
+name and first name with LoginPassword.
+-  Manage entries in LDAP using SFA records with LDAPapi (Search, Add, Delete,
+Modify)
 
 """
 import random
@@ -116,11 +115,13 @@ class ldap_co:
         return {'bool': True}
 
     def close(self):
-        """ Close the LDAP connection.
+        """Close the LDAP connection.
 
         Can throw an exception if the unbinding fails.
-        :returns: dictionary with the bind status if fails.
-            False if not and in this case the error message({'bool','message'})
+
+        :returns: dictionary with the bind status if the unbinding failed and
+            in this case the dict contains an error message. The dictionary keys
+            are : ({'bool','message'})
         :rtype: dict or None
 
         """
@@ -335,6 +336,8 @@ class LoginPassword():
 class LDAPapi:
     """Defines functions to insert and search entries in the LDAP.
 
+    .. note:: class supposes the unix schema is used
+
     """
     def __init__(self):
         logger.setLevelDebug()
@@ -361,7 +364,7 @@ class LDAPapi:
         first name so that the user's login can be generated.
 
         :param record: Record must contain first_name and last_name.
-        :param record: dict
+        :type record: dict
         :returns: the generated login for the user described with record if the
             login generation is successful, None if it fails.
         :rtype: string or None
@@ -572,7 +575,7 @@ class LDAPapi:
         :param record: dictionnary with the user's data.
         :returns: a dictionary with the status (Fail= False, Success= True)
             and the uid of the newly added user if successful, or the error
-            meassage it is not. Dict has keys bool and message in case of
+            message it is not. Dict has keys bool and message in case of
             failure, and bool uid in case of success.
         :rtype: dict
 

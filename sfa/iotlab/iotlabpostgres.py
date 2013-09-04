@@ -88,20 +88,21 @@ class IotlabDB(object):
             self.session()
 
         def create_iotlab_engine(self, config, debug=False):
-            """Creates the SQLAlchemy engine, which is the starting point
-            for any SQLAlchemy application.
+            """Creates the SQLAlchemy engine, which is the starting point for
+            any SQLAlchemy application.
             :param config: configuration object created by SFA based on the
-                configuration file in /etc
+            configuration file in /etc
             :param debug: if set to true, echo and echo pool will be set to true
-                as well. If echo is True, all statements as well as a repr()
-                of their parameter lists to the engines logger, which defaults
-                to sys.stdout. If echo_pool is True, the connection pool will
-                log all checkouts/checkins to the logging stream. A python
-                logger can be used to configure this logging directly but
-                so far it has not been configured. Refer to sql alchemy engine
-                documentation.
+            as well. If echo is True, all statements as well as a repr() of
+            their parameter lists to the engines logger, which defaults to
+            sys.stdout. If echo_pool is True, the connection pool will log all
+            checkouts/checkins to the logging stream. A python logger can be
+            used to configure this logging directly but so far it has not been
+            configured. Refer to sql alchemy engine documentation.
+
             :type config: Config instance (sfa.util.config)
             :type debug: bool
+
             """
 
             if debug is True:
@@ -182,8 +183,9 @@ class IotlabDB(object):
             :param  job_oar_list: list of job ids coming from OAR
             :type job_oar_list: list
             :param job_psql: list of job ids from the database.
-            type job_psql: list
+            :type job_psql: list
 
+            :returns: None
             """
             #Turn the list into a set
             set_jobs_psql = set(jobs_psql)
