@@ -207,19 +207,21 @@ class IotlabImporter:
     def import_nodes(self, site_node_ids, nodes_by_id, iotlabdriver):
         """
 
-        Creates appropriate hostnames and RegNode records for
-        each node in site_node_ids, based on the information given by the
-        dict nodes_by_id that was made from data from OAR.
-        Saves the records to the DB.
+        Creates appropriate hostnames and RegNode records for each node in
+        site_node_ids, based on the information given by the dict nodes_by_id
+        that was made from data from OAR. Saves the records to the DB.
 
         :param site_node_ids: site's node ids
         :type site_node_ids: list of integers
         :param nodes_by_id: dictionary , key is the node id, value is the a dict
-        with node information.
+            with node information.
         :type nodes_by_id: dictionary
-        :param iotlabdriver:IotlabDriver object, used to have access to
+        :param iotlabdriver: IotlabDriver object, used to have access to
             iotlabdriver attributes.
-        :type iotlabdriver:IotlabDriver
+        :type iotlabdriver: IotlabDriver
+
+        :returns: None
+        :rtype: None
 
         """
 
@@ -321,9 +323,9 @@ class IotlabImporter:
         import the user's slice onto the database as well by calling
         import_slice.
 
-        :param iotlabdriver:IotlabDriver object, used to have access to
+        :param iotlabdriver: IotlabDriver object, used to have access to
             iotlabdriver attributes.
-        :type iotlabdriver:IotlabDriver
+        :type iotlabdriver: IotlabDriver
         """
         ldap_person_listdict = iotlabdriver.iotlab_api.GetPersons()
         self.logger.info("IOTLABIMPORT \t ldap_person_listdict %s \r\n"
