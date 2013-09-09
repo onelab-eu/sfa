@@ -3,7 +3,7 @@ Implements what a driver should provide for SFA to work.
 """
 from sfa.util.faults import SliverDoesNotExist, UnknownSfaType
 from sfa.util.sfalogging import logger
-from sfa.storage.alchemy import dbsession
+# from sfa.storage.alchemy import dbsession
 from sfa.storage.model import RegRecord
 
 from sfa.managers.driver import Driver
@@ -700,27 +700,24 @@ class IotlabDriver(Driver):
 
     def update(self, old_sfa_record, new_sfa_record, hrn, new_key):
         """
-        No site or node record update allowed in Iotlab.
-            The only modifications authorized here are key deletion/addition
-            on an existing user and password change.
-            On an existing user, CAN NOT BE MODIFIED:
-            'first_name', 'last_name', 'email'
-            DOES NOT EXIST IN SENSLAB:
-            'phone', 'url', 'bio','title', 'accepted_aup',
-            A slice is bound to its user, so modifying the user's ssh key should
-            modify the slice's GID after an import procedure.
+        No site or node record update allowed in Iotlab. The only modifications
+        authorized here are key deletion/addition on an existing user and
+        password change. On an existing user, CAN NOT BE MODIFIED: 'first_name',
+        'last_name', 'email'. DOES NOT EXIST IN SENSLAB: 'phone', 'url', 'bio',
+        'title', 'accepted_aup'. A slice is bound to its user, so modifying the
+        user's ssh key should nmodify the slice's GID after an import procedure.
 
         :param old_sfa_record: what is in the db for this hrn
-        :param new_sfa_record: what was passed to the Update call
+        :param new_sfa_record: what was passed to the update call
         :param new_key: the new user's public key
         :param hrn: the user's sfa hrn
-        :type old_sfa_record: dictionary
-        :type new_sfa_record: dictionary
-        :type pub_key: string
+        :type old_sfa_record: dict
+        :type new_sfa_record: dict
+        :type new_key: string
         :type hrn: string
 
-         TODO: needs review
-        .. seealso::: update in driver.py.
+        TODO: needs review
+        .. seealso:: update in driver.py.
 
         """
         pointer = old_sfa_record['pointer']
@@ -765,9 +762,8 @@ class IotlabDriver(Driver):
     def remove(self, sfa_record):
         """
 
-        Removes users only. Mark the user as disabled in
-            LDAP. The user and his slice are then deleted from the
-            db by running an import on the registry.
+        Removes users only. Mark the user as disabled in LDAP. The user and his
+        slice are then deleted from the db by running an import on the registry.
 
         :param sfa_record: record is the existing sfa record in the db
         :type sfa_record: dict
@@ -775,6 +771,7 @@ class IotlabDriver(Driver):
         ..warning::As fas as the slice is concerned, here only the leases are
             removed from the slice. The slice is record itself is not removed
             from the db.
+
         TODO: needs review
 
         TODO : REMOVE SLICE FROM THE DB AS WELL? SA 14/05/2013,

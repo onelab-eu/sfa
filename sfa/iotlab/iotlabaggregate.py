@@ -333,7 +333,7 @@ class IotlabAggregate:
                     pass
                 rspec_lease['start_time'] = lease['t_from']
                 rspec_lease['duration'] = (lease['t_until'] - lease['t_from']) \
-                    / grain
+                    * grain
                 rspec_leases.append(rspec_lease)
         return rspec_leases
 
