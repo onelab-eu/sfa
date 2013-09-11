@@ -293,7 +293,7 @@ class IotlabAggregate:
         ('lease_id', 'hostname', 'site_id', 'name', 'start_time', 'duration').
         All the leases running or scheduled are returned.
 
-        :param ldap_username: if a ldap uid is not None, looks for the leases
+        :param ldap_username: if ldap uid is not None, looks for the leases
         belonging to this user.
         :type ldap_username: string
         :returns: rspec lease dictionary with keys lease_id, component_id,
@@ -317,7 +317,7 @@ class IotlabAggregate:
 
         logger.debug("IOTLABAGGREGATE  get_all_leases ldap_username %s "
                      % (ldap_username))
-        leases = self.driver.iotlab_api.GetLeases(ldap_username)
+        leases = self.driver.iotlab_api.GetLeases(login=ldap_username)
         grain = self.driver.iotlab_api.GetLeaseGranularity()
         # site_ids = []
         rspec_leases = []
@@ -364,7 +364,7 @@ class IotlabAggregate:
         :type options: dict
 
         :returns: Xml Rspec.
-        :rtype: XMLf
+        :rtype: XML
 
 
         """
@@ -386,6 +386,16 @@ class IotlabAggregate:
                 version.type, version.version, 'manifest')
 
         slices, slivers = self.get_slice_and_slivers(slice_xrn, login)
+        if slice_xrn and slices is not None:
+            #Get user associated with this slice
+            #for one_slice in slices :
+            ldap_username = slices[0]['reg_researchers'][0].__dict__['hrn']
+             # ldap_username = slices[0]['user']
+            tmp = ldap_username.split('.')
+            ldap_username = tmp[1]
+            logger.debug("IotlabAggregate \tget_rspec **** \
+                    LDAP USERNAME %s \r\n" \
+                    % (ldap_username))
         #at this point sliver may be empty if no iotlab job
         #is running for this user/slice.
         rspec = RSpec(version=rspec_version, user_options=options)
@@ -416,12 +426,14 @@ class IotlabAggregate:
             #In case creating a job,  slice_xrn is not set to None
             rspec.version.add_nodes(nodes)
             if slice_xrn and slices is not None:
-                #Get user associated with this slice
-                #for one_slice in slices :
-                # ldap_username = slices[0]['hrn']
-                # tmp = ldap_username.split('.')
-                # ldap_username = tmp[1].split('_')[0]
-                ldap_username = slices[0]['user']
+            #     #Get user associated with this slice
+            #     #for one_slice in slices :
+            #     ldap_username = slices[0]['reg_researchers']
+            #      # ldap_username = slices[0]['user']
+            #     tmp = ldap_username.split('.')
+            #     ldap_username = tmp[1]
+            #      # ldap_username = tmp[1].split('_')[0]
+
                 logger.debug("IotlabAggregate \tget_rspec **** \
                         version type %s ldap_ user %s \r\n" \
                         % (version.type, ldap_username))
