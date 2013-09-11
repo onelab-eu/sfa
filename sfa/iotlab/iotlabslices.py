@@ -130,6 +130,9 @@ class IotlabSlices:
 
         #First remove job whose duration is too short
         for job in requested_jobs_dict.values():
+            job['duration'] = \
+                str(int(job['duration']) \
+                * self.driver.iotlab_api.GetLeaseGranularity())
             if job['duration'] < self.driver.iotlab_api.GetLeaseGranularity():
                 del requested_jobs_dict[job['start_time']]
 

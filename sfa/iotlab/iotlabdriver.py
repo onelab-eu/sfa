@@ -3,7 +3,7 @@ Implements what a driver should provide for SFA to work.
 """
 from sfa.util.faults import SliverDoesNotExist, UnknownSfaType
 from sfa.util.sfalogging import logger
-# from sfa.storage.alchemy import dbsession
+from sfa.storage.alchemy import dbsession
 from sfa.storage.model import RegRecord
 
 from sfa.managers.driver import Driver
@@ -376,7 +376,7 @@ class IotlabDriver(Driver):
                     #the lease to the requested leases list
                     duration_in_seconds = \
                         int(single_requested_lease['duration'])
-                    if duration_in_seconds >= self.iotlab_api.GetMinExperimentDurationInSec():
+                    if duration_in_seconds >= self.iotlab_api.GetMinExperimentDurationInGranularity():
                         requested_lease_list.append(single_requested_lease)
 
         return requested_lease_list

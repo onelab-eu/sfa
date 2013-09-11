@@ -26,7 +26,7 @@ from sfa.iotlab.iotlabaggregate import iotlab_xrn_object
 class IotlabTestbedAPI():
     """ Class enabled to use LDAP and OAR api calls. """
 
-    _MINIMUM_DURATION = 600
+    _MINIMUM_DURATION = 10  # 10 units of granularity 60 s, 10 mins
 
     def __init__(self, config):
         """Creates an instance of OARrestapi and LDAPapi which will be used to
@@ -50,7 +50,7 @@ class IotlabTestbedAPI():
         return
 
     @staticmethod
-    def GetMinExperimentDurationInSec():
+    def GetMinExperimentDurationInGranularity():
         """ Returns the minimum allowed duration for an experiment on the
         testbed. In seconds.
 
@@ -930,7 +930,7 @@ class IotlabTestbedAPI():
 
         """
 
-        unfiltered_reservation_list = self.GetReservedNodes()
+        unfiltered_reservation_list = self.GetReservedNodes(login)
 
         reservation_list = []
         #Find the slice associated with this user iotlab ldap uid
