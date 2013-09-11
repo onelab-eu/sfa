@@ -279,13 +279,16 @@ class IotlabAggregate:
 
         return (rspec_nodes)
 
-    def get_all_leases(self):
+    def get_all_leases(self, ldap_username):
         """
 
         Get list of lease dictionaries which all have the mandatory keys
         ('lease_id', 'hostname', 'site_id', 'name', 'start_time', 'duration').
         All the leases running or scheduled are returned.
 
+        :param ldap_username: if a ldap uid is not None, looks for the leases
+        belonging to this user.
+        :type ldap_username: string
         :returns: rspec lease dictionary with keys lease_id, component_id,
             slice_id, start_time, duration.
         :rtype: dict
@@ -304,7 +307,10 @@ class IotlabAggregate:
             #lease_filter.update({'name': slice_record['name']})
 
         #leases = self.driver.iotlab_api.GetLeases(lease_filter)
-        leases = self.driver.iotlab_api.GetLeases()
+
+        logger.debug("IOTLABAGGREGATE  get_all_leases ldap_username %s "
+                     % (ldap_username))
+        leases = self.driver.iotlab_api.GetLeases(ldap_username)
         grain = self.driver.iotlab_api.GetLeaseGranularity()
         # site_ids = []
         rspec_leases = []
@@ -326,7 +332,7 @@ class IotlabAggregate:
                     pass
                 rspec_lease['start_time'] = lease['t_from']
                 rspec_lease['duration'] = (lease['t_until'] - lease['t_from']) \
-                    * grain
+                    # * grain
                 rspec_leases.append(rspec_lease)
         return rspec_leases
 
@@ -351,11 +357,12 @@ class IotlabAggregate:
         :type options: dict
 
         :returns: Xml Rspec.
-        :rtype: XML
+        :rtype: XMLf
 
 
         """
 
+        ldap_username= None
         rspec = None
         version_manager = VersionManager()
         version = version_manager.get_version(version)
@@ -404,11 +411,13 @@ class IotlabAggregate:
             if slice_xrn and slices is not None:
                 #Get user associated with this slice
                 #for one_slice in slices :
-                ldap_username = slices[0]['hrn']
-                tmp = ldap_username.split('.')
-                ldap_username = tmp[1].split('_')[0]
+                # ldap_username = slices[0]['hrn']
+                # tmp = ldap_username.split('.')
+                # ldap_username = tmp[1].split('_')[0]
+                ldap_username = slices[0]['user']
                 logger.debug("IotlabAggregate \tget_rspec **** \
-                        version type %s \r\n" % (version.type))
+                        version type %s ldap_ user %s \r\n" \
+                        % (version.type, ldap_username))
                 if version.type == "Iotlab":
                     rspec.version.add_connection_information(
                         ldap_username, sites_set)
@@ -423,7 +432,7 @@ class IotlabAggregate:
                         attrib, default_sliver[attrib])
 
         if lease_option in ['all','leases']:
-            leases = self.get_all_leases()
+            leases = self.get_all_leases(ldap_username)
             rspec.version.add_leases(leases)
             logger.debug("IotlabAggregate \tget_rspec **** \
                        FINAL RSPEC %s \r\n" % (rspec.toxml()))
