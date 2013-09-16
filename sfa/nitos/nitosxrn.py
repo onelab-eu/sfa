@@ -23,6 +23,12 @@ def hrn_to_nitos_authname (hrn):
     return NitosXrn(xrn=hrn,type='any').nitos_authname()
 def xrn_to_hostname(hrn):
     return Xrn.unescape(NitosXrn(xrn=hrn, type='node').get_leaf())
+def channel_to_hrn (auth, login_base, channel):
+    return NitosXrn(auth=auth+'.'+login_base, channel=channel).get_hrn()
+def channel_to_urn (auth, login_base, channel):
+    return NitosXrn(auth=auth+'.'+login_base, channel=channel).get_urn()
+def xrn_to_channel(hrn):
+    return Xrn.unescape(NitosXrn(xrn=hrn, type='channel').get_leaf())
 
 class NitosXrn (Xrn):
 
@@ -30,7 +36,7 @@ class NitosXrn (Xrn):
     def site_hrn (auth, login_base):
         return '.'.join([auth,login_base])
 
-    def __init__ (self, auth=None, hostname=None, slicename=None, email=None, interface=None, **kwargs):
+    def __init__ (self, auth=None, hostname=None, slicename=None, email=None, interface=None, channel=None, **kwargs):
         #def hostname_to_hrn(auth_hrn, login_base, hostname):
         if hostname is not None:
             self.type='node'
@@ -53,6 +59,10 @@ class NitosXrn (Xrn):
         elif interface is not None:
             self.type = 'interface'
             self.hrn = auth + '.' + interface
+            self.hrn_to_urn()
+        elif channel is not None:
+            self.type='channel'
+            self.hrn=".".join([auth] + [channel])
             self.hrn_to_urn()
         else:
             Xrn.__init__ (self,**kwargs)

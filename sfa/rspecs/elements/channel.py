@@ -10,4 +10,5 @@ class Channel(Element):
         'slice_id',
         'start_time',
         'duration',
+        'component_id',
     ]

@@ -69,7 +69,7 @@ class NITOSv1Lease:
             for channel in channels:
                  channel['start_time'] = datetime_to_string(utcparse(channel['start_time']))
                  if channel['slice_id'] == lease[0]['slice_id'] and channel['start_time'] == lease[0]['start_time'] and channel['duration'] == lease[0]['duration']:
-                     lease_elem.add_instance('channel', channel, ['channel_num'])
+                     lease_elem.add_instance('channel', channel, ['component_id'])
             
 
     @staticmethod
@@ -99,7 +99,8 @@ class NITOSv1Lease:
                  channel['slice_id'] = lease_elem.attrib['slice_id']
                  channel['start_time'] = datetime_to_epoch(utcparse(lease_elem.attrib['start_time']))
                  channel['duration'] = lease_elem.attrib['duration']
-                 channel['channel_num'] = channel_elem.attrib['channel_num']
+                 channel['component_id'] = channel_elem.attrib['component_id']
+                 
                  channels.append(channel)
 
         return (leases, channels)            
