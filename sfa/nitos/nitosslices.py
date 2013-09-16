@@ -7,7 +7,7 @@ from sfa.util.xrn import Xrn, get_leaf, get_authority, urn_to_hrn
 
 from sfa.rspecs.rspec import RSpec
 
-from sfa.nitos.nitosxrn import NitosXrn, hrn_to_nitos_slicename, xrn_to_hostname
+from sfa.nitos.nitosxrn import NitosXrn, hrn_to_nitos_slicename, xrn_to_hostname, xrn_to_channel
 
 MAXINT =  2L**31-1
 
@@ -96,7 +96,7 @@ class NitosSlices:
              slice_name = hrn_to_nitos_slicename(channel['slice_id'])
              if slice_name != slice['slice_name']:
                  continue
-             channel_num = channel['channel_num']
+             channel_num = xrn_to_channel(channel['component_id'])
              nitos_channel = self.driver.filter_nitos_results(nitos_channels, {'channel': channel_num})[0]
              # fill the requested channel with nitos ids
              requested_channel['slice_id'] = slice['slice_id']
