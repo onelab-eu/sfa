@@ -9,7 +9,6 @@
 from sfa.iotlab.LDAPapi import LDAPapi
 import ldap.modlist as modlist
 
-
 #logger sfa
 from sfa.util.sfalogging import logger
 
@@ -181,13 +180,12 @@ def get_stuff(oar, uri):
     data = json.dumps({})
 
     headers['X-REMOTE_IDENT'] = 'avakian'
-
     headers['content-length'] = '0' #seems that it does not work if we don't add this
 
 
     conn = httplib.HTTPConnection(oar.oarserver['ip'], oar.oarserver['port'])
     conn.request("GET", uri, data , headers )
-    resp = ( conn.getresponse()).read()
+    resp = (conn.getresponse()).read()
 
     conn.close()
 
@@ -261,8 +259,8 @@ def TestIotlabDriver(job_id = None):
     #nodes = iotlabdriver.iotlab_api.GetReservedNodes()
     #print " \r\n \r\n GetReservedNodes", nodes
 
-    #sl = iotlabdriver.iotlab_api.GetSlices(slice_filter='iotlab.avakian_slice', slice_filter_type='slice_hrn')
-    #print "\r\n \r\nGetSlices", sl[0]
+    sl = iotlabdriver.iotlab_api.GetSlices(slice_filter='iotlab.avakian_slice', slice_filter_type='slice_hrn')
+    print "\r\n \r\nGetSlices", sl[0]
 
     #sl = iotlabdriver.iotlab_api.GetSlices(slice_filter='20', slice_filter_type='record_id_user')
     #print "\r\n \r\nGetSlices", sl
@@ -292,7 +290,7 @@ def  TestSfi(filename = None):
     print os.system("sfi.py resources -l all")
 
 
-    print "================ SFI.PY RESOURCES -R SLAB -L ALL ============\r\n", \
+    print "================ SFI.PY RESOURCES -R IOTLAB -L ALL ============\r\n", \
     os.system("sfi.py resources -r iotlab -l all")
 
     print "================ WRITING  sfi.py resources -l all ===========\r\n", \
