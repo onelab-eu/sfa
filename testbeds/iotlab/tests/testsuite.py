@@ -1,7 +1,19 @@
 #!/usr/bin/env python
 
 import os
+from sfa.iotlab.LDAPapi import LDAPapi
 from difflib import SequenceMatcher
+
+# check if the firexp user (uid user) is already in LDAP
+# in this is the case, delete it :
+ldap_server = LDAPapi()
+dn = 'uid=' + 'user' + ',' + ldap_server.baseDN
+result = ldap_server.LdapSearch('(uid=user)', [])
+
+if result != []:
+	retval = ldap_server.LDAPDelete(dn)
+	print "deleting firexp user : %s " , retval
+
 
 print "config sfi"
 with open ("/root/.sfi/sfi_config", "r") as sfi_config:
