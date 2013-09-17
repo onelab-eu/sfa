@@ -61,6 +61,15 @@ class PGv2Node:
                     for initscript in node.get('pl_initscripts', []):
                         slivers['tags'].append({'name': 'initscript', 'value': initscript['name']})
             PGv2SliverType.add_slivers(node_elem, slivers)
+
+            # advertise the node tags
+            tags = node.get('tags', [])
+            if tags:
+               for tag in tags:
+                        tag_elem = node_elem.add_element(tag['tagname'])
+                        tag_elem.set_text(tag['value'])
+            PGv2SliverType.add_slivers(node_elem, node.get('slivers', []))
+
         return node_elems
 
     @staticmethod
