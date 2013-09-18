@@ -12,7 +12,9 @@ from sfa.rspecs.elements.pltag import PLTag
 from sfa.rspecs.elements.versions.pgv2Services import PGv2Services     
 from sfa.rspecs.elements.versions.pgv2SliverType import PGv2SliverType     
 from sfa.rspecs.elements.versions.pgv2Interface import PGv2Interface     
+from sfa.rspecs.elements.versions.sfav1PLTag import SFAv1PLTag
 from sfa.rspecs.elements.granularity import Granularity
+from sfa.rspecs.elements.attribute import Attribute
 
 from sfa.planetlab.plxrn import xrn_to_hostname
 
@@ -69,11 +71,11 @@ class PGv2Node:
             tags = node.get('tags', [])
             if tags:
                for tag in tags:
-                        tag_elem = node_elem.add_element(tag['tagname'])
-                        tag_elem.set_text(tag['value'])
-            PGv2SliverType.add_slivers(node_elem, node.get('slivers', []))
+                    tag['name'] = tag.pop('tagname')
+                    node_elem.add_instance('attribute', tag, ['name', 'value'])
 
         return node_elems
+
 
     @staticmethod
     def get_nodes(xml, filter={}):
@@ -126,6 +128,15 @@ class PGv2Node:
                     node['boot_state'] = 'boot'
                 else: 
                     node['boot_state'] = 'disabled' 
+
+            # get node tags
+            tag_elems = node_elem.xpath('./default:attribute | ./attribute')
+            node['tags'] = []
+            if len(tag_elems) > 0:
+                for tag_elem in tag_elems:
+                    tag = tag_elem.get_instance(Attribute)
+                    tag['tagname'] = tag.pop('name')
+                    node['tags'].append(tag)
         return nodes
 
 
