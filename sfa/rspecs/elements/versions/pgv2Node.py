@@ -69,7 +69,7 @@ class PGv2Node:
             if tags:
                for tag in tags:
                     tag['name'] = tag.pop('tagname')
-                    node_elem.add_instance('attribute', tag, ['name', 'value'])
+                    node_elem.add_instance('{%s}attribute' % xml.namespaces['planetlab'], tag, ['name', 'value'])
 
         return node_elems
 
@@ -127,7 +127,7 @@ class PGv2Node:
                     node['boot_state'] = 'disabled' 
 
             # get node tags
-            tag_elems = node_elem.xpath('./default:attribute | ./attribute')
+            tag_elems = node_elem.xpath('./planetlab:attribute | ./attribute')
             node['tags'] = []
             if len(tag_elems) > 0:
                 for tag_elem in tag_elems:
