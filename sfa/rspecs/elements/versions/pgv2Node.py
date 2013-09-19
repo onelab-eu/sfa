@@ -122,8 +122,9 @@ class PGv2Node:
             
             # get slivers
             node['slivers'] = PGv2SliverType.get_slivers(node_elem)    
+
             available_elems = node_elem.xpath('./default:available | ./available')
-            if len(available_elems) > 0 and 'name' in available_elems[0].attrib:
+            if len(available_elems) > 0 and 'now' in available_elems[0].attrib:
                 if available_elems[0].attrib.get('now', '').lower() == 'true': 
                     node['boot_state'] = 'boot'
                 else: 
