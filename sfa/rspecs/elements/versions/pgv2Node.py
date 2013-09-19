@@ -119,13 +119,30 @@ class PGv2Node:
             
             # get slivers
             node['slivers'] = PGv2SliverType.get_slivers(node_elem)    
-
-            available_elems = node_elem.xpath('./default:available | ./available')
+            
+            # get initscripts
+            initscript_elems = node_elem.xpath('./planetlab:initscript | ./initscript')
+            if len(initscript_elems) > 0:
+                for initscript_elem in initscript_elems:
+                    if 'name' in initscript_elem.attrib:
+                        node['pl_initscripts']= initscript_elem.attrib
+                        
+                    
+            # get boot state
+	    available_elems = node_elem.xpath('./default:available | ./available')
             if len(available_elems) > 0 and 'now' in available_elems[0].attrib:
                 if available_elems[0].attrib.get('now', '').lower() == 'true': 
                     node['boot_state'] = 'boot'
                 else: 
                     node['boot_state'] = 'disabled' 
+
+            # get initscripts
+            node['pl_initscripts'] = []
+            initscript_elems = node_elem.xpath('./default:sliver_type/planetlab:initscript | ./sliver_type/initscript')
+            if len(initscript_elems) > 0:
+                for initscript_elem in initscript_elems:
+                    if 'name' in initscript_elem.attrib:
+                        node['pl_initscripts'].append(initscript_elem.attrib)
 
             # get node tags
             tag_elems = node_elem.xpath('./planetlab:attribute | ./attribute')
