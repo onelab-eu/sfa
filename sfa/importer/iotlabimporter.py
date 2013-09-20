@@ -151,58 +151,6 @@ class IotlabImporter:
             return
         self.records_by_type_hrn[rec_tuple] = record
 
-    def import_sites_and_nodes(self, iotlabdriver):
-        """
-
-        Gets all the sites and nodes from OAR, process the information,
-        creates hrns and RegAuthority for sites, and feed them to the database.
-        For each site, import the site's nodes to the DB by calling
-        import_nodes.
-
-        :param iotlabdriver: IotlabDriver object, used to have access to
-            iotlabdriver methods and fetching info on sites and nodes.
-        :type iotlabdriver: IotlabDriver
-        """
-
-        sites_listdict = iotlabdriver.iotlab_api.GetSites()
-        nodes_listdict = iotlabdriver.iotlab_api.GetNodes()
-        nodes_by_id = dict([(node['node_id'], node) for node in nodes_listdict])
-        for site in sites_listdict:
-            site_hrn = site['name']
-            site_record = self.find_record_by_type_hrn ('authority', site_hrn)
-            if not site_record:
-                try:
-                    urn = hrn_to_urn(site_hrn, 'authority')
-                    if not self.auth_hierarchy.auth_exists(urn):
-                        self.auth_hierarchy.create_auth(urn)
-
-                    auth_info = self.auth_hierarchy.get_auth_info(urn)
-                    site_record = \
-                        RegAuthority(hrn=site_hrn,
-                                     gid=auth_info.get_gid_object(),
-                                     pointer='-1',
-                                     authority=get_authority(site_hrn))
-                    site_record.just_created()
-                    dbsession.add(site_record)
-                    dbsession.commit()
-                    self.logger.info("IotlabImporter: imported authority \
-                                    (site) %s" % site_record)
-                    self.update_just_added_records_dict(site_record)
-                except SQLAlchemyError:
-                    # if the site import fails then there is no point in
-                    # trying to import the
-                    # site's child records(node, slices, persons), so skip them.
-                    self.logger.log_exc("IotlabImporter: failed to import \
-                        site. Skipping child records")
-                    continue
-            else:
-                # xxx update the record ...
-                pass
-
-            site_record.stale = False
-            self.import_nodes(site['node_ids'], nodes_by_id, iotlabdriver)
-
-            return
 
     def import_nodes(self, site_node_ids, nodes_by_id, iotlabdriver):
         """
@@ -276,6 +224,63 @@ class IotlabImporter:
                 #TODO:  xxx update the record ...
                 pass
             node_record.stale = False
+
+    def import_sites_and_nodes(self, iotlabdriver):
+        """
+
+        Gets all the sites and nodes from OAR, process the information,
+        creates hrns and RegAuthority for sites, and feed them to the database.
+        For each site, import the site's nodes to the DB by calling
+        import_nodes.
+
+        :param iotlabdriver: IotlabDriver object, used to have access to
+            iotlabdriver methods and fetching info on sites and nodes.
+        :type iotlabdriver: IotlabDriver
+        """
+
+        sites_listdict = iotlabdriver.iotlab_api.GetSites()
+        nodes_listdict = iotlabdriver.iotlab_api.GetNodes()
+        nodes_by_id = dict([(node['node_id'], node) for node in nodes_listdict])
+        for site in sites_listdict:
+            site_hrn = site['name']
+            site_record = self.find_record_by_type_hrn ('authority', site_hrn)
+            self.logger.info("IotlabImporter: import_sites_and_nodes \
+                                    (site) %s \r\n " % site_record)
+            if not site_record:
+                try:
+                    urn = hrn_to_urn(site_hrn, 'authority')
+                    if not self.auth_hierarchy.auth_exists(urn):
+                        self.auth_hierarchy.create_auth(urn)
+
+                    auth_info = self.auth_hierarchy.get_auth_info(urn)
+                    site_record = \
+                        RegAuthority(hrn=site_hrn,
+                                     gid=auth_info.get_gid_object(),
+                                     pointer='-1',
+                                     authority=get_authority(site_hrn))
+                    site_record.just_created()
+                    dbsession.add(site_record)
+                    dbsession.commit()
+                    self.logger.info("IotlabImporter: imported authority \
+                                    (site) %s" % site_record)
+                    self.update_just_added_records_dict(site_record)
+                except SQLAlchemyError:
+                    # if the site import fails then there is no point in
+                    # trying to import the
+                    # site's child records(node, slices, persons), so skip them.
+                    self.logger.log_exc("IotlabImporter: failed to import \
+                        site. Skipping child records")
+                    continue
+            else:
+                # xxx update the record ...
+                pass
+
+            site_record.stale = False
+            self.import_nodes(site['node_ids'], nodes_by_id, iotlabdriver)
+
+        return
+
+
 
     def init_person_key(self, person, iotlab_key):
         """
