@@ -97,11 +97,11 @@ class PGv2Node:
             
             # get hardware types
             hardware_type_elems = node_elem.xpath('./default:hardware_type | ./hardware_type')
-            node['hardware_types'] = [hw_type.get_instance(HardwareType) for hw_type in hardware_type_elems]
+            node['hardware_types'] = [dict(hw_type.get_instance(HardwareType)) for hw_type in hardware_type_elems]
             
             # get location
             location_elems = node_elem.xpath('./default:location | ./location')
-            locations = [location_elem.get_instance(Location) for location_elem in location_elems]
+            locations = [dict(location_elem.get_instance(Location)) for location_elem in location_elems]
             if len(locations) > 0:
                 node['location'] = locations[0]
 
@@ -112,7 +112,7 @@ class PGv2Node:
 
             # get interfaces
             iface_elems = node_elem.xpath('./default:interface | ./interface')
-            node['interfaces'] = [iface_elem.get_instance(Interface) for iface_elem in iface_elems]
+            node['interfaces'] = [dict(iface_elem.get_instance(Interface)) for iface_elem in iface_elems]
 
             # get services
             node['services'] = PGv2Services.get_services(node_elem)
@@ -134,14 +134,14 @@ class PGv2Node:
             if len(initscript_elems) > 0:
                 for initscript_elem in initscript_elems:
                     if 'name' in initscript_elem.attrib:
-                        node['pl_initscripts'].append(initscript_elem.attrib)
+                        node['pl_initscripts'].append(dict(initscript_elem.attrib))
 
             # get node tags
             tag_elems = node_elem.xpath('./planetlab:attribute | ./attribute')
             node['tags'] = []
             if len(tag_elems) > 0:
                 for tag_elem in tag_elems:
-                    tag = tag_elem.get_instance(Attribute)
+                    tag = dict(tag_elem.get_instance(Attribute))
                     tag['tagname'] = tag.pop('name')
                     node['tags'].append(tag)
         return nodes
