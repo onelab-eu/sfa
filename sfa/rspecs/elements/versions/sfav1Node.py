@@ -143,7 +143,7 @@ class SFAv1Node:
                 node['authority_id'] = node_elem.attrib['site_id']
             # get location
             location_elems = node_elem.xpath('./default:location | ./location')
-            locations = [loc_elem.get_instance(Location) for loc_elem in location_elems]  
+            locations = [dict(loc_elem.get_instance(Location)) for loc_elem in location_elems]  
             if len(locations) > 0:
                 node['location'] = locations[0]
             # get bwlimit
@@ -153,7 +153,7 @@ class SFAv1Node:
                 node['bwlimit'] = bwlimits[0]
             # get interfaces
             iface_elems = node_elem.xpath('./default:interface | ./interface')
-            ifaces = [iface_elem.get_instance(Interface) for iface_elem in iface_elems]
+            ifaces = [dict(iface_elem.get_instance(Interface)) for iface_elem in iface_elems]
             node['interfaces'] = ifaces
             # get services
             node['services'] = PGv2Services.get_services(node_elem) 
@@ -163,7 +163,7 @@ class SFAv1Node:
             node['tags'] =  SFAv1PLTag.get_pl_tags(node_elem, ignore=NodeElement.fields+["hardware_type"])
             # get hardware types
             hardware_type_elems = node_elem.xpath('./default:hardware_type | ./hardware_type')
-            node['hardware_types'] = [hw_type.get_instance(HardwareType) for hw_type in hardware_type_elems]
+            node['hardware_types'] = [dict(hw_type.get_instance(HardwareType)) for hw_type in hardware_type_elems]
 
             # temporary... play nice with old slice manager rspec
             if not node['component_name']:
