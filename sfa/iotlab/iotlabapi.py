@@ -910,6 +910,30 @@ class IotlabTestbedAPI():
 
     #     return
 
+    @staticmethod
+    def filter_lease_name(reservation_list, filter_value):
+        filtered_reservation_list = list(reservation_list)
+        logger.debug("IOTLAB_API \t filter_lease_name reservation_list %s" \
+                        % (reservation_list))
+        for reservation in reservation_list:
+            if 'slice_hrn' in reservation and \
+                reservation['slice_hrn'] != filter_value:
+                filtered_reservation_list.remove(reservation)
+
+        logger.debug("IOTLAB_API \t filter_lease_name filtered_reservation_list %s" \
+                        % (filtered_reservation_list))
+        return filtered_reservation_list
+
+    @staticmethod
+    def filter_lease_start_time(reservation_list, filter_value):
+        filtered_reservation_list = list(reservation_list)
+
+        for reservation in reservation_list:
+            if 'start_time' in reservation and \
+                reservation['start_time'] > filter_value:
+                filtered_reservation_list.remove(reservation)
+
+        return filtered_reservation_list
 
     def GetLeases(self, lease_filter_dict=None, login=None):
         """
@@ -959,7 +983,7 @@ class IotlabTestbedAPI():
             if resa['lease_id'] in jobs_psql_dict:
                 job_info = jobs_psql_dict[resa['lease_id']]
                 logger.debug("IOTLAB_API \tGetLeases job_info %s"
-                             % (job_info))
+                          % (job_info))
                 resa['slice_hrn'] = job_info['slice_hrn']
                 resa['slice_id'] = hrn_to_urn(resa['slice_hrn'], 'slice')
 
@@ -976,12 +1000,33 @@ class IotlabTestbedAPI():
                 iotlab_xrn = iotlab_xrn_object(self.root_auth, node)
                 resa['component_id_list'].append(iotlab_xrn.urn)
 
-            if lease_filter_dict:
-                logger.debug("IOTLAB_API \tGetLeases resa_ %s \
-                        \r\n leasefilter %s" % (resa, lease_filter_dict))
+        if lease_filter_dict:
+            logger.debug("IOTLAB_API \tGetLeases resa_ %s \
+                    \r\n leasefilter %s" % (resa, lease_filter_dict))
 
-                if lease_filter_dict['name'] == resa['slice_hrn']:
-                    reservation_list.append(resa)
+            filter_dict_functions = {
+            'slice_hrn' : IotlabTestbedAPI.filter_lease_name,
+            'start_time' : IotlabTestbedAPI.filter_lease_start_time
+            }
+            reservation_list = list(unfiltered_reservation_list)
+            for filter_type in lease_filter_dict:
+                logger.debug("IOTLAB_API \tGetLeases reservation_list %s" \
+                    % (reservation_list))
+                reservation_list = filter_dict_functions[filter_type](\
+                    reservation_list,lease_filter_dict[filter_type] )
+
+                # Filter the reservation list with a maximum timespan so that the
+                # leases and jobs running after this timestamp do not appear
+                # in the result leases.
+                # if 'start_time' in :
+                #     if resa['start_time'] < lease_filter_dict['start_time']:
+                #        reservation_list.append(resa)
+
+
+                # if 'name' in lease_filter_dict and \
+                #     lease_filter_dict['name'] == resa['slice_hrn']:
+                #     reservation_list.append(resa)
+
 
         if lease_filter_dict is None:
             reservation_list = unfiltered_reservation_list

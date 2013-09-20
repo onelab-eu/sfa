@@ -247,6 +247,15 @@ def TestOAR(job_id = None):
     return
 
 
+def TestImporter(arg=None):
+    iotlabdriver = IotlabDriver(Config())
+
+    nodes_listdict = iotlabdriver.iotlab_api.GetNodes()
+    sites_listdict = iotlabdriver.iotlab_api.GetSites()
+    nodes_by_id = dict([(node['node_id'], node) for node in nodes_listdict])
+
+    # from sfa.importer.iotlabimporter import IotlabImporter
+    # importer = IotlabImporter()
 
 def TestIotlabDriver(job_id = None):
     if job_id is None:
@@ -274,8 +283,12 @@ def TestIotlabDriver(job_id = None):
     leases = iotlabdriver.iotlab_api.GetLeases(login='avakian')
     print "\r\n \r\n  GetLeases", leases
 
+    leases = iotlabdriver.iotlab_api.GetLeases(lease_filter_dict={'slice_hrn':'iotlab.avakian_slice'})
+    print "\r\n \r\n  GetLeases", leases
 
 
+    leases = iotlabdriver.iotlab_api.GetLeases(lease_filter_dict={'t_from':1405070000})
+    print "\r\n \r\n  GetLeases", leases
 def  TestSfi(filename = None):
 
     if filename is None:
@@ -386,7 +399,8 @@ supported_options = {
         'driver': TestIotlabDriver,
         'sfi':TestSfi,
         'sql':TestSQL,
-        'all' : RunAll }
+        'all' : RunAll,
+        'import': TestImporter }
 
 def main():
     opts = parse_options()

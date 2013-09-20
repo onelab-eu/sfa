@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<RSpec type="SFA" expires="2013-09-05T13:30:10Z" generated="2013-09-05T12:30:10Z">
+  <network name="plab" >
+     </network>
+  <network name="iotlab">
+     </network>
+</RSpec>
+
+

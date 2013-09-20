@@ -1,0 +1,36 @@
+Rspec file names
+======================
+Rspec file names are constructed as follows :
+	 slice name used in this rspec + network in which the reserved nodes are
+
+Networks can be : iotlab, plab, all (iotlab + plab)
+	
+Slices and users
+=================
+user:
+login iotlab : user
+hrn iotlab: iotlab.user
+hrn firexp: firexp.flab.iotlab_user
+slice iotlab: iotlab.user_slice
+slice firexp : firexp.flab.iotlab_slice
+
+
+This special test  user comes from Firexp and is considered as an
+external user coming from a federated testbedd for Iotlab.
+
+user:
+login iotlab: avakian
+slice iotlab: iotlab.avakian_slice
+hrn firexp : firexp.flab.avakian (?)
+slice firexp : firexp.flab.avakian_slice (?)
+
+This user comes from iotlab. 
+
+
+Leases
+======
+
+The starting time of the leases in those RSpec files are
+usually set to be in 2014, so that we don't have to keep the
+date in mind and check that we are not scheduling a lease
+in the past.
