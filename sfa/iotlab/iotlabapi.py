@@ -929,8 +929,8 @@ class IotlabTestbedAPI():
         filtered_reservation_list = list(reservation_list)
 
         for reservation in reservation_list:
-            if 'start_time' in reservation and \
-                reservation['start_time'] > filter_value:
+            if 't_from' in reservation and \
+                reservation['t_from'] > filter_value:
                 filtered_reservation_list.remove(reservation)
 
         return filtered_reservation_list
@@ -1006,7 +1006,7 @@ class IotlabTestbedAPI():
 
             filter_dict_functions = {
             'slice_hrn' : IotlabTestbedAPI.filter_lease_name,
-            'start_time' : IotlabTestbedAPI.filter_lease_start_time
+            't_from' : IotlabTestbedAPI.filter_lease_start_time
             }
             reservation_list = list(unfiltered_reservation_list)
             for filter_type in lease_filter_dict:
