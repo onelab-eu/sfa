@@ -4,6 +4,64 @@ import os
 from sfa.iotlab.LDAPapi import LDAPapi
 from difflib import SequenceMatcher
 
+def parse_options():
+
+    #arguments supplied
+    if len(sys.argv) > 1 :
+        options_list = sys.argv[1:]
+        rspec_rep = options_list[0]
+        return rspec_rep
+    else:
+    	print "Must supply Rspecs directory"
+    	return
+
+
+rspec_dir = parse_options()
+print "DIRECTORY SUPPLIED" , rspec_dir
+rspec_filename_list = ['firexp_avakian_slice_iotlab.rspec',
+'firexp_iotlab_slice_iotlab.rspec',
+'iotlab_avakian_slice_iotlab2.rspec',
+'iotlab_avakian_slice_plab.rspec',
+'firexp_iotlab_slice_all.rspec',
+'iotlab_avakian_slice_all.rspec',
+'iotlab_avakian_slice_iotlab.rspec',
+'iotlab_user_slice_iotlab.rspec',
+'test_delete_all_leases.rspec']
+
+rspec_filename_dict = {
+	('iotlab_avakian', 'iotlab'):
+		"sfi.py create iotlab.avakian_slice " + rspec_dir + \
+			'iotlab_avakian_slice_iotlab.rspec',
+
+	('iotlab_avakian', 'iotlab2'):
+		"sfi.py create iotlab.avakian_slice " + rspec_dir + \
+		'iotlab_avakian_slice_iotlab2.rspec',
+
+	('firexp_user','iotlab'):
+		"sfi.py create firexp.flab.iotlab_slice " + rspec_dir + \
+			'firexp_iotlab_slice_iotlab.rspec',
+
+	('firexp_user', 'all'):
+			"sfi.py create firexp.flab.iotlab_slice "+ rspec_dir + \
+				'firexp_iotlab_slice_all.rspec',
+
+	('iotlab_user', 'iotlab'):
+		"sfi.py create iotlab.user_slice "+ rspec_dir + \
+			'iotlab_user_slice_iotlab.rspec',
+
+	('firexp_avakian','iotlab'):
+		"sfi.py create firexp.flab.avakian_slice " + rspec_dir + \
+			'firexp_avakian_slice_iotlab.rspec',
+
+	('iotlab_avakian', 'plab') :
+			"sfi.py create iotlab.avakian_slice " + rspec_dir + \
+				'iotlab_avakian_slice_plab.rspec',
+
+	('iotlab_avakian', 'all') :
+	 "sfi.py create iotlab.avakian_slice " + rspec_dir + \
+		'iotlab_avakian_slice_all.rspec'
+
+	}
 # check if the firexp user (uid user) is already in LDAP
 # in this is the case, delete it :
 ldap_server = LDAPapi()
@@ -81,7 +139,7 @@ os.system('sfi.py status iotlab.avakian_slice')
 
 print " =================    SFI.PY CREATE SLICE  on iotlab only  ============="
 raw_input("Press Enter to continue...")
-os.system('sfi.py create iotlab.avakian_slice /root/tests_rspecs/iotlab_devlille.rspec')
+os.system( rspec_filename_dict[('iotlab_avakian','iotlab')])
 
 
 print " ================= SFI.PY RESOURCES -l all iotlab.avakian_slice ============="
@@ -96,7 +154,7 @@ os.system('sfi.py delete iotlab.avakian_slice')
 
 print " =================    SFI.PY CREATE SLICE  on iotlab and firexp  ============="
 raw_input("Press Enter to continue...")
-os.system('sfi.py create iotlab.avakian_slice /root/tests_rspecs/test_bidir.rspec')
+os.system(rspec_filename_dict[('iotlab_avakian','all')])
 
 
 print " ================= SFI.PY RESOURCES -l all -r iotlab iotlab.avakian_slice ============="
@@ -121,7 +179,7 @@ os.system('cp /root/.sfi/sfi_config_firexp /root/.sfi/sfi_config')
 
 print " =================    SFI.PY CREATE SLICE  on iotlab and firexp  ============="
 raw_input("Press Enter to continue...")
-os.system('sfi.py create firexp.flab.iotlab_slice /root/tests_rspecs/mynodes.rspec')
+os.system(rspec_filename_dict[('firexp_user','all')])
 
 
 print " =================    SFI.PY SHOW SLICE   ============="
