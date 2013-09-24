@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-
+import sys
 import os
 from sfa.iotlab.LDAPapi import LDAPapi
 from difflib import SequenceMatcher
@@ -9,10 +9,11 @@ def parse_options():
     #arguments supplied
     if len(sys.argv) > 1 :
         options_list = sys.argv[1:]
+        print options_list
         rspec_rep = options_list[0]
         return rspec_rep
     else:
-    	print "Must supply Rspecs directory"
+    	print "Must supply Rspecs directory ",  sys.argv[1:]
     	return
 
 
