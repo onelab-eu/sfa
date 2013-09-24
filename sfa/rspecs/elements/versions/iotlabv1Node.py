@@ -184,6 +184,12 @@ class Iotlabv1Node:
             node['interfaces'] = [iface_elem.get_instance(Interface) \
                                             for iface_elem in iface_elems]
 
+            # get position
+            position_elems = node_elem.xpath('./default:position | ./position')
+            if position_elems:
+                position_elem = position_elems[0]
+                node['position'] = position_elem.get_instance(IotlabPosition)
+
             # get services
             #node['services'] = PGv2Services.get_services(node_elem)
 
