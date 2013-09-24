@@ -70,8 +70,8 @@ dn = 'uid=' + 'user' + ',' + ldap_server.baseDN
 result = ldap_server.LdapSearch('(uid=user)', [])
 
 if result != []:
-	retval = ldap_server.LDAPDelete(dn)
-	print "deleting firexp user : %s " , retval
+	retval = ldap_server.LdapDelete(dn)
+	print "deleting firexp user : ", retval
 
 
 print "config sfi"
