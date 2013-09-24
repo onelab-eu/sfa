@@ -369,7 +369,7 @@ class IotlabAggregate:
 
         """
 
-        ldap_username= None
+        ldap_username = None
         rspec = None
         version_manager = VersionManager()
         version = version_manager.get_version(version)
@@ -416,6 +416,8 @@ class IotlabAggregate:
         #if not options.get('list_leases') or options.get('list_leases')
         #and options['list_leases'] != 'leases':
             nodes = self.get_nodes(slices, slivers)
+            if slice_xrn and slices is None:
+              nodes = []
             logger.debug("\r\n")
             logger.debug("IotlabAggregate \t lease_option %s \
                           get rspec  ******* nodes %s"
