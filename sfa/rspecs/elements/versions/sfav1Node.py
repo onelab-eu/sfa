@@ -42,7 +42,7 @@ class SFAv1Node:
 
             # set component_name attribute and  hostname element
             if 'component_id' in node and node['component_id']:
-                component_name = get_leaf(Xrn(node['component_id']).get_hrn())
+                component_name = Xrn.unescape(get_leaf(Xrn(node['component_id']).get_hrn()))
                 node_elem.set('component_name', component_name)
                 hostname_elem = node_elem.add_element('hostname')
                 hostname_elem.set_text(component_name)
