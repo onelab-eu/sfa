@@ -27,7 +27,7 @@ class PGv2Node:
             node_elems.append(node_elem)
             # set component name
             if node.get('component_id'):
-                component_name = get_leaf(Xrn(node['component_id']).get_hrn())
+                component_name = Xrn.unescape(get_leaf(Xrn(node['component_id']).get_hrn()))
                 node_elem.set('component_name', component_name)
             # set hardware types
             if node.get('hardware_types'):
