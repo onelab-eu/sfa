@@ -1,4 +1,4 @@
-from sfa.util.xrn import Xrn
+from sfa.util.xrn import Xrn, get_leaf
 from sfa.util.xml import XpathFilter
 
 from sfa.rspecs.elements.node import NodeElement
@@ -16,7 +16,6 @@ from sfa.rspecs.elements.versions.sfav1PLTag import SFAv1PLTag
 from sfa.rspecs.elements.granularity import Granularity
 from sfa.rspecs.elements.attribute import Attribute
 
-from sfa.planetlab.plxrn import xrn_to_hostname
 
 class PGv2Node:
     @staticmethod
@@ -28,7 +27,7 @@ class PGv2Node:
             node_elems.append(node_elem)
             # set component name
             if node.get('component_id'):
-                component_name = xrn_to_hostname(node['component_id'])
+                component_name = get_leaf(Xrn(node['component_id']).get_hrn())
                 node_elem.set('component_name', component_name)
             # set hardware types
             if node.get('hardware_types'):
@@ -39,7 +38,7 @@ class PGv2Node:
                 node_elem.add_instance('location', node['location'], Location.fields)       
 
             # set granularity
-            if node['exclusive'] == "true":
+            if node.get('exclusive') == "true":
                 granularity = node.get('granularity')
                 node_elem.add_instance('granularity', granularity, granularity.fields)
             # set interfaces

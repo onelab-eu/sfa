@@ -1,6 +1,6 @@
 from sfa.util.sfalogging import logger
 from sfa.util.xml import XpathFilter
-from sfa.util.xrn import Xrn
+from sfa.util.xrn import Xrn, get_leaf
 
 from sfa.rspecs.elements.element import Element
 from sfa.rspecs.elements.node import NodeElement
@@ -15,7 +15,6 @@ from sfa.rspecs.elements.versions.sfav1Sliver import SFAv1Sliver
 from sfa.rspecs.elements.versions.sfav1PLTag import SFAv1PLTag
 from sfa.rspecs.elements.versions.pgv2Services import PGv2Services
 
-from sfa.planetlab.plxrn import xrn_to_hostname
 
 class SFAv1Node:
 
@@ -43,7 +42,7 @@ class SFAv1Node:
 
             # set component_name attribute and  hostname element
             if 'component_id' in node and node['component_id']:
-                component_name = xrn_to_hostname(node['component_id'])
+                component_name = get_leaf(Xrn(node['component_id']).get_hrn())
                 node_elem.set('component_name', component_name)
                 hostname_elem = node_elem.add_element('hostname')
                 hostname_elem.set_text(component_name)
