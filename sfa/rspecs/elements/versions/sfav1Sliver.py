@@ -5,7 +5,6 @@ from sfa.rspecs.elements.element import Element
 from sfa.rspecs.elements.sliver import Sliver
 from sfa.rspecs.elements.versions.sfav1PLTag import SFAv1PLTag
 
-from sfa.planetlab.plxrn import PlXrn
 
 class SFAv1Sliver:
 

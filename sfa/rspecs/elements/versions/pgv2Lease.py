@@ -14,7 +14,6 @@ from sfa.rspecs.elements.versions.pgv2SliverType import PGv2SliverType
 from sfa.rspecs.elements.versions.pgv2Interface import PGv2Interface     
 from sfa.rspecs.elements.lease import Lease
 
-from sfa.planetlab.plxrn import xrn_to_hostname
 
 class PGv2Lease:
     @staticmethod
