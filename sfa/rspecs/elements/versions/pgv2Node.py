@@ -132,21 +132,28 @@ class PGv2Node:
                     node['boot_state'] = 'disabled' 
 
             # get initscripts
-            node['pl_initscripts'] = []
-            initscript_elems = node_elem.xpath('./default:sliver_type/planetlab:initscript | ./sliver_type/initscript')
-            if len(initscript_elems) > 0:
-                for initscript_elem in initscript_elems:
-                    if 'name' in initscript_elem.attrib:
-                        node['pl_initscripts'].append(dict(initscript_elem.attrib))
+            try:
+               node['pl_initscripts'] = []
+               initscript_elems = node_elem.xpath('./default:sliver_type/planetlab:initscript | ./sliver_type/initscript')
+               if len(initscript_elems) > 0:
+                   for initscript_elem in initscript_elems:
+                        if 'name' in initscript_elem.attrib:
+                            node['pl_initscripts'].append(dict(initscript_elem.attrib))
+            except:
+               pass
 
             # get node tags
-            tag_elems = node_elem.xpath('./planetlab:attribute | ./attribute')
-            node['tags'] = []
-            if len(tag_elems) > 0:
-                for tag_elem in tag_elems:
-                    tag = dict(tag_elem.get_instance(Attribute))
-                    tag['tagname'] = tag.pop('name')
-                    node['tags'].append(tag)
+            try:
+               tag_elems = node_elem.xpath('./planetlab:attribute | ./attribute')
+               node['tags'] = []
+               if len(tag_elems) > 0:
+                   for tag_elem in tag_elems:
+                        tag = dict(tag_elem.get_instance(Attribute))
+                        tag['tagname'] = tag.pop('name')
+                        node['tags'].append(tag)
+            except:
+               pass
+  
         return nodes
 
 
