@@ -102,6 +102,10 @@ class NITOSv1Node:
                     tag_elem = node_elem.add_element(tag['tagname'])
                     tag_elem.set_text(tag['value'])
             NITOSv1Sliver.add_slivers(node_elem, node.get('slivers', []))
+            
+            # add sliver tag in Request Rspec
+            if rspec_content_type == "request":
+                node_elem.add_instance('sliver', '', [])
 
     @staticmethod 
     def add_slivers(xml, slivers):
