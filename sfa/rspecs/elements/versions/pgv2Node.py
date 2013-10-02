@@ -19,7 +19,7 @@ from sfa.rspecs.elements.attribute import Attribute
 
 class PGv2Node:
     @staticmethod
-    def add_nodes(xml, nodes):
+    def add_nodes(xml, nodes, rspec_content_type=None):
         node_elems = []
         for node in nodes:
             node_fields = ['component_manager_id', 'component_id', 'client_id', 'sliver_id', 'exclusive']
@@ -72,6 +72,10 @@ class PGv2Node:
                for tag in tags:
                     tag['name'] = tag.pop('tagname')
                     node_elem.add_instance('{%s}attribute' % xml.namespaces['planetlab'], tag, ['name', 'value'])
+
+            # add sliver tag in Request Rspec
+            if rspec_content_type == "request":
+                node_elem.add_instance('sliver', '', [])
 
         return node_elems
 
