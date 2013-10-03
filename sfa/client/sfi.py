@@ -687,7 +687,7 @@ use this if you mean an authority instead""")
 
     def slice_credential(self, name):
         return {'geni_type': 'geni_sfa',
-                'geni_version': '3.0',
+                'geni_version': '3',
                 'geni_value': self.slice_credential_string(name)}    
 
     # xxx should be supported by sfaclientbootstrap as well
@@ -1118,7 +1118,7 @@ use this if you mean an authority instead""")
                        'cached': True,
                        'info': options.info,
                        'list_leases': options.list_leases,
-                       'geni_rspec_version': {'type': 'geni', 'version': '3.0'},
+                       'geni_rspec_version': {'type': 'geni', 'version': '3'},
                       }
         if options.rspec_version:
             version_manager = VersionManager()
@@ -1127,7 +1127,7 @@ use this if you mean an authority instead""")
                 # just request the version the client wants
                 api_options['geni_rspec_version'] = version_manager.get_version(options.rspec_version).to_dict()
             else:
-                api_options['geni_rspec_version'] = {'type': 'geni', 'version': '3.0'}
+                api_options['geni_rspec_version'] = {'type': 'geni', 'version': '3'}
         urn = Xrn(args[0], type='slice').get_urn()        
         result = server.Describe([urn], creds, api_options)
         value = ReturnValue.get_value(result)
@@ -1255,7 +1255,7 @@ use this if you mean an authority instead""")
 
         # set the requtested rspec version
         version_manager = VersionManager()
-        rspec_version = version_manager._get_version('geni', '3.0').to_dict()
+        rspec_version = version_manager._get_version('geni', '3').to_dict()
         api_options['geni_rspec_version'] = rspec_version
 
         # users
