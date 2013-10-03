@@ -667,7 +667,7 @@ use this if you mean an authority instead""")
         self.private_key = client_bootstrap.private_key()
         self.my_credential_string = client_bootstrap.my_credential_string ()
         self.my_credential = {'geni_type': 'geni_sfa',
-                              'geni_version': '3.0', 
+                              'geni_version': '3', 
                               'geni_value': self.my_credential_string}
         self.my_gid = client_bootstrap.my_gid ()
         self.client_bootstrap = client_bootstrap
@@ -1085,9 +1085,9 @@ use this if you mean an authority instead""")
                 # just request the version the client wants
                 api_options['geni_rspec_version'] = version_manager.get_version(options.rspec_version).to_dict()
             else:
-                api_options['geni_rspec_version'] = {'type': 'geni', 'version': '3.0'}
+                api_options['geni_rspec_version'] = {'type': 'geni', 'version': '3'}
         else:
-            api_options['geni_rspec_version'] = {'type': 'geni', 'version': '3.0'}
+            api_options['geni_rspec_version'] = {'type': 'geni', 'version': '3'}
         result = server.ListResources (creds, api_options)
         value = ReturnValue.get_value(result)
         if self.options.raw:
