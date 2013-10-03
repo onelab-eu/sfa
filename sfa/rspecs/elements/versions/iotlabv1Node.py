@@ -55,20 +55,6 @@ class Iotlabv1Node:
 
     @staticmethod
     def add_nodes(xml, nodes, rspec_content_type=None):
-        """Adds the nodes to the xml.
-
-        Adds the nodes as well as dedicated iotlab fields to the node xml
-        element.
-
-        :param xml: the xml being constructed.
-        :type xml: xml
-        :param nodes: list of node dict
-        :type nodes: list
-        :returns: a list of node elements.
-        :rtype: list
-
-        """
->>>>>>> f7d277c... rspec.version.add_nodes take an extra arg to handle Request RSpec
         #Add network item in the xml
         network_elems = xml.xpath('//network')
         if len(network_elems) > 0:
