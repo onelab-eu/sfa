@@ -145,7 +145,7 @@ class PlImporter:
         # Get all plc sites
         # retrieve only required stuf
         sites = shell.GetSites({'peer_id': None, 'enabled' : True},
-                               ['site_id','login_base','node_ids','slice_ids','person_ids',])
+                               ['site_id','login_base','node_ids','slice_ids','person_ids', 'name'])
         # create a hash of sites by login_base
 #        sites_by_login_base = dict ( [ ( site['login_base'], site ) for site in sites ] )
         # Get all plc users
@@ -192,6 +192,9 @@ class PlImporter:
 
         # start importing 
         for site in sites:
+            if site['name'].startswith('sfa.'):
+                continue
+
             site_hrn = _get_site_hrn(interface_hrn, site)
             # import if hrn is not in list of existing hrns or if the hrn exists
             # but its not a site record
@@ -254,7 +257,7 @@ class PlImporter:
                     pass
                 node_record.stale=False
 
-            site_pis=set()
+            site_pis=[]
             # import persons
             for person_id in site['person_ids']:
                 proceed=False
@@ -362,7 +365,7 @@ class PlImporter:
                     # this is valid for all sites she is in..
                     # PI is coded with role_id==20
                     if 20 in person['role_ids']:
-                        site_pis.add (user_record)
+                        site_pis.append (user_record)
                 except:
                     self.logger.log_exc("PlImporter: failed to import person %d %s"%(person['person_id'],person['email']))
     
@@ -373,7 +376,7 @@ class PlImporter:
             # being improperly handled, and where the whole loop on persons
             # could be performed twice with the same person...
             # so hopefully we do not need to eliminate duplicates explicitly here anymore
-            site_record.reg_pis = list(site_pis)
+            site_record.reg_pis = site_pis
             dbsession.commit()
 
             # import slices
@@ -400,15 +403,10 @@ class PlImporter:
                     except:
                         self.logger.log_exc("PlImporter: failed to import slice %s (%s)"%(slice_hrn,slice['name']))
                 else:
-                    # update the pointer if it has changed
-                    if slice_id != slice_record.pointer:
-                        self.logger.info("updating record (slice) pointer")
-                        slice_record.pointer = slice_id
-                        dbsession.commit() 
                     # xxx update the record ...
                     # given that we record the current set of users anyways, there does not seem to be much left to do here
                     # self.logger.warning ("Slice update not yet implemented on slice %s (%s)"%(slice_hrn,slice['name']))
-                    #pass
+                    pass
                 # record current users affiliated with the slice
                 slice_record.reg_researchers = \
                     [ self.locate_by_type_pointer ('user',user_id) for user_id in slice['person_ids'] ]
