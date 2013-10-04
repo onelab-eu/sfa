@@ -646,7 +646,7 @@ class PlDriver (Driver):
         # ensure slice record exists
         slice = slices.verify_slice(xrn.hrn, slice_record, peer, sfa_peer, expiration=expiration, options=options)
         # ensure person records exists
-        #persons = slices.verify_persons(xrn.hrn, slice, users, peer, sfa_peer, options=options)
+        persons = slices.verify_persons(xrn.hrn, slice, users, peer, sfa_peer, options=options)
         # ensure slice attributes exists
         slices.verify_slice_attributes(slice, requested_attributes, options=options)
        

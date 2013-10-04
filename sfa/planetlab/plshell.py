@@ -25,7 +25,10 @@ class PlShell:
                     'GetSites','GetNodes',
                     # Lease management methods
                     'GetLeases', 'GetLeaseGranularity', 'DeleteLeases','UpdateLeases',
-                    'AddLeases' 
+                    'AddLeases',
+                    # HRN management methods
+                    'SetPersonHrn', 'GetPersonHrn', 'SetSliceHrn', 'GetSliceHrn',
+                    'SetNodeHrn', 'GetNodeHrn' 
                     ]
     # support for other names - this is experimental
     alias_calls = { 'get_authorities':'GetSites',
