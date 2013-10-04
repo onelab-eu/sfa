@@ -145,7 +145,7 @@ class PlImporter:
         # Get all plc sites
         # retrieve only required stuf
         sites = shell.GetSites({'peer_id': None, 'enabled' : True},
-                               ['site_id','login_base','node_ids','slice_ids','person_ids',])
+                               ['site_id','login_base','node_ids','slice_ids','person_ids', 'name'])
         # create a hash of sites by login_base
 #        sites_by_login_base = dict ( [ ( site['login_base'], site ) for site in sites ] )
         # Get all plc users
@@ -192,6 +192,9 @@ class PlImporter:
 
         # start importing 
         for site in sites:
+            if site['name'].startswith('sfa.'):
+                continue
+
             site_hrn = _get_site_hrn(interface_hrn, site)
             # import if hrn is not in list of existing hrns or if the hrn exists
             # but its not a site record
