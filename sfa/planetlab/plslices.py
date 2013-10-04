@@ -424,7 +424,7 @@ class PlSlices:
             login_base = parts[0]
         else:
             login_base = '8'.join(site_hrn.split('.'))
-            slice_name = '_'.join([login_base, slice_hrn.split('.')[-1]])
+            slicename = '_'.join([login_base, slice_hrn.split('.')[-1]])
 
         slices = self.driver.shell.GetSlices([slicename]) 
         expires = int(datetime_to_epoch(utcparse(expiration)))

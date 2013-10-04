@@ -1,6 +1,6 @@
 #!/usr/bin/python
 from collections import defaultdict
-from sfa.util.xrn import Xrn, hrn_to_urn, urn_to_hrn
+from sfa.util.xrn import Xrn, hrn_to_urn, urn_to_hrn, get_authority, get_leaf
 from sfa.util.sfatime import utcparse, datetime_to_string
 from sfa.util.sfalogging import logger
 from sfa.util.faults import SliverDoesNotExist

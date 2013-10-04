@@ -676,7 +676,7 @@ class PlDriver (Driver):
         peer = slices.get_peer(slice['hrn'])
         sfa_peer = slices.get_sfa_peer(slice['hrn'])
         users = options.get('geni_users', [])
-        persons = slices.verify_persons(None, slice, users, peer, sfa_peer, options=options)
+        persons = slices.verify_persons(slice['hrn'], slice, users, peer, sfa_peer, options=options)
         slices.handle_peer(None, None, persons, peer)
         # update sliver allocation states and set them to geni_provisioned
         sliver_ids = [sliver['sliver_id'] for sliver in slivers]
@@ -692,23 +692,31 @@ class PlDriver (Driver):
         slivers = aggregate.get_slivers(urns)
         if slivers:
             slice_id = slivers[0]['slice_id'] 
+            slice_name = slivers[0]['name']
             node_ids = []
             sliver_ids = []
             for sliver in slivers:
                 node_ids.append(sliver['node_id'])
                 sliver_ids.append(sliver['sliver_id']) 
 
+            # leases
+            leases = self.shell.GetLeases({'name': slice_name})
+            leases_ids = [lease['lease_id'] for lease in leases ]
+
             # determine if this is a peer slice
             # xxx I wonder if this would not need to use PlSlices.get_peer instead 
             # in which case plc.peers could be deprecated as this here
             # is the only/last call to this last method in plc.peers
-            slice_hrn = PlXrn(auth=self.hrn, slicename=slivers[0]['name']).get_hrn()     
+            #slice_hrn = PlXrn(auth=self.hrn, slice_name).get_hrn()     
+            slice_hrn = self.shell.GetSliceHrn(int(slice_id))
             peer = peers.get_peer(self, slice_hrn)
             try:
                 if peer:
                     self.shell.UnBindObjectFromPeer('slice', slice_id, peer)
      
                 self.shell.DeleteSliceFromNodes(slice_id, node_ids)
+                if len(leases_ids) > 0:
+                    self.shell.DeleteLeases(leases_ids)
      
                 # delete sliver allocation states
                 SliverAllocation.delete_allocations(sliver_ids)
