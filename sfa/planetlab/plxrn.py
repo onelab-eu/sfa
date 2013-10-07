@@ -1,6 +1,6 @@
 # specialized Xrn class for PlanetLab
 import re
-from sfa.util.xrn import Xrn
+from sfa.util.xrn import Xrn, get_authority
 
 # temporary helper functions to use this module instead of namespace
 def hostname_to_hrn (auth, login_base, hostname):
@@ -20,6 +20,22 @@ def hrn_to_pl_authname (hrn):
     return PlXrn(xrn=hrn,type='any').pl_authname()
 def xrn_to_hostname(hrn):
     return Xrn.unescape(PlXrn(xrn=hrn, type='node').get_leaf())
+
+# helpers to handle external objects created via fedaration 
+def xrn_to_ext_slicename (xrn):
+    slice_hrn=PlXrn(xrn=xrn,type='slice').get_hrn()
+    site_hrn = get_authority(slice_hrn)
+    login_base = '8'.join(site_hrn.split('.'))
+    slice_name = '_'.join([login_base, slice_hrn.split('.')[-1]])
+    return slice_name
+
+def hrn_to_ext_loginbase (hrn):
+    site_hrn =  get_authority(hrn)
+    login_base = '8'.join(site_hrn.split('.'))[:20]
+    return login_base
+
+def top_auth (hrn):
+    return hrn.split('.')[0]
 
 class PlXrn (Xrn):
 

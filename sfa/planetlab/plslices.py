@@ -8,7 +8,7 @@ from sfa.util.xrn import Xrn, get_leaf, get_authority, urn_to_hrn
 from sfa.rspecs.rspec import RSpec
 from sfa.planetlab.vlink import VLink
 from sfa.planetlab.topology import Topology
-from sfa.planetlab.plxrn import PlXrn, hrn_to_pl_slicename, xrn_to_hostname
+from sfa.planetlab.plxrn import PlXrn, hrn_to_pl_slicename, xrn_to_hostname, xrn_to_ext_slicename, hrn_to_ext_loginbase, top_auth
 from sfa.storage.model import SliverAllocation
 from sfa.storage.alchemy import dbsession
 
@@ -169,7 +169,12 @@ class PlSlices:
         requested_leases = []
         for lease in rspec_requested_leases:
              requested_lease = {}
-             slice_name = hrn_to_pl_slicename(lease['slice_id'])
+             slice_hrn, _ = urn_to_hrn(lease['slice_id'])
+             top_auth_hrn = top_auth(slice_hrn)
+             if top_auth_hrn == self.driver.hrn:
+                 slice_name = hrn_to_pl_slicename(lease['slice_id'])
+             else:
+                 slice_name = xrn_to_ext_slicename(lease['slice_id'])
              if slice_name != slice['name']:
                  continue
              elif Xrn(lease['component_id']).get_authority_urn().split(':')[0] != self.driver.hrn:
@@ -373,15 +378,14 @@ class PlSlices:
 
     def verify_site(self, slice_xrn, slice_record={}, peer=None, sfa_peer=None, options={}):
         (slice_hrn, type) = urn_to_hrn(slice_xrn)
-        site_hrn = get_authority(slice_hrn)
-        top_auth_hrn = site_hrn.split('.')[0]
+        top_auth_hrn = top_auth(slice_hrn)
         if top_auth_hrn == self.driver.hrn:
             # login base can't be longer than 20 characters
             slicename = hrn_to_pl_slicename(slice_hrn)
             authority_name = slicename.split('_')[0]
             login_base = authority_name[:20]
         else:
-            login_base = '8'.join(site_hrn.split('.'))[:20]
+            login_base = hrn_to_ext_loginbase(slice_hrn)
             authority_name = login_base
 
         sites = self.driver.shell.GetSites(login_base)
@@ -416,15 +420,14 @@ class PlSlices:
 
 
     def verify_slice(self, slice_hrn, slice_record, peer, sfa_peer, expiration, options={}):
-        site_hrn = get_authority(slice_hrn)
-        top_auth_hrn = site_hrn.split('.')[0]
+        top_auth_hrn = top_auth(slice_hrn)
         if top_auth_hrn == self.driver.hrn:
             slicename = hrn_to_pl_slicename(slice_hrn)
             parts = slicename.split("_")
             login_base = parts[0]
         else:
-            login_base = '8'.join(site_hrn.split('.'))
-            slicename = '_'.join([login_base, slice_hrn.split('.')[-1]])
+            login_base = hrn_to_ext_loginbase(slice_hrn)
+            slicename = xrn_to_ext_slicename(slice_hrn)
 
         slices = self.driver.shell.GetSlices([slicename]) 
         expires = int(datetime_to_epoch(utcparse(expiration)))
@@ -462,19 +465,6 @@ class PlSlices:
 
     #def get_existing_persons(self, users):
     def verify_persons(self, slice_hrn, slice_record, users, peer, sfa_peer, options={}):
-
-        site_hrn = get_authority(slice_hrn)
-        top_auth_hrn = site_hrn.split('.')[0]
-        if top_auth_hrn == self.driver.hrn:
-            slicename = hrn_to_pl_slicename(slice_hrn)
-            parts = slicename.split("_")
-            login_base = parts[0]
-        else:
-            login_base = '8'.join(site_hrn.split('.'))
-            slice_name = '_'.join([login_base, slice_hrn.split('.')[-1]])
-
-
-
         users_by_email = {}
         users_by_site = defaultdict(list)
         users_dict = {}
@@ -484,13 +474,12 @@ class PlSlices:
             username = get_leaf(hrn)
             user['username'] = username
 
-            site_hrn = get_authority(hrn)
-            top_auth_hrn = site_hrn.split('.')[0]
+            top_auth_hrn = top_auth(hrn)
 
             if top_auth_hrn == self.driver.hrn:
                 login_base = PlXrn(xrn=user['urn']).pl_login_base()
             else:
-                login_base = '8'.join(site_hrn.split('.'))
+                login_base = hrn_to_ext_loginbase(hrn)
 
             user['site'] = login_base
             if 'email' in user:

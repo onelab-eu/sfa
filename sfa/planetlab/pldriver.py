@@ -25,7 +25,7 @@ from sfa.planetlab.plshell import PlShell
 import sfa.planetlab.peers as peers
 from sfa.planetlab.plaggregate import PlAggregate
 from sfa.planetlab.plslices import PlSlices
-from sfa.planetlab.plxrn import PlXrn, slicename_to_hrn, hostname_to_hrn, hrn_to_pl_slicename, xrn_to_hostname
+from sfa.planetlab.plxrn import PlXrn, slicename_to_hrn, hostname_to_hrn, hrn_to_pl_slicename, xrn_to_hostname, xrn_to_ext_slicename, top_auth
 
 
 def list_to_dict(recs, key):
@@ -767,8 +767,12 @@ class PlDriver (Driver):
 
     # set the 'enabled' tag to 0
     def shutdown (self, xrn, options={}):
-        xrn = PlXrn(xrn=xrn, type='slice')
-        slicename = xrn.pl_slicename()
+        hrn = urn_to_hrn(xrn)
+        top_auth_hrn = top_auth(hrn)
+        if top_auth_hrn == self.hrn:
+            slicename = hrn_to_pl_slicename(hrn)
+        else:
+            slicename = xrn_to_ext_slicename(hrn)
         slices = self.shell.GetSlices({'name': slicename}, ['slice_id'])
         if not slices:
             raise RecordNotFound(slice_hrn)
