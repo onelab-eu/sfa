@@ -17,7 +17,7 @@ from sfa.rspecs.elements.lease import Lease
 from sfa.rspecs.elements.granularity import Granularity
 from sfa.rspecs.version_manager import VersionManager
 
-from sfa.planetlab.plxrn import PlXrn, hostname_to_urn, hrn_to_pl_slicename, slicename_to_hrn
+from sfa.planetlab.plxrn import PlXrn, hostname_to_urn, hrn_to_pl_slicename, slicename_to_hrn, xrn_to_ext_slicename, top_auth
 from sfa.planetlab.vlink import get_tc_rate
 from sfa.planetlab.topology import Topology
 
@@ -111,13 +111,11 @@ class PlAggregate:
 
         slice_urn = hrn_to_urn(slice_xrn, 'slice')
         slice_hrn, _ = urn_to_hrn(slice_xrn)
-        site_hrn = get_authority(slice_hrn)
-        top_auth_hrn = site_hrn.split('.')[0]
+        top_auth_hrn = top_auth(slice_hrn)
         if top_auth_hrn == self.driver.hrn:
             slice_name = hrn_to_pl_slicename(slice_hrn)
         else:
-            login_base = '8'.join(site_hrn.split('.'))
-            slice_name = '_'.join([login_base, get_leaf(slice_hrn)])
+            slice_name = xrn_to_ext_slicename(slice_hrn)
 
         slices = self.driver.shell.GetSlices(slice_name)
         if not slices:
