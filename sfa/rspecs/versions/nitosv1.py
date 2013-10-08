@@ -173,21 +173,15 @@ class NITOSv1(RSpecVersion):
     # Links
 
     def get_links(self, network=None):
-        return PGv2Link.get_links(self.xml)
+        return []
 
     def get_link_requests(self):
-        return PGv2Link.get_link_requests(self.xml) 
+        return []
 
     def add_links(self, links):
-        networks = self.get_networks()
-        if len(networks) > 0:
-            xml = networks[0].element
-        else:
-            xml = self.xml
-        PGv2Link.add_links(xml, links)
-
+        pass
     def add_link_requests(self, links):
-        PGv2Link.add_link_requests(self.xml, links)
+        pass
 
     # utility
 
@@ -223,7 +217,8 @@ class NITOSv1(RSpecVersion):
     def get_leases(self, filter=None):
         return NITOSv1Lease.get_leases(self.xml, filter)
 
-    def add_leases(self, leases, channels, network = None, no_dupes=False):
+    def add_leases(self, leases_channels, network = None, no_dupes=False):
+        leases, channels = leases_channels
         NITOSv1Lease.add_leases(self.xml, leases, channels)
 
     # Spectrum

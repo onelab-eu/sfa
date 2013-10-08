@@ -245,6 +245,28 @@ class Iotlabv1(RSpecVersion):
         SFAv1Lease.add_leases(self.xml, leases)
         #Iotlabv1Lease.add_leases(self.xml, leases)
 
+    # Spectrum
+
+    def get_channels(self, filter=None):
+        return []
+
+    def add_channels(self, channels, network = None, no_dupes=False):
+        pass
+
+    # Links
+
+    def get_links(self, network=None):
+        return []
+
+    def get_link_requests(self):
+        return []
+
+    def add_links(self, links):
+        pass
+    def add_link_requests(self, links):
+        pass
+
+
     def cleanup(self):
         # remove unncecessary elements, attributes
         if self.type in ['request', 'manifest']:
