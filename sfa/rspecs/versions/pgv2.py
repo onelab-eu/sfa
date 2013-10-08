@@ -182,6 +182,14 @@ class PGv2(RSpecVersion):
     def add_leases(self, leases, network = None, no_dupes=False):
         PGv2Lease.add_leases(self.xml, leases)
 
+    # Spectrum
+
+    def get_channels(self, filter=None):
+        return []
+
+    def add_channels(self, channels, network = None, no_dupes=False):
+        pass
+
     # Utility
 
     def merge(self, in_rspec):
