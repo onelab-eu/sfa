@@ -8,7 +8,7 @@ from sfa.util.xrn import Xrn, get_leaf, get_authority, urn_to_hrn
 from sfa.rspecs.rspec import RSpec
 
 from sfa.planetlab.vlink import VLink
-from sfa.planetlab.plxrn import PlXrn, hrn_to_pl_slicename, xrn_to_hostname
+from sfa.planetlab.plxrn import PlXrn, hrn_to_pl_slicename, xrn_to_hostname, xrn_to_ext_slicename, hrn_to_ext_loginbase, top_auth
 
 import time
 
@@ -169,7 +169,12 @@ class PlSlices:
         requested_leases = []
         for lease in rspec_requested_leases:
              requested_lease = {}
-             slice_name = hrn_to_pl_slicename(lease['slice_id'])
+             slice_hrn, _ = urn_to_hrn(lease['slice_id'])
+             top_auth_hrn = top_auth(slice_hrn)
+             if top_auth_hrn == self.driver.hrn:
+                 slice_name = hrn_to_pl_slicename(lease['slice_id'])
+             else:
+                 slice_name = xrn_to_ext_slicename(lease['slice_id'])
              if slice_name != slice['name']:
                  continue
              elif Xrn(lease['component_id']).get_authority_urn().split(':')[0] != self.driver.hrn:
@@ -360,15 +365,20 @@ class PlSlices:
 
     def verify_site(self, slice_xrn, slice_record={}, peer=None, sfa_peer=None, options={}):
         (slice_hrn, type) = urn_to_hrn(slice_xrn)
-        site_hrn = get_authority(slice_hrn)
-        # login base can't be longer than 20 characters
-        slicename = hrn_to_pl_slicename(slice_hrn)
-        authority_name = slicename.split('_')[0]
-        login_base = authority_name[:20]
+        top_auth_hrn = top_auth(slice_hrn)
+        if top_auth_hrn == self.driver.hrn:
+            # login base can't be longer than 20 characters
+            slicename = hrn_to_pl_slicename(slice_hrn)
+            authority_name = slicename.split('_')[0]
+            login_base = authority_name[:20]
+        else:
+            login_base = hrn_to_ext_loginbase(slice_hrn)
+            authority_name = login_base
+
         sites = self.driver.shell.GetSites(login_base)
         if not sites:
             # create new site record
-            site = {'name': 'geni.%s' % authority_name,
+            site = {'name': 'sfa.%s' % authority_name,
                     'abbreviated_name': authority_name,
                     'login_base': login_base,
                     'max_slices': 100,
@@ -396,16 +406,25 @@ class PlSlices:
         return site        
 
     def verify_slice(self, slice_hrn, slice_record, peer, sfa_peer, options={}):
-        slicename = hrn_to_pl_slicename(slice_hrn)
-        parts = slicename.split("_")
-        login_base = parts[0]
-        slices = self.driver.shell.GetSlices([slicename]) 
+        top_auth_hrn = top_auth(slice_hrn)
+        if top_auth_hrn == self.driver.hrn:
+            slice_name = hrn_to_pl_slicename(slice_hrn)
+            parts = slice_name.split("_")
+            login_base = parts[0]
+        else:
+            login_base = hrn_to_ext_loginbase(slice_hrn)
+            slice_name = xrn_to_ext_slicename(slice_hrn)
+            
+        slices = self.driver.shell.GetSlices([slice_name]) 
         if not slices:
-            slice = {'name': slicename,
+            slice = {'name': slice_name,
                      'url': slice_record.get('url', slice_hrn), 
                      'description': slice_record.get('description', slice_hrn)}
             # add the slice                          
             slice['slice_id'] = self.driver.shell.AddSlice(slice)
+            # set the slice HRN
+            self.driver.shell.SetSliceHrn(int(slice['slice_id']), slice_hrn)            
+
             slice['node_ids'] = []
             slice['person_ids'] = []
             if peer:
@@ -417,6 +436,10 @@ class PlSlices:
 #                self.registry.register_peer_object(self.credential, peer_dict)
         else:
             slice = slices[0]
+            # Check slice HRN
+            if self.driver.shell.GetSliceHrn(slice['slice_id']) != slice_hrn:
+                self.driver.shell.SetSliceHrn(slice['slice_id'], slice_hrn)
+
             if peer:
                 slice['peer_slice_id'] = slice_record.get('slice_id', None)
                 # unbind from peer so we can modify if necessary. Will bind back later
@@ -438,10 +461,16 @@ class PlSlices:
             user['urn'] = user['urn'].lower()
             hrn, type = urn_to_hrn(user['urn'])
             username = get_leaf(hrn)
-            login_base = PlXrn(xrn=user['urn']).pl_login_base()
             user['username'] = username
-            user['site'] = login_base
+             
+            top_auth_hrn = top_auth(hrn)            
 
+            if top_auth_hrn == self.driver.hrn:
+                login_base = PlXrn(xrn=user['urn']).pl_login_base()
+            else:
+                login_base = hrn_to_ext_loginbase(hrn)
+
+            user['site'] = login_base
             if 'email' in user:
                 user['email'] = user['email'].lower() 
                 users_by_email[user['email']] = user
@@ -537,11 +566,16 @@ class PlSlices:
                 'first_name': added_user.get('first_name', hrn),
                 'last_name': added_user.get('last_name', hrn),
                 'email': added_user_id,
-                'peer_person_id': None,
-                'keys': [],
+                #'peer_person_id': None,
+                #'keys': [],
                 #'key_ids': added_user.get('key_ids', []),
             }
             person['person_id'] = self.driver.shell.AddPerson(person)
+            self.driver.shell.AddRoleToPerson('user', int(person['person_id']))
+            # check user HRN
+            if self.driver.shell.GetPersonHrn(int(person['person_id'])) != hrn:
+                self.driver.shell.SetPersonHrn(int(person['person_id']), hrn)
+
             if peer:
                 person['peer_person_id'] = added_user['person_id']
             added_persons.append(person)
@@ -555,6 +589,8 @@ class PlSlices:
             for key_string in added_user.get('keys', []):
                 key = {'key':key_string, 'key_type':'ssh'}
                 key['key_id'] = self.driver.shell.AddPersonKey(person['person_id'], key)
+                if 'keys' not in person:
+                    person['keys'] = []
                 person['keys'].append(key)
 
             # add the registry record

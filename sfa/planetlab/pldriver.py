@@ -27,7 +27,7 @@ from sfa.planetlab.plshell import PlShell
 import sfa.planetlab.peers as peers
 from sfa.planetlab.plaggregate import PlAggregate
 from sfa.planetlab.plslices import PlSlices
-from sfa.planetlab.plxrn import PlXrn, slicename_to_hrn, hostname_to_hrn, hrn_to_pl_slicename, xrn_to_hostname
+from sfa.planetlab.plxrn import PlXrn, slicename_to_hrn, hostname_to_hrn, hrn_to_pl_slicename, xrn_to_hostname, xrn_to_ext_slicename, top_auth
 
 
 def list_to_dict(recs, key):
@@ -773,7 +773,13 @@ class PlDriver (Driver):
                                    version=rspec.version)
 
     def delete_sliver (self, slice_urn, slice_hrn, creds, options):
-        slicename = hrn_to_pl_slicename(slice_hrn)
+
+        top_auth_hrn = top_auth(slice_hrn)
+        if top_auth_hrn == self.hrn:
+            slicename = hrn_to_pl_slicename(slice_hrn)
+        else:
+            slicename = xrn_to_ext_slicename(slice_hrn)
+
         slices = self.shell.GetSlices({'name': slicename})
         if not slices:
             return True
@@ -799,7 +805,12 @@ class PlDriver (Driver):
         return True
     
     def renew_sliver (self, slice_urn, slice_hrn, creds, expiration_time, options):
-        slicename = hrn_to_pl_slicename(slice_hrn)
+        top_auth_hrn = top_auth(slice_hrn)
+        if top_auth_hrn == self.hrn:
+            slicename = hrn_to_pl_slicename(slice_hrn)
+        else:
+            slicename = xrn_to_ext_slicename(slice_hrn)
+
         slices = self.shell.GetSlices({'name': slicename}, ['slice_id'])
         if not slices:
             raise RecordNotFound(slice_hrn)
@@ -814,7 +825,12 @@ class PlDriver (Driver):
 
     # remove the 'enabled' tag 
     def start_slice (self, slice_urn, slice_hrn, creds):
-        slicename = hrn_to_pl_slicename(slice_hrn)
+        top_auth_hrn = top_auth(slice_hrn)
+        if top_auth_hrn == self.hrn:
+            slicename = hrn_to_pl_slicename(slice_hrn)
+        else:
+            slicename = xrn_to_ext_slicename(slice_hrn)
+
         slices = self.shell.GetSlices({'name': slicename}, ['slice_id'])
         if not slices:
             raise RecordNotFound(slice_hrn)
@@ -827,7 +843,12 @@ class PlDriver (Driver):
 
     # set the 'enabled' tag to 0
     def stop_slice (self, slice_urn, slice_hrn, creds):
-        slicename = hrn_to_pl_slicename(slice_hrn)
+        top_auth_hrn = top_auth(slice_hrn)
+        if top_auth_hrn == self.hrn:
+            slicename = hrn_to_pl_slicename(slice_hrn)
+        else:
+            slicename = xrn_to_ext_slicename(slice_hrn)
+
         slices = self.shell.GetSlices({'name': slicename}, ['slice_id'])
         if not slices:
             raise RecordNotFound(slice_hrn)

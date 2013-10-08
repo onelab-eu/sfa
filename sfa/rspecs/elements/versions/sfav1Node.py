@@ -1,6 +1,6 @@
 from sfa.util.sfalogging import logger
 from sfa.util.xml import XpathFilter
-from sfa.util.xrn import Xrn
+from sfa.util.xrn import Xrn, get_leaf
 
 from sfa.rspecs.elements.element import Element
 from sfa.rspecs.elements.node import Node
@@ -15,12 +15,11 @@ from sfa.rspecs.elements.versions.sfav1Sliver import SFAv1Sliver
 from sfa.rspecs.elements.versions.sfav1PLTag import SFAv1PLTag
 from sfa.rspecs.elements.versions.pgv2Services import PGv2Services
 
-from sfa.planetlab.plxrn import xrn_to_hostname
 
 class SFAv1Node:
 
     @staticmethod
-    def add_nodes(xml, nodes):
+    def add_nodes(xml, nodes, rspec_content_type=None):
         network_elems = xml.xpath('//network')
         if len(network_elems) > 0:
             network_elem = network_elems[0]
@@ -43,7 +42,7 @@ class SFAv1Node:
 
             # set component_name attribute and  hostname element
             if 'component_id' in node and node['component_id']:
-                component_name = xrn_to_hostname(node['component_id'])
+                component_name = Xrn.unescape(get_leaf(Xrn(node['component_id']).get_hrn()))
                 node_elem.set('component_name', component_name)
                 hostname_elem = node_elem.add_element('hostname')
                 hostname_elem.set_text(component_name)
@@ -93,6 +92,10 @@ class SFAv1Node:
                         tag_elem = node_elem.add_element(tag['tagname'])
                         tag_elem.set_text(tag['value'])
             SFAv1Sliver.add_slivers(node_elem, node.get('slivers', []))
+
+            # add sliver tag in Request Rspec
+            if rspec_content_type == "request":
+                node_elem.add_instance('sliver', '', []) 
 
     @staticmethod 
     def add_slivers(xml, slivers):

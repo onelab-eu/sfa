@@ -64,8 +64,8 @@ class Iotlabv1(RSpecVersion):
     def add_connection_information(self, ldap_username, sites_set):
         return Iotlabv1Node.add_connection_information(self.xml,ldap_username, sites_set)
 
-    def add_nodes(self, nodes, check_for_dupes=False):
-        return Iotlabv1Node.add_nodes(self.xml,nodes )
+    def add_nodes(self, nodes, check_for_dupes=False, rspec_content_type=None):
+        return Iotlabv1Node.add_nodes(self.xml,nodes, rspec_content_type)
 
     def merge_node(self, source_node_tag, network, no_dupes = False):
         logger.debug("SLABV1 merge_node")

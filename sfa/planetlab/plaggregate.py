@@ -1,5 +1,5 @@
 #!/usr/bin/python
-from sfa.util.xrn import Xrn, hrn_to_urn, urn_to_hrn
+from sfa.util.xrn import Xrn, hrn_to_urn, urn_to_hrn, get_authority, get_leaf
 from sfa.util.sfatime import utcparse, datetime_to_string
 from sfa.util.sfalogging import logger
 
@@ -17,7 +17,7 @@ from sfa.rspecs.elements.lease import Lease
 from sfa.rspecs.elements.granularity import Granularity
 from sfa.rspecs.version_manager import VersionManager
 
-from sfa.planetlab.plxrn import PlXrn, hostname_to_urn, hrn_to_pl_slicename, slicename_to_hrn
+from sfa.planetlab.plxrn import PlXrn, hostname_to_urn, hrn_to_pl_slicename, slicename_to_hrn, xrn_to_ext_slicename, top_auth
 from sfa.planetlab.vlink import get_tc_rate
 from sfa.planetlab.topology import Topology
 
@@ -108,9 +108,15 @@ class PlAggregate:
         slice = None
         if not slice_xrn:
             return (slice, slivers)
+
         slice_urn = hrn_to_urn(slice_xrn, 'slice')
         slice_hrn, _ = urn_to_hrn(slice_xrn)
-        slice_name = hrn_to_pl_slicename(slice_hrn)
+        top_auth_hrn = top_auth(slice_hrn)
+        if top_auth_hrn == self.driver.hrn:
+            slice_name = hrn_to_pl_slicename(slice_hrn)
+        else:
+            slice_name = xrn_to_ext_slicename(slice_hrn)
+
         slices = self.driver.shell.GetSlices(slice_name)
         if not slices:
             return (slice, slivers)
@@ -289,12 +295,16 @@ class PlAggregate:
             site=sites_dict[site_id]
 
             #rspec_lease['lease_id'] = lease['lease_id']
-            rspec_lease['component_id'] = hostname_to_urn(self.driver.hrn, site['login_base'], lease['hostname'])
+            rspec_lease['component_id'] = hrn_to_urn(self.driver.shell.GetNodeHrn(lease['hostname']), 'node')
+            #rspec_lease['component_id'] = hostname_to_urn(self.driver.hrn, site['login_base'], lease['hostname'])
             if slice_xrn:
                 slice_urn = slice_xrn
-                slice_hrn = urn_to_hrn(slice_urn)
+                slice_hrn, _ = urn_to_hrn(slice_urn)
+                # Check slice HRN
+                if slice_hrn != self.driver.shell.GetSliceHrn(lease['slice_id']):
+                    self.driver.shell.SetSliceHrn(lease['slice_id'], slice_hrn)
             else:
-                slice_hrn = slicename_to_hrn(self.driver.hrn, lease['name'])
+                slice_hrn = self.driver.shell.GetSliceHrn(lease['slice_id'])
                 slice_urn = hrn_to_urn(slice_hrn, 'slice')
             rspec_lease['slice_id'] = slice_urn
             rspec_lease['start_time'] = lease['t_from']

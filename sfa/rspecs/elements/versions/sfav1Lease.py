@@ -16,7 +16,6 @@ from sfa.rspecs.elements.versions.sfav1PLTag import SFAv1PLTag
 from sfa.rspecs.elements.versions.pgv2Services import PGv2Services
 from sfa.rspecs.elements.lease import Lease
 
-from sfa.planetlab.plxrn import xrn_to_hostname
 
 class SFAv1Lease:
 

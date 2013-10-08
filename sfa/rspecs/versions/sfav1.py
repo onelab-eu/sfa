@@ -46,8 +46,8 @@ class SFAv1(RSpecVersion):
     def get_nodes_with_slivers(self):
         return SFAv1Node.get_nodes_with_slivers(self.xml)
 
-    def add_nodes(self, nodes, network = None, no_dupes=False):
-        SFAv1Node.add_nodes(self.xml, nodes)
+    def add_nodes(self, nodes, network = None, no_dupes=False, rspec_content_type=None):
+        SFAv1Node.add_nodes(self.xml, nodes, rspec_content_type)
 
     def merge_node(self, source_node_tag, network, no_dupes=False):
         if no_dupes and self.get_node_element(node['hostname']):

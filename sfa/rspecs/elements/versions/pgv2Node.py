@@ -1,4 +1,4 @@
-from sfa.util.xrn import Xrn
+from sfa.util.xrn import Xrn, get_leaf
 from sfa.util.xml import XpathFilter
 
 from sfa.rspecs.elements.node import Node
@@ -16,11 +16,10 @@ from sfa.rspecs.elements.versions.sfav1PLTag import SFAv1PLTag
 from sfa.rspecs.elements.granularity import Granularity
 from sfa.rspecs.elements.attribute import Attribute
 
-from sfa.planetlab.plxrn import xrn_to_hostname
 
 class PGv2Node:
     @staticmethod
-    def add_nodes(xml, nodes):
+    def add_nodes(xml, nodes, rspec_content_type=None):
         node_elems = []
         for node in nodes:
             node_fields = ['component_manager_id', 'component_id', 'client_id', 'sliver_id', 'exclusive']
@@ -28,7 +27,7 @@ class PGv2Node:
             node_elems.append(node_elem)
             # set component name
             if node.get('component_id'):
-                component_name = xrn_to_hostname(node['component_id'])
+                component_name = Xrn.unescape(get_leaf(Xrn(node['component_id']).get_hrn()))
                 node_elem.set('component_name', component_name)
             # set hardware types
             if node.get('hardware_types'):
@@ -39,7 +38,7 @@ class PGv2Node:
                 node_elem.add_instance('location', node['location'], Location.fields)       
 
             # set granularity
-            if node['exclusive'] == "true":
+            if node.get('exclusive') == "true":
                 granularity = node.get('granularity')
                 node_elem.add_instance('granularity', granularity, granularity.fields)
             # set interfaces
@@ -73,6 +72,10 @@ class PGv2Node:
                for tag in tags:
                     tag['name'] = tag.pop('tagname')
                     node_elem.add_instance('{%s}attribute' % xml.namespaces['planetlab'], tag, ['name', 'value'])
+
+            # add sliver tag in Request Rspec
+            if rspec_content_type == "request":
+                node_elem.add_instance('sliver', '', [])
 
         return node_elems
 
@@ -132,21 +135,28 @@ class PGv2Node:
                     node['boot_state'] = 'disabled' 
 
             # get initscripts
-            node['pl_initscripts'] = []
-            initscript_elems = node_elem.xpath('./default:sliver_type/planetlab:initscript | ./sliver_type/initscript')
-            if len(initscript_elems) > 0:
-                for initscript_elem in initscript_elems:
-                    if 'name' in initscript_elem.attrib:
-                        node['pl_initscripts'].append(dict(initscript_elem.attrib))
+            try:
+               node['pl_initscripts'] = []
+               initscript_elems = node_elem.xpath('./default:sliver_type/planetlab:initscript | ./sliver_type/initscript')
+               if len(initscript_elems) > 0:
+                   for initscript_elem in initscript_elems:
+                        if 'name' in initscript_elem.attrib:
+                            node['pl_initscripts'].append(dict(initscript_elem.attrib))
+            except:
+               pass
 
             # get node tags
-            tag_elems = node_elem.xpath('./planetlab:attribute | ./attribute')
-            node['tags'] = []
-            if len(tag_elems) > 0:
-                for tag_elem in tag_elems:
-                    tag = dict(tag_elem.get_instance(Attribute))
-                    tag['tagname'] = tag.pop('name')
-                    node['tags'].append(tag)
+            try:
+               tag_elems = node_elem.xpath('./planetlab:attribute | ./attribute')
+               node['tags'] = []
+               if len(tag_elems) > 0:
+                   for tag_elem in tag_elems:
+                        tag = dict(tag_elem.get_instance(Attribute))
+                        tag['tagname'] = tag.pop('name')
+                        node['tags'].append(tag)
+            except:
+               pass
+  
         return nodes
 
 
