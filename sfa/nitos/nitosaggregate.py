@@ -277,8 +277,8 @@ class NitosAggregate:
            rspec.version.add_channels(channels)
 
         if not options.get('list_leases') or options.get('list_leases') and options['list_leases'] != 'resources':
-           leases, channels = self.get_leases_and_channels(slice, slice_xrn)
-           rspec.version.add_leases(leases, channels)
+           leases_channels = self.get_leases_and_channels(slice, slice_xrn)
+           rspec.version.add_leases(leases_channels)
 
         return rspec.toxml()
 
