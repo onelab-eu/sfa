@@ -612,8 +612,17 @@ class NitosDriver (Driver):
         
         # add/remove leases (nodes and channels)
         # a lease in Nitos RSpec case is a reservation of nodes and channels grouped by (slice,timeslot)
-        rspec_requested_nodes, rspec_requested_channels = rspec.version.get_leases()
-  
+        rspec_requested_leases = rspec.version.get_leases()
+        rspec_requested_nodes = []
+        rspec_requested_channels = []
+        for lease in rspec_requested_leases:
+             if lease['type'] == 'node':
+                 lease.pop('type', None)
+                 rspec_requested_nodes = lease
+             else:
+                 lease.pop('type', None)
+                 rspec_requested_channels = lease                 
+        
         nodes = slices.verify_slice_leases_nodes(slice, rspec_requested_nodes)
         channels = slices.verify_slice_leases_channels(slice, rspec_requested_channels)
 

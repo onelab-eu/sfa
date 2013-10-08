@@ -91,6 +91,7 @@ class NITOSv1Lease:
                  lease['start_time'] = datetime_to_epoch(utcparse(lease_elem.attrib['start_time']))
                  lease['duration'] = lease_elem.attrib['duration']
                  lease['component_id'] = node_elem.attrib['component_id']
+                 lease['type'] = 'node'
                  leases.append(lease)
             #get channels
             channel_elems = lease_elem.xpath('./default:channel | ./channel')
@@ -100,8 +101,8 @@ class NITOSv1Lease:
                  channel['start_time'] = datetime_to_epoch(utcparse(lease_elem.attrib['start_time']))
                  channel['duration'] = lease_elem.attrib['duration']
                  channel['component_id'] = channel_elem.attrib['component_id']
-                 
+                 channel['type'] = 'channel'
                  channels.append(channel)
 
-        return (leases, channels)            
+        return leases + channels            
 
