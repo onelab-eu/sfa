@@ -25,6 +25,11 @@ class IotlabLocation(Location):
     fields.extend (['site'])
 
 
+class IotlabMobility(Element):
+    """ Class to give information of a node's mobility, and what kind of
+    mobility it is (train, roomba robot ...) """
+    fields = ['mobile', 'mobility_type']
+
 
 
 class Iotlabv1Node:
@@ -36,50 +41,61 @@ class Iotlabv1Node:
         should be used after add_nodes, which creates the network item.
 
         """
-        logger.debug(" add_connection_information " )
+        logger.debug(" add_connection_information ")
         #Get network item in the xml
         network_elems = xml.xpath('//network')
         if len(network_elems) > 0:
             network_elem = network_elems[0]
 
-        iotlab_network_dict = {}
-        iotlab_network_dict['login'] = ldap_username
+            iotlab_network_dict = {}
+            iotlab_network_dict['login'] = ldap_username
 
-        iotlab_network_dict['ssh'] = \
-            ['ssh ' + ldap_username + '@'+site+'.iotlab.info' \
-            for site in sites_set]
-        network_elem.set('ssh', \
-                unicode(iotlab_network_dict['ssh']))
-        network_elem.set('login', unicode( iotlab_network_dict['login']))
-
+            iotlab_network_dict['ssh'] = \
+                ['ssh ' + ldap_username + '@'+site+'.iotlab.info'
+                 for site in sites_set]
+            network_elem.set('ssh',
+                             unicode(iotlab_network_dict['ssh']))
+            network_elem.set('login', unicode(iotlab_network_dict['login']))
 
     @staticmethod
-    def add_nodes(xml, nodes, rspec_content_type=None):
+    def add_nodes(xml, nodes):
+        """Adds the nodes to the xml.
+
+        Adds the nodes as well as dedicated iotlab fields to the node xml
+        element.
+
+        :param xml: the xml being constructed.
+        :type xml: xml
+        :param nodes: list of node dict
+        :type nodes: list
+        :returns: a list of node elements.
+        :rtype: list
+
+        """
         #Add network item in the xml
         network_elems = xml.xpath('//network')
         if len(network_elems) > 0:
             network_elem = network_elems[0]
         elif len(nodes) > 0 and nodes[0].get('component_manager_id'):
             network_urn = nodes[0]['component_manager_id']
-            network_elem = xml.add_element('network', \
-                                        name = Xrn(network_urn).get_hrn())
+            network_elem = xml.add_element('network',
+                                           name=Xrn(network_urn).get_hrn())
         else:
             network_elem = xml
 
-        logger.debug("iotlabv1Node \t add_nodes  nodes %s \r\n "%(nodes[0]))
         node_elems = []
         #Then add nodes items to the network item in the xml
         for node in nodes:
             #Attach this node to the network element
-            node_fields = ['component_manager_id', 'component_id', 'exclusive',\
-                                                    'boot_state', 'mobile']
+            node_fields = ['component_manager_id', 'component_id', 'exclusive',
+                           'boot_state', 'mobile']
             node_elem = network_elem.add_instance('node', node, node_fields)
             node_elems.append(node_elem)
 
             #Set the attibutes of this node element
             for attribute in node:
             # set component name
-                if attribute is 'component_id':
+                if attribute is 'component_name':
                     component_name = node['component_name']
                     node_elem.set('component_name', component_name)
 
@@ -89,35 +105,39 @@ class Iotlabv1Node:
                 if attribute is 'hardware_types':
                     for hardware_type in node.get('hardware_types', []):
                         fields = HardwareType.fields
-                        fields.extend(['archi','radio'])
+                        fields.extend(['archi', 'radio'])
                         node_elem.add_instance('hardware_types', node, fields)
 
+            # set mobility
+                if attribute is 'mobility':
+                    node_elem.add_instance('mobility', node['mobility'],
+                                           IotlabMobility.fields)
             # set location
                 if attribute is 'location':
-                    node_elem.add_instance('location', node['location'], \
-                                                        IotlabLocation.fields)
+                    node_elem.add_instance('location', node['location'],
+                                            IotlabLocation.fields)
+
              # add granularity of the reservation system
              #TODO put the granularity in network instead SA 18/07/12
-                if attribute is 'granularity' :
+                if attribute is 'granularity':
                     granularity = node['granularity']
                     if granularity:
-                        node_elem.add_instance('granularity', \
-                                    granularity, granularity.fields)
-
+                        node_elem.add_instance('granularity',
+                                               granularity, granularity.fields)
 
             # set available element
                 if attribute is 'boot_state':
                     if node.get('boot_state').lower() == 'alive':
-                        available_elem = node_elem.add_element('available', \
-                                                                    now='true')
+                        available_elem = node_elem.add_element('available',
+                                                               now='true')
                     else:
-                        available_elem = node_elem.add_element('available', \
-                                                                now='false')
+                        available_elem = node_elem.add_element('available',
+                                                               now='false')
 
             #set position
                 if attribute is 'position':
-                    node_elem.add_instance('position', node['position'], \
-                                                        IotlabPosition.fields)
+                    node_elem.add_instance('position', node['position'],
+                                           IotlabPosition.fields)
             ## add services
             #PGv2Services.add_services(node_elem, node.get('services', []))
             # add slivers
@@ -134,14 +154,7 @@ class Iotlabv1Node:
                                                     #'value': initscript['name']})
 
                     Iotlabv1Sliver.add_slivers(node_elem, slivers)
-            
-            # add sliver tag in Request Rspec
-            if rspec_content_type == "request":
-                node_elem.add_instance('sliver', '', [])
-
         return node_elems
-
-
 
     @staticmethod
     def get_nodes(xml, filter={}):

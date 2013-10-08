@@ -103,8 +103,8 @@ class IotlabAggregate:
                                                   login=login)
 
         logger.debug("IotlabAggregate api \tget_slice_and_slivers \
-                      sfa_slice %s \r\n slices %s self.driver.hrn %s"
-                     % (sfa_slice, slices, self.driver.hrn))
+                      slice_hrn %s \r\n slices %s self.driver.hrn %s"
+                     % (slice_hrn, slices, self.driver.hrn))
         if slices == []:
             return (sfa_slice, slivers)
 
@@ -117,6 +117,7 @@ class IotlabAggregate:
                 logger.log_exc("IOTLABAGGREGATE \t \
                             get_slice_and_slivers No nodes in the slice \
                             - KeyError ")
+                node_ids_list = []
                 continue
 
             for node in node_ids_list:

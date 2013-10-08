@@ -307,6 +307,7 @@ class ParsingResourcesFull():
         'archi': self.AddHardwareType,
         'state': self.AddBootState,
         'id': self.AddOarNodeId,
+        'mobility_type': self.AddMobilityType,
         }
 
 
@@ -379,6 +380,21 @@ class ParsingResourcesFull():
 
     #     """
     #     tuplelist.append(('radio', str(value)))
+
+    def AddMobilityType(self, tuplelist, value):
+        """Adds  which kind of mobility it is, train or roomba robot.
+
+        :param tuplelist: tuple list on which to add the node's mobility status.
+            The tuplelist is the value associated with the node's id in the
+            OARGETParser's dictionary node_dictlist.
+        :param value: tells if a node is a mobile node or not. The value is
+            found in the json.
+
+        :type tuplelist: list
+        :type value: integer
+
+        """
+        tuplelist.append(('mobility_type', str(value)))
 
 
     def AddMobility(self, tuplelist, value):
