@@ -39,7 +39,7 @@ class IotlabLocation(Location):
 class IotlabMobility(Element):
     """ Class to give information of a node's mobility, and what kind of
     mobility it is (train, roomba robot ...) """
-    fields = ['mobile', 'mobility-type']
+    fields = ['mobile', 'mobility_type']
 
 
 
@@ -58,15 +58,15 @@ class Iotlabv1Node:
         if len(network_elems) > 0:
             network_elem = network_elems[0]
 
-        iotlab_network_dict = {}
-        iotlab_network_dict['login'] = ldap_username
+            iotlab_network_dict = {}
+            iotlab_network_dict['login'] = ldap_username
 
-        iotlab_network_dict['ssh'] = \
-            ['ssh ' + ldap_username + '@'+site+'.iotlab.info'
-             for site in sites_set]
-        network_elem.set('ssh',
-                         unicode(iotlab_network_dict['ssh']))
-        network_elem.set('login', unicode(iotlab_network_dict['login']))
+            iotlab_network_dict['ssh'] = \
+                ['ssh ' + ldap_username + '@'+site+'.iotlab.info'
+                 for site in sites_set]
+            network_elem.set('ssh',
+                             unicode(iotlab_network_dict['ssh']))
+            network_elem.set('login', unicode(iotlab_network_dict['login']))
 
     @staticmethod
     def add_nodes(xml, nodes):
@@ -94,7 +94,6 @@ class Iotlabv1Node:
         else:
             network_elem = xml
 
-        logger.debug("iotlabv1Node \t add_nodes  nodes %s \r\n " % (nodes[0]))
         node_elems = []
         #Then add nodes items to the network item in the xml
         for node in nodes:
@@ -147,12 +146,9 @@ class Iotlabv1Node:
                                                                now='false')
 
             #set position
-                logger.debug("Iotlabv1Node position node_elem %s" % (node_elem))
                 if attribute is 'position':
                     node_elem.add_instance('position', node['position'],
                                            IotlabPosition.fields)
-                logger.debug("Iotlabv1Node position node[position] %s "
-                            % (node['position']))
             ## add services
             #PGv2Services.add_services(node_elem, node.get('services', []))
             # add slivers

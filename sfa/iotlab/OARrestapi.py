@@ -307,6 +307,7 @@ class ParsingResourcesFull():
         'archi': self.AddHardwareType,
         'state': self.AddBootState,
         'id': self.AddOarNodeId,
+        'mobility_type': self.AddMobilityType,
         }
 
 
@@ -393,7 +394,7 @@ class ParsingResourcesFull():
         :type value: integer
 
         """
-        tuplelist.append(('mobility-type', str(value)))
+        tuplelist.append(('mobility_type', str(value)))
 
 
     def AddMobility(self, tuplelist, value):
