@@ -618,10 +618,10 @@ class NitosDriver (Driver):
         for lease in rspec_requested_leases:
              if lease['type'] == 'node':
                  lease.pop('type', None)
-                 rspec_requested_nodes = lease
+                 rspec_requested_nodes.append(lease)
              else:
                  lease.pop('type', None)
-                 rspec_requested_channels = lease                 
+                 rspec_requested_channels.append(lease)                 
         
         nodes = slices.verify_slice_leases_nodes(slice, rspec_requested_nodes)
         channels = slices.verify_slice_leases_channels(slice, rspec_requested_channels)
