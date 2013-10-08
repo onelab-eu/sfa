@@ -1606,6 +1606,7 @@ $ sfi m
         """ 
         trusted_certs = self.registry().get_trusted_certs()
         for trusted_cert in trusted_certs:
+            print "\n===========================================================\n"
             gid = GID(string=trusted_cert)
             gid.dump()
             cert = Certificate(string=trusted_cert)
