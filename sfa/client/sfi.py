@@ -1599,8 +1599,7 @@ $ sfi m
         if count_success != count_all: sys.exit(1)
         return
 
-# Thierry: I'm turning this off as a command, no idea what it's used for
-#    @register_command("cred","")
+    @register_command("cred","")
     def trusted(self, options, args):
         """
         return the trusted certs at this interface (get_trusted_certs)
@@ -1611,5 +1610,6 @@ $ sfi m
             gid.dump()
             cert = Certificate(string=trusted_cert)
             self.logger.debug('Sfi.trusted -> %r'%cert.get_subject())
+            print "Certificate:\n%s\n\n"%trusted_cert
         return 
 
