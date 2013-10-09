@@ -108,7 +108,7 @@ class IotlabSlices:
         logger.debug("IOTLABSLICES verify_slice_leases sfa_slice %s "
                      % (sfa_slice))
         #First get the list of current leases from OAR
-        leases = self.driver.iotlab_api.GetLeases({'name': sfa_slice['hrn']})
+        leases = self.driver.iotlab_api.GetLeases({'slice_hrn': sfa_slice['hrn']})
         logger.debug("IOTLABSLICES verify_slice_leases requested_jobs_dict %s \
                         leases %s " % (requested_jobs_dict, leases))
 
