@@ -492,6 +492,8 @@ use this if you mean an authority instead""")
                              metavar="slice_hrn", help="delegate cred. for slice HRN")
             parser.add_option("-a", "--auths", dest='delegate_auths',action='append',default=[],
                              metavar='auth_hrn', help="delegate PI cred for auth HRN")
+            parser.add_option('-d', '--delegate', dest='delegate', help="Override 'delegate' from the config file")
+            parser.add_option('-b', '--backend',  dest='backend',  help="Override 'backend' from the config file")
         
         return parser
 
@@ -1514,8 +1516,14 @@ $ sfi m
         myslice_dict={}
         myslice_keys=['backend', 'delegate', 'platform', 'username']
         for key in myslice_keys:
-            full_key="MYSLICE_" + key.upper()
-            value=getattr(self.config_instance,full_key,None)
+            value=None
+            # oct 2013 - I'm finding myself juggling with config files
+            # so I'm adding a few command-line options to override config
+            if hasattr(args,key):
+                value=getattr(args,key)
+            else:
+                full_key="MYSLICE_" + key.upper()
+                value=getattr(self.config_instance,full_key,None)
             if value:   myslice_dict[key]=value
             else:       print "Unsufficient config, missing key %s in [myslice] section of sfi_config"%key
         if len(myslice_dict) != len(myslice_keys):
