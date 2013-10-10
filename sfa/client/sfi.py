@@ -1135,9 +1135,9 @@ use this if you mean an authority instead""")
 
             if 'sfa' not in server_version:
                 users = pg_users_arg(user_records)
-                rspec = RSpec(rspec)
-                rspec.filter({'component_manager_id': server_version['urn']})
-                rspec = RSpecConverter.to_pg_rspec(rspec.toxml(), content_type='request')
+                #rspec = RSpec(rspec)
+                #rspec.filter({'component_manager_id': server_version['urn']})
+                #rspec = RSpecConverter.to_pg_rspec(rspec.toxml(), content_type='request')
             else:
                 users = sfa_users_arg(user_records, slice_record)
 
