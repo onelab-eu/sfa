@@ -8,6 +8,7 @@ from types import StringTypes, ListType
 from optparse import OptionParser
 
 from sfa.util.sfalogging import logger
+from sfa.util.faults import CredentialNotVerifiable, CertMissingParent #, ChildRightsNotSubsetOfParent
 
 from sfa.trust.certificate import Certificate
 from sfa.trust.credential import Credential
@@ -73,29 +74,43 @@ def extract_gids(cred, extract_parents):
 #       if parent:
 #           extract_gids(parent, extract_parents)
 
+def verify_input_object (obj, kind, options):
+    if options.trusted_roots:
+        print "CHEKING...",
+        message= "against [" + (" + ".join(options.trusted_roots)) + "]"
+        try:
+            if kind=='credential':
+                print "verify",message,
+                obj.verify(options.trusted_roots)
+            elif kind in ['certificate','gid']:
+                print "verify_chain",message,
+                obj.verify_chain(options.trusted_roots)
+            print "--> OK"
+        except Exception as inst:
+            print "--> KO",type(inst).__name__
+
 def handle_input (filename, options):
     kind = determine_sfa_filekind(filename)
-    handle_input_kind (filename,options,kind)
 
-def handle_input_kind (filename, options, kind):
-    
-
-# dump methods current do 'print' so let's go this road for now
+    # dump methods current do 'print' so let's go this road for now
     if kind=="certificate":
         cert=Certificate (filename=filename)
         print '--------------------',filename,'IS A',kind
         cert.dump(show_extensions=options.show_extensions)
+        verify_input_object (cert, kind, options)
     elif kind=="credential":
         cred = Credential(filename = filename)
         print '--------------------',filename,'IS A',kind
         cred.dump(dump_parents = options.dump_parents, show_xml=options.show_xml)
         if options.extract_gids:
-            print '--------------------',filename,'embedded GIDS'
+            print '--------------------',filename,'embedded GIDs'
             extract_gids(cred, extract_parents = options.dump_parents)
+        verify_input_object (cred, kind, options)
     elif kind=="gid":
         gid = GID(filename = filename)
         print '--------------------',filename,'IS A',kind
         gid.dump(dump_parents = options.dump_parents)
+        verify_input_object (gid, kind, options)
     else:
         print "%s: unknown filekind '%s'"% (filename,kind)
 
@@ -114,6 +129,8 @@ display info on input files"""
                       dest='verbose', default=0, help="More and more verbose")
     parser.add_option("-x", "--xml", action='store_true', 
                       dest='show_xml', default=False, help="dumps xml tree (cred. only)")
+    parser.add_option("-c", "--check", action='append', dest='trusted_roots',
+                      help="cumulative list of trusted GIDs - when provided, the input is verify'ed against these")
     (options, args) = parser.parse_args()
 
     logger.setLevelFromOptVerbose(options.verbose)
