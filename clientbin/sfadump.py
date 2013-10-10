@@ -5,7 +5,7 @@ import sys
 import os, os.path
 import tempfile
 from types import StringTypes, ListType
-from optparse import OptionParser
+from argparse import ArgumentParser
 
 from sfa.util.sfalogging import logger
 from sfa.util.faults import CredentialNotVerifiable, CertMissingParent #, ChildRightsNotSubsetOfParent
@@ -76,7 +76,7 @@ def extract_gids(cred, extract_parents):
 
 def verify_input_object (obj, kind, options):
     if options.trusted_roots:
-        print "CHEKING...",
+        print "CHECKING...",
         message= "against [" + (" + ".join(options.trusted_roots)) + "]"
         try:
             if kind=='credential':
@@ -117,28 +117,26 @@ def handle_input (filename, options):
 def main():
     usage = """%prog file1 [ .. filen]
 display info on input files"""
-    parser = OptionParser(usage=usage)
+    parser = ArgumentParser(usage=usage)
 
-    parser.add_option("-g", "--extract-gids", action="store_true", dest="extract_gids", 
-                      default=False, help="Extract GIDs from credentials")
-    parser.add_option("-p", "--dump-parents", action="store_true", dest="dump_parents", 
-                      default=False, help="Show parents")
-    parser.add_option("-e", "--extensions", action="store_true", 
-                      dest="show_extensions", default="False", help="Show certificate extensions")
-    parser.add_option("-v", "--verbose", action='count', 
-                      dest='verbose', default=0, help="More and more verbose")
-    parser.add_option("-x", "--xml", action='store_true', 
-                      dest='show_xml', default=False, help="dumps xml tree (cred. only)")
-    parser.add_option("-c", "--check", action='append', dest='trusted_roots',
-                      help="cumulative list of trusted GIDs - when provided, the input is verify'ed against these")
-    (options, args) = parser.parse_args()
+    parser.add_argument("-g", "--extract-gids", action="store_true", dest="extract_gids", 
+                        default=False, help="Extract GIDs from credentials")
+    parser.add_argument("-p", "--dump-parents", action="store_true", dest="dump_parents", 
+                        default=False, help="Show parents")
+    parser.add_argument("-e", "--extensions", action="store_true", 
+                        dest="show_extensions", default="False", help="Show certificate extensions")
+    parser.add_argument("-v", "--verbose", action='count', 
+                        dest='verbose', default=0, help="More and more verbose")
+    parser.add_argument("-x", "--xml", action='store_true', 
+                        dest='show_xml', default=False, help="dumps xml tree (cred. only)")
+    parser.add_argument("-c", "--check", action='append', dest='trusted_roots',
+                        help="cumulative list of trusted GIDs - when provided, the input is verify'ed against these")
+    parser.add_argument("filenames",metavar='F',nargs='+',help="filenames to dump")
+    options = parser.parse_args()
 
     logger.setLevelFromOptVerbose(options.verbose)
-    if len(args) <= 0:
-        parser.print_help()
-        sys.exit(1)
-    for f in args: 
-        handle_input(f,options)
+    for filename in options.filenames: 
+        handle_input(filename,options)
 
 if __name__=="__main__":
    main()
