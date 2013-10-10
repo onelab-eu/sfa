@@ -1518,15 +1518,16 @@ $ sfi m
         if len(args)>0:
             self.print_help()
             sys.exit(1)
+        # enable info by default
+        self.logger.setLevelFromOptVerbose(self.options.verbose+1)
         ### the rough sketch goes like this
         # (a) rain check for sufficient config in sfi_config
-        # we don't allow to override these settings for now
         myslice_dict={}
         myslice_keys=['backend', 'delegate', 'platform', 'username']
         for key in myslice_keys:
             value=None
             # oct 2013 - I'm finding myself juggling with config files
-            # so I'm adding a few command-line options to override config
+            # so a couple of command-line options can now override config
             if hasattr(args,key):
                 value=getattr(args,key)
             else:
@@ -1538,7 +1539,7 @@ $ sfi m
             sys.exit(1)
 
         # (b) figure whether we are PI for the authority where we belong
-        self.logger.info("Resolving our own id")
+        self.logger.info("Resolving our own id %s"%self.user)
         my_records=self.registry().Resolve(self.user,self.my_credential_string)
         if len(my_records)!=1: print "Cannot Resolve %s -- exiting"%self.user; sys.exit(1)
         my_record=my_records[0]
@@ -1549,18 +1550,18 @@ $ sfi m
         my_auths = my_auths_all
         if options.delegate_auths:
             my_auths = list(set(my_auths_all).intersection(set(options.delegate_auths)))
+            self.logger.debug("Restricted to user-provided auths"%(my_auths))
 
-        self.logger.info("Delegate PI creds for authorities: %s"%my_auths        )
         # (c) get the set of slices that we are in
         my_slices_all=my_record['reg-slices']
         self.logger.info("Found %d slices that we are member of"%len(my_slices_all))
         self.logger.debug("They are: %s"%(my_slices_all))
  
         my_slices = my_slices_all
+        # if user provided slices, deal only with these - if they are found
         if options.delegate_slices:
             my_slices = list(set(my_slices_all).intersection(set(options.delegate_slices)))
-
-        self.logger.info("Delegate slice creds for slices: %s"%my_slices)
+            self.logger.debug("Restricted to user-provided slices: %s"%(my_slices))
 
         # (d) make sure we have *valid* credentials for all these
         hrn_credentials=[]
@@ -1578,7 +1579,13 @@ $ sfi m
         hrn_delegated_credentials = []
         for (hrn, htype, credential) in hrn_credentials:
             delegated_credential = self.client_bootstrap.delegate_credential_string (credential, delegatee_hrn, delegatee_type)
-            hrn_delegated_credentials.append ((hrn, htype, delegated_credential, ))
+            # save these so user can monitor what she's uploaded
+            filename = os.path.join ( self.options.sfi_dir,
+                                      "%s.%s_for_%s.%s.cred"%(hrn,htype,delegatee_hrn,delegatee_type))
+            with file(filename,'w') as f:
+                f.write(delegated_credential)
+            self.logger.debug("(Over)wrote %s"%filename)
+            hrn_delegated_credentials.append ((hrn, htype, delegated_credential, filename, ))
 
         # (f) and finally upload them to manifold server
         # xxx todo add an option so the password can be set on the command line
@@ -1590,7 +1597,7 @@ $ sfi m
                                      password=options.password)
         uploader.prompt_all()
         (count_all,count_success)=(0,0)
-        for (hrn,htype,delegated_credential) in hrn_delegated_credentials:
+        for (hrn,htype,delegated_credential,filename) in hrn_delegated_credentials:
             # inspect
             inspect=Credential(string=delegated_credential)
             expire_datetime=inspect.get_expiration()
