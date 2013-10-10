@@ -1,6 +1,6 @@
 %define name sfa
 %define version 2.1
-%define taglevel 26
+%define taglevel 27
 
 %define release %{taglevel}%{?pldistro:.%{pldistro}}%{?date:.%{date}}
 %global python_sitearch	%( python -c "from distutils.sysconfig import get_python_lib; print get_python_lib(1)" )
@@ -265,6 +265,31 @@ fi
 #[ "$1" -ge "1" ] && service sfa-cm restart || :
 
 %changelog
+* Thu Oct 10 2013 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-2.1-27
+- -- core
+- Extend all versions of rspecs in order to support "links" and "channels" management methods
+- several fixes aroung Rspecs in order to make the code usable by 3rd-party tools
+- expose PL node tags in PGv2 and GENIv3 rspecs
+- fix default slivers mgt in sfav1 rspecs
+- fix SM and AM urn format in GetVersion
+- fix sfaadmin.py to handle extra testbed-dependent info
+- -- PlanetLab
+- Better management of external Slices/Persons/Sites
+- Importer ignores external Slices/Persons/Sites
+- -- Nitos
+- uniformize Leases management
+- address channels with urn
+- -- IotLab
+- Renaming slab folders, files and variables to iotlab, the new name of the platform.
+- New class ParsingResourcesFull in Oarrestapi file. Contain all the parsing nodes functions.
+- Adding a mobile field to iotlab rspec and a mobility type attribute .
+- Granularity changed to 60 sec.
+- Fixing returned rspec in GetSlices and GetLeases.
+- Corrections in import (importing nodes)
+- More testis in script files under testbeds/iotlab/tests . Creation of Rspecs request models under r testbeds/iotlab/tests /tests_rspec
+- Lease filtering by date added in GetLeases.
+- Commenting and cleaning
+
 * Tue Jun 18 2013 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-2.1-26
 - -- core
 - do start flash policy server when configured
