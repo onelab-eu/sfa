@@ -104,11 +104,16 @@ def main():
 display info on input files"""
     parser = OptionParser(usage=usage)
 
-    parser.add_option("-g", "--extract-gids", action="store_true", dest="extract_gids", default=False, help="Extract GIDs from credentials")
-    parser.add_option("-p", "--dump-parents", action="store_true", dest="dump_parents", default=False, help="Show parents")
-    parser.add_option("-e", "--extensions", action="store_true", dest="show_extensions", default="False", help="Show certificate extensions")
-    parser.add_option("-v", "--verbose", action='count', dest='verbose', default=0, help="More and more verbose")
-    parser.add_option("-x", "--xml", action='store_true', dest='show_xml', default=False, help="dumps xml tree (cred. only)")
+    parser.add_option("-g", "--extract-gids", action="store_true", dest="extract_gids", 
+                      default=False, help="Extract GIDs from credentials")
+    parser.add_option("-p", "--dump-parents", action="store_true", dest="dump_parents", 
+                      default=False, help="Show parents")
+    parser.add_option("-e", "--extensions", action="store_true", 
+                      dest="show_extensions", default="False", help="Show certificate extensions")
+    parser.add_option("-v", "--verbose", action='count', 
+                      dest='verbose', default=0, help="More and more verbose")
+    parser.add_option("-x", "--xml", action='store_true', 
+                      dest='show_xml', default=False, help="dumps xml tree (cred. only)")
     (options, args) = parser.parse_args()
 
     logger.setLevelFromOptVerbose(options.verbose)
