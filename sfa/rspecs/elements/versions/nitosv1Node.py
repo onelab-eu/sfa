@@ -20,7 +20,7 @@ from sfa.rspecs.elements.versions.pgv2Services import PGv2Services
 class NITOSv1Node:
 
     @staticmethod
-    def add_nodes(xml, nodes):
+    def add_nodes(xml, nodes, rspec_content_type=None):
         network_elems = xml.xpath('//network')
         if len(network_elems) > 0:
             network_elem = network_elems[0]
