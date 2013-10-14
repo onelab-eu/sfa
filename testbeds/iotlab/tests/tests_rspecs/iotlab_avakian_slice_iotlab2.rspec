@@ -1,15 +1,15 @@
 <?xml version="1.0"?>
 <RSpec type="SFA" expires="2013-02-27T15:14:10Z" generated="2013-02-27T14:14:10Z">
   <network name="iotlab">
-    <node component_manager_id="urn:publicid:IDN+iotlab+authority+sa" component_id="urn:publicid:IDN+iotlab+node+node11.devlille.senslab.info" boot_state="Alive" component_name="node5.devlille.senslab.info" site_id="urn:publicid:IDN+senslab+authority+sa">
-      <hostname>node11.devlille.senslab.info</hostname>
+    <node component_manager_id="urn:publicid:IDN+iotlab+authority+sa" component_id="urn:publicid:IDN+iotlab+node+wsn430-8.devlille.iot-lab.info" boot_state="Alive" component_name="wsn430-12.devlille.iot-lab.info.info" site_id="urn:publicid:IDN+senslab+authority+sa">
+      <hostname>wsn430-8.devlille.iot-lab.info</hostname>
       <location country="France"/>
       <exclusive>TRUE</exclusive>
       <granularity grain="600"/>
       <sliver/>
     </node>
-    <node component_manager_id="urn:publicid:IDN+iotlab+authority+sa" component_id="urn:publicid:IDN+iotlab+node+node12.devlille.senslab.info" boot_state="Alive" component_name="node2.devlille.senslab.info" site_id="urn:publicid:IDN+senslab+authority+sa">
-      <hostname>node12.devlille.senslab.info</hostname>
+    <node component_manager_id="urn:publicid:IDN+iotlab+authority+sa" component_id="urn:publicid:IDN+iotlab+node+wsn430-5.devlille.iot-lab.info" boot_state="Alive" component_name="a8-11.devgrenoble.iot-lab.info" site_id="urn:publicid:IDN+senslab+authority+sa">
+      <hostname>wsn430-5.devlille.iot-lab.info</hostname>
       <location country="France"/>
       <exclusive>TRUE</exclusive>
       <granularity grain="600"/>
@@ -28,8 +28,8 @@
       <sliver/>
     </node>
      <lease slice_id="urn:publicid:IDN+iotlab+slice+avakian_slice" start_time="1405078900" duration="10">
-	<node component_id="urn:publicid:IDN+iotlab+node+node12.devlille.senslab.info"/>
-	<node component_id="urn:publicid:IDN+iotlab+node+node11.devlille.senslab.info"/>
+	<node component_id="urn:publicid:IDN+iotlab+node+wsn430-5.devlille.iot-lab.info"/>
+	<node component_id="urn:publicid:IDN+iotlab+node+wsn430-8.devlille.iot-lab.info"/>
     </lease>
  </network>
 </RSpec>
