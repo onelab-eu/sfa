@@ -14,7 +14,7 @@
     </lease>
   </network>
   <network name="iotlab">
-    <node component_manager_id="urn:publicid:IDN+iotlab+authority+sa" component_id="urn:publicid:IDN+iotlab+node+wsn430-12.devlille.iot-lab.info.info" boot_state="Alive" component_name="node5.devlille.iotlab.info" site_id="urn:publicid:IDN+iotlab+authority+sa">
+    <node component_manager_id="urn:publicid:IDN+iotlab+authority+sa" component_id="urn:publicid:IDN+iotlab+node+wsn430-12.devlille.iot-lab.info.info" boot_state="Alive" component_name="wsn430-12.devlille.iot-lab.info.info" site_id="urn:publicid:IDN+iotlab+authority+sa">
       <hostname>wsn430-12.devlille.iot-lab.info.info</hostname>
       <location country="France"/>
       <exclusive>TRUE</exclusive>
