@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <RSpec type="SFA" expires="2013-02-27T15:14:10Z" generated="2013-02-27T14:14:10Z">
   <network name="iotlab">
-    <node component_manager_id="urn:publicid:IDN+iotlab+authority+sa" component_id="urn:publicid:IDN+iotlab+node+wsn430-12.devlille.iot-lab.info" boot_state="Alive" component_name="wsn430-12.devlille.iot-lab.info.info" site_id="urn:publicid:IDN+senslab+authority+sa">
+    <node component_manager_id="urn:publicid:IDN+iotlab+authority+sa" component_id="urn:publicid:IDN+iotlab+node+wsn430-12.devlille.iot-lab.info" boot_state="Alive" component_name="wsn430-12.devlille.iot-lab.info" site_id="urn:publicid:IDN+senslab+authority+sa">
       <hostname>wsn430-12.devlille.iot-lab.info</hostname>
       <location country="France"/>
       <exclusive>TRUE</exclusive>
