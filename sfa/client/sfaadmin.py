@@ -261,7 +261,7 @@ Users having a GID/PubKey correpondence NOT OK: %s and are: \n%s\n\n"%(len(NOKEY
         """Initialize or upgrade the db"""
         from sfa.storage.dbschema import DBSchema
         dbschema=DBSchema()
-        dbschema.init_or_upgrade
+        dbschema.init_or_upgrade()
     
     @args('-a', '--all', dest='all', metavar='<all>', action='store_true', default=False,
           help='Remove all registry records and all files in %s area' % help_basedir)

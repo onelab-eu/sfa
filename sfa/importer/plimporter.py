@@ -376,7 +376,7 @@ class PlImporter:
             # being improperly handled, and where the whole loop on persons
             # could be performed twice with the same person...
             # so hopefully we do not need to eliminate duplicates explicitly here anymore
-            site_record.reg_pis = site_pis
+            site_record.reg_pis = list(set(site_pis))
             dbsession.commit()
 
             # import slices
