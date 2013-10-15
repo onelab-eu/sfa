@@ -389,11 +389,12 @@ class IotlabSlices:
         for info in users:
             if 'slice_record' in info:
                 slice_rec = info['slice_record']
-                user = slice_rec['user']
+                if 'user' in slice_rec :
+                    user = slice_rec['user']
 
-            if 'email' in user:
-                users_by_email[user['email']] = user
-                users_dict[user['email']] = user
+                    if 'email' in user:
+                        users_by_email[user['email']] = user
+                        users_dict[user['email']] = user
 
         logger.debug("IOTLABSLICES.PY \t verify_person  \
                         users_dict %s \r\n user_by_email %s \r\n \
