@@ -1001,8 +1001,8 @@ class IotlabTestbedAPI():
                 resa['component_id_list'].append(iotlab_xrn.urn)
 
         if lease_filter_dict:
-            logger.debug("IOTLAB_API \tGetLeases resa_ %s \
-                    \r\n leasefilter %s" % (resa, lease_filter_dict))
+            logger.debug("IOTLAB_API \tGetLeases  \
+                    \r\n leasefilter %s" % ( lease_filter_dict))
 
             filter_dict_functions = {
             'slice_hrn' : IotlabTestbedAPI.filter_lease_name,
