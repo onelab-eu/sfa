@@ -7,7 +7,7 @@ from sfa.util.config import Config
 from sfa.util.xrn import Xrn, get_authority, hrn_to_urn
 
 from sfa.iotlab.iotlabdriver import IotlabDriver
-from sfa.iotlab.iotlabpostgres import IotlabDB
+from sfa.iotlab.iotlabpostgres import TestbedAdditionalSfaDB
 from sfa.trust.certificate import Keypair, convert_public_key
 from sfa.trust.gid import create_uuid
 
@@ -505,7 +505,7 @@ class IotlabImporter:
 
     def run(self, options):
         """
-        Create the special iotlab table, iotlab_xp, in the iotlab database.
+        Create the special iotlab table, testbed_xp, in the iotlab database.
         Import everything (users, slices, nodes and sites from OAR
         and LDAP) into the SFA database.
         Delete stale records that are no longer in OAR or LDAP.
@@ -515,12 +515,12 @@ class IotlabImporter:
         config = Config()
 
         iotlabdriver = IotlabDriver(config)
-        iotlab_db = IotlabDB(config)
+        iotlab_db = TestbedAdditionalSfaDB(config)
         #Create special slice table for iotlab
 
-        if not iotlab_db.exists('iotlab_xp'):
+        if not iotlab_db.exists('testbed_xp'):
             iotlab_db.createtable()
-            self.logger.info("IotlabImporter.run:  iotlab_xp table created ")
+            self.logger.info("IotlabImporter.run:  testbed_xp table created ")
 
         # import site and node records in site into the SFA db.
         self.import_sites_and_nodes(iotlabdriver)

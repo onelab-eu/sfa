@@ -23,32 +23,32 @@ slice_table = {'record_id_user': 'integer PRIMARY KEY references X ON DELETE \
                'record_id_slice': 'integer', 'slice_hrn': 'text NOT NULL'}
 
 #Dict with all the specific iotlab tables
-tablenames_dict = {'iotlab_xp': slice_table}
+# tablenames_dict = {'testbed_xp': slice_table}
 
 
-IotlabBase = declarative_base()
+TestbedBase = declarative_base()
 
 
-class IotlabXP (IotlabBase):
+class TestbedXP (TestbedBase):
     """ SQL alchemy class to manipulate the rows of the slice_iotlab table in
-    iotlab_sfa database. Handles the records representation and creates the
+    lease_table database. Handles the records representation and creates the
     table if it does not exist yet.
 
     """
-    __tablename__ = 'iotlab_xp'
+    __tablename__ = 'testbed_xp'
 
     slice_hrn = Column(String)
-    job_id = Column(Integer, primary_key=True)
+    experiment_id = Column(Integer, primary_key=True)
     end_time = Column(Integer, nullable=False)
 
-    def __init__(self, slice_hrn=None, job_id=None,  end_time=None):
+    def __init__(self, slice_hrn=None, experiment_id=None,  end_time=None):
         """
         Defines a row of the slice_iotlab table
         """
         if slice_hrn:
             self.slice_hrn = slice_hrn
-        if job_id:
-            self.job_id = job_id
+        if experiment_id:
+            self.experiment_id = experiment_id
         if end_time:
             self.end_time = end_time
 
@@ -56,20 +56,20 @@ class IotlabXP (IotlabBase):
         """Prints the SQLAlchemy record to the format defined
         by the function.
         """
-        result = "<iotlab_xp : slice_hrn = %s , job_id %s end_time = %s" \
-            % (self.slice_hrn, self.job_id, self.end_time)
+        result = "<testbed_xp : slice_hrn = %s , experiment_id %s end_time = %s" \
+            % (self.slice_hrn, self.experiment_id, self.end_time)
         result += ">"
         return result
 
 
-class IotlabDB(object):
+class TestbedAdditionalSfaDB(object):
     """ SQL Alchemy connection class.
     From alchemy.py
     """
     # Stores the unique Singleton instance-
     _connection_singleton = None
     # defines the database name
-    dbname = "iotlab_sfa"
+    dbname = "lease_table"
 
     class Singleton:
         """
@@ -81,13 +81,13 @@ class IotlabDB(object):
         """
 
         def __init__(self, config, debug=False):
-            self.iotlab_engine = None
-            self.iotlab_session = None
+            self.testbed_engine = None
+            self.testbed_session = None
             self.url = None
-            self.create_iotlab_engine(config, debug)
+            self.create_testbed_engine(config, debug)
             self.session()
 
-        def create_iotlab_engine(self, config, debug=False):
+        def create_testbed_engine(self, config, debug=False):
             """Creates the SQLAlchemy engine, which is the starting point for
             any SQLAlchemy application.
             :param config: configuration object created by SFA based on the
@@ -122,23 +122,23 @@ class IotlabDB(object):
             #  - omitting the hostname does the trick
             unix_url = "postgresql+psycopg2://%s:%s@:%s/%s" \
                 % (config.SFA_DB_USER, config.SFA_DB_PASSWORD,
-                   config.SFA_DB_PORT, IotlabDB.dbname)
+                   config.SFA_DB_PORT, TestbedAdditionalSfaDB.dbname)
 
             # the TCP fallback method
             tcp_url = "postgresql+psycopg2://%s:%s@%s:%s/%s" \
                 % (config.SFA_DB_USER, config.SFA_DB_PASSWORD,
-                    config.SFA_DB_HOST, config.SFA_DB_PORT, IotlabDB.dbname)
+                    config.SFA_DB_HOST, config.SFA_DB_PORT, TestbedAdditionalSfaDB.dbname)
 
             for url in [unix_url, tcp_url]:
                 try:
-                    self.iotlab_engine = create_engine(
+                    self.testbed_engine = create_engine(
                         url, echo_pool=l_echo_pool, echo=l_echo)
                     self.check()
                     self.url = url
                     return
                 except:
                     pass
-                self.iotlab_engine = None
+                self.testbed_engine = None
 
             raise Exception("Could not connect to database")
 
@@ -147,7 +147,7 @@ class IotlabDB(object):
             on the table.
 
             """
-            self.iotlab_engine.execute("select 1").scalar()
+            self.testbed_engine.execute("select 1").scalar()
 
 
         def session(self):
@@ -157,59 +157,68 @@ class IotlabDB(object):
             tables for this given database.
 
             """
-            if self.iotlab_session is None:
+            if self.testbed_session is None:
                 Session = sessionmaker()
-                self.iotlab_session = Session(bind=self.iotlab_engine)
-            return self.iotlab_session
+                self.testbed_session = Session(bind=self.testbed_engine)
+            return self.testbed_session
 
         def close_session(self):
             """
             Closes connection to database.
 
             """
-            if self.iotlab_session is None:
+            if self.testbed_session is None:
                 return
-            self.iotlab_session.close()
-            self.iotlab_session = None
+            self.testbed_session.close()
+            self.testbed_session = None
 
 
-        def update_jobs_in_iotlabdb(self, job_oar_list, jobs_psql):
+        def update_experiments_in_additional_sfa_db(self,
+            experiment_list_from_testbed, experiment_list_in_db):
             """ Cleans the iotlab db by deleting expired and cancelled jobs.
 
-            Compares the list of job ids given by OAR with the job ids that
-            are already in the database, deletes the jobs that are no longer in
-            the OAR job id list.
+            Compares the list of experiment ids given by the testbed with the
+            experiment ids that are already in the database, deletes the
+            experiments that are no longer in the testbed experiment id list.
 
-            :param  job_oar_list: list of job ids coming from OAR
-            :type job_oar_list: list
-            :param job_psql: list of job ids from the database.
-            :type job_psql: list
+            :param  experiment_list_from_testbed: list of experiment ids coming
+                from testbed
+            :type experiment_list_from_testbed: list
+            :param experiment_list_in_db: list of experiment ids from the sfa
+                additionnal database.
+            :type experiment_list_in_db: list
 
             :returns: None
             """
             #Turn the list into a set
-            set_jobs_psql = set(jobs_psql)
+            set_experiment_list_in_db = set(experiment_list_in_db)
 
-            kept_jobs = set(job_oar_list).intersection(set_jobs_psql)
-            logger.debug("\r\n \t update_jobs_in_iotlabdb jobs_psql %s \r\n \
-                            job_oar_list %s kept_jobs %s "
-                         % (set_jobs_psql, job_oar_list, kept_jobs))
-            deleted_jobs = set_jobs_psql.difference(kept_jobs)
-            deleted_jobs = list(deleted_jobs)
-            if len(deleted_jobs) > 0:
-                self.iotlab_session.query(IotlabXP).filter(IotlabXP.job_id.in_(deleted_jobs)).delete(synchronize_session='fetch')
-                self.iotlab_session.commit()
+            kept_experiments = set(experiment_list_from_testbed).intersection(set_experiment_list_in_db)
+            logger.debug("\r\n \t update_experiments_in_additional_sfa_db \
+                            experiment_list_in_db %s \r\n \
+                            experiment_list_from_testbed %s \
+                            kept_experiments %s "
+                         % (set_experiment_list_in_db,
+                          experiment_list_from_testbed, kept_experiments))
+            deleted_experiments = set_experiment_list_in_db.difference(
+                kept_experiments)
+            deleted_experiments = list(deleted_experiments)
+            if len(deleted_experiments) > 0:
+                self.testbed_session.query(TestbedXP).filter(TestbedXP.job_id.in_(deleted_experiments)).delete(synchronize_session='fetch')
+                self.testbed_session.commit()
             return
 
     def __init__(self, config, debug=False):
-        self.sl_base = IotlabBase
+        self.sl_base = TestbedBase
 
          # Check whether we already have an instance
-        if IotlabDB._connection_singleton is None:
-            IotlabDB._connection_singleton = IotlabDB.Singleton(config, debug)
+        if TestbedAdditionalSfaDB._connection_singleton is None:
+            TestbedAdditionalSfaDB._connection_singleton = \
+                TestbedAdditionalSfaDB.Singleton(config, debug)
 
         # Store instance reference as the only member in the handle
-        self._EventHandler_singleton = IotlabDB._connection_singleton
+        self._EventHandler_singleton = \
+            TestbedAdditionalSfaDB._connection_singleton
 
     def __getattr__(self, aAttr):
         """
@@ -240,7 +249,7 @@ class IotlabDB(object):
         :rtype: bool
 
         """
-        metadata = MetaData(bind=self.iotlab_engine)
+        metadata = MetaData(bind=self.testbed_engine)
         try:
             table = Table(tablename, metadata, autoload=True)
             return True
@@ -257,8 +266,8 @@ class IotlabDB(object):
 
         """
 
-        logger.debug("SLABPOSTGRES createtable \
-                    IotlabBase.metadata.sorted_tables %s \r\n engine %s"
-                     % (IotlabBase.metadata.sorted_tables, self.iotlab_engine))
-        IotlabBase.metadata.create_all(self.iotlab_engine)
+        logger.debug("IOTLABPOSTGRES createtable \
+                    TestbedBase.metadata.sorted_tables %s \r\n engine %s"
+                     % (TestbedBase.metadata.sorted_tables, self.testbed_engine))
+        TestbedBase.metadata.create_all(self.testbed_engine)
         return
