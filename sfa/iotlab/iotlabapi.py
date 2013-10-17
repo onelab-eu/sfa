@@ -11,7 +11,7 @@ from sfa.util.sfalogging import logger
 from sfa.storage.alchemy import dbsession
 from sqlalchemy.orm import joinedload
 from sfa.storage.model import RegRecord, RegUser, RegSlice, RegKey
-from sfa.iotlab.iotlabpostgres import TestbedAdditionalSfaDB, TestbedXP
+from sfa.iotlab.iotlabpostgres import TestbedAdditionalSfaDB, LeaseTableXP
 from sfa.iotlab.OARrestapi import OARrestapi
 from sfa.iotlab.LDAPapi import LDAPapi
 
@@ -836,7 +836,7 @@ class IotlabTestbedAPI():
         logger.debug("IOTLAB_API \r\n \r\n \t AddLeases %s %s %s " \
                 %(type(slice_record['hrn']), type(job_id), type(end_time)))
 
-        iotlab_ex_row = TestbedXP(slice_hrn = slice_record['hrn'], job_id=job_id,
+        iotlab_ex_row = LeaseTableXP(slice_hrn = slice_record['hrn'], job_id=job_id,
                                  end_time= end_time)
 
         logger.debug("IOTLAB_API \r\n \r\n \t AddLeases iotlab_ex_row %s" \
@@ -911,7 +911,7 @@ class IotlabTestbedAPI():
     #     deleted_jobs = set_jobs_psql.difference(kept_jobs)
     #     deleted_jobs = list(deleted_jobs)
     #     if len(deleted_jobs) > 0:
-    #         self.iotlab_db.testbed_session.query(TestbedXP).filter(TestbedXP.job_id.in_(deleted_jobs)).delete(synchronize_session='fetch')
+    #         self.iotlab_db.testbed_session.query(LeaseTableXP).filter(LeaseTableXP.job_id.in_(deleted_jobs)).delete(synchronize_session='fetch')
     #         self.iotlab_db.testbed_session.commit()
 
     #     return
@@ -971,7 +971,7 @@ class IotlabTestbedAPI():
         #the same user in LDAP SA 27/07/12
         job_oar_list = []
 
-        jobs_psql_query = self.iotlab_db.testbed_session.query(TestbedXP).all()
+        jobs_psql_query = self.iotlab_db.testbed_session.query(LeaseTableXP).all()
         jobs_psql_dict = dict([(row.job_id, row.__dict__)
                                for row in jobs_psql_query])
         #jobs_psql_dict = jobs_psql_dict)
