@@ -213,21 +213,31 @@ class OARrestapi:
             conn = HTTPConnection(self.oarserver['ip'],
                                   self.oarserver['port'])
             conn.request("GET", self.oarserver['uri'], data, headers)
-            resp = (conn.getresponse()).read()
+            resp = conn.getresponse()
+            body = resp.read()
+        except Exception as error:
+            logger.log_exc("GET_OAR_SRVR : Connection error: %s "
+                % (error))
+            raise Exception ("GET_OAR_SRVR : Connection error %s " %(error))
+
+        finally:
             conn.close()
 
-        except HTTPException, error:
-            logger.log_exc("GET_OAR_SRVR : Problem with OAR server : %s "
-                           % (error))
+        # except HTTPException, error:
+        #     logger.log_exc("GET_OAR_SRVR : Problem with OAR server : %s "
+        #                    % (error))
             #raise ServerError("GET_OAR_SRVR : Could not reach OARserver")
+        if resp.status >= 400:
+            raise ValueError ("Response Error %s, %s" %(resp.status,
+                resp.reason))
         try:
-            js_dict = json.loads(resp)
+            js_dict = json.loads(body)
             #print "\r\n \t\t\t js_dict keys" , js_dict.keys(), " \r\n", js_dict
             return js_dict
 
         except ValueError, error:
             logger.log_exc("Failed to parse Server Response: %s ERROR %s"
-                           % (js_dict, error))
+                           % (body, error))
             #raise ServerError("Failed to parse Server Response:" + js)
 
 
@@ -260,17 +270,28 @@ class OARrestapi:
             conn = HTTPConnection(self.oarserver['ip'], \
                                         self.oarserver['port'])
             conn.request("POST", self.oarserver['uri'], data, headers)
-            resp = (conn.getresponse()).read()
-            conn.close()
+            resp = conn.getresponse()
+            body = resp.read()
+
         except NotConnected:
             logger.log_exc("POSTRequestToOARRestAPI NotConnected ERROR: \
                             data %s \r\n \t\n \t\t headers %s uri %s" \
                             %(data,headers,self.oarserver['uri']))
+        except Exception as error:
+            logger.log_exc("POST_OAR_SERVER : Connection error: %s "
+                % (error))
+            raise Exception ("POST_OAR_SERVER : Connection error %s " %(error))
 
-            #raise ServerError("POST_OAR_SRVR : error")
+        finally:
+            conn.close()
+
+        if resp.status >= 400:
+            raise ValueError ("Response Error %s, %s" %(resp.status,
+                resp.reason))
+
 
         try:
-            answer = json.loads(resp)
+            answer = json.loads(body)
             logger.debug("POSTRequestToOARRestAPI : answer %s" % (answer))
             return answer
 

@@ -11,7 +11,7 @@ from sfa.util.sfalogging import logger
 from sfa.storage.alchemy import dbsession
 from sqlalchemy.orm import joinedload
 from sfa.storage.model import RegRecord, RegUser, RegSlice, RegKey
-from sfa.iotlab.iotlabpostgres import IotlabDB, IotlabXP
+from sfa.iotlab.iotlabpostgres import TestbedAdditionalSfaDB, TestbedXP
 from sfa.iotlab.OARrestapi import OARrestapi
 from sfa.iotlab.LDAPapi import LDAPapi
 
@@ -37,7 +37,7 @@ class IotlabTestbedAPI():
         :param config: configuration object from sfa.util.config
         :type config: Config object
         """
-        self.iotlab_db = IotlabDB(config)
+        self.iotlab_db = TestbedAdditionalSfaDB(config)
         self.oar = OARrestapi()
         self.ldap = LDAPapi()
         self.time_format = "%Y-%m-%d %H:%M:%S"
@@ -244,6 +244,7 @@ class IotlabTestbedAPI():
 
         :returns: dicionary with nodes' hostnames belonging to the job.
         :rtype: dict
+        .. warning: Unused. SA 16/10/13
         """
 
         req = "GET_jobs_id_resources"
@@ -434,8 +435,13 @@ class IotlabTestbedAPI():
 
     def GetSites(self, site_filter_name_list=None, return_fields_list=None):
         """Returns the list of Iotlab's sites with the associated nodes and
-        their properties as dictionaries.
+        the sites' properties as dictionaries.
 
+        Site properties:
+        ['address_ids', 'slice_ids', 'name', 'node_ids', 'url', 'person_ids',
+        'site_tag_ids', 'enabled', 'site', 'longitude', 'pcu_ids',
+        'max_slivers', 'max_slices', 'ext_consortium_id', 'date_created',
+        'latitude', 'is_public', 'peer_site_id', 'peer_id', 'abbreviated_name']
         Uses the OAR request GET_sites to find the Iotlab's sites.
 
         :param site_filter_name_list: used to specify specific sites
@@ -443,7 +449,7 @@ class IotlabTestbedAPI():
         :type site_filter_name_list: list
         :type return_fields_list: list
 
-        .. warning:: unused
+
         """
         site_dict = self.oar.parser.SendRequest("GET_sites")
         #site_dict : dict where the key is the sit ename
@@ -520,7 +526,7 @@ class IotlabTestbedAPI():
         Add a federated user straight to db when the user issues a lease
         request with iotlab nodes and that he has not registered with iotlab
         yet (that is he does not have a LDAP entry yet).
-        Uses parts of the routines in SlabImport when importing user from LDAP.
+        Uses parts of the routines in IotlabImport when importing user from LDAP.
         Called by AddPerson, right after LdapAddUser.
         :param user_dict: Must contain email, hrn and pkey to get a GID
         and be added to the SFA db.
@@ -830,13 +836,13 @@ class IotlabTestbedAPI():
         logger.debug("IOTLAB_API \r\n \r\n \t AddLeases %s %s %s " \
                 %(type(slice_record['hrn']), type(job_id), type(end_time)))
 
-        iotlab_ex_row = IotlabXP(slice_hrn = slice_record['hrn'], job_id=job_id,
+        iotlab_ex_row = TestbedXP(slice_hrn = slice_record['hrn'], job_id=job_id,
                                  end_time= end_time)
 
         logger.debug("IOTLAB_API \r\n \r\n \t AddLeases iotlab_ex_row %s" \
                 %(iotlab_ex_row))
-        self.iotlab_db.iotlab_session.add(iotlab_ex_row)
-        self.iotlab_db.iotlab_session.commit()
+        self.iotlab_db.testbed_session.add(iotlab_ex_row)
+        self.iotlab_db.testbed_session.commit()
 
         logger.debug("IOTLAB_API \t AddLeases hostname_list start_time %s " \
                 %(start_time))
@@ -886,7 +892,7 @@ class IotlabTestbedAPI():
 
 
     # @staticmethod
-    # def update_jobs_in_iotlabdb( job_oar_list, jobs_psql):
+    # def update_experiments_in_additional_sfa_db( job_oar_list, jobs_psql):
     #     """ Cleans the iotlab db by deleting expired and cancelled jobs.
     #     Compares the list of job ids given by OAR with the job ids that
     #     are already in the database, deletes the jobs that are no longer in
@@ -900,13 +906,13 @@ class IotlabTestbedAPI():
     #     set_jobs_psql = set(jobs_psql)
 
     #     kept_jobs = set(job_oar_list).intersection(set_jobs_psql)
-    #     logger.debug ( "\r\n \t\ update_jobs_in_iotlabdb jobs_psql %s \r\n \t \
+    #     logger.debug ( "\r\n \t\ update_experiments_in_additional_sfa_db jobs_psql %s \r\n \t \
     #         job_oar_list %s kept_jobs %s "%(set_jobs_psql, job_oar_list, kept_jobs))
     #     deleted_jobs = set_jobs_psql.difference(kept_jobs)
     #     deleted_jobs = list(deleted_jobs)
     #     if len(deleted_jobs) > 0:
-    #         self.iotlab_db.iotlab_session.query(IotlabXP).filter(IotlabXP.job_id.in_(deleted_jobs)).delete(synchronize_session='fetch')
-    #         self.iotlab_db.iotlab_session.commit()
+    #         self.iotlab_db.testbed_session.query(TestbedXP).filter(TestbedXP.job_id.in_(deleted_jobs)).delete(synchronize_session='fetch')
+    #         self.iotlab_db.testbed_session.commit()
 
     #     return
 
@@ -943,7 +949,7 @@ class IotlabTestbedAPI():
             Two purposes:
             -Fetch all the jobs from OAR (running, waiting..)
             complete the reservation information with slice hrn
-            found in iotlab_xp table. If not available in the table,
+            found in testbed_xp table. If not available in the table,
             assume it is a iotlab slice.
             -Updates the iotlab table, deleting jobs when necessary.
 
@@ -965,7 +971,7 @@ class IotlabTestbedAPI():
         #the same user in LDAP SA 27/07/12
         job_oar_list = []
 
-        jobs_psql_query = self.iotlab_db.iotlab_session.query(IotlabXP).all()
+        jobs_psql_query = self.iotlab_db.testbed_session.query(TestbedXP).all()
         jobs_psql_dict = dict([(row.job_id, row.__dict__)
                                for row in jobs_psql_query])
         #jobs_psql_dict = jobs_psql_dict)
@@ -1031,7 +1037,7 @@ class IotlabTestbedAPI():
         if lease_filter_dict is None:
             reservation_list = unfiltered_reservation_list
 
-        self.iotlab_db.update_jobs_in_iotlabdb(job_oar_list, jobs_psql_id_list)
+        self.iotlab_db.update_experiments_in_additional_sfa_db(job_oar_list, jobs_psql_id_list)
 
         logger.debug(" IOTLAB_API.PY \tGetLeases reservation_list %s"
                      % (reservation_list))
@@ -1112,8 +1118,8 @@ class IotlabTestbedAPI():
 
         #"""
         ##new_row = FederatedToIotlab(iotlab_hrn, federated_hrn)
-        ##self.iotlab_db.iotlab_session.add(new_row)
-        ##self.iotlab_db.iotlab_session.commit()
+        ##self.iotlab_db.testbed_session.add(new_row)
+        ##self.iotlab_db.testbed_session.commit()
 
         #logger.debug("IOTLAB_API UpdatePerson EMPTY - DO NOTHING \r\n ")
         #return
@@ -1193,7 +1199,7 @@ class IotlabTestbedAPI():
         #of the user otherwise will mess up the RegRecord in
         #Resolve, don't know why - SA 08/08/2012
 
-        #Only one entry for one user  = one slice in iotlab_xp table
+        #Only one entry for one user  = one slice in testbed_xp table
         #slicerec = dbsession.query(RegRecord).filter_by(hrn = slice_filter).first()
         raw_slicerec = dbsession.query(RegSlice).options(joinedload('reg_researchers')).filter_by(hrn=slice_filter).first()
         #raw_slicerec = dbsession.query(RegRecord).filter_by(hrn = slice_filter).first()
