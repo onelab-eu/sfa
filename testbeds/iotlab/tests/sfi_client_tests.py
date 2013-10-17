@@ -129,7 +129,7 @@ raw_input("Press Enter to continue...")
 os.system('sfi.py show iotlab.avakian')
 
 print " =================    SFI.PY SHOW NODE   ============="
-os.system('sfi.py show iotlab.node6.devlille.senslab.info')
+os.system('sfi.py show m3-3.devgrenoble.iot-lab.info')
 
 print " =================    SFI.PY SLICES       ============="
 raw_input("Press Enter to continue...")
