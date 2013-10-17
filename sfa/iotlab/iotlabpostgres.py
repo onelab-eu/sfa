@@ -23,19 +23,19 @@ slice_table = {'record_id_user': 'integer PRIMARY KEY references X ON DELETE \
                'record_id_slice': 'integer', 'slice_hrn': 'text NOT NULL'}
 
 #Dict with all the specific iotlab tables
-# tablenames_dict = {'testbed_xp': slice_table}
+# tablenames_dict = {'lease_table': slice_table}
 
 
 TestbedBase = declarative_base()
 
 
-class TestbedXP (TestbedBase):
+class LeaseTableXP (TestbedBase):
     """ SQL alchemy class to manipulate the rows of the slice_iotlab table in
     lease_table database. Handles the records representation and creates the
     table if it does not exist yet.
 
     """
-    __tablename__ = 'testbed_xp'
+    __tablename__ = 'lease_table'
 
     slice_hrn = Column(String)
     experiment_id = Column(Integer, primary_key=True)
@@ -56,7 +56,7 @@ class TestbedXP (TestbedBase):
         """Prints the SQLAlchemy record to the format defined
         by the function.
         """
-        result = "<testbed_xp : slice_hrn = %s , experiment_id %s end_time = %s" \
+        result = "<lease_table : slice_hrn = %s , experiment_id %s end_time = %s" \
             % (self.slice_hrn, self.experiment_id, self.end_time)
         result += ">"
         return result
@@ -69,7 +69,7 @@ class TestbedAdditionalSfaDB(object):
     # Stores the unique Singleton instance-
     _connection_singleton = None
     # defines the database name
-    dbname = "lease_table"
+    dbname = "testbed_xp"
 
     class Singleton:
         """
@@ -204,7 +204,7 @@ class TestbedAdditionalSfaDB(object):
                 kept_experiments)
             deleted_experiments = list(deleted_experiments)
             if len(deleted_experiments) > 0:
-                self.testbed_session.query(TestbedXP).filter(TestbedXP.job_id.in_(deleted_experiments)).delete(synchronize_session='fetch')
+                self.testbed_session.query(LeaseTableXP).filter(LeaseTableXP.job_id.in_(deleted_experiments)).delete(synchronize_session='fetch')
                 self.testbed_session.commit()
             return
 
