@@ -5,7 +5,7 @@ from sfa.rspecs.elements.element import Element
 from sfa.rspecs.elements.sliver import Sliver
 from sfa.rspecs.elements.versions.nitosv1PLTag import NITOSv1PLTag
 
-from sfa.planetlab.plxrn import PlXrn
+#from sfa.planetlab.plxrn import PlXrn
 
 class NITOSv1Sliver:
 
@@ -21,9 +21,9 @@ class NITOSv1Sliver:
             if tags:
                 for tag in tags:
                     NITOSv1Sliver.add_sliver_attribute(sliver_elem, tag['tagname'], tag['value'])
-            if sliver.get('sliver_id'):
-                name = PlXrn(xrn=sliver.get('sliver_id')).pl_slicename()
-                sliver_elem.set('name', name)
+#            if sliver.get('sliver_id'):
+#                name = PlXrn(xrn=sliver.get('sliver_id')).pl_slicename()
+#                sliver_elem.set('name', name)
 
     @staticmethod
     def add_sliver_attribute(xml, name, value):
