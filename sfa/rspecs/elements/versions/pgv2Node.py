@@ -58,7 +58,11 @@ class PGv2Node:
             slivers = node.get('slivers', [])
             if not slivers:
                 # we must still advertise the available sliver types
-                slivers = Sliver({'type': 'plab-vserver'})
+                if node.get('sliver_type'):
+                    slivers = Sliver({'type': node['sliver_type']})
+                else:
+                # Planet lab
+                    slivers = Sliver({'type': 'plab-vserver'})
                 # we must also advertise the available initscripts
                 slivers['tags'] = []
                 if node.get('pl_initscripts'): 
@@ -74,8 +78,8 @@ class PGv2Node:
                     node_elem.add_instance('{%s}attribute' % xml.namespaces['planetlab'], tag, ['name', 'value'])
 
             # add sliver tag in Request Rspec
-            if rspec_content_type == "request":
-                node_elem.add_instance('sliver', '', [])
+            #if rspec_content_type == "request":
+            #    node_elem.add_instance('sliver', '', [])
 
         return node_elems
 
