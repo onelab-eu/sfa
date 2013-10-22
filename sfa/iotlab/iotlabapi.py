@@ -299,18 +299,15 @@ class IotlabTestbedAPI():
         """
         return self.oar.parser.SendRequest("GET_running_jobs")
 
-    def __get_hostnames_from_oar_node_ids(self, resource_id_list ):
+    def __get_hostnames_from_oar_node_ids(self, oar_id_node_dict,
+            resource_id_list ):
         """Get the hostnames of the nodes from their OAR identifiers.
         Get the list of nodes dict using GetNodes and find the hostname
         associated with the identifier.
+        :param oar_id_node_dict: full node dictionary list keyed by oar node id
         :param resource_id_list: list of nodes identifiers
         :returns: list of node hostnames.
         """
-        full_nodes_dict_list = self.GetNodes()
-        #Put the full node list into a dictionary keyed by oar node id
-        oar_id_node_dict = {}
-        for node in full_nodes_dict_list:
-            oar_id_node_dict[node['oar_id']] = node
 
         hostname_list = []
         for resource_id in resource_id_list:
@@ -337,12 +334,21 @@ class IotlabTestbedAPI():
                         self.oar.parser.SendRequest("GET_reserved_nodes", \
                         username = username)
 
+        # Get the full node dict list once for all
+        # so that we can get the hostnames given their oar node id afterwards
+        # when the reservations are checked.
+        full_nodes_dict_list = self.GetNodes()
+        #Put the full node list into a dictionary keyed by oar node id
+        oar_id_node_dict = {}
+        for node in full_nodes_dict_list:
+            oar_id_node_dict[node['oar_id']] = node
 
         for resa in reservation_dict_list:
             logger.debug ("GetReservedNodes resa %s"%(resa))
             #dict list of hostnames and their site
             resa['reserved_nodes'] = \
-                self.__get_hostnames_from_oar_node_ids(resa['resource_ids'])
+                self.__get_hostnames_from_oar_node_ids(oar_id_node_dict,
+                    resa['resource_ids'])
 
         #del resa['resource_ids']
         return reservation_dict_list
@@ -972,12 +978,12 @@ class IotlabTestbedAPI():
         job_oar_list = []
 
         jobs_psql_query = self.iotlab_db.testbed_session.query(LeaseTableXP).all()
-        jobs_psql_dict = dict([(row.job_id, row.__dict__)
+        jobs_psql_dict = dict([(row.experiment_id, row.__dict__)
                                for row in jobs_psql_query])
         #jobs_psql_dict = jobs_psql_dict)
         logger.debug("IOTLAB_API \tGetLeases jobs_psql_dict %s"
                      % (jobs_psql_dict))
-        jobs_psql_id_list = [row.job_id for row in jobs_psql_query]
+        jobs_psql_id_list = [row.experiment_id for row in jobs_psql_query]
 
         for resa in unfiltered_reservation_list:
             logger.debug("IOTLAB_API \tGetLeases USER %s"
