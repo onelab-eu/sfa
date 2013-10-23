@@ -21,9 +21,9 @@ class NITOSv1Sliver:
             if tags:
                 for tag in tags:
                     NITOSv1Sliver.add_sliver_attribute(sliver_elem, tag['tagname'], tag['value'])
-#            if sliver.get('sliver_id'):
-#                name = PlXrn(xrn=sliver.get('sliver_id')).pl_slicename()
-#                sliver_elem.set('name', name)
+            if sliver.get('sliver_id'):
+                name = Xrn(xrn=sliver.get('sliver_id')).get_hrn().split('.')[-1]
+                sliver_elem.set('name', name)
 
     @staticmethod
     def add_sliver_attribute(xml, name, value):
