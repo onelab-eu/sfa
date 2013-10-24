@@ -842,7 +842,7 @@ class IotlabTestbedAPI():
         logger.debug("IOTLAB_API \r\n \r\n \t AddLeases %s %s %s " \
                 %(type(slice_record['hrn']), type(job_id), type(end_time)))
 
-        iotlab_ex_row = LeaseTableXP(slice_hrn = slice_record['hrn'], job_id=job_id,
+        iotlab_ex_row = LeaseTableXP(slice_hrn = slice_record['hrn'], experiment_id=job_id,
                                  end_time= end_time)
 
         logger.debug("IOTLAB_API \r\n \r\n \t AddLeases iotlab_ex_row %s" \
@@ -946,6 +946,7 @@ class IotlabTestbedAPI():
                 filtered_reservation_list.remove(reservation)
 
         return filtered_reservation_list
+
 
     def GetLeases(self, lease_filter_dict=None, login=None):
         """
