@@ -9,6 +9,7 @@
 
 import sys
 import os,os.path
+import subprocess
 from datetime import datetime
 from sfa.util.xrn import Xrn
 
@@ -24,7 +25,7 @@ from sfa.trust.certificate import Keypair, Certificate
 from sfa.trust.credential import Credential
 from sfa.trust.gid import GID
 ########## 
-# a helper class to implement the bootstrapping of crypto. material
+# a helper class to implement the bootstrapping of cryptoa. material
 # assuming we are starting from scratch on the client side 
 # what's needed to complete a full slice creation cycle
 # (**) prerequisites: 
@@ -52,7 +53,11 @@ from sfa.trust.gid import GID
 #      obtained at the registry with Resolve
 #      using the (step2) user-credential as credential
 #      default filename is <hrn>.<type>.cred
-
+#
+# (**) additionnally, it might make sense to upgrade a GID file 
+# into a pkcs12 certificate usable in a browser
+# this bundled format allows for embedding the private key
+# 
 
 ########## Implementation notes
 #
@@ -87,6 +92,11 @@ from sfa.trust.gid import GID
 # a known successful attempt at this approach that worked 
 # for Java is documented below
 # http://nam.ece.upatras.gr/fstoolkit/trac/wiki/JavaSFAClient
+#
+# (*) pkcs12
+# 
+# the implementation of the pkcs12 wrapping, which is a late addition,
+# is done through direct calls to openssl
 #
 ####################
 
@@ -194,6 +204,22 @@ class SfaClientBootstrap:
         return output
 
 
+# http://trac.myslice.info/wiki/MySlice/Developer/SFALogin
+### produce a pkcs12 bundled certificate from GID and private key
+# xxx for now we put a hard-wired password that's just, well, 'password'
+# when leaving this empty on the mac, result can't seem to be loaded in keychain..
+    def my_pkcs12_produce (self, filename):
+        password=raw_input("Enter password for p12 certificate: ")
+        openssl_command=['openssl', 'pkcs12', "-export"]
+        openssl_command += [ "-password", "pass:%s"%password ]
+        openssl_command += [ "-inkey", self.private_key_filename()]
+        openssl_command += [ "-in",    self.my_gid_filename()]
+        openssl_command += [ "-out",   filename ]
+        if subprocess.call(openssl_command) ==0:
+            print "Successfully created %s"%filename
+        else:
+            print "Failed to create %s"%filename
+
     # Returns True if credential file is valid. Otherwise return false.
     def validate_credential(self, filename):
         valid = True
@@ -260,7 +286,8 @@ class SfaClientBootstrap:
         return self.gid_filename (self.hrn, "user")
     def gid_filename (self, hrn, type): 
         return self.fullpath ("%s.%s.gid"%(hrn,type))
-    
+    def my_pkcs12_filename (self):
+        return self.fullpath ("%s.p12"%self.hrn)
 
 # optimizing dependencies
 # originally we used classes GID or Credential or Certificate 
@@ -326,6 +353,9 @@ class SfaClientBootstrap:
 
     @get_or_produce (my_gid_filename, my_gid_produce)
     def my_gid (self): pass
+
+    @get_or_produce (my_pkcs12_filename, my_pkcs12_produce)
+    def my_pkcs12 (self): pass
 
     @get_or_produce (credential_filename, credential_produce, validate_credential)
     def credential (self, hrn, type): pass
