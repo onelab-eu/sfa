@@ -1513,6 +1513,9 @@ $ sfi m
         # enable info by default
         self.logger.setLevelFromOptVerbose(self.options.verbose+1)
         ### the rough sketch goes like this
+        # (0) produce a p12 file
+        self.client_bootstrap.my_pkcs12()
+
         # (a) rain check for sufficient config in sfi_config
         myslice_dict={}
         myslice_keys=['backend', 'delegate', 'platform', 'username']
@@ -1597,8 +1600,8 @@ $ sfi m
             if uploader.upload(delegated_credential,message=message):
                 count_success+=1
             count_all+=1
-
         self.logger.info("Successfully uploaded %d/%d credentials"%(count_success,count_all))
+
         # at first I thought we would want to save these,
         # like 'sfi delegate does' but on second thought
         # it is probably not helpful as people would not
