@@ -55,7 +55,7 @@ class LeaseTableXP (TestbedBase):
     def __repr__(self):
         """Prints the SQLAlchemy record to the format defined
         by the function.
-        """
+        """207
         result = "<lease_table : slice_hrn = %s , experiment_id %s end_time = %s" \
             % (self.slice_hrn, self.experiment_id, self.end_time)
         result += ">"
@@ -204,7 +204,7 @@ class TestbedAdditionalSfaDB(object):
                 kept_experiments)
             deleted_experiments = list(deleted_experiments)
             if len(deleted_experiments) > 0:
-                self.testbed_session.query(LeaseTableXP).filter(LeaseTableXP.job_id.in_(deleted_experiments)).delete(synchronize_session='fetch')
+                self.testbed_session.query(LeaseTableXP).filter(LeaseTableXP.experiment_id.in_(deleted_experiments)).delete(synchronize_session='fetch')
                 self.testbed_session.commit()
             return
 

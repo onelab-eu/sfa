@@ -98,6 +98,7 @@ class IotlabAggregate:
         slice_hrn, _ = urn_to_hrn(slice_xrn)
         slice_name = slice_hrn
 
+        # GetSlices always returns a list, even if there is only one element
         slices = self.driver.iotlab_api.GetSlices(slice_filter=str(slice_name),
                                                   slice_filter_type='slice_hrn',
                                                   login=login)
@@ -110,40 +111,57 @@ class IotlabAggregate:
 
         # sort slivers by node id , if there is a job
         #and therefore, node allocated to this slice
-        for sfa_slice in slices:
-            try:
-                node_ids_list = sfa_slice['node_ids']
-            except KeyError:
-                logger.log_exc("IOTLABAGGREGATE \t \
-                            get_slice_and_slivers No nodes in the slice \
-                            - KeyError ")
-                node_ids_list = []
-                continue
+        # for sfa_slice in slices:
+        sfa_slice = slices[0]
+        try:
+            node_ids_list = sfa_slice['node_ids']
+        except KeyError:
+            logger.log_exc("IOTLABAGGREGATE \t \
+                        get_slice_and_slivers No nodes in the slice \
+                        - KeyError ")
+            node_ids_list = []
+            # continue
 
-            for node in node_ids_list:
-                sliver_xrn = Xrn(slice_urn, type='sliver', id=node)
-                sliver_xrn.set_authority(self.driver.hrn)
-                sliver = Sliver({'sliver_id': sliver_xrn.urn,
-                                'name': sfa_slice['hrn'],
-                                'type': 'iotlab-node',
-                                'tags': []})
+        for node in node_ids_list:
+            sliver_xrn = Xrn(slice_urn, type='sliver', id=node)
+            sliver_xrn.set_authority(self.driver.hrn)
+            sliver = Sliver({'sliver_id': sliver_xrn.urn,
+                            'name': sfa_slice['hrn'],
+                            'type': 'iotlab-node',
+                            'tags': []})
 
-                slivers[node] = sliver
+            slivers[node] = sliver
 
         #Add default sliver attribute :
         #connection information for iotlab
-        if get_authority(sfa_slice['hrn']) == self.driver.iotlab_api.root_auth:
-            tmp = sfa_slice['hrn'].split('.')
-            ldap_username = tmp[1].split('_')[0]
+        # if get_authority(sfa_slice['hrn']) == self.driver.iotlab_api.root_auth:
+        #     tmp = sfa_slice['hrn'].split('.')
+        #     ldap_username = tmp[1].split('_')[0]
+        #     ssh_access = None
+        #     slivers['default_sliver'] = {'ssh': ssh_access,
+        #                                  'login': ldap_username}
+        # look in ldap:
+        ldap_username = self.find_ldap_username_from_slice(sfa_slice)
+
+        if ldap_username is not None:
             ssh_access = None
             slivers['default_sliver'] = {'ssh': ssh_access,
-                                         'login': ldap_username}
+                                             'login': ldap_username}
 
-        #TODO get_slice_and_slivers Find the login of the external user
 
         logger.debug("IOTLABAGGREGATE api get_slice_and_slivers  slivers %s "
                      % (slivers))
         return (slices, slivers)
+
+    def find_ldap_username_from_slice(self, sfa_slice):
+        researchers = [sfa_slice['reg_researchers'][0].__dict__]
+        # look in ldap:
+        ldap_username = None
+        ret =  self.driver.iotlab_api.GetPersons(researchers)
+        if len(ret) != 0:
+            ldap_username = ret[0]['uid']
+
+        return ldap_username
 
 
     def get_nodes(self, slices=None, slivers=[], options=None):
@@ -390,10 +408,11 @@ class IotlabAggregate:
         if slice_xrn and slices is not None:
             #Get user associated with this slice
             #for one_slice in slices :
-            ldap_username = slices[0]['reg_researchers'][0].__dict__['hrn']
-             # ldap_username = slices[0]['user']
-            tmp = ldap_username.split('.')
-            ldap_username = tmp[1]
+            ldap_username = self.find_ldap_username_from_slice(slices[0])
+            # ldap_username = slices[0]['reg_researchers'][0].__dict__['hrn']
+            #  # ldap_username = slices[0]['user']
+            # tmp = ldap_username.split('.')
+            # ldap_username = tmp[1]
             logger.debug("IotlabAggregate \tget_rspec **** \
                     LDAP USERNAME %s \r\n" \
                     % (ldap_username))
