@@ -11,9 +11,9 @@ from sfa.util.sfalogging import logger
 from sfa.storage.alchemy import dbsession
 from sqlalchemy.orm import joinedload
 from sfa.storage.model import RegRecord, RegUser, RegSlice, RegKey
-from sfa.iotlab.iotlabpostgres import IotlabDB, IotlabXP
-from sfa.iotlab.OARrestapi import OARrestapi
-from sfa.iotlab.LDAPapi import LDAPapi
+
+from sfa.iotlab.iotlabpostgres import TestbedAdditionalSfaDB, LeaseTableXP
+from sfa.cortexlab.LDAPapi import LDAPapi
 
 from sfa.util.xrn import Xrn, hrn_to_urn, get_authority
 
@@ -37,8 +37,8 @@ class CortexlabTestbedAPI():
         :param config: configuration object from sfa.util.config
         :type config: Config object
         """
-        self.iotlab_db = IotlabDB(config)
-        self.oar = OARrestapi()
+        self.cortexlab_leases_db = TestbedAdditionalSfaDB(config)
+        self.query_sites = CortexlabQueryNodes()
         self.ldap = LDAPapi()
         self.time_format = "%Y-%m-%d %H:%M:%S"
         self.root_auth = config.SFA_REGISTRY_ROOT_AUTH
@@ -55,7 +55,7 @@ class CortexlabTestbedAPI():
         testbed. In seconds.
 
         """
-        return IotlabTestbedAPI._MINIMUM_DURATION
+        return CortexlabTestbedAPI._MINIMUM_DURATION
 
     @staticmethod
     def GetPeers(peer_filter=None ):
@@ -107,7 +107,7 @@ class CortexlabTestbedAPI():
     #over the records' list
     def GetPersons(self, person_filter=None):
         """
-        Get the enabled users and their properties from Iotlab LDAP.
+        Get the enabled users and their properties from Cortexlab LDAP.
         If a filter is specified, looks for the user whose properties match
         the filter, otherwise returns the whole enabled users'list.
 
@@ -148,14 +148,8 @@ class CortexlabTestbedAPI():
         return person_list
 
 
-    #def GetTimezone(self):
-        #""" Returns the OAR server time and timezone.
-        #Unused SA 30/05/13"""
-        #server_timestamp, server_tz = self.oar.parser.\
-                                            #SendRequest("GET_timezone")
-        #return server_timestamp, server_tz
 
-    def DeleteLeases(self, lease_id, username):
+    def DeleteOneLease(self, lease_id, username):
         """
 
         Deletes the lease with the specified lease_id and username on OAR by
@@ -174,89 +168,33 @@ class CortexlabTestbedAPI():
         """
 
         # Here delete the lease specified
+        answer = self.query_sites.delete_experiment(lease_id, username)
 
         # If the username is not necessary to delete the lease, then you can
         # remove it from the parameters, given that you propagate the changes
-
-
         # Return delete status so that you know if the delete has been
         # successuf or not
-        if answer['status'] == 'Delete request registered':
+
+
+        if answer['status'] is True:
             ret = {lease_id: True}
         else:
             ret = {lease_id: False}
-        logger.debug("CORTEXLAB_API \DeleteLeases lease_id  %s \r\n answer %s \
+        logger.debug("CORTEXLAB_API \DeleteOneLease lease_id  %s \r\n answer %s \
                                 username %s" % (lease_id, answer, username))
         return ret
 
 
 
-
-
-
-    def GetJobsResources(self, job_id, username = None):
-        """ Gets the list of nodes associated with the job_id and username
-        if provided.
-        Transforms the iotlab hostnames to the corresponding
-        SFA nodes hrns.
-        Rertuns dict key :'node_ids' , value : hostnames list
-        :param username: user's LDAP login
-        :paran job_id: job's OAR identifier.
-        :type username: string
-        :type job_id: integer
-
-        :returns: dicionary with nodes' hostnames belonging to the job.
-        :rtype: dict
-        """
-
-        req = "GET_jobs_id_resources"
-
-
-        #Get job resources list from OAR
-        node_id_list = self.oar.parser.SendRequest(req, job_id, username)
-        logger.debug("CORTEXLAB_API \t GetJobsResources  %s " %(node_id_list))
-
-        hostname_list = \
-            self.__get_hostnames_from_oar_node_ids(node_id_list)
-
-
-        #Replaces the previous entry "assigned_network_address" /
-        #"reserved_resources" with "node_ids"
-        job_info = {'node_ids': hostname_list}
-
-        return job_info
-
-
-
     def GetNodesCurrentlyInUse(self):
-        """Returns a list of all the nodes already involved in an oar running
-        job.
+        """Returns a list of all the nodes involved in a currently running
+        experiment (and only the one not available at the moment the call to
+        this method is issued)
         :rtype: list of nodes hostnames.
         """
-        return self.oar.parser.SendRequest("GET_running_jobs")
+        node_hostnames_list = []
+        return node_hostnames_list
 
-    def __get_hostnames_from_oar_node_ids(self, resource_id_list ):
-        """Get the hostnames of the nodes from their OAR identifiers.
-        Get the list of nodes dict using GetNodes and find the hostname
-        associated with the identifier.
-        :param resource_id_list: list of nodes identifiers
-        :returns: list of node hostnames.
-        """
-        full_nodes_dict_list = self.GetNodes()
-        #Put the full node list into a dictionary keyed by oar node id
-        oar_id_node_dict = {}
-        for node in full_nodes_dict_list:
-            oar_id_node_dict[node['oar_id']] = node
-
-        hostname_list = []
-        for resource_id in resource_id_list:
-            #Because jobs requested "asap" do not have defined resources
-            if resource_id is not "Undefined":
-                hostname_list.append(\
-                        oar_id_node_dict[resource_id]['hostname'])
-
-            #hostname_list.append(oar_id_node_dict[resource_id]['hostname'])
-        return hostname_list
 
     def GetReservedNodes(self, username=None):
         """ Get list of leases. Get the leases for the username if specified,
@@ -269,28 +207,37 @@ class CortexlabTestbedAPI():
         """
 
         #Get the nodes in use and the reserved nodes
+        mandatory_sfa_keys = ['reserved_nodes','lease_id']
         reservation_dict_list = \
-                        self.oar.parser.SendRequest("GET_reserved_nodes", \
-                        username = username)
+                        self.query_sites.get_reserved_nodes(username = username)
+
+        if len(reservation_dict_list) == 0:
+            return []
+
+        else:
+            # Ensure mandatory keys are in the dict
+            if not self.ensure_format_is_valid(reservation_dict_list,
+                mandatory_sfa_keys):
+                raise KeyError, "GetReservedNodes : Missing SFA mandatory keys"
 
 
-        for resa in reservation_dict_list:
-            logger.debug ("GetReservedNodes resa %s"%(resa))
-            #dict list of hostnames and their site
-            resa['reserved_nodes'] = \
-                self.__get_hostnames_from_oar_node_ids(resa['resource_ids'])
-
-        #del resa['resource_ids']
         return reservation_dict_list
+
+    @staticmethod
+    def ensure_format_is_valid(list_dictionary_to_check, mandatory_keys_list):
+        for entry in list_dictionary_to_check:
+            if not all (key in entry for key in mandatory_keys_list):
+                return False
+        return True
 
     def GetNodes(self, node_filter_dict=None, return_fields_list=None):
         """
 
-        Make a list of iotlab nodes and their properties from information
-            given by OAR. Search for specific nodes if some filters are
+        Make a list of cortexlab nodes and their properties from information
+            given by ?. Search for specific nodes if some filters are
             specified. Nodes properties returned if no return_fields_list given:
             'hrn','archi','mobile','hostname','site','boot_state','node_id',
-            'radio','posx','posy','oar_id','posz'.
+            'radio','posx','posy,'posz'.
 
         :param node_filter_dict: dictionnary of lists with node properties. For
             instance, if you want to look for a specific node with its hrn,
@@ -299,39 +246,33 @@ class CortexlabTestbedAPI():
         :param return_fields_list: list of specific fields the user wants to be
             returned.
         :type return_fields_list: list
-        :returns: list of dictionaries with node properties
+        :returns: list of dictionaries with node properties. Mandatory
+            properties hrn, site, hostname. Complete list (iotlab) ['hrn',
+            'archi', 'mobile', 'hostname', 'site', 'mobility_type',
+            'boot_state', 'node_id','radio', 'posx', 'posy', 'oar_id', 'posz']
+            Radio, archi, mobile and position are useful to help users choose
+            the appropriate nodes.
         :rtype: list
 
+        :TODO: FILL IN THE BLANKS
         """
-        node_dict_by_id = self.oar.parser.SendRequest("GET_resources_full")
-        node_dict_list = node_dict_by_id.values()
-        logger.debug (" CORTEXLAB_API GetNodes  node_filter_dict %s \
-            return_fields_list %s " % (node_filter_dict, return_fields_list))
-        #No  filtering needed return the list directly
-        if not (node_filter_dict or return_fields_list):
-            return node_dict_list
 
-        return_node_list = []
-        if node_filter_dict:
-            for filter_key in node_filter_dict:
-                try:
-                    #Filter the node_dict_list by each value contained in the
-                    #list node_filter_dict[filter_key]
-                    for value in node_filter_dict[filter_key]:
-                        for node in node_dict_list:
-                            if node[filter_key] == value:
-                                if return_fields_list:
-                                    tmp = {}
-                                    for k in return_fields_list:
-                                        tmp[k] = node[k]
-                                    return_node_list.append(tmp)
-                                else:
-                                    return_node_list.append(node)
-                except KeyError:
-                    logger.log_exc("GetNodes KeyError")
-                    return
+        # Here get full dict of nodes with all their properties.
+        mandatory_sfa_keys = ['hrn', 'site', 'hostname']
+        node_list_dict  = self.query_sites.get_all_nodes(node_filter_dict,
+            return_fields_list)
+
+        if len(node_list_dict) == 0:
+            return_node_list = []
+
+        else:
+            # Ensure mandatory keys are in the dict
+            if not self.ensure_format_is_valid(node_list_dict,
+                mandatory_sfa_keys):
+                raise KeyError, "GetNodes : Missing SFA mandatory keys"
 
 
+        return_node_list = node_list_dict
         return return_node_list
 
 
@@ -340,8 +281,8 @@ class CortexlabTestbedAPI():
     def AddSlice(slice_record, user_record):
         """
 
-        Add slice to the local iotlab sfa tables if the slice comes
-            from a federated site and is not yet in the iotlab sfa DB,
+        Add slice to the local cortexlab sfa tables if the slice comes
+            from a federated site and is not yet in the cortexlab sfa DB,
             although the user has already a LDAP login.
             Called by verify_slice during lease/sliver creation.
 
@@ -370,45 +311,45 @@ class CortexlabTestbedAPI():
 
 
     def GetSites(self, site_filter_name_list=None, return_fields_list=None):
-        """Returns the list of Iotlab's sites with the associated nodes and
-        their properties as dictionaries.
+        """Returns the list of Cortexlab's sites with the associated nodes and
+        the sites' properties as dictionaries. Used in import.
 
-        Uses the OAR request GET_sites to find the Iotlab's sites.
+        Site properties:
+        ['address_ids', 'slice_ids', 'name', 'node_ids', 'url', 'person_ids',
+        'site_tag_ids', 'enabled', 'site', 'longitude', 'pcu_ids',
+        'max_slivers', 'max_slices', 'ext_consortium_id', 'date_created',
+        'latitude', 'is_public', 'peer_site_id', 'peer_id', 'abbreviated_name']
+        can be empty ( []): address_ids, slice_ids, pcu_ids, person_ids,
+        site_tag_ids
 
         :param site_filter_name_list: used to specify specific sites
         :param return_fields_list: field that has to be returned
         :type site_filter_name_list: list
         :type return_fields_list: list
+        :rtype: list of dicts
 
-        .. warning:: unused
         """
-        site_dict = self.oar.parser.SendRequest("GET_sites")
-        #site_dict : dict where the key is the sit ename
-        return_site_list = []
-        if not (site_filter_name_list or return_fields_list):
-            return_site_list = site_dict.values()
-            return return_site_list
+        site_list_dict = self.query_sites.get_sites(site_filter_name_list,
+                        return_fields_list)
 
-        for site_filter_name in site_filter_name_list:
-            if site_filter_name in site_dict:
-                if return_fields_list:
-                    for field in return_fields_list:
-                        tmp = {}
-                        try:
-                            tmp[field] = site_dict[site_filter_name][field]
-                        except KeyError:
-                            logger.error("GetSites KeyError %s " % (field))
-                            return None
-                    return_site_list.append(tmp)
-                else:
-                    return_site_list.append(site_dict[site_filter_name])
+        mandatory_sfa_keys = ['name', 'node_ids', 'longitude','site' ]
 
+        if len(site_list_dict) == 0:
+            return_site_list = []
+
+        else:
+            # Ensure mandatory keys are in the dict
+            if not self.ensure_format_is_valid(site_list_dict,
+                mandatory_sfa_keys):
+                raise KeyError, "GetSites : Missing sfa mandatory keys"
+
+        return_site_list = site_list_dict
         return return_site_list
 
 
     #TODO : Check rights to delete person
     def DeletePerson(self, person_record):
-        """Disable an existing account in iotlab LDAP.
+        """Disable an existing account in cortexlab LDAP.
 
         Users and techs can only delete themselves. PIs can only
             delete themselves and other non-PIs at their sites.
@@ -430,7 +371,7 @@ class CortexlabTestbedAPI():
         """Deletes the specified slice and kills the jobs associated with
             the slice if any,  using DeleteSliceFromNodes.
 
-        :param slice_record: record of the slice, must contain oar_job_id, user
+        :param slice_record: record of the slice, must contain experiment_id, user
         :type slice_record: dict
         :returns: True if all the jobs in the slice have been deleted,
             or the list of jobs that could not be deleted otherwise.
@@ -441,11 +382,11 @@ class CortexlabTestbedAPI():
         """
         ret = self.DeleteSliceFromNodes(slice_record)
         delete_failed = None
-        for job_id in ret:
-            if False in ret[job_id]:
+        for experiment_id in ret:
+            if False in ret[experiment_id]:
                 if delete_failed is None:
                     delete_failed = []
-                delete_failed.append(job_id)
+                delete_failed.append(experiment_id)
 
         logger.info("CORTEXLAB_API DeleteSlice %s  answer %s"%(slice_record, \
                     delete_failed))
@@ -455,9 +396,10 @@ class CortexlabTestbedAPI():
     def __add_person_to_db(user_dict):
         """
         Add a federated user straight to db when the user issues a lease
-        request with iotlab nodes and that he has not registered with iotlab
+        request with iotlab nodes and that he has not registered with cortexlab
         yet (that is he does not have a LDAP entry yet).
-        Uses parts of the routines in SlabImport when importing user from LDAP.
+        Uses parts of the routines in CortexlabImport when importing user
+        from LDAP.
         Called by AddPerson, right after LdapAddUser.
         :param user_dict: Must contain email, hrn and pkey to get a GID
         and be added to the SFA db.
@@ -552,31 +494,6 @@ class CortexlabTestbedAPI():
         logger.warning("CORTEXLAB_API AddPersonKey EMPTY - DO NOTHING \r\n ")
         return ret['bool']
 
-    def DeleteLeases(self, leases_id_list, slice_hrn):
-        """
-
-        Deletes several leases, based on their job ids and the slice
-            they are associated with. Uses DeleteJobs to delete the jobs
-            on OAR. Note that one slice can contain multiple jobs, and in this
-            case all the jobs in the leases_id_list MUST belong to ONE slice,
-            since there is only one slice hrn provided here.
-
-        :param leases_id_list: list of job ids that belong to the slice whose
-            slice hrn is provided.
-        :param slice_hrn: the slice hrn.
-        :type slice_hrn: string
-
-        .. warning:: Does not have a return value since there was no easy
-            way to handle failure when dealing with multiple job delete. Plus,
-            there was no easy way to report it to the user.
-
-        """
-        logger.debug("CORTEXLAB_API DeleteLeases leases_id_list %s slice_hrn %s \
-                \r\n " %(leases_id_list, slice_hrn))
-        for job_id in leases_id_list:
-            self.DeleteJobs(job_id, slice_hrn)
-
-        return
 
     @staticmethod
     def _process_walltime(duration):
@@ -672,64 +589,54 @@ class CortexlabTestbedAPI():
         return reqdict
 
 
-    def LaunchExperimentOnOAR(self, added_nodes, slice_name, \
+    def LaunchExperimentOnTestbed(self, added_nodes, slice_name, \
                         lease_start_time, lease_duration, slice_user=None):
 
         """
-        Create a job request structure based on the information provided
-        and post the job on OAR.
+        Create an experiment request structure based on the information provided
+        and schedule/run the experiment on the testbed  by reserving the nodes.
         :param added_nodes: list of nodes that belong to the described lease.
         :param slice_name: the slice hrn associated to the lease.
         :param lease_start_time: timestamp of the lease startting time.
-        :param lease_duration: lease durationin minutes
+        :param lease_duration: lease duration in minutes
 
         """
         lease_dict = {}
+        # Add in the dict whatever is necessary to create the experiment on
+        # the testbed
         lease_dict['lease_start_time'] = lease_start_time
         lease_dict['lease_duration'] = lease_duration
         lease_dict['added_nodes'] = added_nodes
         lease_dict['slice_name'] = slice_name
         lease_dict['slice_user'] = slice_user
         lease_dict['grain'] = self.GetLeaseGranularity()
-        lease_dict['time_format'] = self.time_format
 
 
-        logger.debug("CORTEXLAB_API.PY \tLaunchExperimentOnOAR slice_user %s\
-                             \r\n "  %(slice_user))
-        #Create the request for OAR
-        reqdict = self._create_job_structure_request_for_OAR(lease_dict)
-         # first step : start the OAR job and update the job
-        logger.debug("CORTEXLAB_API.PY \tLaunchExperimentOnOAR reqdict %s\
-                             \r\n "  %(reqdict))
 
-        answer = self.oar.POSTRequestToOARRestAPI('POST_job', \
-                                                reqdict, slice_user)
-        logger.debug("CORTEXLAB_API \tLaunchExperimentOnOAR jobid  %s " %(answer))
+        answer = self.query_sites.schedule_experiment(lease_dict)
         try:
-            jobid = answer['id']
+            experiment_id = answer['id']
         except KeyError:
-            logger.log_exc("CORTEXLAB_API \tLaunchExperimentOnOAR \
-                                Impossible to create job  %s "  %(answer))
+            logger.log_exc("CORTEXLAB_API \tLaunchExperimentOnTestbed \
+                                Impossible to create xp  %s "  %(answer))
             return None
 
+        if experiment_id :
+            logger.debug("CORTEXLAB_API \tLaunchExperimentOnTestbed \
+                experiment_id %s added_nodes %s slice_user %s"
+                %(experiment_id, added_nodes, slice_user))
 
 
-
-        if jobid :
-            logger.debug("CORTEXLAB_API \tLaunchExperimentOnOAR jobid %s \
-                    added_nodes %s slice_user %s" %(jobid, added_nodes, \
-                                                            slice_user))
-
-
-        return jobid
+        return experiment_id
 
 
     def AddLeases(self, hostname_list, slice_record,
                   lease_start_time, lease_duration):
 
-        """Creates a job in OAR corresponding to the information provided
-        as parameters. Adds the job id and the slice hrn in the iotlab
-        database so that we are able to know which slice has which nodes.
+        """Creates an experiment on the testbed corresponding to the information
+        provided as parameters. Adds the experiment id and the slice hrn in the
+        lease table on the additional sfa database so that we are able to know
+        which slice has which nodes.
 
         :param hostname_list: list of nodes' OAR hostnames.
         :param slice_record: sfa slice record, must contain login and hrn.
@@ -747,10 +654,9 @@ class CortexlabTestbedAPI():
                  %( hostname_list, slice_record , lease_start_time, \
                  lease_duration))
 
-        #tmp = slice_record['reg-researchers'][0].split(".")
         username = slice_record['login']
-        #username = tmp[(len(tmp)-1)]
-        job_id = self.LaunchExperimentOnOAR(hostname_list, \
+
+        experiment_id = self.LaunchExperimentOnTestbed(hostname_list, \
                                     slice_record['hrn'], \
                                     lease_start_time, lease_duration, \
                                     username)
@@ -761,56 +667,85 @@ class CortexlabTestbedAPI():
 
 
         logger.debug("CORTEXLAB_API \r\n \r\n \t AddLeases TURN ON LOGGING SQL \
-                        %s %s %s "%(slice_record['hrn'], job_id, end_time))
+                    %s %s %s "%(slice_record['hrn'], experiment_id, end_time))
 
 
         logger.debug("CORTEXLAB_API \r\n \r\n \t AddLeases %s %s %s " \
-                %(type(slice_record['hrn']), type(job_id), type(end_time)))
+                %(type(slice_record['hrn']), type(experiment_id),
+                type(end_time)))
 
-        iotlab_ex_row = IotlabXP(slice_hrn = slice_record['hrn'], job_id=job_id,
-                                 end_time= end_time)
+        testbed_xp_row = LeaseTableXP(slice_hrn=slice_record['hrn'],
+            experiment_id=experiment_id, end_time=end_time)
 
-        logger.debug("CORTEXLAB_API \r\n \r\n \t AddLeases iotlab_ex_row %s" \
-                %(iotlab_ex_row))
-        self.iotlab_db.iotlab_session.add(iotlab_ex_row)
-        self.iotlab_db.iotlab_session.commit()
+        logger.debug("CORTEXLAB_API \r\n \r\n \t AddLeases testbed_xp_row %s" \
+                %(testbed_xp_row))
+        self.cortexlab_leases_db.testbed_session.add(testbed_xp_row)
+        self.cortexlab_leases_db.testbed_session.commit()
 
         logger.debug("CORTEXLAB_API \t AddLeases hostname_list start_time %s " \
                 %(start_time))
 
         return
 
+    def DeleteLeases(self, leases_id_list, slice_hrn):
+        """
+
+        Deletes several leases, based on their experiment ids and the slice
+            they are associated with. Uses DeleteOneLease to delete the
+            experiment on the testbed. Note that one slice can contain multiple
+            experiments, and in this
+            case all the experiments in the leases_id_list MUST belong to this
+            same slice, since there is only one slice hrn provided here.
+
+        :param leases_id_list: list of job ids that belong to the slice whose
+            slice hrn is provided.
+        :param slice_hrn: the slice hrn.
+        :type slice_hrn: string
+
+        .. warning:: Does not have a return value since there was no easy
+            way to handle failure when dealing with multiple job delete. Plus,
+            there was no easy way to report it to the user.
+
+        """
+        logger.debug("CORTEXLAB_API DeleteLeases leases_id_list %s slice_hrn %s \
+                \r\n " %(leases_id_list, slice_hrn))
+        for experiment_id in leases_id_list:
+            self.DeleteOneLease(experiment_id, slice_hrn)
+
+        return
 
     #Delete the jobs from job_iotlab table
     def DeleteSliceFromNodes(self, slice_record):
         """
-
         Deletes all the running or scheduled jobs of a given slice
             given its record.
 
-        :param slice_record: record of the slice, must contain oar_job_id, user
+        :param slice_record: record of the slice, must contain experiment_id,
+        user
         :type slice_record: dict
-
         :returns: dict of the jobs'deletion status. Success= True, Failure=
             False, for each job id.
         :rtype: dict
+
+        .. note: used in driver delete_sliver
 
         """
         logger.debug("CORTEXLAB_API \t  DeleteSliceFromNodes %s "
                      % (slice_record))
 
-        if isinstance(slice_record['oar_job_id'], list):
-            oar_bool_answer = {}
-            for job_id in slice_record['oar_job_id']:
-                ret = self.DeleteJobs(job_id, slice_record['user'])
+        if isinstance(slice_record['experiment_id'], list):
+            experiment_bool_answer = {}
+            for experiment_id in slice_record['experiment_id']:
+                ret = self.DeleteOneLease(experiment_id, slice_record['user'])
 
-                oar_bool_answer.update(ret)
+                experiment_bool_answer.update(ret)
 
         else:
-            oar_bool_answer = [self.DeleteJobs(slice_record['oar_job_id'],
-                                               slice_record['user'])]
+            experiment_bool_answer = [self.DeleteOneLease(
+                                        slice_record['experiment_id'],
+                                        slice_record['user'])]
 
-        return oar_bool_answer
+        return experiment_bool_answer
 
 
 
@@ -823,7 +758,7 @@ class CortexlabTestbedAPI():
 
 
     # @staticmethod
-    # def update_jobs_in_iotlabdb( job_oar_list, jobs_psql):
+    # def update_experiments_in_additional_sfa_db( job_oar_list, jobs_psql):
     #     """ Cleans the iotlab db by deleting expired and cancelled jobs.
     #     Compares the list of job ids given by OAR with the job ids that
     #     are already in the database, deletes the jobs that are no longer in
@@ -837,13 +772,13 @@ class CortexlabTestbedAPI():
     #     set_jobs_psql = set(jobs_psql)
 
     #     kept_jobs = set(job_oar_list).intersection(set_jobs_psql)
-    #     logger.debug ( "\r\n \t\ update_jobs_in_iotlabdb jobs_psql %s \r\n \t \
+    #     logger.debug ( "\r\n \t\ update_experiments_in_additional_sfa_db jobs_psql %s \r\n \t \
     #         job_oar_list %s kept_jobs %s "%(set_jobs_psql, job_oar_list, kept_jobs))
     #     deleted_jobs = set_jobs_psql.difference(kept_jobs)
     #     deleted_jobs = list(deleted_jobs)
     #     if len(deleted_jobs) > 0:
-    #         self.iotlab_db.iotlab_session.query(IotlabXP).filter(IotlabXP.job_id.in_(deleted_jobs)).delete(synchronize_session='fetch')
-    #         self.iotlab_db.iotlab_session.commit()
+    #         self.cortexlab_leases_db.testbed_session.query(LeaseTableXP).filter(LeaseTableXP.job_id.in_(deleted_jobs)).delete(synchronize_session='fetch')
+    #         self.cortexlab_leases_db.testbed_session.commit()
 
     #     return
 
@@ -872,59 +807,44 @@ class CortexlabTestbedAPI():
 
         return filtered_reservation_list
 
-    def GetLeases(self, lease_filter_dict=None, login=None):
-        """
+    def complete_leases_info(self, unfiltered_reservation_list, db_xp_dict):
 
-        Get the list of leases from OAR with complete information
-            about which slice owns which jobs and nodes.
-            Two purposes:
-            -Fetch all the jobs from OAR (running, waiting..)
-            complete the reservation information with slice hrn
-            found in iotlab_xp table. If not available in the table,
-            assume it is a iotlab slice.
-            -Updates the iotlab table, deleting jobs when necessary.
-
-        :returns: reservation_list, list of dictionaries with 'lease_id',
-            'reserved_nodes','slice_id', 'state', 'user', 'component_id_list',
-            'slice_hrn', 'resource_ids', 't_from', 't_until'
-        :rtype: list
+        """Check that the leases list of dictionaries contains the appropriate
+        fields and piece of information here
+        :param unfiltered_reservation_list: list of leases to be completed.
+        :param db_xp_dict: leases information in the lease_sfa table
+        :returns local_unfiltered_reservation_list: list of leases completed.
+        list of dictionaries describing the leases, with all the needed
+        information (sfa,ldap,nodes)to identify one particular lease.
+        :returns testbed_xp_list: list of experiments'ids running or scheduled
+        on the testbed.
+        :rtype local_unfiltered_reservation_list: list of dict
+        :rtype testbed_xp_list: list
 
         """
+        testbed_xp_list = []
+        local_unfiltered_reservation_list = list(unfiltered_reservation_list)
+        # slice_hrn and lease_id are in the lease_table,
+        # so they are in the db_xp_dict.
+        # component_id_list : list of nodes xrns
+        # reserved_nodes : list of nodes' hostnames
+        # slice_id : slice urn, can be made from the slice hrn using hrn_to_urn
+        for resa in local_unfiltered_reservation_list:
 
-        unfiltered_reservation_list = self.GetReservedNodes(login)
-
-        reservation_list = []
-        #Find the slice associated with this user iotlab ldap uid
-        logger.debug(" CORTEXLAB_API.PY \tGetLeases login %s\
-                        unfiltered_reservation_list %s "
-                     % (login, unfiltered_reservation_list))
-        #Create user dict first to avoid looking several times for
-        #the same user in LDAP SA 27/07/12
-        job_oar_list = []
-
-        jobs_psql_query = self.iotlab_db.iotlab_session.query(IotlabXP).all()
-        jobs_psql_dict = dict([(row.job_id, row.__dict__)
-                               for row in jobs_psql_query])
-        #jobs_psql_dict = jobs_psql_dict)
-        logger.debug("CORTEXLAB_API \tGetLeases jobs_psql_dict %s"
-                     % (jobs_psql_dict))
-        jobs_psql_id_list = [row.job_id for row in jobs_psql_query]
-
-        for resa in unfiltered_reservation_list:
-            logger.debug("CORTEXLAB_API \tGetLeases USER %s"
-                         % (resa['user']))
-            #Construct list of jobs (runing, waiting..) in oar
-            job_oar_list.append(resa['lease_id'])
-            #If there is information on the job in IOTLAB DB ]
-            #(slice used and job id)
-            if resa['lease_id'] in jobs_psql_dict:
-                job_info = jobs_psql_dict[resa['lease_id']]
-                logger.debug("CORTEXLAB_API \tGetLeases job_info %s"
-                          % (job_info))
-                resa['slice_hrn'] = job_info['slice_hrn']
+            #Construct list of scheduled experiments (runing, waiting..)
+            testbed_xp_list.append(resa['lease_id'])
+            #If there is information on the experiment in the lease table
+            #(slice used and experiment id), meaning the experiment was created
+            # using sfa
+            if resa['lease_id'] in db_xp_dict:
+                xp_info = db_xp_dict[resa['lease_id']]
+                logger.debug("CORTEXLAB_API \tGetLeases xp_info %s"
+                          % (xp_info))
+                resa['slice_hrn'] = xp_info['slice_hrn']
                 resa['slice_id'] = hrn_to_urn(resa['slice_hrn'], 'slice')
 
-            #otherwise, assume it is a iotlab slice:
+            #otherwise, assume it is a cortexlab slice, created via the
+            # cortexlab portal
             else:
                 resa['slice_id'] = hrn_to_urn(self.root_auth + '.' +
                                               resa['user'] + "_slice", 'slice')
@@ -937,14 +857,76 @@ class CortexlabTestbedAPI():
                 iotlab_xrn = iotlab_xrn_object(self.root_auth, node)
                 resa['component_id_list'].append(iotlab_xrn.urn)
 
+        return local_unfiltered_reservation_list, testbed_xp_list
+
+    def GetLeases(self, lease_filter_dict=None, login=None):
+        """
+
+        Get the list of leases from the testbed with complete information
+            about in which slice is running which experiment ans which nodes are
+            involved.
+            Two purposes:
+            -Fetch all the experiments from the testbed (running, waiting..)
+            complete the reservation information with slice hrn
+            found in testbed_xp table. If not available in the table,
+            assume it is a cortexlab slice.
+            -Updates the cortexlab table, deleting jobs when necessary.
+
+        :returns: reservation_list, list of dictionaries with 'lease_id',
+            'reserved_nodes','slice_id','user', 'component_id_list',
+            'slice_hrn', 'resource_ids', 't_from', 't_until'. Other
+            keys can be returned if necessary, such as the 'state' of the lease,
+            if the information has been added in GetReservedNodes.
+        :rtype: list
+
+        """
+
+        unfiltered_reservation_list = self.GetReservedNodes(login)
+
+        reservation_list = []
+        #Find the slice associated with this user ldap uid
+        logger.debug(" CORTEXLAB_API.PY \tGetLeases login %s\
+                        unfiltered_reservation_list %s "
+                     % (login, unfiltered_reservation_list))
+        #Create user dict first to avoid looking several times for
+        #the same user in LDAP SA 27/07/12
+
+
+        db_xp_query = self.cortexlab_leases_db.testbed_session.query(LeaseTableXP).all()
+        db_xp_dict = dict([(row.experiment_id, row.__dict__)
+                               for row in db_xp_query])
+
+        logger.debug("CORTEXLAB_API \tGetLeases db_xp_dict %s"
+                     % (db_xp_dict))
+        db_xp_id_list = [row.experiment_id for row in db_xp_query]
+
+        required_fiels_in_leases = ['lease_id',
+            'reserved_nodes','slice_id',  'user', 'component_id_list',
+            'slice_hrn', 'resource_ids', 't_from', 't_until']
+
+        # Add any missing information on the leases with complete_leases_info
+        unfiltered_reservation_list, testbed_xp_list = \
+            self.complete_leases_info(unfiltered_reservation_list,
+            db_xp_dict)
+        # Check that the list of leases is complete and have the mandatory
+        # information
+        format_status = self.ensure_format_is_valid(unfiltered_reservation_list,
+            required_fiels_in_leases)
+
+        if not format_status:
+            logger.log_exc("\tCortexlabapi \t GetLeases : Missing fields in \
+                reservation list")
+            raise KeyError, "GetLeases : Missing fields in reservation list "
+
         if lease_filter_dict:
             logger.debug("CORTEXLAB_API \tGetLeases  \
                     \r\n leasefilter %s" % ( lease_filter_dict))
 
             filter_dict_functions = {
-            'slice_hrn' : IotlabTestbedAPI.filter_lease_name,
-            't_from' : IotlabTestbedAPI.filter_lease_start_time
+            'slice_hrn' : CortexlabTestbedAPI.filter_lease_name,
+            't_from' : CortexlabTestbedAPI.filter_lease_start_time
             }
+
             reservation_list = list(unfiltered_reservation_list)
             for filter_type in lease_filter_dict:
                 logger.debug("CORTEXLAB_API \tGetLeases reservation_list %s" \
@@ -952,23 +934,12 @@ class CortexlabTestbedAPI():
                 reservation_list = filter_dict_functions[filter_type](\
                     reservation_list,lease_filter_dict[filter_type] )
 
-                # Filter the reservation list with a maximum timespan so that the
-                # leases and jobs running after this timestamp do not appear
-                # in the result leases.
-                # if 'start_time' in :
-                #     if resa['start_time'] < lease_filter_dict['start_time']:
-                #        reservation_list.append(resa)
-
-
-                # if 'name' in lease_filter_dict and \
-                #     lease_filter_dict['name'] == resa['slice_hrn']:
-                #     reservation_list.append(resa)
-
 
         if lease_filter_dict is None:
             reservation_list = unfiltered_reservation_list
 
-        self.iotlab_db.update_jobs_in_iotlabdb(job_oar_list, jobs_psql_id_list)
+        self.cortexlab_leases_db.update_experiments_in_additional_sfa_db(
+            testbed_xp_list, db_xp_id_list)
 
         logger.debug(" CORTEXLAB_API.PY \tGetLeases reservation_list %s"
                      % (reservation_list))
@@ -1049,8 +1020,8 @@ class CortexlabTestbedAPI():
 
         #"""
         ##new_row = FederatedToIotlab(iotlab_hrn, federated_hrn)
-        ##self.iotlab_db.iotlab_session.add(new_row)
-        ##self.iotlab_db.iotlab_session.commit()
+        ##self.cortexlab_leases_db.testbed_session.add(new_row)
+        ##self.cortexlab_leases_db.testbed_session.commit()
 
         #logger.debug("CORTEXLAB_API UpdatePerson EMPTY - DO NOTHING \r\n ")
         #return
@@ -1130,7 +1101,7 @@ class CortexlabTestbedAPI():
         #of the user otherwise will mess up the RegRecord in
         #Resolve, don't know why - SA 08/08/2012
 
-        #Only one entry for one user  = one slice in iotlab_xp table
+        #Only one entry for one user  = one slice in testbed_xp table
         #slicerec = dbsession.query(RegRecord).filter_by(hrn = slice_filter).first()
         raw_slicerec = dbsession.query(RegSlice).options(joinedload('reg_researchers')).filter_by(hrn=slice_filter).first()
         #raw_slicerec = dbsession.query(RegRecord).filter_by(hrn = slice_filter).first()
@@ -1240,13 +1211,13 @@ class CortexlabTestbedAPI():
 
     def GetSlices(self, slice_filter=None, slice_filter_type=None,
                   login=None):
-        """Get the slice records from the iotlab db and add lease information
+        """Get the slice records from the sfa db and add lease information
             if any.
 
         :param slice_filter: can be the slice hrn or slice record id in the db
             depending on the slice_filter_type.
         :param slice_filter_type: defines the type of the filtering used, Can be
-            either 'slice_hrn' or "record_id'.
+            either 'slice_hrn' or 'record_id'.
         :type slice_filter: string
         :type slice_filter_type: string
         :returns: a slice dict if slice_filter  and slice_filter_type
@@ -1293,7 +1264,7 @@ class CortexlabTestbedAPI():
             leases_hrn = [lease['slice_hrn'] for lease in leases_list]
             if slice_hrn not in leases_hrn:
                 return_slicerec_dictlist.append(fixed_slicerec_dict)
-            #If several jobs for one slice , put the slice record into
+            #If several experiments for one slice , put the slice record into
             # each lease information dict
             for lease in leases_list:
                 slicerec_dict = {}
@@ -1301,15 +1272,14 @@ class CortexlabTestbedAPI():
                         \t lease['slice_hrn'] %s"
                              % (slice_filter, lease['slice_hrn']))
                 if lease['slice_hrn'] == slice_hrn:
-                    slicerec_dict['oar_job_id'] = lease['lease_id']
+                    slicerec_dict['experiment_id'] = lease['lease_id']
                     #Update lease dict with the slice record
                     if fixed_slicerec_dict:
-                        fixed_slicerec_dict['oar_job_id'] = []
-                        fixed_slicerec_dict['oar_job_id'].append(
-                            slicerec_dict['oar_job_id'])
+                        fixed_slicerec_dict['experiment_id'] = []
+                        fixed_slicerec_dict['experiment_id'].append(
+                            slicerec_dict['experiment_id'])
                         slicerec_dict.update(fixed_slicerec_dict)
-                        #slicerec_dict.update({'hrn':\
-                                        #str(fixed_slicerec_dict['slice_hrn'])})
+
                     slicerec_dict['slice_hrn'] = lease['slice_hrn']
                     slicerec_dict['hrn'] = lease['slice_hrn']
                     slicerec_dict['user'] = lease['user']
@@ -1319,10 +1289,8 @@ class CortexlabTestbedAPI():
                     slicerec_dict.update({'node_ids': lease['reserved_nodes']})
 
 
-
                     return_slicerec_dictlist.append(slicerec_dict)
-                    logger.debug("CORTEXLAB_API.PY  \tGetSlices  \
-                        OHOHOHOH %s" %(return_slicerec_dictlist))
+
 
                 logger.debug("CORTEXLAB_API.PY  \tGetSlices  \
                         slicerec_dict %s return_slicerec_dictlist %s \
@@ -1338,25 +1306,24 @@ class CortexlabTestbedAPI():
 
 
         else:
-            #Get all slices from the iotlab sfa database ,
-            #put them in dict format
-            #query_slice_list = dbsession.query(RegRecord).all()
+            #Get all slices from the cortexlab sfa database , get the user info
+            # as well at the same time put them in dict format
+
             query_slice_list = \
                 dbsession.query(RegSlice).options(joinedload('reg_researchers')).all()
 
             for record in query_slice_list:
                 tmp = record.__dict__
                 tmp['reg_researchers'] = tmp['reg_researchers'][0].__dict__
-                #del tmp['reg_researchers']['_sa_instance_state']
                 return_slicerec_dictlist.append(tmp)
-                #return_slicerec_dictlist.append(record.__dict__)
 
-            #Get all the jobs reserved nodes
+
+            #Get all the experiments reserved nodes
             leases_list = self.GetReservedNodes()
 
             for fixed_slicerec_dict in return_slicerec_dictlist:
                 slicerec_dict = {}
-                #Check if the slice belongs to a iotlab user
+                #Check if the slice belongs to a cortexlab user
                 if fixed_slicerec_dict['peer_authority'] is None:
                     owner = fixed_slicerec_dict['hrn'].split(
                         ".")[1].split("_")[0]
@@ -1364,7 +1331,7 @@ class CortexlabTestbedAPI():
                     owner = None
                 for lease in leases_list:
                     if owner == lease['user']:
-                        slicerec_dict['oar_job_id'] = lease['lease_id']
+                        slicerec_dict['experiment_id'] = lease['lease_id']
 
                         #for reserved_node in lease['reserved_nodes']:
                         logger.debug("CORTEXLAB_API.PY  \tGetSlices lease %s "
@@ -1376,9 +1343,7 @@ class CortexlabTestbedAPI():
                                              {'hostname':
                                              lease['reserved_nodes']}})
 
-                        #slicerec_dict.update({'hrn':\
-                                    #str(fixed_slicerec_dict['slice_hrn'])})
-                        #return_slicerec_dictlist.append(slicerec_dict)
+
                         fixed_slicerec_dict.update(slicerec_dict)
 
             logger.debug("CORTEXLAB_API.PY  \tGetSlices RETURN \
