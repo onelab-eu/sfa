@@ -1586,6 +1586,7 @@ $ sfi m -b http://mymanifold.foo.com:7080/
         # (f) and finally upload them to manifold server
         # xxx todo add an option so the password can be set on the command line
         # (but *NOT* in the config file) so other apps can leverage this
+        self.logger.info("Uploading on backend at %s"%myslice_dict['backend'])
         uploader = ManifoldUploader (logger=self.logger,
                                      url=myslice_dict['backend'],
                                      platform=myslice_dict['platform'],
