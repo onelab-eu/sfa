@@ -1501,8 +1501,9 @@ $ sfi myslice
 $ sfi -v myslice  -- or sfi -vv myslice
   same but with more and more verbosity
 
-$ sfi m
+$ sfi m -b http://mymanifold.foo.com:7080/
   is synonym to sfi myslice as no other command starts with an 'm'
+  and uses a custom backend for this one call
 """
 ) # register_command
     def myslice (self, options, args):
@@ -1526,13 +1527,13 @@ $ sfi m
 
         # (a) rain check for sufficient config in sfi_config
         myslice_dict={}
-        myslice_keys=['backend', 'delegate', 'platform', 'username']
+        myslice_keys=[ 'backend', 'delegate', 'platform', 'username']
         for key in myslice_keys:
             value=None
             # oct 2013 - I'm finding myself juggling with config files
             # so a couple of command-line options can now override config
-            if hasattr(args,key):
-                value=getattr(args,key)
+            if hasattr(options,key) and getattr(options,key) is not None:
+                value=getattr(options,key)
             else:
                 full_key="MYSLICE_" + key.upper()
                 value=getattr(self.config_instance,full_key,None)
