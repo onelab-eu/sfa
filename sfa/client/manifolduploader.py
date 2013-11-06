@@ -7,17 +7,21 @@
 # install a separate tool; so duplicating this code is suboptimal in
 # terms of code sharing but acceptable for hopefully easier use
 #
+# As of Nov. 2013, the signature for the forward API call has changed
+# and now requires authentication to be passed as an annotation
+# We take this chance to make things much simpler here by dropping
+# support for multiple API versions/flavours
+#
 # As of April 2013, manifold is moving from old-fashioned API known as
 # v1, that offers an AddCredential API call, towards a new API v2 that
 # manages credentials with the same set of Get/Update calls as other
 # objects
 # 
-# Since this code targets the future we favour v2, however in case
-# this won't work the v1 way is attempted too
-#
 
-## this for now points at demo.myslice.info, but sounds like a
-## better default for the long run
+# mostly this is intended to be used through 'sfi myslice'
+# so the defaults below are of no real importance
+# this for now points at demo.myslice.info, but sounds like a
+# better default for the long run
 DEFAULT_URL = "http://myslice.onelab.eu:7080"
 DEFAULT_PLATFORM = 'ple'
 
@@ -63,15 +67,21 @@ class ManifoldUploader:
     def prompt_all(self):
         self.username(); self.password(); self.platform(); self.url()
 
+    # looks like the current implementation of manifold server
+    # won't be happy with several calls issued in the same session
+    # so we do not cache this one
     def proxy (self):
-        if not self._proxy:
-            url=self.url()
-            self.logger.debug("Connecting manifold url %s"%url)
-            self._proxy = xmlrpclib.ServerProxy(url, allow_none = True)
-        return self._proxy
+#        if not self._proxy:
+#            url=self.url()
+#            self.logger.info("Connecting manifold url %s"%url)
+#            self._proxy = xmlrpclib.ServerProxy(url, allow_none = True)
+#        return self._proxy
+        url=self.url()
+        self.logger.debug("Connecting manifold url %s"%url)
+        return xmlrpclib.ServerProxy(url, allow_none = True)
 
     # does the job for one credential
-    # expects the credential (string) and an optional message for reporting
+    # expects the credential (string) and an optional message (e.g. hrn) for reporting
     # return True upon success and False otherwise
     def upload (self, delegated_credential, message=None):
         platform=self.platform()
@@ -81,21 +91,20 @@ class ManifoldUploader:
         if not message: message=""
 
         try:
-            # looks like the current implementation of manifold server
-            # won't be happy with several calls issued in the same session
-#            manifold=self.proxy()
-            url=self.url()
-            self.logger.debug("Connecting manifold url %s"%url)
-            manifold = xmlrpclib.ServerProxy(url, allow_none = True)
+            manifold=self.proxy()
             # the code for a V2 interface
-            query= { 'action':     'update',
+            query = { 'action':     'update',
                      'object':     'local:account',
                      'filters':    [ ['platform', '=', platform] ] ,
                      'params':     {'credential': delegated_credential, },
                      }
+            annotation = {'authentication': auth, }
+            # in principle the xmlrpc call should not raise an exception
+            # but fill in error code and messages instead
+            # however this is only theoretical so let's be on the safe side
             try:
-                self.logger.debug("Trying v2 method Update@%s %s"%(platform,message))
-                retcod2=manifold.Update (auth, query)
+                self.logger.debug("Using new v2 method forward+annotation@%s %s"%(platform,message))
+                retcod2=manifold.forward (query, annotation)
             except Exception,e:
                 # xxx we need a constant constant for UNKNOWN, how about using 1
                 MANIFOLD_UNKNOWN=1
@@ -106,30 +115,11 @@ class ManifoldUploader:
                 info += 'v2 upload OK'
                 self.logger.info(info)
                 return True
-            #print delegated_credential, "upload failed,",retcod['description'], \
-            #    "with code",retcod['code']
-            # the code for V1
-            try:
-                self.logger.debug("Trying v1 method AddCredential@%s %s"%(platform,message))
-                retcod1=manifold.AddCredential(auth, delegated_credential, platform)
-            except Exception,e:
-                retcod1=e
-            if retcod1==1:
-                info=""
-                if message: info += message+" "
-                info += 'v1 upload OK'
-                self.logger.info(message)
-                return True
             # everything has failed, let's report
-            if message: self.logger.error("Could not upload %s"%message)
-            else: self.logger.error("Could not upload credential")
-            if 'code' in retcod2 and 'description' in retcod2:
-                self.logger.info("  V2 Update returned code %s and error >>%s<<"%(retcod2['code'],retcod2['description']))
-                self.logger.debug("****** full retcod2")
-                for (k,v) in retcod2.items(): self.logger.debug("**** %s: %s"%(k,v))
-            else:
-                self.logger.info("  V2 Update returned %s"%retcod2)
-            self.logger.info("  V1 AddCredential returned code %s (expected 1)"%retcod1)
+            self.logger.error("Could not upload %s"%(message if message else "credential"))
+            self.logger.info("  V2 Update returned code %s and error >>%s<<"%(retcod2['code'],retcod2['description']))
+            self.logger.debug("****** full retcod2")
+            for (k,v) in retcod2.items(): self.logger.debug("**** %s: %s"%(k,v))
             return False
         except Exception, e:
             if message: self.logger.error("Could not upload %s %s"%(message,e))
