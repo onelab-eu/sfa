@@ -64,7 +64,7 @@ class PlShell:
             except:
                 plc_direct_access=False
         if is_local and plc_direct_access:
-            logger.debug('plshell access - capability')
+            logger.info('plshell access - capability')
             self.plauth = { 'AuthMethod': 'capability',
                             'Username':   config.SFA_PLC_USER,
                             'AuthString': config.SFA_PLC_PASSWORD,
@@ -72,7 +72,7 @@ class PlShell:
             self.proxy = PLC.Shell.Shell ()
 
         else:
-            logger.debug('plshell access - xmlrpc')
+            logger.info('plshell access - xmlrpc')
             self.plauth = { 'AuthMethod': 'password',
                             'Username':   config.SFA_PLC_USER,
                             'AuthString': config.SFA_PLC_PASSWORD,
