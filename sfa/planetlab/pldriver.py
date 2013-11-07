@@ -27,7 +27,7 @@ from sfa.planetlab.plshell import PlShell
 import sfa.planetlab.peers as peers
 from sfa.planetlab.plaggregate import PlAggregate
 from sfa.planetlab.plslices import PlSlices
-from sfa.planetlab.plxrn import PlXrn, slicename_to_hrn, hostname_to_hrn, hrn_to_pl_slicename, xrn_to_hostname, xrn_to_ext_slicename, top_auth
+from sfa.planetlab.plxrn import PlXrn, slicename_to_hrn, hostname_to_hrn, hrn_to_pl_slicename, xrn_to_hostname, top_auth, hash_loginbase
 
 
 def list_to_dict(recs, key):
@@ -75,6 +75,7 @@ class PlDriver (Driver):
                 if 'max_slices' not in pl_record:
                     pl_record['max_slices']=2
                 pointer = self.shell.AddSite(pl_record)
+                self.shell.SetSiteHrn(int(pointer), hrn)
             else:
                 pointer = sites[0]['site_id']
 
@@ -86,6 +87,7 @@ class PlDriver (Driver):
             slices = self.shell.GetSlices([pl_record['name']])
             if not slices:
                  pointer = self.shell.AddSlice(pl_record)
+                 self.shell.SetSliceHrn(int(pointer), hrn)
             else:
                  pointer = slices[0]['slice_id']
 
@@ -98,6 +100,7 @@ class PlDriver (Driver):
                 can_add = ['first_name', 'last_name', 'title','email', 'password', 'phone', 'url', 'bio']
                 add_person_dict=dict ( [ (k,sfa_record[k]) for k in sfa_record if k in can_add ] )
                 pointer = self.shell.AddPerson(add_person_dict)
+                self.shell.SetPersonHrn(int(pointer), hrn)
             else:
                 pointer = persons[0]['person_id']
     
@@ -128,6 +131,7 @@ class PlDriver (Driver):
             nodes = self.shell.GetNodes([pl_record['hostname']])
             if not nodes:
                 pointer = self.shell.AddNode(login_base, pl_record)
+                self.shell.SetNodeHrn(int(pointer), hrn)
             else:
                 pointer = nodes[0]['node_id']
     
@@ -146,12 +150,14 @@ class PlDriver (Driver):
 
         if (type == "authority"):
             self.shell.UpdateSite(pointer, new_sfa_record)
+            self.shell.SetSiteHrn(pointer, hrn)
     
         elif type == "slice":
             pl_record=self.sfa_fields_to_pl_fields(type, hrn, new_sfa_record)
             if 'name' in pl_record:
                 pl_record.pop('name')
                 self.shell.UpdateSlice(pointer, pl_record)
+                self.shell.SetSliceHrn(pointer, hrn)
     
         elif type == "user":
             # SMBAKER: UpdatePerson only allows a limited set of fields to be
@@ -169,6 +175,7 @@ class PlDriver (Driver):
             if 'email' in update_fields and not update_fields['email']:
                 del update_fields['email']
             self.shell.UpdatePerson(pointer, update_fields)
+            self.shell.SetPersonHrn(pointer, hrn)
     
             if new_key:
                 # must check this key against the previous one if it exists
@@ -775,10 +782,14 @@ class PlDriver (Driver):
     def delete_sliver (self, slice_urn, slice_hrn, creds, options):
 
         top_auth_hrn = top_auth(slice_hrn)
-        if top_auth_hrn == self.hrn:
-            slicename = hrn_to_pl_slicename(slice_hrn)
+        site_hrn = '.'.join(slice_hrn.split('.')[:-1])
+        slice_part = slice_hrn.split('.')[-1]
+        if top_auth_hrn == self.driver.hrn:
+            login_base = slice_hrn.split('.')[-2][:12]
         else:
-            slicename = xrn_to_ext_slicename(slice_hrn)
+            login_base = hash_loginbase(site_hrn)
+
+        slicename = '_'.join([login_base, slice_part])
 
         slices = self.shell.GetSlices({'name': slicename})
         if not slices:
@@ -806,11 +817,14 @@ class PlDriver (Driver):
     
     def renew_sliver (self, slice_urn, slice_hrn, creds, expiration_time, options):
         top_auth_hrn = top_auth(slice_hrn)
-        if top_auth_hrn == self.hrn:
-            slicename = hrn_to_pl_slicename(slice_hrn)
+        site_hrn = '.'.join(slice_hrn.split('.')[:-1])
+        slice_part = slice_hrn.split('.')[-1]
+        if top_auth_hrn == self.driver.hrn:
+            login_base = slice_hrn.split('.')[-2][:12]
         else:
-            slicename = xrn_to_ext_slicename(slice_hrn)
+            login_base = hash_loginbase(site_hrn)
 
+        slicename = '_'.join([login_base, slice_part])
         slices = self.shell.GetSlices({'name': slicename}, ['slice_id'])
         if not slices:
             raise RecordNotFound(slice_hrn)
@@ -826,10 +840,14 @@ class PlDriver (Driver):
     # remove the 'enabled' tag 
     def start_slice (self, slice_urn, slice_hrn, creds):
         top_auth_hrn = top_auth(slice_hrn)
-        if top_auth_hrn == self.hrn:
-            slicename = hrn_to_pl_slicename(slice_hrn)
+        site_hrn = '.'.join(slice_hrn.split('.')[:-1])
+        slice_part = slice_hrn.split('.')[-1]
+        if top_auth_hrn == self.driver.hrn:
+            login_base = slice_hrn.split('.')[-2][:12]
         else:
-            slicename = xrn_to_ext_slicename(slice_hrn)
+            login_base = hash_loginbase(site_hrn)
+
+        slicename = '_'.join([login_base, slice_part])
 
         slices = self.shell.GetSlices({'name': slicename}, ['slice_id'])
         if not slices:
@@ -844,10 +862,14 @@ class PlDriver (Driver):
     # set the 'enabled' tag to 0
     def stop_slice (self, slice_urn, slice_hrn, creds):
         top_auth_hrn = top_auth(slice_hrn)
-        if top_auth_hrn == self.hrn:
-            slicename = hrn_to_pl_slicename(slice_hrn)
+        site_hrn = '.'.join(slice_hrn.split('.')[:-1])
+        slice_part = slice_hrn.split('.')[-1]
+        if top_auth_hrn == self.driver.hrn:
+            login_base = slice_hrn.split('.')[-2][:12]
         else:
-            slicename = xrn_to_ext_slicename(slice_hrn)
+            login_base = hash_loginbase(site_hrn)
+
+        slicename = '_'.join([login_base, slice_part])
 
         slices = self.shell.GetSlices({'name': slicename}, ['slice_id'])
         if not slices:

@@ -8,7 +8,7 @@ from sfa.util.xrn import Xrn, get_leaf, get_authority, urn_to_hrn
 from sfa.rspecs.rspec import RSpec
 
 from sfa.planetlab.vlink import VLink
-from sfa.planetlab.plxrn import PlXrn, hrn_to_pl_slicename, xrn_to_hostname, xrn_to_ext_slicename, hrn_to_ext_loginbase, top_auth
+from sfa.planetlab.plxrn import PlXrn, hrn_to_pl_slicename, xrn_to_hostname, top_auth, hash_loginbase
 
 import time
 
@@ -170,11 +170,17 @@ class PlSlices:
         for lease in rspec_requested_leases:
              requested_lease = {}
              slice_hrn, _ = urn_to_hrn(lease['slice_id'])
+
              top_auth_hrn = top_auth(slice_hrn)
+             site_hrn = '.'.join(slice_hrn.split('.')[:-1])
+             slice_part = slice_hrn.split('.')[-1]
              if top_auth_hrn == self.driver.hrn:
-                 slice_name = hrn_to_pl_slicename(lease['slice_id'])
+                 login_base = slice_hrn.split('.')[-2][:12]
              else:
-                 slice_name = xrn_to_ext_slicename(lease['slice_id'])
+                 login_base = hash_loginbase(site_hrn)
+  
+             slice_name = '_'.join([login_base, slice_part])
+
              if slice_name != slice['name']:
                  continue
              elif Xrn(lease['component_id']).get_authority_urn().split(':')[0] != self.driver.hrn:
@@ -366,57 +372,56 @@ class PlSlices:
     def verify_site(self, slice_xrn, slice_record={}, peer=None, sfa_peer=None, options={}):
         (slice_hrn, type) = urn_to_hrn(slice_xrn)
         top_auth_hrn = top_auth(slice_hrn)
+        site_hrn = '.'.join(slice_hrn.split('.')[:-1])
         if top_auth_hrn == self.driver.hrn:
-            # login base can't be longer than 20 characters
-            slicename = hrn_to_pl_slicename(slice_hrn)
-            authority_name = slicename.split('_')[0]
-            login_base = authority_name[:20]
+            login_base = slice_hrn.split('.')[-2][:12]
         else:
-            login_base = hrn_to_ext_loginbase(slice_hrn)
-            authority_name = login_base
+            login_base = hash_loginbase(site_hrn)
 
-        sites = self.driver.shell.GetSites(login_base)
-        if not sites:
+        sites = self.driver.shell.GetSites({'peer_id': None},['site_id','name','abbreviated_name','login_base','hrn'])        
+
+        # filter sites by hrn
+        site_exists = [site for site in sites if site['hrn'] == site_hrn]
+       
+        if not site_exists:
             # create new site record
-            site = {'name': 'sfa.%s' % authority_name,
-                    'abbreviated_name': authority_name,
+            site = {'name': 'sfa:%s' % site_hrn,
+                    'abbreviated_name': site_hrn,
                     'login_base': login_base,
                     'max_slices': 100,
                     'max_slivers': 1000,
                     'enabled': True,
                     'peer_site_id': None}
-            if peer:
-                site['peer_site_id'] = slice_record.get('site_id', None)
+
             site['site_id'] = self.driver.shell.AddSite(site)
+            # Set site HRN
+            self.driver.shell.SetSiteHrn(int(site['site_id']), site_hrn)
+            # Tag this as created through SFA
+            self.driver.shell.SetSiteSfaCreated(int(site['site_id']), 'True')
             # exempt federated sites from monitor policies
-            self.driver.shell.AddSiteTag(site['site_id'], 'exempt_site_until', "20200101")
-            
-#            # is this still necessary?
-#            # add record to the local registry 
-#            if sfa_peer and slice_record:
-#                peer_dict = {'type': 'authority', 'hrn': site_hrn, \
-#                             'peer_authority': sfa_peer, 'pointer': site['site_id']}
-#                self.registry.register_peer_object(self.credential, peer_dict)
+            self.driver.shell.AddSiteTag(int(site['site_id']), 'exempt_site_until', "20200101")
+
         else:
-            site =  sites[0]
-            if peer:
-                # unbind from peer so we can modify if necessary. Will bind back later
-                self.driver.shell.UnBindObjectFromPeer('site', site['site_id'], peer['shortname']) 
+            site =  site_exists[0]
         
         return site        
 
     def verify_slice(self, slice_hrn, slice_record, peer, sfa_peer, options={}):
         top_auth_hrn = top_auth(slice_hrn)
+        site_hrn = '.'.join(slice_hrn.split('.')[:-1])
+        slice_part = slice_hrn.split('.')[-1]
         if top_auth_hrn == self.driver.hrn:
-            slice_name = hrn_to_pl_slicename(slice_hrn)
-            parts = slice_name.split("_")
-            login_base = parts[0]
+            login_base = slice_hrn.split('.')[-2][:12]
         else:
-            login_base = hrn_to_ext_loginbase(slice_hrn)
-            slice_name = xrn_to_ext_slicename(slice_hrn)
+            login_base = hash_loginbase(site_hrn)        
+
+                
+        slice_name = '_'.join([login_base, slice_part])
             
-        slices = self.driver.shell.GetSlices([slice_name]) 
-        if not slices:
+        slices = self.driver.shell.GetSlices({'peer_id': None},['slice_id','name','hrn']) 
+        # Filter slices by HRN
+        slice_exists = [slice for slice in slices if slice['hrn'] == slice_hrn]
+        if not slice_exists:
             slice = {'name': slice_name,
                      'url': slice_record.get('url', slice_hrn), 
                      'description': slice_record.get('description', slice_hrn)}
@@ -424,240 +429,116 @@ class PlSlices:
             slice['slice_id'] = self.driver.shell.AddSlice(slice)
             # set the slice HRN
             self.driver.shell.SetSliceHrn(int(slice['slice_id']), slice_hrn)            
+            # Tag this as created through SFA
+            self.driver.shell.SetSliceSfaCreated(int(slice['slice_id']), 'True')
 
-            slice['node_ids'] = []
-            slice['person_ids'] = []
-            if peer:
-                slice['peer_slice_id'] = slice_record.get('slice_id', None) 
-            # mark this slice as an sfa peer record
-#            if sfa_peer:
-#                peer_dict = {'type': 'slice', 'hrn': slice_hrn, 
-#                             'peer_authority': sfa_peer, 'pointer': slice['slice_id']}
-#                self.registry.register_peer_object(self.credential, peer_dict)
         else:
-            slice = slices[0]
-            # Check slice HRN
-            if self.driver.shell.GetSliceHrn(slice['slice_id']) != slice_hrn:
-                self.driver.shell.SetSliceHrn(slice['slice_id'], slice_hrn)
-
-            if peer:
-                slice['peer_slice_id'] = slice_record.get('slice_id', None)
-                # unbind from peer so we can modify if necessary. Will bind back later
-                self.driver.shell.UnBindObjectFromPeer('slice', slice['slice_id'], peer['shortname'])
-	        #Update existing record (e.g. expires field) it with the latest info.
+            slice = slice_exists[0]
             if slice_record and slice_record.get('expires'):
                 requested_expires = int(datetime_to_epoch(utcparse(slice_record['expires'])))
                 if requested_expires and slice['expires'] != requested_expires:
-                    self.driver.shell.UpdateSlice( slice['slice_id'], {'expires' : requested_expires})
+                    self.driver.shell.UpdateSlice( int(slice['slice_id']), {'expires' : requested_expires})
        
-        return slice
+        return self.driver.shell.GetSlices(int(slice['slice_id']))[0]
 
-    #def get_existing_persons(self, users):
     def verify_persons(self, slice_hrn, slice_record, users, peer, sfa_peer, options={}):
-        users_by_email = {}
-        users_by_site = defaultdict(list)
-        users_dict = {} 
+        top_auth_hrn = top_auth(slice_hrn)
+        site_hrn = '.'.join(slice_hrn.split('.')[:-1])
+        slice_part = slice_hrn.split('.')[-1]
+        users_by_hrn = {}
         for user in users:
-            user['urn'] = user['urn'].lower()
-            hrn, type = urn_to_hrn(user['urn'])
-            username = get_leaf(hrn)
-            user['username'] = username
+           user['hrn'], _ = urn_to_hrn(user['urn']) 
+           users_by_hrn[user['hrn']] = user
+
+        if top_auth_hrn == self.driver.hrn:
+            login_base = slice_hrn.split('.')[-2][:12]
+        else:
+            login_base = hash_loginbase(site_hrn)
+
+        slice_name = '_'.join([login_base, slice_part])
+
+        persons = self.driver.shell.GetPersons({'peer_id': None},['person_id','email','hrn'])
+        site = self.driver.shell.GetSites({'peer_id': None, 'login_base': login_base})[0]
+        slice = self.driver.shell.GetSlices({'peer_id': None, 'name': slice_name})[0]
+        slice_persons = self.driver.shell.GetPersons({'peer_id': None, 'person_id': slice['person_ids']},['person_id','email','hrn'])
+
+        persons_by_hrn = {}
+        persons_by_email = {}
+        for person in persons:
+           persons_by_hrn[person['hrn']] = person
+           persons_by_email[person['email']] = person
+        slice_persons_by_hrn = {}
+        for slice_person in slice_persons:
+           slice_persons_by_hrn[slice_person['hrn']] = slice_person
+
+        # sort persons by HRN
+        persons_to_add = set(users_by_hrn.keys()).difference(slice_persons_by_hrn.keys())
+        persons_to_delete = set(slice_persons_by_hrn.keys()).difference(users_by_hrn.keys())
+        persons_to_keep = set(users_by_hrn.keys()).intersection(slice_persons_by_hrn.keys()) 
+
+
+        persons_to_verify_keys = {}
+
+        # Add persons or add persons to slice
+        for person_hrn in persons_to_add:
+             person_email = users_by_hrn[person_hrn].get('email', None)
+             if person_email and person_email in persons_by_email.keys():
+                 # check if the user already exist in PL
+                 person_id = persons_by_email[person_email]['person_id']
+                 self.driver.shell.AddPersonToSlice(person_id, slice['slice_id'])
+                 persons_to_verify_keys[person_id] = users_by_hrn[person_hrn] 
+
+             else:
+                 person = {
+                           'first_name': person_hrn,
+                           'last_name': person_hrn,
+                           'email': users_by_hrn[person_hrn].get('email', "%s@geni.net"%person_hrn.split('.')[-1]),
+                           'enabled': True
+                          }
+                  
+                 person_id = self.driver.shell.AddPerson(person)
+                 self.driver.shell.AddRoleToPerson('user', int(person_id))
+                 self.driver.shell.SetPersonHrn(int(person_id), person_hrn)
+                 self.driver.shell.SetPersonSfaCreated(int(person_id), 'True')
+                 self.driver.shell.AddPersonToSite(int(person_id), site['site_id'])
+                 self.driver.shell.AddPersonToSlice(int(person_id), slice['slice_id'])
+               
+                 # Add keys
+                 for key in users_by_hrn[person_hrn].get('keys', []):
+                      key = {'key':key, 'key_type':'ssh'}
+                      self.driver.shell.AddPersonKey(person_id, key)
+
+                  
+        # Delete persons from slice     
+        for person_hrn in persons_to_delete:
+             person_id = slice_persons_by_hrn[person_hrn].get('person_id')
+             slice_id = slice['slice_id']
+             self.driver.shell.DeletePersonFromSlice(person_id, slice_id)
+
+
+        # Update kept persons
+        for person_hrn in persons_to_keep:
+             person_id = slice_persons_by_hrn[person_hrn].get('person_id')
+             persons_to_verify_keys[person_id] = users_by_hrn[person_hrn]
+
+        self.verify_keys(persons_to_verify_keys, peer, options)
+
+        return persons_to_add
+            
+
+    def verify_keys(self, persons_to_verify_keys, peer, options={}):
+        # we only add keys that comes from sfa to persons in PL
+        for person_id in persons_to_verify_keys:
+             person_sfa_keys = persons_to_verify_keys[person_id].get('keys', [])
+             person_pl_keys = self.driver.shell.GetKeys({'person_id': int(person_id)})
+             person_pl_keys_list = [key['key'] for key in person_pl_keys]
              
-            top_auth_hrn = top_auth(hrn)            
-
-            if top_auth_hrn == self.driver.hrn:
-                login_base = PlXrn(xrn=user['urn']).pl_login_base()
-            else:
-                login_base = hrn_to_ext_loginbase(hrn)
-
-            user['site'] = login_base
-            if 'email' in user:
-                user['email'] = user['email'].lower() 
-                users_by_email[user['email']] = user
-                users_dict[user['email']] = user
-            else:
-                users_by_site[user['site']].append(user)
-
-        # start building a list of existing users
-        existing_user_ids = []
-        existing_user_ids_filter = []
-        if users_by_email:
-            existing_user_ids_filter.extend(users_by_email.keys())
-        if users_by_site:
-            for login_base in users_by_site:
-                users = users_by_site[login_base]
-                for user in users:	
-                    existing_user_ids_filter.append(user['username']+'@geni.net')		
-        if existing_user_ids_filter:			
-            # get existing users by email 
-            existing_users = self.driver.shell.GetPersons({'email': existing_user_ids_filter}, 
-                                                        ['person_id', 'key_ids', 'email'])
-            existing_user_ids.extend([user['email'] for user in existing_users])
-	
-        if users_by_site:
-            # get a list of user sites (based on requeste user urns
-            site_list = self.driver.shell.GetSites(users_by_site.keys(), \
-                ['site_id', 'login_base', 'person_ids'])
-            # get all existing users at these sites
-            sites = {}
-            site_user_ids = []
-            for site in site_list:
-                sites[site['site_id']] = site
-                site_user_ids.extend(site['person_ids'])
-
-            existing_site_persons_list = self.driver.shell.GetPersons(site_user_ids,  
-                                                                    ['person_id', 'key_ids', 'email', 'site_ids'])
-
-            # all requested users are either existing users or new (added) users      
-            for login_base in users_by_site:
-                requested_site_users = users_by_site[login_base]
-                for requested_user in requested_site_users:
-                    user_found = False
-                    for existing_user in existing_site_persons_list:
-                        for site_id in existing_user['site_ids']:
-                            if site_id in sites:
-                                site = sites[site_id]
-                                if login_base == site['login_base'] and \
-                                   existing_user['email'].startswith(requested_user['username']+'@'):
-                                    existing_user_ids.append(existing_user['email'])
-                                    requested_user['email'] = existing_user['email']
-                                    users_dict[existing_user['email']] = requested_user
-                                    user_found = True
-                                    break
-                        if user_found:
-                            break
-      
-                    if user_found == False:
-                        fake_email = requested_user['username'] + '@geni.net'
-                        requested_user['email'] = fake_email
-                        users_dict[fake_email] = requested_user
-                
-        # requested slice users        
-        requested_user_ids = users_dict.keys()
-        # existing slice users
-        existing_slice_users_filter = {'person_id': slice_record.get('person_ids', [])}
-        existing_slice_users = self.driver.shell.GetPersons(existing_slice_users_filter,
-                                                          ['person_id', 'key_ids', 'email'])
-        existing_slice_user_ids = [user['email'] for user in existing_slice_users]
-        
-        # users to be added, removed or updated
-        added_user_ids = set(requested_user_ids).difference(existing_user_ids)
-        added_slice_user_ids = set(requested_user_ids).difference(existing_slice_user_ids)
-        removed_user_ids = set(existing_slice_user_ids).difference(requested_user_ids)
-        updated_user_ids = set(existing_slice_user_ids).intersection(requested_user_ids)
-
-        # Remove stale users (only if we are not appending).
-        # Append by default.
-        append = options.get('append', True)
-        if append == False:
-            for removed_user_id in removed_user_ids:
-                self.driver.shell.DeletePersonFromSlice(removed_user_id, slice_record['name'])
-        # update_existing users
-        updated_users_list = [user for user in users_dict.values() if user['email'] in \
-          updated_user_ids]
-        self.verify_keys(existing_slice_users, updated_users_list, peer, options)
-
-        added_persons = []
-        # add new users
-        for added_user_id in added_user_ids:
-            added_user = users_dict[added_user_id]
-            hrn, type = urn_to_hrn(added_user['urn'])  
-            person = {
-                'first_name': added_user.get('first_name', hrn),
-                'last_name': added_user.get('last_name', hrn),
-                'email': added_user_id,
-                #'peer_person_id': None,
-                #'keys': [],
-                #'key_ids': added_user.get('key_ids', []),
-            }
-            person['person_id'] = self.driver.shell.AddPerson(person)
-            self.driver.shell.AddRoleToPerson('user', int(person['person_id']))
-            # check user HRN
-            if self.driver.shell.GetPersonHrn(int(person['person_id'])) != hrn:
-                self.driver.shell.SetPersonHrn(int(person['person_id']), hrn)
-
-            if peer:
-                person['peer_person_id'] = added_user['person_id']
-            added_persons.append(person)
-           
-            # enable the account 
-            self.driver.shell.UpdatePerson(person['person_id'], {'enabled': True})
+             keys_to_add = set(person_sfa_keys).difference(person_pl_keys_list)
             
-            # add person to site
-            self.driver.shell.AddPersonToSite(added_user_id, added_user['site'])
+             for key_string in keys_to_add:
+                  key = {'key': key_string, 'key_type': 'ssh'}
+                  self.driver.shell.AddPersonKey(int(person_id), key)
 
-            for key_string in added_user.get('keys', []):
-                key = {'key':key_string, 'key_type':'ssh'}
-                key['key_id'] = self.driver.shell.AddPersonKey(person['person_id'], key)
-                if 'keys' not in person:
-                    person['keys'] = []
-                person['keys'].append(key)
-
-            # add the registry record
-#            if sfa_peer:
-#                peer_dict = {'type': 'user', 'hrn': hrn, 'peer_authority': sfa_peer, \
-#                    'pointer': person['person_id']}
-#                self.registry.register_peer_object(self.credential, peer_dict)
-    
-        for added_slice_user_id in added_slice_user_ids.union(added_user_ids):
-            # add person to the slice 
-            self.driver.shell.AddPersonToSlice(added_slice_user_id, slice_record['name'])
-            # if this is a peer record then it should already be bound to a peer.
-            # no need to return worry about it getting bound later 
-
-        return added_persons
-            
-
-    def verify_keys(self, persons, users, peer, options={}):
-        # existing keys 
-        key_ids = []
-        for person in persons:
-            key_ids.extend(person['key_ids'])
-        keylist = self.driver.shell.GetKeys(key_ids, ['key_id', 'key'])
-        keydict = {}
-        for key in keylist:
-            keydict[key['key']] = key['key_id']     
-        existing_keys = keydict.keys()
-        persondict = {}
-        for person in persons:
-            persondict[person['email']] = person    
-    
-        # add new keys
-        requested_keys = []
-        updated_persons = []
-        for user in users:
-            user_keys = user.get('keys', [])
-            updated_persons.append(user)
-            for key_string in user_keys:
-                requested_keys.append(key_string)
-                if key_string not in existing_keys:
-                    key = {'key': key_string, 'key_type': 'ssh'}
-                    try:
-                        if peer:
-                            person = persondict[user['email']]
-                            self.driver.shell.UnBindObjectFromPeer('person', person['person_id'], peer['shortname'])
-                        key['key_id'] = self.driver.shell.AddPersonKey(user['email'], key)
-                        if peer:
-                            key_index = user_keys.index(key['key'])
-                            remote_key_id = user['key_ids'][key_index]
-                            self.driver.shell.BindObjectToPeer('key', key['key_id'], peer['shortname'], remote_key_id)
-                            
-                    finally:
-                        if peer:
-                            self.driver.shell.BindObjectToPeer('person', person['person_id'], peer['shortname'], user['person_id'])
-        
-        # remove old keys (only if we are not appending)
-        append = options.get('append', True)
-        if append == False: 
-            removed_keys = set(existing_keys).difference(requested_keys)
-            for existing_key_id in keydict:
-                if keydict[existing_key_id] in removed_keys:
-                    try:
-                        if peer:
-                            self.driver.shell.UnBindObjectFromPeer('key', existing_key_id, peer['shortname'])
-                        self.driver.shell.DeleteKey(existing_key_id)
-                    except:
-                        pass   
 
     def verify_slice_attributes(self, slice, requested_slice_attributes, options={}, admin=False):
         append = options.get('append', True)
@@ -671,7 +552,8 @@ class PlSlices:
         # get sliver attributes
         added_slice_attributes = []
         removed_slice_attributes = []
-        ignored_slice_attribute_names = []
+        # we need to keep the slice hrn anyway
+        ignored_slice_attribute_names = ['hrn']
         existing_slice_attributes = self.driver.shell.GetSliceTags({'slice_id': slice['slice_id']})
         
         # get attributes that should be removed
@@ -680,6 +562,7 @@ class PlSlices:
                 # If a slice already has a admin only role it was probably given to them by an
                 # admin, so we should ignore it.
                 ignored_slice_attribute_names.append(slice_tag['tagname'])
+                attribute_found=True
             else:
                 # If an existing slice attribute was not found in the request it should
                 # be removed

@@ -28,7 +28,11 @@ class PlShell:
                     'AddLeases',
                     # HRN management methods
                     'SetPersonHrn', 'GetPersonHrn', 'SetSliceHrn', 'GetSliceHrn',
-                    'SetNodeHrn', 'GetNodeHrn' 
+                    'SetNodeHrn', 'GetNodeHrn', 'GetSiteHrn', 'SetSiteHrn',
+                    # Tag slice/person/site created by SFA
+                    'SetPersonSfaCreated', 'GetPersonSfaCreated', 'SetSliceSfaCreated', 
+                    'GetSliceSfaCreated', 'SetNodeSfaCreated', 'GetNodeSfaCreated', 
+                    'GetSiteSfaCreated', 'SetSiteSfaCreated',  
                     ]
     # support for other names - this is experimental
     alias_calls = { 'get_authorities':'GetSites',

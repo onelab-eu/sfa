@@ -22,20 +22,20 @@ def xrn_to_hostname(hrn):
     return Xrn.unescape(PlXrn(xrn=hrn, type='node').get_leaf())
 
 # helpers to handle external objects created via fedaration 
-def xrn_to_ext_slicename (xrn):
-    slice_hrn=PlXrn(xrn=xrn,type='slice').get_hrn()
-    site_hrn = get_authority(slice_hrn)
-    login_base = '8'.join(site_hrn.split('.'))
-    slice_name = '_'.join([login_base, slice_hrn.split('.')[-1]])
-    return slice_name
-
-def hrn_to_ext_loginbase (hrn):
-    site_hrn =  get_authority(hrn)
-    login_base = '8'.join(site_hrn.split('.'))[:20]
-    return login_base
-
 def top_auth (hrn):
     return hrn.split('.')[0]
+
+def hash_loginbase(site_hrn):
+    if len(site_hrn) <= 12:
+        return site_hrn.replace('.','8')
+    ratio = float(12) / len(site_hrn)
+    auths_tab = site_hrn.split('.')
+    auths_tab2 = []
+    for auth in auths_tab:
+         auth2 = auth[:int(len(auth)*ratio)]
+         auths_tab2.append(auth2)
+    
+    return '8'.join(auths_tab2)
 
 class PlXrn (Xrn):
 
