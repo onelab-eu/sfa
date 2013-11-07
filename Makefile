@@ -127,8 +127,12 @@ force:
 # a lot of stuff in the working dir is just noise
 files:
 	@find . -type f | egrep -v '^\./\.|/\.git/|/\.svn/|TAGS|AA-|~$$|egg-info|\.(py[co]|doc|html|pdf|png|svg|out|bak|dg|pickle)$$' 
+
+git-files:
+	@git ls-files | grep -v '\.doc$$'
+
 tags:	
-	$(MAKE) files | xargs etags
+	$(MAKE) git-files | xargs etags
 
 .PHONY: files tags
 
