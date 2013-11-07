@@ -320,6 +320,7 @@ class PlSlices:
         for link in requested_links:
             # get the ip address of the first node in the link
             ifname1 = Xrn(link['interface1']['component_id']).get_leaf()
+
             if ifname1:
                 ifname_parts = ifname1.split(':')
                 node_raw = ifname_parts[0]
