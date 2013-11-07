@@ -75,7 +75,7 @@ class IotlabDB(object):
         """
         Class used with this Python singleton design pattern to allow the
         definition of one single instance of iotlab db session in the whole
-        code. Wherever a conenction to the database is needed, this class
+        code. Wherever a connection to the database is needed, this class
         returns the same instance every time. Removes the need for global
         variable throughout the code.
         """
