@@ -420,7 +420,7 @@ class Sfi:
                                   "authority in set of credentials for this call")
 
         # show_credential option
-        if command in ("list","resources", "describe", "provision", "allocate", "add","update","remove","slices","delete","status","renew"):
+        if command in ("list","resources", "describe", "provision", "allocate", "add","update","remove","delete","status","renew"):
             parser.add_option("-C","--credential",dest='show_credential',action='store_true',default=False,
                               help="show credential(s) used in human-readable form")
         # registy filter option
@@ -492,6 +492,8 @@ use this if you mean an authority instead""")
                              metavar="slice_hrn", help="delegate cred. for slice HRN")
             parser.add_option("-a", "--auths", dest='delegate_auths',action='append',default=[],
                              metavar='auth_hrn', help="delegate PI cred for auth HRN")
+            parser.add_option('-d', '--delegate', dest='delegate', help="Override 'delegate' from the config file")
+            parser.add_option('-b', '--backend',  dest='backend',  help="Override 'backend' from the config file")
         
         return parser
 
@@ -667,7 +669,7 @@ use this if you mean an authority instead""")
         self.private_key = client_bootstrap.private_key()
         self.my_credential_string = client_bootstrap.my_credential_string ()
         self.my_credential = {'geni_type': 'geni_sfa',
-                              'geni_version': '3.0', 
+                              'geni_version': '3', 
                               'geni_value': self.my_credential_string}
         self.my_gid = client_bootstrap.my_gid ()
         self.client_bootstrap = client_bootstrap
@@ -687,7 +689,7 @@ use this if you mean an authority instead""")
 
     def slice_credential(self, name):
         return {'geni_type': 'geni_sfa',
-                'geni_version': '3.0',
+                'geni_version': '3',
                 'geni_value': self.slice_credential_string(name)}    
 
     # xxx should be supported by sfaclientbootstrap as well
@@ -1047,25 +1049,6 @@ use this if you mean an authority instead""")
     # Slice-related commands
     # ==================================================================
 
-    @register_command("","")
-    def slices(self, options, args):
-        "list instantiated slices (ListSlices) - returns urn's"
-        server = self.sliceapi()
-        # creds
-        creds = [self.my_credential_string]
-        # options and call_id when supported
-        api_options = {}
-        api_options['call_id']=unique_call_id()
-        if options.show_credential:
-            show_credentials(creds)
-        result = server.ListSlices(creds, *self.ois(server,api_options))
-        value = ReturnValue.get_value(result)
-        if self.options.raw:
-            save_raw_to_file(result, self.options.raw, self.options.rawformat, self.options.rawbanner)
-        else:
-            display_list(value)
-        return
-
     # show rspec for named slice
     @register_command("","")
     def resources(self, options, args):
@@ -1104,9 +1087,9 @@ use this if you mean an authority instead""")
                 # just request the version the client wants
                 api_options['geni_rspec_version'] = version_manager.get_version(options.rspec_version).to_dict()
             else:
-                api_options['geni_rspec_version'] = {'type': 'geni', 'version': '3.0'}
+                api_options['geni_rspec_version'] = {'type': 'geni', 'version': '3'}
         else:
-            api_options['geni_rspec_version'] = {'type': 'geni', 'version': '3.0'}
+            api_options['geni_rspec_version'] = {'type': 'geni', 'version': '3'}
         result = server.ListResources (creds, api_options)
         value = ReturnValue.get_value(result)
         if self.options.raw:
@@ -1137,7 +1120,7 @@ use this if you mean an authority instead""")
                        'cached': True,
                        'info': options.info,
                        'list_leases': options.list_leases,
-                       'geni_rspec_version': {'type': 'geni', 'version': '3.0'},
+                       'geni_rspec_version': {'type': 'geni', 'version': '3'},
                       }
         if options.rspec_version:
             version_manager = VersionManager()
@@ -1146,7 +1129,7 @@ use this if you mean an authority instead""")
                 # just request the version the client wants
                 api_options['geni_rspec_version'] = version_manager.get_version(options.rspec_version).to_dict()
             else:
-                api_options['geni_rspec_version'] = {'type': 'geni', 'version': '3.0'}
+                api_options['geni_rspec_version'] = {'type': 'geni', 'version': '3'}
         urn = Xrn(args[0], type='slice').get_urn()        
         result = server.Describe([urn], creds, api_options)
         value = ReturnValue.get_value(result)
@@ -1218,6 +1201,21 @@ use this if you mean an authority instead""")
         rspec = open(rspec_file).read()
         api_options = {}
         api_options ['call_id'] = unique_call_id()
+        # users
+        sfa_users = []
+        geni_users = []
+        slice_records = self.registry().Resolve(slice_urn, [self.my_credential_string])
+        if slice_records and 'reg-researchers' in slice_records[0] and slice_records[0]['reg-researchers']!=[]:
+            slice_record = slice_records[0]
+            user_hrns = slice_record['reg-researchers']
+            user_urns = [hrn_to_urn(hrn, 'user') for hrn in user_hrns]
+            user_records = self.registry().Resolve(user_urns, [self.my_credential_string])
+            sfa_users = sfa_users_arg(user_records, slice_record)
+            geni_users = pg_users_arg(user_records)
+
+        api_options['sfa_users'] = sfa_users
+        api_options['geni_users'] = geni_users
+
         result = server.Allocate(slice_urn, creds, rspec, api_options)
         value = ReturnValue.get_value(result)
         if self.options.raw:
@@ -1259,7 +1257,7 @@ use this if you mean an authority instead""")
 
         # set the requtested rspec version
         version_manager = VersionManager()
-        rspec_version = version_manager._get_version('geni', '3.0').to_dict()
+        rspec_version = version_manager._get_version('geni', '3').to_dict()
         api_options['geni_rspec_version'] = rspec_version
 
         # users
@@ -1270,9 +1268,9 @@ use this if you mean an authority instead""")
         #  }]
         users = []
         slice_records = self.registry().Resolve(slice_urn, [self.my_credential_string])
-        if slice_records and 'researcher' in slice_records[0] and slice_records[0]['researcher']!=[]:
+        if slice_records and 'reg-researchers' in slice_records[0] and slice_records[0]['reg-researchers']!=[]:
             slice_record = slice_records[0]
-            user_hrns = slice_record['researcher']
+            user_hrns = slice_record['reg-researchers']
             user_urns = [hrn_to_urn(hrn, 'user') for hrn in user_hrns]
             user_records = self.registry().Resolve(user_urns, [self.my_credential_string])
             users = pg_users_arg(user_records)
@@ -1495,8 +1493,9 @@ $ sfi myslice
 $ sfi -v myslice  -- or sfi -vv myslice
   same but with more and more verbosity
 
-$ sfi m
+$ sfi m -b http://mymanifold.foo.com:7080/
   is synonym to sfi myslice as no other command starts with an 'm'
+  and uses a custom backend for this one call
 """
 ) # register_command
     def myslice (self, options, args):
@@ -1512,21 +1511,31 @@ $ sfi m
         if len(args)>0:
             self.print_help()
             sys.exit(1)
+        # enable info by default
+        self.logger.setLevelFromOptVerbose(self.options.verbose+1)
         ### the rough sketch goes like this
+        # (0) produce a p12 file
+        self.client_bootstrap.my_pkcs12()
+
         # (a) rain check for sufficient config in sfi_config
-        # we don't allow to override these settings for now
         myslice_dict={}
-        myslice_keys=['backend', 'delegate', 'platform', 'username']
+        myslice_keys=[ 'backend', 'delegate', 'platform', 'username']
         for key in myslice_keys:
-            full_key="MYSLICE_" + key.upper()
-            value=getattr(self.config_instance,full_key,None)
+            value=None
+            # oct 2013 - I'm finding myself juggling with config files
+            # so a couple of command-line options can now override config
+            if hasattr(options,key) and getattr(options,key) is not None:
+                value=getattr(options,key)
+            else:
+                full_key="MYSLICE_" + key.upper()
+                value=getattr(self.config_instance,full_key,None)
             if value:   myslice_dict[key]=value
             else:       print "Unsufficient config, missing key %s in [myslice] section of sfi_config"%key
         if len(myslice_dict) != len(myslice_keys):
             sys.exit(1)
 
         # (b) figure whether we are PI for the authority where we belong
-        self.logger.info("Resolving our own id")
+        self.logger.info("Resolving our own id %s"%self.user)
         my_records=self.registry().Resolve(self.user,self.my_credential_string)
         if len(my_records)!=1: print "Cannot Resolve %s -- exiting"%self.user; sys.exit(1)
         my_record=my_records[0]
@@ -1537,18 +1546,18 @@ $ sfi m
         my_auths = my_auths_all
         if options.delegate_auths:
             my_auths = list(set(my_auths_all).intersection(set(options.delegate_auths)))
+            self.logger.debug("Restricted to user-provided auths"%(my_auths))
 
-        self.logger.info("Delegate PI creds for authorities: %s"%my_auths        )
         # (c) get the set of slices that we are in
         my_slices_all=my_record['reg-slices']
         self.logger.info("Found %d slices that we are member of"%len(my_slices_all))
         self.logger.debug("They are: %s"%(my_slices_all))
  
         my_slices = my_slices_all
+        # if user provided slices, deal only with these - if they are found
         if options.delegate_slices:
             my_slices = list(set(my_slices_all).intersection(set(options.delegate_slices)))
-
-        self.logger.info("Delegate slice creds for slices: %s"%my_slices)
+            self.logger.debug("Restricted to user-provided slices: %s"%(my_slices))
 
         # (d) make sure we have *valid* credentials for all these
         hrn_credentials=[]
@@ -1566,11 +1575,18 @@ $ sfi m
         hrn_delegated_credentials = []
         for (hrn, htype, credential) in hrn_credentials:
             delegated_credential = self.client_bootstrap.delegate_credential_string (credential, delegatee_hrn, delegatee_type)
-            hrn_delegated_credentials.append ((hrn, htype, delegated_credential, ))
+            # save these so user can monitor what she's uploaded
+            filename = os.path.join ( self.options.sfi_dir,
+                                      "%s.%s_for_%s.%s.cred"%(hrn,htype,delegatee_hrn,delegatee_type))
+            with file(filename,'w') as f:
+                f.write(delegated_credential)
+            self.logger.debug("(Over)wrote %s"%filename)
+            hrn_delegated_credentials.append ((hrn, htype, delegated_credential, filename, ))
 
         # (f) and finally upload them to manifold server
         # xxx todo add an option so the password can be set on the command line
         # (but *NOT* in the config file) so other apps can leverage this
+        self.logger.info("Uploading on backend at %s"%myslice_dict['backend'])
         uploader = ManifoldUploader (logger=self.logger,
                                      url=myslice_dict['backend'],
                                      platform=myslice_dict['platform'],
@@ -1578,7 +1594,7 @@ $ sfi m
                                      password=options.password)
         uploader.prompt_all()
         (count_all,count_success)=(0,0)
-        for (hrn,htype,delegated_credential) in hrn_delegated_credentials:
+        for (hrn,htype,delegated_credential,filename) in hrn_delegated_credentials:
             # inspect
             inspect=Credential(string=delegated_credential)
             expire_datetime=inspect.get_expiration()
@@ -1586,8 +1602,8 @@ $ sfi m
             if uploader.upload(delegated_credential,message=message):
                 count_success+=1
             count_all+=1
-
         self.logger.info("Successfully uploaded %d/%d credentials"%(count_success,count_all))
+
         # at first I thought we would want to save these,
         # like 'sfi delegate does' but on second thought
         # it is probably not helpful as people would not
@@ -1595,17 +1611,18 @@ $ sfi m
         if count_success != count_all: sys.exit(1)
         return
 
-# Thierry: I'm turning this off as a command, no idea what it's used for
-#    @register_command("cred","")
+    @register_command("cred","")
     def trusted(self, options, args):
         """
         return the trusted certs at this interface (get_trusted_certs)
         """ 
         trusted_certs = self.registry().get_trusted_certs()
         for trusted_cert in trusted_certs:
+            print "\n===========================================================\n"
             gid = GID(string=trusted_cert)
             gid.dump()
             cert = Certificate(string=trusted_cert)
             self.logger.debug('Sfi.trusted -> %r'%cert.get_subject())
+            print "Certificate:\n%s\n\n"%trusted_cert
         return 
 

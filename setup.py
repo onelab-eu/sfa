@@ -16,22 +16,22 @@ except:
     version_tag='cleaningup'
 
 scripts = glob("clientbin/*.py") + \
-    [ 
+    [
     'config/sfa-config-tty',
     'config/sfa-config',
 #    'config/gen-sfa-cm-config.py',
-    'sfa/server/sfa-start.py', 
-#    'sfa/server/sfa_component_setup.py', 
+    'sfa/server/sfa-start.py',
+#    'sfa/server/sfa_component_setup.py',
     'sfatables/sfatables',
     'keyconvert/keyconvert.py',
     'flashpolicy/sfa_flashpolicy.py',
     ]
 
 packages = [
-    'sfa', 
+    'sfa',
     'sfa/trust',
     'sfa/storage',
-    'sfa/util', 
+    'sfa/util',
     'sfa/server',
     'sfa/methods',
     'sfa/generic',
@@ -48,7 +48,7 @@ packages = [
     'sfa/dummy',
     'sfa/openstack',
     'sfa/federica',
-    'sfa/senslab',
+    'sfa/iotlab',
     'sfatables',
     'sfatables/commands',
     'sfatables/processors',
@@ -96,24 +96,24 @@ if sys.argv[1] in ['uninstall', 'remove', 'delete', 'clean']:
     remove_bins = [ '/usr/bin/' + os.path.basename(bin) for bin in scripts ]
     remove_files = remove_bins + [ "/etc/init.d/%s"%x for x in initscripts ]
 
-    # remove files   
+    # remove files
     for filepath in remove_files:
         print "removing", filepath, "...",
-        try: 
+        try:
             os.remove(filepath)
             print "success"
         except: print "failed"
-    # remove directories 
-    for directory in remove_dirs: 
+    # remove directories
+    for directory in remove_dirs:
         print "removing", directory, "...",
-        try: 
+        try:
             shutil.rmtree(directory)
             print "success"
         except: print "failed"
 else:
     # avoid repeating what's in the specfile already
     setup(name='sfa',
-          packages = packages, 
+          packages = packages,
           data_files = data_files,
           scripts = scripts,
           url="http://svn.planet-lab.org/wiki/SFATutorial",

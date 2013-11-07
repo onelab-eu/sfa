@@ -48,7 +48,7 @@ class NITOSv1Channel:
           
         channel_elems = []       
         for channel in channels:
-            channel_fields = ['channel_num', 'frequency', 'standard']
+            channel_fields = ['channel_num', 'frequency', 'standard', 'component_id']
             channel_elem = spectrum_elem.add_instance('channel', channel, channel_fields)
             channel_elems.append(channel_elem)
 
@@ -67,6 +67,7 @@ class NITOSv1Channel:
             channel['channel_num'] = channel_elem.attrib['channel_num']
             channel['frequency'] = channel_elem.attrib['frequency']
             channel['standard'] = channel_elem.attrib['standard']
+            channel['component_id'] = channel_elem.attrib['component_id']
 
             channels.append(channel)
         return channels            

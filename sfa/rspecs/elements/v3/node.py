@@ -1,4 +1,4 @@
-from sfa.util.xrn import Xrn
+from sfa.util.xrn import Xrn, get_leaf
 from sfa.util.xml import XpathFilter
 
 from sfa.rspecs.elements.node import NodeElement
@@ -13,7 +13,6 @@ from sfa.rspecs.elements.v3.services import Services
 from sfa.rspecs.elements.versions.pgv2SliverType import PGv2SliverType     
 from sfa.rspecs.elements.versions.pgv2Interface import PGv2Interface     
 
-from sfa.planetlab.plxrn import xrn_to_hostname
 
 class Node:
     @staticmethod
@@ -25,7 +24,7 @@ class Node:
             node_elems.append(node_elem)
             # set component name
             if node.get('component_id'):
-                component_name = xrn_to_hostname(node['component_id'])
+                component_name = Xrn.unescape(get_leaf(Xrn(node['component_id']).get_hrn()))
                 node_elem.set('component_name', component_name)
             # set hardware types
             if node.get('hardware_types'):

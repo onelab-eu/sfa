@@ -1,4 +1,4 @@
-from sfa.util.xrn import Xrn
+from sfa.util.xrn import Xrn, get_leaf
 from sfa.util.xml import XpathFilter
 
 from sfa.rspecs.elements.node import NodeElement
@@ -12,13 +12,14 @@ from sfa.rspecs.elements.pltag import PLTag
 from sfa.rspecs.elements.versions.pgv2Services import PGv2Services     
 from sfa.rspecs.elements.versions.pgv2SliverType import PGv2SliverType     
 from sfa.rspecs.elements.versions.pgv2Interface import PGv2Interface     
+from sfa.rspecs.elements.versions.sfav1PLTag import SFAv1PLTag
 from sfa.rspecs.elements.granularity import Granularity
+from sfa.rspecs.elements.attribute import Attribute
 
-from sfa.planetlab.plxrn import xrn_to_hostname
 
 class PGv2Node:
     @staticmethod
-    def add_nodes(xml, nodes):
+    def add_nodes(xml, nodes, rspec_content_type=None):
         node_elems = []
         for node in nodes:
             node_fields = ['component_manager_id', 'component_id', 'client_id', 'sliver_id', 'exclusive']
@@ -26,7 +27,7 @@ class PGv2Node:
             node_elems.append(node_elem)
             # set component name
             if node.get('component_id'):
-                component_name = xrn_to_hostname(node['component_id'])
+                component_name = Xrn.unescape(get_leaf(Xrn(node['component_id']).get_hrn()))
                 node_elem.set('component_name', component_name)
             # set hardware types
             if node.get('hardware_types'):
@@ -37,7 +38,7 @@ class PGv2Node:
                 node_elem.add_instance('location', node['location'], Location.fields)       
 
             # set granularity
-            if node['exclusive'] == "true":
+            if node.get('exclusive') == "true":
                 granularity = node.get('granularity')
                 node_elem.add_instance('granularity', granularity, granularity.fields)
             # set interfaces
@@ -54,14 +55,31 @@ class PGv2Node:
             slivers = node.get('slivers', [])
             if not slivers:
                 # we must still advertise the available sliver types
-                slivers = Sliver({'type': 'plab-vserver'})
+                if node.get('sliver_type'):
+                    slivers = Sliver({'type': node['sliver_type']})
+                else:
+                # Planet lab
+                    slivers = Sliver({'type': 'plab-vserver'})
                 # we must also advertise the available initscripts
                 slivers['tags'] = []
                 if node.get('pl_initscripts'): 
                     for initscript in node.get('pl_initscripts', []):
                         slivers['tags'].append({'name': 'initscript', 'value': initscript['name']})
             PGv2SliverType.add_slivers(node_elem, slivers)
+
+            # advertise the node tags
+            tags = node.get('tags', [])
+            if tags:
+               for tag in tags:
+                    tag['name'] = tag.pop('tagname')
+                    node_elem.add_instance('{%s}attribute' % xml.namespaces['planetlab'], tag, ['name', 'value'])
+
+            # add sliver tag in Request Rspec
+            #if rspec_content_type == "request":
+            #    node_elem.add_instance('sliver', '', [])
+
         return node_elems
+
 
     @staticmethod
     def get_nodes(xml, filter={}):
@@ -86,11 +104,11 @@ class PGv2Node:
             
             # get hardware types
             hardware_type_elems = node_elem.xpath('./default:hardware_type | ./hardware_type')
-            node['hardware_types'] = [hw_type.get_instance(HardwareType) for hw_type in hardware_type_elems]
+            node['hardware_types'] = [dict(hw_type.get_instance(HardwareType)) for hw_type in hardware_type_elems]
             
             # get location
             location_elems = node_elem.xpath('./default:location | ./location')
-            locations = [location_elem.get_instance(Location) for location_elem in location_elems]
+            locations = [dict(location_elem.get_instance(Location)) for location_elem in location_elems]
             if len(locations) > 0:
                 node['location'] = locations[0]
 
@@ -101,19 +119,45 @@ class PGv2Node:
 
             # get interfaces
             iface_elems = node_elem.xpath('./default:interface | ./interface')
-            node['interfaces'] = [iface_elem.get_instance(Interface) for iface_elem in iface_elems]
+            node['interfaces'] = [dict(iface_elem.get_instance(Interface)) for iface_elem in iface_elems]
 
             # get services
             node['services'] = PGv2Services.get_services(node_elem)
             
             # get slivers
             node['slivers'] = PGv2SliverType.get_slivers(node_elem)    
-            available_elems = node_elem.xpath('./default:available | ./available')
-            if len(available_elems) > 0 and 'name' in available_elems[0].attrib:
+            
+            # get boot state
+	    available_elems = node_elem.xpath('./default:available | ./available')
+            if len(available_elems) > 0 and 'now' in available_elems[0].attrib:
                 if available_elems[0].attrib.get('now', '').lower() == 'true': 
                     node['boot_state'] = 'boot'
                 else: 
                     node['boot_state'] = 'disabled' 
+
+            # get initscripts
+            try:
+               node['pl_initscripts'] = []
+               initscript_elems = node_elem.xpath('./default:sliver_type/planetlab:initscript | ./sliver_type/initscript')
+               if len(initscript_elems) > 0:
+                   for initscript_elem in initscript_elems:
+                        if 'name' in initscript_elem.attrib:
+                            node['pl_initscripts'].append(dict(initscript_elem.attrib))
+            except:
+               pass
+
+            # get node tags
+            try:
+               tag_elems = node_elem.xpath('./planetlab:attribute | ./attribute')
+               node['tags'] = []
+               if len(tag_elems) > 0:
+                   for tag_elem in tag_elems:
+                        tag = dict(tag_elem.get_instance(Attribute))
+                        tag['tagname'] = tag.pop('name')
+                        node['tags'].append(tag)
+            except:
+               pass
+  
         return nodes
 
 

@@ -88,7 +88,7 @@ class V2ToV3Adapter:
                 (slice_urn, rspec_string, expiration, options) = args
                 slice_hrn, type = urn_to_hrn(slice_urn)
                 creds = []
-                users = options.get('geni_users', [])
+                users = options.get('sfa_users', [])
                 manifest_string = getattr(self.driver, "create_sliver")(slice_urn, slice_hrn, creds, rspec_string, users, options)
                 
                 # slivers allocation

@@ -15,7 +15,7 @@ from sfa.trust.certificate import convert_public_key
 
 from sfa.client.candidates import Candidates
 
-from sfa.client.common import optparse_listvalue_callback, terminal_render, filter_records
+from sfa.client.common import optparse_listvalue_callback, optparse_dictvalue_callback, terminal_render, filter_records
 
 pprinter = PrettyPrinter(indent=4)
 
@@ -84,7 +84,7 @@ class RegistryCommands(Commands):
     def _record_dict(self, xrn=None, type=None, 
                      url=None, description=None, email='', 
                      key=None, 
-                     slices=[], researchers=[], pis=[]):
+                     slices=[], researchers=[], pis=[], extras={}):
         record_dict = {}
         if xrn:
             if type:
@@ -112,6 +112,8 @@ class RegistryCommands(Commands):
             record_dict['email'] = email
         if pis:
             record_dict['pi'] = pis
+        if extras:
+            record_dict.update(extras)
         return record_dict
 
 
@@ -200,11 +202,12 @@ Users having a GID/PubKey correpondence NOT OK: %s and are: \n%s\n\n"%(len(NOKEY
     @args('-p', '--pis', dest='pis', metavar='<PIs>', 
           help='Set/replace Principal Investigators/Project Managers', 
           default='', type="str", action='callback', callback=optparse_listvalue_callback)
+    @args('-X','--extra',dest='extras',default={},type='str',metavar="<EXTRA_ASSIGNS>", action="callback", callback=optparse_dictvalue_callback, nargs=1, help="set extra/testbed-dependent flags, e.g. --extra enabled=true")
     def register(self, xrn, type=None, url=None, description=None, key=None, slices='', 
-                 pis='', researchers='',email=''):
+                 pis='', researchers='',email='', extras={}):
         """Create a new Registry record"""
         record_dict = self._record_dict(xrn=xrn, type=type, url=url, key=key, 
-                                        slices=slices, researchers=researchers, email=email, pis=pis)
+                                        slices=slices, researchers=researchers, email=email, pis=pis, extras=extras)
         self.api.manager.Register(self.api, record_dict)         
 
 
@@ -222,12 +225,13 @@ Users having a GID/PubKey correpondence NOT OK: %s and are: \n%s\n\n"%(len(NOKEY
     @args('-p', '--pis', dest='pis', metavar='<PIs>',
           help='Set/replace Principal Investigators/Project Managers',
           default='', type="str", action='callback', callback=optparse_listvalue_callback)
+    @args('-X','--extra',dest='extras',default={},type='str',metavar="<EXTRA_ASSIGNS>", action="callback", callback=optparse_dictvalue_callback, nargs=1, help="set extra/testbed-dependent flags, e.g. --extra enabled=true")
     def update(self, xrn, type=None, url=None, description=None, key=None, slices='', 
-               pis='', researchers=''):
+               pis='', researchers='', extras={}):
         """Update an existing Registry record""" 
         print 'incoming PIS',pis
         record_dict = self._record_dict(xrn=xrn, type=type, url=url, description=description, 
-                                        key=key, slices=slices, researchers=researchers, pis=pis)
+                                        key=key, slices=slices, researchers=researchers, pis=pis, extras=extras)
         self.api.manager.Update(self.api, record_dict)
         
     @args('-x', '--xrn', dest='xrn', metavar='<xrn>', help='object hrn/urn (mandatory)') 
@@ -256,7 +260,7 @@ Users having a GID/PubKey correpondence NOT OK: %s and are: \n%s\n\n"%(len(NOKEY
         """Initialize or upgrade the db"""
         from sfa.storage.dbschema import DBSchema
         dbschema=DBSchema()
-        dbschema.init_or_upgrade
+        dbschema.init_or_upgrade()
     
     @args('-a', '--all', dest='all', metavar='<all>', action='store_true', default=False,
           help='Remove all registry records and all files in %s area' % help_basedir)

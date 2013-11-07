@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<RSpec type="SFA" expires="2013-02-27T15:14:10Z" generated="2013-02-27T14:14:10Z">
+  <network name="iotlab">
+    <node component_manager_id="urn:publicid:IDN+iotlab+authority+sa" component_id="urn:publicid:IDN+iotlab+node+wsn430-12.devlille.iot-lab.info" boot_state="Alive" component_name="wsn430-12.devlille.iot-lab.info" site_id="urn:publicid:IDN+iotlab+authority+sa">
+      <hostname>wsn430-12.devlille.iot-lab.info</hostname>
+      <location country="France"/>
+      <exclusive>TRUE</exclusive>
+      <granularity grain="60"/>
+      <sliver/>
+    </node>
+    <node component_manager_id="urn:publicid:IDN+iotlab+authority+sa" component_id="urn:publicid:IDN+iotlab+node+a8-11.devgrenoble.iot-lab.info" boot_state="Alive" component_name="a8-11.devgrenoble.iot-lab.info" site_id="urn:publicid:IDN+iotlab+authority+sa">
+      <hostname>a8-11.devgrenoble.iot-lab.info</hostname>
+      <location country="France"/>
+      <exclusive>TRUE</exclusive>
+      <granularity grain="60"/>
+      <sliver/>
+    </node>
+  </network>
+ <lease slice_id="urn:publicid:IDN+firexp:flab+slice+avakian_slice" start_time="1386765700" duration="10">
+	<node component_id="urn:publicid:IDN+iotlab+node+a8-11.devgrenoble.iot-lab.info"/>
+	<node component_id="urn:publicid:IDN+iotlab+node+wsn430-12.devlille.iot-lab.info"/>
+ </lease>
+</RSpec>

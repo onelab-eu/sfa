@@ -1,6 +1,6 @@
 #!/usr/bin/python
 from collections import defaultdict
-from sfa.util.xrn import Xrn, hrn_to_urn, urn_to_hrn
+from sfa.util.xrn import Xrn, hrn_to_urn, urn_to_hrn, get_authority, get_leaf
 from sfa.util.sfatime import utcparse, datetime_to_string
 from sfa.util.sfalogging import logger
 from sfa.util.faults import SliverDoesNotExist
@@ -18,7 +18,7 @@ from sfa.rspecs.elements.lease import Lease
 from sfa.rspecs.elements.granularity import Granularity
 from sfa.rspecs.version_manager import VersionManager
 
-from sfa.planetlab.plxrn import PlXrn, hostname_to_urn, hrn_to_pl_slicename, slicename_to_hrn
+from sfa.planetlab.plxrn import PlXrn, hostname_to_urn, hrn_to_pl_slicename, slicename_to_hrn, xrn_to_ext_slicename, top_auth
 from sfa.planetlab.vlink import get_tc_rate
 from sfa.planetlab.topology import Topology
 from sfa.storage.alchemy import dbsession
@@ -129,7 +129,13 @@ class PlAggregate:
                 except ValueError:
                     pass 
             else:  
-                names.add(xrn.pl_slicename())
+                slice_hrn = xrn.get_hrn()
+                top_auth_hrn = top_auth(slice_hrn)
+                if top_auth_hrn == self.driver.hrn:
+                    slice_name = hrn_to_pl_slicename(slice_hrn)
+                else:
+                    slice_name = xrn_to_ext_slicename(slice_hrn) 
+                names.add(slice_name)
 
         filter = {}
         if names:
@@ -141,7 +147,7 @@ class PlAggregate:
         if not slices:
             return []
         slice = slices[0]     
-        slice['hrn'] = PlXrn(auth=self.driver.hrn, slicename=slice['name']).hrn   
+        slice['hrn'] = slice_hrn   
 
         # get sliver users
         persons = []
@@ -165,10 +171,10 @@ class PlAggregate:
         # construct user key info
         users = []
         for person in persons:
-            name = person['email'][0:person['email'].index('@')]
+            person_urn = hrn_to_urn(self.driver.shell.GetPersonHrn(int(person['person_id'])), 'user')
             user = {
                 'login': slice['name'], 
-                'user_urn': Xrn('%s.%s' % (self.driver.hrn, name), type='user').urn,
+                'user_urn': person_urn,
                 'keys': [keys[k_id]['key'] for k_id in person['key_ids'] if k_id in keys]
             }
             users.append(user)
@@ -356,8 +362,8 @@ class PlAggregate:
             site_id=lease['site_id']
             site=sites_dict[site_id]
 
-            rspec_lease['component_id'] = hostname_to_urn(self.driver.hrn, site['login_base'], lease['hostname'])
-            slice_hrn = slicename_to_hrn(self.driver.hrn, lease['name'])
+            rspec_lease['component_id'] = hrn_to_urn(self.driver.shell.GetNodeHrn(lease['hostname']), 'node')
+            slice_hrn = self.driver.shell.GetSliceHrn(lease['slice_id'])
             slice_urn = hrn_to_urn(slice_hrn, 'slice')
             rspec_lease['slice_id'] = slice_urn
             rspec_lease['start_time'] = lease['t_from']

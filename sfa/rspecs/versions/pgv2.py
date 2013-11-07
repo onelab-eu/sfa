@@ -45,8 +45,8 @@ class PGv2(RSpecVersion):
     def get_nodes_with_slivers(self):
         return PGv2Node.get_nodes_with_slivers(self.xml)
 
-    def add_nodes(self, nodes, check_for_dupes=False):
-        return PGv2Node.add_nodes(self.xml, nodes)
+    def add_nodes(self, nodes, check_for_dupes=False, rspec_content_type=None):
+        return PGv2Node.add_nodes(self.xml, nodes, rspec_content_type)
     
     def merge_node(self, source_node_tag):
         # this is untested
@@ -181,6 +181,14 @@ class PGv2(RSpecVersion):
 
     def add_leases(self, leases, network = None, no_dupes=False):
         PGv2Lease.add_leases(self.xml, leases)
+
+    # Spectrum
+
+    def get_channels(self, filter=None):
+        return []
+
+    def add_channels(self, channels, network = None, no_dupes=False):
+        pass
 
     # Utility
 

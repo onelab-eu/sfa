@@ -19,8 +19,8 @@ def pg_users_arg(records):
     for record in records:
         if record['type'] != 'user': 
             continue
-        user = {'urn': record['geni_urn'],
-                'keys': record['keys'],
+        user = {'urn': record['reg-urn'],
+                'keys': record['reg-keys'],
                 'email': record['email']}
         users.append(user)
     return users    

@@ -47,7 +47,7 @@ class AggregateManager:
         return version_string
 
     def GetVersion(self, api, options):
-        xrn=Xrn(api.hrn, type='authority')
+        xrn=Xrn(api.hrn, type='authority+am')
         version = version_core()
         cred_types = [{'geni_type': 'geni_sfa', 'geni_version': str(i)} for i in range(4)[-2:]]
         geni_api_versions = ApiVersions().get_versions()

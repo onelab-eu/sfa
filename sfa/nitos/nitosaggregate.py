@@ -18,7 +18,7 @@ from sfa.rspecs.elements.granularity import Granularity
 from sfa.rspecs.elements.channel import Channel
 from sfa.rspecs.version_manager import VersionManager
 
-from sfa.nitos.nitosxrn import NitosXrn, hostname_to_urn, hrn_to_nitos_slicename, slicename_to_hrn
+from sfa.nitos.nitosxrn import NitosXrn, hostname_to_urn, hrn_to_nitos_slicename, slicename_to_hrn, channel_to_urn
 from sfa.planetlab.vlink import get_tc_rate
 from sfa.planetlab.topology import Topology
 
@@ -163,6 +163,7 @@ class NitosAggregate:
             rspec_channel['channel_num'] = channel_number
             rspec_channel['start_time'] = channel['start_time']
             rspec_channel['duration'] = (int(channel['end_time']) - int(channel['start_time'])) / int(grain)
+            rspec_channel['component_id'] = channel_to_urn(self.driver.hrn, self.driver.testbedInfo['name'], channel_number)
                  
             # retreive slicename
             for slc in slices:
@@ -238,6 +239,7 @@ class NitosAggregate:
             rspec_channel['channel_num'] = channel['channel']
             rspec_channel['frequency'] = channel['frequency']
             rspec_channel['standard'] = channel['modulation']
+            rspec_channel['component_id'] = channel_to_urn(self.driver.hrn, self.driver.testbedInfo['name'], channel['channel'])
             rspec_channels.append(rspec_channel)
         return rspec_channels
 
@@ -275,8 +277,8 @@ class NitosAggregate:
            rspec.version.add_channels(channels)
 
         if not options.get('list_leases') or options.get('list_leases') and options['list_leases'] != 'resources':
-           leases, channels = self.get_leases_and_channels(slice, slice_xrn)
-           rspec.version.add_leases(leases, channels)
+           leases_channels = self.get_leases_and_channels(slice, slice_xrn)
+           rspec.version.add_leases(leases_channels)
 
         return rspec.toxml()
 

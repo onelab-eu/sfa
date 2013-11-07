@@ -20,7 +20,7 @@ from sfa.rspecs.elements.versions.pgv2Services import PGv2Services
 class NITOSv1Node:
 
     @staticmethod
-    def add_nodes(xml, nodes):
+    def add_nodes(xml, nodes, rspec_content_type=None):
         network_elems = xml.xpath('//network')
         if len(network_elems) > 0:
             network_elem = network_elems[0]
@@ -102,6 +102,10 @@ class NITOSv1Node:
                     tag_elem = node_elem.add_element(tag['tagname'])
                     tag_elem.set_text(tag['value'])
             NITOSv1Sliver.add_slivers(node_elem, node.get('slivers', []))
+            
+            # add sliver tag in Request Rspec
+            if rspec_content_type == "request":
+                node_elem.add_instance('sliver', '', [])
 
     @staticmethod 
     def add_slivers(xml, slivers):
