@@ -69,6 +69,7 @@ urlcomputes = buildpagehttp("https://api.integration.bonfire.grid5000.fr/locatio
 # list for all bonfire resources
 def bonsources():
     bonfires = []
+    bonfires.append("<RSpec>")
     bonfires.append("<managed_experiments>")
     manag_exp =  remove_needless_txt(callcurl("https://api.bonfire-project.eu/managed_experiments"))
     bonfires.append(manag_exp)
