@@ -149,7 +149,7 @@ SSHURL:=root@$(PLC):/
 SSHCOMMAND:=ssh root@$(PLC)
 else
 ifdef PLCHOSTLXC
-SSHURL:=root@$(PLCHOSTLXC):/var/lib/lxc/$(GUESTNAME)/rootfs
+SSHURL:=root@$(PLCHOSTLXC):/vservers/$(GUESTNAME)/rootfs
 SSHCOMMAND:=ssh root@$(PLCHOSTLXC) ssh $(GUESTHOSTNAME)
 else
 ifdef PLCHOSTVS
