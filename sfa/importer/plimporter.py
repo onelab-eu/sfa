@@ -192,7 +192,7 @@ class PlImporter:
 
         # start importing 
         for site in sites:
-            if site['name'].startswith('sfa.'):
+            if site['name'].startswith('sfa:'):
                 continue
 
             site_hrn = _get_site_hrn(interface_hrn, site)

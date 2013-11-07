@@ -18,7 +18,7 @@ from sfa.rspecs.elements.lease import Lease
 from sfa.rspecs.elements.granularity import Granularity
 from sfa.rspecs.version_manager import VersionManager
 
-from sfa.planetlab.plxrn import PlXrn, hostname_to_urn, hrn_to_pl_slicename, slicename_to_hrn, xrn_to_ext_slicename, top_auth
+from sfa.planetlab.plxrn import PlXrn, hostname_to_urn, hrn_to_pl_slicename, slicename_to_hrn, top_auth, hash_loginbase
 from sfa.planetlab.vlink import get_tc_rate
 from sfa.planetlab.topology import Topology
 from sfa.storage.alchemy import dbsession
@@ -131,10 +131,14 @@ class PlAggregate:
             else:  
                 slice_hrn = xrn.get_hrn()
                 top_auth_hrn = top_auth(slice_hrn)
+                site_hrn = '.'.join(slice_hrn.split('.')[:-1])
+                slice_part = slice_hrn.split('.')[-1]
                 if top_auth_hrn == self.driver.hrn:
-                    slice_name = hrn_to_pl_slicename(slice_hrn)
+                    login_base = slice_hrn.split('.')[-2][:12]
                 else:
-                    slice_name = xrn_to_ext_slicename(slice_hrn) 
+                    login_base = hash_loginbase(site_hrn)
+
+                slice_name = '_'.join([login_base, slice_part])
                 names.add(slice_name)
 
         filter = {}
