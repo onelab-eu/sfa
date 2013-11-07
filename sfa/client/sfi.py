@@ -14,6 +14,10 @@ import codecs
 import pickle
 import json
 import shutil
+
+# import bonfire.py for listing bonfire resources
+import bonfire
+
 from lxml import etree
 from StringIO import StringIO
 from optparse import OptionParser
@@ -1139,6 +1143,9 @@ use this if you mean an authority instead""")
             save_rspec_to_file(value, options.file)
         if (self.options.raw is None) and (options.file is None):
             display_rspec(value, options.format)
+            #adding resources from bonfire 
+            bonfire_resources = bonfire.bonsources()
+            display_rspec(bonfire_resources, options.format)
 
         return 
 
