@@ -22,6 +22,7 @@ configurable in a flavour (e.g. sfa.generic.pl.py)
 api.manager 
 manager.driver
 api.driver (for convenience)
+driver.api
 
 ------
 example

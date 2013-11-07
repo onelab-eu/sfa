@@ -1,4 +1,3 @@
-
 from sfa.util.faults import RecordNotFound, ConnectionKeyGIDMismatch
 from sfa.util.xrn import urn_to_hrn
 from sfa.util.method import Method

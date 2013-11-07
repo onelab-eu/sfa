@@ -4,7 +4,9 @@ from sfa.util.config import Config
 from sfa.util.xrn import Xrn, get_leaf, get_authority, hrn_to_urn
 from sfa.trust.gid import create_uuid    
 from sfa.trust.certificate import convert_public_key, Keypair
-from sfa.storage.alchemy import dbsession
+# using global alchemy.session() here is fine 
+# as importer is on standalone one-shot process
+from sfa.storage.alchemy import global_dbsession
 from sfa.storage.model import RegRecord, RegAuthority, RegUser, RegSlice, RegNode
 from sfa.openstack.osxrn import OSXrn
 from sfa.openstack.shell import Shell    
@@ -79,8 +81,8 @@ class OpenstackImporter:
                 user_record.hrn=hrn
                 user_record.gid=user_gid
                 user_record.authority=get_authority(hrn)
-                dbsession.add(user_record)
-                dbsession.commit()
+                global_dbsession.add(user_record)
+                global_dbsession.commit()
                 self.logger.info("OpenstackImporter: imported person %s" % user_record)   
 
         return users_dict, user_keys
@@ -112,8 +114,8 @@ class OpenstackImporter:
                 record.hrn=hrn
                 record.gid=gid
                 record.authority=get_authority(hrn)
-                dbsession.add(record)
-                dbsession.commit()
+                global_dbsession.add(record)
+                global_dbsession.commit()
                 self.logger.info("OpenstackImporter: imported authority: %s" % record)
 
             else:
@@ -125,8 +127,8 @@ class OpenstackImporter:
                 record.hrn=hrn
                 record.gid=gid
                 record.authority=get_authority(hrn)
-                dbsession.add(record)
-                dbsession.commit()
+                global_dbsession.add(record)
+                global_dbsession.commit()
                 self.logger.info("OpenstackImporter: imported slice: %s" % record) 
 
         return tenants_dict
@@ -139,7 +141,7 @@ class OpenstackImporter:
         existing_records = {}
         existing_hrns = []
         key_ids = []
-        for record in dbsession.query(RegRecord):
+        for record in global_dbsession.query(RegRecord):
             existing_records[ (record.hrn, record.type,) ] = record
             existing_hrns.append(record.hrn) 
             
@@ -168,8 +170,8 @@ class OpenstackImporter:
         
             record_object = existing_records[ (record_hrn, type) ]
             self.logger.info("OpenstackImporter: removing %s " % record)
-            dbsession.delete(record_object)
-            dbsession.commit()
+            global_dbsession.delete(record_object)
+            global_dbsession.commit()
                                    
         # save pub keys
         self.logger.info('OpenstackImporter: saving current pub keys')

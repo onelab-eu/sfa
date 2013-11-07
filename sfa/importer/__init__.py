@@ -10,7 +10,9 @@ from sfa.util.sfalogging import _SfaLogger
 from sfa.trust.hierarchy import Hierarchy
 #from sfa.trust.trustedroots import TrustedRoots
 from sfa.trust.gid import create_uuid
-from sfa.storage.alchemy import dbsession
+# using global alchemy.session() here is fine 
+# as importer is on standalone one-shot process
+from sfa.storage.alchemy import global_dbsession
 from sfa.storage.model import RegRecord, RegAuthority, RegUser
 from sfa.trust.certificate import convert_public_key, Keypair
 
@@ -35,7 +37,7 @@ class Importer:
    
     # check before creating a RegRecord entry as we run this over and over
     def record_exists (self, type, hrn):
-       return dbsession.query(RegRecord).filter_by(hrn=hrn,type=type).count()!=0 
+       return global_dbsession.query(RegRecord).filter_by(hrn=hrn,type=type).count()!=0 
 
     def create_top_level_auth_records(self, hrn):
         """
@@ -56,8 +58,8 @@ class Importer:
             auth_record = RegAuthority(hrn=hrn, gid=auth_info.get_gid_object(),
                                        authority=get_authority(hrn))
             auth_record.just_created()
-            dbsession.add (auth_record)
-            dbsession.commit()
+            global_dbsession.add (auth_record)
+            global_dbsession.commit()
             self.logger.info("SfaImporter: imported authority (parent) %s " % auth_record)     
    
 
@@ -76,8 +78,8 @@ class Importer:
         user_record = RegUser(hrn=hrn, gid=auth_info.get_gid_object(),
                               authority=get_authority(hrn))
         user_record.just_created()
-        dbsession.add (user_record)
-        dbsession.commit()
+        global_dbsession.add (user_record)
+        global_dbsession.commit()
         self.logger.info("SfaImporter: importing user (slicemanager) %s " % user_record)
 
 
@@ -98,8 +100,8 @@ class Importer:
             interface_record = RegAuthority(type=type, hrn=hrn, gid=gid,
                                             authority=get_authority(hrn))
             interface_record.just_created()
-            dbsession.add (interface_record)
-            dbsession.commit()
+            global_dbsession.add (interface_record)
+            global_dbsession.commit()
             self.logger.info("SfaImporter: imported authority (%s) %s " % (type,interface_record))
  
     def run(self, options=None):

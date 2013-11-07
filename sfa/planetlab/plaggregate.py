@@ -21,7 +21,6 @@ from sfa.rspecs.version_manager import VersionManager
 from sfa.planetlab.plxrn import PlXrn, hostname_to_urn, hrn_to_pl_slicename, slicename_to_hrn, xrn_to_ext_slicename, top_auth
 from sfa.planetlab.vlink import get_tc_rate
 from sfa.planetlab.topology import Topology
-from sfa.storage.alchemy import dbsession
 from sfa.storage.model import SliverAllocation
 
 

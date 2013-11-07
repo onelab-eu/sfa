@@ -14,6 +14,7 @@ from sfa.util.version import version_core
 from sfa.server.xmlrpcapi import XmlrpcApi
 from sfa.client.return_value import ReturnValue
 
+from sfa.storage.alchemy import alchemy
 
 ####################
 class SfaApi (XmlrpcApi): 
@@ -69,6 +70,7 @@ class SfaApi (XmlrpcApi):
         
         # filled later on by generic/Generic
         self.manager=None
+        self._dbsession=None
 
     def server_proxy(self, interface, cred, timeout=30):
         """
@@ -89,7 +91,16 @@ class SfaApi (XmlrpcApi):
         server = interface.server_proxy(key_file, cert_file, timeout)
         return server
                
-        
+    def dbsession(self):
+        if self._dbsession is None:
+            self._dbsession=alchemy.session()
+        return self._dbsession
+
+    def close_dbsession(self):
+        if self._dbsession is None: return
+        alchemy.close_session(self._dbsession)
+        self._dbsession=None
+
     def getCredential(self, minimumExpiration=0):
         """
         Return a valid credential for this interface.

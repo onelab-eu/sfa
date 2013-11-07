@@ -125,9 +125,8 @@ class RegistryCommands(Commands):
         """Check the correspondance between the GID and the PubKey"""
 
         # db records
-        from sfa.storage.alchemy import dbsession
         from sfa.storage.model import RegRecord
-        db_query = dbsession.query(RegRecord).filter_by(type=type)
+        db_query = self.api.dbsession().query(RegRecord).filter_by(type=type)
         if xrn and not all:
             hrn = Xrn(xrn).get_hrn()
             db_query = db_query.filter_by(hrn=hrn)
@@ -315,10 +314,9 @@ class CertCommands(Commands):
     @args('-o', '--outfile', dest='outfile', metavar='<outfile>', help='output file', default=None)
     def export(self, xrn, type=None, outfile=None):
         """Fetch an object's GID from the Registry"""  
-        from sfa.storage.alchemy import dbsession
         from sfa.storage.model import RegRecord
         hrn = Xrn(xrn).get_hrn()
-        request=dbsession.query(RegRecord).filter_by(hrn=hrn)
+        request=self.api.dbsession().query(RegRecord).filter_by(hrn=hrn)
         if type: request = request.filter_by(type=type)
         record=request.first()
         if record:

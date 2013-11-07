@@ -19,7 +19,6 @@ from sfa.trust.gid import create_uuid
 
 from sfa.storage.model import make_record, RegRecord, RegAuthority, RegUser, RegSlice, RegKey, \
     augment_with_sfa_builtins
-from sfa.storage.alchemy import dbsession
 ### the types that we need to exclude from sqlobjects before being able to dump
 # them on the xmlrpc wire
 from sqlalchemy.orm.collections import InstrumentedList
@@ -41,6 +40,7 @@ class RegistryManager:
                              'peers':peers})
     
     def GetCredential(self, api, xrn, type, caller_xrn=None):
+        dbsession = api.dbsession()
         # convert xrn to hrn     
         if type:
             hrn = urn_to_hrn(xrn)[0]
@@ -110,6 +110,7 @@ class RegistryManager:
     # the default for full, which means 'dig into the testbed as well', should be false
     def Resolve(self, api, xrns, type=None, details=False):
     
+        dbsession = api.dbsession()
         if not isinstance(xrns, types.ListType):
             # try to infer type if not set and we get a single input
             if not type:
@@ -196,6 +197,7 @@ class RegistryManager:
         return records
     
     def List (self, api, xrn, origin_hrn=None, options={}):
+        dbsession=api.dbsession()
         # load all know registry names into a prefix tree and attempt to find
         # the longest matching prefix
         hrn, type = urn_to_hrn(xrn)
@@ -263,18 +265,18 @@ class RegistryManager:
     # subject_record describes the subject of the relationships
     # ref_record contains the target values for the various relationships we need to manage
     # (to begin with, this is just the slice x person (researcher) and authority x person (pi) relationships)
-    def update_driver_relations (self, subject_obj, ref_obj):
+    def update_driver_relations (self, subject_obj, ref_obj, dbsession):
         type=subject_obj.type
         #for (k,v) in subject_obj.__dict__.items(): print k,'=',v
         if type=='slice' and hasattr(ref_obj,'researcher'):
-            self.update_driver_relation(subject_obj, ref_obj.researcher, 'user', 'researcher')
+            self.update_driver_relation(subject_obj, ref_obj.researcher, 'user', 'researcher', dbsession)
         elif type=='authority' and hasattr(ref_obj,'pi'):
-            self.update_driver_relation(subject_obj,ref_obj.pi, 'user', 'pi')
+            self.update_driver_relation(subject_obj,ref_obj.pi, 'user', 'pi', dbsession)
         
     # field_key is the name of one field in the record, typically 'researcher' for a 'slice' record
     # hrns is the list of hrns that should be linked to the subject from now on
     # target_type would be e.g. 'user' in the 'slice' x 'researcher' example
-    def update_driver_relation (self, record_obj, hrns, target_type, relation_name):
+    def update_driver_relation (self, record_obj, hrns, target_type, relation_name, dbsession):
         # locate the linked objects in our db
         subject_type=record_obj.type
         subject_id=record_obj.pointer
@@ -286,6 +288,7 @@ class RegistryManager:
 
     def Register(self, api, record_dict):
     
+        dbsession=api.dbsession()
         hrn, type = record_dict['hrn'], record_dict['type']
         urn = hrn_to_urn(hrn,type)
         # validate the type
@@ -331,11 +334,11 @@ class RegistryManager:
 
             # locate objects for relationships
             pi_hrns = getattr(record,'pi',None)
-            if pi_hrns is not None: record.update_pis (pi_hrns)
+            if pi_hrns is not None: record.update_pis (pi_hrns, dbsession)
 
         elif isinstance (record, RegSlice):
             researcher_hrns = getattr(record,'researcher',None)
-            if researcher_hrns is not None: record.update_researchers (researcher_hrns)
+            if researcher_hrns is not None: record.update_researchers (researcher_hrns, dbsession)
         
         elif isinstance (record, RegUser):
             # create RegKey objects for incoming keys
@@ -351,11 +354,12 @@ class RegistryManager:
         dbsession.commit()
     
         # update membership for researchers, pis, owners, operators
-        self.update_driver_relations (record, record)
+        self.update_driver_relations (record, record, dbsession)
         
         return record.get_gid_object().save_to_string(save_parents=True)
     
     def Update(self, api, record_dict):
+        dbsession=api.dbsession()
         assert ('type' in record_dict)
         new_record=make_record(dict=record_dict)
         (type,hrn) = (new_record.type, new_record.hrn)
@@ -394,11 +398,11 @@ class RegistryManager:
         # update native relations
         if isinstance (record, RegSlice):
             researcher_hrns = getattr(new_record,'researcher',None)
-            if researcher_hrns is not None: record.update_researchers (researcher_hrns)
+            if researcher_hrns is not None: record.update_researchers (researcher_hrns, dbsession)
 
         elif isinstance (record, RegAuthority):
             pi_hrns = getattr(new_record,'pi',None)
-            if pi_hrns is not None: record.update_pis (pi_hrns)
+            if pi_hrns is not None: record.update_pis (pi_hrns, dbsession)
         
         # update the PLC information that was specified with the record
         # xxx oddly enough, without this useless statement, 
@@ -417,12 +421,13 @@ class RegistryManager:
 
         dbsession.commit()
         # update membership for researchers, pis, owners, operators
-        self.update_driver_relations (record, new_record)
+        self.update_driver_relations (record, new_record, dbsession)
         
         return 1 
     
     # expecting an Xrn instance
     def Remove(self, api, xrn, origin_hrn=None):
+        dbsession=api.dbsession()
         hrn=xrn.get_hrn()
         type=xrn.get_type()
         request=dbsession.query(RegRecord).filter_by(hrn=hrn)
@@ -465,6 +470,7 @@ class RegistryManager:
 
     # This is a PLC-specific thing, won't work with other platforms
     def get_key_from_incoming_ip (self, api):
+        dbsession=api.dbsession()
         # verify that the callers's ip address exist in the db and is an interface
         # for a node in the db
         (ip, port) = api.remote_addr

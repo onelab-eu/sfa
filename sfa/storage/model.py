@@ -191,9 +191,7 @@ class RegAuthority (RegRecord):
     def __repr__ (self):
         return RegRecord.__repr__(self).replace("Record","Authority")
 
-    def update_pis (self, pi_hrns):
-        # don't ruin the import of that file in a client world
-        from sfa.storage.alchemy import dbsession
+    def update_pis (self, pi_hrns, dbsession):
         # strip that in case we have <researcher> words </researcher>
         pi_hrns = [ x.strip() for x in pi_hrns ]
         request = dbsession.query (RegUser).filter(RegUser.hrn.in_(pi_hrns))
@@ -221,9 +219,7 @@ class RegSlice (RegRecord):
     def __repr__ (self):
         return RegRecord.__repr__(self).replace("Record","Slice")
 
-    def update_researchers (self, researcher_hrns):
-        # don't ruin the import of that file in a client world
-        from sfa.storage.alchemy import dbsession
+    def update_researchers (self, researcher_hrns, dbsession):
         # strip that in case we have <researcher> words </researcher>
         researcher_hrns = [ x.strip() for x in researcher_hrns ]
         request = dbsession.query (RegUser).filter(RegUser.hrn.in_(researcher_hrns))
@@ -233,8 +229,9 @@ class RegSlice (RegRecord):
 
     # when dealing with credentials, we need to retrieve the PIs attached to a slice
     def get_pis (self):
-        # don't ruin the import of that file in a client world
-        from sfa.storage.alchemy import dbsession
+        from sqlalchemy.orm import sessionmaker
+        Session=sessionmaker()
+        dbsession=Session.object_session(self)
         from sfa.util.xrn import get_authority
         authority_hrn = get_authority(self.hrn)
         auth_record = dbsession.query(RegAuthority).filter_by(hrn=authority_hrn).first()
@@ -344,8 +341,7 @@ class SliverAllocation(Base,AlchemyObj):
         return state
 
     @staticmethod    
-    def set_allocations(sliver_ids, state):
-        from sfa.storage.alchemy import dbsession
+    def set_allocations(sliver_ids, state, dbsession):
         if not isinstance(sliver_ids, list):
             sliver_ids = [sliver_ids]
         sliver_state_updated = {}
@@ -366,8 +362,7 @@ class SliverAllocation(Base,AlchemyObj):
         dbsession.commit()
 
     @staticmethod
-    def delete_allocations(sliver_ids):
-        from sfa.storage.alchemy import dbsession
+    def delete_allocations(sliver_ids, dbsession):
         if not isinstance(sliver_ids, list):
             sliver_ids = [sliver_ids]
         constraint = SliverAllocation.sliver_id.in_(sliver_ids)
@@ -377,8 +372,10 @@ class SliverAllocation(Base,AlchemyObj):
         dbsession.commit()
     
     def sync(self):
-        from sfa.storage.alchemy import dbsession
         
+        from sqlalchemy.orm import sessionmaker
+        Session=sessionmaker()
+        dbsession=Session.object_session(self)
         constraints = [SliverAllocation.sliver_id==self.sliver_id]
         results = dbsession.query(SliverAllocation).filter(and_(*constraints))
         records = []

@@ -10,7 +10,6 @@ from sfa.planetlab.vlink import VLink
 from sfa.planetlab.topology import Topology
 from sfa.planetlab.plxrn import PlXrn, hrn_to_pl_slicename, xrn_to_hostname, xrn_to_ext_slicename, hrn_to_ext_loginbase, top_auth
 from sfa.storage.model import SliverAllocation
-from sfa.storage.alchemy import dbsession
 
 MAXINT =  2L**31-1
 

@@ -133,9 +133,10 @@ class SecureXMLRpcRequestHandler(SimpleXMLRPCServer.SimpleXMLRPCRequestHandler):
         self.send_header("Content-length", str(len(response)))
         self.end_headers()
         self.wfile.write(response)
-
-        # shut down the connection
         self.wfile.flush()
+        # close db connection
+        self.api.close_dbsession()
+        # shut down the connection
         self.connection.shutdown() # Modified here!
 
 ##
