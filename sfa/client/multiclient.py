@@ -16,7 +16,7 @@ def ThreadedMethod(callable, results, errors):
                 try:
                     results.put(callable(*args, **kwds))
                 except Exception, e:
-                    logger.log_exc('ThreadManager: Error in thread: ')
+                    logger.log_exc('MultiClient: Error in thread: ')
                     errors.put(traceback.format_exc())
                     
         thread = ThreadInstance()
@@ -26,10 +26,10 @@ def ThreadedMethod(callable, results, errors):
 
  
 
-class ThreadManager:
+class MultiClient:
     """
-    ThreadManager executes a callable in a thread and stores the result
-    in a thread safe queue. 
+    MultiClient allows to issue several SFA calls in parallel in different threads
+    and stores the results in a thread safe queue. 
     """
 
     def __init__(self):
@@ -58,7 +58,7 @@ class ThreadManager:
         """
         Return a list of all the results so far. Blocks until 
         all threads are finished. 
-        If lienent is set to false the error queue will be checked before 
+        If lenient is set to false the error queue will be checked before 
         the response is returned. If there are errors in the queue an SFA Fault will 
         be raised.   
         """
@@ -107,7 +107,7 @@ if __name__ == '__main__':
             time.sleep(sleep)
         return nums      
 
-    threads = ThreadManager()
+    threads = MultiClient()
     threads.run(f, "Thread1", 10, 2)
     threads.run(f, "Thread2", -10, 1)
     threads.run(e, "Thread3", 19, 1)

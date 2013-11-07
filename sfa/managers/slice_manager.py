@@ -14,7 +14,7 @@ from sfa.util.version import version_core
 from sfa.util.callids import Callids
 from sfa.util.cache import Cache
 
-from sfa.server.threadmanager import ThreadManager
+from sfa.client.multiclient import MultiClient
 
 from sfa.rspecs.rspec_converter import RSpecConverter
 from sfa.rspecs.version_manager import VersionManager
@@ -147,7 +147,7 @@ class SliceManager:
         cred = api.getDelegatedCredential(creds)
         if not cred:
             cred = api.getCredential()
-        threads = ThreadManager()
+        multiclient = MultiClient()
         for aggregate in api.aggregates:
             # prevent infinite loop. Dont send request back to caller
             # unless the caller is the aggregate's SM
@@ -157,10 +157,10 @@ class SliceManager:
             # get the rspec from the aggregate
             interface = api.aggregates[aggregate]
             server = api.server_proxy(interface, cred)
-            threads.run(_ListResources, aggregate, server, [cred], options)
+            multiclient.run(_ListResources, aggregate, server, [cred], options)
     
     
-        results = threads.get_results()
+        results = multiclient.get_results()
         rspec_version = version_manager.get_version(options.get('geni_rspec_version'))
         if xrn:    
             result_version = version_manager._get_version(rspec_version.type, rspec_version.version, 'manifest')
@@ -230,7 +230,7 @@ class SliceManager:
         hrn, type = urn_to_hrn(xrn)
         valid_cred = api.auth.checkCredentials(creds, 'createsliver', hrn)[0]
         caller_hrn = Credential(cred=valid_cred).get_gid_caller().get_hrn()
-        threads = ThreadManager()
+        multiclient = MultiClient()
         for aggregate in api.aggregates:
             # prevent infinite loop. Dont send request back to caller
             # unless the caller is the aggregate's SM 
@@ -239,9 +239,9 @@ class SliceManager:
             interface = api.aggregates[aggregate]
             server = api.server_proxy(interface, cred)
             # Just send entire RSpec to each aggregate
-            threads.run(_Allocate, aggregate, server, xrn, [cred], rspec.toxml(), options)
+            multiclient.run(_Allocate, aggregate, server, xrn, [cred], rspec.toxml(), options)
                 
-        results = threads.get_results()
+        results = multiclient.get_results()
         manifest_version = version_manager._get_version(rspec.version.type, rspec.version.version, 'manifest')
         result_rspec = RSpec(version=manifest_version)
         geni_urn = None
@@ -290,7 +290,7 @@ class SliceManager:
         # get the callers hrn
         valid_cred = api.auth.checkCredentials(creds, 'createsliver', xrn)[0]
         caller_hrn = Credential(cred=valid_cred).get_gid_caller().get_hrn()
-        threads = ThreadManager()
+        multiclient = MultiClient()
         for aggregate in api.aggregates:
             # prevent infinite loop. Dont send request back to caller
             # unless the caller is the aggregate's SM
@@ -299,9 +299,9 @@ class SliceManager:
             interface = api.aggregates[aggregate]
             server = api.server_proxy(interface, cred)
             # Just send entire RSpec to each aggregate
-            threads.run(_Provision, aggregate, server, xrn, [cred], options)
+            multiclient.run(_Provision, aggregate, server, xrn, [cred], options)
 
-        results = threads.get_results()
+        results = multiclient.get_results()
         manifest_version = version_manager._get_version('GENI', '3', 'manifest')
         result_rspec = RSpec(version=manifest_version)
         geni_slivers = []
@@ -350,7 +350,7 @@ class SliceManager:
         cred = api.getDelegatedCredential(creds)
         if not cred:
             cred = api.getCredential(minimumExpiration=31*86400)
-        threads = ThreadManager()
+        multiclient = MultiClient()
         for aggregate in api.aggregates:
             # prevent infinite loop. Dont send request back to caller
             # unless the caller is the aggregate's SM
@@ -358,9 +358,9 @@ class SliceManager:
                 continue
             interface = api.aggregates[aggregate]
             server = api.server_proxy(interface, cred)
-            threads.run(_Renew, aggregate, server, xrn, [cred], expiration_time, options)
+            multiclient.run(_Renew, aggregate, server, xrn, [cred], expiration_time, options)
 
-        results = threads.get_results()
+        results = multiclient.get_results()
 
         geni_code = 0
         geni_output = ",".join([x.get('output',"") for x in results])
@@ -390,7 +390,7 @@ class SliceManager:
         cred = api.getDelegatedCredential(creds)
         if not cred:
             cred = api.getCredential()
-        threads = ThreadManager()
+        multiclient = MultiClient()
         for aggregate in api.aggregates:
             # prevent infinite loop. Dont send request back to caller
             # unless the caller is the aggregate's SM
@@ -398,10 +398,10 @@ class SliceManager:
                 continue
             interface = api.aggregates[aggregate]
             server = api.server_proxy(interface, cred)
-            threads.run(_Delete, server, xrn, [cred], options)
+            multiclient.run(_Delete, server, xrn, [cred], options)
         
         results = []
-        for result in threads.get_results():
+        for result in multiclient.get_results():
             results += ReturnValue.get_value(result)
         return results
     
@@ -417,12 +417,12 @@ class SliceManager:
         cred = api.getDelegatedCredential(creds)
         if not cred:
             cred = api.getCredential()
-        threads = ThreadManager()
+        multiclient = MultiClient()
         for aggregate in api.aggregates:
             interface = api.aggregates[aggregate]
             server = api.server_proxy(interface, cred)
-            threads.run (_Status, server, slice_xrn, [cred], options)
-        results = [ReturnValue.get_value(result) for result in threads.get_results()]
+            multiclient.run (_Status, server, slice_xrn, [cred], options)
+        results = [ReturnValue.get_value(result) for result in multiclient.get_results()]
     
         # get rid of any void result - e.g. when call_id was hit, where by convention we return {}
         results = [ result for result in results if result and result['geni_slivers']]
@@ -455,12 +455,12 @@ class SliceManager:
         cred = api.getDelegatedCredential(creds)
         if not cred:
             cred = api.getCredential()
-        threads = ThreadManager()
+        multiclient = MultiClient()
         for aggregate in api.aggregates:
             interface = api.aggregates[aggregate]
             server = api.server_proxy(interface, cred)
-            threads.run (_Describe, server, xrns, [cred], options)
-        results = [ReturnValue.get_value(result) for result in threads.get_results()]
+            multiclient.run (_Describe, server, xrns, [cred], options)
+        results = [ReturnValue.get_value(result) for result in multiclient.get_results()]
 
         # get rid of any void result - e.g. when call_id was hit, where by convention we return {}
         results = [ result for result in results if result and result.get('geni_urn')]
@@ -496,7 +496,7 @@ class SliceManager:
         cred = api.getDelegatedCredential(creds)
         if not cred:
             cred = api.getCredential()
-        threads = ThreadManager()
+        multiclient = MultiClient()
         for aggregate in api.aggregates:
             # prevent infinite loop. Dont send request back to caller
             # unless the caller is the aggregate's SM
@@ -504,8 +504,8 @@ class SliceManager:
                 continue
             interface = api.aggregates[aggregate]
             server = api.server_proxy(interface, cred)    
-            threads.run(server.PerformOperationalAction, xrn, [cred], action, options)
-        threads.get_results()    
+            multiclient.run(server.PerformOperationalAction, xrn, [cred], action, options)
+        multiclient.get_results()    
         return 1
      
     def Shutdown(self, api, xrn, creds, options={}):
@@ -518,7 +518,7 @@ class SliceManager:
         cred = api.getDelegatedCredential(creds)
         if not cred:
             cred = api.getCredential()
-        threads = ThreadManager()
+        multiclient = MultiClient()
         for aggregate in api.aggregates:
             # prevent infinite loop. Dont send request back to caller
             # unless the caller is the aggregate's SM
@@ -526,7 +526,7 @@ class SliceManager:
                 continue
             interface = api.aggregates[aggregate]
             server = api.server_proxy(interface, cred)
-            threads.run(server.Shutdown, xrn.urn, cred)
-        threads.get_results()    
+            multiclient.run(server.Shutdown, xrn.urn, cred)
+        multiclient.get_results()    
         return 1
     

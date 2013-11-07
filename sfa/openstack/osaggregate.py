@@ -24,7 +24,7 @@ from sfa.planetlab.plxrn import PlXrn
 from sfa.openstack.osxrn import OSXrn, hrn_to_os_slicename
 from sfa.rspecs.version_manager import VersionManager
 from sfa.openstack.security_group import SecurityGroup
-from sfa.server.threadmanager import ThreadManager
+from sfa.client.multiclient import MultiClient
 from sfa.util.sfalogging import logger
 
 def pubkeys_to_user_data(pubkeys):
@@ -412,7 +412,7 @@ class OSAggregate:
                     time.sleep(.5)
                 manager.delete_security_group(security_group)
 
-        thread_manager = ThreadManager()
+        multiclient = MultiClient()
         tenant = self.driver.shell.auth_manager.tenants.find(id=instance.tenant_id)  
         self.driver.shell.nova_manager.connect(tenant=tenant.name)
         args = {'name': instance.name,
@@ -423,7 +423,7 @@ class OSAggregate:
             # destroy instance
             self.driver.shell.nova_manager.servers.delete(instance)
             # deleate this instance's security groups
-            thread_manager.run(_delete_security_group, instance)
+            multiclient.run(_delete_security_group, instance)
         return 1
 
     def stop_instances(self, instance_name, tenant_name, id=None):
