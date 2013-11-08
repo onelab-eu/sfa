@@ -25,7 +25,8 @@ from sqlalchemy.orm.collections import InstrumentedList
 
 class RegistryManager:
 
-    def __init__ (self, config): pass
+    def __init__ (self, config): 
+        logger.info("Creating RegistryManager[%s]"%id(self))
 
     # The GENI GetVersion call
     def GetVersion(self, api, options):
@@ -50,7 +51,7 @@ class RegistryManager:
         # Slivers don't have credentials but users should be able to 
         # specify a sliver xrn and receive the slice's credential
         if type == 'sliver' or '-' in Xrn(hrn).leaf:
-            slice_xrn = self.driver.sliver_to_slice_xrn(hrn)
+            slice_xrn = api.driver.sliver_to_slice_xrn(hrn)
             hrn = slice_xrn.hrn 
   
         # Is this a root or sub authority
@@ -173,7 +174,7 @@ class RegistryManager:
         if details:
             # in details mode we get as much info as we can, which involves contacting the 
             # testbed for getting implementation details about the record
-            self.driver.augment_records_with_testbed_info(local_dicts)
+            api.driver.augment_records_with_testbed_info(local_dicts)
             # also we fill the 'url' field for known authorities
             # used to be in the driver code, sounds like a poorman thing though
             def solve_neighbour_url (record):
@@ -347,7 +348,7 @@ class RegistryManager:
                 record.reg_keys = [ RegKey (key) for key in record.keys ]
             
         # update testbed-specific data if needed
-        pointer = self.driver.register (record.__dict__, hrn, pub_key)
+        pointer = api.driver.register (record.__dict__, hrn, pub_key)
 
         record.pointer=pointer
         dbsession.add(record)
@@ -412,7 +413,7 @@ class RegistryManager:
         print "DO NOT REMOVE ME before driver.update, record=%s"%record
         new_key_pointer = -1
         try:
-           (pointer, new_key_pointer) = self.driver.update (record.__dict__, new_record.__dict__, hrn, new_key)
+           (pointer, new_key_pointer) = api.driver.update (record.__dict__, new_record.__dict__, hrn, new_key)
         except:
            pass
         if new_key and new_key_pointer:
@@ -459,7 +460,7 @@ class RegistryManager:
 
         # call testbed callback first
         # IIUC this is done on the local testbed TOO because of the refreshpeer link
-        if not self.driver.remove(record.__dict__):
+        if not api.driver.remove(record.__dict__):
             logger.warning("driver.remove failed")
 
         # delete from sfa db
@@ -474,10 +475,10 @@ class RegistryManager:
         # verify that the callers's ip address exist in the db and is an interface
         # for a node in the db
         (ip, port) = api.remote_addr
-        interfaces = self.driver.shell.GetInterfaces({'ip': ip}, ['node_id'])
+        interfaces = api.driver.shell.GetInterfaces({'ip': ip}, ['node_id'])
         if not interfaces:
             raise NonExistingRecord("no such ip %(ip)s" % locals())
-        nodes = self.driver.shell.GetNodes([interfaces[0]['node_id']], ['node_id', 'hostname'])
+        nodes = api.driver.shell.GetNodes([interfaces[0]['node_id']], ['node_id', 'hostname'])
         if not nodes:
             raise NonExistingRecord("no such node using ip %(ip)s" % locals())
         node = nodes[0]

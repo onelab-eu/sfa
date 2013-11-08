@@ -25,7 +25,7 @@ class Delete(Method):
     
     def call(self, xrns, creds, options):
         valid_creds = self.api.auth.checkCredentials(creds, 'deletesliver', xrns,
-                      check_sliver_callback = self.api.manager.driver.check_sliver_credentials)
+                      check_sliver_callback = self.api.driver.check_sliver_credentials)
 
         #log the call
         origin_hrn = Credential(cred=valid_creds[0]).get_gid_caller().get_hrn()

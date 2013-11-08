@@ -18,7 +18,6 @@ from sfa.storage.alchemy import alchemy
 
 ####################
 class SfaApi (XmlrpcApi): 
-    
     """
     An SfaApi instance is a basic xmlrcp service
     augmented with the local cryptographic material and hrn
@@ -32,8 +31,8 @@ class SfaApi (XmlrpcApi):
 
     It gets augmented by the generic layer with 
     (*) an instance of manager (actually a manager module for now)
-    (*) which in turn holds an instance of a testbed driver
-    For convenience api.manager.driver == api.driver
+        beware that this is shared among all instances of api
+    (*) an instance of a testbed driver
     """
 
     def __init__ (self, encoding="utf-8", methods='sfa.methods', 
