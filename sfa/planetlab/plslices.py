@@ -421,7 +421,7 @@ class PlSlices:
 
 
     def verify_slice(self, slice_hrn, slice_record, peer, sfa_peer, expiration, options={}):
-       top_auth_hrn = top_auth(slice_hrn)
+        top_auth_hrn = top_auth(slice_hrn)
         site_hrn = '.'.join(slice_hrn.split('.')[:-1])
         slice_part = slice_hrn.split('.')[-1]
         if top_auth_hrn == self.driver.hrn:
