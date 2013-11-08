@@ -228,6 +228,8 @@ class RegSlice (RegRecord):
         self.reg_researchers = researchers
 
     # when dealing with credentials, we need to retrieve the PIs attached to a slice
+    # WARNING: with the move to passing dbsessions around, we face a glitch here because this
+    # helper function is called from the trust/ area that
     def get_pis (self):
         from sqlalchemy.orm import sessionmaker
         Session=sessionmaker()
@@ -371,11 +373,7 @@ class SliverAllocation(Base,AlchemyObj):
             dbsession.delete(sliver_allocation)
         dbsession.commit()
     
-    def sync(self):
-        
-        from sqlalchemy.orm import sessionmaker
-        Session=sessionmaker()
-        dbsession=Session.object_session(self)
+    def sync(self, dbsession):
         constraints = [SliverAllocation.sliver_id==self.sliver_id]
         results = dbsession.query(SliverAllocation).filter(and_(*constraints))
         records = []

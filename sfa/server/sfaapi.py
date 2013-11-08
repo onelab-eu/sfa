@@ -170,7 +170,8 @@ class SfaApi (XmlrpcApi):
         if not auth_hrn or hrn == self.config.SFA_INTERFACE_HRN:
             auth_hrn = hrn
         auth_info = self.auth.get_auth_info(auth_hrn)
-        from sfa.storage.alchemy import dbsession
+        # xxx although unlikely we might want to check for a potential leak
+        dbsession=self.dbsession()
         from sfa.storage.model import RegRecord
         record = dbsession.query(RegRecord).filter_by(type='authority+sa', hrn=hrn).first()
         if not record:
