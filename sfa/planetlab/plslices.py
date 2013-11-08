@@ -452,7 +452,7 @@ class PlSlices:
         else:
             slice = slice_exists[0]
             #Update expiration if necessary
-            if slice['expires'] != expires:
+            if slice.get('expires', None) != expires:
                 self.driver.shell.UpdateSlice( int(slice['slice_id']), {'expires' : expires})
 
         return self.driver.shell.GetSlices(int(slice['slice_id']))[0]
@@ -510,11 +510,12 @@ class PlSlices:
                            'first_name': person_hrn,
                            'last_name': person_hrn,
                            'email': users_by_hrn[person_hrn].get('email', "%s@geni.net"%person_hrn.split('.')[-1]),
-                           'enabled': True
                           }
 
                  person_id = self.driver.shell.AddPerson(person)
                  self.driver.shell.AddRoleToPerson('user', int(person_id))
+                 # enable the account 
+                 self.driver.shell.UpdatePerson(int(person_id), {'enabled': True})
                  self.driver.shell.SetPersonHrn(int(person_id), person_hrn)
                  self.driver.shell.SetPersonSfaCreated(int(person_id), 'True')
                  self.driver.shell.AddPersonToSite(int(person_id), site['site_id'])
