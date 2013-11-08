@@ -498,6 +498,8 @@ class PlSlices:
                   
                  person_id = self.driver.shell.AddPerson(person)
                  self.driver.shell.AddRoleToPerson('user', int(person_id))
+                 # enable the account 
+                 self.driver.shell.UpdatePerson(int(person_id), {'enabled': True})
                  self.driver.shell.SetPersonHrn(int(person_id), person_hrn)
                  self.driver.shell.SetPersonSfaCreated(int(person_id), 'True')
                  self.driver.shell.AddPersonToSite(int(person_id), site['site_id'])
