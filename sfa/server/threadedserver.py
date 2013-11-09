@@ -127,17 +127,18 @@ class SecureXMLRpcRequestHandler(SimpleXMLRPCServer.SimpleXMLRPCRequestHandler):
             #self.send_response(500)
             #self.end_headers()
        
-        # got a valid response
-        self.send_response(200)
-        self.send_header("Content-type", "text/xml")
-        self.send_header("Content-length", str(len(response)))
-        self.end_headers()
-        self.wfile.write(response)
-        self.wfile.flush()
-        # close db connection
-        self.api.close_dbsession()
-        # shut down the connection
-        self.connection.shutdown() # Modified here!
+        # avoid session/connection leaks : do this no matter what 
+        finally:
+            self.send_response(200)
+            self.send_header("Content-type", "text/xml")
+            self.send_header("Content-length", str(len(response)))
+            self.end_headers()
+            self.wfile.write(response)
+            self.wfile.flush()
+            # close db connection
+            self.api.close_dbsession()
+            # shut down the connection
+            self.connection.shutdown() # Modified here!
 
 ##
 # Taken from the web (XXX find reference). Implements an HTTPS xmlrpc server
