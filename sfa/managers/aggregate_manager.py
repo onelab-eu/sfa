@@ -53,7 +53,7 @@ class AggregateManager:
         geni_api_versions = ApiVersions().get_versions()
         geni_api_versions['3'] = 'http://%s:%s' % (api.config.sfa_aggregate_host, api.config.sfa_aggregate_port)
         version_generic = {
-            'testbed': self.driver.testbed_name(),
+            'testbed': api.driver.testbed_name(),
             'interface':'aggregate',
             'hrn':xrn.get_hrn(),
             'urn':xrn.get_urn(),
@@ -65,7 +65,7 @@ class AggregateManager:
         }
         version.update(version_generic)
         version.update(self.rspec_versions())
-        testbed_version = self.driver.aggregate_version()
+        testbed_version = api.driver.aggregate_version()
         version.update(testbed_version)
         return version
     
@@ -80,16 +80,16 @@ class AggregateManager:
 
         # look in cache first
         cached_requested = options.get('cached', True)
-        if cached_requested and self.driver.cache:
-            rspec = self.driver.cache.get(version_string)
+        if cached_requested and api.driver.cache:
+            rspec = api.driver.cache.get(version_string)
             if rspec:
-                logger.debug("%s.ListResources returning cached advertisement" % (self.driver.__module__))
+                logger.debug("%s.ListResources returning cached advertisement" % (api.driver.__module__))
                 return rspec
        
-        rspec = self.driver.list_resources (rspec_version, options) 
-        if self.driver.cache:
-            logger.debug("%s.ListResources stores advertisement in cache" % (self.driver.__module__))
-            self.driver.cache.add(version_string, rspec)    
+        rspec = api.driver.list_resources (rspec_version, options) 
+        if api.driver.cache:
+            logger.debug("%s.ListResources stores advertisement in cache" % (api.driver.__module__))
+            api.driver.cache.add(version_string, rspec)    
         return rspec
     
     def Describe(self, api, creds, urns, options):
@@ -98,13 +98,13 @@ class AggregateManager:
 
         version_manager = VersionManager()
         rspec_version = version_manager.get_version(options.get('geni_rspec_version'))
-        return self.driver.describe(urns, rspec_version, options)
+        return api.driver.describe(urns, rspec_version, options)
         
     
     def Status (self, api, urns, creds, options):
         call_id = options.get('call_id')
         if Callids().already_handled(call_id): return {}
-        return self.driver.status (urns, options=options)
+        return api.driver.status (urns, options=options)
    
 
     def Allocate(self, api, xrn, creds, rspec_string, expiration, options):
@@ -114,7 +114,7 @@ class AggregateManager:
         """
         call_id = options.get('call_id')
         if Callids().already_handled(call_id): return ""
-        return self.driver.allocate(xrn, rspec_string, expiration, options)
+        return api.driver.allocate(xrn, rspec_string, expiration, options)
  
     def Provision(self, api, xrns, creds, options):
         """
@@ -134,25 +134,25 @@ class AggregateManager:
         if not rspec_version:
             raise InvalidRSpecVersion(options['geni_rspec_version'])
                        
-        return self.driver.provision(xrns, options)
+        return api.driver.provision(xrns, options)
     
     def Delete(self, api, xrns, creds, options):
         call_id = options.get('call_id')
         if Callids().already_handled(call_id): return True
-        return self.driver.delete(xrns, options)
+        return api.driver.delete(xrns, options)
 
     def Renew(self, api, xrns, creds, expiration_time, options):
         call_id = options.get('call_id')
         if Callids().already_handled(call_id): return True
-        return self.driver.renew(xrns, expiration_time, options)
+        return api.driver.renew(xrns, expiration_time, options)
 
     def PerformOperationalAction(self, api, xrns, creds, action, options={}):
         call_id = options.get('call_id')
         if Callids().already_handled(call_id): return True
-        return self.driver.perform_operational_action(xrns, action, options) 
+        return api.driver.perform_operational_action(xrns, action, options) 
 
     def Shutdown(self, api, xrn, creds, options={}):
         call_id = options.get('call_id')
         if Callids().already_handled(call_id): return True
-        return self.driver.shutdown(xrn, options) 
+        return api.driver.shutdown(xrn, options) 
     
