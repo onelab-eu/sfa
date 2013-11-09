@@ -1,0 +1,13 @@
+As of Nov. 2013, when moving from 3.0 to 3.2
+--------------------------------------------
+
+* driver-creation
+. expect an api instead of a config (and api.config is set)
+
+* managers
+. cannot access their driver from self, but from the context (api is passed to methods)
+
+* dbsession
+. use api.dbsession() whenever possible
+. it's fair to have importers and sfaadmin use the global session (there won't be instances of api in their case)
+. there is one or 2 exceptions where dbsession is retrieved from an sqlalchemy object but this is deemed poor practice, please DO NOT do this as far as possible
