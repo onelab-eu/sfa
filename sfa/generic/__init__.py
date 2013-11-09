@@ -72,11 +72,7 @@ class Generic:
         # add a manager wrapper
         manager_wrap = ManagerWrapper(manager_class_or_module,api.interface,api.config)
         api.manager=manager_wrap
-#        # insert driver in manager
-#        logger.debug("Setting manager.driver, manager=%s"%manager_class_or_module)
-#        # xxx this should go into the object and not the class !?!
-#        manager_class_or_module.driver=driver
-        # add it in api as well for convenience
+        # add it in api as well; driver.api is set too as part of make_driver
         api.driver=driver
         return api
 
