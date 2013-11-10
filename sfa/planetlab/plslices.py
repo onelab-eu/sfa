@@ -326,21 +326,23 @@ class PlSlices:
         for link in requested_links:
             # get the ip address of the first node in the link
             ifname1 = Xrn(link['interface1']['component_id']).get_leaf()
-            ifname_parts = ifname1.split(':')
-            node_raw = ifname_parts[0]
-            device = None
-            if len(ifname_parts) > 1:
-                device = ifname_parts[1] 
-            node_id = int(node_raw.replace('node', ''))
-            node = nodes_dict[node_id]
-            if1 = interfaces_dict[node['interface_ids'][0]]
-            ipaddr = if1['ip']
-            topo_rspec = VLink.get_topo_rspec(link, ipaddr)
-            # set topo_rspec tag
-            slice_tags.append({'name': 'topo_rspec', 'value': str([topo_rspec]), 'node_id': node_id})
-            # set vini_topo tag
-            slice_tags.append({'name': 'vini_topo', 'value': 'manual', 'node_id': node_id})
-            #self.driver.shell.AddSliceTag(slice['name'], 'topo_rspec', str([topo_rspec]), node_id) 
+
+            if ifname1:
+                ifname_parts = ifname1.split(':')
+                node_raw = ifname_parts[0]
+                device = None
+                if len(ifname_parts) > 1:
+                    device = ifname_parts[1] 
+                node_id = int(node_raw.replace('node', ''))
+                node = nodes_dict[node_id]
+                if1 = interfaces_dict[node['interface_ids'][0]]
+                ipaddr = if1['ip']
+                topo_rspec = VLink.get_topo_rspec(link, ipaddr)
+                # set topo_rspec tag
+                slice_tags.append({'name': 'topo_rspec', 'value': str([topo_rspec]), 'node_id': node_id})
+                # set vini_topo tag
+                slice_tags.append({'name': 'vini_topo', 'value': 'manual', 'node_id': node_id})
+                #self.driver.shell.AddSliceTag(slice['name'], 'topo_rspec', str([topo_rspec]), node_id) 
 
         self.verify_slice_attributes(slice, slice_tags, {'append': True}, admin=True)
                         
