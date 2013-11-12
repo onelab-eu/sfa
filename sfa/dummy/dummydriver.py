@@ -11,7 +11,6 @@ from sfa.util.xrn import Xrn, hrn_to_urn, get_leaf
 from sfa.util.cache import Cache
 
 # one would think the driver should not need to mess with the SFA db, but..
-from sfa.storage.alchemy import dbsession
 from sfa.storage.model import RegRecord, SliverAllocation
 from sfa.trust.credential import Credential
 
@@ -44,9 +43,9 @@ class DummyDriver (Driver):
     # the cache instance is a class member so it survives across incoming requests
     cache = None
 
-    def __init__ (self, config):
-        Driver.__init__ (self, config)
-        self.config = config
+    def __init__ (self, api):
+        Driver.__init__ (self, api)
+   config = api.config
         self.hrn = config.SFA_INTERFACE_HRN
         self.root_auth = config.SFA_REGISTRY_ROOT_AUTH
         self.shell = DummyShell (config)
@@ -336,7 +335,7 @@ class DummyDriver (Driver):
         
         # get the registry records
         user_list, users = [], {}
-        user_list = dbsession.query (RegRecord).filter(RegRecord.pointer.in_(user_ids))
+        user_list = self.api.dbsession().query (RegRecord).filter(RegRecord.pointer.in_(user_ids))
         # create a hrns keyed on the sfa record's pointer.
         # Its possible for multiple records to have the same pointer so
         # the dict's value will be a list of hrns.
@@ -464,7 +463,8 @@ class DummyDriver (Driver):
         #users = slices.verify_users(None, slice, geni_users, options=options)
         # update sliver allocation states and set them to geni_provisioned
         sliver_ids = [sliver['sliver_id'] for sliver in slivers]
-        SliverAllocation.set_allocations(sliver_ids, 'geni_provisioned')
+        dbsession=self.api.dbsession()
+        SliverAllocation.set_allocations(sliver_ids, 'geni_provisioned',dbsession)
         version_manager = VersionManager()
         rspec_version = version_manager.get_version(options['geni_rspec_version'])
         return self.describe(urns, rspec_version, options=options)
@@ -490,7 +490,8 @@ class DummyDriver (Driver):
             try:
                 self.shell.DeleteSliceFromNodes({'slice_id': slice_id, 'node_ids': node_ids})
                 # delete sliver allocation states
-                SliverAllocation.delete_allocations(sliver_ids)
+                dbsession=self.api.dbsession()
+                SliverAllocation.delete_allocations(sliver_ids,dbsession)
             finally:
                 pass
 
