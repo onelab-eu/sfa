@@ -23,8 +23,9 @@ federica_version_string="RSpecV2"
 
 class FdDriver (PlDriver):
 
-    def __init__ (self,config): 
-        PlDriver.__init__ (self, config)
+    def __init__ (self,api): 
+        PlDriver.__init__ (self, api)
+        config = api.config
         self.shell=FdShell(config)
 
     # the agreement with the federica driver is for them to expose results in a way
