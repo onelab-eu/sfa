@@ -115,6 +115,7 @@ class PlDriver (Driver):
                 if 'max_slices' not in pl_record:
                     pl_record['max_slices']=2
                 pointer = self.shell.AddSite(pl_record)
+                self.shell.SetSiteHrn(int(pointer), hrn)
             else:
                 pointer = sites[0]['site_id']
 
@@ -126,6 +127,7 @@ class PlDriver (Driver):
             slices = self.shell.GetSlices([pl_record['name']])
             if not slices:
                  pointer = self.shell.AddSlice(pl_record)
+                 self.shell.SetSliceHrn(int(pointer), hrn)
             else:
                  pointer = slices[0]['slice_id']
 
@@ -138,6 +140,7 @@ class PlDriver (Driver):
                 can_add = ['first_name', 'last_name', 'title','email', 'password', 'phone', 'url', 'bio']
                 add_person_dict=dict ( [ (k,sfa_record[k]) for k in sfa_record if k in can_add ] )
                 pointer = self.shell.AddPerson(add_person_dict)
+                self.shell.SetPersonHrn(int(pointer), hrn)
             else:
                 pointer = persons[0]['person_id']
     
@@ -168,6 +171,7 @@ class PlDriver (Driver):
             nodes = self.shell.GetNodes([pl_record['hostname']])
             if not nodes:
                 pointer = self.shell.AddNode(login_base, pl_record)
+                self.shell.SetNodeHrn(int(pointer), hrn)
             else:
                 pointer = nodes[0]['node_id']
     
@@ -186,12 +190,14 @@ class PlDriver (Driver):
 
         if (type == "authority"):
             self.shell.UpdateSite(pointer, new_sfa_record)
+            self.shell.SetSiteHrn(pointer, hrn)
     
         elif type == "slice":
             pl_record=self.sfa_fields_to_pl_fields(type, hrn, new_sfa_record)
             if 'name' in pl_record:
                 pl_record.pop('name')
                 self.shell.UpdateSlice(pointer, pl_record)
+                self.shell.SetSliceHrn(pointer, hrn)
     
         elif type == "user":
             # SMBAKER: UpdatePerson only allows a limited set of fields to be
@@ -209,6 +215,7 @@ class PlDriver (Driver):
             if 'email' in update_fields and not update_fields['email']:
                 del update_fields['email']
             self.shell.UpdatePerson(pointer, update_fields)
+            self.shell.SetPersonHrn(pointer, hrn)
     
             if new_key:
                 # must check this key against the previous one if it exists
