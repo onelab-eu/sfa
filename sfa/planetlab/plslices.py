@@ -265,7 +265,7 @@ class PlSlices:
                                       component_id=component_id,
                                       slice_urn = slice_urn, 
                                       allocation_state='geni_allocated')      
-            record.sync(self.driver.api.dbsession)
+            record.sync(self.driver.api.dbsession())
         return resulting_nodes
 
     def free_egre_key(self):
