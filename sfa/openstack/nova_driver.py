@@ -15,7 +15,6 @@ from sfa.trust.credential import Credential
 #from sfa.trust.sfaticket import SfaTicket
 from sfa.rspecs.version_manager import VersionManager
 from sfa.rspecs.rspec import RSpec
-from sfa.storage.alchemy import dbsession
 from sfa.storage.model import RegRecord, SliverAllocation
 
 # the driver interface, mostly provides default behaviours
@@ -41,8 +40,9 @@ class NovaDriver(Driver):
     # the cache instance is a class member so it survives across incoming requests
     cache = None
 
-    def __init__ (self, config):
-        Driver.__init__(self, config)
+    def __init__ (self, api):
+        Driver.__init__(self, api)
+        config = api.config
         self.shell = Shell(config=config)
         self.cache=None
         if config.SFA_AGGREGATE_CACHING:
@@ -396,7 +396,8 @@ class NovaDriver(Driver):
         
         # update all sliver allocation states setting then to geni_allocated    
         sliver_ids = [sliver.id for sliver in slivers]
-        SliverAllocation.set_allocations(sliver_ids, 'geni_allocated')
+        dbsession=self.api.dbsession()
+        SliverAllocation.set_allocations(sliver_ids, 'geni_provisioned',dbsession)
    
         return aggregate.describe(urns=[urn], version=rspec.version)
 
@@ -408,7 +409,8 @@ class NovaDriver(Driver):
         for instance in instances:
             sliver_hrn = "%s.%s" % (self.driver.hrn, instance.id)
             sliver_ids.append(Xrn(sliver_hrn, type='sliver').urn)
-        SliverAllocation.set_allocations(sliver_ids, 'geni_provisioned') 
+        dbsession=self.api.dbsession()
+        SliverAllocation.set_allocations(sliver_ids, 'geni_provisioned',dbsession) 
         version_manager = VersionManager()
         rspec_version = version_manager.get_version(options['geni_rspec_version'])
         return self.describe(urns, rspec_version, options=options) 
@@ -427,7 +429,8 @@ class NovaDriver(Driver):
             aggregate.delete_instance(instance)
             
         # delete sliver allocation states
-        SliverAllocation.delete_allocations(sliver_ids)
+        dbsession=self.api.dbsession()
+        SliverAllocation.delete_allocations(sliver_ids, dbsession)
 
         # return geni_slivers
         geni_slivers = []
