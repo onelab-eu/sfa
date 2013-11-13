@@ -15,7 +15,7 @@ from sfa.rspecs.elements.lease import Lease
 from sfa.rspecs.elements.granularity import Granularity
 from sfa.rspecs.version_manager import VersionManager
 
-from sfa.rspecs.elements.versions.cortexlabv1Node import IotlabPosition, \
+from sfa.rspecs.elements.versions.iotlabv1Node import IotlabPosition, \
     IotlabNode, IotlabLocation, IotlabMobility
 
 from sfa.util.sfalogging import logger
@@ -90,6 +90,8 @@ class CortexlabAggregate:
             is to be consistent with the SFA standard.
 
         """
+
+
         slivers = {}
         sfa_slice = None
         if slice_xrn is None:
@@ -98,53 +100,67 @@ class CortexlabAggregate:
         slice_hrn, _ = urn_to_hrn(slice_xrn)
         slice_name = slice_hrn
 
+        # GetSlices always returns a list, even if there is only one element
         slices = self.driver.cortexlab_api.GetSlices(slice_filter=str(slice_name),
                                                   slice_filter_type='slice_hrn',
                                                   login=login)
 
-        logger.debug("CortexlabAggregate api \tget_slice_and_slivers \
+        logger.debug("IotlabAggregate api \tget_slice_and_slivers \
                       slice_hrn %s \r\n slices %s self.driver.hrn %s"
                      % (slice_hrn, slices, self.driver.hrn))
-
         if slices == []:
             return (sfa_slice, slivers)
 
         # sort slivers by node id , if there is a job
         #and therefore, node allocated to this slice
-        for sfa_slice in slices:
-            try:
-                node_ids_list = sfa_slice['node_ids']
-            except KeyError:
-                logger.log_exc("CortexlabAggregate \t \
-                            get_slice_and_slivers No nodes in the slice \
-                            - KeyError ")
-                node_ids_list = []
-                continue
+        # for sfa_slice in slices:
+        sfa_slice = slices[0]
+        try:
+            node_ids_list = sfa_slice['node_ids']
+        except KeyError:
+            logger.log_exc("CORTEXLABAGGREGATE \t \
+                        get_slice_and_slivers No nodes in the slice \
+                        - KeyError ")
+            node_ids_list = []
+            # continue
 
-            for node in node_ids_list:
-                sliver_xrn = Xrn(slice_urn, type='sliver', id=node)
-                sliver_xrn.set_authority(self.driver.hrn)
-                sliver = Sliver({'sliver_id': sliver_xrn.urn,
-                                'name': sfa_slice['hrn'],
-                                'type': 'cortexlab-node',
-                                'tags': []})
+        for node in node_ids_list:
+            sliver_xrn = Xrn(slice_urn, type='sliver', id=node)
+            sliver_xrn.set_authority(self.driver.hrn)
+            sliver = Sliver({'sliver_id': sliver_xrn.urn,
+                            'name': sfa_slice['hrn'],
+                            'type': 'cortexlab-node',
+                            'tags': []})
 
-                slivers[node] = sliver
+            slivers[node] = sliver
 
         #Add default sliver attribute :
-        #connection information for cortexlab
-        if get_authority(sfa_slice['hrn']) == self.driver.cortexlab_api.root_auth:
-            tmp = sfa_slice['hrn'].split('.')
-            ldap_username = tmp[1].split('_')[0]
+        #connection information for cortexlab, assuming it is the same ssh
+        # connection process
+         # look in ldap:
+        ldap_username = self.find_ldap_username_from_slice(sfa_slice)
+
+        if ldap_username is not None:
             ssh_access = None
             slivers['default_sliver'] = {'ssh': ssh_access,
-                                         'login': ldap_username}
+                                             'login': ldap_username}
 
-        #TODO get_slice_and_slivers Find the login of the external user
 
-        logger.debug("CortexlabAggregate api get_slice_and_slivers  slivers %s "
+        logger.debug("CORTEXLABAGGREGATE api get_slice_and_slivers  slivers %s "
                      % (slivers))
         return (slices, slivers)
+
+
+    def find_ldap_username_from_slice(self, sfa_slice):
+        researchers = [sfa_slice['reg_researchers'][0].__dict__]
+        # look in ldap:
+        ldap_username = None
+        ret =  self.driver.iotlab_api.GetPersons(researchers)
+        if len(ret) != 0:
+            ldap_username = ret[0]['uid']
+
+        return ldap_username
+
 
 
     def get_nodes(self, slices=None, slivers=[], options=None):
@@ -208,14 +224,9 @@ class CortexlabAggregate:
             nodes_dict[node['node_id']] = node
             if slice_nodes_list == [] or node['hostname'] in slice_nodes_list:
 
-                rspec_node = IotlabNode()
-                # xxx how to retrieve site['login_base']
-                #site_id=node['site_id']
-                #site=sites_dict[site_id]
+                rspec_node = Node()
 
-                # rspec_node['mobile'] = node['mobile']
-                rspec_node['archi'] = node['archi']
-                rspec_node['radio'] = node['radio']
+
 
                 cortexlab_xrn = cortexlab_xrn_object(self.driver.cortexlab_api.root_auth,
                                                node['hostname'])
@@ -231,41 +242,19 @@ class CortexlabAggregate:
                 # in authority_id SA 27/07/12
                 rspec_node['authority_id'] = rspec_node['component_manager_id']
 
-                # do not include boot state (<available> element)
-                #in the manifest rspec
 
-                rspec_node['boot_state'] = node['boot_state']
-                if node['hostname'] in reserved_nodes:
-                    rspec_node['boot_state'] = "Reserved"
+                # boot state removed if you need it uncomment
+                # rspec_node['boot_state'] = node['boot_state']
+                # if node['hostname'] in reserved_nodes:
+                #     rspec_node['boot_state'] = "Reserved"
+
                 rspec_node['exclusive'] = 'true'
                 rspec_node['hardware_types'] = [HardwareType({'name':
                                                'cortexlab-node'})]
 
 
-                location = IotlabLocation({'country':'France', 'site':
-                                            node['site']})
-                rspec_node['location'] = location
-
-                # Adding mobility of the node in the rspec
-                mobility = IotlabMobility()
-                for field in mobility:
-                    try:
-                        mobility[field] = node[field]
-                    except KeyError, error:
-                        logger.log_exc("CortexlabAggregate\t get_nodes \
-                                         mobility %s " % (error))
-                rspec_node['mobility'] = mobility
-
-                position = IotlabPosition()
-                for field in position:
-                    try:
-                        position[field] = node[field]
-                    except KeyError, error:
-                        logger.log_exc("CortexlabAggregate\t get_nodes \
-                                                        position %s " % (error))
-
-                rspec_node['position'] = position
-                #rspec_node['interfaces'] = []
+                # Location, mobility and position removed. If you need it go check
+                # get_nodes in iotlabaggregate.py
 
                 # Granularity
                 granularity = Granularity({'grain': grain})
@@ -312,10 +301,7 @@ class CortexlabAggregate:
         #now = int(time.time())
         #lease_filter = {'clip': now }
 
-        #if slice_record:
-            #lease_filter.update({'name': slice_record['name']})
 
-        #leases = self.driver.cortexlab_api.GetLeases(lease_filter)
 
         logger.debug("CortexlabAggregate  get_all_leases ldap_username %s "
                      % (ldap_username))
@@ -328,9 +314,9 @@ class CortexlabAggregate:
             for node in lease['reserved_nodes']:
                 rspec_lease = Lease()
                 rspec_lease['lease_id'] = lease['lease_id']
-                #site = node['site_id']
-                cortexlab_xrn = cortexlab_xrn_object(self.driver.cortexlab_api.root_auth,
-                                               node)
+
+                cortexlab_xrn = cortexlab_xrn_object(
+                    self.driver.cortexlab_api.root_auth, node)
                 rspec_lease['component_id'] = cortexlab_xrn.urn
                 #rspec_lease['component_id'] = hostname_to_urn(self.driver.hrn,\
                                         #site, node['hostname'])
@@ -391,10 +377,11 @@ class CortexlabAggregate:
         if slice_xrn and slices is not None:
             #Get user associated with this slice
             #for one_slice in slices :
-            ldap_username = slices[0]['reg_researchers'][0].__dict__['hrn']
-             # ldap_username = slices[0]['user']
-            tmp = ldap_username.split('.')
-            ldap_username = tmp[1]
+            ldap_username = self.find_ldap_username_from_slice(slices[0])
+            # ldap_username = slices[0]['reg_researchers'][0].__dict__['hrn']
+            #  # ldap_username = slices[0]['user']
+            # tmp = ldap_username.split('.')
+            # ldap_username = tmp[1]
             logger.debug("CortexlabAggregate \tget_rspec **** \
                     LDAP USERNAME %s \r\n" \
                     % (ldap_username))

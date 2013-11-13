@@ -1,5 +1,5 @@
 """
-File containing the IotlabTestbedAPI, used to interact with nodes, users,
+File containing the CortexlabShell, used to interact with nodes, users,
 slices, leases and keys,  as well as the dedicated iotlab database and table,
 holding information about which slice is running which job.
 
@@ -21,7 +21,7 @@ from sfa.trust.certificate import Keypair, convert_public_key
 from sfa.trust.gid import create_uuid
 from sfa.trust.hierarchy import Hierarchy
 
-from sfa.iotlab.iotlabaggregate import iotlab_xrn_object
+from sfa.cortexlab.iotlabaggregate import iotlab_xrn_object
 
 class CortexlabTestbedAPI():
     """ Class enabled to use LDAP and OAR api calls. """
@@ -561,7 +561,7 @@ class CortexlabTestbedAPI():
 
 
         walltime, sleep_walltime = \
-                    IotlabTestbedAPI._process_walltime(\
+                    CortexlabShell._process_walltime(\
                                      int(lease_dict['lease_duration']))
 
 
