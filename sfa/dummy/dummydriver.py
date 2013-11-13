@@ -45,7 +45,7 @@ class DummyDriver (Driver):
 
     def __init__ (self, api):
         Driver.__init__ (self, api)
-   config = api.config
+        config = api.config
         self.hrn = config.SFA_INTERFACE_HRN
         self.root_auth = config.SFA_REGISTRY_ROOT_AUTH
         self.shell = DummyShell (config)
