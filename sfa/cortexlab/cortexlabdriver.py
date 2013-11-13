@@ -12,11 +12,12 @@ from sfa.rspecs.rspec import RSpec
 
 from sfa.util.xrn import Xrn, hrn_to_urn, get_authority
 
-from sfa.iotlab.iotlabaggregate import IotlabAggregate, iotlab_xrn_to_hostname
-from sfa.iotlab.iotlabslices import IotlabSlices
+from sfa.cortexlab.cortexlabaggregate import CortexlabAggregate, \
+            cortexlab_xrn_to_hostname
 
+from sfa.iotlab.iotlabslices import CortexlabSlices
 
-from sfa.iotlab.iotlabapi import IotlabTestbedAPI
+from sfa.cortexlab.cortexlabapi import CortexlabTestbedAPI
 
 
 class CortexlabDriver(Driver):
@@ -40,7 +41,7 @@ class CortexlabDriver(Driver):
         """
         Driver.__init__(self, config)
         self.config = config
-        self.iotlab_api = IotlabTestbedAPI(config)
+        self.cortexlab_api = CortexlabTestbedAPI(config)
         self.cache = None
 
     def augment_records_with_testbed_info(self, record_list):
@@ -73,7 +74,7 @@ class CortexlabDriver(Driver):
 
         """
 
-        logger.debug("IOTLABDRIVER \tfill_record_info records %s "
+        logger.debug("CORTEXLABDRIVER \tfill_record_info records %s "
                      % (record_list))
         if not isinstance(record_list, list):
             record_list = [record_list]
@@ -85,11 +86,11 @@ class CortexlabDriver(Driver):
                     # look for node info using GetNodes
                     # the record is about one node only
                     filter_dict = {'hrn': [record['hrn']]}
-                    node_info = self.iotlab_api.GetNodes(filter_dict)
+                    node_info = self.cortexlab_api.GetNodes(filter_dict)
                     # the node_info is about one node only, but it is formatted
                     # as a list
                     record.update(node_info[0])
-                    logger.debug("IOTLABDRIVER.PY \t \
+                    logger.debug("CORTEXLABDRIVER.PY \t \
                                   fill_record_info NODE" % (record))
 
                 #If the record is a SFA slice record, then add information
@@ -105,7 +106,7 @@ class CortexlabDriver(Driver):
                             {'PI': [record['reg_researchers']['hrn']],
                              'researcher': [record['reg_researchers']['hrn']],
                              'name': record['hrn'],
-                             'oar_job_id': [],
+                             'experiment_id': [],
                              'node_ids': [],
                              'person_ids': [record['reg_researchers']
                                             ['record_id']],
@@ -117,27 +118,27 @@ class CortexlabDriver(Driver):
                              'key_ids': ''})
 
                     #Get iotlab slice record and oar job id if any.
-                    recslice_list = self.iotlab_api.GetSlices(
+                    recslice_list = self.cortexlab_api.GetSlices(
                         slice_filter=str(record['hrn']),
                         slice_filter_type='slice_hrn')
 
-                    logger.debug("IOTLABDRIVER \tfill_record_info \
-                        TYPE SLICE RECUSER record['hrn'] %s record['oar_job_id']\
-                         %s " % (record['hrn'], record['oar_job_id']))
+                    logger.debug("CORTEXLABDRIVER \tfill_record_info \
+                        TYPE SLICE RECUSER record['hrn'] %s record['experiment_id']\
+                         %s " % (record['hrn'], record['experiment_id']))
                     del record['reg_researchers']
                     try:
                         for rec in recslice_list:
-                            logger.debug("IOTLABDRIVER\r\n  \t  \
-                            fill_record_info oar_job_id %s "
-                                         % (rec['oar_job_id']))
+                            logger.debug("CORTEXLABDRIVER\r\n  \t  \
+                            fill_record_info experiment_id %s "
+                                         % (rec['experiment_id']))
 
-                            record['node_ids'] = [self.iotlab_api.root_auth +
+                            record['node_ids'] = [self.cortexlab_api.root_auth +
                                                   '.' + hostname for hostname
                                                   in rec['node_ids']]
                     except KeyError:
                         pass
 
-                    logger.debug("IOTLABDRIVER.PY \t fill_record_info SLICE \
+                    logger.debug("CORTEXLABDRIVER.PY \t fill_record_info SLICE \
                                     recslice_list  %s \r\n \t RECORD %s \r\n \
                                     \r\n" % (recslice_list, record))
 
@@ -145,11 +146,11 @@ class CortexlabDriver(Driver):
                     #The record is a SFA user record.
                     #Get the information about his slice from Iotlab's DB
                     #and add it to the user record.
-                    recslice_list = self.iotlab_api.GetSlices(
+                    recslice_list = self.cortexlab_api.GetSlices(
                         slice_filter=record['record_id'],
                         slice_filter_type='record_id_user')
 
-                    logger.debug("IOTLABDRIVER.PY \t fill_record_info \
+                    logger.debug("CORTEXLABDRIVER.PY \t fill_record_info \
                         TYPE USER recslice_list %s \r\n \t RECORD %s \r\n"
                                  % (recslice_list, record))
                     #Append slice record in records list,
@@ -157,7 +158,7 @@ class CortexlabDriver(Driver):
                     #Will update PIs and researcher for the slice
 
                     recuser = recslice_list[0]['reg_researchers']
-                    logger.debug("IOTLABDRIVER.PY \t fill_record_info USER  \
+                    logger.debug("CORTEXLABDRIVER.PY \t fill_record_info USER  \
                                             recuser %s \r\n \r\n" % (recuser))
                     recslice = {}
                     recslice = recslice_list[0]
@@ -166,11 +167,11 @@ class CortexlabDriver(Driver):
                          'researcher': [recuser['hrn']],
                          'name': record['hrn'],
                          'node_ids': [],
-                         'oar_job_id': [],
+                         'experiment_id': [],
                          'person_ids': [recuser['record_id']]})
                     try:
                         for rec in recslice_list:
-                            recslice['oar_job_id'].append(rec['oar_job_id'])
+                            recslice['experiment_id'].append(rec['experiment_id'])
                     except KeyError:
                         pass
 
@@ -178,9 +179,9 @@ class CortexlabDriver(Driver):
                                      'hrn': recslice_list[0]['hrn']})
 
                     #GetPersons takes [] as filters
-                    user_iotlab = self.iotlab_api.GetPersons([record])
+                    user_cortexlab = self.cortexlab_api.GetPersons([record])
 
-                    record.update(user_iotlab[0])
+                    record.update(user_cortexlab[0])
                     #For client_helper.py compatibility
                     record.update(
                         {'geni_urn': '',
@@ -188,12 +189,12 @@ class CortexlabDriver(Driver):
                          'key_ids': ''})
                     record_list.append(recslice)
 
-                    logger.debug("IOTLABDRIVER.PY \t \
+                    logger.debug("CORTEXLABDRIVER.PY \t \
                         fill_record_info ADDING SLICE\
                         INFO TO USER records %s" % (record_list))
 
         except TypeError, error:
-            logger.log_exc("IOTLABDRIVER \t fill_record_info  EXCEPTION %s"
+            logger.log_exc("CORTEXLABDRIVER \t fill_record_info  EXCEPTION %s"
                            % (error))
 
         return record_list
@@ -214,7 +215,7 @@ class CortexlabDriver(Driver):
         """
 
         #First get the slice with the slice hrn
-        slice_list = self.iotlab_api.GetSlices(slice_filter=slice_hrn,
+        slice_list = self.cortexlab_api.GetSlices(slice_filter=slice_hrn,
                                                slice_filter_type='slice_hrn')
 
         if len(slice_list) == 0:
@@ -227,7 +228,7 @@ class CortexlabDriver(Driver):
         slice_nodes_list = []
         slice_nodes_list = one_slice['node_ids']
         #Get all the corresponding nodes details
-        nodes_all = self.iotlab_api.GetNodes(
+        nodes_all = self.cortexlab_api.GetNodes(
             {'hostname': slice_nodes_list},
             ['node_id', 'hostname', 'site', 'boot_state'])
         nodeall_byhostname = dict([(one_node['hostname'], one_node)
@@ -238,13 +239,13 @@ class CortexlabDriver(Driver):
             top_level_status = 'empty'
             result = {}
             result.fromkeys(
-                ['geni_urn', 'geni_error', 'iotlab_login', 'geni_status',
+                ['geni_urn', 'geni_error', 'cortexlab_login', 'geni_status',
                  'geni_resources'], None)
             # result.fromkeys(\
             #     ['geni_urn','geni_error', 'pl_login','geni_status',
             # 'geni_resources'], None)
             # result['pl_login'] = one_slice['reg_researchers'][0].hrn
-            result['iotlab_login'] = one_slice['user']
+            result['cortexlab_login'] = one_slice['user']
             logger.debug("Slabdriver - sliver_status Sliver status \
                             urn %s hrn %s single_slice  %s \r\n "
                          % (slice_urn, slice_hrn, single_slice))
@@ -265,15 +266,10 @@ class CortexlabDriver(Driver):
             resources = []
             for node_hostname in single_slice['node_ids']:
                 res = {}
-                res['iotlab_hostname'] = node_hostname
-                res['iotlab_boot_state'] = \
+                res['cortexlab_hostname'] = node_hostname
+                res['cortexlab_boot_state'] = \
                     nodeall_byhostname[node_hostname]['boot_state']
 
-                #res['pl_hostname'] = node['hostname']
-                #res['pl_boot_state'] = \
-                            #nodeall_byhostname[node['hostname']]['boot_state']
-                #res['pl_last_contact'] = strftime(self.time_format, \
-                                                    #gmtime(float(timestamp)))
                 sliver_id = Xrn(
                     slice_urn, type='slice',
                     id=nodeall_byhostname[node_hostname]['node_id']).urn
@@ -293,7 +289,7 @@ class CortexlabDriver(Driver):
 
             result['geni_status'] = top_level_status
             result['geni_resources'] = resources
-            logger.debug("IOTLABDRIVER \tsliver_statusresources %s res %s "
+            logger.debug("CORTEXLABDRIVER \tsliver_statusresources %s res %s "
                          % (resources, res))
             return result
 
@@ -360,14 +356,14 @@ class CortexlabDriver(Driver):
         requested_lease_list = []
         for lease in rspec.version.get_leases():
             single_requested_lease = {}
-            logger.debug("IOTLABDRIVER.PY \t \
+            logger.debug("CORTEXLABDRIVER.PY \t \
                 _get_requested_leases_list lease %s " % (lease))
 
             if not lease.get('lease_id'):
                 if get_authority(lease['component_id']) == \
-                        self.iotlab_api.root_auth:
+                        self.cortexlab_api.root_auth:
                     single_requested_lease['hostname'] = \
-                        iotlab_xrn_to_hostname(\
+                        cortexlab_xrn_to_hostname(\
                             lease.get('component_id').strip())
                     single_requested_lease['start_time'] = \
                         lease.get('start_time')
@@ -376,7 +372,7 @@ class CortexlabDriver(Driver):
                     #the lease to the requested leases list
                     duration_in_seconds = \
                         int(single_requested_lease['duration'])
-                    if duration_in_seconds >= self.iotlab_api.GetMinExperimentDurationInGranularity():
+                    if duration_in_seconds >= self.cortexlab_api.GetMinExperimentDurationInGranularity():
                         requested_lease_list.append(single_requested_lease)
 
         return requested_lease_list
@@ -396,27 +392,27 @@ class CortexlabDriver(Driver):
 
         """
 
-        requested_job_dict = {}
+        requested_xp_dict = {}
         for lease in requested_lease_list:
 
             #In case it is an asap experiment start_time is empty
             if lease['start_time'] == '':
                 lease['start_time'] = '0'
 
-            if lease['start_time'] not in requested_job_dict:
+            if lease['start_time'] not in requested_xp_dict:
                 if isinstance(lease['hostname'], str):
                     lease['hostname'] = [lease['hostname']]
 
-                requested_job_dict[lease['start_time']] = lease
+                requested_xp_dict[lease['start_time']] = lease
 
             else:
-                job_lease = requested_job_dict[lease['start_time']]
+                job_lease = requested_xp_dict[lease['start_time']]
                 if lease['duration'] == job_lease['duration']:
                     job_lease['hostname'].append(lease['hostname'])
 
-        return requested_job_dict
+        return requested_xp_dict
 
-    def _process_requested_jobs(self, rspec):
+    def _process_requested_xp_dict(self, rspec):
         """
         Turns the requested leases and information into a dictionary
             of requested jobs, grouped by starting time.
@@ -427,13 +423,13 @@ class CortexlabDriver(Driver):
 
         """
         requested_lease_list = self._get_requested_leases_list(rspec)
-        logger.debug("IOTLABDRIVER _process_requested_jobs \
+        logger.debug("CORTEXLABDRIVER _process_requested_xp_dict \
             requested_lease_list  %s" % (requested_lease_list))
-        job_dict = self._group_leases_by_start_time(requested_lease_list)
-        logger.debug("IOTLABDRIVER _process_requested_jobs  job_dict\
-        %s" % (job_dict))
+        xp_dict = self._group_leases_by_start_time(requested_lease_list)
+        logger.debug("CORTEXLABDRIVER _process_requested_xp_dict  xp_dict\
+        %s" % (xp_dict))
 
-        return job_dict
+        return xp_dict
 
     def create_sliver(self, slice_urn, slice_hrn, creds, rspec_string,
                       users, options):
@@ -458,9 +454,9 @@ class CortexlabDriver(Driver):
 
 
         """
-        aggregate = IotlabAggregate(self)
+        aggregate = CortexlabAggregate(self)
 
-        slices = IotlabSlices(self)
+        slices = CortexlabSlices(self)
         peer = slices.get_peer(slice_hrn)
         sfa_peer = slices.get_sfa_peer(slice_hrn)
         slice_record = None
@@ -470,7 +466,7 @@ class CortexlabDriver(Driver):
 
         if users:
             slice_record = users[0].get('slice_record', {})
-            logger.debug("IOTLABDRIVER.PY \t ===============create_sliver \t\
+            logger.debug("CORTEXLABDRIVER.PY \t ===============create_sliver \t\
                             creds %s \r\n \r\n users %s"
                          % (creds, users))
             slice_record['user'] = {'keys': users[0]['keys'],
@@ -478,7 +474,7 @@ class CortexlabDriver(Driver):
                                     'hrn': slice_record['reg-researchers'][0]}
         # parse rspec
         rspec = RSpec(rspec_string)
-        logger.debug("IOTLABDRIVER.PY \t create_sliver \trspec.version \
+        logger.debug("CORTEXLABDRIVER.PY \t create_sliver \trspec.version \
                      %s slice_record %s users %s"
                      % (rspec.version, slice_record, users))
 
@@ -497,13 +493,13 @@ class CortexlabDriver(Driver):
         #unused, removed SA 13/08/12
         #rspec.version.get_slice_attributes()
 
-        logger.debug("IOTLABDRIVER.PY create_sliver slice %s " % (sfa_slice))
+        logger.debug("CORTEXLABDRIVER.PY create_sliver slice %s " % (sfa_slice))
 
         # add/remove slice from nodes
 
         #requested_slivers = [node.get('component_id') \
                     #for node in rspec.version.get_nodes_with_slivers()\
-                    #if node.get('authority_id') is self.iotlab_api.root_auth]
+                    #if node.get('authority_id') is self.cortexlab_api.root_auth]
         #l = [ node for node in rspec.version.get_nodes_with_slivers() ]
         #logger.debug("SLADRIVER \tcreate_sliver requested_slivers \
                                     #requested_slivers %s  listnodes %s" \
@@ -511,14 +507,14 @@ class CortexlabDriver(Driver):
         #verify_slice_nodes returns nodes, but unused here. Removed SA 13/08/12.
         #slices.verify_slice_nodes(sfa_slice, requested_slivers, peer)
 
-        requested_job_dict = self._process_requested_jobs(rspec)
+        requested_xp_dict = self._process_requested_xp_dict(rspec)
 
-        logger.debug("IOTLABDRIVER.PY \tcreate_sliver  requested_job_dict %s "
-                     % (requested_job_dict))
+        logger.debug("CORTEXLABDRIVER.PY \tcreate_sliver  requested_xp_dict %s "
+                     % (requested_xp_dict))
         #verify_slice_leases returns the leases , but the return value is unused
         #here. Removed SA 13/08/12
         slices.verify_slice_leases(sfa_slice,
-                                   requested_job_dict, peer)
+                                   requested_xp_dict, peer)
 
         return aggregate.get_rspec(slice_xrn=slice_urn,
                                    login=sfa_slice['login'],
@@ -546,7 +542,7 @@ class CortexlabDriver(Driver):
              delete_sliver .
         """
 
-        sfa_slice_list = self.iotlab_api.GetSlices(
+        sfa_slice_list = self.cortexlab_api.GetSlices(
             slice_filter=slice_hrn,
             slice_filter_type='slice_hrn')
 
@@ -555,16 +551,16 @@ class CortexlabDriver(Driver):
 
         #Delete all leases in the slice
         for sfa_slice in sfa_slice_list:
-            logger.debug("IOTLABDRIVER.PY delete_sliver slice %s" % (sfa_slice))
-            slices = IotlabSlices(self)
+            logger.debug("CORTEXLABDRIVER.PY delete_sliver slice %s" % (sfa_slice))
+            slices = CortexlabSlices(self)
             # determine if this is a peer slice
 
             peer = slices.get_peer(slice_hrn)
 
-            logger.debug("IOTLABDRIVER.PY delete_sliver peer %s \
+            logger.debug("CORTEXLABDRIVER.PY delete_sliver peer %s \
                 \r\n \t sfa_slice %s " % (peer, sfa_slice))
             try:
-                self.iotlab_api.DeleteSliceFromNodes(sfa_slice)
+                self.cortexlab_api.DeleteSliceFromNodes(sfa_slice)
                 return True
             except:
                 return False
@@ -625,7 +621,7 @@ class CortexlabDriver(Driver):
                 #return rspec
 
         #panos: passing user-defined options
-        aggregate = IotlabAggregate(self)
+        aggregate = CortexlabAggregate(self)
 
         rspec = aggregate.get_rspec(slice_xrn=slice_urn,
                                     version=rspec_version, options=options)
@@ -659,8 +655,8 @@ class CortexlabDriver(Driver):
 
         # get data from db
 
-        slices = self.iotlab_api.GetSlices()
-        logger.debug("IOTLABDRIVER.PY \tlist_slices hrn %s \r\n \r\n"
+        slices = self.cortexlab_api.GetSlices()
+        logger.debug("CORTEXLABDRIVER.PY \tlist_slices hrn %s \r\n \r\n"
                      % (slices))
         slice_hrns = [iotlab_slice['hrn'] for iotlab_slice in slices]
 
@@ -700,10 +696,10 @@ class CortexlabDriver(Driver):
 
     def update(self, old_sfa_record, new_sfa_record, hrn, new_key):
         """
-        No site or node record update allowed in Iotlab. The only modifications
+        No site or node record update allowed in Cortexlab. The only modifications
         authorized here are key deletion/addition on an existing user and
         password change. On an existing user, CAN NOT BE MODIFIED: 'first_name',
-        'last_name', 'email'. DOES NOT EXIST IN SENSLAB: 'phone', 'url', 'bio',
+        'last_name', 'email'. DOES NOT EXIST IN LDAP: 'phone', 'url', 'bio',
         'title', 'accepted_aup'. A slice is bound to its user, so modifying the
         user's ssh key should nmodify the slice's GID after an import procedure.
 
@@ -736,11 +732,11 @@ class CortexlabDriver(Driver):
 
             if new_key:
                 # must check this key against the previous one if it exists
-                persons = self.iotlab_api.GetPersons([old_sfa_record])
+                persons = self.cortexlab_api.GetPersons([old_sfa_record])
                 person = persons[0]
                 keys = [person['pkey']]
                 #Get all the person's keys
-                keys_dict = self.iotlab_api.GetKeys(keys)
+                keys_dict = self.cortexlab_api.GetKeys(keys)
 
                 # Delete all stale keys, meaning the user has only one key
                 #at a time
@@ -753,8 +749,8 @@ class CortexlabDriver(Driver):
                 else:
                     #remove all the other keys
                     for key in keys_dict:
-                        self.iotlab_api.DeleteKey(person, key)
-                    self.iotlab_api.AddPersonKey(
+                        self.cortexlab_api.DeleteKey(person, key)
+                    self.cortexlab_api.AddPersonKey(
                         person, {'sshPublicKey': person['pkey']},
                         {'sshPublicKey': new_key})
         return True
@@ -783,16 +779,16 @@ class CortexlabDriver(Driver):
         if sfa_record_type == 'user':
 
             #get user from iotlab ldap
-            person = self.iotlab_api.GetPersons(sfa_record)
+            person = self.cortexlab_api.GetPersons(sfa_record)
             #No registering at a given site in Iotlab.
             #Once registered to the LDAP, all iotlab sites are
             #accesible.
             if person:
                 #Mark account as disabled in ldap
-                return self.iotlab_api.DeletePerson(sfa_record)
+                return self.cortexlab_api.DeletePerson(sfa_record)
 
         elif sfa_record_type == 'slice':
-            if self.iotlab_api.GetSlices(slice_filter=hrn,
+            if self.cortexlab_api.GetSlices(slice_filter=hrn,
                                          slice_filter_type='slice_hrn'):
-                ret = self.iotlab_api.DeleteSlice(sfa_record)
+                ret = self.cortexlab_api.DeleteSlice(sfa_record)
             return True

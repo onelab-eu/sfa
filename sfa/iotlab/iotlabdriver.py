@@ -416,7 +416,7 @@ class IotlabDriver(Driver):
 
         return requested_job_dict
 
-    def _process_requested_jobs(self, rspec):
+    def _process_requested_xp_dict(self, rspec):
         """
         Turns the requested leases and information into a dictionary
             of requested jobs, grouped by starting time.
@@ -427,13 +427,13 @@ class IotlabDriver(Driver):
 
         """
         requested_lease_list = self._get_requested_leases_list(rspec)
-        logger.debug("IOTLABDRIVER _process_requested_jobs \
+        logger.debug("IOTLABDRIVER _process_requested_xp_dict \
             requested_lease_list  %s" % (requested_lease_list))
-        job_dict = self._group_leases_by_start_time(requested_lease_list)
-        logger.debug("IOTLABDRIVER _process_requested_jobs  job_dict\
-        %s" % (job_dict))
+        xp_dict = self._group_leases_by_start_time(requested_lease_list)
+        logger.debug("IOTLABDRIVER _process_requested_xp_dict  xp_dict\
+        %s" % (xp_dict))
 
-        return job_dict
+        return xp_dict
 
     def create_sliver(self, slice_urn, slice_hrn, creds, rspec_string,
                       users, options):
@@ -511,9 +511,9 @@ class IotlabDriver(Driver):
         #verify_slice_nodes returns nodes, but unused here. Removed SA 13/08/12.
         #slices.verify_slice_nodes(sfa_slice, requested_slivers, peer)
 
-        requested_job_dict = self._process_requested_jobs(rspec)
+        requested_xp_dict = self._process_requested_xp_dict(rspec)
 
-        logger.debug("IOTLABDRIVER.PY \tcreate_sliver  requested_job_dict %s "
+        logger.debug("IOTLABDRIVER.PY \tcreate_sliver  requested_xp_dict %s "
                      % (requested_job_dict))
         #verify_slice_leases returns the leases , but the return value is unused
         #here. Removed SA 13/08/12
