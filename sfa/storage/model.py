@@ -391,5 +391,14 @@ def augment_with_sfa_builtins (local_record):
         related_records = getattr(local_record,attribute,[])
         hrns = [ r.hrn for r in related_records ]
         setattr (local_record, field_name, hrns)
+
+    # include legacy 'slices' and 'keys' fields for backwards compatibility
+    reg_keys = getattr(local_record, 'reg-keys')
+    if reg_keys:
+        setattr(local_record, 'keys', reg_keys)
+    reg_slices = getattr(local_record, 'reg-slices')
+    if reg_slices:
+       setattr(local_record, 'slices', reg_slices)
+         
     
 
