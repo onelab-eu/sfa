@@ -37,7 +37,7 @@ class CortexlabShell():
         :param config: configuration object from sfa.util.config
         :type config: Config object
         """
-        self.cortexlab_leases_db = TestbedAdditionalSfaDB(config)
+        self.leases_db = TestbedAdditionalSfaDB(config)
         self.query_sites = CortexlabQueryNodes()
         self.ldap = LDAPapi()
         self.time_format = "%Y-%m-%d %H:%M:%S"
@@ -676,8 +676,8 @@ class CortexlabShell():
 
         logger.debug("CORTEXLAB_API \r\n \r\n \t AddLeases testbed_xp_row %s" \
                 %(testbed_xp_row))
-        self.cortexlab_leases_db.testbed_session.add(testbed_xp_row)
-        self.cortexlab_leases_db.testbed_session.commit()
+        self.leases_db.testbed_session.add(testbed_xp_row)
+        self.leases_db.testbed_session.commit()
 
         logger.debug("CORTEXLAB_API \t AddLeases hostname_list start_time %s " \
                 %(start_time))
@@ -774,8 +774,8 @@ class CortexlabShell():
     #     deleted_jobs = set_jobs_psql.difference(kept_jobs)
     #     deleted_jobs = list(deleted_jobs)
     #     if len(deleted_jobs) > 0:
-    #         self.cortexlab_leases_db.testbed_session.query(LeaseTableXP).filter(LeaseTableXP.job_id.in_(deleted_jobs)).delete(synchronize_session='fetch')
-    #         self.cortexlab_leases_db.testbed_session.commit()
+    #         self.leases_db.testbed_session.query(LeaseTableXP).filter(LeaseTableXP.job_id.in_(deleted_jobs)).delete(synchronize_session='fetch')
+    #         self.leases_db.testbed_session.commit()
 
     #     return
 
@@ -889,7 +889,7 @@ class CortexlabShell():
         #the same user in LDAP SA 27/07/12
 
 
-        db_xp_query = self.cortexlab_leases_db.testbed_session.query(LeaseTableXP).all()
+        db_xp_query = self.leases_db.testbed_session.query(LeaseTableXP).all()
         db_xp_dict = dict([(row.experiment_id, row.__dict__)
                                for row in db_xp_query])
 
@@ -935,7 +935,7 @@ class CortexlabShell():
         if lease_filter_dict is None:
             reservation_list = unfiltered_reservation_list
 
-        self.cortexlab_leases_db.update_experiments_in_additional_sfa_db(
+        self.leases_db.update_experiments_in_additional_sfa_db(
             testbed_xp_list, db_xp_id_list)
 
         logger.debug(" CORTEXLAB_API.PY \tGetLeases reservation_list %s"
@@ -1017,8 +1017,8 @@ class CortexlabShell():
 
         #"""
         ##new_row = FederatedToIotlab(iotlab_hrn, federated_hrn)
-        ##self.cortexlab_leases_db.testbed_session.add(new_row)
-        ##self.cortexlab_leases_db.testbed_session.commit()
+        ##self.leases_db.testbed_session.add(new_row)
+        ##self.leases_db.testbed_session.commit()
 
         #logger.debug("CORTEXLAB_API UpdatePerson EMPTY - DO NOTHING \r\n ")
         #return

@@ -37,7 +37,7 @@ class IotlabShell():
         :param config: configuration object from sfa.util.config
         :type config: Config object
         """
-        self.iotlab_db = TestbedAdditionalSfaDB(config)
+        self.leases_db = TestbedAdditionalSfaDB(config)
         self.oar = OARrestapi()
         self.ldap = LDAPapi()
         self.time_format = "%Y-%m-%d %H:%M:%S"
@@ -845,8 +845,8 @@ class IotlabShell():
 
         logger.debug("IOTLAB_API \r\n \r\n \t AddLeases iotlab_ex_row %s" \
                 %(iotlab_ex_row))
-        self.iotlab_db.testbed_session.add(iotlab_ex_row)
-        self.iotlab_db.testbed_session.commit()
+        self.leases_db.testbed_session.add(iotlab_ex_row)
+        self.leases_db.testbed_session.commit()
 
         logger.debug("IOTLAB_API \t AddLeases hostname_list start_time %s " \
                 %(start_time))
@@ -952,7 +952,7 @@ class IotlabShell():
         #the same user in LDAP SA 27/07/12
         job_oar_list = []
 
-        jobs_psql_query = self.iotlab_db.testbed_session.query(LeaseTableXP).all()
+        jobs_psql_query = self.leases_db.testbed_session.query(LeaseTableXP).all()
         jobs_psql_dict = dict([(row.experiment_id, row.__dict__)
                                for row in jobs_psql_query])
         #jobs_psql_dict = jobs_psql_dict)
@@ -1018,7 +1018,7 @@ class IotlabShell():
         if lease_filter_dict is None:
             reservation_list = unfiltered_reservation_list
 
-        self.iotlab_db.update_experiments_in_additional_sfa_db(job_oar_list, jobs_psql_id_list)
+        self.leases_db.update_experiments_in_additional_sfa_db(job_oar_list, jobs_psql_id_list)
 
         logger.debug(" IOTLAB_API.PY \tGetLeases reservation_list %s"
                      % (reservation_list))
@@ -1099,8 +1099,8 @@ class IotlabShell():
 
         #"""
         ##new_row = FederatedToIotlab(iotlab_hrn, federated_hrn)
-        ##self.iotlab_db.testbed_session.add(new_row)
-        ##self.iotlab_db.testbed_session.commit()
+        ##self.leases_db.testbed_session.add(new_row)
+        ##self.leases_db.testbed_session.commit()
 
         #logger.debug("IOTLAB_API UpdatePerson EMPTY - DO NOTHING \r\n ")
         #return

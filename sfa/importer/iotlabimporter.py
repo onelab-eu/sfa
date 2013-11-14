@@ -517,11 +517,11 @@ class IotlabImporter:
         config = Config()
 
         iotlabdriver = IotlabDriver(config)
-        iotlab_db = TestbedAdditionalSfaDB(config)
+        leases_db = TestbedAdditionalSfaDB(config)
         #Create special slice table for iotlab
 
-        if not iotlab_db.exists('testbed_xp'):
-            iotlab_db.createtable()
+        if not leases_db.exists('testbed_xp'):
+            leases_db.createtable()
             self.logger.info("IotlabImporter.run:  testbed_xp table created ")
 
         # import site and node records in site into the SFA db.
