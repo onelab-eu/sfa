@@ -396,25 +396,25 @@ class IotlabDriver(Driver):
 
         """
 
-        requested_job_dict = {}
+        requested_xp_dict = {}
         for lease in requested_lease_list:
 
             #In case it is an asap experiment start_time is empty
             if lease['start_time'] == '':
                 lease['start_time'] = '0'
 
-            if lease['start_time'] not in requested_job_dict:
+            if lease['start_time'] not in requested_xp_dict:
                 if isinstance(lease['hostname'], str):
                     lease['hostname'] = [lease['hostname']]
 
-                requested_job_dict[lease['start_time']] = lease
+                requested_xp_dict[lease['start_time']] = lease
 
             else:
-                job_lease = requested_job_dict[lease['start_time']]
+                job_lease = requested_xp_dict[lease['start_time']]
                 if lease['duration'] == job_lease['duration']:
                     job_lease['hostname'].append(lease['hostname'])
 
-        return requested_job_dict
+        return requested_xp_dict
 
     def _process_requested_xp_dict(self, rspec):
         """
@@ -514,11 +514,11 @@ class IotlabDriver(Driver):
         requested_xp_dict = self._process_requested_xp_dict(rspec)
 
         logger.debug("IOTLABDRIVER.PY \tcreate_sliver  requested_xp_dict %s "
-                     % (requested_job_dict))
+                     % (requested_xp_dict))
         #verify_slice_leases returns the leases , but the return value is unused
         #here. Removed SA 13/08/12
         slices.verify_slice_leases(sfa_slice,
-                                   requested_job_dict, peer)
+                                   requested_xp_dict, peer)
 
         return aggregate.get_rspec(slice_xrn=slice_urn,
                                    login=sfa_slice['login'],
