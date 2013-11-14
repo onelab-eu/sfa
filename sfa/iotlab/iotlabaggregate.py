@@ -99,7 +99,7 @@ class IotlabAggregate:
         slice_name = slice_hrn
 
         # GetSlices always returns a list, even if there is only one element
-        slices = self.driver.iotlab_api.GetSlices(slice_filter=str(slice_name),
+        slices = self.driver.testbed_shell.GetSlices(slice_filter=str(slice_name),
                                                   slice_filter_type='slice_hrn',
                                                   login=login)
 
@@ -134,7 +134,7 @@ class IotlabAggregate:
 
         #Add default sliver attribute :
         #connection information for iotlab
-        # if get_authority(sfa_slice['hrn']) == self.driver.iotlab_api.root_auth:
+        # if get_authority(sfa_slice['hrn']) == self.driver.testbed_shell.root_auth:
         #     tmp = sfa_slice['hrn'].split('.')
         #     ldap_username = tmp[1].split('_')[0]
         #     ssh_access = None
@@ -157,7 +157,7 @@ class IotlabAggregate:
         researchers = [sfa_slice['reg_researchers'][0].__dict__]
         # look in ldap:
         ldap_username = None
-        ret =  self.driver.iotlab_api.GetPersons(researchers)
+        ret =  self.driver.testbed_shell.GetPersons(researchers)
         if len(ret) != 0:
             ldap_username = ret[0]['uid']
 
@@ -204,9 +204,9 @@ class IotlabAggregate:
                     return []
 
         # get the granularity in second for the reservation system
-        grain = self.driver.iotlab_api.GetLeaseGranularity()
+        grain = self.driver.testbed_shell.GetLeaseGranularity()
 
-        nodes = self.driver.iotlab_api.GetNodes()
+        nodes = self.driver.testbed_shell.GetNodes()
 
         nodes_dict = {}
 
@@ -218,8 +218,7 @@ class IotlabAggregate:
         logger.debug("IOTLABAGGREGATE api get_nodes slices  %s "
                      % (slices))
 
-
-        reserved_nodes = self.driver.iotlab_api.GetNodesCurrentlyInUse()
+        reserved_nodes = self.driver.testbed_shell.GetNodesCurrentlyInUse()
         logger.debug("IOTLABAGGREGATE api get_nodes slice_nodes_list  %s "
                      % (slice_nodes_list))
         for node in nodes:
@@ -235,12 +234,12 @@ class IotlabAggregate:
                 rspec_node['archi'] = node['archi']
                 rspec_node['radio'] = node['radio']
 
-                iotlab_xrn = iotlab_xrn_object(self.driver.iotlab_api.root_auth,
+                iotlab_xrn = iotlab_xrn_object(self.driver.testbed_shell.root_auth,
                                                node['hostname'])
                 rspec_node['component_id'] = iotlab_xrn.urn
                 rspec_node['component_name'] = node['hostname']
                 rspec_node['component_manager_id'] = \
-                                hrn_to_urn(self.driver.iotlab_api.root_auth,
+                                hrn_to_urn(self.driver.testbed_shell.root_auth,
                                 'authority+sa')
 
                 # Iotlab's nodes are federated : there is only one authority
@@ -325,12 +324,12 @@ class IotlabAggregate:
         #if slice_record:
             #lease_filter.update({'name': slice_record['name']})
 
-        #leases = self.driver.iotlab_api.GetLeases(lease_filter)
+        #leases = self.driver.testbed_shell.GetLeases(lease_filter)
 
         logger.debug("IOTLABAGGREGATE  get_all_leases ldap_username %s "
                      % (ldap_username))
-        leases = self.driver.iotlab_api.GetLeases(login=ldap_username)
-        grain = self.driver.iotlab_api.GetLeaseGranularity()
+        leases = self.driver.testbed_shell.GetLeases(login=ldap_username)
+        grain = self.driver.testbed_shell.GetLeaseGranularity()
         # site_ids = []
         rspec_leases = []
         for lease in leases:
@@ -339,7 +338,7 @@ class IotlabAggregate:
                 rspec_lease = Lease()
                 rspec_lease['lease_id'] = lease['lease_id']
                 #site = node['site_id']
-                iotlab_xrn = iotlab_xrn_object(self.driver.iotlab_api.root_auth,
+                iotlab_xrn = iotlab_xrn_object(self.driver.testbed_shell.root_auth,
                                                node)
                 rspec_lease['component_id'] = iotlab_xrn.urn
                 #rspec_lease['component_id'] = hostname_to_urn(self.driver.hrn,\

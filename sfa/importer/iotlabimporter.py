@@ -183,7 +183,7 @@ class IotlabImporter:
                         - ignored" % (node_id))
                 continue
             escaped_hrn =  \
-                self.hostname_to_hrn_escaped(iotlabdriver.iotlab_api.root_auth,
+                self.hostname_to_hrn_escaped(iotlabdriver.testbed_shell.root_auth,
                                              node['hostname'])
             self.logger.info("IOTLABIMPORTER node %s " % (node))
             hrn = node['hrn']
@@ -240,8 +240,8 @@ class IotlabImporter:
         :type iotlabdriver: IotlabDriver
         """
 
-        sites_listdict = iotlabdriver.iotlab_api.GetSites()
-        nodes_listdict = iotlabdriver.iotlab_api.GetNodes()
+        sites_listdict = iotlabdriver.testbed_shell.GetSites()
+        nodes_listdict = iotlabdriver.testbed_shell.GetNodes()
         nodes_by_id = dict([(node['node_id'], node) for node in nodes_listdict])
         for site in sites_listdict:
             site_hrn = site['name']
@@ -334,7 +334,7 @@ class IotlabImporter:
             iotlabdriver attributes.
         :type iotlabdriver: IotlabDriver
         """
-        ldap_person_listdict = iotlabdriver.iotlab_api.GetPersons()
+        ldap_person_listdict = iotlabdriver.testbed_shell.GetPersons()
         self.logger.info("IOTLABIMPORT \t ldap_person_listdict %s \r\n"
                          % (ldap_person_listdict))
 
@@ -531,7 +531,7 @@ class IotlabImporter:
 
          ### remove stale records
         # special records must be preserved
-        system_hrns = [iotlabdriver.hrn, iotlabdriver.iotlab_api.root_auth,
+        system_hrns = [iotlabdriver.hrn, iotlabdriver.testbed_shell.root_auth,
                        iotlabdriver.hrn + '.slicemanager']
         for record in self.all_records:
             if record.hrn in system_hrns:

@@ -45,7 +45,7 @@ class IotlabSlices:
         slice_authority = get_authority(hrn)
         #Iotlab stuff
         #This slice belongs to the current site
-        if slice_authority == self.driver.iotlab_api.root_auth:
+        if slice_authority == self.driver.testbed_shell.root_auth:
             site_authority = slice_authority
             return None
 
@@ -58,7 +58,7 @@ class IotlabSlices:
 
         # check if we are already peered with this site_authority
         #if so find the peer record
-        peers = self.driver.iotlab_api.GetPeers(peer_filter=site_authority)
+        peers = self.driver.testbed_shell.GetPeers(peer_filter=site_authority)
         for peer_record in peers:
             if site_authority == peer_record.hrn:
                 peer = peer_record
@@ -108,7 +108,7 @@ class IotlabSlices:
         logger.debug("IOTLABSLICES verify_slice_leases sfa_slice %s "
                      % (sfa_slice))
         #First get the list of current leases from OAR
-        leases = self.driver.iotlab_api.GetLeases({'slice_hrn': sfa_slice['hrn']})
+        leases = self.driver.testbed_shell.GetLeases({'slice_hrn': sfa_slice['hrn']})
         logger.debug("IOTLABSLICES verify_slice_leases requested_jobs_dict %s \
                         leases %s " % (requested_jobs_dict, leases))
 
@@ -132,8 +132,8 @@ class IotlabSlices:
         for job in requested_jobs_dict.values():
             job['duration'] = \
                 str(int(job['duration']) \
-                * self.driver.iotlab_api.GetLeaseGranularity())
-            if job['duration'] < self.driver.iotlab_api.GetLeaseGranularity():
+                * self.driver.testbed_shell.GetLeaseGranularity())
+            if job['duration'] < self.driver.testbed_shell.GetLeaseGranularity():
                 del requested_jobs_dict[job['start_time']]
 
         #Requested jobs
@@ -207,14 +207,14 @@ class IotlabSlices:
                 logger.debug("IOTLABSLICES \
                               NEWLEASE slice %s  job %s"
                              % (sfa_slice, job))
-                self.driver.iotlab_api.AddLeases(
+                self.driver.testbed_shell.AddLeases(
                     job['hostname'],
                     sfa_slice, int(job['start_time']),
                     int(job['duration']))
 
         #Deleted leases are the ones with lease id not declared in the Rspec
         if deleted_leases:
-            self.driver.iotlab_api.DeleteLeases(deleted_leases,
+            self.driver.testbed_shell.DeleteLeases(deleted_leases,
                                                 sfa_slice['user']['uid'])
             logger.debug("IOTLABSLICES \
                           verify_slice_leases slice %s deleted_leases %s"
@@ -223,7 +223,7 @@ class IotlabSlices:
         if reschedule_jobs_dict:
             for start_time in reschedule_jobs_dict:
                 job = reschedule_jobs_dict[start_time]
-                self.driver.iotlab_api.AddLeases(
+                self.driver.testbed_shell.AddLeases(
                     job['hostname'],
                     sfa_slice, int(job['start_time']),
                     int(job['duration']))
@@ -259,7 +259,7 @@ class IotlabSlices:
         deleted_nodes = []
 
         if 'node_ids' in sfa_slice:
-            nodes = self.driver.iotlab_api.GetNodes(
+            nodes = self.driver.testbed_shell.GetNodes(
                 sfa_slice['list_node_ids'],
                 ['hostname'])
             current_slivers = [node['hostname'] for node in nodes]
@@ -274,7 +274,7 @@ class IotlabSlices:
 
             if deleted_nodes:
                 #Delete the entire experience
-                self.driver.iotlab_api.DeleteSliceFromNodes(sfa_slice)
+                self.driver.testbed_shell.DeleteSliceFromNodes(sfa_slice)
             return nodes
 
     def verify_slice(self, slice_hrn, slice_record, sfa_peer):
@@ -300,7 +300,7 @@ class IotlabSlices:
 
         slicename = slice_hrn
         # check if slice belongs to Iotlab
-        slices_list = self.driver.iotlab_api.GetSlices(
+        slices_list = self.driver.testbed_shell.GetSlices(
             slice_filter=slicename, slice_filter_type='slice_hrn')
 
         sfa_slice = None
@@ -316,7 +316,7 @@ class IotlabSlices:
 
         else:
             #Search for user in ldap based on email SA 14/11/12
-            ldap_user = self.driver.iotlab_api.ldap.LdapFindUser(\
+            ldap_user = self.driver.testbed_shell.ldap.LdapFindUser(\
                                                     slice_record['user'])
             logger.debug(" IOTLABSLICES \tverify_slice Oups \
                         slice_record %s sfa_peer %s ldap_user %s"
@@ -333,7 +333,7 @@ class IotlabSlices:
                          }
 
             if ldap_user:
-                hrn = self.driver.iotlab_api.root_auth + '.' + ldap_user['uid']
+                hrn = self.driver.testbed_shell.root_auth + '.' + ldap_user['uid']
                 user = self.driver.get_user_record(hrn)
 
                 logger.debug(" IOTLABSLICES \tverify_slice hrn %s USER %s"
@@ -341,7 +341,7 @@ class IotlabSlices:
 
                  # add the external slice to the local SFA iotlab DB
                 if sfa_slice:
-                    self.driver.iotlab_api.AddSlice(sfa_slice, user)
+                    self.driver.testbed_shell.AddSlice(sfa_slice, user)
 
             logger.debug("IOTLABSLICES \tverify_slice ADDSLICE OK")
         return sfa_slice
@@ -416,8 +416,8 @@ class IotlabSlices:
             #Check user i in LDAP with GetPersons
             #Needed because what if the user has been deleted in LDAP but
             #is still in SFA?
-            existing_users = self.driver.iotlab_api.GetPersons(filter_user)
-            logger.debug(" \r\n SLABSLICE.PY \tverify_person  filter_user \
+            existing_users = self.driver.testbed_shell.GetPersons(filter_user)
+            logger.debug(" \r\n IOTLABSLICES.PY \tverify_person  filter_user \
                         %s existing_users %s "
                         % (filter_user, existing_users))
             #User is in iotlab LDAP
@@ -436,7 +436,7 @@ class IotlabSlices:
                     req += users[0]['email']
                 else:
                     req += users['email']
-                ldap_reslt = self.driver.iotlab_api.ldap.LdapSearch(req)
+                ldap_reslt = self.driver.testbed_shell.ldap.LdapSearch(req)
 
                 if ldap_reslt:
                     logger.debug(" SLABSLICE.PY \tverify_person users \
@@ -502,7 +502,7 @@ class IotlabSlices:
             person['email'] = added_user['email']
             person['key_ids'] = added_user.get('key_ids', [])
 
-            ret = self.driver.iotlab_api.AddPerson(person)
+            ret = self.driver.testbed_shell.AddPerson(person)
             if 'uid' in ret:
                 # meaning bool is True and the AddPerson was successful
                 person['uid'] = ret['uid']
@@ -528,7 +528,7 @@ class IotlabSlices:
         key_ids = []
         for person in persons:
             key_ids.extend(person['key_ids'])
-        keylist = self.driver.iotlab_api.GetKeys(key_ids, ['key_id', 'key'])
+        keylist = self.driver.testbed_shell.GetKeys(key_ids, ['key_id', 'key'])
 
         keydict = {}
         for key in keylist:
@@ -554,21 +554,21 @@ class IotlabSlices:
                     #try:
                         ##if peer:
                             #person = persondict[user['email']]
-                            #self.driver.iotlab_api.UnBindObjectFromPeer(
+                            #self.driver.testbed_shell.UnBindObjectFromPeer(
                                 # 'person',person['person_id'],
                                 # peer['shortname'])
-                    ret = self.driver.iotlab_api.AddPersonKey(
+                    ret = self.driver.testbed_shell.AddPersonKey(
                         user['email'], key)
                         #if peer:
                             #key_index = user_keys.index(key['key'])
                             #remote_key_id = user['key_ids'][key_index]
-                            #self.driver.iotlab_api.BindObjectToPeer('key', \
+                            #self.driver.testbed_shell.BindObjectToPeer('key', \
                                             #key['key_id'], peer['shortname'], \
                                             #remote_key_id)
 
                     #finally:
                         #if peer:
-                            #self.driver.iotlab_api.BindObjectToPeer('person', \
+                            #self.driver.testbed_shell.BindObjectToPeer('person', \
                                     #person['person_id'], peer['shortname'], \
                                     #user['person_id'])
 
@@ -578,10 +578,10 @@ class IotlabSlices:
             removed_keys = set(existing_keys).difference(requested_keys)
             for key in removed_keys:
                     #if peer:
-                        #self.driver.iotlab_api.UnBindObjectFromPeer('key', \
+                        #self.driver.testbed_shell.UnBindObjectFromPeer('key', \
                                         #key, peer['shortname'])
 
                 user = users_by_key_string[key]
-                self.driver.iotlab_api.DeleteKey(user, key)
+                self.driver.testbed_shell.DeleteKey(user, key)
 
         return
