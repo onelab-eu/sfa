@@ -17,7 +17,7 @@ from sfa.cortexlab.cortexlabaggregate import CortexlabAggregate, \
 
 from sfa.iotlab.iotlabslices import CortexlabSlices
 
-from sfa.cortexlab.cortexlabapi import CortexlabTestbedAPI
+from sfa.cortexlab.cortexlabshell import CortexlabShell
 
 
 class CortexlabDriver(Driver):
@@ -41,7 +41,7 @@ class CortexlabDriver(Driver):
         """
         Driver.__init__(self, config)
         self.config = config
-        self.cortexlab_api = CortexlabTestbedAPI(config)
+        self.testbed_shell = CortexlabShell(config)
         self.cache = None
 
     def augment_records_with_testbed_info(self, record_list):
@@ -86,7 +86,7 @@ class CortexlabDriver(Driver):
                     # look for node info using GetNodes
                     # the record is about one node only
                     filter_dict = {'hrn': [record['hrn']]}
-                    node_info = self.cortexlab_api.GetNodes(filter_dict)
+                    node_info = self.testbed_shell.GetNodes(filter_dict)
                     # the node_info is about one node only, but it is formatted
                     # as a list
                     record.update(node_info[0])
@@ -118,7 +118,7 @@ class CortexlabDriver(Driver):
                              'key_ids': ''})
 
                     #Get iotlab slice record and oar job id if any.
-                    recslice_list = self.cortexlab_api.GetSlices(
+                    recslice_list = self.testbed_shell.GetSlices(
                         slice_filter=str(record['hrn']),
                         slice_filter_type='slice_hrn')
 
@@ -132,7 +132,7 @@ class CortexlabDriver(Driver):
                             fill_record_info experiment_id %s "
                                          % (rec['experiment_id']))
 
-                            record['node_ids'] = [self.cortexlab_api.root_auth +
+                            record['node_ids'] = [self.testbed_shell.root_auth +
                                                   '.' + hostname for hostname
                                                   in rec['node_ids']]
                     except KeyError:
@@ -146,7 +146,7 @@ class CortexlabDriver(Driver):
                     #The record is a SFA user record.
                     #Get the information about his slice from Iotlab's DB
                     #and add it to the user record.
-                    recslice_list = self.cortexlab_api.GetSlices(
+                    recslice_list = self.testbed_shell.GetSlices(
                         slice_filter=record['record_id'],
                         slice_filter_type='record_id_user')
 
@@ -179,7 +179,7 @@ class CortexlabDriver(Driver):
                                      'hrn': recslice_list[0]['hrn']})
 
                     #GetPersons takes [] as filters
-                    user_cortexlab = self.cortexlab_api.GetPersons([record])
+                    user_cortexlab = self.testbed_shell.GetPersons([record])
 
                     record.update(user_cortexlab[0])
                     #For client_helper.py compatibility
@@ -215,7 +215,7 @@ class CortexlabDriver(Driver):
         """
 
         #First get the slice with the slice hrn
-        slice_list = self.cortexlab_api.GetSlices(slice_filter=slice_hrn,
+        slice_list = self.testbed_shell.GetSlices(slice_filter=slice_hrn,
                                                slice_filter_type='slice_hrn')
 
         if len(slice_list) == 0:
@@ -228,7 +228,7 @@ class CortexlabDriver(Driver):
         slice_nodes_list = []
         slice_nodes_list = one_slice['node_ids']
         #Get all the corresponding nodes details
-        nodes_all = self.cortexlab_api.GetNodes(
+        nodes_all = self.testbed_shell.GetNodes(
             {'hostname': slice_nodes_list},
             ['node_id', 'hostname', 'site', 'boot_state'])
         nodeall_byhostname = dict([(one_node['hostname'], one_node)
@@ -361,7 +361,7 @@ class CortexlabDriver(Driver):
 
             if not lease.get('lease_id'):
                 if get_authority(lease['component_id']) == \
-                        self.cortexlab_api.root_auth:
+                        self.testbed_shell.root_auth:
                     single_requested_lease['hostname'] = \
                         cortexlab_xrn_to_hostname(\
                             lease.get('component_id').strip())
@@ -372,7 +372,7 @@ class CortexlabDriver(Driver):
                     #the lease to the requested leases list
                     duration_in_seconds = \
                         int(single_requested_lease['duration'])
-                    if duration_in_seconds >= self.cortexlab_api.GetMinExperimentDurationInGranularity():
+                    if duration_in_seconds >= self.testbed_shell.GetMinExperimentDurationInGranularity():
                         requested_lease_list.append(single_requested_lease)
 
         return requested_lease_list
@@ -499,7 +499,7 @@ class CortexlabDriver(Driver):
 
         #requested_slivers = [node.get('component_id') \
                     #for node in rspec.version.get_nodes_with_slivers()\
-                    #if node.get('authority_id') is self.cortexlab_api.root_auth]
+                    #if node.get('authority_id') is self.testbed_shell.root_auth]
         #l = [ node for node in rspec.version.get_nodes_with_slivers() ]
         #logger.debug("SLADRIVER \tcreate_sliver requested_slivers \
                                     #requested_slivers %s  listnodes %s" \
@@ -542,7 +542,7 @@ class CortexlabDriver(Driver):
              delete_sliver .
         """
 
-        sfa_slice_list = self.cortexlab_api.GetSlices(
+        sfa_slice_list = self.testbed_shell.GetSlices(
             slice_filter=slice_hrn,
             slice_filter_type='slice_hrn')
 
@@ -560,7 +560,7 @@ class CortexlabDriver(Driver):
             logger.debug("CORTEXLABDRIVER.PY delete_sliver peer %s \
                 \r\n \t sfa_slice %s " % (peer, sfa_slice))
             try:
-                self.cortexlab_api.DeleteSliceFromNodes(sfa_slice)
+                self.testbed_shell.DeleteSliceFromNodes(sfa_slice)
                 return True
             except:
                 return False
@@ -655,7 +655,7 @@ class CortexlabDriver(Driver):
 
         # get data from db
 
-        slices = self.cortexlab_api.GetSlices()
+        slices = self.testbed_shell.GetSlices()
         logger.debug("CORTEXLABDRIVER.PY \tlist_slices hrn %s \r\n \r\n"
                      % (slices))
         slice_hrns = [iotlab_slice['hrn'] for iotlab_slice in slices]
@@ -732,11 +732,11 @@ class CortexlabDriver(Driver):
 
             if new_key:
                 # must check this key against the previous one if it exists
-                persons = self.cortexlab_api.GetPersons([old_sfa_record])
+                persons = self.testbed_shell.GetPersons([old_sfa_record])
                 person = persons[0]
                 keys = [person['pkey']]
                 #Get all the person's keys
-                keys_dict = self.cortexlab_api.GetKeys(keys)
+                keys_dict = self.testbed_shell.GetKeys(keys)
 
                 # Delete all stale keys, meaning the user has only one key
                 #at a time
@@ -749,8 +749,8 @@ class CortexlabDriver(Driver):
                 else:
                     #remove all the other keys
                     for key in keys_dict:
-                        self.cortexlab_api.DeleteKey(person, key)
-                    self.cortexlab_api.AddPersonKey(
+                        self.testbed_shell.DeleteKey(person, key)
+                    self.testbed_shell.AddPersonKey(
                         person, {'sshPublicKey': person['pkey']},
                         {'sshPublicKey': new_key})
         return True
@@ -779,16 +779,16 @@ class CortexlabDriver(Driver):
         if sfa_record_type == 'user':
 
             #get user from iotlab ldap
-            person = self.cortexlab_api.GetPersons(sfa_record)
+            person = self.testbed_shell.GetPersons(sfa_record)
             #No registering at a given site in Iotlab.
             #Once registered to the LDAP, all iotlab sites are
             #accesible.
             if person:
                 #Mark account as disabled in ldap
-                return self.cortexlab_api.DeletePerson(sfa_record)
+                return self.testbed_shell.DeletePerson(sfa_record)
 
         elif sfa_record_type == 'slice':
-            if self.cortexlab_api.GetSlices(slice_filter=hrn,
+            if self.testbed_shell.GetSlices(slice_filter=hrn,
                                          slice_filter_type='slice_hrn'):
-                ret = self.cortexlab_api.DeleteSlice(sfa_record)
+                ret = self.testbed_shell.DeleteSlice(sfa_record)
             return True
