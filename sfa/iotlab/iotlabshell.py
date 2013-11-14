@@ -57,8 +57,8 @@ class IotlabShell():
         """
         return IotlabShell._MINIMUM_DURATION
 
-    @staticmethod
-    def GetPeers(peer_filter=None ):
+
+    def GetPeers(self, peer_filter=None ):
         """ Gathers registered authorities in SFA DB and looks for specific peer
         if peer_filter is specified.
         :param peer_filter: name of the site authority looked for.
@@ -405,9 +405,7 @@ class IotlabShell():
         return return_node_list
 
 
-
-    @staticmethod
-    def AddSlice(slice_record, user_record):
+    def AddSlice(self, slice_record, user_record):
         """
 
         Add slice to the local iotlab sfa tables if the slice comes
@@ -526,8 +524,8 @@ class IotlabShell():
                     delete_failed))
         return delete_failed or True
 
-    @staticmethod
-    def __add_person_to_db(user_dict):
+
+    def __add_person_to_db(self, user_dict):
         """
         Add a federated user straight to db when the user issues a lease
         request with iotlab nodes and that he has not registered with iotlab
@@ -1107,8 +1105,8 @@ class IotlabShell():
         #logger.debug("IOTLAB_API UpdatePerson EMPTY - DO NOTHING \r\n ")
         #return
 
-    @staticmethod
-    def GetKeys(key_filter=None):
+
+    def GetKeys(self, key_filter=None):
         """Returns a dict of dict based on the key string. Each dict entry
         contains the key id, the ssh key, the user's email and the
         user's hrn.
@@ -1162,10 +1160,7 @@ class IotlabShell():
         return ret['bool']
 
 
-
-
-    @staticmethod
-    def _sql_get_slice_info(slice_filter):
+    def _sql_get_slice_info(self, slice_filter):
         """
         Get the slice record based on the slice hrn. Fetch the record of the
         user associated with the slice by using joinedload based on the
@@ -1201,8 +1196,7 @@ class IotlabShell():
         else:
             return None
 
-    @staticmethod
-    def _sql_get_slice_info_from_user(slice_filter):
+    def _sql_get_slice_info_from_user(self, slice_filter):
         """
         Get the slice record based on the user recordid by using a joinedload
         on the relationship reg_slices_as_researcher. Format the sql record
