@@ -23,7 +23,9 @@ from sfa.util.xrn import Xrn, get_leaf, get_authority, hrn_to_urn
 from sfa.trust.gid import create_uuid    
 from sfa.trust.certificate import convert_public_key, Keypair
 
-from sfa.storage.alchemy import dbsession
+# using global alchemy.session() here is fine 
+# as importer is on standalone one-shot process
+from sfa.storage.alchemy import global_dbsession
 from sfa.storage.model import RegRecord, RegAuthority, RegSlice, RegNode, RegUser, RegKey
 
 from sfa.dummy.dummyshell import DummyShell    
@@ -99,7 +101,7 @@ class DummyImporter:
         shell = DummyShell (config)
 
         ######## retrieve all existing SFA objects
-        all_records = dbsession.query(RegRecord).all()
+        all_records = global_dbsession.query(RegRecord).all()
 
         # create hash by (type,hrn) 
         # we essentially use this to know if a given record is already known to SFA 
@@ -159,8 +161,8 @@ class DummyImporter:
                                                pointer= -1,
                                                authority=get_authority(site_hrn))
                     site_record.just_created()
-                    dbsession.add(site_record)
-                    dbsession.commit()
+                    global_dbsession.add(site_record)
+                    global_dbsession.commit()
                     self.logger.info("DummyImporter: imported authority (site) : %s" % site_record) 
                     self.remember_record (site_record)
                 except:
@@ -190,8 +192,8 @@ class DummyImporter:
                                                pointer =node['node_id'],
                                                authority=get_authority(node_hrn))
                         node_record.just_created()
-                        dbsession.add(node_record)
-                        dbsession.commit()
+                        global_dbsession.add(node_record)
+                        global_dbsession.commit()
                         self.logger.info("DummyImporter: imported node: %s" % node_record)  
                         self.remember_record (node_record)
                     except:
@@ -249,8 +251,8 @@ class DummyImporter:
                         else:
                             self.logger.warning("No key found for user %s"%user_record)
                         user_record.just_created()
-                        dbsession.add (user_record)
-                        dbsession.commit()
+                        global_dbsession.add (user_record)
+                        global_dbsession.commit()
                         self.logger.info("DummyImporter: imported person: %s" % user_record)
                         self.remember_record ( user_record )
 
@@ -277,7 +279,7 @@ class DummyImporter:
                                 user_record.reg_keys=[ RegKey (pubkey)]
                             self.logger.info("DummyImporter: updated person: %s" % user_record)
                     user_record.email = user['email']
-                    dbsession.commit()
+                    global_dbsession.commit()
                     user_record.stale=False
                 except:
                     self.logger.log_exc("DummyImporter: failed to import user %d %s"%(user['user_id'],user['email']))
@@ -296,8 +298,8 @@ class DummyImporter:
                                                  pointer=slice['slice_id'],
                                                  authority=get_authority(slice_hrn))
                         slice_record.just_created()
-                        dbsession.add(slice_record)
-                        dbsession.commit()
+                        global_dbsession.add(slice_record)
+                        global_dbsession.commit()
                         self.logger.info("DummyImporter: imported slice: %s" % slice_record)  
                         self.remember_record ( slice_record )
                     except:
@@ -309,7 +311,7 @@ class DummyImporter:
                 # record current users affiliated with the slice
                 slice_record.reg_researchers = \
                     [ self.locate_by_type_pointer ('user',user_id) for user_id in slice['user_ids'] ]
-                dbsession.commit()
+                global_dbsession.commit()
                 slice_record.stale=False
 
         ### remove stale records
@@ -328,5 +330,5 @@ class DummyImporter:
                 self.logger.warning("stale not found with %s"%record)
             if stale:
                 self.logger.info("DummyImporter: deleting stale record: %s" % record)
-                dbsession.delete(record)
-                dbsession.commit()
+                global_dbsession.delete(record)
+                global_dbsession.commit()

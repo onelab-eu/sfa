@@ -1,0 +1,37 @@
+As of Nov. 2013, when moving from 3.0 to 3.2
+--------------------------------------------
+
+* driver-creation
+. expect an api instead of a config (and api.config is set)
+
+* managers
+. cannot access their driver from self, but from the context (api is passed to methods)
+
+* dbsession : implementation
+. storage.Alchemy still exports a global dbsession object, but named global_session(); together with close_global_session()
+. storage.Alchemy also exports a method called session(), that is *NOT* managed - caller is expected to close_session()
+. storage.Alchemy only exports global_session (as alchemy.global_session) 
+  so that any code that would still need adaptation will break at import time
+
+* dbsession : usage
+. use api.dbsession() whenever possible
+. it's fair to have importers and sfaadmin use the global session (there won't be instances of api in their case)
+. there is one or 2 exceptions where dbsession is retrieved from an sqlalchemy object but this is deemed poor practice, please DO NOT do this as far as possible
+
+---
+OTHER NOTES:
+
+* iotlab/cortexlab:
+. while browsing this code I noticed that the code for cortexlab seems very close to the one for iotlab
+  I wonder if some inheritance would have allowed to reduce code duplication
+  so I'll forget about cortexlab for now as all/most of the folowing comments probably apply as-is to cortex
+
+* iotlab/iotlabapi
+. it's confusing that the class name here does not match the filename (class IotlabTestbedAPI in iotlabapi.py)
+. IIUC this could/should be renamed IotlabShell (in iotlabshell.py) instead, that's exactly what our notion of a shell is
+. regardless; in order to fetch dbsession() from the context api, I tried to tweak iotlabtestbedapi so that it also takes an api instead of a config in argument
+  however I am puzzled at why most(all?) the IotlabTestbadAPI methods that actually use dbsession are labelled as methodstatic ?
+  Is this a strong constraint ? 
+  It would help me a lot if this could be made a regular class, as opposed to what looks like a mere namespace, so we can retrieve dbsession() from an api object
+
+

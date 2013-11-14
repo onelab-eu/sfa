@@ -8,7 +8,6 @@ from sfa.util.xrn import Xrn, get_leaf, get_authority, urn_to_hrn
 
 from sfa.rspecs.rspec import RSpec
 from sfa.storage.model import SliverAllocation
-from sfa.storage.alchemy import dbsession
 
 from sfa.dummy.dummyxrn import DummyXrn, hrn_to_dummy_slicename
 
@@ -107,7 +106,7 @@ class DummySlices:
                                       component_id=component_id,
                                       slice_urn = slice_urn,
                                       allocation_state='geni_allocated')
-            record.sync()
+            record.sync(self.driver.api.dbsession())
         return resulting_nodes
         
 

@@ -14,10 +14,10 @@ from sfa.util.version import version_core
 from sfa.server.xmlrpcapi import XmlrpcApi
 from sfa.client.return_value import ReturnValue
 
+from sfa.storage.alchemy import alchemy
 
 ####################
 class SfaApi (XmlrpcApi): 
-    
     """
     An SfaApi instance is a basic xmlrcp service
     augmented with the local cryptographic material and hrn
@@ -31,8 +31,8 @@ class SfaApi (XmlrpcApi):
 
     It gets augmented by the generic layer with 
     (*) an instance of manager (actually a manager module for now)
-    (*) which in turn holds an instance of a testbed driver
-    For convenience api.manager.driver == api.driver
+        beware that this is shared among all instances of api
+    (*) an instance of a testbed driver
     """
 
     def __init__ (self, encoding="utf-8", methods='sfa.methods', 
@@ -69,6 +69,7 @@ class SfaApi (XmlrpcApi):
         
         # filled later on by generic/Generic
         self.manager=None
+        self._dbsession=None
 
     def server_proxy(self, interface, cred, timeout=30):
         """
@@ -89,7 +90,16 @@ class SfaApi (XmlrpcApi):
         server = interface.server_proxy(key_file, cert_file, timeout)
         return server
                
-        
+    def dbsession(self):
+        if self._dbsession is None:
+            self._dbsession=alchemy.session()
+        return self._dbsession
+
+    def close_dbsession(self):
+        if self._dbsession is None: return
+        alchemy.close_session(self._dbsession)
+        self._dbsession=None
+
     def getCredential(self, minimumExpiration=0):
         """
         Return a valid credential for this interface.
@@ -159,7 +169,8 @@ class SfaApi (XmlrpcApi):
         if not auth_hrn or hrn == self.config.SFA_INTERFACE_HRN:
             auth_hrn = hrn
         auth_info = self.auth.get_auth_info(auth_hrn)
-        from sfa.storage.alchemy import dbsession
+        # xxx although unlikely we might want to check for a potential leak
+        dbsession=self.dbsession()
         from sfa.storage.model import RegRecord
         record = dbsession.query(RegRecord).filter_by(type='authority+sa', hrn=hrn).first()
         if not record:

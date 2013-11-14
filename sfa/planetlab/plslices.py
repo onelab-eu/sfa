@@ -10,7 +10,6 @@ from sfa.planetlab.vlink import VLink
 from sfa.planetlab.topology import Topology
 from sfa.planetlab.plxrn import PlXrn, hrn_to_pl_slicename, xrn_to_hostname, top_auth, hash_loginbase
 from sfa.storage.model import SliverAllocation
-from sfa.storage.alchemy import dbsession
 
 MAXINT =  2L**31-1
 
@@ -272,7 +271,7 @@ class PlSlices:
                                       component_id=component_id,
                                       slice_urn = slice_urn, 
                                       allocation_state='geni_allocated')      
-            record.sync()
+            record.sync(self.driver.api.dbsession())
         return resulting_nodes
 
     def free_egre_key(self):

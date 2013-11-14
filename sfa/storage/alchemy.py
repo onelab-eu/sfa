@@ -49,21 +49,34 @@ class Alchemy:
     def check (self):
         self.engine.execute ("select 1").scalar()
 
-    def session (self):
+    def global_session (self):
         if self._session is None:
             Session=sessionmaker ()
             self._session=Session(bind=self.engine)
+            logger.info('alchemy.global_session created session %s'%self._session)
         return self._session
 
-    def close_session (self):
+    def close_global_session (self):
         if self._session is None: return
+        logger.info('alchemy.close_global_session %s'%self._session)
         self._session.close()
         self._session=None
+
+    # create a dbsession to be managed separately
+    def session (self):
+        Session=sessionmaker()
+        session=Session (bind=self.engine)
+        logger.info('alchemy.session created session %s'%session)
+        return session
+
+    def close_session (self, session):
+        logger.info('alchemy.close_session closed session %s'%session)
+        session.close()
 
 ####################
 from sfa.util.config import Config
 
 alchemy=Alchemy (Config())
 engine=alchemy.engine
-dbsession=alchemy.session()
+global_dbsession=alchemy.global_session()
 

@@ -7,6 +7,7 @@ from sfa.util.xrn import Xrn, urn_to_hrn, hrn_to_urn, get_leaf, get_authority
 from sfa.util.cache import Cache
 from sfa.rspecs.rspec import RSpec
 from sfa.storage.model import SliverAllocation
+# xxx 1-dbsession-per-request
 from sfa.storage.alchemy import dbsession
 
 class V2ToV3Adapter:

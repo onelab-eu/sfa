@@ -24,7 +24,9 @@ from sfa.util.xrn import Xrn, get_leaf, get_authority, hrn_to_urn
 from sfa.trust.gid import create_uuid    
 from sfa.trust.certificate import convert_public_key, Keypair
 
-from sfa.storage.alchemy import dbsession
+# using global alchemy.session() here is fine 
+# as importer is on standalone one-shot process
+from sfa.storage.alchemy import global_dbsession
 from sfa.storage.model import RegRecord, RegAuthority, RegSlice, RegNode, RegUser, RegKey
 
 from sfa.planetlab.plshell import PlShell    
@@ -115,8 +117,8 @@ class PlImporter:
                                            pointer=site['site_id'],
                                            authority=get_authority(site_hrn))
                 auth_record.just_created()
-                dbsession.add(auth_record)
-                dbsession.commit()
+                global_dbsession.add(auth_record)
+                global_dbsession.commit()
                 self.logger.info("PlImporter: Imported authority (vini site) %s"%auth_record)
                 self.remember_record ( site_record )
 
@@ -127,7 +129,7 @@ class PlImporter:
         shell = PlShell (config)
 
         ######## retrieve all existing SFA objects
-        all_records = dbsession.query(RegRecord).all()
+        all_records = global_dbsession.query(RegRecord).all()
 
         # create hash by (type,hrn) 
         # we essentially use this to know if a given record is already known to SFA 
@@ -209,8 +211,8 @@ class PlImporter:
                                                pointer=site['site_id'],
                                                authority=get_authority(site_hrn))
                     site_record.just_created()
-                    dbsession.add(site_record)
-                    dbsession.commit()
+                    global_dbsession.add(site_record)
+                    global_dbsession.commit()
                     self.logger.info("PlImporter: imported authority (site) : %s" % site_record) 
                     self.remember_record (site_record)
                 except:
@@ -245,8 +247,8 @@ class PlImporter:
                                                pointer =node['node_id'],
                                                authority=get_authority(node_hrn))
                         node_record.just_created()
-                        dbsession.add(node_record)
-                        dbsession.commit()
+                        global_dbsession.add(node_record)
+                        global_dbsession.commit()
                         self.logger.info("PlImporter: imported node: %s" % node_record)  
                         self.remember_record (node_record)
                     except:
@@ -310,8 +312,8 @@ class PlImporter:
                         else:
                             self.logger.warning("No key found for user %s"%user_record)
                         user_record.just_created()
-                        dbsession.add (user_record)
-                        dbsession.commit()
+                        global_dbsession.add (user_record)
+                        global_dbsession.commit()
                         self.logger.info("PlImporter: imported person: %s" % user_record)
                         self.remember_record ( user_record )
                     else:
@@ -359,7 +361,7 @@ class PlImporter:
                             user_record.just_updated()
                             self.logger.info("PlImporter: updated person: %s" % user_record)
                     user_record.email = person['email']
-                    dbsession.commit()
+                    global_dbsession.commit()
                     user_record.stale=False
                     # accumulate PIs - PLCAPI has a limitation that when someone has PI role
                     # this is valid for all sites she is in..
@@ -377,7 +379,7 @@ class PlImporter:
             # could be performed twice with the same person...
             # so hopefully we do not need to eliminate duplicates explicitly here anymore
             site_record.reg_pis = list(set(site_pis))
-            dbsession.commit()
+            global_dbsession.commit()
 
             # import slices
             for slice_id in site['slice_ids']:
@@ -396,8 +398,8 @@ class PlImporter:
                                                  pointer=slice['slice_id'],
                                                  authority=get_authority(slice_hrn))
                         slice_record.just_created()
-                        dbsession.add(slice_record)
-                        dbsession.commit()
+                        global_dbsession.add(slice_record)
+                        global_dbsession.commit()
                         self.logger.info("PlImporter: imported slice: %s" % slice_record)  
                         self.remember_record ( slice_record )
                     except:
@@ -410,7 +412,7 @@ class PlImporter:
                 # record current users affiliated with the slice
                 slice_record.reg_researchers = \
                     [ self.locate_by_type_pointer ('user',user_id) for user_id in slice['person_ids'] ]
-                dbsession.commit()
+                global_dbsession.commit()
                 slice_record.stale=False
 
         ### remove stale records
@@ -432,5 +434,5 @@ class PlImporter:
                 self.logger.warning("stale not found with %s"%record)
             if stale:
                 self.logger.info("PlImporter: deleting stale record: %s" % record)
-                dbsession.delete(record)
-                dbsession.commit()
+                global_dbsession.delete(record)
+                global_dbsession.commit()

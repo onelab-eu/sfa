@@ -11,7 +11,9 @@ from sfa.iotlab.iotlabpostgres import TestbedAdditionalSfaDB
 from sfa.trust.certificate import Keypair, convert_public_key
 from sfa.trust.gid import create_uuid
 
-from sfa.storage.alchemy import dbsession
+# using global alchemy.session() here is fine 
+# as importer is on standalone one-shot process
+from sfa.storage.alchemy import global_dbsession
 from sfa.storage.model import RegRecord, RegAuthority, RegSlice, RegNode, \
     RegUser, RegKey
 
@@ -43,7 +45,7 @@ class IotlabImporter:
         self.logger = loc_logger
         self.logger.setLevelDebug()
         #retrieve all existing SFA objects
-        self.all_records = dbsession.query(RegRecord).all()
+        self.all_records = global_dbsession.query(RegRecord).all()
 
         # initialize record.stale to True by default,
         # then mark stale=False on the ones that are in use
@@ -213,8 +215,8 @@ class IotlabImporter:
                 try:
 
                     node_record.just_created()
-                    dbsession.add(node_record)
-                    dbsession.commit()
+                    global_dbsession.add(node_record)
+                    global_dbsession.commit()
                     self.logger.info("IotlabImporter: imported node: %s"
                                      % node_record)
                     self.update_just_added_records_dict(node_record)
@@ -259,8 +261,8 @@ class IotlabImporter:
                                      pointer='-1',
                                      authority=get_authority(site_hrn))
                     site_record.just_created()
-                    dbsession.add(site_record)
-                    dbsession.commit()
+                    global_dbsession.add(site_record)
+                    global_dbsession.commit()
                     self.logger.info("IotlabImporter: imported authority \
                                     (site) %s" % site_record)
                     self.update_just_added_records_dict(site_record)
@@ -404,8 +406,8 @@ class IotlabImporter:
 
                         try:
                             user_record.just_created()
-                            dbsession.add (user_record)
-                            dbsession.commit()
+                            global_dbsession.add (user_record)
+                            global_dbsession.commit()
                             self.logger.info("IotlabImporter: imported person \
                                             %s" % (user_record))
                             self.update_just_added_records_dict(user_record)
@@ -440,7 +442,7 @@ class IotlabImporter:
                     user_record.email = person['email']
 
             try:
-                dbsession.commit()
+                global_dbsession.commit()
                 user_record.stale = False
             except SQLAlchemyError:
                 self.logger.log_exc("IotlabImporter: \
@@ -478,8 +480,8 @@ class IotlabImporter:
                                     authority=get_authority(slice_hrn))
             try:
                 slice_record.just_created()
-                dbsession.add(slice_record)
-                dbsession.commit()
+                global_dbsession.add(slice_record)
+                global_dbsession.commit()
 
 
                 self.update_just_added_records_dict(slice_record)
@@ -497,7 +499,7 @@ class IotlabImporter:
 
         slice_record.reg_researchers = [user_record]
         try:
-            dbsession.commit()
+            global_dbsession.commit()
             slice_record.stale = False
         except SQLAlchemyError:
             self.logger.log_exc("IotlabImporter: failed to update slice")
@@ -551,8 +553,8 @@ class IotlabImporter:
                                  % (record))
 
                 try:
-                    dbsession.delete(record)
-                    dbsession.commit()
+                    global_dbsession.delete(record)
+                    global_dbsession.commit()
                 except SQLAlchemyError:
                     self.logger.log_exc("IotlabImporter: failed to delete \
                         stale record %s" % (record))

@@ -11,7 +11,6 @@ from sfa.util.xrn import Xrn, hrn_to_urn, get_leaf, urn_to_hrn
 from sfa.util.cache import Cache
 
 # one would think the driver should not need to mess with the SFA db, but..
-from sfa.storage.alchemy import dbsession
 from sfa.storage.model import RegRecord
 
 # used to be used in get_ticket
@@ -46,8 +45,9 @@ class NitosDriver (Driver):
     # the cache instance is a class member so it survives across incoming requests
     cache = None
 
-    def __init__ (self, config):
-        Driver.__init__ (self, config)
+    def __init__ (self, api):
+        Driver.__init__ (self, api)
+        config = api.config
         self.shell = NitosShell (config)
         self.cache=None
         self.testbedInfo = self.shell.getTestbedInfo()
@@ -367,7 +367,7 @@ class NitosDriver (Driver):
         
         # get the registry records
         user_list, users = [], {}
-        user_list = dbsession.query(RegRecord).filter(RegRecord.pointer.in_(user_ids)).all()
+        user_list = self.api.dbsession().query(RegRecord).filter(RegRecord.pointer.in_(user_ids)).all()
         # create a hrns keyed on the sfa record's pointer.
         # Its possible for multiple records to have the same pointer so
         # the dict's value will be a list of hrns.

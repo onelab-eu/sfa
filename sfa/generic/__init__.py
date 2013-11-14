@@ -67,16 +67,12 @@ class Generic:
         # xxx can probably drop support for managers implemented as modules 
         # which makes it a bit awkward
         manager_class_or_module = self.make_manager(api.interface)
-        driver = self.make_driver (api.config, api.interface)
+        driver = self.make_driver (api)
         ### arrange stuff together
         # add a manager wrapper
         manager_wrap = ManagerWrapper(manager_class_or_module,api.interface,api.config)
         api.manager=manager_wrap
-        # insert driver in manager
-        logger.debug("Setting manager.driver, manager=%s"%manager_class_or_module)
-        # xxx this should go into the object and not the class !?!
-        manager_class_or_module.driver=driver
-        # add it in api as well for convenience
+        # add it in api as well; driver.api is set too as part of make_driver
         api.driver=driver
         return api
 
@@ -100,7 +96,9 @@ class Generic:
             logger.log_exc_critical(message)
         
     # need interface to select the right driver
-    def make_driver (self, config, interface):
+    def make_driver (self, api):
+        config=api.config
+        interface=api.interface
         flavour = self.flavour
         message="Generic.make_driver for flavour=%s and interface=%s"%(flavour,interface)
         
@@ -111,7 +109,7 @@ class Generic:
         try:
             class_obj = getattr(self,classname)()
             logger.debug("%s : %s"%(message,class_obj))
-            return class_obj(config)
+            return class_obj(api)
         except:
             logger.log_exc_critical(message)
         

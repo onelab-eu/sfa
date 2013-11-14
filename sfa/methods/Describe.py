@@ -38,7 +38,7 @@ class Describe(Method):
                 raise SfaInvalidArgument('Must specify an rspec version option. geni_rspec_version cannot be null')
  
         valid_creds = self.api.auth.checkCredentials(creds, 'listnodes', urns, \
-                      check_sliver_callback = self.api.manager.driver.check_sliver_credentials)
+                      check_sliver_callback = self.api.driver.check_sliver_credentials)
 
         # get hrn of the original caller 
         origin_hrn = options.get('origin_hrn', None)

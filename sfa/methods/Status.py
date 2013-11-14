@@ -20,7 +20,7 @@ class Status(Method):
 
     def call(self, xrns, creds, options):
         valid_creds = self.api.auth.checkCredentials(creds, 'sliverstatus', xrns,
-                      check_sliver_callback = self.api.manager.driver.check_sliver_credentials)
+                      check_sliver_callback = self.api.driver.check_sliver_credentials)
 
         self.api.logger.info("interface: %s\ttarget-hrn: %s\tmethod-name: %s"%(self.api.interface, xrns, self.name))
         return self.api.manager.Status(self.api, xrns, creds, options)

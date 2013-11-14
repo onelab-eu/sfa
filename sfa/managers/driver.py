@@ -5,9 +5,10 @@
 
 class Driver:
     
-    def __init__ (self, config): 
+    def __init__ (self, api): 
+        self.api = api
         # this is the hrn attached to the running server
-        self.hrn = config.SFA_INTERFACE_HRN
+        self.hrn = api.config.SFA_INTERFACE_HRN
 
     ########################################
     ########## registry oriented

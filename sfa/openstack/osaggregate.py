@@ -75,7 +75,7 @@ class OSAggregate:
         # lookup the sliver allocations
         sliver_ids = [sliver['sliver_id'] for sliver in slivers]
         constraint = SliverAllocation.sliver_id.in_(sliver_ids)
-        sliver_allocations = dbsession.query(SliverAllocation).filter(constraint)
+        sliver_allocations = self.driver.api.dbsession().query(SliverAllocation).filter(constraint)
         sliver_allocation_dict = {}
         for sliver_allocation in sliver_allocations:
             sliver_allocation_dict[sliver_allocation.sliver_id] = sliver_allocation
