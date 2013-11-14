@@ -116,8 +116,8 @@ print " ================= SFI.PY RESOURCES -R IOTLAB -L ALL ============="
 raw_input("Press Enter to continue...")
 os.system('sfi.py resources -r iotlab -l all')
 
-print " ================= SFI.PY RESOURCES -O  output rspec ==========="
-os.system('sfi.py resources -o /root/tests_rspecs/iotlab_devlille_OUTPUT.rspec')
+# print " ================= SFI.PY RESOURCES -O  output rspec ==========="
+# os.system('sfi.py resources -o /root/tests_rspecs/iotlab_devlille_OUTPUT.rspec')
 
 print " ================= SFI.PY RESOURCES -L LEASES  ============="
 raw_input("Press Enter to continue...")
@@ -129,7 +129,7 @@ raw_input("Press Enter to continue...")
 os.system('sfi.py show iotlab.avakian')
 
 print " =================    SFI.PY SHOW NODE   ============="
-os.system('sfi.py show m3-3.devgrenoble.iot-lab.info')
+os.system('sfi.py show iotlab.m3-3.devgrenoble.iot-lab.info')
 
 print " =================    SFI.PY SLICES       ============="
 raw_input("Press Enter to continue...")
