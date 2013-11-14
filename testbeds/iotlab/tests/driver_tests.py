@@ -250,8 +250,8 @@ def TestOAR(job_id = None):
 def TestImporter(arg=None):
     iotlabdriver = IotlabDriver(Config())
 
-    nodes_listdict = iotlabdriver.iotlab_api.GetNodes()
-    sites_listdict = iotlabdriver.iotlab_api.GetSites()
+    nodes_listdict = iotlabdriver.testbed_shell.GetNodes()
+    sites_listdict = iotlabdriver.testbed_shell.GetSites()
     nodes_by_id = dict([(node['node_id'], node) for node in nodes_listdict])
 
     # from sfa.importer.iotlabimporter import IotlabImporter
@@ -265,29 +265,29 @@ def TestIotlabDriver(job_id = None):
         job_id = job_id[0]
     iotlabdriver = IotlabDriver(Config())
 
-    #nodes = iotlabdriver.iotlab_api.GetReservedNodes()
+    #nodes = iotlabdriver.testbed_shell.GetReservedNodes()
     #print " \r\n \r\n GetReservedNodes", nodes
 
-    sl = iotlabdriver.iotlab_api.GetSlices(slice_filter='iotlab.avakian_slice', slice_filter_type='slice_hrn')
+    sl = iotlabdriver.testbed_shell.GetSlices(slice_filter='iotlab.avakian_slice', slice_filter_type='slice_hrn')
     print "\r\n \r\nGetSlices", sl[0]
 
-    #sl = iotlabdriver.iotlab_api.GetSlices(slice_filter='20', slice_filter_type='record_id_user')
+    #sl = iotlabdriver.testbed_shell.GetSlices(slice_filter='20', slice_filter_type='record_id_user')
     #print "\r\n \r\nGetSlices", sl
 
-    #sl = iotlabdriver.iotlab_api.GetSlices()
+    #sl = iotlabdriver.testbed_shell.GetSlices()
     #print "\r\n \r\nGetSlices", sl
 
-    persons = iotlabdriver.iotlab_api.GetPersons()
+    persons = iotlabdriver.testbed_shell.GetPersons()
     print "\r\n \r\n  GetPersons", persons
 
-    leases = iotlabdriver.iotlab_api.GetLeases(login='avakian')
+    leases = iotlabdriver.testbed_shell.GetLeases(login='avakian')
     print "\r\n \r\n  GetLeases", leases
 
-    leases = iotlabdriver.iotlab_api.GetLeases(lease_filter_dict={'slice_hrn':'iotlab.avakian_slice'})
+    leases = iotlabdriver.testbed_shell.GetLeases(lease_filter_dict={'slice_hrn':'iotlab.avakian_slice'})
     print "\r\n \r\n  GetLeases", leases
 
 
-    leases = iotlabdriver.iotlab_api.GetLeases(lease_filter_dict={'t_from':1405070000})
+    leases = iotlabdriver.testbed_shell.GetLeases(lease_filter_dict={'t_from':1405070000})
     print "\r\n \r\n  GetLeases", leases
 def  TestSfi(filename = None):
 
