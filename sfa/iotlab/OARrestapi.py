@@ -809,7 +809,7 @@ class OARGETParser:
         :rtype: dict
 
         .. warning:: unused
-        .. seealso:: GetSites (IotlabTestbedAPI)
+        .. seealso:: GetSites (IotlabShell)
 
         """
         self.ChangeRawJsonDependingOnApilibVersion()
