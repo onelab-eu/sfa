@@ -101,7 +101,7 @@ class CortexlabAggregate:
         slice_name = slice_hrn
 
         # GetSlices always returns a list, even if there is only one element
-        slices = self.driver.cortexlab_api.GetSlices(slice_filter=str(slice_name),
+        slices = self.driver.testbed_shell.GetSlices(slice_filter=str(slice_name),
                                                   slice_filter_type='slice_hrn',
                                                   login=login)
 
@@ -155,7 +155,7 @@ class CortexlabAggregate:
         researchers = [sfa_slice['reg_researchers'][0].__dict__]
         # look in ldap:
         ldap_username = None
-        ret =  self.driver.iotlab_api.GetPersons(researchers)
+        ret =  self.driver.testbed_shell.GetPersons(researchers)
         if len(ret) != 0:
             ldap_username = ret[0]['uid']
 
@@ -203,9 +203,9 @@ class CortexlabAggregate:
                     return []
 
         # get the granularity in second for the reservation system
-        grain = self.driver.cortexlab_api.GetLeaseGranularity()
+        grain = self.driver.testbed_shell.GetLeaseGranularity()
 
-        nodes = self.driver.cortexlab_api.GetNodes()
+        nodes = self.driver.testbed_shell.GetNodes()
 
         nodes_dict = {}
 
@@ -217,7 +217,7 @@ class CortexlabAggregate:
         logger.debug("CortexlabAggregate api get_nodes slices  %s "
                      % (slices))
 
-        reserved_nodes = self.driver.cortexlab_api.GetNodesCurrentlyInUse()
+        reserved_nodes = self.driver.testbed_shell.GetNodesCurrentlyInUse()
         logger.debug("CortexlabAggregate api get_nodes slice_nodes_list  %s "
                      % (slice_nodes_list))
         for node in nodes:
@@ -228,12 +228,12 @@ class CortexlabAggregate:
 
 
 
-                cortexlab_xrn = cortexlab_xrn_object(self.driver.cortexlab_api.root_auth,
+                cortexlab_xrn = cortexlab_xrn_object(self.driver.testbed_shell.root_auth,
                                                node['hostname'])
                 rspec_node['component_id'] = cortexlab_xrn.urn
                 rspec_node['component_name'] = node['hostname']
                 rspec_node['component_manager_id'] = \
-                                hrn_to_urn(self.driver.cortexlab_api.root_auth,
+                                hrn_to_urn(self.driver.testbed_shell.root_auth,
                                 'authority+sa')
 
                 # Iotlab's nodes are federated : there is only one authority
@@ -305,8 +305,8 @@ class CortexlabAggregate:
 
         logger.debug("CortexlabAggregate  get_all_leases ldap_username %s "
                      % (ldap_username))
-        leases = self.driver.cortexlab_api.GetLeases(login=ldap_username)
-        grain = self.driver.cortexlab_api.GetLeaseGranularity()
+        leases = self.driver.testbed_shell.GetLeases(login=ldap_username)
+        grain = self.driver.testbed_shell.GetLeaseGranularity()
         # site_ids = []
         rspec_leases = []
         for lease in leases:
@@ -316,7 +316,7 @@ class CortexlabAggregate:
                 rspec_lease['lease_id'] = lease['lease_id']
 
                 cortexlab_xrn = cortexlab_xrn_object(
-                    self.driver.cortexlab_api.root_auth, node)
+                    self.driver.testbed_shell.root_auth, node)
                 rspec_lease['component_id'] = cortexlab_xrn.urn
                 #rspec_lease['component_id'] = hostname_to_urn(self.driver.hrn,\
                                         #site, node['hostname'])
