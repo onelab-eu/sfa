@@ -28,7 +28,11 @@ class PlShell:
                     'AddLeases',
                     # HRN management methods
                     'SetPersonHrn', 'GetPersonHrn', 'SetSliceHrn', 'GetSliceHrn',
-                    'SetNodeHrn', 'GetNodeHrn' 
+                    'SetNodeHrn', 'GetNodeHrn', 'GetSiteHrn', 'SetSiteHrn',
+                    # Tag slice/person/site created by SFA
+                    'SetPersonSfaCreated', 'GetPersonSfaCreated', 'SetSliceSfaCreated',
+                    'GetSliceSfaCreated', 'SetNodeSfaCreated', 'GetNodeSfaCreated',
+                    'GetSiteSfaCreated', 'SetSiteSfaCreated', 
                     ]
     # support for other names - this is experimental
     alias_calls = { 'get_authorities':'GetSites',
@@ -66,16 +70,16 @@ class PlShell:
         if is_local and plc_direct_access:
             logger.info('plshell access - capability')
             self.plauth = { 'AuthMethod': 'capability',
-                            'Username':   config.SFA_PLC_USER,
-                            'AuthString': config.SFA_PLC_PASSWORD,
+                            'Username':   str(config.SFA_PLC_USER),
+                            'AuthString': str(config.SFA_PLC_PASSWORD),
                             }
             self.proxy = PLC.Shell.Shell ()
 
         else:
             logger.info('plshell access - xmlrpc')
             self.plauth = { 'AuthMethod': 'password',
-                            'Username':   config.SFA_PLC_USER,
-                            'AuthString': config.SFA_PLC_PASSWORD,
+                            'Username':   str(config.SFA_PLC_USER),
+                            'AuthString': str(config.SFA_PLC_PASSWORD),
                             }
             self.proxy = xmlrpclib.Server(url, verbose = False, allow_none = True)
 
@@ -90,4 +94,3 @@ class PlShell:
             logger.debug('PlShell %s (%s) returned ... '%(name,actual_name))
             return result
         return func
-
