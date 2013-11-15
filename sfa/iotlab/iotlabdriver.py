@@ -28,7 +28,7 @@ class IotlabDriver(Driver):
     .. seealso::: Driver class
 
     """
-    def __init__(self, config):
+    def __init__(self, api):
         """
 
         Sets the iotlab SFA config parameters,
@@ -38,9 +38,10 @@ class IotlabDriver(Driver):
         :type config: Config object
 
         """
-        Driver.__init__(self, config)
-        self.config = config
-        self.testbed_shell = IotlabShell(config)
+        Driver.__init__(self, api)
+        self.api=api
+        config = api.config
+        self.testbed_shell = IotlabShell(api)
         self.cache = None
 
     def augment_records_with_testbed_info(self, record_list):
