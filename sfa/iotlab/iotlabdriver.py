@@ -308,11 +308,7 @@ class IotlabDriver(Driver):
         :rtype: RegUser
 
         """
-        # xxx this method should not be static
-        from sfa.storage.alchemy import global_dbsession
-        return global_dbsession.query(RegRecord).filter_by(hrn=hrn).first()
-        # code should read instead (if this method was not static, that is)
-        #return self.api.dbsession().query(RegRecord).filter_by(hrn=hrn).first()
+        return self.api.dbsession().query(RegRecord).filter_by(hrn=hrn).first()
 
     def testbed_name(self):
         """
