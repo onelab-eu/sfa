@@ -21,7 +21,8 @@ from sfa.trust.certificate import Keypair, convert_public_key
 from sfa.trust.gid import create_uuid
 from sfa.trust.hierarchy import Hierarchy
 
-from sfa.cortexlab.iotlabaggregate import iotlab_xrn_object
+from sfa.iotlab.iotlabaggregate import iotlab_xrn_object
+from sfa.cortexlab.cortexlabnodes import CortexlabQueryNodes
 
 class CortexlabShell():
     """ Class enabled to use LDAP and OAR api calls. """
