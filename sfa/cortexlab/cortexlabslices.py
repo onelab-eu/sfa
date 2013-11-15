@@ -8,7 +8,7 @@ from sfa.util.sfalogging import logger
 MAXINT = 2L**31-1
 
 
-class IotlabSlices:
+class CortexlabSlices:
     """
     This class is responsible for checking the slice when creating a
     lease or a sliver. Those checks include verifying that the user is valid,
