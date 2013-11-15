@@ -15,9 +15,10 @@ from sfa.util.xrn import Xrn, hrn_to_urn, get_authority
 from sfa.cortexlab.cortexlabaggregate import CortexlabAggregate, \
             cortexlab_xrn_to_hostname
 
-from sfa.iotlab.iotlabslices import CortexlabSlices
+from sfa.cortexlab.cortexlabslices import CortexlabSlices
 
 from sfa.cortexlab.cortexlabshell import CortexlabShell
+
 
 
 class CortexlabDriver(Driver):
@@ -293,8 +294,8 @@ class CortexlabDriver(Driver):
                          % (resources, res))
             return result
 
-    @staticmethod
-    def get_user_record(hrn):
+
+    def get_user_record(self, hrn):
         """
 
         Returns the user record based on the hrn from the SFA DB .
