@@ -12,23 +12,21 @@ from sfa.storage.alchemy import dbsession
 
 class V2ToV3Adapter:
 
-    def __init__ (self, config):
+    def __init__ (self, api):
+        config = api.config
         flavour = config.SFA_GENERIC_FLAVOUR
         # to be cleaned
         if flavour == "nitos":
             from sfa.nitos.nitosdriver import NitosDriver
-            self.driver = NitosDriver(config)
+            self.driver = NitosDriver(api)
         elif flavour == "fd":
             from sfa.federica.fddriver import FdDriver
-            self.driver = FdDriver(config)
-        elif flavour == "dummy":
-            from sfa.dummy.dummydriver import DummyDriver
-            self.driver = DummyDriver(config)
-        elif flavour == "slab":
-            from sfa.senslab.slabdriver import SlabDriver
-            self.driver = SlabDriver(config)
+            self.driver = FdDriver(api)
+        elif flavour == "iotlab":
+            from sfa.iotlab.iotlabdriver import IotlabDriver
+            self.driver = IotlabDriver(api)
         else:
-          logger.info("DriverV2Adapter unknown flavour !!!\n supported flavours: pl, nitos, fd, dummy, slab")
+          logger.info("DriverV2Adapter unknown flavour !!!\n supported flavours: pl, nitos, fd, iotlab")
          
         # Caching 
         if config.SFA_AGGREGATE_CACHING:
