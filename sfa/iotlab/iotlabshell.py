@@ -8,7 +8,6 @@ from datetime import datetime
 
 from sfa.util.sfalogging import logger
 
-from sfa.storage.alchemy import dbsession
 from sqlalchemy.orm import joinedload
 from sfa.storage.model import RegRecord, RegUser, RegSlice, RegKey
 from sfa.iotlab.iotlabpostgres import TestbedAdditionalSfaDB, LeaseTableXP
@@ -72,7 +71,7 @@ class IotlabShell():
         existing_records = {}
         existing_hrns_by_types = {}
         logger.debug("IOTLAB_API \tGetPeers peer_filter %s " % (peer_filter))
-        all_records = dbsession.query(RegRecord).filter(RegRecord.type.like('%authority%')).all()
+        all_records = self.api.dbsession().query(RegRecord).filter(RegRecord.type.like('%authority%')).all()
 
         for record in all_records:
             existing_records[(record.hrn, record.type)] = record
@@ -430,11 +429,11 @@ class IotlabShell():
         logger.debug("IOTLAB_API.PY AddSlice  sfa_record %s user_record %s"
                      % (sfa_record, user_record))
         sfa_record.just_created()
-        dbsession.add(sfa_record)
-        dbsession.commit()
+        self.api.dbsession().add(sfa_record)
+        self.api.dbsession().commit()
         #Update the reg-researcher dependance table
         sfa_record.reg_researchers = [user_record]
-        dbsession.commit()
+        self.api.dbsession().commit()
 
         return
 
@@ -540,7 +539,7 @@ class IotlabShell():
 
         """
         check_if_exists = \
-        dbsession.query(RegUser).filter_by(email = user_dict['email']).first()
+        self.api.dbsession().query(RegUser).filter_by(email = user_dict['email']).first()
         #user doesn't exists
         if not check_if_exists:
             logger.debug("__add_person_to_db \t Adding %s \r\n \r\n \
@@ -572,8 +571,8 @@ class IotlabShell():
                                     email=user_dict['email'], gid = person_gid)
             user_record.reg_keys = [RegKey(user_dict['pkey'])]
             user_record.just_created()
-            dbsession.add (user_record)
-            dbsession.commit()
+            self.api.dbsession().add (user_record)
+            self.api.dbsession().commit()
         return
 
 
@@ -1122,9 +1121,9 @@ class IotlabShell():
         :rtype: dict
         """
         if key_filter is None:
-            keys = dbsession.query(RegKey).options(joinedload('reg_user')).all()
+            keys = self.api.dbsession().query(RegKey).options(joinedload('reg_user')).all()
         else:
-            keys = dbsession.query(RegKey).options(joinedload('reg_user')).filter(RegKey.key.in_(key_filter)).all()
+            keys = self.api.dbsession().query(RegKey).options(joinedload('reg_user')).filter(RegKey.key.in_(key_filter)).all()
 
         key_dict = {}
         for key in keys:
@@ -1181,8 +1180,8 @@ class IotlabShell():
 
         #Only one entry for one user  = one slice in testbed_xp table
         #slicerec = dbsession.query(RegRecord).filter_by(hrn = slice_filter).first()
-        raw_slicerec = dbsession.query(RegSlice).options(joinedload('reg_researchers')).filter_by(hrn=slice_filter).first()
-        #raw_slicerec = dbsession.query(RegRecord).filter_by(hrn = slice_filter).first()
+        raw_slicerec = self.api.dbsession().query(RegSlice).options(joinedload('reg_researchers')).filter_by(hrn=slice_filter).first()
+        #raw_slicerec = self.api.dbsession().query(RegRecord).filter_by(hrn = slice_filter).first()
         if raw_slicerec:
             #load_reg_researcher
             #raw_slicerec.reg_researchers
@@ -1208,8 +1207,8 @@ class IotlabShell():
         :rtype:dict or None..
         """
         #slicerec = dbsession.query(RegRecord).filter_by(record_id = slice_filter).first()
-        raw_slicerec = dbsession.query(RegUser).options(joinedload('reg_slices_as_researcher')).filter_by(record_id=slice_filter).first()
-        #raw_slicerec = dbsession.query(RegRecord).filter_by(record_id = slice_filter).first()
+        raw_slicerec = self.api.dbsession().query(RegUser).options(joinedload('reg_slices_as_researcher')).filter_by(record_id=slice_filter).first()
+        #raw_slicerec = self.api.dbsession().query(RegRecord).filter_by(record_id = slice_filter).first()
         #Put it in correct order
         user_needed_fields = ['peer_authority', 'hrn', 'last_updated',
                               'classtype', 'authority', 'gid', 'record_id',
@@ -1390,7 +1389,7 @@ class IotlabShell():
             #put them in dict format
             #query_slice_list = dbsession.query(RegRecord).all()
             query_slice_list = \
-                dbsession.query(RegSlice).options(joinedload('reg_researchers')).all()
+                self.api.dbsession().query(RegSlice).options(joinedload('reg_researchers')).all()
 
             for record in query_slice_list:
                 tmp = record.__dict__
