@@ -297,8 +297,7 @@ class IotlabDriver(Driver):
                          % (resources, res))
             return result
 
-    @staticmethod
-    def get_user_record(hrn):
+    def get_user_record(self, hrn):
         """
 
         Returns the user record based on the hrn from the SFA DB .
