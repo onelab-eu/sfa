@@ -3,7 +3,6 @@ Implements what a driver should provide for SFA to work.
 """
 from sfa.util.faults import SliverDoesNotExist, UnknownSfaType
 from sfa.util.sfalogging import logger
-from sfa.storage.alchemy import dbsession
 from sfa.storage.model import RegRecord
 
 from sfa.managers.driver import Driver
@@ -310,7 +309,11 @@ class IotlabDriver(Driver):
         :rtype: RegUser
 
         """
-        return dbsession.query(RegRecord).filter_by(hrn=hrn).first()
+        # xxx this method should not be static
+        from sfa.storage.alchemy import global_dbsession
+        return global_dbsession.query(RegRecord).filter_by(hrn=hrn).first()
+        # code should read instead (if this method was not static, that is)
+        #return self.api.dbsession().query(RegRecord).filter_by(hrn=hrn).first()
 
     def testbed_name(self):
         """
