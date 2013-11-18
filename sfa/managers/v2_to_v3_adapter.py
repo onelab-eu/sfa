@@ -7,8 +7,6 @@ from sfa.util.xrn import Xrn, urn_to_hrn, hrn_to_urn, get_leaf, get_authority
 from sfa.util.cache import Cache
 from sfa.rspecs.rspec import RSpec
 from sfa.storage.model import SliverAllocation
-# xxx 1-dbsession-per-request
-from sfa.storage.alchemy import dbsession
 
 class V2ToV3Adapter:
 
@@ -58,7 +56,7 @@ class V2ToV3Adapter:
                 else:
                     constraint = SliverAllocation.sliver_id.in_(urns)
  
-                sliver_allocations = dbsession.query (SliverAllocation).filter        (constraint)
+                sliver_allocations = self.driver.api.dbsession().query (SliverAllocation).filter        (constraint)
                 sliver_status = getattr(self.driver, "sliver_status")(slice_urn, slice_hrn)               
                 if 'geni_expires' in sliver_status.keys():
                     geni_expires = sliver_status['geni_expires']
@@ -126,6 +124,7 @@ class V2ToV3Adapter:
                 else:
                    constraint = SliverAllocation.sliver_id.in_(urns)
                 
+                dbsession = self.driver.api.dbsession()
                 sliver_allocations = dbsession.query (SliverAllocation).filter(constraint)
                 for sliver_allocation in sliver_allocations:
                      sliver_allocation.allocation_state = 'geni_provisioned'
@@ -161,9 +160,10 @@ class V2ToV3Adapter:
              
                 #SliverAllocation
                 constraints = SliverAllocation.slice_urn.in_(urns)
+                dbsession = self.driver.api.dbsession()
                 sliver_allocations = dbsession.query(SliverAllocation).filter(constraints)
                 sliver_ids = [sliver_allocation.sliver_id for sliver_allocation in sliver_allocations]
-                SliverAllocation.delete_allocations(sliver_ids)
+                SliverAllocation.delete_allocations(sliver_ids, dbsession)
                 
 
             elif name == "renew":
