@@ -22,7 +22,7 @@ from sfa.trust.gid import create_uuid
 from sfa.trust.hierarchy import Hierarchy
 
 from sfa.iotlab.iotlabaggregate import iotlab_xrn_object
-from sfa.cortexlab.cortexlabnodes import CortexlabQueryNodes
+from sfa.cortexlab.cortexlabnodes import CortexlabQueryTestbed
 
 class CortexlabShell():
     """ Class enabled to use LDAP and OAR api calls. """
@@ -39,7 +39,7 @@ class CortexlabShell():
         :type config: Config object
         """
         self.leases_db = TestbedAdditionalSfaDB(config)
-        self.query_sites = CortexlabQueryNodes()
+        self.query_sites = CortexlabQueryTestbed()
         self.ldap = LDAPapi()
         self.time_format = "%Y-%m-%d %H:%M:%S"
         self.root_auth = config.SFA_REGISTRY_ROOT_AUTH

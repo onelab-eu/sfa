@@ -68,14 +68,13 @@ class CortexlabAggregate:
         self.driver = driver
 
     def get_slice_and_slivers(self, slice_xrn, login=None):
-        """
+        """Returns a dict of slivers based on the sliver's node_id.
+
         Get the slices and the associated leases if any, from the cortexlab
-            testbed. One slice can have mutliple leases.
-            For each slice, get the nodes in the  associated lease
-            and create a sliver with the necessary info and insert it into the
-            sliver dictionary, keyed on the node hostnames.
-            Returns a dict of slivers based on the sliver's node_id.
-            Called by get_rspec.
+        testbed. One slice can have mutliple leases. For each slice, get the
+        nodes in the  associated lease and create a sliver with the necessary
+        info and insert it into the sliver dictionary, keyed on the node
+        hostnames.Called by get_rspec.
 
 
         :param slice_xrn: xrn of the slice
@@ -279,13 +278,12 @@ class CortexlabAggregate:
 
     def get_all_leases(self, ldap_username):
         """
-
-        Get list of lease dictionaries which all have the mandatory keys
-        ('lease_id', 'hostname', 'site_id', 'name', 'start_time', 'duration').
-        All the leases running or scheduled are returned.
+        Get list of lease dictionaries which all have the following
+        mandatory keys ('lease_id', 'hostname', 'site_id', 'name', 'start_time',
+        'duration'). All the leases running or scheduled are returned.
 
         :param ldap_username: if ldap uid is not None, looks for the leases
-        belonging to this user.
+            belonging to this user.
         :type ldap_username: string
         :returns: rspec lease dictionary with keys lease_id, component_id,
             slice_id, start_time, duration.

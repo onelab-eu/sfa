@@ -2,36 +2,39 @@
 File used to handle all the nodes querying:
 - get nodes list along with their properties
 """
+from sfa.util.sfalogging import logger
 
-class CortexlabQueryNodes:
+class CortexlabQueryTestbed:
     def __init__(self):
 
         pass
 
     def get_all_nodes(self, node_filter_dict=None, return_fields_list=None):
-        """
-        Get all the nodes and their properties. Called by GetNodes.
+        """Get all the nodes and their properties. Called by GetNodes.
+
         Filtering on nodes properties can be done here or in GetNodes.
-        Search for specific nodes if some filters are
-        specified.Returns all the nodes properties if no return_fields_list
-        given.
-        TODO: Define which properties have to be listed here. Useful ones:
-        node architecture, radio type, position (x,y,z)
+        Search for specific nodes if some filters are specified. Returns all
+        the nodes properties if no return_fields_list given.
+
 
         :param node_filter_dict: dictionary of lists with node properties. For
-            instance, if you want to look for a specific node with its hrn,
-            the node_filter_dict should be {'hrn': [hrn_of_the_node]}
+            instance, if you want to look for a specific node with its hrn, the
+            node_filter_dict should be {'hrn': [hrn_of_the_node]}.
         :type node_filter_dict: dict
         :param return_fields_list: list of specific fields the user wants to be
             returned.
         :type return_fields_list: list
         :returns: list of dictionaries with node properties
         :rtype: list
+
+        TODO: Define which properties have to be listed here. Useful ones:
+        node architecture, radio type, position (x,y,z)
         """
         node_dict_list = None
         # Get the nodes here, eventually filter here
         # See iotlabapi.py GetNodes to get the filtering (node_filter_dict and
         # return_fields_list ) part, if necessary
+        # Format example
         node_dict_list = [
         {'hrn': 'iotlab.wsn430-11.devlille.iot-lab.info',
         'archi': 'wsn430', 'mobile': 'True',
@@ -69,6 +72,7 @@ class CortexlabQueryNodes:
         :param return_fields_list: fields that has to be returned
         :type site_filter_name_list: list
         :type return_fields_list: list
+        :rtype: list of dictionaries
         """
         site_dict_list = None
         site_dict_list = [
@@ -88,47 +92,58 @@ class CortexlabQueryNodes:
 
 
     def get_reserved_nodes(self, username):
-        """Get list of leases. Get the leases for the username if specified,
-        otherwise get all the leases.
+        """Get list of leases.
+
+        Get the leases for the username if specified, otherwise get all the
+        leases.
+
         :param username: user's LDAP login
         :type username: string
         :returns: list of reservations dict
-        :rtype: dict list
+        :rtype: list of dictionaries
 
         """
         reserved_nodes_list_dict = None
+
+        reserved_nodes_list_dict = [{'lease_id': 1658,
+        'reserved_nodes': [ 'wsn430-11.devlille.iot-lab.info'], 'state':
+        'Waiting', 'user': 'avakian', 'resource_ids': [11],
+        't_from': 1412938800, 't_until': 1412942640}]
+
         return reserved_nodes_list_dict
 
     def schedule_experiment(self, lease_dict):
         """Schedule/ run an experiment based on the information provided in the
         lease dictionary.
 
-        :param lease_dict: contains  lease_start_time,
-        lease_duration, added_nodes, slice_name , slice_user, grain:
+        :param lease_dict: contains  lease_start_time, lease_duration,
+            added_nodes, slice_name , slice_user, grain:
         :type lease_dict: dictionary
-
+        :rtype: dict
         """
         answer = {}
         answer['id'] = None #experiment id
         answer['msg'] = None #message in case of error
+
+
+        answer['id'] = 1659
 
         # Launch the experiment here
 
         return answer
 
     def delete_experiment(self, experiment_id, username):
-        """
-        Delete the experiment designated by its experiment id and its
-        user.
-        TODO: If the username is not necessary to delete the lease, then you can
-        remove it from the parameters, given that you propagate the changes
+        """Delete the experiment designated by its experiment id and its user.
 
         :param experiment_id: experiment identifier
-        :type experiment_id : integer
         :param username: user's LDAP login
+        :type experiment_id: integer
         :type username: string
         :returns: dict with delete status {'status': True of False}
         :rtype: dict
+
+        TODO: If the username is not necessary to delete the lease, then you can
+        remove it from the parameters, given that you propagate the changes
         """
         # Delete the experiment here. Ret['status'] should be True or False
         # depending if the delete was effective or not.
