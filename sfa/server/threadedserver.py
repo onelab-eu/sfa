@@ -175,6 +175,7 @@ class SecureXMLRPCServer(BaseHTTPServer.HTTPServer,SimpleXMLRPCServer.SimpleXMLR
         ctx.set_app_data(self)
         self.socket = SSL.Connection(ctx, socket.socket(self.address_family,
                                                         self.socket_type))
+        self.socket.settimeout(60)
         self.server_bind()
         self.server_activate()
 
