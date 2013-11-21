@@ -150,11 +150,9 @@ class PlDriver (Driver):
     
             if 'enabled' in sfa_record and sfa_record['enabled']:
                 self.shell.UpdatePerson(pointer, {'enabled': sfa_record['enabled']})
-            # add this person to the site only if she is being added for the first
-            # time by sfa and doesont already exist in plc
-            if not persons or not persons[0]['site_ids']:
-                login_base = get_leaf(sfa_record['authority'])
-                self.shell.AddPersonToSite(pointer, login_base)
+            # add this person to the site
+            login_base = get_leaf(sfa_record['authority'])
+            self.shell.AddPersonToSite(pointer, login_base)
     
             # What roles should this user have?
             roles=[]
