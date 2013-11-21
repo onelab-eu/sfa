@@ -126,6 +126,10 @@ class PlDriver (Driver):
                     pl_record.pop(key)
             slices = self.shell.GetSlices([pl_record['name']])
             if not slices:
+                 if not pl_record.get('url', None) or not pl_record.get('description', None):
+                     pl_record['url'] = hrn
+                     pl_record['description'] = hrn
+
                  pointer = self.shell.AddSlice(pl_record)
                  self.shell.SetSliceHrn(int(pointer), hrn)
             else:
