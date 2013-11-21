@@ -434,7 +434,7 @@ class PlAggregate:
         geni_urn = urns[0]
         sliver_ids = [sliver['sliver_id'] for sliver in slivers]
         constraint = SliverAllocation.sliver_id.in_(sliver_ids)
-        sliver_allocations = dbsession.query(SliverAllocation).filter(constraint)
+        sliver_allocations = self.driver.api.dbsession().query(SliverAllocation).filter(constraint)
         sliver_allocation_dict = {}
         for sliver_allocation in sliver_allocations:
             geni_urn = sliver_allocation.slice_urn
