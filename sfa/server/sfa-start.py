@@ -130,8 +130,9 @@ def update_cert_records(gids):
     Removes old records from the db.
     """
     # import db stuff here here so this module can be loaded by PlcComponentApi
-    from sfa.storage.alchemy import dbsession
+    from sfa.storage.alchemy import global_dbsession
     from sfa.storage.model import RegRecord
+    dbsession = global_dbsession
     if not gids:
         return
     # get records that actually exist in the db
