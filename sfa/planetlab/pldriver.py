@@ -109,7 +109,7 @@ class PlDriver (Driver):
         pl_record = self.sfa_fields_to_pl_fields(type, hrn, sfa_record)
 
         if type == 'authority':
-            sites = self.shell.GetSites([pl_record['login_base']])
+            sites = self.shell.GetSites({'peer_id': None, 'login_base': pl_record['login_base']})
             if not sites:
                 # xxx when a site gets registered through SFA we need to set its max_slices
                 if 'max_slices' not in pl_record:
@@ -124,7 +124,7 @@ class PlDriver (Driver):
             for key in pl_record.keys():
                 if key not in acceptable_fields:
                     pl_record.pop(key)
-            slices = self.shell.GetSlices([pl_record['name']])
+            slices = self.shell.GetSlices({'peer_id': None, 'name': pl_record['name']})
             if not slices:
                  if not pl_record.get('url', None) or not pl_record.get('description', None):
                      pl_record['url'] = hrn
@@ -136,7 +136,7 @@ class PlDriver (Driver):
                  pointer = slices[0]['slice_id']
 
         elif type == 'user':
-            persons = self.shell.GetPersons({'email':sfa_record['email']})
+            persons = self.shell.GetPersons({'peer_id': None, 'email': sfa_record['email']})
             if not persons:
                 for key in ['first_name','last_name']:
                     if key not in sfa_record: sfa_record[key]='*from*sfa*'
@@ -172,7 +172,7 @@ class PlDriver (Driver):
 
         elif type == 'node':
             login_base = PlXrn(xrn=sfa_record['authority'],type='authority').pl_login_base()
-            nodes = self.shell.GetNodes([pl_record['hostname']])
+            nodes = self.shell.GetNodes({'peer_id': None, 'hostname': pl_record['hostname']})
             if not nodes:
                 pointer = self.shell.AddNode(login_base, pl_record)
                 self.shell.SetNodeHrn(int(pointer), hrn)
@@ -223,7 +223,7 @@ class PlDriver (Driver):
     
             if new_key:
                 # must check this key against the previous one if it exists
-                persons = self.shell.GetPersons([pointer], ['key_ids'])
+                persons = self.shell.GetPersons({'peer_id': None, 'person_id': pointer}, ['key_ids'])
                 person = persons[0]
                 keys = person['key_ids']
                 keys = self.shell.GetKeys(person['key_ids'])
@@ -248,19 +248,19 @@ class PlDriver (Driver):
         type=sfa_record['type']
         pointer=sfa_record['pointer']
         if type == 'user':
-            persons = self.shell.GetPersons(pointer)
+            persons = self.shell.GetPersons({'peer_id': None, 'person_id': pointer})
             # only delete this person if he has site ids. if he doesnt, it probably means
             # he was just removed from a site, not actually deleted
             if persons and persons[0]['site_ids']:
                 self.shell.DeletePerson(pointer)
         elif type == 'slice':
-            if self.shell.GetSlices(pointer):
+            if self.shell.GetSlices({'peer_id': None, 'slice_id': pointer}):
                 self.shell.DeleteSlice(pointer)
         elif type == 'node':
-            if self.shell.GetNodes(pointer):
+            if self.shell.GetNodes({'peer_id': None, 'node_id': pointer}):
                 self.shell.DeleteNode(pointer)
         elif type == 'authority':
-            if self.shell.GetSites(pointer):
+            if self.shell.GetSites({'peer_id': None, 'site_id': pointer}):
                 self.shell.DeleteSite(pointer)
 
         return True
@@ -353,16 +353,16 @@ class PlDriver (Driver):
         # get pl records
         nodes, sites, slices, persons, keys = {}, {}, {}, {}, {}
         if node_ids:
-            node_list = self.shell.GetNodes(node_ids)
+            node_list = self.shell.GetNodes({'peer_id': None, 'node_id': node_ids})
             nodes = list_to_dict(node_list, 'node_id')
         if site_ids:
-            site_list = self.shell.GetSites(site_ids)
+            site_list = self.shell.GetSites({'peer_id': None, 'site_id': site_ids})
             sites = list_to_dict(site_list, 'site_id')
         if slice_ids:
-            slice_list = self.shell.GetSlices(slice_ids)
+            slice_list = self.shell.GetSlices({'peer_id': None, 'slice_id': slice_ids})
             slices = list_to_dict(slice_list, 'slice_id')
         if person_ids:
-            person_list = self.shell.GetPersons(person_ids)
+            person_list = self.shell.GetPersons({'peer_id': None, 'person_id': person_ids})
             persons = list_to_dict(person_list, 'person_id')
             for person in persons:
                 key_ids.extend(persons[person]['key_ids'])
@@ -419,16 +419,16 @@ class PlDriver (Driver):
         # get pl records
         slices, persons, sites, nodes = {}, {}, {}, {}
         if site_ids:
-            site_list = self.shell.GetSites(site_ids, ['site_id', 'login_base'])
+            site_list = self.shell.GetSites({'peer_id': None, 'site_id': site_ids}, ['site_id', 'login_base'])
             sites = list_to_dict(site_list, 'site_id')
         if person_ids:
-            person_list = self.shell.GetPersons(person_ids, ['person_id', 'email'])
+            person_list = self.shell.GetPersons({'peer_id': None, 'person_id': person_ids}, ['person_id', 'email'])
             persons = list_to_dict(person_list, 'person_id')
         if slice_ids:
-            slice_list = self.shell.GetSlices(slice_ids, ['slice_id', 'name'])
+            slice_list = self.shell.GetSlices({'peer_id': None, 'slice_id': slice_ids}, ['slice_id', 'name'])
             slices = list_to_dict(slice_list, 'slice_id')       
         if node_ids:
-            node_list = self.shell.GetNodes(node_ids, ['node_id', 'hostname'])
+            node_list = self.shell.GetNodes({'peer_id': None, 'node_id': node_ids}, ['node_id', 'hostname'])
             nodes = list_to_dict(node_list, 'node_id')
        
         # convert ids to hrns
@@ -492,7 +492,7 @@ class PlDriver (Driver):
         # and store them in a dictionary keyed on site_id 
         site_pis = {}
         if site_ids:
-            pi_filter = {'|roles': ['pi'], '|site_ids': site_ids} 
+            pi_filter = {'peer_id': None, '|roles': ['pi'], '|site_ids': site_ids} 
             pi_list = self.shell.GetPersons(pi_filter, ['person_id', 'site_ids'])
             for pi in pi_list:
                 # we will need the pi's hrns also
@@ -603,7 +603,7 @@ class PlDriver (Driver):
         elif subject_type == 'authority' and target_type == 'user' and relation_name == 'pi':
             # due to the plcapi limitations this means essentially adding pi role to all people in the list
             # it's tricky to remove any pi role here, although it might be desirable
-            persons = self.shell.GetPersons (target_ids)
+            persons = self.shell.GetPersons ({'peer_id': None, 'person_id': target_ids})
             for person in persons: 
                 if 'pi' not in person['roles']:
                     self.shell.AddRoleToPerson('pi',person['person_id'])
@@ -791,7 +791,7 @@ class PlDriver (Driver):
 
         slicename = '_'.join([login_base, slice_part])
 
-        slices = self.shell.GetSlices({'name': slicename}, ['slice_id'])
+        slices = self.shell.GetSlices({'peer_id': None, 'name': slicename}, ['slice_id'])
         if not slices:
             raise RecordNotFound(slice_hrn)
         slice_id = slices[0]['slice_id']
