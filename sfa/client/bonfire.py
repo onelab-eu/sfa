@@ -6,6 +6,30 @@ import xml.etree.ElementTree as ET
 
 # helping functions
 # ########################################################## #
+
+def create_fed4fire_exp(name, groups, description, walltime, slice_id, exp_owner):
+    # create experiement with tag fed4fire
+    xmldescription='<experiment xmlns="http://api.bonfire-project.eu/doc/schemas/occi"><name>' + name + '</name><groups>' + groups + '</groups><description>' + description + '</description><walltime>' + walltime + '</walltime><status>ready</status><fed4fire><slice_id>' + slice_id + '</slice_id><exp_owner>' + exp_owner + '<exp_owner></fed4fire></experiment>'
+    postexp("https://api.integration.bonfire.grid5000.fr/experiments", xmldescription)
+
+def postexp(url, xmldescription):
+    headers = {'content-type': 'application/vnd.bonfire+xml'}
+    r = requests.post(url, data=xmldescription, headers=headers, verify=False, auth=('nlebreto', 'GDRU_23tc$'))
+
+def stop_vm(testbed, num_compute):
+    # compute bonfire to stopped state
+    url = "https://api.integration.bonfire.grid5000.fr/" + "locations/" + testbed + "/computes/" + num_compute
+    xmldescription = '<compute xmlns="http://api.bonfire-project.eu/doc/schemas/occi"><state>stopped</state></compute>'
+    headers = {'content-type': 'application/vnd.bonfire+xml'}
+    requests.put(url, data=xmldescription, headers=headers, verify=False, auth=('nlebreto', 'GDRU_23tc$'))
+
+def provisioning(num_experiment):
+    # experiment bonfire to running status
+    url = "https://api.integration.bonfire.grid5000.fr/experiments/" + num_experiment
+    xmldescription = '<experiment xmlns="http://api.bonfire-project.eu/doc/schemas/occi"><status>running</status></experiment>'
+    headers = {'content-type': 'application/vnd.bonfire+xml'}
+    requests.put(url, data=xmldescription, headers=headers, verify=False, auth=('nlebreto', 'GDRU_23tc$'))
+
 def callcurl(url):
     r = requests.get(url, verify=False, auth=('nlebreto', 'GDRU_23tc$'))
     if r.status_code == 200:
@@ -52,9 +76,24 @@ def jfedfeat(bonfires, pageurl):
         bonfires.append("</node>")
 
 def remove_needless_txt(txt):
+    txt=str(txt)
     txt=txt.replace("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n","\n")
     txt=txt.replace("<?xml version='1.0' encoding='UTF-8'?>\n","\n")
     return txt
+
+def rsa_user_bonfire(testbed, num_compute):
+    url = "https://api.integration.bonfire.grid5000.fr/" + "locations/" + testbed + "/computes/" + num_compute
+    pagebonfirecompute = callcurl(url)
+    xmlreduit = ET.fromstring(pagebonfirecompute)
+    hash = {}
+    hash["url"] = url
+    for name in xmlreduit:
+        if name.tag == "{http://api.bonfire-project.eu/doc/schemas/occi}groups":
+           hash["name"] = name.text
+        for context in name:
+            if context.tag == "{http://api.bonfire-project.eu/doc/schemas/occi}authorized_keys":
+               hash["keys"] = context.text
+    return hash
 
 # parameters
 # ########################################################## #
@@ -75,7 +114,7 @@ def bonsources():
     bonfires.append(manag_exp)
     bonfires.append("</managed_experiments><sites><machines>")
     jfedfeat(bonfires, "http://frontend.bonfire.grid5000.fr/one-status.xml")
-#   jfedfeat(bonfires, "http://bonfire.epcc.ed.ac.uk/logs/one-status.xml")
+    jfedfeat(bonfires, "http://bonfire.epcc.ed.ac.uk/one-status.xml")
     jfedfeat(bonfires, "http://bonfire.psnc.pl/one-status.xml")
     jfedfeat(bonfires, "http://nebulosus.rus.uni-stuttgart.de/one-status.xml")
     bonfires.append("</machines><networks>")
