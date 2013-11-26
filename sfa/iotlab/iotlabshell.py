@@ -20,7 +20,7 @@ from sfa.trust.certificate import Keypair, convert_public_key
 from sfa.trust.gid import create_uuid
 from sfa.trust.hierarchy import Hierarchy
 
-from sfa.iotlab.iotlabaggregate import iotlab_xrn_object
+from sfa.iotlab.iotlabxrn import xrn_object
 
 class IotlabShell():
     """ Class enabled to use LDAP and OAR api calls. """
@@ -985,7 +985,7 @@ class IotlabShell():
             #Transform the hostnames into urns (component ids)
             for node in resa['reserved_nodes']:
 
-                iotlab_xrn = iotlab_xrn_object(self.root_auth, node)
+                iotlab_xrn = xrn_object(self.root_auth, node)
                 resa['component_id_list'].append(iotlab_xrn.urn)
 
         if lease_filter_dict:

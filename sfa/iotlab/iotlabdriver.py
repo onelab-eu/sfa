@@ -11,7 +11,8 @@ from sfa.rspecs.rspec import RSpec
 
 from sfa.util.xrn import Xrn, hrn_to_urn, get_authority
 
-from sfa.iotlab.iotlabaggregate import IotlabAggregate, iotlab_xrn_to_hostname
+from sfa.iotlab.iotlabaggregate import IotlabAggregate
+from sfa.iotlab.iotlabxrn import xrn_to_hostname
 from sfa.iotlab.iotlabslices import IotlabSlices
 
 
@@ -38,7 +39,7 @@ class IotlabDriver(Driver):
 
         """
         Driver.__init__(self, api)
-        self.api=api
+        self.api = api
         config = api.config
         self.testbed_shell = IotlabShell(api)
         self.cache = None
@@ -366,7 +367,7 @@ class IotlabDriver(Driver):
                 if get_authority(lease['component_id']) == \
                         self.testbed_shell.root_auth:
                     single_requested_lease['hostname'] = \
-                        iotlab_xrn_to_hostname(\
+                        xrn_to_hostname(\
                             lease.get('component_id').strip())
                     single_requested_lease['start_time'] = \
                         lease.get('start_time')
@@ -433,6 +434,7 @@ class IotlabDriver(Driver):
         %s" % (xp_dict))
 
         return xp_dict
+
 
     def create_sliver(self, slice_urn, slice_hrn, creds, rspec_string,
                       users, options):
@@ -795,3 +797,132 @@ class IotlabDriver(Driver):
                                          slice_filter_type='slice_hrn'):
                 ret = self.testbed_shell.DeleteSlice(sfa_record)
             return True
+
+    def check_sliver_credentials(self, creds, urns):
+        # build list of cred object hrns
+        slice_cred_names = []
+        for cred in creds:
+            slice_cred_hrn = Credential(cred=cred).get_gid_object().get_hrn()
+            slicename = Xrn(xrn=slice_cred_hrn).iotlab_slicename()
+            logger.debug("IOTLABDRIVER.PY \t check_sliver_credentials slicename %s \r\n \r\n"
+                     % (slicename))
+            slice_cred_names.append(slicename)
+
+        # look up slice name of slivers listed in urns arg
+
+        slice_ids = []
+        for urn in urns:
+            sliver_id_parts = Xrn(xrn=urn).get_sliver_id_parts()
+            try:
+                slice_ids.append(int(sliver_id_parts[0]))
+            except ValueError:
+                pass
+
+        if not slice_ids:
+             raise Forbidden("sliver urn not provided")
+
+        slices = self.testbed_shell.GetSlices(slice_ids)
+        sliver_names = [single_slice['name'] for single_slice in slices]
+
+        # make sure we have a credential for every specified sliver ierd
+        for sliver_name in sliver_names:
+            if sliver_name not in slice_cred_names:
+                msg = "Valid credential not found for target: %s" % sliver_name
+                raise Forbidden(msg)
+
+    ########################################
+    ########## aggregate oriented
+    ########################################
+
+
+    def testbed_name (self): return "iotlab"
+
+    def aggregate_version (self):
+        return {}
+
+    # first 2 args are None in case of resource discovery
+    def list_resources (self, version=None, options={}):
+        aggregate = IotlabAggregate(self)
+        rspec =  aggregate.list_resources(version=version, options=options)
+        return rspec
+
+    def describe(self, urns, version, options={}):
+        aggregate = IotlabAggregate(self)
+        return aggregate.describe(urns, version=version, options=options)
+
+    def status (self, urns, options={}):
+        aggregate = IotlabAggregate(self)
+        desc =  aggregate.describe(urns, version='GENI 3')
+        status = {'geni_urn': desc['geni_urn'],
+                  'geni_slivers': desc['geni_slivers']}
+        return status
+
+
+    def allocate (self, urn, rspec_string, expiration, options={}):
+        xrn = Xrn(urn)
+        aggregate = IotlabAggregate(self)
+
+        slices = IotlabSlices(self)
+        peer = slices.get_peer(xrn.get_hrn())
+        sfa_peer = slices.get_sfa_peer(xrn.get_hrn())
+
+
+        slice_record = None
+        users = options.get('geni_users', [])
+        if users:
+            slice_record = users[0].get('slice_record', {})
+            logger.debug("IOTLABDRIVER.PY \t ===============allocatte \t\
+                            \r\n \r\n users %s" % (users))
+        # parse rspec
+        rspec = RSpec(rspec_string)
+        # requested_attributes = rspec.version.get_slice_attributes()
+
+        # ensure site record exists
+        # site = slices.verify_site(xrn.hrn, slice_record, peer, sfa_peer, options=options)
+        # ensure slice record exists
+        current_slice = slices.verify_slice(xrn.hrn, slice_record, peer, sfa_peer, expiration=expiration, options=options)
+        # ensure person records exists
+        persons = slices.verify_persons(xrn.hrn, slice, users, peer, sfa_peer, options=options)
+        # ensure slice attributes exists
+        # slices.verify_slice_attributes(slice, requested_attributes, options=options)
+
+        # add/remove slice from nodes
+        requested_xp_dict = self._process_requested_xp_dict(rspec)
+
+        logger.debug("IOTLABDRIVER.PY \tcreate_sliver  requested_xp_dict %s "
+                     % (requested_xp_dict))
+        # request_nodes = rspec.version.get_nodes_with_slivers()
+        # nodes = slices.verify_slice_nodes(urn, slice, request_nodes, peer)
+
+        # add/remove links links
+        # slices.verify_slice_links(slice, rspec.version.get_link_requests(), nodes)
+
+        # add/remove leases
+        # rspec_requested_leases = rspec.version.get_leases()
+        leases = slices.verify_slice_leases(current_slice, requested_xp_dict, peer)
+
+        # handle MyPLC peer association.
+        # only used by plc and ple.
+        slices.handle_peer(site, slice, None, peer)
+
+        return aggregate.describe([xrn.get_urn()], version=rspec.version)
+
+    def provision(self, urns, options={}):
+        # update users
+        slices = IotlabSlices(self)
+        aggregate = IotlabAggregate(self)
+        slivers = aggregate.get_slivers(urns)
+        current_slice = slivers[0]
+        peer = slices.get_peer(current_slice['hrn'])
+        sfa_peer = slices.get_sfa_peer(current_slice['hrn'])
+        users = options.get('geni_users', [])
+        persons = slices.verify_persons(current_slice['hrn'],
+            current_slice, users, peer, sfa_peer, options=options)
+        slices.handle_peer(None, None, persons, peer)
+        # update sliver allocation states and set them to geni_provisioned
+        sliver_ids = [sliver['sliver_id'] for sliver in slivers]
+        dbsession=self.api.dbsession()
+        SliverAllocation.set_allocations(sliver_ids, 'geni_provisioned',dbsession)
+        version_manager = VersionManager()
+        rspec_version = version_manager.get_version(options['geni_rspec_version'])
+        return self.describe(urns, rspec_version, options=options)

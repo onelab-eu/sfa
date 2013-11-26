@@ -5,13 +5,13 @@ of which slice hrn contains which job.
 """
 from sfa.util.config import Config
 from sfa.util.xrn import Xrn, get_authority, hrn_to_urn
-
-from sfa.iotlab.iotlabdriver import IotlabDriver
+from sfa.iotlab.iotlabshell import IotlabShell
+# from sfa.iotlab.iotlabdriver import IotlabDriver
 from sfa.iotlab.iotlabpostgres import TestbedAdditionalSfaDB
 from sfa.trust.certificate import Keypair, convert_public_key
 from sfa.trust.gid import create_uuid
 
-# using global alchemy.session() here is fine 
+# using global alchemy.session() here is fine
 # as importer is on standalone one-shot process
 from sfa.storage.alchemy import global_dbsession
 from sfa.storage.model import RegRecord, RegAuthority, RegSlice, RegNode, \
@@ -154,7 +154,7 @@ class IotlabImporter:
         self.records_by_type_hrn[rec_tuple] = record
 
 
-    def import_nodes(self, site_node_ids, nodes_by_id, iotlabdriver):
+    def import_nodes(self, site_node_ids, nodes_by_id, testbed_shell):
         """
 
         Creates appropriate hostnames and RegNode records for each node in
@@ -166,9 +166,9 @@ class IotlabImporter:
         :param nodes_by_id: dictionary , key is the node id, value is the a dict
             with node information.
         :type nodes_by_id: dictionary
-        :param iotlabdriver: IotlabDriver object, used to have access to
-            iotlabdriver attributes.
-        :type iotlabdriver: IotlabDriver
+        :param testbed_shell: IotlabDriver object, used to have access to
+            testbed_shell attributes.
+        :type testbed_shell: IotlabDriver
 
         :returns: None
         :rtype: None
@@ -183,7 +183,7 @@ class IotlabImporter:
                         - ignored" % (node_id))
                 continue
             escaped_hrn =  \
-                self.hostname_to_hrn_escaped(iotlabdriver.testbed_shell.root_auth,
+                self.hostname_to_hrn_escaped(testbed_shell.root_auth,
                                              node['hostname'])
             self.logger.info("IOTLABIMPORTER node %s " % (node))
             hrn = node['hrn']
@@ -227,7 +227,7 @@ class IotlabImporter:
                 pass
             node_record.stale = False
 
-    def import_sites_and_nodes(self, iotlabdriver):
+    def import_sites_and_nodes(self, testbed_shell):
         """
 
         Gets all the sites and nodes from OAR, process the information,
@@ -235,13 +235,13 @@ class IotlabImporter:
         For each site, import the site's nodes to the DB by calling
         import_nodes.
 
-        :param iotlabdriver: IotlabDriver object, used to have access to
-            iotlabdriver methods and fetching info on sites and nodes.
-        :type iotlabdriver: IotlabDriver
+        :param testbed_shell: IotlabDriver object, used to have access to
+            testbed_shell methods and fetching info on sites and nodes.
+        :type testbed_shell: IotlabDriver
         """
 
-        sites_listdict = iotlabdriver.testbed_shell.GetSites()
-        nodes_listdict = iotlabdriver.testbed_shell.GetNodes()
+        sites_listdict = testbed_shell.GetSites()
+        nodes_listdict = testbed_shell.GetNodes()
         nodes_by_id = dict([(node['node_id'], node) for node in nodes_listdict])
         for site in sites_listdict:
             site_hrn = site['name']
@@ -278,7 +278,7 @@ class IotlabImporter:
                 pass
 
             site_record.stale = False
-            self.import_nodes(site['node_ids'], nodes_by_id, iotlabdriver)
+            self.import_nodes(site['node_ids'], nodes_by_id, testbed_shell)
 
         return
 
@@ -319,7 +319,7 @@ class IotlabImporter:
             pkey = Keypair(create=True)
         return (pubkey, pkey)
 
-    def import_persons_and_slices(self, iotlabdriver):
+    def import_persons_and_slices(self, testbed_shell):
         """
 
         Gets user data from LDAP, process the information.
@@ -330,11 +330,11 @@ class IotlabImporter:
         import the user's slice onto the database as well by calling
         import_slice.
 
-        :param iotlabdriver: IotlabDriver object, used to have access to
-            iotlabdriver attributes.
-        :type iotlabdriver: IotlabDriver
+        :param testbed_shell: IotlabDriver object, used to have access to
+            testbed_shell attributes.
+        :type testbed_shell: IotlabDriver
         """
-        ldap_person_listdict = iotlabdriver.testbed_shell.GetPersons()
+        ldap_person_listdict = testbed_shell.GetPersons()
         self.logger.info("IOTLABIMPORT \t ldap_person_listdict %s \r\n"
                          % (ldap_person_listdict))
 
@@ -514,9 +514,12 @@ class IotlabImporter:
         :param options:
         :type options:
         """
-        config = Config()
 
-        iotlabdriver = IotlabDriver(config)
+        config = Config ()
+        interface_hrn = config.SFA_INTERFACE_HRN
+        root_auth = config.SFA_REGISTRY_ROOT_AUTH
+
+        testbed_shell = IotlabShell(config)
         leases_db = TestbedAdditionalSfaDB(config)
         #Create special slice table for iotlab
 
@@ -525,14 +528,14 @@ class IotlabImporter:
             self.logger.info("IotlabImporter.run:  testbed_xp table created ")
 
         # import site and node records in site into the SFA db.
-        self.import_sites_and_nodes(iotlabdriver)
+        self.import_sites_and_nodes(testbed_shell)
         #import users and slice into the SFA DB.
-        self.import_persons_and_slices(iotlabdriver)
+        self.import_persons_and_slices(testbed_shell)
 
          ### remove stale records
         # special records must be preserved
-        system_hrns = [iotlabdriver.hrn, iotlabdriver.testbed_shell.root_auth,
-                       iotlabdriver.hrn + '.slicemanager']
+        system_hrns = [interface_hrn, root_auth,
+                        interface_hrn + '.slicemanager']
         for record in self.all_records:
             if record.hrn in system_hrns:
                 record.stale = False
