@@ -148,8 +148,8 @@ class PlDriver (Driver):
             else:
                 pointer = persons[0]['person_id']
     
-            if 'enabled' in sfa_record and sfa_record['enabled']:
-                self.shell.UpdatePerson(pointer, {'enabled': sfa_record['enabled']})
+            # enable the person's account
+            self.shell.UpdatePerson(pointer, {'enabled': True})
             # add this person to the site
             login_base = get_leaf(sfa_record['authority'])
             self.shell.AddPersonToSite(pointer, login_base)
