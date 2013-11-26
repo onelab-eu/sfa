@@ -21,7 +21,6 @@ from sfa.rspecs.rspec import RSpec
 # the driver interface, mostly provides default behaviours
 from sfa.managers.driver import Driver
 from sfa.planetlab.plshell import PlShell
-import sfa.planetlab.peers as peers
 from sfa.planetlab.plaggregate import PlAggregate
 from sfa.planetlab.plslices import PlSlices
 from sfa.planetlab.plxrn import PlXrn, slicename_to_hrn, hostname_to_hrn, hrn_to_pl_slicename, xrn_to_hostname, top_auth, hash_loginbase
@@ -639,7 +638,6 @@ class PlDriver (Driver):
         xrn = Xrn(urn)
         aggregate = PlAggregate(self)
         slices = PlSlices(self)
-        peer = slices.get_peer(xrn.get_hrn())
         sfa_peer = slices.get_sfa_peer(xrn.get_hrn())
         slice_record=None    
         users = options.get('geni_users', [])
@@ -651,29 +649,25 @@ class PlDriver (Driver):
         requested_attributes = rspec.version.get_slice_attributes()
         
         # ensure site record exists
-        site = slices.verify_site(xrn.hrn, slice_record, peer, sfa_peer, options=options)
+        site = slices.verify_site(xrn.hrn, slice_record, sfa_peer, options=options)
         # ensure slice record exists
-        slice = slices.verify_slice(xrn.hrn, slice_record, peer, sfa_peer, expiration=expiration, options=options)
+        slice = slices.verify_slice(xrn.hrn, slice_record, sfa_peer, expiration=expiration, options=options)
         # ensure person records exists
-        persons = slices.verify_persons(xrn.hrn, slice, users, peer, sfa_peer, options=options)
+        persons = slices.verify_persons(xrn.hrn, slice, users, sfa_peer, options=options)
         # ensure slice attributes exists
         slices.verify_slice_attributes(slice, requested_attributes, options=options)
        
         # add/remove slice from nodes
         request_nodes = rspec.version.get_nodes_with_slivers()
-        nodes = slices.verify_slice_nodes(urn, slice, request_nodes, peer)
+        nodes = slices.verify_slice_nodes(urn, slice, request_nodes)
          
         # add/remove links links 
         slices.verify_slice_links(slice, rspec.version.get_link_requests(), nodes)
 
         # add/remove leases
         rspec_requested_leases = rspec.version.get_leases()
-        leases = slices.verify_slice_leases(slice, rspec_requested_leases, peer)
+        leases = slices.verify_slice_leases(slice, rspec_requested_leases)
 
-        # handle MyPLC peer association.
-        # only used by plc and ple.
-        slices.handle_peer(site, slice, None, peer)
-        
         return aggregate.describe([xrn.get_urn()], version=rspec.version)
 
     def provision(self, urns, options={}):
@@ -682,11 +676,9 @@ class PlDriver (Driver):
         aggregate = PlAggregate(self)
         slivers = aggregate.get_slivers(urns)
         slice = slivers[0]
-        peer = slices.get_peer(slice['hrn'])
         sfa_peer = slices.get_sfa_peer(slice['hrn'])
         users = options.get('geni_users', [])
-        persons = slices.verify_persons(slice['hrn'], slice, users, peer, sfa_peer, options=options)
-        slices.handle_peer(None, None, persons, peer)
+        persons = slices.verify_persons(slice['hrn'], slice, users, sfa_peer, options=options)
         # update sliver allocation states and set them to geni_provisioned
         sliver_ids = [sliver['sliver_id'] for sliver in slivers]
         dbsession=self.api.dbsession()
@@ -713,17 +705,8 @@ class PlDriver (Driver):
             leases = self.shell.GetLeases({'name': slice_name})
             leases_ids = [lease['lease_id'] for lease in leases ]
 
-            # determine if this is a peer slice
-            # xxx I wonder if this would not need to use PlSlices.get_peer instead 
-            # in which case plc.peers could be deprecated as this here
-            # is the only/last call to this last method in plc.peers
-            #slice_hrn = PlXrn(auth=self.hrn, slice_name).get_hrn()     
             slice_hrn = self.shell.GetSliceHrn(int(slice_id))
-            peer = peers.get_peer(self, slice_hrn)
             try:
-                if peer:
-                    self.shell.UnBindObjectFromPeer('slice', slice_id, peer)
-     
                 self.shell.DeleteSliceFromNodes(slice_id, node_ids)
                 if len(leases_ids) > 0:
                     self.shell.DeleteLeases(leases_ids)
@@ -732,8 +715,7 @@ class PlDriver (Driver):
                 dbsession=self.api.dbsession()
                 SliverAllocation.delete_allocations(sliver_ids,dbsession)
             finally:
-                if peer:
-                    self.shell.BindObjectToPeer('slice', slice_id, peer, slice['peer_slice_id'])
+                pass
 
         # prepare return struct
         geni_slivers = []

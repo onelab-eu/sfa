@@ -125,27 +125,6 @@ class PlSlices:
 
         return slivers
  
-    def get_peer(self, xrn):
-        hrn, type = urn_to_hrn(xrn)
-        # Becaues of myplc federation,  we first need to determine if this
-        # slice belongs to out local plc or a myplc peer. We will assume it 
-        # is a local site, unless we find out otherwise  
-        peer = None
-
-        # get this slice's authority (site)
-        slice_authority = get_authority(hrn)
-
-        # get this site's authority (sfa root authority or sub authority)
-        site_authority = get_authority(slice_authority).lower()
-
-        # check if we are already peered with this site_authority, if so
-        peers = self.driver.shell.GetPeers({}, ['peer_id', 'peername', 'shortname', 'hrn_root'])
-        for peer_record in peers:
-            names = [name.lower() for name in peer_record.values() if isinstance(name, StringTypes)]
-            if site_authority in names:
-                peer = peer_record
-
-        return peer
 
     def get_sfa_peer(self, xrn):
         hrn, type = urn_to_hrn(xrn)
@@ -160,7 +139,7 @@ class PlSlices:
 
         return sfa_peer
 
-    def verify_slice_leases(self, slice, rspec_requested_leases, peer):
+    def verify_slice_leases(self, slice, rspec_requested_leases):
 
         leases = self.driver.shell.GetLeases({'name':slice['name'], 'clip':int(time.time())}, ['lease_id','name', 'hostname', 't_from', 't_until'])
         grain = self.driver.shell.GetLeaseGranularity()
@@ -214,8 +193,6 @@ class PlSlices:
    
 
         try:
-            if peer:
-                self.driver.shell.UnBindObjectFromPeer('slice', slice['slice_id'], peer['shortname'])
             self.driver.shell.DeleteLeases(deleted_leases_id)
             for lease in added_leases:
                 self.driver.shell.AddLeases(lease['hostname'], slice['name'], lease['t_from'], lease['t_until'])
@@ -226,7 +203,7 @@ class PlSlices:
         return leases
 
 
-    def verify_slice_nodes(self, slice_urn, slice, rspec_nodes, peer):
+    def verify_slice_nodes(self, slice_urn, slice, rspec_nodes):
         
         slivers = {}
         for node in rspec_nodes:
@@ -250,8 +227,6 @@ class PlSlices:
         added_nodes = list(set(slivers.keys()).difference(current_slivers))        
 
         try:
-            if peer:
-                self.driver.shell.UnBindObjectFromPeer('slice', slice['slice_id'], peer['shortname'])
             self.driver.shell.AddSliceToNodes(slice['name'], added_nodes)
             self.driver.shell.DeleteSliceFromNodes(slice['name'], deleted_nodes)
             
@@ -347,43 +322,7 @@ class PlSlices:
                         
         
 
-    def handle_peer(self, site, slice, persons, peer):
-        if peer:
-            # bind site
-            try:
-                if site:
-                    self.driver.shell.BindObjectToPeer('site', site['site_id'], peer['shortname'], slice['site_id'])
-            except Exception,e:
-                self.driver.shell.DeleteSite(site['site_id'])
-                raise e
-            
-            # bind slice
-            try:
-                if slice:
-                    self.driver.shell.BindObjectToPeer('slice', slice['slice_id'], peer['shortname'], slice['slice_id'])
-            except Exception,e:
-                self.driver.shell.DeleteSlice(slice['slice_id'])
-                raise e 
-
-            # bind persons
-            for person in persons:
-                try:
-                    self.driver.shell.BindObjectToPeer('person', 
-                                                     person['person_id'], peer['shortname'], person['peer_person_id'])
-
-                    for (key, remote_key_id) in zip(person['keys'], person['key_ids']):
-                        try:
-                            self.driver.shell.BindObjectToPeer( 'key', key['key_id'], peer['shortname'], remote_key_id)
-                        except:
-                            self.driver.shell.DeleteKey(key['key_id'])
-                            logger("failed to bind key: %s to peer: %s " % (key['key_id'], peer['shortname']))
-                except Exception,e:
-                    self.driver.shell.DeletePerson(person['person_id'])
-                    raise e       
-
-        return slice
-
-    def verify_site(self, slice_xrn, slice_record={}, peer=None, sfa_peer=None, options={}):
+    def verify_site(self, slice_xrn, slice_record={}, sfa_peer=None, options={}):
         (slice_hrn, type) = urn_to_hrn(slice_xrn)
         top_auth_hrn = top_auth(slice_hrn)
         site_hrn = '.'.join(slice_hrn.split('.')[:-1])
@@ -421,7 +360,7 @@ class PlSlices:
         return site
 
 
-    def verify_slice(self, slice_hrn, slice_record, peer, sfa_peer, expiration, options={}):
+    def verify_slice(self, slice_hrn, slice_record, sfa_peer, expiration, options={}):
         top_auth_hrn = top_auth(slice_hrn)
         site_hrn = '.'.join(slice_hrn.split('.')[:-1])
         slice_part = slice_hrn.split('.')[-1]
@@ -459,7 +398,7 @@ class PlSlices:
         return self.driver.shell.GetSlices(int(slice['slice_id']))[0]
 
 
-    def verify_persons(self, slice_hrn, slice_record, users, peer, sfa_peer, options={}):
+    def verify_persons(self, slice_hrn, slice_record, users, sfa_peer, options={}):
         top_auth_hrn = top_auth(slice_hrn)
         site_hrn = '.'.join(slice_hrn.split('.')[:-1])
         slice_part = slice_hrn.split('.')[-1]
@@ -540,12 +479,12 @@ class PlSlices:
              person_id = slice_persons_by_hrn[person_hrn].get('person_id')
              persons_to_verify_keys[person_id] = users_by_hrn[person_hrn]
 
-        self.verify_keys(persons_to_verify_keys, peer, options)
+        self.verify_keys(persons_to_verify_keys, options)
 
         return persons_to_add
 
 
-    def verify_keys(self, persons_to_verify_keys, peer, options={}):
+    def verify_keys(self, persons_to_verify_keys, options={}):
         # we only add keys that comes from sfa to persons in PL
         for person_id in persons_to_verify_keys:
              person_sfa_keys = persons_to_verify_keys[person_id].get('keys', [])
