@@ -41,7 +41,7 @@ class IotlabDriver(Driver):
         Driver.__init__(self, api)
         self.api = api
         config = api.config
-        self.testbed_shell = IotlabShell(api)
+        self.testbed_shell = IotlabShell(config)
         self.cache = None
 
     def augment_records_with_testbed_info(self, record_list):

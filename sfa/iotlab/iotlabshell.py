@@ -27,7 +27,7 @@ class IotlabShell():
 
     _MINIMUM_DURATION = 10  # 10 units of granularity 60 s, 10 mins
 
-    def __init__(self, api):
+    def __init__(self, config):
         """Creates an instance of OARrestapi and LDAPapi which will be used to
         issue calls to OAR or LDAP methods.
         Set the time format  and the testbed granularity used for OAR
@@ -36,8 +36,8 @@ class IotlabShell():
         :param config: configuration object from sfa.util.config
         :type config: Config object
         """
-        self.api=api
-        config=api.config
+        # self.api=api
+        # config=api.config
         self.leases_db = TestbedAdditionalSfaDB(config)
         self.oar = OARrestapi()
         self.ldap = LDAPapi()
