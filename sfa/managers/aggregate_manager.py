@@ -55,6 +55,7 @@ class AggregateManager:
         version_generic = {
             'testbed': api.driver.testbed_name(),
             'interface':'aggregate',
+            'sfa': 3,
             'hrn':xrn.get_hrn(),
             'urn':xrn.get_urn(),
             'geni_api': 3,
