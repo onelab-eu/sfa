@@ -20,14 +20,14 @@ from sfa.trust.certificate import Keypair, convert_public_key
 from sfa.trust.gid import create_uuid
 from sfa.trust.hierarchy import Hierarchy
 
-from sfa.iotlab.iotlabaggregate import iotlab_xrn_object
+from sfa.iotlab.iotlabxrn import xrn_object
 
 class IotlabShell():
     """ Class enabled to use LDAP and OAR api calls. """
 
     _MINIMUM_DURATION = 10  # 10 units of granularity 60 s, 10 mins
 
-    def __init__(self, api):
+    def __init__(self, config):
         """Creates an instance of OARrestapi and LDAPapi which will be used to
         issue calls to OAR or LDAP methods.
         Set the time format  and the testbed granularity used for OAR
@@ -36,8 +36,8 @@ class IotlabShell():
         :param config: configuration object from sfa.util.config
         :type config: Config object
         """
-        self.api=api
-        config=api.config
+        # self.api=api
+        # config=api.config
         self.leases_db = TestbedAdditionalSfaDB(config)
         self.oar = OARrestapi()
         self.ldap = LDAPapi()
@@ -985,7 +985,7 @@ class IotlabShell():
             #Transform the hostnames into urns (component ids)
             for node in resa['reserved_nodes']:
 
-                iotlab_xrn = iotlab_xrn_object(self.root_auth, node)
+                iotlab_xrn = xrn_object(self.root_auth, node)
                 resa['component_id_list'].append(iotlab_xrn.urn)
 
         if lease_filter_dict:
