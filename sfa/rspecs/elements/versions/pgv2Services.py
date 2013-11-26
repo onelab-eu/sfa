@@ -30,13 +30,13 @@ class PGv2Services:
         for services_elem in xml.xpath('./default:services | ./services'):
             service = ServicesElement(services_elem.attrib, services_elem)
             # get install 
-            install_elems = xml.xpath('./default:install | ./install')
+            install_elems = services_elem.xpath('./default:install | ./install')
             service['install'] = [install_elem.get_instance(Install) for install_elem in install_elems]
             # get execute
-            execute_elems = xml.xpath('./default:execute | ./execute')
+            execute_elems = services_elem.xpath('./default:execute | ./execute')
             service['execute'] = [execute_elem.get_instance(Execute) for execute_elem in execute_elems]
             # get login
-            login_elems = xml.xpath('./default:login | ./login')
+            login_elems = services_elem.xpath('./default:login | ./login')
             service['login'] = [login_elem.get_instance(Login) for login_elem in login_elems]
             services.append(service)  
         return services
