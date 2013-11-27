@@ -115,6 +115,7 @@ class PlAggregate:
         names = set()
         slice_ids = set()
         node_ids = []
+        slice_hrn = None
         for urn in urns:
             xrn = PlXrn(xrn=urn)
             if xrn.type == 'sliver':
@@ -129,24 +130,18 @@ class PlAggregate:
                     pass 
             else:  
                 slice_hrn = xrn.get_hrn()
-                top_auth_hrn = top_auth(slice_hrn)
-                site_hrn = '.'.join(slice_hrn.split('.')[:-1])
-                slice_part = slice_hrn.split('.')[-1]
-                if top_auth_hrn == self.driver.hrn:
-                    login_base = slice_hrn.split('.')[-2][:12]
-                else:
-                    login_base = hash_loginbase(site_hrn)
-
-                slice_name = '_'.join([login_base, slice_part])
-                names.add(slice_name)
 
         filter = {}
-        if names:
-            filter['name'] = list(names)
+        filter['peer_id'] = None
         if slice_ids:
             filter['slice_id'] = list(slice_ids)
-        # get slices
-        slices = self.driver.shell.GetSlices(filter)
+        # get all slices
+        all_slices = self.driver.shell.GetSlices(filter, ['slice_id', 'name', 'hrn', 'person_ids', 'node_ids', 'slice_tag_ids', 'expires'])
+        if slice_hrn:
+            slices = [slice for slice in all_slices if slice['hrn'] == slice_hrn]
+        else:
+            slices = all_slices
+      
         if not slices:
             return []
         slice = slices[0]     
