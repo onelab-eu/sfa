@@ -1,5 +1,4 @@
 from sfa.rspecs.versions.pgv2 import PGv2
-from sfa.rspecs.elements.v3.node import Node 
 
 class GENIv3(PGv2):
     type = 'GENI'
@@ -53,10 +52,3 @@ class GENIv2Manifest(GENIv3):
     content_type = 'manifest'
     schema = 'http://www.geni.net/resources/rspec/3/manifest.xsd'
     template = '<rspec type="manifest" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://www.geni.net/resources/rspec/3" xmlns:plos="http://www.planet-lab.org/resources/sfa/ext/plos/1" xmlns:flack="http://www.protogeni.net/resources/rspec/ext/flack/1" xmlns:planetlab="http://www.planet-lab.org/resources/sfa/ext/planetlab/1" xmlns:ssh-user="http://www.geni.net/resources/rspec/ext/user/1" xsi:schemaLocation="http://www.geni.net/resources/rspec/3 http://www.geni.net/resources/rspec/3/manifest.xsd http://www.planet-lab.org/resources/sfa/ext/planetlab/1 http://www.planet-lab.org/resources/sfa/ext/planetlab/1/planetlab.xsd http://www.planet-lab.org/resources/sfa/ext/plos/1 http://www.planet-lab.org/resources/sfa/ext/plos/1/plos.xsd http://www.geni.net/resources/rspec/ext/user/1 http://www.geni.net/resources/rspec/ext/user/1/manifest.xsd"/>'
-
-
-    def add_nodes(self, nodes, check_for_dupes=False):
-        return Node.add_nodes(self.xml, nodes)
-    
-    def get_nodes(self, filter=None):
-        return Node.get_nodes(self.xml, filter) 

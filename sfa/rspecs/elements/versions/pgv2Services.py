@@ -23,6 +23,16 @@ class PGv2Services:
                 elif isinstance(child, list):
                     for obj in child:
                         service_elem.add_instance(name, obj, fields)
+
+            # add ssh_users
+            if service['services_user']:
+                for ssh_user in service['services_user']:
+                    ssh_user_elem = service_elem.add_element('{%s}services_user' % xml.namespaces['ssh-user'],
+                                                             login=ssh_user['login'],
+                                                             user_urn=ssh_user['user_urn'])
+                    for key in ssh_user['keys']:
+                        pkey_elem = ssh_user_elem.add_element('{%s}public_key' % xml.namespaces['ssh-user'])
+                        pkey_elem.element.text=key
               
     @staticmethod
     def get_services(xml):
@@ -38,6 +48,13 @@ class PGv2Services:
             # get login
             login_elems = services_elem.xpath('./default:login | ./login')
             service['login'] = [login_elem.get_instance(Login) for login_elem in login_elems]
+
+            ssh_user_elems = services_elem.xpath('./ssh-user:service_user | ./service_user')
+            services_user = []
+            for ssh_user_elem in ssh_user_elems:
+                services_user = ssh_user_elem.get_instance(None, fields=['login', 'user_urn'])
+            service['services_user'] = services_user
+
             services.append(service)  
         return services
 
