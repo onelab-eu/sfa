@@ -1098,7 +1098,7 @@ use this if you mean an authority instead""")
         if self.options.raw:
             save_raw_to_file(result, self.options.raw, self.options.rawformat, self.options.rawbanner)
         if options.file is not None:
-            save_rspec_to_file(value['geni_rspec'], options.file)
+            save_rspec_to_file(value, options.file)
         if (self.options.raw is None) and (options.file is None):
             display_rspec(value, options.format)
 
