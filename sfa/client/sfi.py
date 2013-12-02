@@ -386,6 +386,11 @@ class Sfi:
                               action="store_true", dest="version_local", default=False,
                               help="display version of the local client")
 
+        if command in ("trusted"):
+            parser.add_option("-R","--registry-version",
+                             action="store_true", dest="version_registry", default=False,
+                             help="probe registry version instead of sliceapi")
+
         if command in ("add", "update"):
             parser.add_option('-x', '--xrn', dest='xrn', metavar='<xrn>', help='object hrn/urn (mandatory)')
             parser.add_option('-t', '--type', dest='type', metavar='<type>', help='object type', default=None)
@@ -1624,13 +1629,23 @@ $ sfi m -b http://mymanifold.foo.com:7080/
         """
         return the trusted certs at this interface (get_trusted_certs)
         """ 
-        trusted_certs = self.registry().get_trusted_certs()
-        for trusted_cert in trusted_certs:
-            print "\n===========================================================\n"
-            gid = GID(string=trusted_cert)
-            gid.dump()
-            cert = Certificate(string=trusted_cert)
-            self.logger.debug('Sfi.trusted -> %r'%cert.get_subject())
-            print "Certificate:\n%s\n\n"%trusted_cert
-        return 
+        if options.version_registry:
+            server=self.registry()
+        else:
+            server = self.sliceapi()
+            
+        auth_cred = self.my_authority_credential_string()
+        trusted_certs = server.get_trusted_certs(auth_cred)
 
+        if not options.version_registry:
+            trusted_certs = ReturnValue.get_value(trusted_certs)
+
+        for trusted_cert in trusted_certs:
+             print "\n===========================================================\n"
+             gid = GID(string=trusted_cert)
+             gid.dump()
+             cert = Certificate(string=trusted_cert)
+             self.logger.debug('Sfi.trusted -> %r'%cert.get_subject())
+             print "Certificate:\n%s\n\n"%trusted_cert
+
+        return
