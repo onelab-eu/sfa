@@ -379,12 +379,15 @@ class Sfi:
                               help='how myslice config variables as well')
 
         if command in ("version"):
-            parser.add_option("-R","--registry-version",
-                              action="store_true", dest="version_registry", default=False,
-                              help="probe registry version instead of sliceapi")
             parser.add_option("-l","--local",
                               action="store_true", dest="version_local", default=False,
                               help="display version of the local client")
+
+        if command in ("version", "trusted"):
+            parser.add_option("-I", "--interface", dest="interface", type="choice",
+                            help="Select the SFA interface the call should target (Slice Interface (sm) | Registry Interface (registry))",
+                            choices=("sm", "registry"),
+                            default="sm")
 
         if command in ("trusted"):
             parser.add_option("-R","--registry-version",
@@ -839,7 +842,7 @@ use this if you mean an authority instead""")
         if options.version_local:
             version=version_core()
         else:
-            if options.version_registry:
+            if options.interface == "registry":
                 server=self.registry()
             else:
                 server = self.sliceapi()
@@ -1629,15 +1632,13 @@ $ sfi m -b http://mymanifold.foo.com:7080/
         """
         return the trusted certs at this interface (get_trusted_certs)
         """ 
-        if options.version_registry:
+        if options.interface == "registry":
             server=self.registry()
         else:
             server = self.sliceapi()
-            
-        auth_cred = self.my_authority_credential_string()
-        trusted_certs = server.get_trusted_certs(auth_cred)
-
-        if not options.version_registry:
+        cred = self.my_authority_credential_string()
+        trusted_certs = server.get_trusted_certs(cred)
+        if options.interface != "registry":
             trusted_certs = ReturnValue.get_value(trusted_certs)
 
         for trusted_cert in trusted_certs:
