@@ -384,15 +384,9 @@ class Sfi:
                               help="display version of the local client")
 
         if command in ("version", "trusted"):
-            parser.add_option("-I", "--interface", dest="interface", type="choice",
-                            help="Select the SFA interface the call should target (Slice Interface (sm) | Registry Interface (registry))",
-                            choices=("sm", "registry"),
-                            default="sm")
-
-        if command in ("trusted"):
-            parser.add_option("-R","--registry-version",
-                             action="store_true", dest="version_registry", default=False,
-                             help="probe registry version instead of sliceapi")
+            parser.add_option("-R","--registry-interface",
+                             action="store_true", dest="registry-interface", default=False,
+                             help="target the registry interface instead of slice interface")
 
         if command in ("add", "update"):
             parser.add_option('-x', '--xrn', dest='xrn', metavar='<xrn>', help='object hrn/urn (mandatory)')
@@ -842,7 +836,7 @@ use this if you mean an authority instead""")
         if options.version_local:
             version=version_core()
         else:
-            if options.interface == "registry":
+            if options.registry-interface:
                 server=self.registry()
             else:
                 server = self.sliceapi()
@@ -1632,13 +1626,13 @@ $ sfi m -b http://mymanifold.foo.com:7080/
         """
         return the trusted certs at this interface (get_trusted_certs)
         """ 
-        if options.interface == "registry":
+        if options.registry-interface:
             server=self.registry()
         else:
             server = self.sliceapi()
         cred = self.my_authority_credential_string()
         trusted_certs = server.get_trusted_certs(cred)
-        if options.interface != "registry":
+        if not options.registry-interface:
             trusted_certs = ReturnValue.get_value(trusted_certs)
 
         for trusted_cert in trusted_certs:
