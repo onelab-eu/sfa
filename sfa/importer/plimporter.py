@@ -194,7 +194,11 @@ class PlImporter:
 
         # start importing 
         for site in sites:
-            if site['name'].startswith('sfa:'):
+            try:
+               site_sfa_created = shell.GetSiteSfaCreated(site['site_id'])
+            except: 
+               site_sfa_created = None
+            if site['name'].startswith('sfa:') or site_sfa_created == 'True':
                 continue
 
             site_hrn = _get_site_hrn(interface_hrn, site)

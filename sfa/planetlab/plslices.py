@@ -415,8 +415,10 @@ class PlSlices:
         slice_name = '_'.join([login_base, slice_part])
 
         persons = self.driver.shell.GetPersons({'peer_id': None},['person_id','email','hrn'])
-        site = self.driver.shell.GetSites({'peer_id': None, 'login_base': login_base})[0]
-        slice = self.driver.shell.GetSlices({'peer_id': None, 'name': slice_name})[0]
+        sites = self.driver.shell.GetSites({'peer_id': None}, ['node_ids', 'site_id', 'name', 'person_ids', 'slice_ids', 'login_base', 'hrn'])
+        site = [site for site in sites if site['hrn'] == site_hrn][0]
+        slices = self.driver.shell.GetSlices({'peer_id': None}, ['slice_id', 'node_ids', 'person_ids', 'expires', 'site_id', 'name', 'hrn'])
+        slice = [slice for slice in slices if slice['hrn'] == slice_hrn][0]
         slice_persons = self.driver.shell.GetPersons({'peer_id': None, 'person_id': slice['person_ids']},['person_id','email','hrn'])
 
         persons_by_hrn = {}
@@ -456,10 +458,10 @@ class PlSlices:
                  self.driver.shell.AddRoleToPerson('user', int(person_id))
                  # enable the account 
                  self.driver.shell.UpdatePerson(int(person_id), {'enabled': True})
-                 self.driver.shell.SetPersonHrn(int(person_id), person_hrn)
                  self.driver.shell.SetPersonSfaCreated(int(person_id), 'True')
                  self.driver.shell.AddPersonToSite(int(person_id), site['site_id'])
                  self.driver.shell.AddPersonToSlice(int(person_id), slice['slice_id'])
+                 self.driver.shell.SetPersonHrn(int(person_id), person_hrn)
 
                  # Add keys
                  for key in users_by_hrn[person_hrn].get('keys', []):

@@ -20,11 +20,8 @@ class V2ToV3Adapter:
         elif flavour == "fd":
             from sfa.federica.fddriver import FdDriver
             self.driver = FdDriver(api)
-        elif flavour == "iotlab":
-            from sfa.iotlab.iotlabdriver import IotlabDriver
-            self.driver = IotlabDriver(api)
         else:
-          logger.info("DriverV2Adapter unknown flavour !!!\n supported flavours: pl, nitos, fd, iotlab")
+          logger.error("V2ToV3Adapter: Unknown Flavour !!!\n Supported Flavours: nitos, fd")
          
         # Caching 
         if config.SFA_AGGREGATE_CACHING:
