@@ -3,8 +3,9 @@ File providing methods to generate valid RSpecs for the Iotlab testbed.
 Contains methods to get information on slice, slivers, nodes and leases,
 formatting them and turn it into a RSpec.
 """
-from sfa.util.xrn import hrn_to_urn, urn_to_hrn, get_authority
-
+from sfa.util.sfatime import utcparse, datetime_to_string
+from sfa.util.xrn import Xrn, hrn_to_urn, urn_to_hrn, get_authority
+from sfa.iotlab.iotlabxrn import IotlabXrn
 from sfa.rspecs.rspec import RSpec
 #from sfa.rspecs.elements.location import Location
 from sfa.rspecs.elements.hardware_type import HardwareType
@@ -14,16 +15,12 @@ from sfa.rspecs.elements.sliver import Sliver
 from sfa.rspecs.elements.lease import Lease
 from sfa.rspecs.elements.granularity import Granularity
 from sfa.rspecs.version_manager import VersionManager
-
+from sfa.storage.model import SliverAllocation
 from sfa.rspecs.elements.versions.iotlabv1Node import IotlabPosition, \
     IotlabNode, IotlabLocation
-
+from sfa.iotlab.iotlabxrn import xrn_object
 from sfa.util.sfalogging import logger
-from sfa.util.xrn import Xrn
-
-
-
-
+import time
 
 class IotlabAggregate:
     """Aggregate manager class for Iotlab. """
@@ -283,7 +280,10 @@ class IotlabAggregate:
         # return (rspec_nodes)
         return nodes_dict
 
-    def node_to_rspec_node(self, node, grain):
+    def node_to_rspec_node(self, node):
+
+        grain = self.driver.testbed_shell.GetLeaseGranularity()
+
         rspec_node = IotlabNode()
         # xxx how to retrieve site['login_base']
         #site_id=node['site_id']
@@ -353,6 +353,61 @@ class IotlabAggregate:
         #     rspec_node['services'] = [service]
 
         return rspec_node
+
+
+    def rspec_node_to_geni_sliver(self, rspec_node, sliver_allocations = {}):
+        if rspec_node['sliver_id'] in sliver_allocations:
+            # set sliver allocation and operational status
+            sliver_allocation = sliver_allocations[rspec_node['sliver_id']]
+            if sliver_allocation:
+                allocation_status = sliver_allocation.allocation_state
+                if allocation_status == 'geni_allocated':
+                    op_status =  'geni_pending_allocation'
+                elif allocation_status == 'geni_provisioned':
+                    op_status = 'geni_ready'
+                else:
+                    op_status = 'geni_unknown'
+            else:
+                allocation_status = 'geni_unallocated'
+        else:
+            allocation_status = 'geni_unallocated'
+            op_status = 'geni_failed'
+        # required fields
+        geni_sliver = {'geni_sliver_urn': rspec_node['sliver_id'],
+                       'geni_expires': rspec_node['expires'],
+                       'geni_allocation_status' : allocation_status,
+                       'geni_operational_status': op_status,
+                       'geni_error': '',
+                       }
+        return geni_sliver
+
+
+    def sliver_to_rspec_node(self, sliver, sliver_allocations):
+        rspec_node = self.node_to_rspec_node(sliver)
+        rspec_node['expires'] = datetime_to_string(utcparse(sliver['expires']))
+        # add sliver info
+        logger.debug("IOTLABAGGREGATE api \t  sliver_to_rspec_node sliverr  %s \r\nsliver_allocations %s"
+                      % (sliver, sliver_allocations))
+        rspec_sliver = Sliver({'sliver_id': sliver['urn'],
+                         'name': sliver['slice_id'],
+                         'type': 'iotlab-exclusive',
+                         'tags': []})
+        rspec_node['sliver_id'] = rspec_sliver['sliver_id']
+        if sliver['urn'] in sliver_allocations:
+            rspec_node['client_id'] = sliver_allocations[sliver['urn']].client_id
+            if sliver_allocations[sliver['urn']].component_id:
+                rspec_node['component_id'] = sliver_allocations[sliver['urn']].component_id
+        rspec_node['slivers'] = [rspec_sliver]
+
+        # slivers always provide the ssh service
+        login = Login({'authentication': 'ssh-keys',
+                       'hostname': sliver['hostname'],
+                       'port':'22',
+                       'username': sliver['slice_name'],
+                       'login': sliver['slice_name']
+                      })
+        return rspec_node
+
 
     def get_all_leases(self, ldap_username):
         """
@@ -526,6 +581,125 @@ class IotlabAggregate:
                        FINAL RSPEC %s \r\n" % (rspec.toxml()))
         return rspec.toxml()
 
+    def get_slivers(self, urns, options={}):
+        """
+
+        """
+
+
+        slice_ids = set()
+        node_ids = []
+        for urn in urns:
+            xrn = IotlabXrn(xrn=urn)
+            if xrn.type == 'sliver':
+                 # id: slice_id-node_id
+                try:
+                    sliver_id_parts = xrn.get_sliver_id_parts()
+                    slice_id = int(sliver_id_parts[0])
+                    node_id = int(sliver_id_parts[1])
+                    slice_ids.add(slice_id)
+                    node_ids.append(node_id)
+                except ValueError:
+                    pass
+            else:
+                slice_names = set()
+                slice_names.add(xrn.hrn)
+
+
+        logger.debug("IotlabAggregate \t get_slivers urns %s slice_ids %s \
+                       node_ids %s\r\n" % (urns, slice_ids, node_ids))
+        logger.debug("IotlabAggregate \t get_slivers xrn %s slice_names %s \
+                       \r\n" % (xrn, slice_names))
+        filter = {}
+        if slice_names:
+            filter['slice_hrn'] = list(slice_names)
+            slice_hrn = filter['slice_hrn'][0]
+
+            slice_filter_type = 'slice_hrn'
+            logger.debug("IotlabAggregate \t get_slivers  slice_hrn%s \
+                       \r\n" % (slice_hrn ))
+        # if slice_ids:
+        #     filter['slice_id'] = list(slice_ids)
+        # # get slices
+        if slice_hrn:
+            slices = self.driver.testbed_shell.GetSlices(slice_hrn,
+                slice_filter_type)
+            leases = self.driver.testbed_shell.GetLeases(
+                                                {'slice_hrn':slice_hrn})
+        logger.debug("IotlabAggregate \t get_slivers \
+                       slices %s leases %s\r\n" % (slices, leases ))
+        if not slices:
+            return []
+        # slice = slices[0]
+        # slice['hrn'] = DummyXrn(auth=self.driver.hrn, slicename=slice['slice_name']).hrn
+        single_slice = slices[0]
+        # get sliver users
+        # users = []
+        # user_ids = []
+        # for slice in slices:
+        #     user_ids.extend(slice['user_ids'])
+        # if user_ids:
+        #     users = self.driver.shell.GetUsers({'user_ids': user_ids})
+
+        user = single_slice['reg_researchers'][0].__dict__
+        logger.debug("IotlabAggregate \t get_slivers user %s \
+                       \r\n" % (user))
+
+        # construct user key info
+        # users_list = []
+        # for user in users:
+        person = self.driver.testbed_shell.ldap.LdapFindUser(record=user)
+        logger.debug("IotlabAggregate \t get_slivers person %s \
+                       \r\n" % (person))
+        name = person['last_name']
+        user['login'] = person['uid']
+        user['user_urn'] = hrn_to_urn(user['hrn'], 'user')
+        user['keys'] = person['pkey']
+            # name = user['email'][0:user['email'].index('@')]
+            # user = {
+            #     'login': slice['slice_name'],
+            #     'user_urn': Xrn('%s.%s' % (self.driver.hrn, name), type='user').urn,
+            #     'keys': user['keys']
+            # }
+            # users_list.append(user)
+
+        try:
+            node_ids = single_slice['node_ids']
+            node_list = self.driver.testbed_shell.GetNodes(
+                    {'hostname':single_slice['node_ids']})
+            node_by_hostname = dict([(node['hostname'], node) for node in node_list])
+        except KeyError:
+            logger.warning("\t get_slivers No slivers in slice")
+            # slice['node_ids'] = node_ids
+        # nodes_dict = self.get_slice_nodes(slice, options)
+        logger.debug("IotlabAggregate \t get_slivers  node_by_hostname%s \
+                       \r\n" % (node_by_hostname))
+        slivers = []
+        for current_lease in leases:
+            for hostname in current_lease['reserved_nodes']:
+                node = {}
+                node['slice_id'] = current_lease['slice_id']
+                node['slice_hrn'] = current_lease['slice_hrn']
+                slice_name = current_lease['slice_hrn'].split(".")[1]
+                node['slice_name'] = slice_name
+                index = current_lease['reserved_nodes'].index(hostname)
+                node_id = current_lease['resource_ids'][index]
+                # node['slice_name'] = user['login']
+                # node.update(single_slice)
+                more_info = node_by_hostname[hostname]
+                node.update(more_info)
+                # oar_job_id is the slice_id (lease_id)
+                sliver_hrn = '%s.%s-%s' % (self.driver.hrn,
+                            current_lease['lease_id'], node_id)
+                node['node_id'] = node_id
+                node['expires'] = current_lease['t_until']
+                node['sliver_id'] = Xrn(sliver_hrn, type='sliver').urn
+                node['urn'] = node['sliver_id']
+                node['services_user'] = [user]
+                logger.debug("IotlabAggregate \t get_slivers node %s current_lease %s\
+                       \r\n more_info %s" % (node, current_lease, more_info))
+                slivers.append(node)
+        return slivers
 
     def list_resources(self, version = None, options={}):
 
@@ -533,7 +707,10 @@ class IotlabAggregate:
         version = version_manager.get_version(version)
         rspec_version = version_manager._get_version(version.type, version.version, 'ad')
         rspec = RSpec(version=rspec_version, user_options=options)
-
+        # variable ldap_username to be compliant with the get_all_leases
+        # prototype. Now unused in geni-v3 since we are getting all the leases
+        # here
+        ldap_username = None
         if not options.get('list_leases') or options['list_leases'] != 'leases':
             # get nodes
             nodes_dict  = self.get_nodes(options)
@@ -551,12 +728,11 @@ class IotlabAggregate:
             # node_tags = self.get_node_tags({'node_tag_id': tag_ids})
             # pl_initscripts = self.get_pl_initscripts()
             # convert nodes to rspec nodes
-            grain = self.driver.testbed_shell.GetLeaseGranularity()
             rspec_nodes = []
             for node_id in nodes_dict:
                 node = nodes_dict[node_id]
                 # rspec_node = self.node_to_rspec_node(node, sites, interfaces, node_tags, pl_initscripts)
-                rspec_node = self.node_to_rspec_node(node, grain)
+                rspec_node = self.node_to_rspec_node(node)
                 rspec_nodes.append(rspec_node)
             rspec.version.add_nodes(rspec_nodes)
 
@@ -564,18 +740,45 @@ class IotlabAggregate:
             # links = self.get_links(sites, nodes_dict, interfaces)
             # rspec.version.add_links(links)
 
-        if not options.get('list_leases') or options.get('list_leases') and options['list_leases'] != 'resources':
-           leases = self.get_all_leases()
-           rspec.version.add_leases(leases)
+        if not options.get('list_leases') or options.get('list_leases') \
+            and options['list_leases'] != 'resources':
+            leases = self.get_all_leases(ldap_username)
+            rspec.version.add_leases(leases)
 
         return rspec.toxml()
 
 
     def describe(self, urns, version=None, options={}):
+        """
+        Retrieve a manifest RSpec describing the resources contained by the
+        named entities, e.g. a single slice or a set of the slivers in a slice.
+        This listing and description should be sufficiently descriptive to allow
+        experimenters to use the resources.
+
+        returns: On success returns the following struct:
+        {
+           geni_rspec: <geni.rspec, a Manifest RSpec>
+           geni_urn: <string slice urn of the containing slice>
+           geni_slivers:{
+                          geni_sliver_urn: <string sliver urn>
+                          geni_expires:  <dateTime.rfc3339
+                          allocation expiration string, as in geni_expires
+                          from SliversStatus>,
+                          geni_allocation_status: <string sliver state -
+                          e.g. geni_allocated or geni_provisioned >,
+                          geni_operational_status: <string sliver operational
+                          state>,
+                          geni_error: <optional string. The field may be omitted
+                           entirely but may not be null/None, explaining any
+                           failure for a sliver.>
+                       },
+                 ]}
+        .. seealso:: http://groups.geni.net/geni/wiki/GAPI_AM_API_V3#Describe
+        """
         version_manager = VersionManager()
         version = version_manager.get_version(version)
-        rspec_version = version_manager._get_version(version.type,
-                                                     version.version, 'manifest')
+        rspec_version = version_manager._get_version(
+                                    version.type, version.version, 'manifest')
         rspec = RSpec(version=rspec_version, user_options=options)
 
         # get slivers
@@ -590,8 +793,14 @@ class IotlabAggregate:
         # lookup the sliver allocations
         geni_urn = urns[0]
         sliver_ids = [sliver['sliver_id'] for sliver in slivers]
+        logger.debug(" IOTLAB_API.PY \tDescribe  sliver_ids %s "
+                     % (sliver_ids))
         constraint = SliverAllocation.sliver_id.in_(sliver_ids)
-        sliver_allocations = self.driver.api.dbsession().query(SliverAllocation).filter(constraint)
+        logger.debug(" IOTLAB_API.PY \tDescribe  constraint %s "
+                     % (constraint))
+        sliver_allocations = self.driver.api.dbsession().query(SliverAllocation).filter((constraint)).all()
+        logger.debug(" IOTLAB_API.PY \tDescribe  sliver_allocations %s "
+                     % (sliver_allocations))
         sliver_allocation_dict = {}
         for sliver_allocation in sliver_allocations:
             geni_urn = sliver_allocation.slice_urn
@@ -605,8 +814,14 @@ class IotlabAggregate:
         for sliver in slivers:
             rspec_node = self.sliver_to_rspec_node(sliver, sliver_allocation_dict)
             rspec_nodes.append(rspec_node)
+            logger.debug(" IOTLAB_API.PY \tDescribe  sliver_allocation_dict %s "
+                     % (sliver_allocation_dict))
             geni_sliver = self.rspec_node_to_geni_sliver(rspec_node, sliver_allocation_dict)
             geni_slivers.append(geni_sliver)
+
+        logger.debug(" IOTLAB_API.PY \tDescribe rspec_nodes %s\
+                        rspec %s "
+                     % (rspec_nodes, rspec))
         rspec.version.add_nodes(rspec_nodes)
 
         return {'geni_urn': geni_urn,

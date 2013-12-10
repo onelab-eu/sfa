@@ -4,18 +4,20 @@ Implements what a driver should provide for SFA to work.
 from sfa.util.faults import SliverDoesNotExist, UnknownSfaType
 from sfa.util.sfalogging import logger
 from sfa.storage.model import RegRecord
+from sfa.util.sfatime import utcparse, datetime_to_string
 
 from sfa.managers.driver import Driver
 from sfa.rspecs.version_manager import VersionManager
 from sfa.rspecs.rspec import RSpec
 
-from sfa.util.xrn import Xrn, hrn_to_urn, get_authority
+from sfa.iotlab.iotlabxrn import xrn_object
+from sfa.util.xrn import Xrn, hrn_to_urn, get_authority, urn_to_hrn
 
 from sfa.iotlab.iotlabaggregate import IotlabAggregate
 from sfa.iotlab.iotlabxrn import xrn_to_hostname
 from sfa.iotlab.iotlabslices import IotlabSlices
 
-
+from sfa.storage.model import SliverAllocation
 from sfa.iotlab.iotlabshell import IotlabShell
 
 
@@ -41,7 +43,7 @@ class IotlabDriver(Driver):
         Driver.__init__(self, api)
         self.api = api
         config = api.config
-        self.testbed_shell = IotlabShell(config)
+        self.testbed_shell = IotlabShell(api)
         self.cache = None
 
     def augment_records_with_testbed_info(self, record_list):
@@ -525,17 +527,14 @@ class IotlabDriver(Driver):
                                    login=sfa_slice['login'],
                                    version=rspec.version)
 
-    def delete_sliver(self, slice_urn, slice_hrn, creds, options):
+    def delete(self, slice_urns, options):
         """
         Deletes the lease associated with the slice hrn and the credentials
             if the slice belongs to iotlab. Answer to DeleteSliver.
 
         :param slice_urn: urn of the slice
-        :param slice_hrn: name of the slice
-        :param creds: slice credenials
         :type slice_urn: string
-        :type slice_hrn: string
-        :type creds: ? unused
+
 
         :returns: 1 if the slice to delete was not found on iotlab,
             True if the deletion was successful, False otherwise otherwise.
@@ -546,6 +545,20 @@ class IotlabDriver(Driver):
         .. note:: creds are unused, and are not used either in the dummy driver
              delete_sliver .
         """
+        # collect sliver ids so we can update sliver allocation states after
+        # we remove the slivers.
+        aggregate = IotlabAggregate(self)
+        slivers = aggregate.get_slivers(slice_urns)
+        if slivers:
+            slice_id = slivers[0]['slice_id']
+            node_ids = []
+            sliver_ids = []
+            for sliver in slivers:
+                node_ids.append(sliver['node_id'])
+                sliver_ids.append(sliver['sliver_id'])
+        logger.debug("IOTLABDRIVER.PY delete_sliver slivers %s slice_urns %s"
+            % (slivers, slice_urns))
+        slice_hrn = urn_to_hrn(slice_urns[0])[0]
 
         sfa_slice_list = self.testbed_shell.GetSlices(
             slice_filter=slice_hrn,
@@ -566,9 +579,19 @@ class IotlabDriver(Driver):
                 \r\n \t sfa_slice %s " % (peer, sfa_slice))
             try:
                 self.testbed_shell.DeleteSliceFromNodes(sfa_slice)
-                return True
+                dbsession = self.api.dbsession()
+                SliverAllocation.delete_allocations(sliver_ids,dbsession)
             except:
-                return False
+                logger.log_exc("IOTLABDRIVER.PY delete error ")
+
+        # prepare return struct
+        geni_slivers = []
+        for sliver in slivers:
+            geni_slivers.append(
+                {'geni_sliver_urn': sliver['sliver_id'],
+                 'geni_allocation_status': 'geni_unallocated',
+                 'geni_expires': datetime_to_string(utcparse(sliver['expires']))})
+        return geni_slivers
 
     def list_resources (self, slice_urn, slice_hrn, creds, options):
         """
@@ -869,10 +892,12 @@ class IotlabDriver(Driver):
 
         slice_record = None
         users = options.get('geni_users', [])
-        if users:
-            slice_record = users[0].get('slice_record', {})
-            logger.debug("IOTLABDRIVER.PY \t ===============allocatte \t\
-                            \r\n \r\n users %s" % (users))
+
+        sfa_users = options.get('sfa_users', [])
+        if sfa_users:
+            slice_record = sfa_users[0].get('slice_record', [])
+        logger.debug("IOTLABDRIVER.PY \t ===============allocate \t\
+                            \r\n \r\n options %s slice_record %s" % (options,slice_record))
         # parse rspec
         rspec = RSpec(rspec_string)
         # requested_attributes = rspec.version.get_slice_attributes()
@@ -880,30 +905,65 @@ class IotlabDriver(Driver):
         # ensure site record exists
         # site = slices.verify_site(xrn.hrn, slice_record, peer, sfa_peer, options=options)
         # ensure slice record exists
-        current_slice = slices.verify_slice(xrn.hrn, slice_record, peer, sfa_peer, expiration=expiration, options=options)
+
+        current_slice = slices.verify_slice(xrn.hrn, slice_record, sfa_peer)
+        logger.debug("IOTLABDRIVER.PY \t ===============allocate \t\
+                            \r\n \r\n  current_slice %s" % (current_slice))
         # ensure person records exists
-        persons = slices.verify_persons(xrn.hrn, slice, users, peer, sfa_peer, options=options)
+
+        # oui c'est degueulasse, le slice_record se retrouve modifie
+        # dans la methode avec les infos du user, els infos sont propagees
+        # dans verify_slice_leases
+        persons = slices.verify_persons(xrn.hrn, slice_record, users, options=options)
         # ensure slice attributes exists
         # slices.verify_slice_attributes(slice, requested_attributes, options=options)
 
         # add/remove slice from nodes
         requested_xp_dict = self._process_requested_xp_dict(rspec)
 
-        logger.debug("IOTLABDRIVER.PY \tcreate_sliver  requested_xp_dict %s "
+        logger.debug("IOTLABDRIVER.PY \tallocate  requested_xp_dict %s "
                      % (requested_xp_dict))
-        # request_nodes = rspec.version.get_nodes_with_slivers()
-        # nodes = slices.verify_slice_nodes(urn, slice, request_nodes, peer)
+        request_nodes = rspec.version.get_nodes_with_slivers()
+        nodes_list = []
+        for start_time in requested_xp_dict:
+            lease = requested_xp_dict[start_time]
+            for hostname in lease['hostname']:
+                nodes_list.append(hostname)
 
+        # nodes = slices.verify_slice_nodes(slice_record,request_nodes, peer)
+        logger.debug("IOTLABDRIVER.PY \tallocate  nodes_list %s slice_record %s"
+                     % (nodes_list, slice_record))
+
+        # add/remove leases
+        rspec_requested_leases = rspec.version.get_leases()
+        leases = slices.verify_slice_leases(slice_record, requested_xp_dict, peer)
+        logger.debug("IOTLABDRIVER.PY \tallocate leases  %s rspec_requested_leases %s"
+                     % (leases,rspec_requested_leases))
+         # update sliver allocations
+        for hostname in nodes_list:
+            client_id = hostname
+            node_urn = xrn_object(self.testbed_shell.root_auth, hostname).urn
+            component_id = node_urn
+            slice_urn = current_slice['reg-urn']
+            for lease in leases:
+                if hostname in lease['reserved_nodes']:
+                    index = lease['reserved_nodes'].index(hostname)
+                    sliver_hrn = '%s.%s-%s' % (self.hrn, lease['lease_id'],
+                                   lease['resource_ids'][index] )
+            sliver_id = Xrn(sliver_hrn, type='sliver').urn
+            record = SliverAllocation(sliver_id=sliver_id, client_id=client_id,
+                                      component_id=component_id,
+                                      slice_urn = slice_urn,
+                                      allocation_state='geni_allocated')
+
+            logger.debug("\r\n \
+                ===============================IOTLABDRIVER.PY \tallocate  sliver_id %s slice_urn %s \r\n"
+                     % (sliver_id,slice_urn))
+            record.sync(self.api.dbsession())
         # add/remove links links
         # slices.verify_slice_links(slice, rspec.version.get_link_requests(), nodes)
 
-        # add/remove leases
-        # rspec_requested_leases = rspec.version.get_leases()
-        leases = slices.verify_slice_leases(current_slice, requested_xp_dict, peer)
 
-        # handle MyPLC peer association.
-        # only used by plc and ple.
-        slices.handle_peer(site, slice, None, peer)
 
         return aggregate.describe([xrn.get_urn()], version=rspec.version)
 
@@ -916,12 +976,12 @@ class IotlabDriver(Driver):
         peer = slices.get_peer(current_slice['hrn'])
         sfa_peer = slices.get_sfa_peer(current_slice['hrn'])
         users = options.get('geni_users', [])
-        persons = slices.verify_persons(current_slice['hrn'],
-            current_slice, users, peer, sfa_peer, options=options)
-        slices.handle_peer(None, None, persons, peer)
+        # persons = slices.verify_persons(current_slice['hrn'],
+            # current_slice, users, peer, sfa_peer, options=options)
+        # slices.handle_peer(None, None, persons, peer)
         # update sliver allocation states and set them to geni_provisioned
         sliver_ids = [sliver['sliver_id'] for sliver in slivers]
-        dbsession=self.api.dbsession()
+        dbsession =self.api.dbsession()
         SliverAllocation.set_allocations(sliver_ids, 'geni_provisioned',dbsession)
         version_manager = VersionManager()
         rspec_version = version_manager.get_version(options['geni_rspec_version'])

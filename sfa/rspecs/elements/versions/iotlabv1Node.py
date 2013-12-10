@@ -58,7 +58,7 @@ class Iotlabv1Node:
             network_elem.set('login', unicode(iotlab_network_dict['login']))
 
     @staticmethod
-    def add_nodes(xml, nodes):
+    def add_nodes(xml, nodes,rspec_content_type=None):
         """Adds the nodes to the xml.
 
         Adds the nodes as well as dedicated iotlab fields to the node xml
@@ -154,6 +154,9 @@ class Iotlabv1Node:
                                                     #'value': initscript['name']})
 
                     Iotlabv1Sliver.add_slivers(node_elem, slivers)
+                # add sliver tag in Request Rspec
+            if rspec_content_type == "request":
+                node_elem.add_instance('sliver', '', [])
         return node_elems
 
     @staticmethod

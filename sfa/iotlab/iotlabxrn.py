@@ -46,8 +46,8 @@ def hrn_to_iotlab_authname (hrn):
 class IotlabXrn (Xrn):
 
     @staticmethod
-    def site_hrn (auth, testbed_name):
-        return '.'.join([auth, testbed_name])
+    def site_hrn (auth):
+        return auth
 
     def __init__ (self, auth=None, hostname=None, login=None, slicename=None,**kwargs):
         #def hostname_to_hrn(auth_hrn, login_base, hostname):
@@ -69,8 +69,6 @@ class IotlabXrn (Xrn):
             self.hrn = '.'.join([auth, slicename])
             self.hrn_to_urn()
             # split at the first _
-
-
 
         else:
             Xrn.__init__ (self,**kwargs)

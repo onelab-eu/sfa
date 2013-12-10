@@ -27,7 +27,7 @@ class IotlabShell():
 
     _MINIMUM_DURATION = 10  # 10 units of granularity 60 s, 10 mins
 
-    def __init__(self, config):
+    def __init__(self, api):
         """Creates an instance of OARrestapi and LDAPapi which will be used to
         issue calls to OAR or LDAP methods.
         Set the time format  and the testbed granularity used for OAR
@@ -36,8 +36,8 @@ class IotlabShell():
         :param config: configuration object from sfa.util.config
         :type config: Config object
         """
-        # self.api=api
-        # config=api.config
+        self.api = api
+        config = api.config
         self.leases_db = TestbedAdditionalSfaDB(config)
         self.oar = OARrestapi()
         self.ldap = LDAPapi()
@@ -814,6 +814,7 @@ class IotlabShell():
         :type slice_record: dict
         :type lease_start_time: integer
         :type lease_duration: integer
+        :returns: job_id, can be None if the job request failed.
 
         """
         logger.debug("IOTLAB_API \r\n \r\n \t AddLeases hostname_list %s  \
@@ -828,31 +829,32 @@ class IotlabShell():
                                     slice_record['hrn'], \
                                     lease_start_time, lease_duration, \
                                     username)
-        start_time = \
-                datetime.fromtimestamp(int(lease_start_time)).\
-                strftime(self.time_format)
-        end_time = lease_start_time + lease_duration
+        if job_id is not None:
+            start_time = \
+                    datetime.fromtimestamp(int(lease_start_time)).\
+                    strftime(self.time_format)
+            end_time = lease_start_time + lease_duration
 
 
-        logger.debug("IOTLAB_API \r\n \r\n \t AddLeases TURN ON LOGGING SQL \
-                        %s %s %s "%(slice_record['hrn'], job_id, end_time))
+            logger.debug("IOTLAB_API \r\n \r\n \t AddLeases TURN ON LOGGING SQL \
+                            %s %s %s "%(slice_record['hrn'], job_id, end_time))
 
 
-        logger.debug("IOTLAB_API \r\n \r\n \t AddLeases %s %s %s " \
-                %(type(slice_record['hrn']), type(job_id), type(end_time)))
+            logger.debug("IOTLAB_API \r\n \r\n \t AddLeases %s %s %s " \
+                    %(type(slice_record['hrn']), type(job_id), type(end_time)))
 
-        iotlab_ex_row = LeaseTableXP(slice_hrn = slice_record['hrn'], experiment_id=job_id,
-                                 end_time= end_time)
+            iotlab_ex_row = LeaseTableXP(slice_hrn = slice_record['hrn'], experiment_id=job_id,
+                                     end_time= end_time)
 
-        logger.debug("IOTLAB_API \r\n \r\n \t AddLeases iotlab_ex_row %s" \
-                %(iotlab_ex_row))
-        self.leases_db.testbed_session.add(iotlab_ex_row)
-        self.leases_db.testbed_session.commit()
+            logger.debug("IOTLAB_API \r\n \r\n \t AddLeases iotlab_ex_row %s" \
+                    %(iotlab_ex_row))
+            self.leases_db.testbed_session.add(iotlab_ex_row)
+            self.leases_db.testbed_session.commit()
 
-        logger.debug("IOTLAB_API \t AddLeases hostname_list start_time %s " \
-                %(start_time))
+            logger.debug("IOTLAB_API \t AddLeases hostname_list start_time %s " \
+                    %(start_time))
 
-        return
+        return job_id
 
 
     #Delete the jobs from job_iotlab table

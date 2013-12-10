@@ -207,10 +207,15 @@ class IotlabSlices:
                 logger.debug("IOTLABSLICES \
                               NEWLEASE slice %s  job %s"
                              % (sfa_slice, job))
-                self.driver.testbed_shell.AddLeases(
+                job_id = self.driver.testbed_shell.AddLeases(
                     job['hostname'],
                     sfa_slice, int(job['start_time']),
                     int(job['duration']))
+                if job_id is not None:
+                    new_leases = self.driver.testbed_shell.GetLeases(login=
+                        sfa_slice['login'])
+                    for new_lease in new_leases:
+                        leases.append(new_lease)
 
         #Deleted leases are the ones with lease id not declared in the Rspec
         if deleted_leases:
@@ -378,7 +383,6 @@ class IotlabSlices:
         logger.debug("IOTLABSLICES \tverify_persons \tslice_hrn  %s  \
                     \t slice_record %s\r\n users %s \t  "
                      % (slice_hrn, slice_record, users))
-        users_by_id = {}
 
         users_by_email = {}
         #users_dict : dict whose keys can either be the user's hrn or its id.
@@ -387,19 +391,18 @@ class IotlabSlices:
 
         #First create dicts by hrn and id for each user in the user record list:
         for info in users:
-            if 'slice_record' in info:
-                slice_rec = info['slice_record']
-                if 'user' in slice_rec :
-                    user = slice_rec['user']
+            # if 'slice_record' in info:
+            #     slice_rec = info['slice_record']
+                # if 'user' in slice_rec :
+                #     user = slice_rec['user']
 
-                    if 'email' in user:
-                        users_by_email[user['email']] = user
-                        users_dict[user['email']] = user
+            if 'email' in info:
+                users_by_email[info['email']] = info
+                users_dict[info['email']] = info
 
         logger.debug("SLABSLICE.PY \t verify_person  \
-                        users_dict %s \r\n user_by_email %s \r\n \
-                        \tusers_by_id %s "
-                     % (users_dict, users_by_email, users_by_id))
+                        users_dict %s \r\n user_by_email %s \r\n  "
+                     % (users_dict, users_by_email))
 
         existing_user_ids = []
         existing_user_emails = []
@@ -417,12 +420,13 @@ class IotlabSlices:
             #Needed because what if the user has been deleted in LDAP but
             #is still in SFA?
             existing_users = self.driver.testbed_shell.GetPersons(filter_user)
-            logger.debug(" \r\n IOTLABSLICES.PY \tverify_person  filter_user \
-                        %s existing_users %s "
+            logger.debug(" \r\n IOTLABSLICES.PY \tverify_person  filter_user %s\
+                       existing_users %s  "
                         % (filter_user, existing_users))
             #User is in iotlab LDAP
             if existing_users:
                 for user in existing_users:
+                    user['login'] = user['uid']
                     users_dict[user['email']].update(user)
                     existing_user_emails.append(
                         users_dict[user['email']]['email'])
@@ -459,7 +463,7 @@ class IotlabSlices:
         #Check that the user of the slice in the slice record
         #matches one of the existing users
         try:
-            if slice_record['PI'][0] in requested_user_hrns:
+            if slice_record['reg-researchers'][0] in requested_user_hrns:
                 logger.debug(" SLABSLICE  \tverify_person ['PI']\
                                 slice_record %s" % (slice_record))
 
