@@ -1,6 +1,6 @@
 %define name sfa
 %define version 3.1
-%define taglevel 0
+%define taglevel 1
 
 %define release %{taglevel}%{?pldistro:.%{pldistro}}%{?date:.%{date}}
 %global python_sitearch	%( python -c "from distutils.sysconfig import get_python_lib; print get_python_lib(1)" )
@@ -265,6 +265,25 @@ fi
 #[ "$1" -ge "1" ] && service sfa-cm restart || :
 
 %changelog
+* Tue Dec 10 2013 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-3.1-1
+- -- core
+- clean up rspecs.
+- GENIv3 rspecs enhirits everything from pgv2.
+- fix dbsession mgt by attributing each incoming API call has its own dbsession.
+- update all drivers and v2_to_v3_adapter according to dbsession fix.
+- fix DB migration.
+- -- client
+- fix sfi.py myslice.
+- sfi.py new option "my_pkcs12".
+- sfi.py defaulr rspec version is GENIv3
+- sfi.py trusted target either Registry interface or Slice interface.
+- -- PlanetLab
+- rebase all pl driver operations around the objects HRNs.
+- ignore objects (Site/Slice/Person/Node) coming from MyPLC peering.
+- importer ignores sites with tag sfa_created='True'.
+- -- IoTLab
+- In progress writing of native AM API v3 compliant driver.
+
 * Thu Oct 10 2013 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-3.0-2
 - -- core
 - Extend all versions of rspecs in order to support "links" and "channels" management methods
