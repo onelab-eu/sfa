@@ -377,9 +377,15 @@ class PlSlices:
         slice_exists = [slice for slice in slices if slice['hrn'] == slice_hrn]
         expires = int(datetime_to_epoch(utcparse(expiration)))
         if not slice_exists:
+            if slice_record:
+                url = slice_record.get('url', slice_hrn)
+                description = slice_record.get('description', slice_hrn)
+            else:
+                url = slice_hrn
+                description = slice_hrn
             slice = {'name': slice_name,
-                     'url': slice_record.get('url', slice_hrn),
-                     'description': slice_record.get('description', slice_hrn)}
+                     'url': url,
+                     'description': description}
             # add the slice                          
             slice['slice_id'] = self.driver.shell.AddSlice(slice)
             # set the slice HRN
