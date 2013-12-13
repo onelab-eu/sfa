@@ -2,6 +2,8 @@
 File containing the IotlabShell, used to interact with nodes, users,
 slices, leases and keys,  as well as the dedicated iotlab database and table,
 holding information about which slice is running which job.
+TODO: Remove interactons with the SFA DB and put it in the driver iotlabdriver
+instead.
 
 """
 from datetime import datetime
@@ -235,9 +237,10 @@ class IotlabShell():
     def GetJobsResources(self, job_id, username = None):
         """ Gets the list of nodes associated with the job_id and username
         if provided.
-        Transforms the iotlab hostnames to the corresponding
-        SFA nodes hrns.
-        Rertuns dict key :'node_ids' , value : hostnames list
+
+        Transforms the iotlab hostnames to the corresponding SFA nodes hrns.
+        Returns dict key :'node_ids' , value : hostnames list.
+
         :param username: user's LDAP login
         :paran job_id: job's OAR identifier.
         :type username: string
@@ -245,7 +248,8 @@ class IotlabShell():
 
         :returns: dicionary with nodes' hostnames belonging to the job.
         :rtype: dict
-        .. warning: Unused. SA 16/10/13
+
+        .. warning:: Unused. SA 16/10/13
         """
 
         req = "GET_jobs_id_resources"
@@ -265,33 +269,6 @@ class IotlabShell():
 
         return job_info
 
-
-    #def get_info_on_reserved_nodes(self, job_info, node_list_name):
-        #"""
-        #..warning:unused  SA 23/05/13
-        #"""
-        ##Get the list of the testbed nodes records and make a
-        ##dictionnary keyed on the hostname out of it
-        #node_list_dict = self.GetNodes()
-        ##node_hostname_list = []
-        #node_hostname_list = [node['hostname'] for node in node_list_dict]
-        ##for node in node_list_dict:
-            ##node_hostname_list.append(node['hostname'])
-        #node_dict = dict(zip(node_hostname_list, node_list_dict))
-        #try :
-            #reserved_node_hostname_list = []
-            #for index in range(len(job_info[node_list_name])):
-               ##job_info[node_list_name][k] =
-                #reserved_node_hostname_list[index] = \
-                        #node_dict[job_info[node_list_name][index]]['hostname']
-
-            #logger.debug("IOTLAB_API \t get_info_on_reserved_nodes \
-                        #reserved_node_hostname_list %s" \
-                        #%(reserved_node_hostname_list))
-        #except KeyError:
-            #logger.error("IOTLAB_API \t get_info_on_reserved_nodes KEYERROR " )
-
-        #return reserved_node_hostname_list
 
     def GetNodesCurrentlyInUse(self):
         """Returns a list of all the nodes already involved in an oar running
@@ -317,7 +294,6 @@ class IotlabShell():
                 hostname_list.append(\
                         oar_id_node_dict[resource_id]['hostname'])
 
-            #hostname_list.append(oar_id_node_dict[resource_id]['hostname'])
         return hostname_list
 
     def GetReservedNodes(self, username=None):
@@ -531,15 +507,15 @@ class IotlabShell():
         Add a federated user straight to db when the user issues a lease
         request with iotlab nodes and that he has not registered with iotlab
         yet (that is he does not have a LDAP entry yet).
-        Uses parts of the routines in IotlabImport when importing user from LDAP.
-        Called by AddPerson, right after LdapAddUser.
+        Uses parts of the routines in IotlabImport when importing user from
+        LDAP. Called by AddPerson, right after LdapAddUser.
         :param user_dict: Must contain email, hrn and pkey to get a GID
         and be added to the SFA db.
         :type user_dict: dict
 
         """
-        check_if_exists = \
-        self.api.dbsession().query(RegUser).filter_by(email = user_dict['email']).first()
+        query = self.api.dbsession().query(RegUser)
+        check_if_exists = query.filter_by(email = user_dict['email']).first()
         #user doesn't exists
         if not check_if_exists:
             logger.debug("__add_person_to_db \t Adding %s \r\n \r\n \
@@ -837,22 +813,23 @@ class IotlabShell():
 
 
             logger.debug("IOTLAB_API \r\n \r\n \t AddLeases TURN ON LOGGING SQL \
-                            %s %s %s "%(slice_record['hrn'], job_id, end_time))
+                        %s %s %s "%(slice_record['hrn'], job_id, end_time))
 
 
             logger.debug("IOTLAB_API \r\n \r\n \t AddLeases %s %s %s " \
                     %(type(slice_record['hrn']), type(job_id), type(end_time)))
 
-            iotlab_ex_row = LeaseTableXP(slice_hrn = slice_record['hrn'], experiment_id=job_id,
-                                     end_time= end_time)
+            iotlab_ex_row = LeaseTableXP(slice_hrn = slice_record['hrn'],
+                                                    experiment_id=job_id,
+                                                    end_time= end_time)
 
             logger.debug("IOTLAB_API \r\n \r\n \t AddLeases iotlab_ex_row %s" \
                     %(iotlab_ex_row))
             self.leases_db.testbed_session.add(iotlab_ex_row)
             self.leases_db.testbed_session.commit()
 
-            logger.debug("IOTLAB_API \t AddLeases hostname_list start_time %s " \
-                    %(start_time))
+            logger.debug("IOTLAB_API \t AddLeases hostname_list start_time %s "
+                        %(start_time))
 
         return job_id
 
@@ -883,8 +860,8 @@ class IotlabShell():
                 oar_bool_answer.update(ret)
 
         else:
-            oar_bool_answer = [self.DeleteJobs(slice_record['oar_job_id'],
-                                               slice_record['user'])]
+            oar_bool_answer = self.DeleteJobs(slice_record['oar_job_id'],
+                                               slice_record['user'])
 
         return oar_bool_answer
 
@@ -909,8 +886,8 @@ class IotlabShell():
                 reservation['slice_hrn'] != filter_value:
                 filtered_reservation_list.remove(reservation)
 
-        logger.debug("IOTLAB_API \t filter_lease_name filtered_reservation_list %s" \
-                        % (filtered_reservation_list))
+        logger.debug("IOTLAB_API \t filter_lease_name filtered_reservation_list\
+                     %s" % (filtered_reservation_list))
         return filtered_reservation_list
 
     @staticmethod
@@ -954,7 +931,6 @@ class IotlabShell():
         #Create user dict first to avoid looking several times for
         #the same user in LDAP SA 27/07/12
         job_oar_list = []
-
         jobs_psql_query = self.leases_db.testbed_session.query(LeaseTableXP).all()
         jobs_psql_dict = dict([(row.experiment_id, row.__dict__)
                                for row in jobs_psql_query])
@@ -1155,6 +1131,7 @@ class IotlabShell():
         :rtype: Boolean
 
         """
+
         all_user_keys = user_record['keys']
         all_user_keys.remove(key_string)
         new_attributes = {'sshPublicKey':all_user_keys}

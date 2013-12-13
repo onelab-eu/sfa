@@ -4,6 +4,7 @@ Also creates the iotlab specific databse and table to keep track
 of which slice hrn contains which job.
 """
 from sfa.util.config import Config
+from sfa.generic import Generic
 from sfa.util.xrn import Xrn, get_authority, hrn_to_urn
 from sfa.iotlab.iotlabshell import IotlabShell
 # from sfa.iotlab.iotlabdriver import IotlabDriver
@@ -333,6 +334,8 @@ class IotlabImporter:
         :param testbed_shell: IotlabDriver object, used to have access to
             testbed_shell attributes.
         :type testbed_shell: IotlabDriver
+
+        .. warning:: does not support multiple keys per user
         """
         ldap_person_listdict = testbed_shell.GetPersons()
         self.logger.info("IOTLABIMPORT \t ldap_person_listdict %s \r\n"
@@ -507,7 +510,7 @@ class IotlabImporter:
 
     def run(self, options):
         """
-        Create the special iotlab table, testbed_xp, in the iotlab database.
+        Create the special iotlab table, lease_table, in the iotlab database.
         Import everything (users, slices, nodes and sites from OAR
         and LDAP) into the SFA database.
         Delete stale records that are no longer in OAR or LDAP.
@@ -518,14 +521,14 @@ class IotlabImporter:
         config = Config ()
         interface_hrn = config.SFA_INTERFACE_HRN
         root_auth = config.SFA_REGISTRY_ROOT_AUTH
-
-        testbed_shell = IotlabShell(config)
+        api = Generic.the_flavour().make_api(interface='registry')
+        testbed_shell = IotlabShell(api)
         leases_db = TestbedAdditionalSfaDB(config)
         #Create special slice table for iotlab
 
-        if not leases_db.exists('testbed_xp'):
+        if not leases_db.exists('lease_table'):
             leases_db.createtable()
-            self.logger.info("IotlabImporter.run:  testbed_xp table created ")
+            self.logger.info("IotlabImporter.run:  lease_table table created ")
 
         # import site and node records in site into the SFA db.
         self.import_sites_and_nodes(testbed_shell)

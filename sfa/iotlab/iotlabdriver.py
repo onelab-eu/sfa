@@ -1,7 +1,7 @@
 """
 Implements what a driver should provide for SFA to work.
 """
-from sfa.util.faults import SliverDoesNotExist, UnknownSfaType
+from sfa.util.faults import SliverDoesNotExist, Forbidden
 from sfa.util.sfalogging import logger
 from sfa.storage.model import RegRecord
 from sfa.util.sfatime import utcparse, datetime_to_string
@@ -10,14 +10,15 @@ from sfa.managers.driver import Driver
 from sfa.rspecs.version_manager import VersionManager
 from sfa.rspecs.rspec import RSpec
 
-from sfa.iotlab.iotlabxrn import xrn_object
+from sfa.iotlab.iotlabxrn import IotlabXrn, xrn_object
 from sfa.util.xrn import Xrn, hrn_to_urn, get_authority, urn_to_hrn
-
 from sfa.iotlab.iotlabaggregate import IotlabAggregate
 from sfa.iotlab.iotlabxrn import xrn_to_hostname
 from sfa.iotlab.iotlabslices import IotlabSlices
 
+from sfa.trust.credential import Credential
 from sfa.storage.model import SliverAllocation
+
 from sfa.iotlab.iotlabshell import IotlabShell
 
 
@@ -42,7 +43,7 @@ class IotlabDriver(Driver):
         """
         Driver.__init__(self, api)
         self.api = api
-        config = api.config
+        # config = api.config
         self.testbed_shell = IotlabShell(api)
         self.cache = None
 
@@ -323,28 +324,6 @@ class IotlabDriver(Driver):
         """
         return self.hrn
 
-    # 'geni_request_rspec_versions' and 'geni_ad_rspec_versions' are mandatory
-    def aggregate_version(self):
-        """
-
-        Returns the testbed's supported rspec advertisement and request
-        versions.
-        :returns: rspec versions supported ad a dictionary.
-        :rtype: dict
-
-        """
-        version_manager = VersionManager()
-        ad_rspec_versions = []
-        request_rspec_versions = []
-        for rspec_version in version_manager.versions:
-            if rspec_version.content_type in ['*', 'ad']:
-                ad_rspec_versions.append(rspec_version.to_dict())
-            if rspec_version.content_type in ['*', 'request']:
-                request_rspec_versions.append(rspec_version.to_dict())
-        return {
-            'testbed': self.testbed_name(),
-            'geni_request_rspec_versions': request_rspec_versions,
-            'geni_ad_rspec_versions': ad_rspec_versions}
 
     def _get_requested_leases_list(self, rspec):
         """
@@ -438,96 +417,8 @@ class IotlabDriver(Driver):
         return xp_dict
 
 
-    def create_sliver(self, slice_urn, slice_hrn, creds, rspec_string,
-                      users, options):
-        """Answer to CreateSliver.
 
-        Creates the leases and slivers for the users from the information
-            found in the rspec string.
-            Launch experiment on OAR if the requested leases is valid. Delete
-            no longer requested leases.
-
-
-        :param creds: user's credentials
-        :type creds: string
-        :param users: user record list
-        :type users: list
-        :param options:
-        :type options:
-
-        :returns: a valid Rspec for the slice which has just been
-            modified.
-        :rtype: RSpec
-
-
-        """
-        aggregate = IotlabAggregate(self)
-
-        slices = IotlabSlices(self)
-        peer = slices.get_peer(slice_hrn)
-        sfa_peer = slices.get_sfa_peer(slice_hrn)
-        slice_record = None
-
-        if not isinstance(creds, list):
-            creds = [creds]
-
-        if users:
-            slice_record = users[0].get('slice_record', {})
-            logger.debug("IOTLABDRIVER.PY \t ===============create_sliver \t\
-                            creds %s \r\n \r\n users %s"
-                         % (creds, users))
-            slice_record['user'] = {'keys': users[0]['keys'],
-                                    'email': users[0]['email'],
-                                    'hrn': slice_record['reg-researchers'][0]}
-        # parse rspec
-        rspec = RSpec(rspec_string)
-        logger.debug("IOTLABDRIVER.PY \t create_sliver \trspec.version \
-                     %s slice_record %s users %s"
-                     % (rspec.version, slice_record, users))
-
-        # ensure site record exists?
-        # ensure slice record exists
-        #Removed options in verify_slice SA 14/08/12
-        #Removed peer record in  verify_slice SA 18/07/13
-        sfa_slice = slices.verify_slice(slice_hrn, slice_record, sfa_peer)
-
-        # ensure person records exists
-        #verify_persons returns added persons but the return value
-        #is not used
-        #Removed peer record and sfa_peer in  verify_persons SA 18/07/13
-        slices.verify_persons(slice_hrn, sfa_slice, users, options=options)
-        #requested_attributes returned by rspec.version.get_slice_attributes()
-        #unused, removed SA 13/08/12
-        #rspec.version.get_slice_attributes()
-
-        logger.debug("IOTLABDRIVER.PY create_sliver slice %s " % (sfa_slice))
-
-        # add/remove slice from nodes
-
-        #requested_slivers = [node.get('component_id') \
-                    #for node in rspec.version.get_nodes_with_slivers()\
-                    #if node.get('authority_id') is self.testbed_shell.root_auth]
-        #l = [ node for node in rspec.version.get_nodes_with_slivers() ]
-        #logger.debug("SLADRIVER \tcreate_sliver requested_slivers \
-                                    #requested_slivers %s  listnodes %s" \
-                                    #%(requested_slivers,l))
-        #verify_slice_nodes returns nodes, but unused here. Removed SA 13/08/12.
-        #slices.verify_slice_nodes(sfa_slice, requested_slivers, peer)
-
-        requested_xp_dict = self._process_requested_xp_dict(rspec)
-
-        logger.debug("IOTLABDRIVER.PY \tcreate_sliver  requested_xp_dict %s "
-                     % (requested_xp_dict))
-        #verify_slice_leases returns the leases , but the return value is unused
-        #here. Removed SA 13/08/12
-        slices.verify_slice_leases(sfa_slice,
-                                   requested_xp_dict, peer)
-
-        return aggregate.get_rspec(slice_xrn=slice_urn,
-                                   login=sfa_slice['login'],
-                                   version=rspec.version)
-
-    def delete(self, slice_urns, options):
+    def delete(self, slice_urns, options={}):
         """
         Deletes the lease associated with the slice hrn and the credentials
             if the slice belongs to iotlab. Answer to DeleteSliver.
@@ -550,12 +441,15 @@ class IotlabDriver(Driver):
         aggregate = IotlabAggregate(self)
         slivers = aggregate.get_slivers(slice_urns)
         if slivers:
-            slice_id = slivers[0]['slice_id']
+            # slice_id = slivers[0]['slice_id']
             node_ids = []
             sliver_ids = []
+            sliver_jobs_dict = {}
             for sliver in slivers:
                 node_ids.append(sliver['node_id'])
                 sliver_ids.append(sliver['sliver_id'])
+                job_id = sliver['sliver_id'].split('+')[-1].split('-')[0]
+                sliver_jobs_dict[job_id] = sliver['sliver_id']
         logger.debug("IOTLABDRIVER.PY delete_sliver slivers %s slice_urns %s"
             % (slivers, slice_urns))
         slice_hrn = urn_to_hrn(slice_urns[0])[0]
@@ -577,11 +471,20 @@ class IotlabDriver(Driver):
 
             logger.debug("IOTLABDRIVER.PY delete_sliver peer %s \
                 \r\n \t sfa_slice %s " % (peer, sfa_slice))
+            oar_bool_ans = self.testbed_shell.DeleteSliceFromNodes(
+                                                                    sfa_slice)
+            for job_id in oar_bool_ans:
+                # if the job has not been successfully deleted
+                # don't delete the associated sliver
+                # remove it from the sliver list
+                if oar_bool_ans[job_id] is False:
+                    sliver = sliver_jobs_dict[job_id]
+                    sliver_ids.remove(sliver)
             try:
-                self.testbed_shell.DeleteSliceFromNodes(sfa_slice)
+
                 dbsession = self.api.dbsession()
-                SliverAllocation.delete_allocations(sliver_ids,dbsession)
-            except:
+                SliverAllocation.delete_allocations(sliver_ids, dbsession)
+            except :
                 logger.log_exc("IOTLABDRIVER.PY delete error ")
 
         # prepare return struct
@@ -593,73 +496,73 @@ class IotlabDriver(Driver):
                  'geni_expires': datetime_to_string(utcparse(sliver['expires']))})
         return geni_slivers
 
-    def list_resources (self, slice_urn, slice_hrn, creds, options):
-        """
+    # def list_resources (self, slice_urn, slice_hrn, creds, options):
+    #     """
 
-        List resources from the iotlab aggregate and returns a Rspec
-            advertisement with resources found when slice_urn and slice_hrn are
-            None (in case of resource discovery).
-            If a slice hrn and urn are provided, list experiment's slice
-            nodes in a rspec format. Answer to ListResources.
-            Caching unused.
+    #     List resources from the iotlab aggregate and returns a Rspec
+    #         advertisement with resources found when slice_urn and slice_hrn are
+    #         None (in case of resource discovery).
+    #         If a slice hrn and urn are provided, list experiment's slice
+    #         nodes in a rspec format. Answer to ListResources.
+    #         Caching unused.
 
-        :param slice_urn: urn of the slice
-        :param slice_hrn: name of the slice
-        :param creds: slice credenials
-        :type slice_urn: string
-        :type slice_hrn: string
-        :type creds: ? unused
-        :param options: options used when listing resources (list_leases, info,
-            geni_available)
-        :returns: rspec string in xml
-        :rtype: string
+    #     :param slice_urn: urn of the slice
+    #     :param slice_hrn: name of the slice
+    #     :param creds: slice credenials
+    #     :type slice_urn: string
+    #     :type slice_hrn: string
+    #     :type creds: ? unused
+    #     :param options: options used when listing resources (list_leases, info,
+    #         geni_available)
+    #     :returns: rspec string in xml
+    #     :rtype: string
 
-        .. note:: creds are unused
-        """
+    #     .. note:: creds are unused
+    #     """
 
-        #cached_requested = options.get('cached', True)
+    #     #cached_requested = options.get('cached', True)
 
-        version_manager = VersionManager()
-        # get the rspec's return format from options
-        rspec_version = \
-            version_manager.get_version(options.get('geni_rspec_version'))
-        version_string = "rspec_%s" % (rspec_version)
+    #     version_manager = VersionManager()
+    #     # get the rspec's return format from options
+    #     rspec_version = \
+    #         version_manager.get_version(options.get('geni_rspec_version'))
+    #     version_string = "rspec_%s" % (rspec_version)
 
-        #panos adding the info option to the caching key (can be improved)
-        if options.get('info'):
-            version_string = version_string + "_" + \
-                options.get('info', 'default')
+    #     #panos adding the info option to the caching key (can be improved)
+    #     if options.get('info'):
+    #         version_string = version_string + "_" + \
+    #             options.get('info', 'default')
 
-        # Adding the list_leases option to the caching key
-        if options.get('list_leases'):
-            version_string = version_string + "_" + \
-            options.get('list_leases', 'default')
+    #     # Adding the list_leases option to the caching key
+    #     if options.get('list_leases'):
+    #         version_string = version_string + "_" + \
+    #         options.get('list_leases', 'default')
 
-        # Adding geni_available to caching key
-        if options.get('geni_available'):
-            version_string = version_string + "_" + \
-                str(options.get('geni_available'))
+    #     # Adding geni_available to caching key
+    #     if options.get('geni_available'):
+    #         version_string = version_string + "_" + \
+    #             str(options.get('geni_available'))
 
-        # look in cache first
-        #if cached_requested and self.cache and not slice_hrn:
-            #rspec = self.cache.get(version_string)
-            #if rspec:
-                #logger.debug("IotlabDriver.ListResources: \
-                                    #returning cached advertisement")
-                #return rspec
+    #     # look in cache first
+    #     #if cached_requested and self.cache and not slice_hrn:
+    #         #rspec = self.cache.get(version_string)
+    #         #if rspec:
+    #             #logger.debug("IotlabDriver.ListResources: \
+    #                                 #returning cached advertisement")
+    #             #return rspec
 
-        #panos: passing user-defined options
-        aggregate = IotlabAggregate(self)
+    #     #panos: passing user-defined options
+    #     aggregate = IotlabAggregate(self)
 
-        rspec = aggregate.get_rspec(slice_xrn=slice_urn,
-                                    version=rspec_version, options=options)
+    #     rspec = aggregate.get_rspec(slice_xrn=slice_urn,
+    #                                 version=rspec_version, options=options)
 
-        # cache the result
-        #if self.cache and not slice_hrn:
-            #logger.debug("Iotlab.ListResources: stores advertisement in cache")
-            #self.cache.add(version_string, rspec)
+    #     # cache the result
+    #     #if self.cache and not slice_hrn:
+    #         #logger.debug("Iotlab.ListResources: stores advertisement in cache")
+    #         #self.cache.add(version_string, rspec)
 
-        return rspec
+    #     return rspec
 
 
     def list_slices(self, creds, options):
@@ -672,7 +575,7 @@ class IotlabDriver(Driver):
         :returns: slice urns list
         :rtype: list
 
-        .. note:: creds are unused
+        .. note:: creds and options are unused - SA 12/12/13
         """
         # look in cache first
         #if self.cache:
@@ -741,46 +644,49 @@ class IotlabDriver(Driver):
         :type hrn: string
 
         TODO: needs review
-        .. seealso:: update in driver.py.
+        .. warning:: SA 12/12/13 - Removed. should be done in iotlabimporter
+            since users, keys and slice are managed by the LDAP.
 
         """
-        pointer = old_sfa_record['pointer']
-        old_sfa_record_type = old_sfa_record['type']
+        # pointer = old_sfa_record['pointer']
+        # old_sfa_record_type = old_sfa_record['type']
 
-        # new_key implemented for users only
-        if new_key and old_sfa_record_type not in ['user']:
-            raise UnknownSfaType(old_sfa_record_type)
+        # # new_key implemented for users only
+        # if new_key and old_sfa_record_type not in ['user']:
+        #     raise UnknownSfaType(old_sfa_record_type)
 
-        if old_sfa_record_type == "user":
-            update_fields = {}
-            all_fields = new_sfa_record
-            for key in all_fields.keys():
-                if key in ['key', 'password']:
-                    update_fields[key] = all_fields[key]
+        # if old_sfa_record_type == "user":
+        #     update_fields = {}
+        #     all_fields = new_sfa_record
+        #     for key in all_fields.keys():
+        #         if key in ['key', 'password']:
+        #             update_fields[key] = all_fields[key]
 
-            if new_key:
-                # must check this key against the previous one if it exists
-                persons = self.testbed_shell.GetPersons([old_sfa_record])
-                person = persons[0]
-                keys = [person['pkey']]
-                #Get all the person's keys
-                keys_dict = self.testbed_shell.GetKeys(keys)
+        #     if new_key:
+        #         # must check this key against the previous one if it exists
+        #         persons = self.testbed_shell.GetPersons([old_sfa_record])
+        #         person = persons[0]
+        #         keys = [person['pkey']]
+        #         #Get all the person's keys
+        #         keys_dict = self.testbed_shell.GetKeys(keys)
 
-                # Delete all stale keys, meaning the user has only one key
-                #at a time
-                #TODO: do we really want to delete all the other keys?
-                #Is this a problem with the GID generation to have multiple
-                #keys? SA 30/05/13
-                key_exists = False
-                if key in keys_dict:
-                    key_exists = True
-                else:
-                    #remove all the other keys
-                    for key in keys_dict:
-                        self.testbed_shell.DeleteKey(person, key)
-                    self.testbed_shell.AddPersonKey(
-                        person, {'sshPublicKey': person['pkey']},
-                        {'sshPublicKey': new_key})
+        #         # Delete all stale keys, meaning the user has only one key
+        #         #at a time
+        #         #TODO: do we really want to delete all the other keys?
+        #         #Is this a problem with the GID generation to have multiple
+        #         #keys? SA 30/05/13
+        #         key_exists = False
+        #         if key in keys_dict:
+        #             key_exists = True
+        #         else:
+        #             #remove all the other keys
+        #             for key in keys_dict:
+        #                 self.testbed_shell.DeleteKey(person, key)
+        #             self.testbed_shell.AddPersonKey(
+        #                 person, {'sshPublicKey': person['pkey']},
+        #                 {'sshPublicKey': new_key})
+        logger.warning ("UNDEFINED - Update should be done by the \
+            iotlabimporter")
         return True
 
     def remove(self, sfa_record):
@@ -822,13 +728,21 @@ class IotlabDriver(Driver):
             return True
 
     def check_sliver_credentials(self, creds, urns):
+        """Check that the sliver urns belongs to the slice specified in the
+        credentials.
+
+        :param urns: list of sliver urns.
+        :type urns: list.
+        :param creds: slice credentials.
+        :type creds: Credential object.
+
+
+        """
         # build list of cred object hrns
         slice_cred_names = []
         for cred in creds:
             slice_cred_hrn = Credential(cred=cred).get_gid_object().get_hrn()
-            slicename = Xrn(xrn=slice_cred_hrn).iotlab_slicename()
-            logger.debug("IOTLABDRIVER.PY \t check_sliver_credentials slicename %s \r\n \r\n"
-                     % (slicename))
+            slicename = IotlabXrn(xrn=slice_cred_hrn).iotlab_slicename()
             slice_cred_names.append(slicename)
 
         # look up slice name of slivers listed in urns arg
@@ -842,12 +756,12 @@ class IotlabDriver(Driver):
                 pass
 
         if not slice_ids:
-             raise Forbidden("sliver urn not provided")
+            raise Forbidden("sliver urn not provided")
 
         slices = self.testbed_shell.GetSlices(slice_ids)
         sliver_names = [single_slice['name'] for single_slice in slices]
 
-        # make sure we have a credential for every specified sliver ierd
+        # make sure we have a credential for every specified sliver
         for sliver_name in sliver_names:
             if sliver_name not in slice_cred_names:
                 msg = "Valid credential not found for target: %s" % sliver_name
@@ -857,11 +771,28 @@ class IotlabDriver(Driver):
     ########## aggregate oriented
     ########################################
 
+    # 'geni_request_rspec_versions' and 'geni_ad_rspec_versions' are mandatory
+    def aggregate_version(self):
+        """
 
-    def testbed_name (self): return "iotlab"
+        Returns the testbed's supported rspec advertisement and request
+        versions.
+        :returns: rspec versions supported ad a dictionary.
+        :rtype: dict
 
-    def aggregate_version (self):
-        return {}
+        """
+        version_manager = VersionManager()
+        ad_rspec_versions = []
+        request_rspec_versions = []
+        for rspec_version in version_manager.versions:
+            if rspec_version.content_type in ['*', 'ad']:
+                ad_rspec_versions.append(rspec_version.to_dict())
+            if rspec_version.content_type in ['*', 'request']:
+                request_rspec_versions.append(rspec_version.to_dict())
+        return {
+            'testbed': self.testbed_name(),
+            'geni_request_rspec_versions': request_rspec_versions,
+            'geni_ad_rspec_versions': ad_rspec_versions}
 
     # first 2 args are None in case of resource discovery
     def list_resources (self, version=None, options={}):
@@ -896,8 +827,7 @@ class IotlabDriver(Driver):
         sfa_users = options.get('sfa_users', [])
         if sfa_users:
             slice_record = sfa_users[0].get('slice_record', [])
-        logger.debug("IOTLABDRIVER.PY \t ===============allocate \t\
-                            \r\n \r\n options %s slice_record %s" % (options,slice_record))
+
         # parse rspec
         rspec = RSpec(rspec_string)
         # requested_attributes = rspec.version.get_slice_attributes()
@@ -914,9 +844,11 @@ class IotlabDriver(Driver):
         # oui c'est degueulasse, le slice_record se retrouve modifie
         # dans la methode avec les infos du user, els infos sont propagees
         # dans verify_slice_leases
-        persons = slices.verify_persons(xrn.hrn, slice_record, users, options=options)
+        persons = slices.verify_persons(xrn.hrn, slice_record, users,
+                                        options=options)
         # ensure slice attributes exists
-        # slices.verify_slice_attributes(slice, requested_attributes, options=options)
+        # slices.verify_slice_attributes(slice, requested_attributes,
+                                    # options=options)
 
         # add/remove slice from nodes
         requested_xp_dict = self._process_requested_xp_dict(rspec)
@@ -937,8 +869,9 @@ class IotlabDriver(Driver):
         # add/remove leases
         rspec_requested_leases = rspec.version.get_leases()
         leases = slices.verify_slice_leases(slice_record, requested_xp_dict, peer)
-        logger.debug("IOTLABDRIVER.PY \tallocate leases  %s rspec_requested_leases %s"
-                     % (leases,rspec_requested_leases))
+        logger.debug("IOTLABDRIVER.PY \tallocate leases  %s \
+                        rspec_requested_leases %s" % (leases,
+                        rspec_requested_leases))
          # update sliver allocations
         for hostname in nodes_list:
             client_id = hostname
@@ -955,15 +888,7 @@ class IotlabDriver(Driver):
                                       component_id=component_id,
                                       slice_urn = slice_urn,
                                       allocation_state='geni_allocated')
-
-            logger.debug("\r\n \
-                ===============================IOTLABDRIVER.PY \tallocate  sliver_id %s slice_urn %s \r\n"
-                     % (sliver_id,slice_urn))
             record.sync(self.api.dbsession())
-        # add/remove links links
-        # slices.verify_slice_links(slice, rspec.version.get_link_requests(), nodes)
-
-
 
         return aggregate.describe([xrn.get_urn()], version=rspec.version)
 
@@ -981,8 +906,10 @@ class IotlabDriver(Driver):
         # slices.handle_peer(None, None, persons, peer)
         # update sliver allocation states and set them to geni_provisioned
         sliver_ids = [sliver['sliver_id'] for sliver in slivers]
-        dbsession =self.api.dbsession()
-        SliverAllocation.set_allocations(sliver_ids, 'geni_provisioned',dbsession)
+        dbsession = self.api.dbsession()
+        SliverAllocation.set_allocations(sliver_ids, 'geni_provisioned',
+                                                                dbsession)
         version_manager = VersionManager()
-        rspec_version = version_manager.get_version(options['geni_rspec_version'])
+        rspec_version = version_manager.get_version(options[
+                                                        'geni_rspec_version'])
         return self.describe(urns, rspec_version, options=options)

@@ -20,7 +20,7 @@ from sfa.iotlab.OARrestapi import OARrestapi
 from sfa.iotlab.iotlabdriver import IotlabDriver
 from sfa.util.config import Config
 
-
+from sfa.generic import Generic
 import os
 import sys
 
@@ -75,7 +75,7 @@ def TestLdap(job_id = None):
     print "\r\n TEST ldap_server.LdapSearch ids = avakian", ret
 
 
-    password = ldap_server.generate_password()
+    password = ldap_server.login_pwd.generate_password()
     print "\r\n TEST generate_password ", password
 
     maxi = ldap_server.find_max_uidNumber()
@@ -94,7 +94,7 @@ def TestLdap(job_id = None):
     record['mail'] = "robin@arkham.fr"
 
 
-    login = ldap_server.generate_login(data)
+    login = ldap_server.LdapGenerateUniqueLogin(data)
     print "\r\n Robin \tgenerate_login  ", ret, login
 
     ret = ldap_server.LdapAddUser(data)
@@ -105,7 +105,7 @@ def TestLdap(job_id = None):
     print "\r\n Robin \tldap_server.LdapSearch ids = %s %s" % (login, ret)
 
     password = "Thridrobin"
-    enc = ldap_server.encrypt_password(password)
+    enc = ldap_server.login_pwd.encrypt_password(password)
     print "\r\n Robin \tencrypt_password ", enc
 
     ret = ldap_server.LdapModifyUser(record, {'userPassword':enc})
@@ -134,8 +134,8 @@ def TestLdap(job_id = None):
     #ret = ldap_server.LdapSearch('(uid=grayson)', [])
     #print "\r\n Nightwing \tldap_server.LdapSearch ids = %s %s" %('grayson',ret )
 
-    #ret = ldap_server.LdapAddUser(datanight)
-    #print "\r\n Nightwing \tLdapAddUser ", ret
+    ret = ldap_server.LdapAddUser(datanight)
+    print "\r\n Nightwing \tLdapAddUser ", ret
 
     #ret = ldap_server.LdapResetPassword(record_night)
     #print "\r\n Nightwing  \tLdapResetPassword de %s : %s" % (record_night, ret)
@@ -228,7 +228,7 @@ def TestOAR(job_id = None):
 
     uri = '/oarapi/jobs/' + job_id + '/resources.json'
     raw_json = get_stuff(oar, uri)
-    print "\r\n OAR  ", uri, raw_json, "\r\n KKK \t", raw_json.keys()
+    print "\r\n OAR  ", uri, raw_json, "\r\n resources.json \t", raw_json.keys()
 
     time_format = "%Y-%m-%d %H:%M:%S"
 
@@ -248,7 +248,8 @@ def TestOAR(job_id = None):
 
 
 def TestImporter(arg=None):
-    iotlabdriver = IotlabDriver(Config())
+    api = Generic.the_flavour().make_api(interface='registry')
+    iotlabdriver = IotlabDriver(api)
 
     nodes_listdict = iotlabdriver.testbed_shell.GetNodes()
     sites_listdict = iotlabdriver.testbed_shell.GetSites()
@@ -263,19 +264,21 @@ def TestIotlabDriver(job_id = None):
 
     if isinstance(job_id, list) and len(job_id) == 1:
         job_id = job_id[0]
-    iotlabdriver = IotlabDriver(Config())
 
+    api = Generic.the_flavour().make_api(interface='registry')
+    iotlabdriver = IotlabDriver(api)
     #nodes = iotlabdriver.testbed_shell.GetReservedNodes()
     #print " \r\n \r\n GetReservedNodes", nodes
 
-    sl = iotlabdriver.testbed_shell.GetSlices(slice_filter='iotlab.avakian_slice', slice_filter_type='slice_hrn')
+    sl = iotlabdriver.testbed_shell.GetSlices(
+            slice_filter='iotlab.avakian_slice', slice_filter_type='slice_hrn')
     print "\r\n \r\nGetSlices", sl[0]
 
     #sl = iotlabdriver.testbed_shell.GetSlices(slice_filter='20', slice_filter_type='record_id_user')
     #print "\r\n \r\nGetSlices", sl
 
-    #sl = iotlabdriver.testbed_shell.GetSlices()
-    #print "\r\n \r\nGetSlices", sl
+    sl = iotlabdriver.testbed_shell.GetSlices()
+    print "\r\n \r\nGetSlices", sl
 
     persons = iotlabdriver.testbed_shell.GetPersons()
     print "\r\n \r\n  GetPersons", persons
@@ -284,11 +287,11 @@ def TestIotlabDriver(job_id = None):
     print "\r\n \r\n  GetLeases", leases
 
     leases = iotlabdriver.testbed_shell.GetLeases(lease_filter_dict={'slice_hrn':'iotlab.avakian_slice'})
-    print "\r\n \r\n  GetLeases", leases
+    print "\r\n \r\n  GetLeases slice_hrn iotlab.avakian_slice ", leases
 
 
     leases = iotlabdriver.testbed_shell.GetLeases(lease_filter_dict={'t_from':1405070000})
-    print "\r\n \r\n  GetLeases", leases
+    print "\r\n \r\n  GetLeases t_from 1405070000", leases
 def  TestSfi(filename = None):
 
     if filename is None:
@@ -343,7 +346,7 @@ def  TestSfi(filename = None):
 
 def TestSQL(arg = None):
     from sfa.storage.model import make_record, RegSlice, RegRecord
-    from sfa.storage.alchemy import dbsession
+    from sfa.storage.alchemy import global_dbsession
     from sqlalchemy.orm.collections import InstrumentedList
 
     from sqlalchemy.orm import joinedload
@@ -377,13 +380,16 @@ def TestSQL(arg = None):
         #used  to know if a given record is already known to SFA
 
     records_by_type_hrn = \
-            dict ( [ ( (record.type,record.hrn) , record ) for record in all_records ] )
+            dict ( [ ( (record.type,record.hrn) , record ) for
+                                        record in all_records ] )
     for (rec_type, rec) in records_by_type_hrn :
         if rec_type == 'user':
-            print >>sys.stderr,"\r\n IOTLABIMPORT \t keys %s rec %s \r\n" %(rec_type, rec )
+            print >>sys.stderr,"\r\n IOTLABIMPORT \t keys %s rec \
+                %s \r\n" %(rec_type, rec )
 
     users_rec_by_email = \
-            dict ( [ (record.email, record) for record in all_records if record.type == 'user' ] )
+            dict ( [ (record.email, record) for record
+                        in all_records if record.type == 'user' ] )
 
 
 def RunAll( arg ):

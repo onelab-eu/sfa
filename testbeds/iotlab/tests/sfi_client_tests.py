@@ -30,39 +30,90 @@ rspec_filename_list = ['firexp_avakian_slice_iotlab.rspec',
 'test_delete_all_leases.rspec']
 
 rspec_filename_dict = {
-	('iotlab_avakian', 'iotlab'):
-		"sfi.py create iotlab.avakian_slice " + rspec_dir + \
+	('iotlab_avakian', 'iotlab', 'allocate' ):
+		"sfi.py allocate iotlab.avakian_slice " + rspec_dir + \
 			'iotlab_avakian_slice_iotlab.rspec',
 
-	('iotlab_avakian', 'iotlab2'):
-		"sfi.py create iotlab.avakian_slice " + rspec_dir + \
+	('iotlab_avakian', 'iotlab2', 'allocate'):
+		"sfi.py allocate iotlab.avakian_slice " + rspec_dir + \
 		'iotlab_avakian_slice_iotlab2.rspec',
 
-	('firexp_user','iotlab'):
-		"sfi.py create firexp.flab.iotlab_slice " + rspec_dir + \
+	('firexp_user','iotlab', 'allocate'):
+		"sfi.py allocate firexp.flab.iotlab_slice " + rspec_dir + \
 			'firexp_iotlab_slice_iotlab.rspec',
 
-	('firexp_user', 'all'):
-			"sfi.py create firexp.flab.iotlab_slice "+ rspec_dir + \
+	('firexp_user', 'all', 'allocate'):
+			"sfi.py allocate firexp.flab.iotlab_slice "+ rspec_dir + \
 				'firexp_iotlab_slice_all.rspec',
 
-	('iotlab_user', 'iotlab'):
-		"sfi.py create iotlab.user_slice "+ rspec_dir + \
+	('iotlab_user', 'iotlab', 'allocate'):
+		"sfi.py allocate iotlab.user_slice "+ rspec_dir + \
 			'iotlab_user_slice_iotlab.rspec',
 
-	('firexp_avakian','iotlab'):
-		"sfi.py create firexp.flab.avakian_slice " + rspec_dir + \
+	('firexp_avakian','iotlab', 'allocate'):
+		"sfi.py allocate firexp.flab.avakian_slice " + rspec_dir + \
 			'firexp_avakian_slice_iotlab.rspec',
 
-	('iotlab_avakian', 'plab') :
-			"sfi.py create iotlab.avakian_slice " + rspec_dir + \
+	('iotlab_avakian', 'plab', 'allocate') :
+			"sfi.py allocate iotlab.avakian_slice " + rspec_dir + \
 				'iotlab_avakian_slice_plab.rspec',
 
-	('iotlab_avakian', 'all') :
-	 "sfi.py create iotlab.avakian_slice " + rspec_dir + \
-		'iotlab_avakian_slice_all.rspec'
+	('iotlab_avakian', 'all', 'allocate') :
+	 "sfi.py allocate iotlab.avakian_slice " + rspec_dir + \
+		'iotlab_avakian_slice_all.rspec',
 
+    ('iotlab_avakian', 'iotlab', 'provision' ):
+        "sfi.py provision iotlab.avakian_slice \
+                            iotlab_avakian_slice_iotlab.rspec",
+
+    ('iotlab_avakian', 'iotlab2', 'provision'):
+        "sfi.py provision iotlab.avakian_slice \
+                            iotlab_avakian_slice_iotlab2.rspec",
+
+    ('firexp_user','iotlab', 'provision'):
+        "sfi.py provision firexp.flab.iotlab_slice firexp_iotlab_slice_iotlab.rspec",
+
+    ('firexp_user', 'all', 'provision'):
+            "sfi.py provision firexp.flab.iotlab_slice firexp_iotlab_slice_all.rspec",
+
+    ('iotlab_user', 'iotlab', 'provision'):
+        "sfi.py provision iotlab.user_slice iotlab_user_slice_iotlab.rspec",
+
+    ('firexp_avakian','iotlab', 'provision'):
+        "sfi.py provision firexp.flab.avakian_slice firexp_avakian_slice_iotlab.rspec",
+
+    ('iotlab_avakian', 'plab', 'provision') :
+            "sfi.py provision iotlab.avakian_slice iotlab_avakian_slice_plab.rspec",
+
+    ('iotlab_avakian', 'all', 'provision') :
+     "sfi.py provision iotlab.avakian_slice iotlab_avakian_slice_all.rspec",
+
+    ('iotlab_avakian', 'iotlab', 'describe' ):
+        "sfi.py describe iotlab.avakian_slice iotlab_avakian_slice_iotlab.rspec",
+
+    ('iotlab_avakian', 'iotlab2', 'describe'):
+        "sfi.py describe iotlab.avakian_slice iotlab_avakian_slice_iotlab2.rspec",
+
+    ('firexp_user','iotlab', 'describe'):
+        "sfi.py describe firexp.flab.iotlab_slice firexp_iotlab_slice_iotlab.rspec",
+
+    ('firexp_user', 'all', 'describe'):
+            "sfi.py describe firexp.flab.iotlab_slice firexp_iotlab_slice_all.rspec",
+
+    ('iotlab_user', 'iotlab', 'describe'):
+        "sfi.py describe iotlab.user_slice iotlab_user_slice_iotlab.rspec",
+
+    ('firexp_avakian','iotlab', 'describe'):
+        "sfi.py describe firexp.flab.avakian_slice firexp_avakian_slice_iotlab.rspec",
+
+    ('iotlab_avakian', 'plab', 'describe') :
+            "sfi.py describe iotlab.avakian_slice iotlab_avakian_slice_plab.rspec",
+
+    ('iotlab_avakian', 'all', 'describe') :
+     "sfi.py describe iotlab.avakian_slice iotlab_avakian_slice_all.rspec"
 	}
+
+print rspec_filename_dict
 # check if the firexp user (uid user) is already in LDAP
 # in this is the case, delete it :
 ldap_server = LDAPapi()
@@ -131,16 +182,24 @@ os.system('sfi.py show iotlab.avakian')
 print " =================    SFI.PY SHOW NODE   ============="
 os.system('sfi.py show iotlab.m3-3.devgrenoble.iot-lab.info')
 
-print " =================    SFI.PY SLICES       ============="
-raw_input("Press Enter to continue...")
-os.system('sfi.py slices')
+
 
 print " =================    SFI.PY STATUS SLICE   ============="
 os.system('sfi.py status iotlab.avakian_slice')
 
-print " =================    SFI.PY CREATE SLICE  on iotlab only  ============="
+print " =================    SFI.PY ALLOCATE SLICE  on iotlab only  ============="
 raw_input("Press Enter to continue...")
-os.system( rspec_filename_dict[('iotlab_avakian','iotlab')])
+os.system( rspec_filename_dict[('iotlab_avakian','iotlab' , 'allocate')])
+
+
+print " =================    SFI.PY PROVISION SLICE  on iotlab only  ============="
+raw_input("Press Enter to continue...")
+os.system( rspec_filename_dict[('iotlab_avakian','iotlab' , 'provision')])
+
+
+print " =================    SFI.PY DESCRIBE SLICE  on iotlab only  ============="
+raw_input("Press Enter to continue...")
+os.system( rspec_filename_dict[('iotlab_avakian','iotlab' , 'describe')])
 
 
 print " ================= SFI.PY RESOURCES -l all iotlab.avakian_slice ============="
@@ -153,9 +212,9 @@ raw_input("Press Enter to continue...")
 os.system('sfi.py delete iotlab.avakian_slice')
 
 
-print " =================    SFI.PY CREATE SLICE  on iotlab and firexp  ============="
+print " =================    SFI.PY ALLOCATE SLICE  on iotlab and firexp  ============="
 raw_input("Press Enter to continue...")
-os.system(rspec_filename_dict[('iotlab_avakian','all')])
+os.system(rspec_filename_dict[('iotlab_avakian','all', 'allocate')])
 
 
 print " ================= SFI.PY RESOURCES -l all -r iotlab iotlab.avakian_slice ============="
@@ -178,9 +237,17 @@ os.system('cp /root/.sfi/sfi_config_firexp /root/.sfi/sfi_config')
 
 
 
-print " =================    SFI.PY CREATE SLICE  on iotlab and firexp  ============="
+print " =================    SFI.PY ALLOCATE SLICE  on iotlab and firexp  ============="
 raw_input("Press Enter to continue...")
-os.system(rspec_filename_dict[('firexp_user','all')])
+os.system(rspec_filename_dict[('firexp_user','all', 'allocate')])
+
+print " =================    SFI.PY DESCRIBE SLICE  on iotlab and firexp  ============="
+raw_input("Press Enter to continue...")
+os.system(rspec_filename_dict[('firexp_user','all', 'describe')])
+
+print " =================    SFI.PY PROVISION SLICE  on iotlab and firexp  ============="
+raw_input("Press Enter to continue...")
+os.system(rspec_filename_dict[('firexp_user','all', 'provision')])
 
 
 print " =================    SFI.PY SHOW SLICE   ============="
