@@ -4,7 +4,6 @@ Also creates the iotlab specific databse and table to keep track
 of which slice hrn contains which job.
 """
 from sfa.util.config import Config
-from sfa.generic import Generic
 from sfa.util.xrn import Xrn, get_authority, hrn_to_urn
 from sfa.iotlab.iotlabshell import IotlabShell
 # from sfa.iotlab.iotlabdriver import IotlabDriver
@@ -521,8 +520,8 @@ class IotlabImporter:
         config = Config ()
         interface_hrn = config.SFA_INTERFACE_HRN
         root_auth = config.SFA_REGISTRY_ROOT_AUTH
-        api = Generic.the_flavour().make_api(interface='registry')
-        testbed_shell = IotlabShell(api)
+
+        testbed_shell = IotlabShell(config)
         leases_db = TestbedAdditionalSfaDB(config)
         #Create special slice table for iotlab
 

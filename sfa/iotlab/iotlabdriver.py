@@ -3,8 +3,13 @@ Implements what a driver should provide for SFA to work.
 """
 from sfa.util.faults import SliverDoesNotExist, Forbidden
 from sfa.util.sfalogging import logger
-from sfa.storage.model import RegRecord
+
+from sfa.storage.model import RegRecord, RegUser, RegSlice, RegKey
 from sfa.util.sfatime import utcparse, datetime_to_string
+from sfa.trust.certificate import Keypair, convert_public_key
+
+from sfa.trust.hierarchy import Hierarchy
+from sfa.trust.gid import create_uuid
 
 from sfa.managers.driver import Driver
 from sfa.rspecs.version_manager import VersionManager
@@ -20,7 +25,7 @@ from sfa.trust.credential import Credential
 from sfa.storage.model import SliverAllocation
 
 from sfa.iotlab.iotlabshell import IotlabShell
-
+from sqlalchemy.orm import joinedload
 
 class IotlabDriver(Driver):
     """ Iotlab Driver class inherited from Driver generic class.
@@ -43,9 +48,470 @@ class IotlabDriver(Driver):
         """
         Driver.__init__(self, api)
         self.api = api
-        # config = api.config
-        self.testbed_shell = IotlabShell(api)
+        config = api.config
+        self.testbed_shell = IotlabShell(config)
         self.cache = None
+
+    def GetPeers(self, peer_filter=None ):
+        """ Gathers registered authorities in SFA DB and looks for specific peer
+        if peer_filter is specified.
+        :param peer_filter: name of the site authority looked for.
+        :type peer_filter: string
+        :returns: list of records.
+
+        """
+
+        existing_records = {}
+        existing_hrns_by_types = {}
+        logger.debug("IOTLAB_API \tGetPeers peer_filter %s " % (peer_filter))
+        all_records = self.api.dbsession().query(RegRecord).filter(RegRecord.type.like('%authority%')).all()
+
+        for record in all_records:
+            existing_records[(record.hrn, record.type)] = record
+            if record.type not in existing_hrns_by_types:
+                existing_hrns_by_types[record.type] = [record.hrn]
+            else:
+                existing_hrns_by_types[record.type].append(record.hrn)
+
+        logger.debug("IOTLAB_API \tGetPeer\texisting_hrns_by_types %s "
+                     % (existing_hrns_by_types))
+        records_list = []
+
+        try:
+            if peer_filter:
+                records_list.append(existing_records[(peer_filter,
+                                                     'authority')])
+            else:
+                for hrn in existing_hrns_by_types['authority']:
+                    records_list.append(existing_records[(hrn, 'authority')])
+
+            logger.debug("IOTLAB_API \tGetPeer \trecords_list  %s "
+                         % (records_list))
+
+        except KeyError:
+            pass
+
+        return_records = records_list
+        logger.debug("IOTLAB_API \tGetPeer return_records %s "
+                     % (return_records))
+        return return_records
+
+    def GetKeys(self, key_filter=None):
+        """Returns a dict of dict based on the key string. Each dict entry
+        contains the key id, the ssh key, the user's email and the
+        user's hrn.
+        If key_filter is specified and is an array of key identifiers,
+        only keys matching the filter will be returned.
+
+        Admin may query all keys. Non-admins may only query their own keys.
+        FROM PLC API DOC
+
+        :returns: dict with ssh key as key and dicts as value.
+        :rtype: dict
+        """
+        query = self.api.dbsession().query(RegKey)
+        if key_filter is None:
+            keys = query.options(joinedload('reg_user')).all()
+        else:
+            constraint = RegKey.key.in_(key_filter)
+            keys = query.options(joinedload('reg_user')).filter(constraint).all()
+
+        key_dict = {}
+        for key in keys:
+            key_dict[key.key] = {'key_id': key.key_id, 'key': key.key,
+                                 'email': key.reg_user.email,
+                                 'hrn': key.reg_user.hrn}
+
+        #ldap_rslt = self.ldap.LdapSearch({'enabled']=True})
+        #user_by_email = dict((user[1]['mail'][0], user[1]['sshPublicKey']) \
+                                        #for user in ldap_rslt)
+
+        logger.debug("IOTLAB_API  GetKeys  -key_dict %s \r\n " % (key_dict))
+        return key_dict
+
+
+
+    def AddPerson(self, record):
+        """
+
+        Adds a new account. Any fields specified in records are used,
+            otherwise defaults are used. Creates an appropriate login by calling
+            LdapAddUser.
+
+        :param record: dictionary with the sfa user's properties.
+        :returns: a dicitonary with the status. If successful, the dictionary
+            boolean is set to True and there is a 'uid' key with the new login
+            added to LDAP, otherwise the bool is set to False and a key
+            'message' is in the dictionary, with the error message.
+        :rtype: dict
+
+        """
+        ret = self.testbed_shell.ldap.LdapAddUser(record)
+
+        if ret['bool'] is True:
+            record['hrn'] = self.testbed_shell.root_auth + '.' + ret['uid']
+            logger.debug("IOTLAB_API AddPerson return code %s record %s  "
+                         % (ret, record))
+            self.__add_person_to_db(record)
+        return ret
+
+    def __add_person_to_db(self, user_dict):
+        """
+        Add a federated user straight to db when the user issues a lease
+        request with iotlab nodes and that he has not registered with iotlab
+        yet (that is he does not have a LDAP entry yet).
+        Uses parts of the routines in IotlabImport when importing user from
+        LDAP. Called by AddPerson, right after LdapAddUser.
+        :param user_dict: Must contain email, hrn and pkey to get a GID
+        and be added to the SFA db.
+        :type user_dict: dict
+
+        """
+        query = self.api.dbsession().query(RegUser)
+        check_if_exists = query.filter_by(email = user_dict['email']).first()
+        #user doesn't exists
+        if not check_if_exists:
+            logger.debug("__add_person_to_db \t Adding %s \r\n \r\n \
+                                            " %(user_dict))
+            hrn = user_dict['hrn']
+            person_urn = hrn_to_urn(hrn, 'user')
+            pubkey = user_dict['pkey']
+            try:
+                pkey = convert_public_key(pubkey)
+            except TypeError:
+                #key not good. create another pkey
+                logger.warn('__add_person_to_db: unable to convert public \
+                                    key for %s' %(hrn ))
+                pkey = Keypair(create=True)
+
+
+            if pubkey is not None and pkey is not None :
+                hierarchy = Hierarchy()
+                person_gid = hierarchy.create_gid(person_urn, create_uuid(), \
+                                pkey)
+                if user_dict['email']:
+                    logger.debug("__add_person_to_db \r\n \r\n \
+                        IOTLAB IMPORTER PERSON EMAIL OK email %s "\
+                        %(user_dict['email']))
+                    person_gid.set_email(user_dict['email'])
+
+            user_record = RegUser(hrn=hrn , pointer= '-1', \
+                                    authority=get_authority(hrn), \
+                                    email=user_dict['email'], gid = person_gid)
+            user_record.reg_keys = [RegKey(user_dict['pkey'])]
+            user_record.just_created()
+            self.api.dbsession().add (user_record)
+            self.api.dbsession().commit()
+        return
+
+
+
+    def _sql_get_slice_info(self, slice_filter):
+        """
+        Get the slice record based on the slice hrn. Fetch the record of the
+        user associated with the slice by using joinedload based on the
+        reg_researcher relationship.
+
+        :param slice_filter: the slice hrn we are looking for
+        :type slice_filter: string
+        :returns: the slice record enhanced with the user's information if the
+            slice was found, None it wasn't.
+
+        :rtype: dict or None.
+        """
+        #DO NOT USE RegSlice - reg_researchers to get the hrn
+        #of the user otherwise will mess up the RegRecord in
+        #Resolve, don't know why - SA 08/08/2012
+
+        #Only one entry for one user  = one slice in testbed_xp table
+        #slicerec = dbsession.query(RegRecord).filter_by(hrn = slice_filter).first()
+        raw_slicerec = self.api.dbsession().query(RegSlice).options(joinedload('reg_researchers')).filter_by(hrn=slice_filter).first()
+        #raw_slicerec = self.api.dbsession().query(RegRecord).filter_by(hrn = slice_filter).first()
+        if raw_slicerec:
+            #load_reg_researcher
+            #raw_slicerec.reg_researchers
+            raw_slicerec = raw_slicerec.__dict__
+            logger.debug(" IOTLAB_API \t  _sql_get_slice_info slice_filter %s  \
+                            raw_slicerec %s" % (slice_filter, raw_slicerec))
+            slicerec = raw_slicerec
+            #only one researcher per slice so take the first one
+            #slicerec['reg_researchers'] = raw_slicerec['reg_researchers']
+            #del slicerec['reg_researchers']['_sa_instance_state']
+            return slicerec
+
+        else:
+            return None
+
+    def _sql_get_slice_info_from_user(self, slice_filter):
+        """
+        Get the slice record based on the user recordid by using a joinedload
+        on the relationship reg_slices_as_researcher. Format the sql record
+        into a dict with the mandatory fields for user and slice.
+        :returns: dict with slice record and user record if the record was found
+        based on the user's id, None if not..
+        :rtype:dict or None..
+        """
+        #slicerec = dbsession.query(RegRecord).filter_by(record_id = slice_filter).first()
+        raw_slicerec = self.api.dbsession().query(RegUser).options(joinedload('reg_slices_as_researcher')).filter_by(record_id=slice_filter).first()
+        #raw_slicerec = self.api.dbsession().query(RegRecord).filter_by(record_id = slice_filter).first()
+        #Put it in correct order
+        user_needed_fields = ['peer_authority', 'hrn', 'last_updated',
+                              'classtype', 'authority', 'gid', 'record_id',
+                              'date_created', 'type', 'email', 'pointer']
+        slice_needed_fields = ['peer_authority', 'hrn', 'last_updated',
+                               'classtype', 'authority', 'gid', 'record_id',
+                               'date_created', 'type', 'pointer']
+        if raw_slicerec:
+            #raw_slicerec.reg_slices_as_researcher
+            raw_slicerec = raw_slicerec.__dict__
+            slicerec = {}
+            slicerec = \
+                dict([(k, raw_slicerec[
+                    'reg_slices_as_researcher'][0].__dict__[k])
+                    for k in slice_needed_fields])
+            slicerec['reg_researchers'] = dict([(k, raw_slicerec[k])
+                                                for k in user_needed_fields])
+             #TODO Handle multiple slices for one user SA 10/12/12
+                        #for now only take the first slice record associated to the rec user
+                        ##slicerec  = raw_slicerec['reg_slices_as_researcher'][0].__dict__
+                        #del raw_slicerec['reg_slices_as_researcher']
+                        #slicerec['reg_researchers'] = raw_slicerec
+                        ##del slicerec['_sa_instance_state']
+
+            return slicerec
+
+        else:
+            return None
+
+
+
+    def _get_slice_records(self, slice_filter=None,
+                           slice_filter_type=None):
+        """
+        Get the slice record depending on the slice filter and its type.
+        :param slice_filter: Can be either the slice hrn or the user's record
+        id.
+        :type slice_filter: string
+        :param slice_filter_type: describes the slice filter type used, can be
+        slice_hrn or record_id_user
+        :type: string
+        :returns: the slice record
+        :rtype:dict
+        .. seealso::_sql_get_slice_info_from_user
+        .. seealso:: _sql_get_slice_info
+        """
+
+        #Get list of slices based on the slice hrn
+        if slice_filter_type == 'slice_hrn':
+
+            #if get_authority(slice_filter) == self.root_auth:
+                #login = slice_filter.split(".")[1].split("_")[0]
+
+            slicerec = self._sql_get_slice_info(slice_filter)
+
+            if slicerec is None:
+                return None
+                #return login, None
+
+        #Get slice based on user id
+        if slice_filter_type == 'record_id_user':
+
+            slicerec = self._sql_get_slice_info_from_user(slice_filter)
+
+        if slicerec:
+            fixed_slicerec_dict = slicerec
+            #At this point if there is no login it means
+            #record_id_user filter has been used for filtering
+            #if login is None :
+                ##If theslice record is from iotlab
+                #if fixed_slicerec_dict['peer_authority'] is None:
+                    #login = fixed_slicerec_dict['hrn'].split(".")[1].split("_")[0]
+            #return login, fixed_slicerec_dict
+            return fixed_slicerec_dict
+        else:
+            return None
+
+
+
+    def GetSlices(self, slice_filter=None, slice_filter_type=None,
+                  login=None):
+        """Get the slice records from the iotlab db and add lease information
+            if any.
+
+        :param slice_filter: can be the slice hrn or slice record id in the db
+            depending on the slice_filter_type.
+        :param slice_filter_type: defines the type of the filtering used, Can be
+            either 'slice_hrn' or "record_id'.
+        :type slice_filter: string
+        :type slice_filter_type: string
+        :returns: a slice dict if slice_filter  and slice_filter_type
+            are specified and a matching entry is found in the db. The result
+            is put into a list.Or a list of slice dictionnaries if no filters
+            arespecified.
+
+        :rtype: list
+
+        """
+        #login = None
+        authorized_filter_types_list = ['slice_hrn', 'record_id_user']
+        return_slicerec_dictlist = []
+
+        #First try to get information on the slice based on the filter provided
+        if slice_filter_type in authorized_filter_types_list:
+            fixed_slicerec_dict = self._get_slice_records(slice_filter,
+                                                    slice_filter_type)
+            # if the slice was not found in the sfa db
+            if fixed_slicerec_dict is None:
+                return return_slicerec_dictlist
+
+            slice_hrn = fixed_slicerec_dict['hrn']
+
+            logger.debug(" IOTLAB_API \tGetSlices login %s \
+                            slice record %s slice_filter %s \
+                            slice_filter_type %s " % (login,
+                            fixed_slicerec_dict, slice_filter,
+                            slice_filter_type))
+
+
+            #Now we have the slice record fixed_slicerec_dict, get the
+            #jobs associated to this slice
+            leases_list = []
+
+            leases_list = self.testbed_shell.GetLeases(login=login)
+            #If no job is running or no job scheduled
+            #return only the slice record
+            if leases_list == [] and fixed_slicerec_dict:
+                return_slicerec_dictlist.append(fixed_slicerec_dict)
+
+            # if the jobs running don't belong to the user/slice we are looking
+            # for
+            leases_hrn = [lease['slice_hrn'] for lease in leases_list]
+            if slice_hrn not in leases_hrn:
+                return_slicerec_dictlist.append(fixed_slicerec_dict)
+            #If several jobs for one slice , put the slice record into
+            # each lease information dict
+            for lease in leases_list:
+                slicerec_dict = {}
+                logger.debug("IOTLAB_API.PY  \tGetSlices slice_filter %s   \
+                        \t lease['slice_hrn'] %s"
+                             % (slice_filter, lease['slice_hrn']))
+                if lease['slice_hrn'] == slice_hrn:
+                    slicerec_dict['oar_job_id'] = lease['lease_id']
+                    #Update lease dict with the slice record
+                    if fixed_slicerec_dict:
+                        fixed_slicerec_dict['oar_job_id'] = []
+                        fixed_slicerec_dict['oar_job_id'].append(
+                            slicerec_dict['oar_job_id'])
+                        slicerec_dict.update(fixed_slicerec_dict)
+                        #slicerec_dict.update({'hrn':\
+                                        #str(fixed_slicerec_dict['slice_hrn'])})
+                    slicerec_dict['slice_hrn'] = lease['slice_hrn']
+                    slicerec_dict['hrn'] = lease['slice_hrn']
+                    slicerec_dict['user'] = lease['user']
+                    slicerec_dict.update(
+                        {'list_node_ids':
+                        {'hostname': lease['reserved_nodes']}})
+                    slicerec_dict.update({'node_ids': lease['reserved_nodes']})
+
+
+
+                    return_slicerec_dictlist.append(slicerec_dict)
+                    logger.debug("IOTLAB_API.PY  \tGetSlices  \
+                        OHOHOHOH %s" %(return_slicerec_dictlist))
+
+                logger.debug("IOTLAB_API.PY  \tGetSlices  \
+                        slicerec_dict %s return_slicerec_dictlist %s \
+                        lease['reserved_nodes'] \
+                        %s" % (slicerec_dict, return_slicerec_dictlist,
+                               lease['reserved_nodes']))
+
+            logger.debug("IOTLAB_API.PY  \tGetSlices  RETURN \
+                        return_slicerec_dictlist  %s"
+                          % (return_slicerec_dictlist))
+
+            return return_slicerec_dictlist
+
+
+        else:
+            #Get all slices from the iotlab sfa database ,
+            #put them in dict format
+            #query_slice_list = dbsession.query(RegRecord).all()
+            query_slice_list = \
+                self.api.dbsession().query(RegSlice).options(joinedload('reg_researchers')).all()
+
+            for record in query_slice_list:
+                tmp = record.__dict__
+                tmp['reg_researchers'] = tmp['reg_researchers'][0].__dict__
+                #del tmp['reg_researchers']['_sa_instance_state']
+                return_slicerec_dictlist.append(tmp)
+                #return_slicerec_dictlist.append(record.__dict__)
+
+            #Get all the jobs reserved nodes
+            leases_list = self.testbed_shell.GetReservedNodes()
+
+            for fixed_slicerec_dict in return_slicerec_dictlist:
+                slicerec_dict = {}
+                #Check if the slice belongs to a iotlab user
+                if fixed_slicerec_dict['peer_authority'] is None:
+                    owner = fixed_slicerec_dict['hrn'].split(
+                        ".")[1].split("_")[0]
+                else:
+                    owner = None
+                for lease in leases_list:
+                    if owner == lease['user']:
+                        slicerec_dict['oar_job_id'] = lease['lease_id']
+
+                        #for reserved_node in lease['reserved_nodes']:
+                        logger.debug("IOTLAB_API.PY  \tGetSlices lease %s "
+                                     % (lease))
+                        slicerec_dict.update(fixed_slicerec_dict)
+                        slicerec_dict.update({'node_ids':
+                                              lease['reserved_nodes']})
+                        slicerec_dict.update({'list_node_ids':
+                                             {'hostname':
+                                             lease['reserved_nodes']}})
+
+                        #slicerec_dict.update({'hrn':\
+                                    #str(fixed_slicerec_dict['slice_hrn'])})
+                        #return_slicerec_dictlist.append(slicerec_dict)
+                        fixed_slicerec_dict.update(slicerec_dict)
+
+            logger.debug("IOTLAB_API.PY  \tGetSlices RETURN \
+                        return_slicerec_dictlist %s \t slice_filter %s " \
+                        %(return_slicerec_dictlist, slice_filter))
+
+        return return_slicerec_dictlist
+
+    def AddSlice(self, slice_record, user_record):
+        """
+
+        Add slice to the local iotlab sfa tables if the slice comes
+            from a federated site and is not yet in the iotlab sfa DB,
+            although the user has already a LDAP login.
+            Called by verify_slice during lease/sliver creation.
+
+        :param slice_record: record of slice, must contain hrn, gid, slice_id
+            and authority of the slice.
+        :type slice_record: dictionary
+        :param user_record: record of the user
+        :type user_record: RegUser
+
+        """
+
+        sfa_record = RegSlice(hrn=slice_record['hrn'],
+                              gid=slice_record['gid'],
+                              pointer=slice_record['slice_id'],
+                              authority=slice_record['authority'])
+        logger.debug("IOTLAB_API.PY AddSlice  sfa_record %s user_record %s"
+                     % (sfa_record, user_record))
+        sfa_record.just_created()
+        self.api.dbsession().add(sfa_record)
+        self.api.dbsession().commit()
+        #Update the reg-researcher dependance table
+        sfa_record.reg_researchers = [user_record]
+        self.api.dbsession().commit()
+
+        return
 
     def augment_records_with_testbed_info(self, record_list):
         """
@@ -121,7 +587,7 @@ class IotlabDriver(Driver):
                              'key_ids': ''})
 
                     #Get iotlab slice record and oar job id if any.
-                    recslice_list = self.testbed_shell.GetSlices(
+                    recslice_list = self.GetSlices(
                         slice_filter=str(record['hrn']),
                         slice_filter_type='slice_hrn')
 
@@ -149,9 +615,9 @@ class IotlabDriver(Driver):
                     #The record is a SFA user record.
                     #Get the information about his slice from Iotlab's DB
                     #and add it to the user record.
-                    recslice_list = self.testbed_shell.GetSlices(
-                        slice_filter=record['record_id'],
-                        slice_filter_type='record_id_user')
+                    recslice_list = self.GetSlices(
+                                    slice_filter=record['record_id'],
+                                    slice_filter_type='record_id_user')
 
                     logger.debug("IOTLABDRIVER.PY \t fill_record_info \
                         TYPE USER recslice_list %s \r\n \t RECORD %s \r\n"
@@ -218,8 +684,8 @@ class IotlabDriver(Driver):
         """
 
         #First get the slice with the slice hrn
-        slice_list = self.testbed_shell.GetSlices(slice_filter=slice_hrn,
-                                               slice_filter_type='slice_hrn')
+        slice_list = self.GetSlices(slice_filter=slice_hrn,
+                                    slice_filter_type='slice_hrn')
 
         if len(slice_list) == 0:
             raise SliverDoesNotExist("%s  slice_hrn" % (slice_hrn))
@@ -454,9 +920,8 @@ class IotlabDriver(Driver):
             % (slivers, slice_urns))
         slice_hrn = urn_to_hrn(slice_urns[0])[0]
 
-        sfa_slice_list = self.testbed_shell.GetSlices(
-            slice_filter=slice_hrn,
-            slice_filter_type='slice_hrn')
+        sfa_slice_list = self.GetSlices(slice_filter=slice_hrn,
+                                        slice_filter_type='slice_hrn')
 
         if not sfa_slice_list:
             return 1
@@ -586,7 +1051,7 @@ class IotlabDriver(Driver):
 
         # get data from db
 
-        slices = self.testbed_shell.GetSlices()
+        slices = self.GetSlices()
         logger.debug("IOTLABDRIVER.PY \tlist_slices hrn %s \r\n \r\n"
                      % (slices))
         slice_hrns = [iotlab_slice['hrn'] for iotlab_slice in slices]
@@ -668,7 +1133,7 @@ class IotlabDriver(Driver):
         #         person = persons[0]
         #         keys = [person['pkey']]
         #         #Get all the person's keys
-        #         keys_dict = self.testbed_shell.GetKeys(keys)
+        #         keys_dict = self.GetKeys(keys)
 
         #         # Delete all stale keys, meaning the user has only one key
         #         #at a time
@@ -722,8 +1187,8 @@ class IotlabDriver(Driver):
                 return self.testbed_shell.DeletePerson(sfa_record)
 
         elif sfa_record_type == 'slice':
-            if self.testbed_shell.GetSlices(slice_filter=hrn,
-                                         slice_filter_type='slice_hrn'):
+            if self.GetSlices(slice_filter=hrn,
+                                slice_filter_type='slice_hrn'):
                 ret = self.testbed_shell.DeleteSlice(sfa_record)
             return True
 
@@ -758,7 +1223,7 @@ class IotlabDriver(Driver):
         if not slice_ids:
             raise Forbidden("sliver urn not provided")
 
-        slices = self.testbed_shell.GetSlices(slice_ids)
+        slices = self.GetSlices(slice_ids)
         sliver_names = [single_slice['name'] for single_slice in slices]
 
         # make sure we have a credential for every specified sliver

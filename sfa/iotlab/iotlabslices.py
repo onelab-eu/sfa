@@ -58,7 +58,7 @@ class IotlabSlices:
 
         # check if we are already peered with this site_authority
         #if so find the peer record
-        peers = self.driver.testbed_shell.GetPeers(peer_filter=site_authority)
+        peers = self.driver.GetPeers(peer_filter=site_authority)
         for peer_record in peers:
             if site_authority == peer_record.hrn:
                 peer = peer_record
@@ -305,8 +305,8 @@ class IotlabSlices:
 
         slicename = slice_hrn
         # check if slice belongs to Iotlab
-        slices_list = self.driver.testbed_shell.GetSlices(
-            slice_filter=slicename, slice_filter_type='slice_hrn')
+        slices_list = self.driver.GetSlices(slice_filter=slicename,
+                                            slice_filter_type='slice_hrn')
 
         sfa_slice = None
 
@@ -346,7 +346,7 @@ class IotlabSlices:
 
                  # add the external slice to the local SFA iotlab DB
                 if sfa_slice:
-                    self.driver.testbed_shell.AddSlice(sfa_slice, user)
+                    self.driver.AddSlice(sfa_slice, user)
 
             logger.debug("IOTLABSLICES \tverify_slice ADDSLICE OK")
         return sfa_slice
@@ -532,7 +532,7 @@ class IotlabSlices:
         key_ids = []
         for person in persons:
             key_ids.extend(person['key_ids'])
-        keylist = self.driver.testbed_shell.GetKeys(key_ids, ['key_id', 'key'])
+        keylist = self.driver.GetKeys(key_ids, ['key_id', 'key'])
 
         keydict = {}
         for key in keylist:
