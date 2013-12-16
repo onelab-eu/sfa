@@ -7,18 +7,20 @@ from sfa.util.config import Config
 from sfa.util.xrn import Xrn, get_authority, hrn_to_urn
 from sfa.iotlab.iotlabshell import IotlabShell
 # from sfa.iotlab.iotlabdriver import IotlabDriver
-from sfa.iotlab.iotlabpostgres import TestbedAdditionalSfaDB
+# from sfa.iotlab.iotlabpostgres import TestbedAdditionalSfaDB
 from sfa.trust.certificate import Keypair, convert_public_key
 from sfa.trust.gid import create_uuid
 
 # using global alchemy.session() here is fine
 # as importer is on standalone one-shot process
-from sfa.storage.alchemy import global_dbsession
+
+from sfa.storage.alchemy import global_dbsession, engine
 from sfa.storage.model import RegRecord, RegAuthority, RegSlice, RegNode, \
-    RegUser, RegKey
+    RegUser, RegKey, init_tables
 
+from sqlalchemy import Table, MetaData
+from sqlalchemy.exc import SQLAlchemyError, NoSuchTableError
 
-from sqlalchemy.exc import SQLAlchemyError
 
 
 class IotlabImporter:
@@ -44,6 +46,7 @@ class IotlabImporter:
         self.auth_hierarchy = auth_hierarchy
         self.logger = loc_logger
         self.logger.setLevelDebug()
+
         #retrieve all existing SFA objects
         self.all_records = global_dbsession.query(RegRecord).all()
 
@@ -65,6 +68,27 @@ class IotlabImporter:
         self.records_by_type_pointer = \
             dict([((str(record.type), record.pointer), record)
                   for record in self.all_records if record.pointer != -1])
+
+
+
+    def exists(self, tablename, engine):
+        """
+        Checks if the table specified as tablename exists.
+        :param tablename: name of the table in the db that has to be checked.
+        :type tablename: string
+        :returns: True if the table exists, False otherwise.
+        :rtype: bool
+
+        """
+        metadata = MetaData(bind=engine)
+        try:
+            table = Table(tablename, metadata, autoload=True)
+            return True
+
+        except NoSuchTableError:
+            self.logger.log_exc("Iotlabimporter tablename %s does not exist"
+                           % (tablename))
+            return False
 
 
     @staticmethod
@@ -522,11 +546,11 @@ class IotlabImporter:
         root_auth = config.SFA_REGISTRY_ROOT_AUTH
 
         testbed_shell = IotlabShell(config)
-        leases_db = TestbedAdditionalSfaDB(config)
+        # leases_db = TestbedAdditionalSfaDB(config)
         #Create special slice table for iotlab
 
-        if not leases_db.exists('lease_table'):
-            leases_db.createtable()
+        if not self.exists('lease_table', engine):
+            init_tables(engine)
             self.logger.info("IotlabImporter.run:  lease_table table created ")
 
         # import site and node records in site into the SFA db.

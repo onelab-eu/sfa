@@ -108,7 +108,7 @@ class IotlabSlices:
         logger.debug("IOTLABSLICES verify_slice_leases sfa_slice %s "
                      % (sfa_slice))
         #First get the list of current leases from OAR
-        leases = self.driver.testbed_shell.GetLeases({'slice_hrn': sfa_slice['hrn']})
+        leases = self.driver.GetLeases({'slice_hrn': sfa_slice['hrn']})
         logger.debug("IOTLABSLICES verify_slice_leases requested_jobs_dict %s \
                         leases %s " % (requested_jobs_dict, leases))
 
@@ -207,12 +207,12 @@ class IotlabSlices:
                 logger.debug("IOTLABSLICES \
                               NEWLEASE slice %s  job %s"
                              % (sfa_slice, job))
-                job_id = self.driver.testbed_shell.AddLeases(
+                job_id = self.driver.AddLeases(
                     job['hostname'],
                     sfa_slice, int(job['start_time']),
                     int(job['duration']))
                 if job_id is not None:
-                    new_leases = self.driver.testbed_shell.GetLeases(login=
+                    new_leases = self.driver.GetLeases(login=
                         sfa_slice['login'])
                     for new_lease in new_leases:
                         leases.append(new_lease)
@@ -228,7 +228,7 @@ class IotlabSlices:
         if reschedule_jobs_dict:
             for start_time in reschedule_jobs_dict:
                 job = reschedule_jobs_dict[start_time]
-                self.driver.testbed_shell.AddLeases(
+                self.driver.AddLeases(
                     job['hostname'],
                     sfa_slice, int(job['start_time']),
                     int(job['duration']))
