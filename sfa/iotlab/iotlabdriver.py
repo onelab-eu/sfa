@@ -1,6 +1,7 @@
 """
 Implements what a driver should provide for SFA to work.
 """
+from datetime import datetime
 from sfa.util.faults import SliverDoesNotExist, Forbidden
 from sfa.util.sfalogging import logger
 
@@ -26,6 +27,7 @@ from sfa.storage.model import SliverAllocation
 
 from sfa.iotlab.iotlabshell import IotlabShell
 from sqlalchemy.orm import joinedload
+from sfa.iotlab.iotlabpostgres import LeaseTableXP
 
 class IotlabDriver(Driver):
     """ Iotlab Driver class inherited from Driver generic class.
@@ -377,7 +379,7 @@ class IotlabDriver(Driver):
             #jobs associated to this slice
             leases_list = []
 
-            leases_list = self.testbed_shell.GetLeases(login=login)
+            leases_list = self.GetLeases(login=login)
             #If no job is running or no job scheduled
             #return only the slice record
             if leases_list == [] and fixed_slicerec_dict:
@@ -482,6 +484,203 @@ class IotlabDriver(Driver):
 
         return return_slicerec_dictlist
 
+    def AddLeases(self, hostname_list, slice_record,
+                  lease_start_time, lease_duration):
+
+        """Creates a job in OAR corresponding to the information provided
+        as parameters. Adds the job id and the slice hrn in the iotlab
+        database so that we are able to know which slice has which nodes.
+
+        :param hostname_list: list of nodes' OAR hostnames.
+        :param slice_record: sfa slice record, must contain login and hrn.
+        :param lease_start_time: starting time , unix timestamp format
+        :param lease_duration: duration in minutes
+
+        :type hostname_list: list
+        :type slice_record: dict
+        :type lease_start_time: integer
+        :type lease_duration: integer
+        :returns: job_id, can be None if the job request failed.
+
+        """
+        logger.debug("IOTLAB_API \r\n \r\n \t AddLeases hostname_list %s  \
+                slice_record %s lease_start_time %s lease_duration %s  "\
+                 %( hostname_list, slice_record , lease_start_time, \
+                 lease_duration))
+
+        #tmp = slice_record['reg-researchers'][0].split(".")
+        username = slice_record['login']
+        #username = tmp[(len(tmp)-1)]
+        job_id = self.testbed_shell.LaunchExperimentOnOAR(hostname_list, \
+                                    slice_record['hrn'], \
+                                    lease_start_time, lease_duration, \
+                                    username)
+        if job_id is not None:
+            start_time = \
+                    datetime.fromtimestamp(int(lease_start_time)).\
+                    strftime(self.testbed_shell.time_format)
+            end_time = lease_start_time + lease_duration
+
+
+            logger.debug("IOTLAB_API \r\n \r\n \t AddLeases TURN ON LOGGING SQL \
+                        %s %s %s "%(slice_record['hrn'], job_id, end_time))
+
+
+            logger.debug("IOTLAB_API \r\n \r\n \t AddLeases %s %s %s " \
+                    %(type(slice_record['hrn']), type(job_id), type(end_time)))
+
+            iotlab_ex_row = LeaseTableXP(slice_hrn = slice_record['hrn'],
+                                                    experiment_id=job_id,
+                                                    end_time= end_time)
+
+            logger.debug("IOTLAB_API \r\n \r\n \t AddLeases iotlab_ex_row %s" \
+                    %(iotlab_ex_row))
+            self.api.dbsession().add(iotlab_ex_row)
+            self.api.dbsession().commit()
+
+            logger.debug("IOTLAB_API \t AddLeases hostname_list start_time %s "
+                        %(start_time))
+
+        return job_id
+
+    def GetLeases(self, lease_filter_dict=None, login=None):
+        """
+
+        Get the list of leases from OAR with complete information
+            about which slice owns which jobs and nodes.
+            Two purposes:
+            -Fetch all the jobs from OAR (running, waiting..)
+            complete the reservation information with slice hrn
+            found in testbed_xp table. If not available in the table,
+            assume it is a iotlab slice.
+            -Updates the iotlab table, deleting jobs when necessary.
+
+        :returns: reservation_list, list of dictionaries with 'lease_id',
+            'reserved_nodes','slice_id', 'state', 'user', 'component_id_list',
+            'slice_hrn', 'resource_ids', 't_from', 't_until'
+        :rtype: list
+
+        """
+
+        unfiltered_reservation_list = self.testbed_shell.GetReservedNodes(login)
+
+        reservation_list = []
+        #Find the slice associated with this user iotlab ldap uid
+        logger.debug(" IOTLAB_API.PY \tGetLeases login %s\
+                        unfiltered_reservation_list %s "
+                     % (login, unfiltered_reservation_list))
+        #Create user dict first to avoid looking several times for
+        #the same user in LDAP SA 27/07/12
+        job_oar_list = []
+        jobs_psql_query = self.api.dbsession().query(LeaseTableXP).all()
+        jobs_psql_dict = dict([(row.experiment_id, row.__dict__)
+                               for row in jobs_psql_query])
+        #jobs_psql_dict = jobs_psql_dict)
+        logger.debug("IOTLAB_API \tGetLeases jobs_psql_dict %s"
+                     % (jobs_psql_dict))
+        jobs_psql_id_list = [row.experiment_id for row in jobs_psql_query]
+
+        for resa in unfiltered_reservation_list:
+            logger.debug("IOTLAB_API \tGetLeases USER %s"
+                         % (resa['user']))
+            #Construct list of jobs (runing, waiting..) in oar
+            job_oar_list.append(resa['lease_id'])
+            #If there is information on the job in IOTLAB DB ]
+            #(slice used and job id)
+            if resa['lease_id'] in jobs_psql_dict:
+                job_info = jobs_psql_dict[resa['lease_id']]
+                logger.debug("IOTLAB_API \tGetLeases job_info %s"
+                          % (job_info))
+                resa['slice_hrn'] = job_info['slice_hrn']
+                resa['slice_id'] = hrn_to_urn(resa['slice_hrn'], 'slice')
+
+            #otherwise, assume it is a iotlab slice:
+            else:
+                resa['slice_id'] = hrn_to_urn(self.testbed_shell.root_auth \
+                                            + '.' + resa['user'] + "_slice",
+                                            'slice')
+                resa['slice_hrn'] = Xrn(resa['slice_id']).get_hrn()
+
+            resa['component_id_list'] = []
+            #Transform the hostnames into urns (component ids)
+            for node in resa['reserved_nodes']:
+
+                iotlab_xrn = xrn_object(self.testbed_shell.root_auth, node)
+                resa['component_id_list'].append(iotlab_xrn.urn)
+
+        if lease_filter_dict:
+            logger.debug("IOTLAB_API \tGetLeases  \
+                    \r\n leasefilter %s" % ( lease_filter_dict))
+
+            filter_dict_functions = {
+            'slice_hrn' : IotlabShell.filter_lease_name,
+            't_from' : IotlabShell.filter_lease_start_time
+            }
+            reservation_list = list(unfiltered_reservation_list)
+            for filter_type in lease_filter_dict:
+                logger.debug("IOTLAB_API \tGetLeases reservation_list %s" \
+                    % (reservation_list))
+                reservation_list = filter_dict_functions[filter_type](\
+                    reservation_list,lease_filter_dict[filter_type] )
+
+                # Filter the reservation list with a maximum timespan so that the
+                # leases and jobs running after this timestamp do not appear
+                # in the result leases.
+                # if 'start_time' in :
+                #     if resa['start_time'] < lease_filter_dict['start_time']:
+                #        reservation_list.append(resa)
+
+
+                # if 'name' in lease_filter_dict and \
+                #     lease_filter_dict['name'] == resa['slice_hrn']:
+                #     reservation_list.append(resa)
+
+
+        if lease_filter_dict is None:
+            reservation_list = unfiltered_reservation_list
+
+        self.update_experiments_in_additional_sfa_db(job_oar_list, jobs_psql_id_list)
+
+        logger.debug(" IOTLAB_API.PY \tGetLeases reservation_list %s"
+                     % (reservation_list))
+        return reservation_list
+
+
+
+    def update_experiments_in_additional_sfa_db(self,
+        experiment_list_from_testbed, experiment_list_in_db):
+        """ Cleans the iotlab db by deleting expired and cancelled jobs.
+
+        Compares the list of experiment ids given by the testbed with the
+        experiment ids that are already in the database, deletes the
+        experiments that are no longer in the testbed experiment id list.
+
+        :param  experiment_list_from_testbed: list of experiment ids coming
+            from testbed
+        :type experiment_list_from_testbed: list
+        :param experiment_list_in_db: list of experiment ids from the sfa
+            additionnal database.
+        :type experiment_list_in_db: list
+
+        :returns: None
+        """
+        #Turn the list into a set
+        set_experiment_list_in_db = set(experiment_list_in_db)
+
+        kept_experiments = set(experiment_list_from_testbed).intersection(set_experiment_list_in_db)
+        logger.debug("\r\n \t update_experiments_in_additional_sfa_db \
+                        experiment_list_in_db %s \r\n \
+                        experiment_list_from_testbed %s \
+                        kept_experiments %s "
+                     % (set_experiment_list_in_db,
+                      experiment_list_from_testbed, kept_experiments))
+        deleted_experiments = set_experiment_list_in_db.difference(
+            kept_experiments)
+        deleted_experiments = list(deleted_experiments)
+        if len(deleted_experiments) > 0:
+            self.api.dbsession().query(LeaseTableXP).filter(LeaseTableXP.experiment_id.in_(deleted_experiments)).delete(synchronize_session='fetch')
+            self.api.dbsession().commit()
+        return
     def AddSlice(self, slice_record, user_record):
         """
 

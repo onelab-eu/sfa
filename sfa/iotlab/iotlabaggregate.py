@@ -425,7 +425,7 @@ class IotlabAggregate:
 
         logger.debug("IOTLABAGGREGATE  get_all_leases ldap_username %s "
                      % (ldap_username))
-        leases = self.driver.testbed_shell.GetLeases(login=ldap_username)
+        leases = self.driver.GetLeases(login=ldap_username)
         grain = self.driver.testbed_shell.GetLeaseGranularity()
 
         rspec_leases = []
@@ -618,8 +618,7 @@ class IotlabAggregate:
         if slice_hrn:
             slices = self.driver.GetSlices(slice_hrn,
                 slice_filter_type)
-            leases = self.driver.testbed_shell.GetLeases(
-                                                {'slice_hrn':slice_hrn})
+            leases = self.driver.GetLeases({'slice_hrn':slice_hrn})
         logger.debug("IotlabAggregate \t get_slivers \
                        slices %s leases %s\r\n" % (slices, leases ))
         if not slices:
