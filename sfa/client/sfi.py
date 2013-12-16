@@ -1144,7 +1144,7 @@ use this if you mean an authority instead""")
 
         return 
 
-    @register_command("slice_hrn","")
+    @register_command("slice_hrn [<sliver_urn> ... <sliver_urn>]","")
     def delete(self, options, args):
         """
         de-allocate and de-provision all or named slivers of the slice (Delete)
@@ -1155,6 +1155,13 @@ use this if you mean an authority instead""")
         slice_hrn = args[0]
         slice_urn = hrn_to_urn(slice_hrn, 'slice') 
 
+        if len(args) > 1:
+            # we have sliver urns
+            sliver_urns = args[1:]
+        else:
+            # we provision all the slivers of the slice
+            sliver_urns = [slice_urn]
+
         # creds
         slice_cred = self.slice_credential(slice_hrn)
         creds = [slice_cred]
@@ -1164,7 +1171,7 @@ use this if you mean an authority instead""")
         api_options ['call_id'] = unique_call_id()
         if options.show_credential:
             show_credentials(creds)
-        result = server.Delete([slice_urn], creds, *self.ois(server, api_options ) )
+        result = server.Delete(sliver_urns, creds, *self.ois(server, api_options ) )
         value = ReturnValue.get_value(result)
         if self.options.raw:
             save_raw_to_file(result, self.options.raw, self.options.rawformat, self.options.rawbanner)
@@ -1229,15 +1236,21 @@ use this if you mean an authority instead""")
         return value
         
 
-    @register_command("slice_hrn","")
+    @register_command("slice_hrn [<sliver_urn> ... <sliver_urn>]","")
     def provision(self, options, args):
         """
-        provision already allocated resources of named slice (Provision)
+        provision already or named allocated slivers of the named slice (Provision)
         """
         server = self.sliceapi()
         server_version = self.get_cached_server_version(server)
         slice_hrn = args[0]
         slice_urn = Xrn(slice_hrn, type='slice').get_urn()
+        if len(args) > 1:
+            # we have sliver urns
+            sliver_urns = args[1:]
+        else:
+            # we provision all the slivers of the slice
+            sliver_urns = [slice_urn]
 
         # credentials
         creds = [self.slice_credential(slice_hrn)]
@@ -1278,7 +1291,7 @@ use this if you mean an authority instead""")
             users = pg_users_arg(user_records)
         
         api_options['geni_users'] = users
-        result = server.Provision([slice_urn], creds, api_options)
+        result = server.Provision(sliver_urns, creds, api_options)
         value = ReturnValue.get_value(result)
         if self.options.raw:
             save_raw_to_file(result, self.options.raw, self.options.rawformat, self.options.rawbanner)
@@ -1317,7 +1330,7 @@ use this if you mean an authority instead""")
         # Thierry: seemed to be missing
         return value
 
-    @register_command("slice_hrn action","")
+    @register_command("slice_hrn [<sliver_urn> ... <sliver_urn>] action","")
     def action(self, options, args):
         """
         Perform the named operational action on these slivers
@@ -1326,8 +1339,14 @@ use this if you mean an authority instead""")
         api_options = {}
         # slice urn
         slice_hrn = args[0]
-        action = args[1]
-        slice_urn = Xrn(slice_hrn, type='slice').get_urn() 
+        slice_urn = Xrn(slice_hrn, type='slice').get_urn()
+        if len(args) > 2:
+            # we have sliver urns
+            sliver_urns = args[1:-1]
+        else:
+            # we provision all the slivers of the slice
+            sliver_urns = [slice_urn]
+        action = args[-1]
         # cred
         slice_cred = self.slice_credential(args[0])
         creds = [slice_cred]
@@ -1335,7 +1354,7 @@ use this if you mean an authority instead""")
             delegated_cred = self.delegate_cred(slice_cred, get_authority(self.authority))
             creds.append(delegated_cred)
         
-        result = server.PerformOperationalAction([slice_urn], creds, action , api_options)
+        result = server.PerformOperationalAction(sliver_urns, creds, action , api_options)
         value = ReturnValue.get_value(result)
         if self.options.raw:
             save_raw_to_file(result, self.options.raw, self.options.rawformat, self.options.rawbanner)

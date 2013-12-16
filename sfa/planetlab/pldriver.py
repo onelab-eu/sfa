@@ -55,7 +55,7 @@ class PlDriver (Driver):
 
     def sliver_to_slice_xrn(self, xrn):
         sliver_id_parts = Xrn(xrn).get_sliver_id_parts()
-        filter = {}
+        filter = {'peer_id': None}
         try:
             filter['slice_id'] = int(sliver_id_parts[0])
         except ValueError:
@@ -76,7 +76,7 @@ class PlDriver (Driver):
             site_hrn = '.'.join(slice_cred_hrn.split('.')[:-1])
             slice_part = slice_cred_hrn.split('.')[-1]
             if top_auth_hrn == self.hrn:
-                login_base = slice_hrn.split('.')[-2][:12]
+                login_base = slice_cred_hrn.split('.')[-2][:12]
             else:
                 login_base = hash_loginbase(site_hrn)
 
@@ -650,6 +650,7 @@ class PlDriver (Driver):
         sfa_peer = slices.get_sfa_peer(xrn.get_hrn())
         slice_record=None    
         users = options.get('geni_users', [])
+
         if users:
             slice_record = users[0].get('slice_record', {})
     
@@ -684,14 +685,32 @@ class PlDriver (Driver):
         slices = PlSlices(self)
         aggregate = PlAggregate(self)
         slivers = aggregate.get_slivers(urns)
-        slice = slivers[0]
-        sfa_peer = slices.get_sfa_peer(slice['hrn'])
-        users = options.get('geni_users', [])
-        persons = slices.verify_persons(slice['hrn'], slice, users, sfa_peer, options=options)
-        # update sliver allocation states and set them to geni_provisioned
-        sliver_ids = [sliver['sliver_id'] for sliver in slivers]
-        dbsession=self.api.dbsession()
-        SliverAllocation.set_allocations(sliver_ids, 'geni_provisioned',dbsession)
+        if not slivers:
+            sliver_id_parts = Xrn(urns[0]).get_sliver_id_parts()
+            filter = {}
+            try:
+                filter['slice_id'] = int(sliver_id_parts[0])
+            except ValueError:
+                filter['name'] = sliver_id_parts[0]
+            slices = self.shell.GetSlices(filter,['hrn'])
+            if not slices:
+                raise Forbidden("Unable to locate slice record for sliver:  %s" % xrn)
+            slice = slices[0]
+            slice_urn = hrn_to_urn(slice['hrn'], type='slice')
+            urns = [slice_urn]          
+        else:    
+            slice_id = slivers[0]['slice_id']
+            slice_hrn = self.shell.GetSliceHrn(slice_id)
+            slice = self.shell.GetSlices({'slice_id': slice_id})[0]
+            slice['hrn'] = slice_hrn
+            sfa_peer = slices.get_sfa_peer(slice['hrn'])
+            users = options.get('geni_users', [])
+            persons = slices.verify_persons(slice['hrn'], slice, users, sfa_peer, options=options)
+            # update sliver allocation states and set them to geni_provisioned
+            sliver_ids = [sliver['sliver_id'] for sliver in slivers]
+            dbsession=self.api.dbsession()
+            SliverAllocation.set_allocations(sliver_ids, 'geni_provisioned',dbsession)
+
         version_manager = VersionManager()
         rspec_version = version_manager.get_version(options['geni_rspec_version']) 
         return self.describe(urns, rspec_version, options=options)
@@ -711,7 +730,7 @@ class PlDriver (Driver):
                 sliver_ids.append(sliver['sliver_id']) 
 
             # leases
-            leases = self.shell.GetLeases({'name': slice_name})
+            leases = self.shell.GetLeases({'name': slice_name, 'node_id': node_ids})
             leases_ids = [lease['lease_id'] for lease in leases ]
 
             slice_hrn = self.shell.GetSliceHrn(int(slice_id))
