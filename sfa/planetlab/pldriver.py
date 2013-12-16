@@ -59,12 +59,12 @@ class PlDriver (Driver):
         try:
             filter['slice_id'] = int(sliver_id_parts[0])
         except ValueError:
-            fliter['name'] = sliver_id_parts[0] 
-        slices = self.shell.GetSlices(filter)
+            filter['name'] = sliver_id_parts[0] 
+        slices = self.shell.GetSlices(filter,['hrn'])
         if not slices:
             raise Forbidden("Unable to locate slice record for sliver:  %s" % xrn)
         slice = slices[0]
-        slice_xrn = PlXrn(auth=self.hrn, slicename=slice['name'])
+        slice_xrn = slice['hrn']
         return slice_xrn 
  
     def check_sliver_credentials(self, creds, urns):
@@ -72,7 +72,16 @@ class PlDriver (Driver):
         slice_cred_names = []
         for cred in creds:
             slice_cred_hrn = Credential(cred=cred).get_gid_object().get_hrn() 
-            slice_cred_names.append(PlXrn(xrn=slice_cred_hrn).pl_slicename()) 
+            top_auth_hrn = top_auth(slice_cred_hrn)
+            site_hrn = '.'.join(slice_cred_hrn.split('.')[:-1])
+            slice_part = slice_cred_hrn.split('.')[-1]
+            if top_auth_hrn == self.driver.hrn:
+                login_base = slice_hrn.split('.')[-2][:12]
+            else:
+                login_base = hash_loginbase(site_hrn)
+
+            slicename = '_'.join([login_base, slice_part])   
+            slice_cred_names.append(slicename) 
 
         # look up slice name of slivers listed in urns arg
         slice_ids = []
