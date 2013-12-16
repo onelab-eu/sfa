@@ -75,7 +75,7 @@ class PlDriver (Driver):
             top_auth_hrn = top_auth(slice_cred_hrn)
             site_hrn = '.'.join(slice_cred_hrn.split('.')[:-1])
             slice_part = slice_cred_hrn.split('.')[-1]
-            if top_auth_hrn == self.driver.hrn:
+            if top_auth_hrn == self.hrn:
                 login_base = slice_hrn.split('.')[-2][:12]
             else:
                 login_base = hash_loginbase(site_hrn)
@@ -773,7 +773,7 @@ class PlDriver (Driver):
         top_auth_hrn = top_auth(hrn)
         site_hrn = '.'.join(hrn.split('.')[:-1])
         slice_part = hrn.split('.')[-1]
-        if top_auth_hrn == self.driver.hrn:
+        if top_auth_hrn == self.hrn:
             login_base = slice_hrn.split('.')[-2][:12]
         else:
             login_base = hash_loginbase(site_hrn)
