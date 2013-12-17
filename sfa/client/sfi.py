@@ -1147,7 +1147,7 @@ use this if you mean an authority instead""")
     @register_command("slice_hrn [<sliver_urn> ... <sliver_urn>]","")
     def delete(self, options, args):
         """
-        de-allocate and de-provision all or named slivers of the slice (Delete)
+        de-allocate and de-provision all or named slivers of the named slice (Delete)
         """
         server = self.sliceapi()
 
@@ -1239,7 +1239,7 @@ use this if you mean an authority instead""")
     @register_command("slice_hrn [<sliver_urn> ... <sliver_urn>]","")
     def provision(self, options, args):
         """
-        provision already or named allocated slivers of the named slice (Provision)
+        provision all or named already allocated slivers of the named slice (Provision)
         """
         server = self.sliceapi()
         server_version = self.get_cached_server_version(server)
@@ -1304,7 +1304,7 @@ use this if you mean an authority instead""")
     @register_command("slice_hrn","")
     def status(self, options, args):
         """
-        retrieve the status of the slivers belonging to tne named slice (Status)
+        retrieve the status of the slivers belonging to the named slice (Status)
         """
         server = self.sliceapi()
 
@@ -1333,7 +1333,7 @@ use this if you mean an authority instead""")
     @register_command("slice_hrn [<sliver_urn> ... <sliver_urn>] action","")
     def action(self, options, args):
         """
-        Perform the named operational action on these slivers
+        Perform the named operational action on all or named slivers of the named slice
         """
         server = self.sliceapi()
         api_options = {}
@@ -1362,18 +1362,26 @@ use this if you mean an authority instead""")
             print value
         return value
 
-    @register_command("slice_hrn time","")
+    @register_command("slice_hrn [<sliver_urn> ... <sliver_urn>] time","")
     def renew(self, options, args):
         """
-        renew slice (RenewSliver)
+        renew slice (Renew)
         """
         server = self.sliceapi()
-        if len(args) != 2:
+        if len(args) < 2:
             self.print_help()
             sys.exit(1)
-        [ slice_hrn, input_time ] = args
-        # slice urn    
-        slice_urn = hrn_to_urn(slice_hrn, 'slice') 
+        slice_hrn = args[0]
+        slice_urn = Xrn(slice_hrn, type='slice').get_urn()
+
+        if len(args) > 2:
+            # we have sliver urns
+            sliver_urns = args[1:-1]
+        else:
+            # we provision all the slivers of the slice
+            sliver_urns = [slice_urn]
+        input_time = args[-1]
+
         # time: don't try to be smart on the time format, server-side will
         # creds
         slice_cred = self.slice_credential(args[0])
@@ -1383,7 +1391,7 @@ use this if you mean an authority instead""")
         api_options['call_id']=unique_call_id()
         if options.show_credential:
             show_credentials(creds)
-        result =  server.Renew([slice_urn], creds, input_time, *self.ois(server,api_options))
+        result =  server.Renew(sliver_urns, creds, input_time, *self.ois(server,api_options))
         value = ReturnValue.get_value(result)
         if self.options.raw:
             save_raw_to_file(result, self.options.raw, self.options.rawformat, self.options.rawbanner)
