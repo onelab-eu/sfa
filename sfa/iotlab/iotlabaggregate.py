@@ -367,7 +367,8 @@ class IotlabAggregate:
         :param sliver_allocations: dictionary of slivers
         :type sliver_allocations: dict
 
-        :returns: Node dictionary with all necessary data. .
+        :returns: Node dictionary with all necessary data.
+
         .. seealso:: node_to_rspec_node
         """
         rspec_node = self.node_to_rspec_node(sliver)

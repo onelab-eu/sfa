@@ -71,7 +71,7 @@ class IotlabImporter:
 
 
 
-    def exists(self, tablename, engine):
+    def exists(self, tablename):
         """
         Checks if the table specified as tablename exists.
         :param tablename: name of the table in the db that has to be checked.
@@ -518,11 +518,9 @@ class IotlabImporter:
         #No slice update upon import in iotlab
         else:
             # xxx update the record ...
-            self.logger.warning("Slice update not yet implemented")
-            pass
+            self.logger.warning("Iotlab Slice update not implemented")
+
         # record current users affiliated with the slice
-
-
         slice_record.reg_researchers = [user_record]
         try:
             global_dbsession.commit()
@@ -549,7 +547,7 @@ class IotlabImporter:
         # leases_db = TestbedAdditionalSfaDB(config)
         #Create special slice table for iotlab
 
-        if not self.exists('lease_table', engine):
+        if not self.exists('lease_table'):
             init_tables(engine)
             self.logger.info("IotlabImporter.run:  lease_table table created ")
 

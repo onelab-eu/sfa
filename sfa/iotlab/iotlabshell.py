@@ -2,22 +2,15 @@
 File containing the IotlabShell, used to interact with nodes, users,
 slices, leases and keys,  as well as the dedicated iotlab database and table,
 holding information about which slice is running which job.
-TODO: Remove interactons with the SFA DB and put it in the driver iotlabdriver
-instead.
 
 """
 from datetime import datetime
 
 from sfa.util.sfalogging import logger
 
-
-from sfa.iotlab.iotlabpostgres import LeaseTableXP
 from sfa.iotlab.OARrestapi import OARrestapi
 from sfa.iotlab.LDAPapi import LDAPapi
 
-from sfa.util.xrn import Xrn, hrn_to_urn, get_authority
-
-from sfa.iotlab.iotlabxrn import xrn_object
 
 class IotlabShell():
     """ Class enabled to use LDAP and OAR api calls. """
@@ -210,9 +203,13 @@ class IotlabShell():
         #Get job resources list from OAR
         node_id_list = self.oar.parser.SendRequest(req, job_id, username)
         logger.debug("IOTLAB_API \t GetJobsResources  %s " %(node_id_list))
-
+        resources = self.GetNodes()
+        oar_id_node_dict = {}
+        for node in resources:
+            oar_id_node_dict[node['oar_id']] = node['hostname']
         hostname_list = \
-            self.__get_hostnames_from_oar_node_ids(node_id_list)
+            self.__get_hostnames_from_oar_node_ids(oar_id_node_dict,
+                                                            node_id_list)
 
 
         #Replaces the previous entry "assigned_network_address" /
@@ -229,7 +226,8 @@ class IotlabShell():
         """
         return self.oar.parser.SendRequest("GET_running_jobs")
 
-    def __get_hostnames_from_oar_node_ids(self, oar_id_node_dict,
+    @staticmethod
+    def __get_hostnames_from_oar_node_ids(oar_id_node_dict,
             resource_id_list ):
         """Get the hostnames of the nodes from their OAR identifiers.
         Get the list of nodes dict using GetNodes and find the hostname
@@ -674,29 +672,63 @@ class IotlabShell():
 
 
     @staticmethod
-    def filter_lease_name(reservation_list, filter_value):
+    def filter_lease(reservation_list, filter_type, filter_value ):
+        """Filters the lease reservation list by removing each lease whose
+        filter_type is not equal to the filter_value provided. Returns the list
+        of leases in one slice, defined by the slice_hrn if filter_type
+        is 'slice_hrn'. Otherwise, returns all leases scheduled starting from
+        the filter_value if filter_type is 't_from'.
+
+        :param reservation_list: leases list
+        :type reservation_list: list of dictionary
+        :param filter_type: can be either 't_from' or 'slice hrn'
+        :type  filter_type: string
+        :param filter_value: depending on the filter_type, can be the slice_hrn
+            or can be defining a timespan.
+        :type filter_value: if filter_type is 't_from', filter_value is int.
+            if filter_type is 'slice_hrn', filter_value is a string.
+
+
+        :returns: filtered_reservation_list, contains only leases running or
+            scheduled in the given slice (wanted_slice).Dict keys are
+            'lease_id','reserved_nodes','slice_id', 'state', 'user',
+            'component_id_list','slice_hrn', 'resource_ids', 't_from', 't_until'
+        :rtype: list of dict
+
+        """
         filtered_reservation_list = list(reservation_list)
         logger.debug("IOTLAB_API \t filter_lease_name reservation_list %s" \
                         % (reservation_list))
-        for reservation in reservation_list:
-            if 'slice_hrn' in reservation and \
-                reservation['slice_hrn'] != filter_value:
-                filtered_reservation_list.remove(reservation)
-
-        logger.debug("IOTLAB_API \t filter_lease_name filtered_reservation_list\
-                     %s" % (filtered_reservation_list))
-        return filtered_reservation_list
-
-    @staticmethod
-    def filter_lease_start_time(reservation_list, filter_value):
-        filtered_reservation_list = list(reservation_list)
-
-        for reservation in reservation_list:
-            if 't_from' in reservation and \
-                reservation['t_from'] > filter_value:
-                filtered_reservation_list.remove(reservation)
+        try:
+            for reservation in reservation_list:
+                if \
+                (filter_type is 'slice_hrn' and \
+                    reservation['slice_hrn'] != filter_value) or \
+                (filter_type is 't_from' and \
+                        reservation['t_from'] > filter_value):
+                    filtered_reservation_list.remove(reservation)
+        except TypeError:
+            logger.log_exc("Iotlabshell filter_lease : filter_type %s \
+                        filter_value %s not in lease" %(filter_type,
+                            filter_value))
 
         return filtered_reservation_list
+
+    # @staticmethod
+    # def filter_lease_start_time(reservation_list, timespan):
+    #     """Filters the lease reservation list by removing each lease whose
+    #     slice_hrn is not the wanted_slice provided. Returns the list of leases
+    #     in one slice (wanted_slice).
+
+    #     """
+    #     filtered_reservation_list = list(reservation_list)
+
+    #     for reservation in reservation_list:
+    #         if 't_from' in reservation and \
+    #             reservation['t_from'] > timespan:
+    #             filtered_reservation_list.remove(reservation)
+
+    #     return filtered_reservation_list
 
 
 
@@ -705,46 +737,6 @@ class IotlabShell():
 
 #TODO FUNCTIONS SECTION 04/07/2012 SA
 
-    ##TODO : Is UnBindObjectFromPeer still necessary ? Currently does nothing
-    ##04/07/2012 SA
-    #@staticmethod
-    #def UnBindObjectFromPeer( auth, object_type, object_id, shortname):
-        #""" This method is a hopefully temporary hack to let the sfa correctly
-        #detach the objects it creates from a remote peer object. This is
-        #needed so that the sfa federation link can work in parallel with
-        #RefreshPeer, as RefreshPeer depends on remote objects being correctly
-        #marked.
-        #Parameters:
-        #auth : struct, API authentication structure
-            #AuthMethod : string, Authentication method to use
-        #object_type : string, Object type, among 'site','person','slice',
-        #'node','key'
-        #object_id : int, object_id
-        #shortname : string, peer shortname
-        #FROM PLC DOC
-
-        #"""
-        #logger.warning("IOTLAB_API \tUnBindObjectFromPeer EMPTY-\
-                        #DO NOTHING \r\n ")
-        #return
-
-    ##TODO Is BindObjectToPeer still necessary ? Currently does nothing
-    ##04/07/2012 SA
-    #|| Commented out 28/05/13 SA
-    #def BindObjectToPeer(self, auth, object_type, object_id, shortname=None, \
-                                                    #remote_object_id=None):
-        #"""This method is a hopefully temporary hack to let the sfa correctly
-        #attach the objects it creates to a remote peer object. This is needed
-        #so that the sfa federation link can work in parallel with RefreshPeer,
-        #as RefreshPeer depends on remote objects being correctly marked.
-        #Parameters:
-        #shortname : string, peer shortname
-        #remote_object_id : int, remote object_id, set to 0 if unknown
-        #FROM PLC API DOC
-
-        #"""
-        #logger.warning("IOTLAB_API \tBindObjectToPeer EMPTY - DO NOTHING \r\n ")
-        #return
 
     ##TODO UpdateSlice 04/07/2012 SA || Commented out 28/05/13 SA
     ##Funciton should delete and create another job since oin iotlab slice=job

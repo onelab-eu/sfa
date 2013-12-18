@@ -133,7 +133,8 @@ class IotlabSlices:
             job['duration'] = \
                 str(int(job['duration']) \
                 * self.driver.testbed_shell.GetLeaseGranularity())
-            if job['duration'] < self.driver.testbed_shell.GetLeaseGranularity():
+            if job['duration'] < \
+                    self.driver.testbed_shell.GetLeaseGranularity():
                 del requested_jobs_dict[job['start_time']]
 
         #Requested jobs
@@ -313,7 +314,7 @@ class IotlabSlices:
         if slices_list:
             for sl in slices_list:
 
-                logger.debug("SLABSLICE \t verify_slice slicename %s \
+                logger.debug("IOTLABSLICES \t verify_slice slicename %s \
                                 slices_list %s sl %s \r slice_record %s"
                              % (slicename, slices_list, sl, slice_record))
                 sfa_slice = sl
@@ -338,7 +339,8 @@ class IotlabSlices:
                          }
 
             if ldap_user:
-                hrn = self.driver.testbed_shell.root_auth + '.' + ldap_user['uid']
+                hrn = self.driver.testbed_shell.root_auth + '.' \
+                                                + ldap_user['uid']
                 user = self.driver.get_user_record(hrn)
 
                 logger.debug(" IOTLABSLICES \tverify_slice hrn %s USER %s"
@@ -354,7 +356,7 @@ class IotlabSlices:
 
     def verify_persons(self, slice_hrn, slice_record, users, options={}):
         """Ensures the users in users list exist and are enabled in LDAP. Adds
-        person if needed.
+        person if needed (AddPerson).
 
         Checking that a user exist is based on the user's email. If the user is
         still not found in the LDAP, it means that the user comes from another
@@ -366,8 +368,8 @@ class IotlabSlices:
         :param slice_record: record of the slice_hrn
         :param users: users is a record list. Records can either be
             local records or users records from known and trusted federated
-            sites.If the user is from another site that iotlab doesn't trust yet,
-            then Resolve will raise an error before getting to create_sliver.
+            sites.If the user is from another site that iotlab doesn't trust
+            yet, then Resolve will raise an error before getting to allocate.
 
         :type slice_hrn: string
         :type slice_record: string
@@ -378,7 +380,6 @@ class IotlabSlices:
 
 
         """
-        #TODO SA 21/08/12 verify_persons Needs review
 
         logger.debug("IOTLABSLICES \tverify_persons \tslice_hrn  %s  \
                     \t slice_record %s\r\n users %s \t  "
@@ -400,7 +401,7 @@ class IotlabSlices:
                 users_by_email[info['email']] = info
                 users_dict[info['email']] = info
 
-        logger.debug("SLABSLICE.PY \t verify_person  \
+        logger.debug("IOTLABSLICES.PY \t verify_person  \
                         users_dict %s \r\n user_by_email %s \r\n  "
                      % (users_dict, users_by_email))
 
@@ -443,28 +444,28 @@ class IotlabSlices:
                 ldap_reslt = self.driver.testbed_shell.ldap.LdapSearch(req)
 
                 if ldap_reslt:
-                    logger.debug(" SLABSLICE.PY \tverify_person users \
+                    logger.debug(" IOTLABSLICES.PY \tverify_person users \
                                 USER already in Iotlab \t ldap_reslt %s \
                                 " % (ldap_reslt))
                     existing_users.append(ldap_reslt[1])
 
                 else:
                     #User not existing in LDAP
-                    logger.debug("SLABSLICE.PY \tverify_person users \
+                    logger.debug("IOTLABSLICES.PY \tverify_person users \
                                 not in ldap ...NEW ACCOUNT NEEDED %s \r\n \t \
                                 ldap_reslt %s " % (users, ldap_reslt))
 
         requested_user_emails = users_by_email.keys()
         requested_user_hrns = \
             [users_by_email[user]['hrn'] for user in users_by_email]
-        logger.debug("SLABSLICE.PY \tverify_person  \
+        logger.debug("IOTLABSLICES.PY \tverify_person  \
                        users_by_email  %s " % (users_by_email))
 
         #Check that the user of the slice in the slice record
         #matches one of the existing users
         try:
             if slice_record['reg-researchers'][0] in requested_user_hrns:
-                logger.debug(" SLABSLICE  \tverify_person ['PI']\
+                logger.debug(" IOTLABSLICES  \tverify_person ['PI']\
                                 slice_record %s" % (slice_record))
 
         except KeyError:
@@ -487,7 +488,7 @@ class IotlabSlices:
         #requested_user_email is in existing_user_emails
         if len(added_user_emails) == 0:
             slice_record['login'] = users_dict[requested_user_emails[0]]['uid']
-            logger.debug(" SLABSLICE  \tverify_person QUICK DIRTY %s"
+            logger.debug(" IOTLABSLICES  \tverify_person QUICK DIRTY %s"
                          % (slice_record))
 
         for added_user_email in added_user_emails:
@@ -515,7 +516,7 @@ class IotlabSlices:
                 # error message in ret
                 logger.debug(" IOTLABSLICES ret message %s" %(ret))
 
-            logger.debug(" SLABSLICE \r\n \r\n  \t THE SECOND verify_person\
+            logger.debug(" IOTLABSLICES \r\n \r\n  \t THE SECOND verify_person\
                            person %s" % (person))
             #Update slice_Record with the id now known to LDAP
 
@@ -569,12 +570,6 @@ class IotlabSlices:
                             #self.driver.testbed_shell.BindObjectToPeer('key', \
                                             #key['key_id'], peer['shortname'], \
                                             #remote_key_id)
-
-                    #finally:
-                        #if peer:
-                            #self.driver.testbed_shell.BindObjectToPeer('person', \
-                                    #person['person_id'], peer['shortname'], \
-                                    #user['person_id'])
 
         # remove old keys (only if we are not appending)
         append = options.get('append', True)

@@ -66,7 +66,8 @@ class IotlabDriver(Driver):
         existing_records = {}
         existing_hrns_by_types = {}
         logger.debug("IOTLAB_API \tGetPeers peer_filter %s " % (peer_filter))
-        all_records = self.api.dbsession().query(RegRecord).filter(RegRecord.type.like('%authority%')).all()
+        query = self.api.dbsession().query(RegRecord)
+        all_records = query.filter(RegRecord.type.like('%authority%')).all()
 
         for record in all_records:
             existing_records[(record.hrn, record.type)] = record
@@ -227,6 +228,7 @@ class IotlabDriver(Driver):
 
         #Only one entry for one user  = one slice in testbed_xp table
         #slicerec = dbsession.query(RegRecord).filter_by(hrn = slice_filter).first()
+
         raw_slicerec = self.api.dbsession().query(RegSlice).options(joinedload('reg_researchers')).filter_by(hrn=slice_filter).first()
         #raw_slicerec = self.api.dbsession().query(RegRecord).filter_by(hrn = slice_filter).first()
         if raw_slicerec:
@@ -612,16 +614,17 @@ class IotlabDriver(Driver):
             logger.debug("IOTLAB_API \tGetLeases  \
                     \r\n leasefilter %s" % ( lease_filter_dict))
 
-            filter_dict_functions = {
-            'slice_hrn' : IotlabShell.filter_lease_name,
-            't_from' : IotlabShell.filter_lease_start_time
-            }
+            # filter_dict_functions = {
+            # 'slice_hrn' : IotlabShell.filter_lease_name,
+            # 't_from' : IotlabShell.filter_lease_start_time
+            # }
             reservation_list = list(unfiltered_reservation_list)
             for filter_type in lease_filter_dict:
                 logger.debug("IOTLAB_API \tGetLeases reservation_list %s" \
                     % (reservation_list))
-                reservation_list = filter_dict_functions[filter_type](\
-                    reservation_list,lease_filter_dict[filter_type] )
+                reservation_list = self.testbed_shell.filter_lease(
+                        reservation_list,filter_type,
+                        lease_filter_dict[filter_type] )
 
                 # Filter the reservation list with a maximum timespan so that the
                 # leases and jobs running after this timestamp do not appear
@@ -678,7 +681,8 @@ class IotlabDriver(Driver):
             kept_experiments)
         deleted_experiments = list(deleted_experiments)
         if len(deleted_experiments) > 0:
-            self.api.dbsession().query(LeaseTableXP).filter(LeaseTableXP.experiment_id.in_(deleted_experiments)).delete(synchronize_session='fetch')
+            request = self.api.dbsession().query(LeaseTableXP)
+            request.filter(LeaseTableXP.experiment_id.in_(deleted_experiments)).delete(synchronize_session='fetch')
             self.api.dbsession().commit()
         return
     def AddSlice(self, slice_record, user_record):
@@ -833,7 +837,7 @@ class IotlabDriver(Driver):
                     recslice.update(
                         {'PI': [recuser['hrn']],
                          'researcher': [recuser['hrn']],
-                         'name': record['hrn'],
+                         'name': recuser['hrn'],
                          'node_ids': [],
                          'oar_job_id': [],
                          'person_ids': [recuser['record_id']]})
@@ -1160,73 +1164,7 @@ class IotlabDriver(Driver):
                  'geni_expires': datetime_to_string(utcparse(sliver['expires']))})
         return geni_slivers
 
-    # def list_resources (self, slice_urn, slice_hrn, creds, options):
-    #     """
 
-    #     List resources from the iotlab aggregate and returns a Rspec
-    #         advertisement with resources found when slice_urn and slice_hrn are
-    #         None (in case of resource discovery).
-    #         If a slice hrn and urn are provided, list experiment's slice
-    #         nodes in a rspec format. Answer to ListResources.
-    #         Caching unused.
-
-    #     :param slice_urn: urn of the slice
-    #     :param slice_hrn: name of the slice
-    #     :param creds: slice credenials
-    #     :type slice_urn: string
-    #     :type slice_hrn: string
-    #     :type creds: ? unused
-    #     :param options: options used when listing resources (list_leases, info,
-    #         geni_available)
-    #     :returns: rspec string in xml
-    #     :rtype: string
-
-    #     .. note:: creds are unused
-    #     """
-
-    #     #cached_requested = options.get('cached', True)
-
-    #     version_manager = VersionManager()
-    #     # get the rspec's return format from options
-    #     rspec_version = \
-    #         version_manager.get_version(options.get('geni_rspec_version'))
-    #     version_string = "rspec_%s" % (rspec_version)
-
-    #     #panos adding the info option to the caching key (can be improved)
-    #     if options.get('info'):
-    #         version_string = version_string + "_" + \
-    #             options.get('info', 'default')
-
-    #     # Adding the list_leases option to the caching key
-    #     if options.get('list_leases'):
-    #         version_string = version_string + "_" + \
-    #         options.get('list_leases', 'default')
-
-    #     # Adding geni_available to caching key
-    #     if options.get('geni_available'):
-    #         version_string = version_string + "_" + \
-    #             str(options.get('geni_available'))
-
-    #     # look in cache first
-    #     #if cached_requested and self.cache and not slice_hrn:
-    #         #rspec = self.cache.get(version_string)
-    #         #if rspec:
-    #             #logger.debug("IotlabDriver.ListResources: \
-    #                                 #returning cached advertisement")
-    #             #return rspec
-
-    #     #panos: passing user-defined options
-    #     aggregate = IotlabAggregate(self)
-
-    #     rspec = aggregate.get_rspec(slice_xrn=slice_urn,
-    #                                 version=rspec_version, options=options)
-
-    #     # cache the result
-    #     #if self.cache and not slice_hrn:
-    #         #logger.debug("Iotlab.ListResources: stores advertisement in cache")
-    #         #self.cache.add(version_string, rspec)
-
-    #     return rspec
 
 
     def list_slices(self, creds, options):
@@ -1309,7 +1247,7 @@ class IotlabDriver(Driver):
 
         TODO: needs review
         .. warning:: SA 12/12/13 - Removed. should be done in iotlabimporter
-            since users, keys and slice are managed by the LDAP.
+        since users, keys and slice are managed by the LDAP.
 
         """
         # pointer = old_sfa_record['pointer']
@@ -1497,7 +1435,7 @@ class IotlabDriver(Driver):
         # requested_attributes = rspec.version.get_slice_attributes()
 
         # ensure site record exists
-        # site = slices.verify_site(xrn.hrn, slice_record, peer, sfa_peer, options=options)
+
         # ensure slice record exists
 
         current_slice = slices.verify_slice(xrn.hrn, slice_record, sfa_peer)
@@ -1532,7 +1470,8 @@ class IotlabDriver(Driver):
 
         # add/remove leases
         rspec_requested_leases = rspec.version.get_leases()
-        leases = slices.verify_slice_leases(slice_record, requested_xp_dict, peer)
+        leases = slices.verify_slice_leases(slice_record,
+                                                requested_xp_dict, peer)
         logger.debug("IOTLABDRIVER.PY \tallocate leases  %s \
                         rspec_requested_leases %s" % (leases,
                         rspec_requested_leases))
