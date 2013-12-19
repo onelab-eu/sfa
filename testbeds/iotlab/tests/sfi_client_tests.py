@@ -124,7 +124,8 @@ if result != []:
 	retval = ldap_server.LdapDelete(dn)
 	print "deleting firexp user : ", retval
 
-
+# Change the sfi config file to be able to start the experiment on the federated
+# testbed with another identity and another slice
 print "config sfi"
 with open ("/root/.sfi/sfi_config", "r") as sfi_config:
 	sfi_config_txt = [line for line in sfi_config]

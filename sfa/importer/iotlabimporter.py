@@ -145,18 +145,17 @@ class IotlabImporter:
 
     def locate_by_type_pointer(self, record_type, pointer):
         """
-
-        Returns the record corresponding to the key pointer and record
-        type. Returns None if the record does not exist and is not in the
-        records_by_type_pointer dictionnary.
+        Returns the record corresponding to the key pointer and record type.
+            Returns None if the record does not exist and is not in the
+            records_by_type_pointer dictionnary.
 
         :param record_type: the record's type (slice, node, authority...)
         :type  record_type: string
-        :param pointer:Pointer to where the record is in the origin db,
+        :param pointer: Pointer to where the record is in the origin db,
             used in case the record comes from a trusted authority.
         :type pointer: integer
-        :rtype: RegUser if user, RegSlice if slice, RegNode if node...
-            or None if record does not exist.
+        :rtype: RegUser if user, RegSlice if slice, RegNode if node, or None if
+            record does not exist.
         """
         return self.records_by_type_pointer.get((record_type, pointer), None)
 
@@ -310,15 +309,14 @@ class IotlabImporter:
 
     def init_person_key(self, person, iotlab_key):
         """
-
         Returns a tuple pubkey and pkey.
 
         :param person Person's data.
         :type person: dict
-        :param iotlab_key: SSH public key, from LDAP user's data.
-            RSA type supported.
+        :param iotlab_key: SSH public key, from LDAP user's data. RSA type
+            supported.
         :type iotlab_key: string
-        :rtype (string, Keypair)
+        :rtype: (string, Keypair)
 
         """
         pubkey = None

@@ -18,6 +18,7 @@ from sfa.iotlab.OARrestapi import OARrestapi
 
 #Test iotlabdriver
 from sfa.iotlab.iotlabdriver import IotlabDriver
+from sfa.iotlab.iotlabshell import IotlabShell
 from sfa.util.config import Config
 
 from sfa.generic import Generic
@@ -25,6 +26,9 @@ import os
 import sys
 
 
+def message_and_wait(message):
+    print message
+    raw_input("Press Enter to continue...")
 
 def parse_options():
 
@@ -55,7 +59,7 @@ def parse_options():
 
     return valid_options_dict
 
-def TestLdap(job_id = None):
+def TestLdap(uid = None):
     logger.setLevelDebug()
 
     ldap_server = LDAPapi()
@@ -67,19 +71,17 @@ def TestLdap(job_id = None):
     ldap_server.conn.close()
     print "TEST ldap_server.conn.connect(bind=False)", ret
 
-
+    message_and_wait("\r\n \tLdapSeach : Get all users")
     ret = ldap_server.LdapSearch()
-    print "TEST ldap_server.LdapSearch ALL", ret
+    print "\r\n", ret
 
+    message_and_wait("\r\n \tLdapSeach : Get user with uid avakian")
     ret = ldap_server.LdapSearch('(uid=avakian)', [])
-    print "\r\n TEST ldap_server.LdapSearch ids = avakian", ret
+    print "\r\n", ret
 
-
+    message_and_wait("\r\n  generate ...")
     password = ldap_server.login_pwd.generate_password()
-    print "\r\n TEST generate_password ", password
-
-    maxi = ldap_server.find_max_uidNumber()
-    print "\r\n TEST find_max_uidNumber " , maxi
+    print   "\r\n TEST  generate_password ", password
 
     data = {}
     data['last_name'] = "Drake"
@@ -93,9 +95,14 @@ def TestLdap(job_id = None):
     record['first_name'] = "Tim"
     record['mail'] = "robin@arkham.fr"
 
-
     login = ldap_server.LdapGenerateUniqueLogin(data)
-    print "\r\n Robin \tgenerate_login  ", ret, login
+    print "\r\n Robin \tgenerate_login  ", login
+
+    message_and_wait("\r\n find_max_uidNumber")
+    maxi = ldap_server.find_max_uidNumber()
+    print maxi
+
+
 
     ret = ldap_server.LdapAddUser(data)
     print "\r\n Robin  \tLdapAddUser ", ret
@@ -104,6 +111,7 @@ def TestLdap(job_id = None):
     ret = ldap_server.LdapSearch(req_ldap, [])
     print "\r\n Robin \tldap_server.LdapSearch ids = %s %s" % (login, ret)
 
+    message_and_wait("Password methods")
     password = "Thridrobin"
     enc = ldap_server.login_pwd.encrypt_password(password)
     print "\r\n Robin \tencrypt_password ", enc
@@ -111,9 +119,7 @@ def TestLdap(job_id = None):
     ret = ldap_server.LdapModifyUser(record, {'userPassword':enc})
     print "\r\n Robin \tChange password LdapModifyUser ", ret
 
-    #dn = 'uid=' + login + ',' + ldap_server.baseDN
-    #ret = ldap_server.LdapDelete(dn)
-    #print "\r\n Robin  \tLdapDelete ", ret
+
 
     datanight = {}
     datanight['last_name'] = "Grayson"
@@ -128,12 +134,14 @@ def TestLdap(job_id = None):
     record_night['first_name'] = datanight['first_name']
     record_night['mail'] = datanight['mail']
 
+    message_and_wait("\r\n LdapFindUser")
     ret = ldap_server.LdapFindUser(record_night)
-    print "\r\n Nightwing \tldap_server.LdapFindUser %s : %s" % (record_night, ret)
+    print "\r\n Nightwing \tldap_server.LdapFindUser %s : %s" % (record_night,
+        ret)
 
     #ret = ldap_server.LdapSearch('(uid=grayson)', [])
     #print "\r\n Nightwing \tldap_server.LdapSearch ids = %s %s" %('grayson',ret )
-
+    message_and_wait("Add user then delete user")
     ret = ldap_server.LdapAddUser(datanight)
     print "\r\n Nightwing \tLdapAddUser ", ret
 
@@ -143,15 +151,6 @@ def TestLdap(job_id = None):
     ret = ldap_server.LdapDeleteUser(record_night)
     print "\r\n Nightwing   \tLdapDeleteUser ", ret
 
-
-    #record_avakian = {}
-    #record_avakian['hrn']= 'iotlab.avakian'
-    #record_avakian['last_name'] = 'avakian'
-    #record_avakian['first_name'] = 'sandrine'
-    #record_avakian['mail'] = 'sandrine.avakian@inria.fr'
-    #pubkey = "ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEAwSUkJ+cr3xM47h8lFkIXJoJhg4wHakTaLJmgTXkzvUmQsQeFB2MjUZ6WAelMXj/EFz2+XkK+bcWNXwfbrLptJQ+XwGpPZlu9YV/kzO63ghVrAyEg0+p7Pn1TO9f1ZYg4R6JfP/3qwH1AsE+X3PNpIewsuEIKwd2wUCJDf5RXJTpl39GizcBFemrRqgs0bdqAN/vUT9YvtWn8fCYR5EfJHVXOK8P1KmnbuGZpk7ryz21pDMlgw13+8aYB+LPkxdv5zG54A5c6o9N3zOCblvRFWaNBqathS8y04cOYWPmyu+Q0Xccwi7vM3Ktm8RoJw+raQNwsmneJOm6KXKnjoOQeiQ== savakian@sfa2.grenoble.iotlab.info"
-    #ret = ldap_server.LdapModifyUser(record_night, {'sshPublicKey':pubkey})
-    #print "\r\n Sandrine \tChange pubkey LdapModifyUser ", ret
 
     #record_myslice = {}
     #record_myslice['hrn']= 'iotlab.myslice'
@@ -164,12 +163,7 @@ def TestLdap(job_id = None):
 
 
 
-    #password = "ReptileFight"
-    #enc = ldap_server.encrypt_password(password)
-    #print "\r\n sandrine \tencrypt_password ", enc
 
-    #ret = ldap_server.LdapModifyUser(record_avakian, {'userPassword':enc})
-    #print "\r\n sandrine \tChange password LdapModifyUser ", ret
     return
 
 
@@ -194,8 +188,6 @@ def get_stuff(oar, uri):
     return js
 
 
-
-
 def TestOAR(job_id = None):
     print "JOB_ID",  job_id
     if isinstance(job_id, list) :
@@ -207,56 +199,95 @@ def TestOAR(job_id = None):
         job_id = '1'
     print "JOB_ID",  job_id
     oar = OARrestapi()
-    jobs = oar.parser.SendRequest("GET_reserved_nodes", username = 'avakian')
-    print "\r\n OAR GET_reserved_nodes ", jobs
+    print "============USING OAR CLASS PARSING METHODS ================"
 
+    message_and_wait("\r\nGET_reserved_nodes")
+    nodes = oar.parser.SendRequest("GET_reserved_nodes", username = 'avakian')
+    print "\r\n OAR GET_reserved_nodes ", nodes
 
+    message_and_wait("GET_jobs")
     jobs = oar.parser.SendRequest("GET_jobs")
     print "\r\n OAR GET_jobs ", jobs
 
-
+    message_and_wait( "\r\n GET_jobs_id")
     jobs = oar.parser.SendRequest("GET_jobs_id", job_id, 'avakian')
     print "\r\n OAR  GET_jobs_id ", jobs
 
+    # Check that the OAR requests are valid
+
+    print "============RAW JSON FROM OAR ================"
+    message_and_wait("\r\n Get all the jobs in the state  Running,Waiting, \
+        Launching of the user ")
     uri = '/oarapi/jobs/details.json?state=Running,Waiting,Launching&user=avakian'
     raw_json = get_stuff(oar, uri)
-    print "\r\nOAR ", uri, raw_json, "\r\n KKK \t", raw_json.keys()
+    print "\r\n OAR  uri %s \r\n \t raw_json %s \r\n raw_json_keys %s " %(uri,
+        raw_json, raw_json.keys())
 
+
+    message_and_wait("\r\nGet information on the job identified by its job_id")
     uri = '/oarapi/jobs/' + job_id +'.json'
     raw_json = get_stuff(oar, uri)
-    print "\r\n OAR  ", uri, raw_json, "\r\n KKK \t", raw_json.keys()
+    print "\r\n OAR  uri %s \r\n \t raw_json %s \r\n raw_json_keys %s " %(uri,
+        raw_json, raw_json.keys())
 
+
+    message_and_wait(" \r\nGet all the job's resources, \
+        job defined by its job id %s"%(job_id))
     uri = '/oarapi/jobs/' + job_id + '/resources.json'
     raw_json = get_stuff(oar, uri)
-    print "\r\n OAR  ", uri, raw_json, "\r\n resources.json \t", raw_json.keys()
+    print "\r\n OAR  uri %s \r\n \t raw_json %s \r\n raw_json_keys %s " %(uri,
+        raw_json, raw_json.keys())
 
+
+    message_and_wait("\r\n Get server's date and timezone")
     time_format = "%Y-%m-%d %H:%M:%S"
-
     server_timestamp, server_tz = oar.parser.SendRequest("GET_timezone")
-
     print "\r\n OAR  GetTimezone ", server_timestamp, server_tz
-    print(datetime.fromtimestamp(int(server_timestamp)).strftime('%Y-%m-%d %H:%M:%S'))
+    print(datetime.fromtimestamp(int(server_timestamp)).strftime(
+                                                time_format))
 
+    message_and_wait("\r\n Get all the resources with details from OAR")
     uri = '/oarapi/resources/full.json'
     raw_json = get_stuff(oar, uri)
-    print "\r\n OAR  ", uri, raw_json, "\r\n KKK \t", raw_json.keys()
+    print "\r\n OAR  uri %s \r\n \t raw_json %s \r\n raw_json_keys %s " %(uri,
+        raw_json, raw_json.keys())
 
+    message_and_wait("\r\n Get all the jobs scheduled by the user")
     uri = '/oarapi/jobs.json?user=avakian'
     raw_json = get_stuff(oar, uri)
-    print "\r\nOAR ", uri, raw_json, "\r\n KKK \t", raw_json.keys()
+    print "\r\n OAR  uri %s \r\n \t raw_json %s \r\n raw_json_keys %s " %(uri,
+        raw_json, raw_json.keys())
+
     return
 
 
-def TestImporter(arg=None):
-    api = Generic.the_flavour().make_api(interface='registry')
-    iotlabdriver = IotlabDriver(api)
 
-    nodes_listdict = iotlabdriver.testbed_shell.GetNodes()
-    sites_listdict = iotlabdriver.testbed_shell.GetSites()
-    nodes_by_id = dict([(node['node_id'], node) for node in nodes_listdict])
+def TestIotlabshell(param = None):
 
-    # from sfa.importer.iotlabimporter import IotlabImporter
-    # importer = IotlabImporter()
+    config = Config()
+    shell = IotlabShell(config)
+
+    message_and_wait("\r\n \r\n GetReservedNodes")
+    nodes = shell.GetReservedNodes()
+    print nodes
+
+    message_and_wait("\r\n GetPersons")
+    persons = shell.GetPersons()
+    print "\r\n \r\n  GetPersons", persons
+
+
+    message_and_wait("\r\n GetLeases for the login avakian")
+    leases = shell.GetLeases(login='avakian')
+    print  leases
+
+    message_and_wait("\r\n GetLeases for slice iotlab.avakian_slice")
+    leases = shell.GetLeases(lease_filter_dict=
+                        {'slice_hrn':'iotlab.avakian_slice'})
+    print leases
+
+    message_and_wait("\r\n GetLeases t_from 1405070000 ")
+    leases = shell.GetLeases(lease_filter_dict={'t_from':1405070000})
+    print leases
 
 def TestIotlabDriver(job_id = None):
     if job_id is None:
@@ -267,129 +298,63 @@ def TestIotlabDriver(job_id = None):
 
     api = Generic.the_flavour().make_api(interface='registry')
     iotlabdriver = IotlabDriver(api)
-    #nodes = iotlabdriver.testbed_shell.GetReservedNodes()
-    #print " \r\n \r\n GetReservedNodes", nodes
 
-    sl = iotlabdriver.testbed_shell.GetSlices(
-            slice_filter='iotlab.avakian_slice', slice_filter_type='slice_hrn')
-    print "\r\n \r\nGetSlices", sl[0]
+    # Iotlabdriver methods
+    slice_hrn = 'iotlab.avakian_slice'
+    message_and_wait(("\r\n GetSlices slice_hrn"%(slice_hrn)))
+    sl = iotlabdriver.GetSlices(
+            slice_filter= slice_hrn, slice_filter_type='slice_hrn')
+    print sl
 
-    #sl = iotlabdriver.testbed_shell.GetSlices(slice_filter='20', slice_filter_type='record_id_user')
-    #print "\r\n \r\nGetSlices", sl
+    message_and_wait("\r\n GetSlices slice filter 20 (record_id_user) ")
+    sl = iotlabdriver.GetSlices(slice_filter='20',
+                                slice_filter_type='record_id_user')
+    print sl
 
-    sl = iotlabdriver.testbed_shell.GetSlices()
-    print "\r\n \r\nGetSlices", sl
-
-    persons = iotlabdriver.testbed_shell.GetPersons()
-    print "\r\n \r\n  GetPersons", persons
-
-    leases = iotlabdriver.testbed_shell.GetLeases(login='avakian')
-    print "\r\n \r\n  GetLeases", leases
-
-    leases = iotlabdriver.testbed_shell.GetLeases(lease_filter_dict={'slice_hrn':'iotlab.avakian_slice'})
-    print "\r\n \r\n  GetLeases slice_hrn iotlab.avakian_slice ", leases
+    message_and_wait("\r\n GetSlices :all slice")
+    sl = iotlabdriver.GetSlices()
+    print sl
 
 
-    leases = iotlabdriver.testbed_shell.GetLeases(lease_filter_dict={'t_from':1405070000})
-    print "\r\n \r\n  GetLeases t_from 1405070000", leases
-def  TestSfi(filename = None):
-
-    if filename is None:
-        filename = "/home/savakian/flab-sfa/test_rspec/my_lyon_nodes.rspec"
-    print " =================    SFI.PY RESOURCES            =============", \
-    os.system("sfi.py list iotlab")
-
-    print  os.system("sfi.py resources")
-
-    print os.system("sfi.py resources -r iotlab")
-
-    print os.system("sfi.py resources -l all")
 
 
-    print "================ SFI.PY RESOURCES -R IOTLAB -L ALL ============\r\n", \
-    os.system("sfi.py resources -r iotlab -l all")
 
-    print "================ WRITING  sfi.py resources -l all ===========\r\n", \
-    filename
-
-    filename = filename.split(".")[0]+"_out.rspec"
-    rspecfile = open(filename,"w")
-    r = os.popen("sfi.py resources -l all")
-    for i in r.readlines():
-        rspecfile.write(i)
-    rspecfile.close()
-
-    print " =================    SFI.PY SHOW SLICE   ============= \r\n", \
-    os.system("sfi.py resources iotlab.avakian_slice")
-
-    print  " =================    SFI.PY SHOW USER   =============\r\n", \
-    os.system("sfi.py show iotlab.avakian_slice")
-
-    print " =================    SFI.PY SHOW NODE   =============\r\n", \
-    os.system("sfi.py show iotlab.avakian")
-
-    print " =================    SFI.PY SLICES       =============\r\n", \
-    os.system("sfi.py show iotlab.node6.devlille.iotlab.info")
-
-    print " =================    SFI.PY LIST SLICE   =============\r\n", \
-    os.system("sfi.py slices")
-
-    print " =================    SFI.PY STATUS SLICE   =============\r\n", \
-    os.system("sfi.py status iotlab.avakian_slice")
-
-    print " =================    SFI.PY DELETE SLICE   =============\r\n", \
-    os.system("sfi.py delete iotlab.avakian_slice")
-
-    print " =================    SFI.PY CREATE SLICE   =============\r\n", \
-    os.system("sfi.py create iotlab.avakian_slice \
-     /home/savakian/flab-sfa/test_rspec/my_lyon_nodes.rspec")
 
 def TestSQL(arg = None):
     from sfa.storage.model import make_record, RegSlice, RegRecord
     from sfa.storage.alchemy import global_dbsession
-    from sqlalchemy.orm.collections import InstrumentedList
+
 
     from sqlalchemy.orm import joinedload
 
-    #solo_query_slice_list = dbsession.query(RegSlice).options(joinedload('reg_researchers')).filter_by(hrn='iotlab.avakian_slice').first()
-    #print "\r\n \r\n ===========      query_slice_list  RegSlice \
-    #joinedload('reg_researchers')   iotlab.avakian  first \r\n \t ", \
-    #solo_query_slice_list.__dict__
+    slice_hrn = 'iotlab.avakian_slice'
+    request =  global_dbsession.query(RegSlice).options(joinedload('reg_researchers'))
+    solo_query_slice_list = request.filter_by(hrn=slice_hrn).first()
 
-    #query_slice_list = dbsession.query(RegSlice).options(joinedload('reg_researchers')).all()
-    #print "\r\n \r\n ===========      query_slice_list RegSlice \
-    #joinedload('reg_researchers')   ALL  \r\n \t", \
-    #query_slice_list[0].__dict__
+    print "\r\n \r\n ===========      solo_query_slice_list  RegSlice \
+    joinedload('reg_researchers')   slice_hrn %s  first %s \r\n \t "\
+    %(slice_hrn, solo_query_slice_list.__dict__)
 
-    #return_slicerec_dictlist = []
-    #record = query_slice_list[0]
-    #print "\r\n \r\n ===========   \r\n \t", record
+    query_slice_list = request.all()
+    print "\r\n \r\n ===========      query_slice_list RegSlice \
+    joinedload('reg_researchers')   ALL  \r\n \t", \
+    query_slice_list[0].__dict__
 
-    #tmp = record.__dict__
-    #print "\r\n \r\n ===========   \r\n \t", tmp
-    #tmp['reg_researchers'] = tmp['reg_researchers'][0].__dict__
-    #print "\r\n \r\n ===========   \r\n \t", tmp
-        ##del tmp['reg_researchers']['_sa_instance_state']
-    #return_slicerec_dictlist.append(tmp)
+    return_slicerec_dictlist = []
+    record = query_slice_list[0]
+    print "\r\n \r\n ===========   \r\n \t", record
 
-    #print "\r\n \r\n ===========   \r\n \t", return_slicerec_dictlist
+    tmp = record.__dict__
+    print "\r\n \r\n ===========   \r\n \t", tmp
+    tmp['reg_researchers'] = tmp['reg_researchers'][0].__dict__
+    print "\r\n \r\n ===========   \r\n \t", tmp
+        #del tmp['reg_researchers']['_sa_instance_state']
+    return_slicerec_dictlist.append(tmp)
 
-    all_records = dbsession.query(RegRecord).all()
+    print "\r\n \r\n ===========   \r\n \t", return_slicerec_dictlist
 
-        #create hash by (type,hrn)
-        #used  to know if a given record is already known to SFA
+    all_records = global_dbsession.query(RegRecord).all()
 
-    records_by_type_hrn = \
-            dict ( [ ( (record.type,record.hrn) , record ) for
-                                        record in all_records ] )
-    for (rec_type, rec) in records_by_type_hrn :
-        if rec_type == 'user':
-            print >>sys.stderr,"\r\n IOTLABIMPORT \t keys %s rec \
-                %s \r\n" %(rec_type, rec )
-
-    users_rec_by_email = \
-            dict ( [ (record.email, record) for record
-                        in all_records if record.type == 'user' ] )
 
 
 def RunAll( arg ):
@@ -403,10 +368,9 @@ supported_options = {
         'OAR' : TestOAR,
         'LDAP': TestLdap,
         'driver': TestIotlabDriver,
-        'sfi':TestSfi,
+        'shell': TestIotlabshell,
         'sql':TestSQL,
-        'all' : RunAll,
-        'import': TestImporter }
+        'all' : RunAll, }
 
 def main():
     opts = parse_options()
