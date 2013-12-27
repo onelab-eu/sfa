@@ -1,4 +1,4 @@
-Metadata-Version: 1.0
+Metadata-Version: 1.1
 Name: xmlbuilder
 Version: 0.9
 Summary: Pythonic way to create xml files
@@ -15,26 +15,26 @@ Description: Example of usage:
         from xmlbuilder import XMLBuilder
         x = XMLBuilder(format=True)
         with x.root(a = 1):
-        with x.data:
-        [x &lt;&lt; ('node',{'val':i}) for i in range(10)]
+            with x.data:
+                [x &lt;&lt; ('node',{'val':i}) for i in range(10)]
         
         print str(x)
         
         will print
         
         &lt;root a="1"&gt;
-        &lt;data&gt;
-        &lt;node val="0" /&gt;
-        &lt;node val="1" /&gt;
-        &lt;node val="2" /&gt;
-        &lt;node val="3" /&gt;
-        &lt;node val="4" /&gt;
-        &lt;node val="5" /&gt;
-        &lt;node val="6" /&gt;
-        &lt;node val="7" /&gt;
-        &lt;node val="8" /&gt;
-        &lt;node val="9" /&gt;
-        &lt;/data&gt;
+            &lt;data&gt;
+                &lt;node val="0" /&gt;
+                &lt;node val="1" /&gt;
+                &lt;node val="2" /&gt;
+                &lt;node val="3" /&gt;
+                &lt;node val="4" /&gt;
+                &lt;node val="5" /&gt;
+                &lt;node val="6" /&gt;
+                &lt;node val="7" /&gt;
+                &lt;node val="8" /&gt;
+                &lt;node val="9" /&gt;
+            &lt;/data&gt;
         &lt;/root&gt;
         
         Mercurial repo:http://hg.assembla.com/MyPackages/
@@ -49,32 +49,32 @@ Description: Example of usage:
         
         First we need to create xmlbuilder
         
-        from xmlbuilder import XMLBuilder
-        # params - encoding = 'utf8',
-        # builder = None, - ElementTree.TreeBuilder
-        # tab_level = None, - current tab l;evel - for formatted output only
-        # format = False, - create formatted output
-        # tab_step = " " * 4 - indentation step
-        xml = XMLBuilder()
+            from xmlbuilder import XMLBuilder
+            # params - encoding = 'utf8',
+            # builder = None, - ElementTree.TreeBuilder 
+            # tab_level = None, - current tab l;evel - for formatted output only
+            # format = False, - create formatted output
+            # tab_step = " " * 4 - indentation step
+            xml = XMLBuilder()
         
         
         Use `with` statement to make document structure
-        #create and open tag 'root_tag' with text 'text' and attributes
-        with xml.root_tag(text,attr1=val1,attr2=val2):
-        #create and open tag 'sub_tag'
-        with xml.sub_tag(text,attr3=val3):
-        #create tag which are not valid python identificator
-        with xml('one-more-sub-tag',attr7=val37):
-        xml &lt;&lt; "Some textual data"
-        #here tag 'one-more-sub-tag' are closed
-        #Tags without children can be created using `&lt;&lt;` operator
-        for val in range(15):
-        xml &lt;&lt; ('message',"python rocks!"[:i])
-        #create 15 child tag like &lt;message&gt; python r&lt;/message&gt;
-        #all tags closed
-        node = ~x # get etree.ElementTree object
-        xml_data = str(x)
-        unicode_xml_data = unicode(x)
+            #create and open tag 'root_tag' with text 'text' and attributes
+            with xml.root_tag(text,attr1=val1,attr2=val2):
+                #create and open tag 'sub_tag'
+                with xml.sub_tag(text,attr3=val3):
+                    #create tag which are not valid python identificator
+                    with xml('one-more-sub-tag',attr7=val37):
+                        xml &lt;&lt; "Some textual data"
+                    #here tag 'one-more-sub-tag' are closed
+        			#Tags without children can be created using `&lt;&lt;` operator
+                    for val in range(15):
+                        xml &lt;&lt; ('message',"python rocks!"[:i])
+                    #create 15 child tag like &lt;message&gt; python r&lt;/message&gt;
+            #all tags closed
+            node = ~x # get etree.ElementTree object
+            xml_data = str(x)
+            unicode_xml_data = unicode(x)
         
 Keywords: xml
 Platform: UNKNOWN

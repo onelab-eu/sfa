@@ -305,6 +305,9 @@ Users having a GID/PubKey correpondence NOT OK: %s and are: \n%s\n\n"%(len(NOKEY
         
     
 class CertCommands(Commands):
+
+    def __init__(self, *args, **kwds):
+        self.api= Generic.the_flavour().make_api(interface='registry')
     
     def import_gid(self, xrn):
         pass
