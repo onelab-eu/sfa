@@ -221,7 +221,7 @@ class IotlabImporter:
                 node_gid = \
                     self.auth_hierarchy.create_gid(urn, create_uuid(), pkey)
 
-                def iotlab_get_authority(hrn):
+                def testbed_get_authority(hrn):
                     """ Gets the authority part in the hrn.
                     :param hrn: hrn whose authority we are looking for.
                     :type hrn: string
@@ -234,7 +234,7 @@ class IotlabImporter:
 
                 node_record = RegNode(hrn=hrn, gid=node_gid,
                                       pointer='-1',
-                                      authority=iotlab_get_authority(hrn))
+                                      authority=testbed_get_authority(hrn))
                 try:
 
                     node_record.just_created()
@@ -529,7 +529,7 @@ class IotlabImporter:
 
     def run(self, options):
         """
-        Create the special iotlab table, lease_table, in the iotlab database.
+        Create the special iotlab table, lease_table, in the SFA database.
         Import everything (users, slices, nodes and sites from OAR
         and LDAP) into the SFA database.
         Delete stale records that are no longer in OAR or LDAP.

@@ -58,7 +58,7 @@ class CortexlabSlices:
 
         # check if we are already peered with this site_authority
         #if so find the peer record
-        peers = self.driver.testbed_shell.GetPeers(peer_filter=site_authority)
+        peers = self.driver.GetPeers(peer_filter=site_authority)
         for peer_record in peers:
             if site_authority == peer_record.hrn:
                 peer = peer_record
@@ -108,7 +108,7 @@ class CortexlabSlices:
         logger.debug("IOTLABSLICES verify_slice_leases sfa_slice %s "
                      % (sfa_slice))
         #First get the list of current leases from OAR
-        leases = self.driver.testbed_shell.GetLeases({'slice_hrn': sfa_slice['hrn']})
+        leases = self.driver.GetLeases({'slice_hrn': sfa_slice['hrn']})
         logger.debug("IOTLABSLICES verify_slice_leases requested_jobs_dict %s \
                         leases %s " % (requested_jobs_dict, leases))
 
@@ -207,15 +207,19 @@ class CortexlabSlices:
                 logger.debug("IOTLABSLICES \
                               NEWLEASE slice %s  job %s"
                              % (sfa_slice, job))
-                self.driver.testbed_shell.AddLeases(
-                    job['hostname'],
+                job_id = self.driver.AddLeases(job['hostname'],
                     sfa_slice, int(job['start_time']),
                     int(job['duration']))
+                if job_id is not None:
+                    new_leases = self.driver.GetLeases(login=
+                        sfa_slice['login'])
+                    for new_lease in new_leases:
+                        leases.append(new_lease)
 
         #Deleted leases are the ones with lease id not declared in the Rspec
         if deleted_leases:
-            self.driver.testbed_shell.DeleteLeases(deleted_leases,
-                                                sfa_slice['user']['uid'])
+            self.driver.DeleteLeases(deleted_leases,
+                                    sfa_slice['user']['uid'])
             logger.debug("IOTLABSLICES \
                           verify_slice_leases slice %s deleted_leases %s"
                          % (sfa_slice, deleted_leases))
@@ -223,8 +227,7 @@ class CortexlabSlices:
         if reschedule_jobs_dict:
             for start_time in reschedule_jobs_dict:
                 job = reschedule_jobs_dict[start_time]
-                self.driver.testbed_shell.AddLeases(
-                    job['hostname'],
+                self.driver.AddLeases(job['hostname'],
                     sfa_slice, int(job['start_time']),
                     int(job['duration']))
         return leases
@@ -300,7 +303,7 @@ class CortexlabSlices:
 
         slicename = slice_hrn
         # check if slice belongs to Iotlab
-        slices_list = self.driver.testbed_shell.GetSlices(
+        slices_list = self.driver.GetSlices(
             slice_filter=slicename, slice_filter_type='slice_hrn')
 
         sfa_slice = None
@@ -333,7 +336,8 @@ class CortexlabSlices:
                          }
 
             if ldap_user:
-                hrn = self.driver.testbed_shell.root_auth + '.' + ldap_user['uid']
+                hrn = self.driver.testbed_shell.root_auth + '.' \
+                                                + ldap_user['uid']
                 user = self.driver.get_user_record(hrn)
 
                 logger.debug(" IOTLABSLICES \tverify_slice hrn %s USER %s"
@@ -341,7 +345,7 @@ class CortexlabSlices:
 
                  # add the external slice to the local SFA iotlab DB
                 if sfa_slice:
-                    self.driver.testbed_shell.AddSlice(sfa_slice, user)
+                    self.driver.AddSlice(sfa_slice, user)
 
             logger.debug("IOTLABSLICES \tverify_slice ADDSLICE OK")
         return sfa_slice
@@ -373,7 +377,7 @@ class CortexlabSlices:
 
 
         """
-        #TODO SA 21/08/12 verify_persons Needs review
+
 
         logger.debug("IOTLABSLICES \tverify_persons \tslice_hrn  %s  \
                     \t slice_record %s\r\n users %s \t  "
@@ -387,14 +391,15 @@ class CortexlabSlices:
 
         #First create dicts by hrn and id for each user in the user record list:
         for info in users:
-            if 'slice_record' in info:
-                slice_rec = info['slice_record']
-                if 'user' in slice_rec :
-                    user = slice_rec['user']
+            # if 'slice_record' in info:
+            #     slice_rec = info['slice_record']
+            #     if 'user' in slice_rec :
+            #         user = slice_rec['user']
 
-                    if 'email' in user:
-                        users_by_email[user['email']] = user
-                        users_dict[user['email']] = user
+            if 'email' in info:
+                users_by_email[info['email']] = info
+                users_dict[info['email']] = info
+
 
         logger.debug("IOTLABSLICES.PY \t verify_person  \
                         users_dict %s \r\n user_by_email %s \r\n \
@@ -459,7 +464,7 @@ class CortexlabSlices:
         #Check that the user of the slice in the slice record
         #matches one of the existing users
         try:
-            if slice_record['PI'][0] in requested_user_hrns:
+            if slice_record['reg-researchers'][0] in requested_user_hrns:
                 logger.debug(" IOTLABSLICES  \tverify_person ['PI']\
                                 slice_record %s" % (slice_record))
 
