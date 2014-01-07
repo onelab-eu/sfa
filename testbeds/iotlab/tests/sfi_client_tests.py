@@ -63,30 +63,28 @@ rspec_filename_dict = {
 		'iotlab_avakian_slice_all.rspec',
 
     ('iotlab_avakian', 'iotlab', 'provision' ):
-        "sfi.py provision iotlab.avakian_slice \
-                            iotlab_avakian_slice_iotlab.rspec",
+        "sfi.py provision iotlab.avakian_slice",
 
     ('iotlab_avakian', 'iotlab2', 'provision'):
-        "sfi.py provision iotlab.avakian_slice \
-                            iotlab_avakian_slice_iotlab2.rspec",
+        "sfi.py provision iotlab.avakian_slice",
 
     ('firexp_user','iotlab', 'provision'):
-        "sfi.py provision firexp.flab.iotlab_slice firexp_iotlab_slice_iotlab.rspec",
+        "sfi.py provision firexp.flab.iotlab_slice",
 
     ('firexp_user', 'all', 'provision'):
-            "sfi.py provision firexp.flab.iotlab_slice firexp_iotlab_slice_all.rspec",
+            "sfi.py provision firexp.flab.iotlab_slice",
 
     ('iotlab_user', 'iotlab', 'provision'):
-        "sfi.py provision iotlab.user_slice iotlab_user_slice_iotlab.rspec",
+        "sfi.py provision iotlab.user_slice",
 
     ('firexp_avakian','iotlab', 'provision'):
-        "sfi.py provision firexp.flab.avakian_slice firexp_avakian_slice_iotlab.rspec",
+        "sfi.py provision firexp.flab.avakian_slice",
 
     ('iotlab_avakian', 'plab', 'provision') :
-            "sfi.py provision iotlab.avakian_slice iotlab_avakian_slice_plab.rspec",
+            "sfi.py provision iotlab.avakian_slice",
 
     ('iotlab_avakian', 'all', 'provision') :
-     "sfi.py provision iotlab.avakian_slice iotlab_avakian_slice_all.rspec",
+     "sfi.py provision iotlab.avakian_slice",
 
     ('iotlab_avakian', 'iotlab', 'describe' ):
         "sfi.py describe iotlab.avakian_slice iotlab_avakian_slice_iotlab.rspec",

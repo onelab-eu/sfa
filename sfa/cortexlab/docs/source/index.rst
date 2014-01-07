@@ -39,7 +39,8 @@ There are two types of information about the nodes:
 
 Currently, CortexlabQueryTestbed is merely a skeleton of methods that have to be
 implemented with the real testbed API in order to provide the functionality
-they were designed for.
+they were designed for (see the cortxlabnodes file for further information
+on which methods have to be completed).
 
 
 In the LDAP file, the LDAPapi class is based on the unix schema.
