@@ -1,25 +1,35 @@
 """
 Implements what a driver should provide for SFA to work.
 """
-from sfa.util.faults import SliverDoesNotExist, UnknownSfaType
+from datetime import datetime
+from sfa.util.sfatime import utcparse, datetime_to_string
+
+from sfa.util.faults import SliverDoesNotExist, Forbidden
 from sfa.util.sfalogging import logger
-from sfa.storage.alchemy import dbsession
-from sfa.storage.model import RegRecord
+
+from sfa.trust.hierarchy import Hierarchy
+from sfa.trust.gid import create_uuid
 
 from sfa.managers.driver import Driver
 from sfa.rspecs.version_manager import VersionManager
 from sfa.rspecs.rspec import RSpec
 
-from sfa.util.xrn import Xrn, hrn_to_urn, get_authority
-
 from sfa.cortexlab.cortexlabaggregate import CortexlabAggregate, \
             cortexlab_xrn_to_hostname
 
 from sfa.cortexlab.cortexlabslices import CortexlabSlices
-
 from sfa.cortexlab.cortexlabshell import CortexlabShell
 
+from sfa.iotlab.iotlabxrn import IotlabXrn, xrn_object
+from sfa.util.xrn import Xrn, hrn_to_urn, get_authority, urn_to_hrn
 
+from sfa.trust.certificate import Keypair, convert_public_key
+from sfa.trust.credential import Credential
+from sfa.storage.model import SliverAllocation
+
+from sfa.storage.model import RegRecord, RegUser, RegSlice, RegKey
+from sfa.iotlab.iotlabpostgres import LeaseTableXP
+from sqlalchemy.orm import joinedload
 
 class CortexlabDriver(Driver):
     """ Cortexlab Driver class inherited from Driver generic class.
@@ -30,20 +40,680 @@ class CortexlabDriver(Driver):
     .. seealso::: Driver class
 
     """
-    def __init__(self, config):
+    def __init__(self, api):
         """
 
-        Sets the iotlab SFA config parameters,
-            instanciates the testbed api and the iotlab database.
+        Sets the Cortexlab SFA config parameters,
+            instanciates the testbed api.
 
-        :param config: iotlab SFA configuration object
-        :type config: Config object
-
+        :param api: SfaApi configuration object. Holds reference to the
+            database.
+        :type api: SfaApi object
         """
-        Driver.__init__(self, config)
-        self.config = config
+
+        Driver.__init__(self, api)
+        self.api = api
+        config = api.config
         self.testbed_shell = CortexlabShell(config)
         self.cache = None
+
+    def GetPeers(self, peer_filter=None ):
+        """ Gathers registered authorities in SFA DB and looks for specific peer
+        if peer_filter is specified.
+        :param peer_filter: name of the site authority looked for.
+        :type peer_filter: string
+        :returns: list of records.
+
+        """
+
+        existing_records = {}
+        existing_hrns_by_types = {}
+        logger.debug("CORTEXLAB_API \tGetPeers peer_filter %s " % (peer_filter))
+        query = self.api.dbsession().query(RegRecord)
+        all_records = query.filter(RegRecord.type.like('%authority%')).all()
+
+        for record in all_records:
+            existing_records[(record.hrn, record.type)] = record
+            if record.type not in existing_hrns_by_types:
+                existing_hrns_by_types[record.type] = [record.hrn]
+            else:
+                existing_hrns_by_types[record.type].append(record.hrn)
+
+        logger.debug("CORTEXLAB_API \tGetPeer\texisting_hrns_by_types %s "
+                     % (existing_hrns_by_types))
+        records_list = []
+
+        try:
+            if peer_filter:
+                records_list.append(existing_records[(peer_filter,
+                                                     'authority')])
+            else:
+                for hrn in existing_hrns_by_types['authority']:
+                    records_list.append(existing_records[(hrn, 'authority')])
+
+            logger.debug("CORTEXLAB_API \tGetPeer \trecords_list  %s "
+                         % (records_list))
+
+        except KeyError:
+            pass
+
+        return_records = records_list
+        logger.debug("CORTEXLAB_API \tGetPeer return_records %s "
+                     % (return_records))
+        return return_records
+
+    def GetKeys(self, key_filter=None):
+        """Returns a dict of dict based on the key string. Each dict entry
+        contains the key id, the ssh key, the user's email and the
+        user's hrn.
+        If key_filter is specified and is an array of key identifiers,
+        only keys matching the filter will be returned.
+
+        Admin may query all keys. Non-admins may only query their own keys.
+        FROM PLC API DOC
+
+        :returns: dict with ssh key as key and dicts as value.
+        :rtype: dict
+        """
+        query = self.api.dbsession().query(RegKey)
+        if key_filter is None:
+            keys = query.options(joinedload('reg_user')).all()
+        else:
+            constraint = RegKey.key.in_(key_filter)
+            keys = query.options(joinedload('reg_user')).filter(constraint).all()
+
+        key_dict = {}
+        for key in keys:
+            key_dict[key.key] = {'key_id': key.key_id, 'key': key.key,
+                                 'email': key.reg_user.email,
+                                 'hrn': key.reg_user.hrn}
+
+        #ldap_rslt = self.ldap.LdapSearch({'enabled']=True})
+        #user_by_email = dict((user[1]['mail'][0], user[1]['sshPublicKey']) \
+                                        #for user in ldap_rslt)
+
+        logger.debug("CORTEXLAB_API  GetKeys  -key_dict %s \r\n " % (key_dict))
+        return key_dict
+
+    def AddPerson(self, record):
+        """
+
+        Adds a new account. Any fields specified in records are used,
+            otherwise defaults are used. Creates an appropriate login by calling
+            LdapAddUser.
+
+        :param record: dictionary with the sfa user's properties.
+        :returns: a dicitonary with the status. If successful, the dictionary
+            boolean is set to True and there is a 'uid' key with the new login
+            added to LDAP, otherwise the bool is set to False and a key
+            'message' is in the dictionary, with the error message.
+        :rtype: dict
+
+        """
+        ret = self.testbed_shell.ldap.LdapAddUser(record)
+
+        if ret['bool'] is True:
+            record['hrn'] = self.testbed_shell.root_auth + '.' + ret['uid']
+            logger.debug("Cortexlab api AddPerson return code %s record %s  "
+                         % (ret, record))
+            self.__add_person_to_db(record)
+        return ret
+
+    def __add_person_to_db(self, user_dict):
+        """
+        Add a federated user straight to db when the user issues a lease
+        request with nodes and that he has not registered with cortexlab
+        yet (that is he does not have a LDAP entry yet).
+        Uses parts of the routines in CortexlabImport when importing user
+        from LDAP.
+        Called by AddPerson, right after LdapAddUser.
+        :param user_dict: Must contain email, hrn and pkey to get a GID
+        and be added to the SFA db.
+        :type user_dict: dict
+
+        """
+        request = self.api.dbsession().query(RegUser)
+        check_if_exists = \
+            request.filter_by(email = user_dict['email']).first()
+        #user doesn't exists
+        if not check_if_exists:
+            logger.debug("__add_person_to_db \t Adding %s \r\n \r\n \
+                                            " %(user_dict))
+            hrn = user_dict['hrn']
+            person_urn = hrn_to_urn(hrn, 'user')
+            pubkey = user_dict['pkey']
+            try:
+                pkey = convert_public_key(pubkey)
+            except TypeError:
+                #key not good. create another pkey
+                logger.warn('__add_person_to_db: unable to convert public \
+                                    key for %s' %(hrn ))
+                pkey = Keypair(create=True)
+
+
+            if pubkey is not None and pkey is not None :
+                hierarchy = Hierarchy()
+                person_gid = hierarchy.create_gid(person_urn, create_uuid(), \
+                                pkey)
+                if user_dict['email']:
+                    logger.debug("__add_person_to_db \r\n \r\n \
+                        IOTLAB IMPORTER PERSON EMAIL OK email %s "\
+                        %(user_dict['email']))
+                    person_gid.set_email(user_dict['email'])
+
+            user_record = RegUser(hrn=hrn , pointer= '-1', \
+                                    authority=get_authority(hrn), \
+                                    email=user_dict['email'], gid = person_gid)
+            user_record.reg_keys = [RegKey(user_dict['pkey'])]
+            user_record.just_created()
+            self.api.dbsession().add (user_record)
+            self.api.dbsession().commit()
+        return
+
+
+    def _sql_get_slice_info(self, slice_filter):
+        """
+        Get the slice record based on the slice hrn. Fetch the record of the
+        user associated with the slice by using joinedload based on the
+        reg_researcher relationship.
+
+        :param slice_filter: the slice hrn we are looking for
+        :type slice_filter: string
+        :returns: the slice record enhanced with the user's information if the
+            slice was found, None it wasn't.
+
+        :rtype: dict or None.
+        """
+        #DO NOT USE RegSlice - reg_researchers to get the hrn
+        #of the user otherwise will mess up the RegRecord in
+        #Resolve, don't know why - SA 08/08/2012
+
+        #Only one entry for one user  = one slice in testbed_xp table
+        #slicerec = dbsession.query(RegRecord).filter_by(hrn = slice_filter).first()
+        request = self.api.dbsession().query(RegSlice)
+        raw_slicerec = request.options(joinedload('reg_researchers')).filter_by(hrn=slice_filter).first()
+        #raw_slicerec = dbsession.query(RegRecord).filter_by(hrn = slice_filter).first()
+        if raw_slicerec:
+            #load_reg_researcher
+            #raw_slicerec.reg_researchers
+            raw_slicerec = raw_slicerec.__dict__
+            logger.debug(" CORTEXLAB_API \t  _sql_get_slice_info slice_filter %s  \
+                            raw_slicerec %s" % (slice_filter, raw_slicerec))
+            slicerec = raw_slicerec
+            #only one researcher per slice so take the first one
+            #slicerec['reg_researchers'] = raw_slicerec['reg_researchers']
+            #del slicerec['reg_researchers']['_sa_instance_state']
+            return slicerec
+
+        else:
+            return None
+
+    def _sql_get_slice_info_from_user(self, slice_filter):
+        """
+        Get the slice record based on the user recordid by using a joinedload
+        on the relationship reg_slices_as_researcher. Format the sql record
+        into a dict with the mandatory fields for user and slice.
+        :returns: dict with slice record and user record if the record was found
+        based on the user's id, None if not..
+        :rtype:dict or None..
+        """
+        #slicerec = dbsession.query(RegRecord).filter_by(record_id = slice_filter).first()
+        request = self.api.dbsession().query(RegUser)
+        raw_slicerec = request.options(joinedload('reg_slices_as_researcher')).filter_by(record_id=slice_filter).first()
+        #raw_slicerec = dbsession.query(RegRecord).filter_by(record_id = slice_filter).first()
+        #Put it in correct order
+        user_needed_fields = ['peer_authority', 'hrn', 'last_updated',
+                              'classtype', 'authority', 'gid', 'record_id',
+                              'date_created', 'type', 'email', 'pointer']
+        slice_needed_fields = ['peer_authority', 'hrn', 'last_updated',
+                               'classtype', 'authority', 'gid', 'record_id',
+                               'date_created', 'type', 'pointer']
+        if raw_slicerec:
+            #raw_slicerec.reg_slices_as_researcher
+            raw_slicerec = raw_slicerec.__dict__
+            slicerec = {}
+            slicerec = \
+                dict([(k, raw_slicerec[
+                    'reg_slices_as_researcher'][0].__dict__[k])
+                    for k in slice_needed_fields])
+            slicerec['reg_researchers'] = dict([(k, raw_slicerec[k])
+                                                for k in user_needed_fields])
+             #TODO Handle multiple slices for one user SA 10/12/12
+                        #for now only take the first slice record associated to the rec user
+                        ##slicerec  = raw_slicerec['reg_slices_as_researcher'][0].__dict__
+                        #del raw_slicerec['reg_slices_as_researcher']
+                        #slicerec['reg_researchers'] = raw_slicerec
+                        ##del slicerec['_sa_instance_state']
+
+            return slicerec
+
+        else:
+            return None
+
+
+    def _get_slice_records(self, slice_filter=None,
+                           slice_filter_type=None):
+        """
+        Get the slice record depending on the slice filter and its type.
+        :param slice_filter: Can be either the slice hrn or the user's record
+        id.
+        :type slice_filter: string
+        :param slice_filter_type: describes the slice filter type used, can be
+        slice_hrn or record_id_user
+        :type: string
+        :returns: the slice record
+        :rtype:dict
+        .. seealso::_sql_get_slice_info_from_user
+        .. seealso:: _sql_get_slice_info
+        """
+
+        #Get list of slices based on the slice hrn
+        if slice_filter_type == 'slice_hrn':
+
+            #if get_authority(slice_filter) == self.root_auth:
+                #login = slice_filter.split(".")[1].split("_")[0]
+
+            slicerec = self._sql_get_slice_info(slice_filter)
+
+            if slicerec is None:
+                return None
+                #return login, None
+
+        #Get slice based on user id
+        if slice_filter_type == 'record_id_user':
+
+            slicerec = self._sql_get_slice_info_from_user(slice_filter)
+
+        if slicerec:
+            fixed_slicerec_dict = slicerec
+            #At this point if there is no login it means
+            #record_id_user filter has been used for filtering
+            #if login is None :
+                ##If theslice record is from iotlab
+                #if fixed_slicerec_dict['peer_authority'] is None:
+                    #login = fixed_slicerec_dict['hrn'].split(".")[1].split("_")[0]
+            #return login, fixed_slicerec_dict
+            return fixed_slicerec_dict
+        else:
+            return None
+
+
+
+    def GetSlices(self, slice_filter=None, slice_filter_type=None,
+                  login=None):
+        """Get the slice records from the sfa db and add lease information
+            if any.
+
+        :param slice_filter: can be the slice hrn or slice record id in the db
+            depending on the slice_filter_type.
+        :param slice_filter_type: defines the type of the filtering used, Can be
+            either 'slice_hrn' or 'record_id'.
+        :type slice_filter: string
+        :type slice_filter_type: string
+        :returns: a slice dict if slice_filter  and slice_filter_type
+            are specified and a matching entry is found in the db. The result
+            is put into a list.Or a list of slice dictionnaries if no filters
+            arespecified.
+
+        :rtype: list
+
+        """
+        #login = None
+        authorized_filter_types_list = ['slice_hrn', 'record_id_user']
+        return_slicerec_dictlist = []
+
+        #First try to get information on the slice based on the filter provided
+        if slice_filter_type in authorized_filter_types_list:
+            fixed_slicerec_dict = self._get_slice_records(slice_filter,
+                                                          slice_filter_type)
+            # if the slice was not found in the sfa db
+            if fixed_slicerec_dict is None:
+                return return_slicerec_dictlist
+
+            slice_hrn = fixed_slicerec_dict['hrn']
+
+            logger.debug(" CORTEXLAB_API \tGetSlices login %s \
+                            slice record %s slice_filter %s \
+                            slice_filter_type %s " % (login,
+                            fixed_slicerec_dict, slice_filter,
+                            slice_filter_type))
+
+
+            #Now we have the slice record fixed_slicerec_dict, get the
+            #jobs associated to this slice
+            leases_list = []
+
+            leases_list = self.GetLeases(login=login)
+            #If no job is running or no job scheduled
+            #return only the slice record
+            if leases_list == [] and fixed_slicerec_dict:
+                return_slicerec_dictlist.append(fixed_slicerec_dict)
+
+            # if the jobs running don't belong to the user/slice we are looking
+            # for
+            leases_hrn = [lease['slice_hrn'] for lease in leases_list]
+            if slice_hrn not in leases_hrn:
+                return_slicerec_dictlist.append(fixed_slicerec_dict)
+            #If several experiments for one slice , put the slice record into
+            # each lease information dict
+            for lease in leases_list:
+                slicerec_dict = {}
+                logger.debug("CORTEXLAB_API.PY  \tGetSlices slice_filter %s   \
+                        \t lease['slice_hrn'] %s"
+                             % (slice_filter, lease['slice_hrn']))
+                if lease['slice_hrn'] == slice_hrn:
+                    slicerec_dict['experiment_id'] = lease['lease_id']
+                    #Update lease dict with the slice record
+                    if fixed_slicerec_dict:
+                        fixed_slicerec_dict['experiment_id'] = []
+                        fixed_slicerec_dict['experiment_id'].append(
+                            slicerec_dict['experiment_id'])
+                        slicerec_dict.update(fixed_slicerec_dict)
+
+                    slicerec_dict['slice_hrn'] = lease['slice_hrn']
+                    slicerec_dict['hrn'] = lease['slice_hrn']
+                    slicerec_dict['user'] = lease['user']
+                    slicerec_dict.update(
+                        {'list_node_ids':
+                        {'hostname': lease['reserved_nodes']}})
+                    slicerec_dict.update({'node_ids': lease['reserved_nodes']})
+
+
+                    return_slicerec_dictlist.append(slicerec_dict)
+
+
+                logger.debug("CORTEXLAB_API.PY  \tGetSlices  \
+                        slicerec_dict %s return_slicerec_dictlist %s \
+                        lease['reserved_nodes'] \
+                        %s" % (slicerec_dict, return_slicerec_dictlist,
+                               lease['reserved_nodes']))
+
+            logger.debug("CORTEXLAB_API.PY  \tGetSlices  RETURN \
+                        return_slicerec_dictlist  %s"
+                          % (return_slicerec_dictlist))
+
+            return return_slicerec_dictlist
+
+
+        else:
+            #Get all slices from the cortexlab sfa database , get the user info
+            # as well at the same time put them in dict format
+            request = self.api.dbsession().query(RegSlice)
+            query_slice_list = \
+                request.options(joinedload('reg_researchers')).all()
+
+            for record in query_slice_list:
+                tmp = record.__dict__
+                tmp['reg_researchers'] = tmp['reg_researchers'][0].__dict__
+                return_slicerec_dictlist.append(tmp)
+
+
+            #Get all the experiments reserved nodes
+            leases_list = self.testbed_shell.GetReservedNodes()
+
+            for fixed_slicerec_dict in return_slicerec_dictlist:
+                slicerec_dict = {}
+                #Check if the slice belongs to a cortexlab user
+                if fixed_slicerec_dict['peer_authority'] is None:
+                    owner = fixed_slicerec_dict['hrn'].split(
+                        ".")[1].split("_")[0]
+                else:
+                    owner = None
+                for lease in leases_list:
+                    if owner == lease['user']:
+                        slicerec_dict['experiment_id'] = lease['lease_id']
+
+                        #for reserved_node in lease['reserved_nodes']:
+                        logger.debug("CORTEXLAB_API.PY  \tGetSlices lease %s "
+                                     % (lease))
+                        slicerec_dict.update(fixed_slicerec_dict)
+                        slicerec_dict.update({'node_ids':
+                                              lease['reserved_nodes']})
+                        slicerec_dict.update({'list_node_ids':
+                                             {'hostname':
+                                             lease['reserved_nodes']}})
+
+
+                        fixed_slicerec_dict.update(slicerec_dict)
+
+            logger.debug("CORTEXLAB_API.PY  \tGetSlices RETURN \
+                        return_slicerec_dictlist %s \t slice_filter %s " \
+                        %(return_slicerec_dictlist, slice_filter))
+
+        return return_slicerec_dictlist
+
+    def AddLeases(self, hostname_list, slice_record,
+                  lease_start_time, lease_duration):
+
+        """Creates an experiment on the testbed corresponding to the information
+        provided as parameters. Adds the experiment id and the slice hrn in the
+        lease table on the additional sfa database so that we are able to know
+        which slice has which nodes.
+
+        :param hostname_list: list of nodes' OAR hostnames.
+        :param slice_record: sfa slice record, must contain login and hrn.
+        :param lease_start_time: starting time , unix timestamp format
+        :param lease_duration: duration in minutes
+
+        :type hostname_list: list
+        :type slice_record: dict
+        :type lease_start_time: integer
+        :type lease_duration: integer
+        :returns: experiment_id, can be None if the job request failed.
+
+        """
+        logger.debug("CORTEXLAB_API \r\n \r\n \t AddLeases hostname_list %s  \
+                slice_record %s lease_start_time %s lease_duration %s  "\
+                 %( hostname_list, slice_record , lease_start_time, \
+                 lease_duration))
+
+        username = slice_record['login']
+
+        experiment_id = self.testbed_shell.LaunchExperimentOnTestbed(
+                                    hostname_list,
+                                    slice_record['hrn'],
+                                    lease_start_time, lease_duration,
+                                    username)
+        if experiment_id is not None:
+            start_time = \
+                    datetime.fromtimestamp(int(lease_start_time)).\
+                    strftime(self.testbed_shell.time_format)
+            end_time = lease_start_time + lease_duration
+
+
+            logger.debug("CORTEXLAB_API \t AddLeases TURN ON LOGGING SQL \
+                    %s %s %s "%(slice_record['hrn'], experiment_id, end_time))
+
+
+            logger.debug("CORTEXLAB_API \r\n \r\n \t AddLeases %s %s %s " \
+                %(type(slice_record['hrn']), type(experiment_id),
+                type(end_time)))
+
+            testbed_xp_row = LeaseTableXP(slice_hrn=slice_record['hrn'],
+                                            experiment_id=experiment_id,
+                                            end_time=end_time)
+
+            logger.debug("CORTEXLAB_API  \t AddLeases testbed_xp_row %s" \
+                %(testbed_xp_row))
+            self.api.dbsession().add(testbed_xp_row)
+            self.api.dbsession().commit()
+
+            logger.debug("CORTEXLAB_API \t AddLeases hostname_list \
+                    start_time %s " %(start_time))
+
+        return experiment_id
+
+
+    def GetLeases(self, lease_filter_dict=None, login=None):
+        """
+        Get the list of leases from testbed with complete information
+            about which slice owns which jobs and nodes.
+            Two purposes:
+            -Fetch all the experiment from the testbed (running, waiting..)
+            complete the reservation information with slice hrn
+            found in lease_table . If not available in the table,
+            assume it is a iotlab slice.
+            -Updates the iotlab table, deleting jobs when necessary.
+
+        :returns: reservation_list, list of dictionaries with 'lease_id',
+            'reserved_nodes','slice_id', 'state', 'user', 'component_id_list',
+            'slice_hrn', 'resource_ids', 't_from', 't_until'
+        :rtype: list
+
+        """
+
+        unfiltered_reservation_list = self.testbed_shell.GetReservedNodes(login)
+
+        reservation_list = []
+        #Find the slice associated with this user iotlab ldap uid
+        logger.debug(" CORTEXLAB \tGetLeases login %s\
+                        unfiltered_reservation_list %s "
+                     % (login, unfiltered_reservation_list))
+        #Create user dict first to avoid looking several times for
+        #the same user in LDAP SA 27/07/12
+        experiment_id_list = []
+        jobs_psql_query = self.api.dbsession().query(LeaseTableXP).all()
+        jobs_psql_dict = dict([(row.experiment_id, row.__dict__)
+                               for row in jobs_psql_query])
+        #jobs_psql_dict = jobs_psql_dict)
+        logger.debug("CORTEXLAB \tGetLeases jobs_psql_dict %s"
+                     % (jobs_psql_dict))
+        jobs_psql_id_list = [row.experiment_id for row in jobs_psql_query]
+
+        for resa in unfiltered_reservation_list:
+            logger.debug("CORTEXLAB \tGetLeases USER %s"
+                         % (resa['user']))
+            #Construct list of jobs (runing, waiting..) from scheduler
+            experiment_id_list.append(resa['lease_id'])
+            #If there is information on the job in IOTLAB DB ]
+            #(slice used and job id)
+            if resa['lease_id'] in jobs_psql_dict:
+                job_info = jobs_psql_dict[resa['lease_id']]
+                logger.debug("CORTEXLAB \tGetLeases job_info %s"
+                          % (job_info))
+                resa['slice_hrn'] = job_info['slice_hrn']
+                resa['slice_id'] = hrn_to_urn(resa['slice_hrn'], 'slice')
+
+            #otherwise, assume it is a iotlab slice:
+            else:
+                resa['slice_id'] = hrn_to_urn(self.testbed_shell.root_auth \
+                                            + '.' + resa['user'] + "_slice",
+                                            'slice')
+                resa['slice_hrn'] = Xrn(resa['slice_id']).get_hrn()
+
+            resa['component_id_list'] = []
+            #Transform the hostnames into urns (component ids)
+            for node in resa['reserved_nodes']:
+
+                iotlab_xrn = xrn_object(self.testbed_shell.root_auth, node)
+                resa['component_id_list'].append(iotlab_xrn.urn)
+
+        if lease_filter_dict:
+            logger.debug("CORTEXLAB \tGetLeases  \
+                    \r\n leasefilter %s" % ( lease_filter_dict))
+
+            # filter_dict_functions = {
+            # 'slice_hrn' : IotlabShell.filter_lease_name,
+            # 't_from' : IotlabShell.filter_lease_start_time
+            # }
+            reservation_list = list(unfiltered_reservation_list)
+            for filter_type in lease_filter_dict:
+                logger.debug("CORTEXLAB \tGetLeases reservation_list %s" \
+                    % (reservation_list))
+                reservation_list = self.testbed_shell.filter_lease(
+                        reservation_list,filter_type,
+                        lease_filter_dict[filter_type] )
+
+                # Filter the reservation list with a maximum timespan so that the
+                # leases and jobs running after this timestamp do not appear
+                # in the result leases.
+                # if 'start_time' in :
+                #     if resa['start_time'] < lease_filter_dict['start_time']:
+                #        reservation_list.append(resa)
+
+
+                # if 'name' in lease_filter_dict and \
+                #     lease_filter_dict['name'] == resa['slice_hrn']:
+                #     reservation_list.append(resa)
+
+
+        if lease_filter_dict is None:
+            reservation_list = unfiltered_reservation_list
+
+        self.update_experiments_in_lease_table(experiment_id_list,
+                                                    jobs_psql_id_list)
+
+        logger.debug(" CORTEXLAB.PY \tGetLeases reservation_list %s"
+                     % (reservation_list))
+        return reservation_list
+
+    def update_experiments_in_lease_table(self,
+        experiment_list_from_testbed, experiment_list_in_db):
+        """Cleans the lease_table by deleting expired and cancelled jobs.
+
+        Compares the list of experiment ids given by the testbed with the
+        experiment ids that are already in the database, deletes the
+        experiments that are no longer in the testbed experiment id list.
+
+        :param  experiment_list_from_testbed: list of experiment ids coming
+            from testbed
+        :type experiment_list_from_testbed: list
+        :param experiment_list_in_db: list of experiment ids from the sfa
+            additionnal database.
+        :type experiment_list_in_db: list
+
+        :returns: None
+        """
+        #Turn the list into a set
+        set_experiment_list_in_db = set(experiment_list_in_db)
+
+        kept_experiments = set(experiment_list_from_testbed).intersection(set_experiment_list_in_db)
+        logger.debug("\r\n \t update_experiments_in_lease_table \
+                        experiment_list_in_db %s \r\n \
+                        experiment_list_from_testbed %s \
+                        kept_experiments %s "
+                     % (set_experiment_list_in_db,
+                      experiment_list_from_testbed, kept_experiments))
+        deleted_experiments = set_experiment_list_in_db.difference(
+            kept_experiments)
+        deleted_experiments = list(deleted_experiments)
+        if len(deleted_experiments) > 0:
+            request = self.api.dbsession().query(LeaseTableXP)
+            request.filter(LeaseTableXP.experiment_id.in_(deleted_experiments)).delete(synchronize_session='fetch')
+            self.api.dbsession().commit()
+        return
+
+
+    def AddSlice(self, slice_record, user_record):
+        """
+
+        Add slice to the local cortexlab sfa tables if the slice comes
+            from a federated site and is not yet in the cortexlab sfa DB,
+            although the user has already a LDAP login.
+            Called by verify_slice during lease/sliver creation.
+
+        :param slice_record: record of slice, must contain hrn, gid, slice_id
+            and authority of the slice.
+        :type slice_record: dictionary
+        :param user_record: record of the user
+        :type user_record: RegUser
+
+        """
+
+        sfa_record = RegSlice(hrn=slice_record['hrn'],
+                              gid=slice_record['gid'],
+                              pointer=slice_record['slice_id'],
+                              authority=slice_record['authority'])
+        logger.debug("CORTEXLAB_API.PY AddSlice  sfa_record %s user_record %s"
+                     % (sfa_record, user_record))
+        sfa_record.just_created()
+        self.api.dbsession().add(sfa_record)
+        self.api.dbsession().commit()
+        #Update the reg-researcher dependance table
+        sfa_record.reg_researchers = [user_record]
+        self.api.dbsession().commit()
+
+        return
 
     def augment_records_with_testbed_info(self, record_list):
         """
@@ -118,8 +788,8 @@ class CortexlabDriver(Driver):
                                 # For client_helper.py compatibility
                              'key_ids': ''})
 
-                    #Get iotlab slice record and oar job id if any.
-                    recslice_list = self.testbed_shell.GetSlices(
+                    #Get  slice record and  job id if any.
+                    recslice_list = self.GetSlices(
                         slice_filter=str(record['hrn']),
                         slice_filter_type='slice_hrn')
 
@@ -147,7 +817,7 @@ class CortexlabDriver(Driver):
                     #The record is a SFA user record.
                     #Get the information about his slice from Iotlab's DB
                     #and add it to the user record.
-                    recslice_list = self.testbed_shell.GetSlices(
+                    recslice_list = self.GetSlices(
                         slice_filter=record['record_id'],
                         slice_filter_type='record_id_user')
 
@@ -166,7 +836,7 @@ class CortexlabDriver(Driver):
                     recslice.update(
                         {'PI': [recuser['hrn']],
                          'researcher': [recuser['hrn']],
-                         'name': record['hrn'],
+                         'name': recuser['hrn'],
                          'node_ids': [],
                          'experiment_id': [],
                          'person_ids': [recuser['record_id']]})
@@ -216,7 +886,7 @@ class CortexlabDriver(Driver):
         """
 
         #First get the slice with the slice hrn
-        slice_list = self.testbed_shell.GetSlices(slice_filter=slice_hrn,
+        slice_list = self.GetSlices(slice_filter=slice_hrn,
                                                slice_filter_type='slice_hrn')
 
         if len(slice_list) == 0:
@@ -294,7 +964,6 @@ class CortexlabDriver(Driver):
                          % (resources, res))
             return result
 
-
     def get_user_record(self, hrn):
         """
 
@@ -306,7 +975,7 @@ class CortexlabDriver(Driver):
         :rtype: RegUser
 
         """
-        return dbsession.query(RegRecord).filter_by(hrn=hrn).first()
+        return self.api.dbsession().query(RegRecord).filter_by(hrn=hrn).first()
 
     def testbed_name(self):
         """
@@ -318,28 +987,6 @@ class CortexlabDriver(Driver):
         """
         return self.hrn
 
-    # 'geni_request_rspec_versions' and 'geni_ad_rspec_versions' are mandatory
-    def aggregate_version(self):
-        """
-
-        Returns the testbed's supported rspec advertisement and request
-        versions.
-        :returns: rspec versions supported ad a dictionary.
-        :rtype: dict
-
-        """
-        version_manager = VersionManager()
-        ad_rspec_versions = []
-        request_rspec_versions = []
-        for rspec_version in version_manager.versions:
-            if rspec_version.content_type in ['*', 'ad']:
-                ad_rspec_versions.append(rspec_version.to_dict())
-            if rspec_version.content_type in ['*', 'request']:
-                request_rspec_versions.append(rspec_version.to_dict())
-        return {
-            'testbed': self.testbed_name(),
-            'geni_request_rspec_versions': request_rspec_versions,
-            'geni_ad_rspec_versions': ad_rspec_versions}
 
     def _get_requested_leases_list(self, rspec):
         """
@@ -413,6 +1060,7 @@ class CortexlabDriver(Driver):
 
         return requested_xp_dict
 
+
     def _process_requested_xp_dict(self, rspec):
         """
         Turns the requested leases and information into a dictionary
@@ -432,106 +1080,16 @@ class CortexlabDriver(Driver):
 
         return xp_dict
 
-    def create_sliver(self, slice_urn, slice_hrn, creds, rspec_string,
-                      users, options):
-        """Answer to CreateSliver.
-
-        Creates the leases and slivers for the users from the information
-            found in the rspec string.
-            Launch experiment on OAR if the requested leases is valid. Delete
-            no longer requested leases.
 
 
-        :param creds: user's credentials
-        :type creds: string
-        :param users: user record list
-        :type users: list
-        :param options:
-        :type options:
-
-        :returns: a valid Rspec for the slice which has just been
-            modified.
-        :rtype: RSpec
-
-
-        """
-        aggregate = CortexlabAggregate(self)
-
-        slices = CortexlabSlices(self)
-        peer = slices.get_peer(slice_hrn)
-        sfa_peer = slices.get_sfa_peer(slice_hrn)
-        slice_record = None
-
-        if not isinstance(creds, list):
-            creds = [creds]
-
-        if users:
-            slice_record = users[0].get('slice_record', {})
-            logger.debug("CORTEXLABDRIVER.PY \t ===============create_sliver \t\
-                            creds %s \r\n \r\n users %s"
-                         % (creds, users))
-            slice_record['user'] = {'keys': users[0]['keys'],
-                                    'email': users[0]['email'],
-                                    'hrn': slice_record['reg-researchers'][0]}
-        # parse rspec
-        rspec = RSpec(rspec_string)
-        logger.debug("CORTEXLABDRIVER.PY \t create_sliver \trspec.version \
-                     %s slice_record %s users %s"
-                     % (rspec.version, slice_record, users))
-
-        # ensure site record exists?
-        # ensure slice record exists
-        #Removed options in verify_slice SA 14/08/12
-        #Removed peer record in  verify_slice SA 18/07/13
-        sfa_slice = slices.verify_slice(slice_hrn, slice_record, sfa_peer)
-
-        # ensure person records exists
-        #verify_persons returns added persons but the return value
-        #is not used
-        #Removed peer record and sfa_peer in  verify_persons SA 18/07/13
-        slices.verify_persons(slice_hrn, sfa_slice, users, options=options)
-        #requested_attributes returned by rspec.version.get_slice_attributes()
-        #unused, removed SA 13/08/12
-        #rspec.version.get_slice_attributes()
-
-        logger.debug("CORTEXLABDRIVER.PY create_sliver slice %s " % (sfa_slice))
-
-        # add/remove slice from nodes
-
-        #requested_slivers = [node.get('component_id') \
-                    #for node in rspec.version.get_nodes_with_slivers()\
-                    #if node.get('authority_id') is self.testbed_shell.root_auth]
-        #l = [ node for node in rspec.version.get_nodes_with_slivers() ]
-        #logger.debug("SLADRIVER \tcreate_sliver requested_slivers \
-                                    #requested_slivers %s  listnodes %s" \
-                                    #%(requested_slivers,l))
-        #verify_slice_nodes returns nodes, but unused here. Removed SA 13/08/12.
-        #slices.verify_slice_nodes(sfa_slice, requested_slivers, peer)
-
-        requested_xp_dict = self._process_requested_xp_dict(rspec)
-
-        logger.debug("CORTEXLABDRIVER.PY \tcreate_sliver  requested_xp_dict %s "
-                     % (requested_xp_dict))
-        #verify_slice_leases returns the leases , but the return value is unused
-        #here. Removed SA 13/08/12
-        slices.verify_slice_leases(sfa_slice,
-                                   requested_xp_dict, peer)
-
-        return aggregate.get_rspec(slice_xrn=slice_urn,
-                                   login=sfa_slice['login'],
-                                   version=rspec.version)
-
-    def delete_sliver(self, slice_urn, slice_hrn, creds, options):
+    def delete(self, slice_urns, options={}):
         """
         Deletes the lease associated with the slice hrn and the credentials
             if the slice belongs to iotlab. Answer to DeleteSliver.
 
         :param slice_urn: urn of the slice
-        :param slice_hrn: name of the slice
-        :param creds: slice credenials
         :type slice_urn: string
-        :type slice_hrn: string
-        :type creds: ? unused
+
 
         :returns: 1 if the slice to delete was not found on iotlab,
             True if the deletion was successful, False otherwise otherwise.
@@ -542,17 +1100,34 @@ class CortexlabDriver(Driver):
         .. note:: creds are unused, and are not used either in the dummy driver
              delete_sliver .
         """
+        # collect sliver ids so we can update sliver allocation states after
+        # we remove the slivers.
+        aggregate = CortexlabAggregate(self)
+        slivers = aggregate.get_slivers(slice_urns)
+        if slivers:
+            # slice_id = slivers[0]['slice_id']
+            node_ids = []
+            sliver_ids = []
+            sliver_jobs_dict = {}
+            for sliver in slivers:
+                node_ids.append(sliver['node_id'])
+                sliver_ids.append(sliver['sliver_id'])
+                job_id = sliver['sliver_id'].split('+')[-1].split('-')[0]
+                sliver_jobs_dict[job_id] = sliver['sliver_id']
+        logger.debug("CORTEXLABDRIVER.PY delete_sliver slivers %s slice_urns %s"
+            % (slivers, slice_urns))
+        slice_hrn = urn_to_hrn(slice_urns[0])[0]
 
-        sfa_slice_list = self.testbed_shell.GetSlices(
-            slice_filter=slice_hrn,
-            slice_filter_type='slice_hrn')
+        sfa_slice_list = self.GetSlices(slice_filter=slice_hrn,
+                                        slice_filter_type='slice_hrn')
 
         if not sfa_slice_list:
             return 1
 
         #Delete all leases in the slice
         for sfa_slice in sfa_slice_list:
-            logger.debug("CORTEXLABDRIVER.PY delete_sliver slice %s" % (sfa_slice))
+            logger.debug("CORTEXLABDRIVER.PY delete_sliver slice %s" \
+                % (sfa_slice))
             slices = CortexlabSlices(self)
             # determine if this is a peer slice
 
@@ -560,80 +1135,29 @@ class CortexlabDriver(Driver):
 
             logger.debug("CORTEXLABDRIVER.PY delete_sliver peer %s \
                 \r\n \t sfa_slice %s " % (peer, sfa_slice))
+            testbed_bool_ans = self.testbed_shell.DeleteSliceFromNodes(sfa_slice)
+            for job_id in testbed_bool_ans:
+                # if the job has not been successfully deleted
+                # don't delete the associated sliver
+                # remove it from the sliver list
+                if testbed_bool_ans[job_id] is False:
+                    sliver = sliver_jobs_dict[job_id]
+                    sliver_ids.remove(sliver)
             try:
-                self.testbed_shell.DeleteSliceFromNodes(sfa_slice)
-                return True
-            except:
-                return False
 
-    def list_resources (self, slice_urn, slice_hrn, creds, options):
-        """
+                dbsession = self.api.dbsession()
+                SliverAllocation.delete_allocations(sliver_ids, dbsession)
+            except :
+                logger.log_exc("CORTEXLABDRIVER.PY delete error ")
 
-        List resources from the iotlab aggregate and returns a Rspec
-            advertisement with resources found when slice_urn and slice_hrn are
-            None (in case of resource discovery).
-            If a slice hrn and urn are provided, list experiment's slice
-            nodes in a rspec format. Answer to ListResources.
-            Caching unused.
-
-        :param slice_urn: urn of the slice
-        :param slice_hrn: name of the slice
-        :param creds: slice credenials
-        :type slice_urn: string
-        :type slice_hrn: string
-        :type creds: ? unused
-        :param options: options used when listing resources (list_leases, info,
-            geni_available)
-        :returns: rspec string in xml
-        :rtype: string
-
-        .. note:: creds are unused
-        """
-
-        #cached_requested = options.get('cached', True)
-
-        version_manager = VersionManager()
-        # get the rspec's return format from options
-        rspec_version = \
-            version_manager.get_version(options.get('geni_rspec_version'))
-        version_string = "rspec_%s" % (rspec_version)
-
-        #panos adding the info option to the caching key (can be improved)
-        if options.get('info'):
-            version_string = version_string + "_" + \
-                options.get('info', 'default')
-
-        # Adding the list_leases option to the caching key
-        if options.get('list_leases'):
-            version_string = version_string + "_" + \
-            options.get('list_leases', 'default')
-
-        # Adding geni_available to caching key
-        if options.get('geni_available'):
-            version_string = version_string + "_" + \
-                str(options.get('geni_available'))
-
-        # look in cache first
-        #if cached_requested and self.cache and not slice_hrn:
-            #rspec = self.cache.get(version_string)
-            #if rspec:
-                #logger.debug("IotlabDriver.ListResources: \
-                                    #returning cached advertisement")
-                #return rspec
-
-        #panos: passing user-defined options
-        aggregate = CortexlabAggregate(self)
-
-        rspec = aggregate.get_rspec(slice_xrn=slice_urn,
-                                    version=rspec_version, options=options)
-
-        # cache the result
-        #if self.cache and not slice_hrn:
-            #logger.debug("Iotlab.ListResources: stores advertisement in cache")
-            #self.cache.add(version_string, rspec)
-
-        return rspec
-
+        # prepare return struct
+        geni_slivers = []
+        for sliver in slivers:
+            geni_slivers.append(
+                {'geni_sliver_urn': sliver['sliver_id'],
+                 'geni_allocation_status': 'geni_unallocated',
+                 'geni_expires': datetime_to_string(utcparse(sliver['expires']))})
+        return geni_slivers
 
     def list_slices(self, creds, options):
         """Answer to ListSlices.
@@ -645,7 +1169,7 @@ class CortexlabDriver(Driver):
         :returns: slice urns list
         :rtype: list
 
-        .. note:: creds are unused
+        .. note:: creds are unused- SA 12/12/13
         """
         # look in cache first
         #if self.cache:
@@ -656,7 +1180,7 @@ class CortexlabDriver(Driver):
 
         # get data from db
 
-        slices = self.testbed_shell.GetSlices()
+        slices = self.GetSlices()
         logger.debug("CORTEXLABDRIVER.PY \tlist_slices hrn %s \r\n \r\n"
                      % (slices))
         slice_hrns = [iotlab_slice['hrn'] for iotlab_slice in slices]
@@ -694,13 +1218,12 @@ class CortexlabDriver(Driver):
         """
         return -1
 
-
     def update(self, old_sfa_record, new_sfa_record, hrn, new_key):
         """
-        No site or node record update allowed in Cortexlab. The only modifications
+        No site or node record update allowed in Iotlab. The only modifications
         authorized here are key deletion/addition on an existing user and
         password change. On an existing user, CAN NOT BE MODIFIED: 'first_name',
-        'last_name', 'email'. DOES NOT EXIST IN LDAP: 'phone', 'url', 'bio',
+        'last_name', 'email'. DOES NOT EXIST IN SENSLAB: 'phone', 'url', 'bio',
         'title', 'accepted_aup'. A slice is bound to its user, so modifying the
         user's ssh key should nmodify the slice's GID after an import procedure.
 
@@ -714,47 +1237,51 @@ class CortexlabDriver(Driver):
         :type hrn: string
 
         TODO: needs review
-        .. seealso:: update in driver.py.
+        .. warning:: SA 12/12/13 - Removed. should be done in iotlabimporter
+        since users, keys and slice are managed by the LDAP.
 
         """
-        pointer = old_sfa_record['pointer']
-        old_sfa_record_type = old_sfa_record['type']
+        # pointer = old_sfa_record['pointer']
+        # old_sfa_record_type = old_sfa_record['type']
 
-        # new_key implemented for users only
-        if new_key and old_sfa_record_type not in ['user']:
-            raise UnknownSfaType(old_sfa_record_type)
+        # # new_key implemented for users only
+        # if new_key and old_sfa_record_type not in ['user']:
+        #     raise UnknownSfaType(old_sfa_record_type)
 
-        if old_sfa_record_type == "user":
-            update_fields = {}
-            all_fields = new_sfa_record
-            for key in all_fields.keys():
-                if key in ['key', 'password']:
-                    update_fields[key] = all_fields[key]
+        # if old_sfa_record_type == "user":
+        #     update_fields = {}
+        #     all_fields = new_sfa_record
+        #     for key in all_fields.keys():
+        #         if key in ['key', 'password']:
+        #             update_fields[key] = all_fields[key]
 
-            if new_key:
-                # must check this key against the previous one if it exists
-                persons = self.testbed_shell.GetPersons([old_sfa_record])
-                person = persons[0]
-                keys = [person['pkey']]
-                #Get all the person's keys
-                keys_dict = self.testbed_shell.GetKeys(keys)
+        #     if new_key:
+        #         # must check this key against the previous one if it exists
+        #         persons = self.testbed_shell.GetPersons([old_sfa_record])
+        #         person = persons[0]
+        #         keys = [person['pkey']]
+        #         #Get all the person's keys
+        #         keys_dict = self.GetKeys(keys)
 
-                # Delete all stale keys, meaning the user has only one key
-                #at a time
-                #TODO: do we really want to delete all the other keys?
-                #Is this a problem with the GID generation to have multiple
-                #keys? SA 30/05/13
-                key_exists = False
-                if key in keys_dict:
-                    key_exists = True
-                else:
-                    #remove all the other keys
-                    for key in keys_dict:
-                        self.testbed_shell.DeleteKey(person, key)
-                    self.testbed_shell.AddPersonKey(
-                        person, {'sshPublicKey': person['pkey']},
-                        {'sshPublicKey': new_key})
+        #         # Delete all stale keys, meaning the user has only one key
+        #         #at a time
+        #         #TODO: do we really want to delete all the other keys?
+        #         #Is this a problem with the GID generation to have multiple
+        #         #keys? SA 30/05/13
+        #         key_exists = False
+        #         if key in keys_dict:
+        #             key_exists = True
+        #         else:
+        #             #remove all the other keys
+        #             for key in keys_dict:
+        #                 self.testbed_shell.DeleteKey(person, key)
+        #             self.testbed_shell.AddPersonKey(
+        #                 person, {'sshPublicKey': person['pkey']},
+        #                 {'sshPublicKey': new_key})
+        logger.warning ("UNDEFINED - Update should be done by the \
+            iotlabimporter")
         return True
+
 
     def remove(self, sfa_record):
         """
@@ -789,7 +1316,200 @@ class CortexlabDriver(Driver):
                 return self.testbed_shell.DeletePerson(sfa_record)
 
         elif sfa_record_type == 'slice':
-            if self.testbed_shell.GetSlices(slice_filter=hrn,
-                                         slice_filter_type='slice_hrn'):
+            if self.GetSlices(slice_filter=hrn,
+                                slice_filter_type='slice_hrn'):
                 ret = self.testbed_shell.DeleteSlice(sfa_record)
             return True
+
+    def check_sliver_credentials(self, creds, urns):
+        """Check that the sliver urns belongs to the slice specified in the
+        credentials.
+
+        :param urns: list of sliver urns.
+        :type urns: list.
+        :param creds: slice credentials.
+        :type creds: Credential object.
+
+
+        """
+        # build list of cred object hrns
+        slice_cred_names = []
+        for cred in creds:
+            slice_cred_hrn = Credential(cred=cred).get_gid_object().get_hrn()
+            slicename = IotlabXrn(xrn=slice_cred_hrn).iotlab_slicename()
+            slice_cred_names.append(slicename)
+
+        # look up slice name of slivers listed in urns arg
+
+        slice_ids = []
+        for urn in urns:
+            sliver_id_parts = Xrn(xrn=urn).get_sliver_id_parts()
+            try:
+                slice_ids.append(int(sliver_id_parts[0]))
+            except ValueError:
+                pass
+
+        if not slice_ids:
+            raise Forbidden("sliver urn not provided")
+
+        slices = self.GetSlices(slice_ids)
+        sliver_names = [single_slice['name'] for single_slice in slices]
+
+        # make sure we have a credential for every specified sliver
+        for sliver_name in sliver_names:
+            if sliver_name not in slice_cred_names:
+                msg = "Valid credential not found for target: %s" % sliver_name
+                raise Forbidden(msg)
+
+    ########################################
+    ########## aggregate oriented
+    ########################################
+
+    # 'geni_request_rspec_versions' and 'geni_ad_rspec_versions' are mandatory
+    def aggregate_version(self):
+        """
+
+        Returns the testbed's supported rspec advertisement and request
+        versions.
+        :returns: rspec versions supported ad a dictionary.
+        :rtype: dict
+
+        """
+        version_manager = VersionManager()
+        ad_rspec_versions = []
+        request_rspec_versions = []
+        for rspec_version in version_manager.versions:
+            if rspec_version.content_type in ['*', 'ad']:
+                ad_rspec_versions.append(rspec_version.to_dict())
+            if rspec_version.content_type in ['*', 'request']:
+                request_rspec_versions.append(rspec_version.to_dict())
+        return {
+            'testbed': self.testbed_name(),
+            'geni_request_rspec_versions': request_rspec_versions,
+            'geni_ad_rspec_versions': ad_rspec_versions}
+
+
+
+    # first 2 args are None in case of resource discovery
+    def list_resources (self, version=None, options={}):
+        aggregate = CortexlabAggregate(self)
+        rspec =  aggregate.list_resources(version=version, options=options)
+        return rspec
+
+
+    def describe(self, urns, version, options={}):
+        aggregate = CortexlabAggregate(self)
+        return aggregate.describe(urns, version=version, options=options)
+
+    def status (self, urns, options={}):
+        aggregate = CortexlabAggregate(self)
+        desc =  aggregate.describe(urns, version='GENI 3')
+        status = {'geni_urn': desc['geni_urn'],
+                  'geni_slivers': desc['geni_slivers']}
+        return status
+
+
+    def allocate (self, urn, rspec_string, expiration, options={}):
+        xrn = Xrn(urn)
+        aggregate = CortexlabAggregate(self)
+
+        slices = CortexlabSlices(self)
+        peer = slices.get_peer(xrn.get_hrn())
+        sfa_peer = slices.get_sfa_peer(xrn.get_hrn())
+
+        slice_record = None
+        users = options.get('geni_users', [])
+
+        sfa_users = options.get('sfa_users', [])
+        if sfa_users:
+            slice_record = sfa_users[0].get('slice_record', [])
+
+        # parse rspec
+        rspec = RSpec(rspec_string)
+        # requested_attributes = rspec.version.get_slice_attributes()
+
+        # ensure site record exists
+
+        # ensure slice record exists
+
+        current_slice = slices.verify_slice(xrn.hrn, slice_record, sfa_peer)
+        logger.debug("IOTLABDRIVER.PY \t ===============allocate \t\
+                            \r\n \r\n  current_slice %s" % (current_slice))
+        # ensure person records exists
+
+        # oui c'est degueulasse, le slice_record se retrouve modifie
+        # dans la methode avec les infos du user, els infos sont propagees
+        # dans verify_slice_leases
+        persons = slices.verify_persons(xrn.hrn, slice_record, users,
+                                        options=options)
+        # ensure slice attributes exists
+        # slices.verify_slice_attributes(slice, requested_attributes,
+                                    # options=options)
+
+        # add/remove slice from nodes
+        requested_xp_dict = self._process_requested_xp_dict(rspec)
+
+        logger.debug("IOTLABDRIVER.PY \tallocate  requested_xp_dict %s "
+                     % (requested_xp_dict))
+        request_nodes = rspec.version.get_nodes_with_slivers()
+        nodes_list = []
+        for start_time in requested_xp_dict:
+            lease = requested_xp_dict[start_time]
+            for hostname in lease['hostname']:
+                nodes_list.append(hostname)
+
+        # nodes = slices.verify_slice_nodes(slice_record,request_nodes, peer)
+        logger.debug("IOTLABDRIVER.PY \tallocate  nodes_list %s slice_record %s"
+                     % (nodes_list, slice_record))
+
+        # add/remove leases
+        rspec_requested_leases = rspec.version.get_leases()
+        leases = slices.verify_slice_leases(slice_record,
+                                                requested_xp_dict, peer)
+        logger.debug("IOTLABDRIVER.PY \tallocate leases  %s \
+                        rspec_requested_leases %s" % (leases,
+                        rspec_requested_leases))
+         # update sliver allocations
+        for hostname in nodes_list:
+            client_id = hostname
+            node_urn = xrn_object(self.testbed_shell.root_auth, hostname).urn
+            component_id = node_urn
+            slice_urn = current_slice['reg-urn']
+            for lease in leases:
+                if hostname in lease['reserved_nodes']:
+                    index = lease['reserved_nodes'].index(hostname)
+                    sliver_hrn = '%s.%s-%s' % (self.hrn, lease['lease_id'],
+                                   lease['resource_ids'][index] )
+            sliver_id = Xrn(sliver_hrn, type='sliver').urn
+            record = SliverAllocation(sliver_id=sliver_id, client_id=client_id,
+                                      component_id=component_id,
+                                      slice_urn = slice_urn,
+                                      allocation_state='geni_allocated')
+            record.sync(self.api.dbsession())
+
+        return aggregate.describe([xrn.get_urn()], version=rspec.version)
+
+    def provision(self, urns, options={}):
+        # update users
+        slices = CortexlabSlices(self)
+        aggregate = CortexlabAggregate(self)
+        slivers = aggregate.get_slivers(urns)
+        current_slice = slivers[0]
+        peer = slices.get_peer(current_slice['hrn'])
+        sfa_peer = slices.get_sfa_peer(current_slice['hrn'])
+        users = options.get('geni_users', [])
+        # persons = slices.verify_persons(current_slice['hrn'],
+            # current_slice, users, peer, sfa_peer, options=options)
+        # slices.handle_peer(None, None, persons, peer)
+        # update sliver allocation states and set them to geni_provisioned
+        sliver_ids = [sliver['sliver_id'] for sliver in slivers]
+        dbsession = self.api.dbsession()
+        SliverAllocation.set_allocations(sliver_ids, 'geni_provisioned',
+                                                                dbsession)
+        version_manager = VersionManager()
+        rspec_version = version_manager.get_version(options[
+                                                        'geni_rspec_version'])
+        return self.describe(urns, rspec_version, options=options)
+
+
+
