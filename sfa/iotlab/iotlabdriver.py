@@ -16,10 +16,10 @@ from sfa.managers.driver import Driver
 from sfa.rspecs.version_manager import VersionManager
 from sfa.rspecs.rspec import RSpec
 
-from sfa.iotlab.iotlabxrn import IotlabXrn, xrn_object
+from sfa.iotlab.iotlabxrn import IotlabXrn, xrn_object, xrn_to_hostname
 from sfa.util.xrn import Xrn, hrn_to_urn, get_authority, urn_to_hrn
 from sfa.iotlab.iotlabaggregate import IotlabAggregate
-from sfa.iotlab.iotlabxrn import xrn_to_hostname
+
 from sfa.iotlab.iotlabslices import IotlabSlices
 
 from sfa.trust.credential import Credential
@@ -42,10 +42,11 @@ class IotlabDriver(Driver):
         """
 
         Sets the iotlab SFA config parameters,
-            instanciates the testbed api and the iotlab database.
+            instanciates the testbed api .
 
-        :param config: iotlab SFA configuration object
-        :type config: Config object
+        :param api: SfaApi configuration object. Holds reference to the
+            database.
+        :type api: SfaApi object
 
         """
         Driver.__init__(self, api)
@@ -420,8 +421,6 @@ class IotlabDriver(Driver):
 
 
                     return_slicerec_dictlist.append(slicerec_dict)
-                    logger.debug("IOTLAB_API.PY  \tGetSlices  \
-                        OHOHOHOH %s" %(return_slicerec_dictlist))
 
                 logger.debug("IOTLAB_API.PY  \tGetSlices  \
                         slicerec_dict %s return_slicerec_dictlist %s \
@@ -553,7 +552,7 @@ class IotlabDriver(Driver):
             Two purposes:
             -Fetch all the jobs from OAR (running, waiting..)
             complete the reservation information with slice hrn
-            found in testbed_xp table. If not available in the table,
+            found in lease_table . If not available in the table,
             assume it is a iotlab slice.
             -Updates the iotlab table, deleting jobs when necessary.
 
@@ -642,7 +641,7 @@ class IotlabDriver(Driver):
         if lease_filter_dict is None:
             reservation_list = unfiltered_reservation_list
 
-        self.update_experiments_in_additional_sfa_db(job_oar_list, jobs_psql_id_list)
+        self.update_experiments_in_lease_table(job_oar_list, jobs_psql_id_list)
 
         logger.debug(" IOTLAB_API.PY \tGetLeases reservation_list %s"
                      % (reservation_list))
@@ -650,9 +649,9 @@ class IotlabDriver(Driver):
 
 
 
-    def update_experiments_in_additional_sfa_db(self,
+    def update_experiments_in_lease_table(self,
         experiment_list_from_testbed, experiment_list_in_db):
-        """ Cleans the iotlab db by deleting expired and cancelled jobs.
+        """ Cleans the lease_table by deleting expired and cancelled jobs.
 
         Compares the list of experiment ids given by the testbed with the
         experiment ids that are already in the database, deletes the
@@ -671,7 +670,7 @@ class IotlabDriver(Driver):
         set_experiment_list_in_db = set(experiment_list_in_db)
 
         kept_experiments = set(experiment_list_from_testbed).intersection(set_experiment_list_in_db)
-        logger.debug("\r\n \t update_experiments_in_additional_sfa_db \
+        logger.debug("\r\n \t update_experiments_in_lease_table \
                         experiment_list_in_db %s \r\n \
                         experiment_list_from_testbed %s \
                         kept_experiments %s "
@@ -685,6 +684,8 @@ class IotlabDriver(Driver):
             request.filter(LeaseTableXP.experiment_id.in_(deleted_experiments)).delete(synchronize_session='fetch')
             self.api.dbsession().commit()
         return
+
+
     def AddSlice(self, slice_record, user_record):
         """
 

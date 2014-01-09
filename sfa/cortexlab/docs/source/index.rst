@@ -19,9 +19,19 @@ testbeds driver folders. The /cortexlab directory contains the necessary files
 defining API for LDAP, the postgresql database as well as for the SFA
 managers.
 
+CortexlabShell
+--------------
+
+**fill missing code in this class**
+
+This class contains methods to check reserved nodes, leases and launch/delete
+experiments on the testbed. Methods interacting with the testbed have
+to be completed.
 
 Cortexlabnodes
 ---------------
+
+**fill missing code in this class**
 
 CortexlabQueryTestbed class's goal is to get information from the testbed
 about the site and its nodes.

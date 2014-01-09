@@ -301,7 +301,7 @@ def TestIotlabDriver(job_id = None):
 
     # Iotlabdriver methods
     slice_hrn = 'iotlab.avakian_slice'
-    message_and_wait(("\r\n GetSlices slice_hrn"%(slice_hrn)))
+    message_and_wait(("\r\n GetSlices slice_hrn %s "%(slice_hrn)))
     sl = iotlabdriver.GetSlices(
             slice_filter= slice_hrn, slice_filter_type='slice_hrn')
     print sl
