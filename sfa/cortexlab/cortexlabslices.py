@@ -38,7 +38,7 @@ class CortexlabSlices:
 
         """
         hrn, hrn_type = urn_to_hrn(xrn)
-        #Does this slice belong to a local site or a peer iotlab site?
+        #Does this slice belong to a local site or a peer cortexlab site?
         peer = None
 
         # get this slice's authority (site)
@@ -52,7 +52,7 @@ class CortexlabSlices:
         site_authority = get_authority(slice_authority).lower()
         # get this site's authority (sfa root authority or sub authority)
 
-        logger.debug("IOTLABSLICES \t get_peer slice_authority  %s \
+        logger.debug("CortexlabSlices \t get_peer slice_authority  %s \
                     site_authority %s hrn %s"
                      % (slice_authority, site_authority, hrn))
 
@@ -62,7 +62,7 @@ class CortexlabSlices:
         for peer_record in peers:
             if site_authority == peer_record.hrn:
                 peer = peer_record
-        logger.debug(" IOTLABSLICES \tget_peer peer  %s " % (peer))
+        logger.debug(" CortexlabSlices \tget_peer peer  %s " % (peer))
         return peer
 
     def get_sfa_peer(self, xrn):
@@ -105,11 +105,11 @@ class CortexlabSlices:
 
         """
 
-        logger.debug("IOTLABSLICES verify_slice_leases sfa_slice %s "
+        logger.debug("CortexlabSlices verify_slice_leases sfa_slice %s "
                      % (sfa_slice))
         #First get the list of current leases from OAR
         leases = self.driver.GetLeases({'slice_hrn': sfa_slice['hrn']})
-        logger.debug("IOTLABSLICES verify_slice_leases requested_jobs_dict %s \
+        logger.debug("CortexlabSlices verify_slice_leases requested_jobs_dict %s \
                         leases %s " % (requested_jobs_dict, leases))
 
         current_nodes_reserved_by_start_time = {}
@@ -147,7 +147,7 @@ class CortexlabSlices:
         #-Added/removed nodes
         #-Newly added lease
 
-        logger.debug("IOTLABSLICES verify_slice_leases \
+        logger.debug("CortexlabSlices verify_slice_leases \
                         requested_nodes_by_start_time %s \
                         "% (requested_nodes_by_start_time))
         #Find all deleted leases
@@ -160,7 +160,7 @@ class CortexlabSlices:
 
         #Find added or removed nodes in exisiting leases
         for start_time in requested_nodes_by_start_time:
-            logger.debug("IOTLABSLICES verify_slice_leases  start_time %s \
+            logger.debug("CortexlabSlices verify_slice_leases  start_time %s \
                          "%( start_time))
             if start_time in current_nodes_reserved_by_start_time:
 
@@ -183,7 +183,7 @@ class CortexlabSlices:
                     removed_nodes = \
                         old_nodes_set.difference(\
                         requested_nodes_by_start_time[start_time])
-                    logger.debug("IOTLABSLICES verify_slice_leases \
+                    logger.debug("CortexlabSlices verify_slice_leases \
                         shared_nodes %s  added_nodes %s removed_nodes %s"\
                         %(shared_nodes, added_nodes,removed_nodes ))
                     #If the lease is modified, delete it before
@@ -204,7 +204,7 @@ class CortexlabSlices:
                     #New lease
 
                 job = requested_jobs_dict[str(start_time)]
-                logger.debug("IOTLABSLICES \
+                logger.debug("CortexlabSlices \
                               NEWLEASE slice %s  job %s"
                              % (sfa_slice, job))
                 job_id = self.driver.AddLeases(job['hostname'],
@@ -218,9 +218,9 @@ class CortexlabSlices:
 
         #Deleted leases are the ones with lease id not declared in the Rspec
         if deleted_leases:
-            self.driver.DeleteLeases(deleted_leases,
+            self.driver.testbed_shell.DeleteLeases(deleted_leases,
                                     sfa_slice['user']['uid'])
-            logger.debug("IOTLABSLICES \
+            logger.debug("CortexlabSlices \
                           verify_slice_leases slice %s deleted_leases %s"
                          % (sfa_slice, deleted_leases))
 
@@ -271,7 +271,7 @@ class CortexlabSlices:
             deleted_nodes = list(set(current_slivers).
                                  difference(requested_slivers))
 
-            logger.debug("IOTLABSLICES \tverify_slice_nodes slice %s\
+            logger.debug("CortexlabSlices \tverify_slice_nodes slice %s\
                                          \r\n \r\n deleted_nodes %s"
                          % (sfa_slice, deleted_nodes))
 
@@ -311,7 +311,7 @@ class CortexlabSlices:
         if slices_list:
             for sl in slices_list:
 
-                logger.debug("IOTLABSLICES \t verify_slice slicename %s \
+                logger.debug("CortexlabSlices \t verify_slice slicename %s \
                                 slices_list %s sl %s \r slice_record %s"
                              % (slicename, slices_list, sl, slice_record))
                 sfa_slice = sl
@@ -321,7 +321,7 @@ class CortexlabSlices:
             #Search for user in ldap based on email SA 14/11/12
             ldap_user = self.driver.testbed_shell.ldap.LdapFindUser(\
                                                     slice_record['user'])
-            logger.debug(" IOTLABSLICES \tverify_slice Oups \
+            logger.debug(" CortexlabSlices \tverify_slice Oups \
                         slice_record %s sfa_peer %s ldap_user %s"
                         % (slice_record, sfa_peer, ldap_user))
             #User already registered in ldap, meaning user should be in SFA db
@@ -340,20 +340,20 @@ class CortexlabSlices:
                                                 + ldap_user['uid']
                 user = self.driver.get_user_record(hrn)
 
-                logger.debug(" IOTLABSLICES \tverify_slice hrn %s USER %s"
+                logger.debug(" CortexlabSlices \tverify_slice hrn %s USER %s"
                              % (hrn, user))
 
-                 # add the external slice to the local SFA iotlab DB
+                 # add the external slice to the local SFA DB
                 if sfa_slice:
                     self.driver.AddSlice(sfa_slice, user)
 
-            logger.debug("IOTLABSLICES \tverify_slice ADDSLICE OK")
+            logger.debug("CortexlabSlices \tverify_slice ADDSLICE OK")
         return sfa_slice
 
 
     def verify_persons(self, slice_hrn, slice_record, users, options={}):
         """Ensures the users in users list exist and are enabled in LDAP. Adds
-        person if needed.
+        person if needed(AddPerson).
 
         Checking that a user exist is based on the user's email. If the user is
         still not found in the LDAP, it means that the user comes from another
@@ -365,8 +365,8 @@ class CortexlabSlices:
         :param slice_record: record of the slice_hrn
         :param users: users is a record list. Records can either be
             local records or users records from known and trusted federated
-            sites.If the user is from another site that iotlab doesn't trust yet,
-            then Resolve will raise an error before getting to create_sliver.
+            sites.If the user is from another site that cortex;ab doesn't trust
+            yet, then Resolve will raise an error before getting to allocate.
 
         :type slice_hrn: string
         :type slice_record: string
@@ -379,10 +379,10 @@ class CortexlabSlices:
         """
 
 
-        logger.debug("IOTLABSLICES \tverify_persons \tslice_hrn  %s  \
+        logger.debug("CortexlabSlices \tverify_persons \tslice_hrn  %s  \
                     \t slice_record %s\r\n users %s \t  "
                      % (slice_hrn, slice_record, users))
-        users_by_id = {}
+
 
         users_by_email = {}
         #users_dict : dict whose keys can either be the user's hrn or its id.
@@ -401,10 +401,9 @@ class CortexlabSlices:
                 users_dict[info['email']] = info
 
 
-        logger.debug("IOTLABSLICES.PY \t verify_person  \
-                        users_dict %s \r\n user_by_email %s \r\n \
-                        \tusers_by_id %s "
-                     % (users_dict, users_by_email, users_by_id))
+        logger.debug("CortexlabSlices.PY \t verify_person  \
+                        users_dict %s \r\n user_by_email %s \r\n "
+                     %(users_dict, users_by_email))
 
         existing_user_ids = []
         existing_user_emails = []
@@ -422,19 +421,20 @@ class CortexlabSlices:
             #Needed because what if the user has been deleted in LDAP but
             #is still in SFA?
             existing_users = self.driver.testbed_shell.GetPersons(filter_user)
-            logger.debug(" \r\n IOTLABSLICES.PY \tverify_person  filter_user \
+            logger.debug(" \r\n CortexlabSlices.PY \tverify_person  filter_user \
                         %s existing_users %s "
                         % (filter_user, existing_users))
-            #User is in iotlab LDAP
+            #User is in  LDAP
             if existing_users:
                 for user in existing_users:
+                    user['login'] = user['uid']
                     users_dict[user['email']].update(user)
                     existing_user_emails.append(
                         users_dict[user['email']]['email'])
 
 
             # User from another known trusted federated site. Check
-            # if a iotlab account matching the email has already been created.
+            # if a cortexlab account matching the email has already been created.
             else:
                 req = 'mail='
                 if isinstance(users, list):
@@ -444,35 +444,35 @@ class CortexlabSlices:
                 ldap_reslt = self.driver.testbed_shell.ldap.LdapSearch(req)
 
                 if ldap_reslt:
-                    logger.debug(" IOTLABSLICES.PY \tverify_person users \
+                    logger.debug(" CortexlabSlices.PY \tverify_person users \
                                 USER already in Iotlab \t ldap_reslt %s \
                                 " % (ldap_reslt))
                     existing_users.append(ldap_reslt[1])
 
                 else:
                     #User not existing in LDAP
-                    logger.debug("IOTLABSLICES.PY \tverify_person users \
+                    logger.debug("CortexlabSlices.PY \tverify_person users \
                                 not in ldap ...NEW ACCOUNT NEEDED %s \r\n \t \
                                 ldap_reslt %s " % (users, ldap_reslt))
 
         requested_user_emails = users_by_email.keys()
         requested_user_hrns = \
             [users_by_email[user]['hrn'] for user in users_by_email]
-        logger.debug("IOTLABSLICES.PY \tverify_person  \
+        logger.debug("CortexlabSlices.PY \tverify_person  \
                        users_by_email  %s " % (users_by_email))
 
         #Check that the user of the slice in the slice record
         #matches one of the existing users
         try:
             if slice_record['reg-researchers'][0] in requested_user_hrns:
-                logger.debug(" IOTLABSLICES  \tverify_person ['PI']\
+                logger.debug(" CortexlabSlices  \tverify_person ['PI']\
                                 slice_record %s" % (slice_record))
 
         except KeyError:
             pass
 
         # users to be added, removed or updated
-        #One user in one iotlab slice : there should be no need
+        #One user in one cortexlab slice : there should be no need
         #to remove/ add any user from/to a slice.
         #However a user from SFA which is not registered in Iotlab yet
         #should be added to the LDAP.
@@ -488,12 +488,12 @@ class CortexlabSlices:
         #requested_user_email is in existing_user_emails
         if len(added_user_emails) == 0:
             slice_record['login'] = users_dict[requested_user_emails[0]]['uid']
-            logger.debug(" IOTLABSLICES  \tverify_person QUICK DIRTY %s"
+            logger.debug(" CortexlabSlices  \tverify_person QUICK DIRTY %s"
                          % (slice_record))
 
         for added_user_email in added_user_emails:
             added_user = users_dict[added_user_email]
-            logger.debug(" IOTLABSLICES \r\n \r\n  \t  verify_person \
+            logger.debug(" CortexlabSlices \r\n \r\n  \t  verify_person \
                          added_user %s" % (added_user))
             person = {}
             person['peer_person_id'] = None
@@ -514,9 +514,9 @@ class CortexlabSlices:
                 slice_record['login'] = person['uid']
             else:
                 # error message in ret
-                logger.debug(" IOTLABSLICES ret message %s" %(ret))
+                logger.debug(" CortexlabSlices ret message %s" %(ret))
 
-            logger.debug(" IOTLABSLICES \r\n \r\n  \t THE SECOND verify_person\
+            logger.debug(" CortexlabSlices \r\n \r\n  \t THE SECOND verify_person\
                            person %s" % (person))
             #Update slice_Record with the id now known to LDAP
 
@@ -533,7 +533,7 @@ class CortexlabSlices:
         key_ids = []
         for person in persons:
             key_ids.extend(person['key_ids'])
-        keylist = self.driver.testbed_shell.GetKeys(key_ids, ['key_id', 'key'])
+        keylist = self.driver.GetKeys(key_ids, ['key_id', 'key'])
 
         keydict = {}
         for key in keylist:
@@ -571,11 +571,7 @@ class CortexlabSlices:
                                             #key['key_id'], peer['shortname'], \
                                             #remote_key_id)
 
-                    #finally:
-                        #if peer:
-                            #self.driver.testbed_shell.BindObjectToPeer('person', \
-                                    #person['person_id'], peer['shortname'], \
-                                    #user['person_id'])
+
 
         # remove old keys (only if we are not appending)
         append = options.get('append', True)

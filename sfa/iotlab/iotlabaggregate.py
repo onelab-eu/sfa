@@ -70,8 +70,7 @@ class IotlabAggregate:
         slice_hrn, _ = urn_to_hrn(slice_xrn)
 
         # GetSlices always returns a list, even if there is only one element
-        slices = self.driver.GetSlices(
-                                        slice_filter=str(slice_hrn),
+        slices = self.driver.GetSlices(slice_filter=str(slice_hrn),
                                         slice_filter_type='slice_hrn',
                                         login=login)
 
