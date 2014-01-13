@@ -1,6 +1,6 @@
 """ File defining the importer class and all the methods needed to import
 the nodes, users and slices from OAR and LDAP to the SFA database.
-Also creates the iotlab specific databse and table to keep track
+Also creates the iotlab specific  table to keep track
 of which slice hrn contains which job.
 """
 from sfa.util.config import Config

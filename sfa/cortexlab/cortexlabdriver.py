@@ -14,8 +14,7 @@ from sfa.managers.driver import Driver
 from sfa.rspecs.version_manager import VersionManager
 from sfa.rspecs.rspec import RSpec
 
-from sfa.cortexlab.cortexlabaggregate import CortexlabAggregate, \
-            cortexlab_xrn_to_hostname
+from sfa.cortexlab.cortexlabaggregate import CortexlabAggregate
 
 from sfa.cortexlab.cortexlabslices import CortexlabSlices
 from sfa.cortexlab.cortexlabshell import CortexlabShell
@@ -1011,7 +1010,7 @@ class CortexlabDriver(Driver):
                 if get_authority(lease['component_id']) == \
                         self.testbed_shell.root_auth:
                     single_requested_lease['hostname'] = \
-                        cortexlab_xrn_to_hostname(\
+                        xrn_to_hostname(\
                             lease.get('component_id').strip())
                     single_requested_lease['start_time'] = \
                         lease.get('start_time')

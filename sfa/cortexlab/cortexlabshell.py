@@ -31,7 +31,7 @@ class CortexlabShell():
         :param config: configuration object from sfa.util.config
         :type config: Config object
         """
-        self.leases_db = TestbedAdditionalSfaDB(config)
+
         self.query_sites = CortexlabQueryNodes()
         self.ldap = LDAPapi()
         self.time_format = "%Y-%m-%d %H:%M:%S"
