@@ -4,7 +4,6 @@ Section: misc
 Priority: optional
 Standards-Version: 3.9.2
 Build-Depends: devscripts, debhelper (>=7.0.50~), debconf, dpatch, python-setuptools, make
-X-Python-Version: >= 2.7
 
 Package: sfa
 Architecture: any

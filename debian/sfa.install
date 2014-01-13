@@ -1,5 +1,6 @@
 usr/bin/sfa-start.py*
 usr/bin/sfaadmin.py*
+usr/bin/sfaadmin
 usr/bin/keyconvert.py*
 usr/bin/sfa-config-tty
 usr/bin/sfa-config
@@ -10,3 +11,4 @@ etc/init.d/sfa
 etc/init.d/functions.sfa
 usr/share/sfa/migrations
 usr/share/sfa/examples
+var/www/html/wsdl/*.wsdl
