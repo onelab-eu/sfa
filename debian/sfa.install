@@ -10,4 +10,4 @@ etc/init.d/sfa
 etc/init.d/functions.sfa
 usr/share/sfa/migrations
 usr/share/sfa/examples
-wsdl/*.wsdl var/www/html/wsdl/*.wsdl
+wsdl/aggregate.wsdl var/www/html/wsdl/aggregate.wsdl
