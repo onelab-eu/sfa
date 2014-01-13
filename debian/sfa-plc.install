@@ -1,5 +1,5 @@
-usr/lib*/python*/site-packages/sfa/planetlab
-usr/lib*/python*/site-packages/sfa/openstack
+usr/lib*/python*/dist-packages/sfa/planetlab
+usr/lib*/python*/dist-packages/sfa/openstack
 etc/sfa/pl.rng
 etc/sfa/credential.xsd
 etc/sfa/top.xsd
