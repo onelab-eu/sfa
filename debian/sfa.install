@@ -11,8 +11,4 @@ etc/init.d/sfa
 etc/init.d/functions.sfa
 usr/share/sfa/migrations
 usr/share/sfa/examples
-#var/www/html/wsdl/*.wsdl
-wsdl/sfa.wsdl var/www/html/wsdl/
-wsdl/registry.wsdl var/www/html/wsdl/
-wsdl/aggregate.wsdl var/www/html/wsdl/
-wsdl/slice-manager.wsdl var/www/html/wsdl/
+wsdl/*.wsdl var/www/html/wsdl/
