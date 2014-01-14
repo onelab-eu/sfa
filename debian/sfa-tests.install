@@ -1,1 +1,2 @@
-usr/share/sfa/tests
+#usr/share/sfa/tests
+tests/*.py /usr/share/sfa/tests/
