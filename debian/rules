@@ -5,5 +5,6 @@
 	dh $@ --with python2 --buildsystem=python_distutils
 
 override_dh_prep:
+	$(MAKE) version
 	$(MAKE) wsdl
 	dh_prep -O--buildsystem=python_distutils
