@@ -56,11 +56,6 @@ Architecture: any
 Depends: sfa-common
 Description: sfatables policy tool for SFA
 
-Package: sfa-xmlbuilder
-Architecture: any
-Provides: python-xmlbuilder
-Description: third-party xmlbuilder tool
-
 Package: sfa-tests
 Architecture: any
 Depends: sfa-common
