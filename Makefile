@@ -7,7 +7,7 @@ PREFIX=/usr
 ##########
 all: python wsdl 
 
-install: python-install wsdl-install xmlbuilder-install tests-install
+install: python-install wsdl-install tests-install
 
 clean: python-clean wsdl-clean 
 
@@ -28,10 +28,6 @@ version: sfa/util/version.py
 sfa/util/version.py: sfa/util/version.py.in force
 	sed -e "s,@VERSIONTAG@,$(VERSIONTAG),g" -e "s,@SCMURL@,$(SCMURL),g" sfa/util/version.py.in > $@
 
-xmlbuilder-install:
-	cd xmlbuilder-0.9 && python setup.py install --prefix=$(PREFIX) --root=$(DESTDIR) && cd -
-	rm -rf $(DESTDIR)/usr/lib*/python*/site-packages/*egg-info
-
 # postinstall steps - various cleanups and tweaks for a nicer rpm
 python-install:
 	python setup.py install --prefix=$(PREFIX) --root=$(DESTDIR)
@@ -47,7 +43,7 @@ python-clean: version-clean
 version-clean:
 	rm -f sfa/util/version.py
 
-.PHONY: python version python-install python-clean version-clean xmlbuilder-install 
+.PHONY: python version python-install python-clean version-clean 
 ##########
 wsdl: 
 	$(MAKE) -C wsdl 

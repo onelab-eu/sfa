@@ -34,7 +34,7 @@ Requires: python-psycopg2
 Requires: python-sqlalchemy
 Requires: python-migrate
 # the eucalyptus aggregate uses this module
-Requires: python-xmlbuilder
+#Requires: python-xmlbuilder
 # for uuidgen - used in db password generation
 # on f8 this actually comes with e2fsprogs, go figure
 Requires: util-linux-ng
@@ -94,11 +94,6 @@ Summary: sfatables policy tool for SFA
 Group: Applications/System
 Requires: sfa
 
-%package xmlbuilder
-Summary: third-party xmlbuilder tool
-Group: Applications/System
-Provides: python-xmlbuilder
-
 %package tests
 Summary: unit tests suite for SFA
 Group: Applications/System
@@ -139,10 +134,6 @@ The SFA driver for a Dummy Testbed.
 sfatables is a tool for defining access and admission control policies
 in an SFA network, in much the same way as iptables is for ip
 networks. This is the command line interface to manage sfatables
-
-%description xmlbuilder
-This package contains the xmlbuilder python library, packaged for
-convenience as it is not supported by fedora
 
 %description tests
 Provides some binary unit tests in /usr/share/sfa/tests
@@ -231,9 +222,6 @@ rm -rf $RPM_BUILD_ROOT
 /etc/sfatables/*
 %{_bindir}/sfatables
 %{python_sitelib}/sfatables
-
-%files xmlbuilder
-%{python_sitelib}/xmlbuilder
 
 %files tests
 %{_datadir}/sfa/tests
