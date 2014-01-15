@@ -384,8 +384,8 @@ class Sfi:
                               help="display version of the local client")
 
         if command in ("version", "trusted"):
-            parser.add_option("-R","--registry-interface",
-                             action="store_true", dest="registry-interface", default=False,
+            parser.add_option("-R","--registry_interface",
+                             action="store_true", dest="registry_interface", default=False,
                              help="target the registry interface instead of slice interface")
 
         if command in ("add", "update"):
@@ -836,7 +836,7 @@ use this if you mean an authority instead""")
         if options.version_local:
             version=version_core()
         else:
-            if options.registry-interface:
+            if options.registry_interface:
                 server=self.registry()
             else:
                 server = self.sliceapi()
@@ -1626,13 +1626,13 @@ $ sfi m -b http://mymanifold.foo.com:7080/
         """
         return the trusted certs at this interface (get_trusted_certs)
         """ 
-        if options.registry-interface:
+        if options.registry_interface:
             server=self.registry()
         else:
             server = self.sliceapi()
         cred = self.my_authority_credential_string()
         trusted_certs = server.get_trusted_certs(cred)
-        if not options.registry-interface:
+        if not options.registry_interface:
             trusted_certs = ReturnValue.get_value(trusted_certs)
 
         for trusted_cert in trusted_certs:
