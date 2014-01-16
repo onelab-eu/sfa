@@ -79,8 +79,8 @@ Summary: the SFA layer around NITOS
 Group: Applications/System
 Requires: sfa
 
-%package senslab
-Summary: the SFA layer around SensLab
+%package iotlab
+Summary: the SFA layer around IotLab
 Group: Applications/System
 Requires: sfa
 
@@ -129,8 +129,8 @@ The SFA driver for FEDERICA.
 %description nitos
 The SFA driver for NITOS.
 
-%description senslab
-The SFA driver for SensLab.
+%description iotlab
+The SFA driver for IotLab.
 
 %description cortexlab
 The SFA driver for CortexLab.
@@ -220,7 +220,7 @@ rm -rf $RPM_BUILD_ROOT
 %files nitos
 %{python_sitelib}/sfa/nitos
 
-%files senslab
+%files iotlab
 %{python_sitelib}/sfa/iotlab
 
 %files cortexlab
