@@ -48,7 +48,7 @@ packages = [
     'sfa/openstack',
     'sfa/federica',
     'sfa/iotlab',
-    'sfa/cortexlab',
+#    'sfa/cortexlab',
     'sfatables',
     'sfatables/commands',
     'sfatables/processors',
