@@ -46,6 +46,11 @@ Architecture: any
 Depends: sfa-common, python-passlib, python-ldap
 Description: the SFA layer around SensLab
 
+Package: sfa-cortexlab
+Architecture: any
+Depends: sfa-common, python-passlib, python-ldap
+Description: the SFA layer around CortexLab
+
 Package: sfa-dummy
 Architecture: any
 Depends: sfa-common
