@@ -41,10 +41,15 @@ Architecture: any
 Depends: sfa-common
 Description: the SFA layer around NITOS
 
-Package: sfa-senslab
+Package: sfa-iotlab
 Architecture: any
 Depends: sfa-common, python-passlib, python-ldap
-Description: the SFA layer around SensLab
+Description: the SFA layer around IotLab
+
+Package: sfa-cortexlab
+Architecture: any
+Depends: sfa-common, python-passlib, python-ldap
+Description: the SFA layer around CortexLab
 
 Package: sfa-dummy
 Architecture: any
