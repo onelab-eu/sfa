@@ -456,20 +456,20 @@ class IotlabSlices:
                                 ldap_reslt %s " % (users, ldap_reslt))
 
         requested_user_emails = users_by_email.keys()
-        requested_user_hrns = \
-            [users_by_email[user]['hrn'] for user in users_by_email]
-        logger.debug("IOTLABSLICES.PY \tverify_person  \
-                       users_by_email  %s " % (users_by_email))
+        # requested_user_hrns = \
+        #     [users_by_email[user]['hrn'] for user in users_by_email]
+        # logger.debug("IOTLABSLICES.PY \tverify_person  \
+        #                users_by_email  %s " % (users_by_email))
 
-        #Check that the user of the slice in the slice record
-        #matches one of the existing users
-        try:
-            if slice_record['reg-researchers'][0] in requested_user_hrns:
-                logger.debug(" IOTLABSLICES  \tverify_person ['PI']\
-                                slice_record %s" % (slice_record))
+        # #Check that the user of the slice in the slice record
+        # #matches one of the existing users
+        # try:
+        #     if slice_record['reg-researchers'][0] in requested_user_hrns:
+        #         logger.debug(" IOTLABSLICES  \tverify_person ['PI']\
+        #                         slice_record %s" % (slice_record))
 
-        except KeyError:
-            pass
+        # except KeyError:
+        #     pass
 
         # users to be added, removed or updated
         #One user in one iotlab slice : there should be no need
@@ -507,7 +507,7 @@ class IotlabSlices:
             person['email'] = added_user['email']
             person['key_ids'] = added_user.get('key_ids', [])
 
-            ret = self.driver.testbed_shell.AddPerson(person)
+            ret = self.driver.AddPerson(person)
             if 'uid' in ret:
                 # meaning bool is True and the AddPerson was successful
                 person['uid'] = ret['uid']

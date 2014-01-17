@@ -1430,6 +1430,12 @@ class IotlabDriver(Driver):
         sfa_users = options.get('sfa_users', [])
         if sfa_users:
             slice_record = sfa_users[0].get('slice_record', [])
+            slice_record['user'] = {'keys': users[0]['keys'],
+                                    'email': users[0]['email'],
+                                    'hrn': slice_record['reg-researchers'][0]}
+
+        logger.debug("IOTLABDRIVER.PY \t urn %s allocate options  %s "
+                     % (urn, options))
 
         # parse rspec
         rspec = RSpec(rspec_string)
