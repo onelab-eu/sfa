@@ -11,27 +11,58 @@ import time
 # inspired by the following documenation :
 # https://svn.planet-lab.org/wiki/SfaDeveloperDummyTutorial#RunningSFAinDummyflavour
 
-# 1) list all the resources from bonfire's point of view
+# 1) list all the resources  of bonfire from sfa's point of view
 # python -c 'import bonfire; print bonfire.bonsources()'
 
 # 2) retrieve the url, the name and the key that will currently use by sfa for a compute N°3656 located at fr-inria
-# python -c 'import bonfire; print bonfire.rsa_user_bonfire("fr-inria", "3656")
+# python -c 'import bonfire; print bonfire.rsa_user_bonfire("fr-inria", "3656")'
 
 # 3) create a new user and slice for sfa wrap
-# python -c 'import bonfire; print bonfire.new_user_slice()
+# python -c 'import bonfire; print bonfire.new_user_slice()'
 
 # 4) changing the status to running status for the experiment 2911
-# python -c 'import bonfire; print bonfire.provisioning("2911")
+# python -c 'import bonfire; print bonfire.provisioning("2911")'
 
 # 5) stop virtual machine n°3756  at fr-inira testbed
-# python -c 'import bonfire; print bonfire.stop_vm("fr-inria", "3756")
+# python -c 'import bonfire; print bonfire.stop_vm("fr-inria", "3756")'
 
-# 6) create an experiment bonfire with the slice id n°2345423 and the experiment owner : foo+bar.stuff+emulab+professor
-# python -c 'import bonfire; print bonfire.create_fed4fire_exp("nlebreto", "nlebreto", "desc", "300", "2345423", "foo+bar.stuff+emulab+professor")
+# 6) allocation : create an experiment bonfire with slice information
+# python -c 'import bonfire; print bonfire.allocate("nlebreto", "nlebreto", "tdes", "125", "topdomain.dummy.nicolasi", "https://api.integration.bonfire.grid5000.fr/experiments")'
+
+# 7) remove slice or key 
+# python -c 'import bonfire; print bonfire.remove_slice("topdomain.dummy.alice_slice")'
 
 
 
 # ########################################################## #
+
+
+# ########################################################## #
+
+# remove slice or key
+def remove_slice(name):
+    cmdremove    = "sfaadmin.py reg remove {0}".format(name)
+    removeaction = subprocess.Popen(cmdremove, shell=True)
+
+# show specific credential of a slice    
+def show_slice_credential(slice_name):
+    path = "/root/.sfi/{0}.slice.cred".format(slice_name)
+    tree = ET.parse(path)
+    root = tree.getroot()
+    hash = {}
+# hash["slice_native"] = ET.tostring(root)
+    for target in root.findall('credential'):
+        hash["slice_user_urn"] = target.find('owner_urn').text
+        hash["slice_urn"] = target.find('target_urn').text
+        hash["slice_native"] = target.find('serial').text
+    return hash
+
+# create a bonfire experiment from a sfa point of view
+def allocate(user_name, groups, description, walltime, slice_name):
+    hash ={}
+    hash = show_slice_credential(slice_name)
+    create_fed4fire_exp(user_name, groups, description, walltime, hash["slice_urn"], hash["slice_user_urn"], hash["slice_native"])
+    
 
 
 # retrieve the url, the name and the key that will currently use by sfa
@@ -62,11 +93,10 @@ def new_user_slice():
     txtslice = "sfaadmin.py reg register -x {0} -t slice -r {1}".format(slice, url)
     createslice = subprocess.Popen(txtslice, shell=True)
 
-# create a experiment bonfire with the slice id and the experiment owner 
-def create_fed4fire_exp(name, groups, description, walltime, slice_id, exp_owner):
-   # fix this to have the exact mapping to retrieve slice 	
-   # xmldescription='<experiment xmlns="http://api.bonfire-project.eu/doc/schemas/occi"><name>' + name +'</name><groups>' + groups + '</groups><description>' + description + '</description><walltime>' + walltime + '</walltime><status>ready</status><fed4fire><slice_id>' + slice_id + '</slice_id><exp_owner>' + exp_owner + '<exp_owner></fed4fire></experiment>'
-    postexp("https://api.integration.bonfire.grid5000.fr/experiments", '<experiment xmlns="http://api.bonfire-project.eu/doc/schemas/occi"><name>testnlebreto</name><groups>nlebreto</groups><description>sdg</description><walltime>3000</walltime><status>ready</status><fed4fire><slice_id>2345423</slice_id><exp_owner>foo+bar.stuff+emulab+professor<exp_owner></fed4fire></experiment>')
+# create a experiment bonfire with the slice urn and the experiment owner 
+def create_fed4fire_exp(name, groups, description, walltime, slice_urn, slice_user_urn, slice_native, url_experiment_bonfire):
+    xmldescription='<experiment xmlns="http://api.bonfire-project.eu/doc/schemas/occi"><name>' + name +'</name><groups>' + groups + '</groups><description>' + description + '</description><walltime>' + walltime + '</walltime><status>ready</status><slice_urn>' + slice_urn + '</slice_urn><slice_usr_urn>' + slice_user_urn + '<slice_usr_urn><slice_native>' + slice_native + '</slice_native></experiment>'
+    postexp(url_experiment_bonfire, xmldescription)
 
 # simple post method for request
 def postexp(url, xmldescription):
@@ -81,7 +111,7 @@ def stop_vm(testbed, num_compute):
     headers = {'content-type': 'application/vnd.bonfire+xml'}
     requests.put(url, data=xmldescription, headers=headers, verify=False, auth=('nlebreto', 'GDRU_23tc$'))
 
-# provisioning : set an experiment to running  
+# provisioning : set a bonfire's experiment to running  
 # changing the status to running status
 def provisioning(num_experiment):
     url = "https://api.integration.bonfire.grid5000.fr/experiments/" + num_experiment
