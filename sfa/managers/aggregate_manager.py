@@ -1,6 +1,8 @@
 import socket
+import datetime
 from sfa.util.version import version_core
-from sfa.util.xrn import Xrn
+from sfa.util.xrn import Xrni
+from sfa.util.sfatime import utcpase, adjust_datetime
 from sfa.util.callids import Callids
 from sfa.server.api_versions import ApiVersions
 
@@ -87,6 +89,14 @@ class AggregateManager:
         xrn = Xrn(xrn, 'slice')
         slice_urn=xrn.get_urn()
         slice_hrn=xrn.get_hrn()
+
+        if options.get('geni_extend_alap'):
+            now = datetime.datetime.now()
+            requested = utcparse(expiration_time)
+            max = adjust_datetime(now, days=30)
+            if requested > max:
+                expiration_time = max
+     
         return self.driver.renew_sliver (slice_urn, slice_hrn, creds, expiration_time, options)
     
     ### these methods could use an options extension for at least call_id
