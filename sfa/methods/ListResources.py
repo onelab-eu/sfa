@@ -36,9 +36,10 @@ class ListResources(Method):
         # get slice's hrn from options    
         xrn = options.get('geni_slice_urn', '')
         (hrn, _) = urn_to_hrn(xrn)
+        (speaking_for, _) = urn_to_hrn(options.get('geni_speaking_for'))
 
         # Find the valid credentials
-        valid_creds = self.api.auth.checkCredentials(creds, 'listnodes', hrn)
+        valid_creds = self.api.auth.checkCredentials(creds, 'listnodes', hrn, speaking_for)
 
         # get hrn of the original caller 
         origin_hrn = options.get('origin_hrn', None)

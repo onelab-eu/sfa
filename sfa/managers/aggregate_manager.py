@@ -24,6 +24,7 @@ class AggregateManager:
             'geni_api_versions': geni_api_versions, 
             'hrn':xrn.get_hrn(),
             'urn':xrn.get_urn(),
+            'geni_handles_speaksfor': True,     # supports 'speaks for' credentials  
             }
         version.update(version_generic)
         testbed_version = self.driver.aggregate_version()

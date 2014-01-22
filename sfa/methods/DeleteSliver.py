@@ -26,7 +26,8 @@ class DeleteSliver(Method):
     
     def call(self, xrn, creds, options):
         (hrn, type) = urn_to_hrn(xrn)
-        valid_creds = self.api.auth.checkCredentials(creds, 'deletesliver', hrn)
+        (speaking_for, _) = urn_to_hrn(options.get('geni_speaking_for'))
+        valid_creds = self.api.auth.checkCredentials(creds, 'deletesliver', hrn, speaking_for)
 
         #log the call
         origin_hrn = Credential(string=valid_creds[0]).get_gid_caller().get_hrn()

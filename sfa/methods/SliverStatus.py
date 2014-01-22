@@ -21,7 +21,8 @@ class SliverStatus(Method):
 
     def call(self, slice_xrn, creds, options):
         hrn, type = urn_to_hrn(slice_xrn)
-        valid_creds = self.api.auth.checkCredentials(creds, 'sliverstatus', hrn)
+        (speaking_for, _) = urn_to_hrn(options.get('geni_speaking_for'))
+        valid_creds = self.api.auth.checkCredentials(creds, 'sliverstatus', hrn, speaking_for)
 
         self.api.logger.info("interface: %s\ttarget-hrn: %s\tmethod-name: %s"%(self.api.interface, hrn, self.name))
     

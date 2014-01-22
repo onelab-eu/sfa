@@ -34,10 +34,18 @@ class Auth:
         self.trusted_cert_list = TrustedRoots(self.config.get_trustedroots_dir()).get_list()
         self.trusted_cert_file_list = TrustedRoots(self.config.get_trustedroots_dir()).get_file_list()
 
-        
-        
-    def checkCredentials(self, creds, operation, hrn = None):
+       
+    def checkCredentials(self, creds, operation, hrn = None, speaking_for_hrn = None):
+
+        def log_invalid_cred(cred):
+            cred_obj=Credential(string=cred)
+            logger.debug("failed to validate credential - dump=%s"%cred_obj.dump_string(dump_parents=True))
+            error = sys.exc_info()[:2]
+            return error
+
         valid = []
+        speaks_for_cred = None
+
         if not isinstance(creds, list):
             creds = [creds]
         logger.debug("Auth.checkCredentials with %d creds"%len(creds))
@@ -46,13 +54,24 @@ class Auth:
                 self.check(cred, operation, hrn)
                 valid.append(cred)
             except:
-                cred_obj=Credential(string=cred)
-                logger.debug("failed to validate credential - dump=%s"%cred_obj.dump_string(dump_parents=True))
-                error = sys.exc_info()[:2]
+                # check if credential is a 'speaks for  credential'
+                if speaking_for_hrn:
+                    try:
+                        self.check(cred, operation, speaking_for_hrn)
+                        speaks_for_cred = cred
+                        valid.append(cred)    
+                    except:
+                        error = log_invalid_cred(cred)
+                else:
+                    error = log_invalid_cred(cred)
                 continue
             
         if not len(valid):
             raise InsufficientRights('Access denied: %s -- %s' % (error[0],error[1]))
+        
+        if speaking_for_hrn and not speaks_for_cred:
+            raise InsufficientRights('Access denied: "geni_speaking_for" option specified but no valid speaks for credential found: %s -- %s' % (error[0],error[1]))
+            
         
         return valid
         
