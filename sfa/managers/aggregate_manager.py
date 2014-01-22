@@ -63,6 +63,7 @@ class AggregateManager:
             'geni_single_allocation': 0, # Accept operations that act on as subset of slivers in a given state.
             'geni_allocate': 'geni_many',# Multiple slivers can exist and be incrementally added, including those which connect or overlap in some way.
             'geni_credential_types': cred_types,
+            'geni_handles_speaksfor': True,     # supports 'speaks for' credentials
         }
         version.update(version_generic)
         version.update(self.rspec_versions())

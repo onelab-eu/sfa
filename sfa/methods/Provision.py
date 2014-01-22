@@ -31,9 +31,12 @@ class Provision(Method):
     def call(self, xrns, creds, options):
         self.api.logger.info("interface: %s\ttarget-hrn: %s\tmethod-name: %s"%(self.api.interface, xrns, self.name))
 
+        (speaking_for, _) = urn_to_hrn(options.get('geni_speaking_for'))
+        
         # Find the valid credentials
         valid_creds = self.api.auth.checkCredentials(creds, 'createsliver', xrns,
-                      check_sliver_callback = self.api.driver.check_sliver_credentials) 
+                      check_sliver_callback = self.api.driver.check_sliver_credentials,
+                      speaking_for_hrn=speaking_for) 
         origin_hrn = Credential(cred=valid_creds[0]).get_gid_caller().get_hrn()
         self.api.logger.info("interface: %s\tcaller-hrn: %s\ttarget-hrn: %s\tmethod-name: %s"%(self.api.interface, origin_hrn, xrns, self.name))
         result = self.api.manager.Provision(self.api, xrns, creds, options)

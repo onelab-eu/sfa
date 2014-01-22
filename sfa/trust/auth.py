@@ -35,7 +35,14 @@ class Auth:
         self.trusted_cert_list = TrustedRoots(self.config.get_trustedroots_dir()).get_list()
         self.trusted_cert_file_list = TrustedRoots(self.config.get_trustedroots_dir()).get_file_list()
 
-    def checkCredentials(self, creds, operation, xrns=[], check_sliver_callback=None):
+    def checkCredentials(self, creds, operation, xrns=[], check_sliver_callback=None, speaking_for_hrn=None):
+
+        def log_invalid_cred(cred):
+            cred_obj=Credential(string=cred)
+            logger.debug("failed to validate credential - dump=%s"%cred_obj.dump_string(dump_parents=True))
+            error = sys.exc_info()[:2]
+            return error
+
         # if xrns are specified they cannot be None or empty string
         if xrns:
             for xrn in xrns:
@@ -53,6 +60,7 @@ class Auth:
         # we make sure not to include sliver urns/hrns in the core validation loop
         hrns = [Xrn(xrn).hrn for xrn in xrns if xrn not in sliver_xrns] 
         valid = []
+        speaks_for_cred = None
         if not isinstance(creds, list):
             creds = [creds]
         logger.debug("Auth.checkCredentials with %d creds on hrns=%s"%(len(creds),hrns))
@@ -65,10 +73,16 @@ class Auth:
                     self.check(cred, operation, hrn)
                     valid.append(cred)
                 except:
-                    cred_obj=Credential(cred=cred)
-                    logger.debug("failed to validate credential - dump=%s"%cred_obj.dump_string(dump_parents=True))
-                    error = sys.exc_info()[:2]
-                    continue
+                    if speaking_for_hrn:
+                    try:
+                        self.check(cred, operation, speaking_for_hrn)
+                        speaks_for_cred = cred
+                        valid.append(cred)
+                    except:
+                        error = log_invalid_cred(cred)
+                else:
+                    error = log_invalid_cred(cred)
+                continue
         
         # make sure all sliver xrns are validated against the valid credentials
         if sliver_xrns:
@@ -80,6 +94,9 @@ class Auth:
                 
         if not len(valid):
             raise Forbidden("Invalid credential")
+        
+        if speaking_for_hrn and not speaks_for_cred:
+            raise InsufficientRights('Access denied: "geni_speaking_for" option specified but no valid speaks for credential found: %s -- %s' % (error[0],error[1]))
         
         return valid
         

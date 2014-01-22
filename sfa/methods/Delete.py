@@ -24,8 +24,10 @@ class Delete(Method):
     returns = Parameter(int, "1 if successful")
     
     def call(self, xrns, creds, options):
+        (speaking_for, _) = urn_to_hrn(options.get('geni_speaking_for'))
         valid_creds = self.api.auth.checkCredentials(creds, 'deletesliver', xrns,
-                      check_sliver_callback = self.api.driver.check_sliver_credentials)
+                      check_sliver_callback = self.api.driver.check_sliver_credentials,
+                      speaking_for_hrn=speaking_for)
 
         #log the call
         origin_hrn = Credential(cred=valid_creds[0]).get_gid_caller().get_hrn()

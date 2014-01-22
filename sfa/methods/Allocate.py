@@ -37,9 +37,10 @@ class Allocate(Method):
     def call(self, xrn, creds, rspec, options):
         xrn = Xrn(xrn, type='slice')
         self.api.logger.info("interface: %s\ttarget-hrn: %s\tmethod-name: %s"%(self.api.interface, xrn.get_hrn(), self.name))
+        (speaking_for, _) = urn_to_hrn(options.get('geni_speaking_for'))
 
         # Find the valid credentials
-        valid_creds = self.api.auth.checkCredentials(creds, 'createsliver', xrn.get_hrn())
+        valid_creds = self.api.auth.checkCredentials(creds, 'createsliver', xrn.get_hrn(), speaking_for_hrn=speaking_for)
         # use the expiration from the first valid credential to determine when 
         # the slivers should expire.
         expiration = datetime_to_string(Credential(cred=valid_creds[0]).expiration)

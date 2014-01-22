@@ -36,9 +36,10 @@ class Describe(Method):
                 options['geni_rspec_version'] = options['rspec_version']
             else:
                 raise SfaInvalidArgument('Must specify an rspec version option. geni_rspec_version cannot be null')
- 
+        (speaking_for, _) = urn_to_hrn(options.get('geni_speaking_for'))
         valid_creds = self.api.auth.checkCredentials(creds, 'listnodes', urns, \
-                      check_sliver_callback = self.api.driver.check_sliver_credentials)
+                      check_sliver_callback = self.api.driver.check_sliver_credentials,
+                      speaking_for_hrn=speaking_for)
 
         # get hrn of the original caller 
         origin_hrn = options.get('origin_hrn', None)
