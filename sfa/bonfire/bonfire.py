@@ -32,12 +32,16 @@ import time
 # 7) remove slice or key 
 # python -c 'import bonfire; print bonfire.remove_slice("topdomain.dummy.alice_slice")'
 
-
-
+# 8) attach slice to a user
+# python -c 'import bonfire; print bonfire.create_slice_attach_user("topdomain.dummy.alice")'
+  
 # ########################################################## #
-
-
 # ########################################################## #
+ 
+# create a slice and attach a specific user to it
+def create_slice_attach_user(user_slice):
+    call = "sfa.py add -x {0}_slice -t slice -r {0}@dummy.net".format(user_slice)
+    callcreateslice =  subprocess.Popen(call, shell=True)
 
 # remove slice or key
 def remove_slice(name):
