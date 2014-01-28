@@ -74,15 +74,15 @@ class Auth:
                     valid.append(cred)
                 except:
                     if speaking_for_hrn:
-                    try:
-                        self.check(cred, operation, speaking_for_hrn)
-                        speaks_for_cred = cred
-                        valid.append(cred)
-                    except:
-                        error = log_invalid_cred(cred)
-                else:
-                    error = log_invalid_cred(cred)
-                continue
+                       try:
+                          self.check(cred, operation, speaking_for_hrn)
+                          speaks_for_cred = cred
+                          valid.append(cred)
+                       except:
+                          error = log_invalid_cred(cred)
+                    else:
+                       error = log_invalid_cred(cred)
+                    continue
         
         # make sure all sliver xrns are validated against the valid credentials
         if sliver_xrns:
