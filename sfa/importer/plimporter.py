@@ -192,6 +192,10 @@ class PlImporter:
         # isolate special vini case in separate method
         self.create_special_vini_record (interface_hrn)
 
+        # Get top authority record
+        top_auth_record=self.locate_by_type_hrn ('authority', root_auth)
+        admins = []
+
         # start importing 
         for site in sites:
             try:
@@ -372,6 +376,11 @@ class PlImporter:
                     # PI is coded with role_id==20
                     if 20 in person['role_ids']:
                         site_pis.append (user_record)
+
+                    # PL Admins need to marked as PI of the top authority record
+                    if 10 in person['role_ids'] and user_record not in top_auth_record.reg_pis:
+                        admins.append(user_record)
+
                 except:
                     self.logger.log_exc("PlImporter: failed to import person %d %s"%(person['person_id'],person['email']))
     
@@ -418,6 +427,12 @@ class PlImporter:
                     [ self.locate_by_type_pointer ('user',user_id) for user_id in slice['person_ids'] ]
                 global_dbsession.commit()
                 slice_record.stale=False
+
+        # Set PL Admins as PI's of the top authority
+        if admins:
+            top_auth_record.reg_pis = list(set(admins))
+            global_dbsession.commit()
+            self.logger.info('PlImporter: set PL admins %s as PIs of %s'%(admins,top_auth_record.hrn))
 
         ### remove stale records
         # special records must be preserved
