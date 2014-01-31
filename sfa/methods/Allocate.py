@@ -1,6 +1,6 @@
 from sfa.util.faults import SfaInvalidArgument, InvalidRSpec, SfatablesRejected
 from sfa.util.sfatime import datetime_to_string 
-from sfa.util.xrn import Xrn
+from sfa.util.xrn import Xrn, urn_to_hrn
 from sfa.util.method import Method
 from sfa.util.sfatablesRuntime import run_sfatables
 from sfa.trust.credential import Credential
