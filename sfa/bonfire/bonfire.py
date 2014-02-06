@@ -35,6 +35,9 @@ import time
 # 8) attach slice to a user (did not work)
 # python -c 'import bonfire; print bonfire.create_slice_attach_user("topdomain.dummy.alice")'
 
+# 9) verify bonfire authentication 
+# # python -c 'import bonfire; print bonfire.callcurl("https://api.bonfire-project.eu/")'
+
 # ########################################################## #
 # ########################################################## #
 
@@ -153,6 +156,8 @@ def rsa_user_bonfire(testbed, num_compute):
 def callcurl(url):
     h = bonfire_authenticate()
     r = requests.get(url, verify=False, auth=(h["user"], h["user_pass"]))
+    if r.status_code == 401:
+        return "error 401, you need to be register to the portal f4f"
     if r.status_code == 200:
         return r.text
         
