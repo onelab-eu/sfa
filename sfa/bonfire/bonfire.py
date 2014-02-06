@@ -32,12 +32,20 @@ import time
 # 7) remove slice or key 
 # python -c 'import bonfire; print bonfire.remove_slice("topdomain.dummy.alice_slice")'
 
-# 8) attach slice to a user
+# 8) attach slice to a user (did not work)
 # python -c 'import bonfire; print bonfire.create_slice_attach_user("topdomain.dummy.alice")'
-  
+
 # ########################################################## #
 # ########################################################## #
- 
+
+# pseudo authentication for bonfire
+def bonfire_authenticate():
+    h = {}
+    h["user"]      = "nlebreto"
+    h["user_pass"] = "GDRU_23tc$"
+    h["location"]  = "https://api.integration.bonfire.grid5000.fr"
+    return h  
+
 # create a slice and attach a specific user to it
 def create_slice_attach_user(user_slice):
     call = "sfa.py add -x {0}_slice -t slice -r {0}@dummy.net".format(user_slice)
@@ -54,11 +62,11 @@ def show_slice_credential(slice_name):
     tree = ET.parse(path)
     root = tree.getroot()
     hash = {}
-# hash["slice_native"] = ET.tostring(root)
+    hash["slice_native"] = root.findall(".//signatures//{http://www.w3.org/2000/09/xmldsig#}Signature//{http://www.w3.org/2000/09/xmldsig#}KeyInfo//{http://www.w3.org/2000/09/xmldsig#}X509Data//{http://www.w3.org/2000/09/xmldsig#}X509SubjectName")[0].text
     for target in root.findall('credential'):
         hash["slice_user_urn"] = target.find('owner_urn').text
         hash["slice_urn"] = target.find('target_urn').text
-        hash["slice_native"] = target.find('serial').text
+        hash["serial"] = target.find('serial').text
     return hash
 
 # create a bonfire experiment from a sfa point of view
@@ -105,7 +113,8 @@ def create_fed4fire_exp(name, groups, description, walltime, slice_urn, slice_us
 # simple post method for request
 def postexp(url, xmldescription):
     headers = {'content-type': 'application/vnd.bonfire+xml'}
-    r = requests.post(url, data=xmldescription, headers=headers, verify=False, auth=('nlebreto', 'GDRU_23tc$'))
+    h = bonfire_authenticate()
+    r = requests.post(url, data=xmldescription, headers=headers, verify=False, auth=(h["user"], h["user_pass"]))
 
 # stop a virtual machine for bonfire 
 # changing the state to stopped state
@@ -113,7 +122,8 @@ def stop_vm(testbed, num_compute):
     url = "https://api.integration.bonfire.grid5000.fr/" + "locations/" + testbed + "/computes/" + num_compute
     xmldescription = '<compute xmlns="http://api.bonfire-project.eu/doc/schemas/occi"><state>stopped</state></compute>'
     headers = {'content-type': 'application/vnd.bonfire+xml'}
-    requests.put(url, data=xmldescription, headers=headers, verify=False, auth=('nlebreto', 'GDRU_23tc$'))
+    h = bonfire_authenticate()
+    r = requests.post(url, data=xmldescription, headers=headers, verify=False, auth=(h["user"], h["user_pass"]))
 
 # provisioning : set a bonfire's experiment to running  
 # changing the status to running status
@@ -121,7 +131,8 @@ def provisioning(num_experiment):
     url = "https://api.integration.bonfire.grid5000.fr/experiments/" + num_experiment
     xmldescription = '<experiment xmlns="http://api.bonfire-project.eu/doc/schemas/occi"><status>running</status></experiment>'
     headers = {'content-type': 'application/vnd.bonfire+xml'}
-    requests.put(url, data=xmldescription, headers=headers, verify=False, auth=('nlebreto', 'GDRU_23tc$'))
+    h = bonfire_authenticate()
+    r = requests.post(url, data=xmldescription, headers=headers, verify=False, auth=(h["user"], h["user_pass"]))
 
 # retrieving the url, the name and the keys for a specific compute 
 def rsa_user_bonfire(testbed, num_compute):
@@ -140,7 +151,8 @@ def rsa_user_bonfire(testbed, num_compute):
 
 # do a curl request  
 def callcurl(url):
-    r = requests.get(url, verify=False, auth=('nlebreto', 'GDRU_23tc$'))
+    h = bonfire_authenticate()
+    r = requests.get(url, verify=False, auth=(h["user"], h["user_pass"]))
     if r.status_code == 200:
         return r.text
         
