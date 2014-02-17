@@ -111,7 +111,11 @@ class Hierarchy:
 
     def get_auth_filenames(self, xrn):
         hrn, type = urn_to_hrn(xrn)
-        leaf = get_leaf(hrn)
+        if '\\' in hrn:
+            hrn = hrn.replace('\\', ''
+            leaf = hrn
+        else:
+            leaf = get_leaf(hrn)
         parent_hrn = get_authority(hrn)
         directory = os.path.join(self.basedir, hrn.replace(".", "/"))
 
