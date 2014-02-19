@@ -147,12 +147,12 @@ class PlImporter:
         # Get all plc sites
         # retrieve only required stuf
         sites = shell.GetSites({'peer_id': None, 'enabled' : True},
-                               ['site_id','login_base','node_ids','slice_ids','person_ids', 'name'])
+                               ['site_id','login_base','node_ids','slice_ids','person_ids', 'name', 'hrn'])
         # create a hash of sites by login_base
 #        sites_by_login_base = dict ( [ ( site['login_base'], site ) for site in sites ] )
         # Get all plc users
         persons = shell.GetPersons({'peer_id': None, 'enabled': True}, 
-                                   ['person_id', 'email', 'key_ids', 'site_ids', 'role_ids'])
+                                   ['person_id', 'email', 'key_ids', 'site_ids', 'role_ids', 'hrn'])
         # create a hash of persons by person_id
         persons_by_id = dict ( [ ( person['person_id'], person) for person in persons ] )
         # also gather non-enabled user accounts so as to issue relevant warnings
@@ -185,7 +185,7 @@ class PlImporter:
         # create hash by node_id
         nodes_by_id = dict ( [ ( node['node_id'], node, ) for node in nodes ] )
         # Get all plc slices
-        slices = shell.GetSlices( {'peer_id': None}, ['slice_id', 'name', 'person_ids'])
+        slices = shell.GetSlices( {'peer_id': None}, ['slice_id', 'name', 'person_ids', 'hrn'])
         # create hash by slice_id
         slices_by_id = dict ( [ (slice['slice_id'], slice ) for slice in slices ] )
 
@@ -205,7 +205,8 @@ class PlImporter:
             if site['name'].startswith('sfa:') or site_sfa_created == 'True':
                 continue
 
-            site_hrn = _get_site_hrn(interface_hrn, site)
+            #site_hrn = _get_site_hrn(interface_hrn, site)
+            site_hrn = site['hrn']
             # import if hrn is not in list of existing hrns or if the hrn exists
             # but its not a site record
             site_record=self.locate_by_type_hrn ('authority', site_hrn)
@@ -281,7 +282,8 @@ class PlImporter:
                 # make sure to NOT run this if anything is wrong
                 if not proceed: continue
 
-                person_hrn = email_to_hrn(site_hrn, person['email'])
+                #person_hrn = email_to_hrn(site_hrn, person['email'])
+                person_hrn = person['hrn']
                 # xxx suspicious again
                 if len(person_hrn) > 64: person_hrn = person_hrn[:64]
                 person_urn = hrn_to_urn(person_hrn, 'user')
@@ -400,7 +402,9 @@ class PlImporter:
                     slice = slices_by_id[slice_id]
                 except:
                     self.logger.warning ("PlImporter: cannot locate slice_id %s - ignored"%slice_id)
-                slice_hrn = slicename_to_hrn(interface_hrn, slice['name'])
+                    continue
+                #slice_hrn = slicename_to_hrn(interface_hrn, slice['name'])
+                slice_hrn = slice['hrn']
                 slice_record = self.locate_by_type_hrn ('slice', slice_hrn)
                 if not slice_record:
                     try:
