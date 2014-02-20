@@ -1,6 +1,6 @@
 %define name sfa
 %define version 3.1
-%define taglevel 1
+%define taglevel 2
 
 %define release %{taglevel}%{?pldistro:.%{pldistro}}%{?date:.%{date}}
 %global python_sitearch	%( python -c "from distutils.sysconfig import get_python_lib; print get_python_lib(1)" )
@@ -264,6 +264,34 @@ fi
 #[ "$1" -ge "1" ] && service sfa-cm restart || :
 
 %changelog
+* Thu Feb 20 2014 Mohamed Larabi <mohamed.larabi@inria.fr> - sfa-3.1-2
+- -- Core
+- added support for geni_extend_alap (as long as possible) in RenewSliver.
+- adding support for geni_speaking_for option,
+- -- RSpecs
+- Add support for Ofelia OpenFlow RSpecs
+- -- PlanetLab
+- Set Admins as PI's of the top authority while importing.
+- -- IoTLab
+- Iotlab and cortexlab ported to geni-v3.
+- Moving methods using the SFA db and api object from Shell to Driver.
+- Propagating the changes in iotlabimporter, iotlabaggregate and iotlabslices.
+- Iotlab now using sfa database for the special table lease_table.
+- Using alchemy.py classes to create a session to the DB.
+- Cleaning and documenting.
+- Fix Allocate() API call
+- -- client
+- handle single slivers.
+- fix sfi.py version and trusted.
+- -- PlanetLab
+- handle single slivers by Provision(), Delete() and PerformOperationalAction().
+- fix foreign slices mgt in sliver_to_slice_xrn() and check_sliver_credentials().
+- wider mgt of new slice url and description.
+- -- Packaging
+- rename senslab package into iotlab.
+- don't package xml-builder anymore.
+- fix debian/ubuntu packaging.
+
 * Tue Dec 10 2013 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-3.1-1
 - -- core
 - clean up rspecs.
