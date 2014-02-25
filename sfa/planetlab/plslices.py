@@ -4,6 +4,7 @@ from collections import defaultdict
 from sfa.util.sfatime import utcparse, datetime_to_epoch
 from sfa.util.sfalogging import logger
 from sfa.util.xrn import Xrn, get_leaf, get_authority, urn_to_hrn
+from sfa.planetlab.plxrn import PlXrn
 
 from sfa.rspecs.rspec import RSpec
 
@@ -370,19 +371,27 @@ class PlSlices:
         return slice
 
     def verify_site(self, slice_xrn, slice_record={}, peer=None, sfa_peer=None, options={}):
-        (slice_hrn, type) = urn_to_hrn(slice_xrn)
-        top_auth_hrn = top_auth(slice_hrn)
-        site_hrn = '.'.join(slice_hrn.split('.')[:-1])
-        if top_auth_hrn == self.driver.hrn:
-            login_base = slice_hrn.split('.')[-2][:12]
-        else:
-            login_base = hash_loginbase(site_hrn)
-
-        sites = self.driver.shell.GetSites({'peer_id': None},['site_id','name','abbreviated_name','login_base','hrn'])        
+        #(slice_hrn, type) = urn_to_hrn(slice_xrn)
+        #top_auth_hrn = top_auth(slice_hrn)
+        #site_hrn = '.'.join(slice_hrn.split('.')[:-1])
+        #if top_auth_hrn == self.driver.hrn:
+        #    login_base = slice_hrn.split('.')[-2][:12]
+        #else:
+        #    login_base = hash_loginbase(site_hrn)
+        
+        #sites = self.driver.shell.GetSites({'peer_id': None},['site_id','name','abbreviated_name','login_base','hrn'])        
 
         # filter sites by hrn
-        site_exists = [site for site in sites if site['hrn'] == site_hrn]
        
+
+        plxrn = PlXrn(xrn=slice_xrn)
+        slice_hrn = plxrn.get_hrn()
+        type = plxrn.get_type()
+        site_hrn = plxrn.get_authority_hrn()
+        authority_name = plxrn.pl_authname()
+        slicename = plxrn.pl_slicename()
+        login_base = plxrn.pl_login_base()
+        site_exists = [site for site in sites if site['hrn'] == site_hrn]
         if not site_exists:
             # create new site record
             site = {'name': 'sfa:%s' % site_hrn,
@@ -407,16 +416,23 @@ class PlSlices:
         return site        
 
     def verify_slice(self, slice_hrn, slice_record, peer, sfa_peer, options={}):
-        top_auth_hrn = top_auth(slice_hrn)
-        site_hrn = '.'.join(slice_hrn.split('.')[:-1])
-        slice_part = slice_hrn.split('.')[-1]
-        if top_auth_hrn == self.driver.hrn:
-            login_base = slice_hrn.split('.')[-2][:12]
-        else:
-            login_base = hash_loginbase(site_hrn)        
-
-                
-        slice_name = '_'.join([login_base, slice_part])
+        #top_auth_hrn = top_auth(slice_hrn)
+        #site_hrn = '.'.join(slice_hrn.split('.')[:-1])
+        #slice_part = slice_hrn.split('.')[-1]
+        #if top_auth_hrn == self.driver.hrn:
+        #    login_base = slice_hrn.split('.')[-2][:12]
+        #else:
+        #    login_base = hash_loginbase(site_hrn)        
+        #
+        #        
+        #slice_name = '_'.join([login_base, slice_part])
+        plxrn = PlXrn(xrn=slice_xrn)
+        slice_hrn = plxrn.get_hrn()
+        type = plxrn.get_type()
+        site_hrn = plxrn.get_authority_hrn()
+        authority_name = plxrn.pl_authname()
+        slicename = plxrn.pl_slicename()
+        login_base = plxrn.pl_login_base()
             
         slices = self.driver.shell.GetSlices({'peer_id': None},['slice_id','name','hrn']) 
         # Filter slices by HRN
