@@ -99,7 +99,7 @@ class PlXrn (Xrn):
         
         # Fix up names of GENI Federates
         base = base.lower()
-        base = re.sub('\\\[^a-zA-Z0-9]', '', base)
+        base = re.sub('[\\\\]*[^a-zA-Z0-9]', '', base)
 
         if len(base) > 20:
             base = base[len(base)-20:]
