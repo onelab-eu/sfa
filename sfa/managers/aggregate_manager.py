@@ -151,7 +151,7 @@ class AggregateManager:
         if options.get('geni_extend_alap'):
             now = datetime.datetime.now()
             requested = utcparse(expiration_time)
-            max = adjust_datetime(now, days=30)
+            max = adjust_datetime(now, days=int(api.config.SFA_MAX_SLICE_RENEW))
             if requested > max:
                 expiration_time = max
 
