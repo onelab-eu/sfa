@@ -379,7 +379,6 @@ class PlSlices:
         #else:
         #    login_base = hash_loginbase(site_hrn)
         
-        #sites = self.driver.shell.GetSites({'peer_id': None},['site_id','name','abbreviated_name','login_base','hrn'])        
 
         # filter sites by hrn
        
@@ -391,6 +390,7 @@ class PlSlices:
         authority_name = plxrn.pl_authname()
         slicename = plxrn.pl_slicename()
         login_base = plxrn.pl_login_base()
+        sites = self.driver.shell.GetSites({'peer_id': None},['site_id','name','abbreviated_name','login_base','hrn'])        
         site_exists = [site for site in sites if site['hrn'] == site_hrn]
         if not site_exists:
             # create new site record
