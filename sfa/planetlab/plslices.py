@@ -426,7 +426,7 @@ class PlSlices:
         #
         #        
         #slice_name = '_'.join([login_base, slice_part])
-        plxrn = PlXrn(xrn=slice_xrn)
+        plxrn = PlXrn(xrn=slice_hrn)
         slice_hrn = plxrn.get_hrn()
         type = plxrn.get_type()
         site_hrn = plxrn.get_authority_hrn()
