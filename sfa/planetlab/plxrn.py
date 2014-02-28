@@ -101,7 +101,4 @@ class PlXrn (Xrn):
         base = base.lower()
         base = re.sub('[\\\\]*[^a-zA-Z0-9]', '', base)
 
-        if len(base) > 20:
-            base = base[len(base)-20:]
-        
         return base
