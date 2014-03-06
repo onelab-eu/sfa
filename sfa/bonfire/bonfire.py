@@ -34,7 +34,7 @@ import time
 # python -c 'import bonfire; print bonfire.allocate("nlebreto", "nlebreto", "tdes", "125", "topdomain.dummy.nicolas")'
 
 # 3) provisioning: changing the status to running status for the experiment 2911
-# python -c 'import bonfire; print bonfire.provisioning("2911")'
+# python -c 'import bonfire; print bonfire.provisioning("2911","running")'
 
 # 4) bonfire create virtual machine with these specific features 1) fr-inria storages n°1805 network 2 ip public 2) uk-epcc storages n°1364 network 0 bonfire wan
 # python -c 'import bonfire; print bonfire.create_vm("fr-inria", "56910", "rester", "nlebreto")'
@@ -164,9 +164,9 @@ def stop_vm(testbed, num_compute):
 
 # provisioning : set a bonfire's experiment to running  
 # changing the status to running status
-def provisioning(num_experiment):
+def provisioning(num_experiment, status):
     url = "https://api.integration.bonfire.grid5000.fr/experiments/" + num_experiment
-    xmldescription = '<experiment xmlns="http://api.bonfire-project.eu/doc/schemas/occi"><status>running</status></experiment>'
+    xmldescription = '<experiment xmlns="http://api.bonfire-project.eu/doc/schemas/occi"><status>'+ status + '</status></experiment>'
     headers = {'content-type': 'application/vnd.bonfire+xml'}
     h = bonfire_authenticate()
     r = requests.post(url, data=xmldescription, headers=headers, verify=False, auth=(h["user"], h["user_pass"]))
