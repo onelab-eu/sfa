@@ -92,7 +92,8 @@ class DummyAggregate:
         users = []
         user_ids = []
         for slice in slices:
-            user_ids.extend(slice['user_ids'])
+            if 'user_ids' in slice.keys():
+                user_ids.extend(slice['user_ids'])
         if user_ids:
             users = self.driver.shell.GetUsers({'user_ids': user_ids})
 
