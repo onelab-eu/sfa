@@ -255,10 +255,10 @@ class DummyDriver (Driver):
             # fill in key info
             if record['type'] == 'user':
                 record['key_ids'] = []
-                recors['keys'] = []
+                record['keys'] = []
                 for key in dummy_records['user'][record['pointer']]['keys']:
                      record['key_ids'].append(-1)
-                     recors['keys'].append(key)
+                     record['keys'].append(key)
 
         return records
 
