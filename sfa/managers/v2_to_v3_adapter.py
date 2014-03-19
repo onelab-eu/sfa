@@ -105,7 +105,7 @@ class V2ToV3Adapter:
                                       slice_urn = slice_urn,
                                       allocation_state='geni_allocated')    
      
-                     record.sync()
+                     record.sync(self.driver.api.dbsession())
 
                
                 # return manifest
