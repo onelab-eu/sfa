@@ -1,12 +1,12 @@
 import bonfire
 from sfa.managers.driver import Driver
 
-# an attempt to do a sfawrap plugin document
+""" an attempt to do a sfawrap plugin document """
 
 class Bonfiredriver(Driver):
 
     def __init__ (self, config):
-        # this is the hrn attached to the running server
+        """ this is the hrn attached to the running server """
         self.config = config
 
     def augment_records_with_testbed_info (self, sfa_records):
@@ -51,14 +51,14 @@ class Bonfiredriver(Driver):
 
     def list_resources (self, version=None, options={}):
         rspec = bonfire.bonsources()
-        hash ={'geni_rspec': rspec, 'geni_urn':'None','geni_slivers':[{'geni_sliver_urn':'None','geni_expires':'None','geni_allocation_status':'None','geni_operational_status':'None'}]}
-        return hash
+        hashres ={'geni_rspec': rspec, 'geni_urn':'None','geni_slivers':[{'geni_sliver_urn':'None','geni_expires':'None','geni_allocation_status':'None','geni_operational_status':'None'}]}
+        return hashres
 
     def describe (self, urns, version, options={}):
         return "dummy Driver.describe needs to be redefined"
 
     def allocate (self, urn=None, rspec_string=None, expiration=None, options={}):
-        #options= {"user_name":"nlebreto","groups":"nlebreto","description":"exp","walltime":"125","slice_name":"topdomain.dummy.nicolas"}
+        """ options= {"user_name":"nlebreto","groups":"nlebreto","description":"exp","walltime":"125","slice_name":"topdomain.dummy.nicolas"} """
         if bool(options):
            sendallocate = bonfire.allocate(options['user_name'],options['groups'],options['description'],options['walltime'],options['slice_name'])
            return "allocate done"
