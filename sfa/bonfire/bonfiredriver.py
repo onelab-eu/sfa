@@ -3,7 +3,7 @@ from sfa.managers.driver import Driver
 
 """ an attempt to do a sfawrap plugin document """
 
-class Bonfiredriver(Driver):
+class BonfireDriver(Driver):
 
     def __init__ (self, config):
         """ this is the hrn attached to the running server """
