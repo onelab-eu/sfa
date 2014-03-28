@@ -1120,10 +1120,13 @@ use this if you mean an authority instead""")
 
         api_options = {'call_id': unique_call_id(),
                        'cached': True,
-                       'info': options.info,
+                       #'info': options.info,
                        'list_leases': options.list_leases,
                        'geni_rspec_version': {'type': 'geni', 'version': '3'},
                       }
+        if options.info:
+            api_options['info'] = options.info
+
         if options.rspec_version:
             version_manager = VersionManager()
             server_version = self.get_cached_server_version(server)
