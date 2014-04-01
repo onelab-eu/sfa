@@ -41,7 +41,6 @@ class RegistryManager:
                              'peers':peers})
     
     def GetCredential(self, api, xrn, type, caller_xrn=None):
-        dbsession = api.dbsession()
         # convert xrn to hrn     
         if type:
             hrn = urn_to_hrn(xrn)[0]
@@ -59,7 +58,9 @@ class RegistryManager:
         if not auth_hrn or hrn == api.config.SFA_INTERFACE_HRN:
             auth_hrn = hrn
         auth_info = api.auth.get_auth_info(auth_hrn)
+
         # get record info
+        dbsession = api.dbsession()
         record=dbsession.query(RegRecord).filter_by(type=type,hrn=hrn).first()
         if not record:
             raise RecordNotFound("hrn=%s, type=%s"%(hrn,type))
