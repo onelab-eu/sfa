@@ -40,16 +40,18 @@ class RegistryManager:
                              'urn':xrn.get_urn(),
                              'peers':peers})
     
-    def GetCredential(self, api, xrn, type, caller_xrn=None):
+    def GetCredential(self, api, xrn, input_type, caller_xrn=None):
         # convert xrn to hrn     
-        if type:
-            hrn = urn_to_hrn(xrn)[0]
+        if input_type:
+            hrn, _ = urn_to_hrn(xrn)
+            type = input_type
         else:
             hrn, type = urn_to_hrn(xrn)
 
         # Slivers don't have credentials but users should be able to 
         # specify a sliver xrn and receive the slice's credential
-        if type == 'sliver' or '-' in Xrn(hrn).leaf:
+        # However if input_type is specified
+        if type == 'sliver' or ( not input_type and '-' in Xrn(hrn).leaf):
             slice_xrn = api.driver.sliver_to_slice_xrn(hrn)
             hrn = slice_xrn.hrn 
   
