@@ -219,3 +219,13 @@ sfa/util/{sfalogging,faults,genicode,enumeration,__init__}.py
 clientlibsync: 
 	@[ -d "$(CLIENTLIBTARGET)" ] || { echo "You need to set the make variable CLIENTLIBTARGET"; exit 1; }
 	rsync -av --relative $(CLIENTLIBFILES) $(CLIENTLIBTARGET)
+
+#################### convenience, for debugging only
+# make +foo : prints the value of $(foo)
+# make ++foo : idem but verbose, i.e. foo=$(foo)
+++%: varname=$(subst +,,$@)
+++%:
+	@echo "$(varname)=$($(varname))"
++%: varname=$(subst +,,$@)
++%:
+	@echo "$($(varname))"
