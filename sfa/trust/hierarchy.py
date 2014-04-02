@@ -112,7 +112,7 @@ class Hierarchy:
     def get_auth_filenames(self, xrn):
         hrn, type = urn_to_hrn(xrn)
         if '\\' in hrn:
-            hrn = hrn.replace('\\', ''
+            hrn = hrn.replace('\\', '')
             leaf = hrn
         else:
             leaf = get_leaf(hrn)
