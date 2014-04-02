@@ -7,7 +7,7 @@ from sfa.util.faults import InsufficientRights, MissingCallerGID, MissingTrusted
     BadRequestHash, ConnectionKeyGIDMismatch, SfaPermissionDenied
 from sfa.util.sfalogging import logger
 from sfa.util.config import Config
-from sfa.util.xrn import get_authority
+from sfa.util.xrn import get_authority, Xrn
 
 from sfa.trust.gid import GID
 from sfa.trust.rights import Rights
@@ -35,15 +35,16 @@ class Auth:
         self.trusted_cert_file_list = TrustedRoots(self.config.get_trustedroots_dir()).get_file_list()
 
        
-    def checkCredentials(self, creds, operation, hrn = None, speaking_for_hrn = None):
+    def checkCredentials(self, creds, operation, hrn = None, options = {}):
 
         def log_invalid_cred(cred):
-            cred_obj=Credential(string=cred)
-            logger.debug("failed to validate credential - dump=%s"%cred_obj.dump_string(dump_parents=True))
+            #cred_obj=Credential(string=cred)
+            #logger.debug("failed to validate credential - dump=%s"%cred_obj.dump_string(dump_parents=True))
             error = sys.exc_info()[:2]
             return error
 
         valid = []
+        speaking_for = options.get('geni_speaking_for', None)
         speaks_for_cred = None
 
         if not isinstance(creds, list):
@@ -55,8 +56,10 @@ class Auth:
                 valid.append(cred)
             except:
                 # check if credential is a 'speaks for  credential'
-                if speaking_for_hrn:
+                if speaking_for:
                     try:
+                        speaking_for_xrn = Xrn(speaking_for)
+                        speaking_for_hrn = speaking_for_xrn.get_hrn()     
                         self.check(cred, operation, speaking_for_hrn)
                         speaks_for_cred = cred
                         valid.append(cred)    
@@ -69,7 +72,7 @@ class Auth:
         if not len(valid):
             raise InsufficientRights('Access denied: %s -- %s' % (error[0],error[1]))
         
-        if speaking_for_hrn and not speaks_for_cred:
+        if speaking_for and not speaks_for_cred:
             raise InsufficientRights('Access denied: "geni_speaking_for" option specified but no valid speaks for credential found: %s -- %s' % (error[0],error[1]))
             
         

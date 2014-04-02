@@ -463,8 +463,12 @@ class Certificate:
     # Get the issuer name
 
     def get_issuer(self, which="CN"):
-        x = self.cert.get_issuer()
-        return getattr(x, which)
+        if self.cert:
+            x = self.cert.get_issuer()
+            subject = getattr(x, which)    
+        else:
+            subject = ""
+        return subject
 
     ##
     # Set the subject name of the certificate
