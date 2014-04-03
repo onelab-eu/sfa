@@ -1,6 +1,6 @@
 %define name sfa
 %define version 3.1
-%define taglevel 2
+%define taglevel 3
 
 %define release %{taglevel}%{?pldistro:.%{pldistro}}%{?date:.%{date}}
 %global python_sitearch	%( python -c "from distutils.sysconfig import get_python_lib; print get_python_lib(1)" )
@@ -264,6 +264,11 @@ fi
 #[ "$1" -ge "1" ] && service sfa-cm restart || :
 
 %changelog
+* Thu Apr 03 2014 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-3.1-3
+- fix for user hrn's that have a dash in their leaf
+- fix for names of GENI federates
+- fix for SFA_MAX_SLICE_RENEW
+
 * Thu Feb 20 2014 Mohamed Larabi <mohamed.larabi@inria.fr> - sfa-3.1-2
 - -- Core
 - added support for geni_extend_alap (as long as possible) in RenewSliver.
