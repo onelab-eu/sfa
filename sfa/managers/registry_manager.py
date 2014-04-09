@@ -32,7 +32,7 @@ class RegistryManager:
     def GetVersion(self, api, options):
         peers = dict ( [ (hrn,interface.get_url()) for (hrn,interface) in api.registries.iteritems() 
                        if hrn != api.hrn])
-        xrn=Xrn(api.hrn)
+        xrn=Xrn(api.hrn,type='authority')
         return version_core({'interface':'registry',
                              'sfa': 2,
                              'geni_api': 2,
