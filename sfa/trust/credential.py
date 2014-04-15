@@ -1056,8 +1056,8 @@ class Credential(object):
     def dump (self, *args, **kwargs):
         print self.dump_string(*args, **kwargs)
 
-
-    def dump_string(self, dump_parents=False):
+    # show_xml is ignored
+    def dump_string(self, dump_parents=False, show_xml=None):
         result=""
         result += "CREDENTIAL %s\n" % self.get_subject()
         filename=self.get_filename()

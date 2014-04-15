@@ -115,7 +115,7 @@ def handle_input (filename, options):
         print "%s: unknown filekind '%s'"% (filename,kind)
 
 def main():
-    usage = """%prog file1 [ .. filen]
+    usage = """%(prog)s file1 [ .. filen]
 display info on input files"""
     parser = ArgumentParser(usage=usage)
 
