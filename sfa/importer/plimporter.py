@@ -284,6 +284,9 @@ class PlImporter:
 
                 #person_hrn = email_to_hrn(site_hrn, person['email'])
                 person_hrn = person['hrn']
+                if person_hrn is None:
+                    self.logger.warn("Person %s has no hrn - skipped"%person['email'])
+                    continue
                 # xxx suspicious again
                 if len(person_hrn) > 64: person_hrn = person_hrn[:64]
                 person_urn = hrn_to_urn(person_hrn, 'user')
@@ -405,6 +408,9 @@ class PlImporter:
                     continue
                 #slice_hrn = slicename_to_hrn(interface_hrn, slice['name'])
                 slice_hrn = slice['hrn']
+                if slice_hrn is None:
+                    self.logger.warning("Slice %s has no hrn - skipped"%slice['name'])
+                    continue
                 slice_record = self.locate_by_type_hrn ('slice', slice_hrn)
                 if not slice_record:
                     try:
