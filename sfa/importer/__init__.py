@@ -119,6 +119,7 @@ class Importer:
         importer_class = generic.importer_class()
         if importer_class:
             begin_time=datetime.now()
+            self.logger.info (30*'=')
             self.logger.info ("Starting import on %s, using class %s from flavour %s"%\
                          (begin_time,importer_class.__name__,generic.flavour))
             testbed_importer = importer_class (auth_hierarchy, self.logger)
@@ -128,3 +129,4 @@ class Importer:
             end_time=datetime.now()
             duration=end_time-begin_time
             self.logger.info("Import took %s"%duration)
+            self.logger.info (30*'=')
