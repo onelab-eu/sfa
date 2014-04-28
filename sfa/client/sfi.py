@@ -241,13 +241,19 @@ from functools import wraps
 commands_list=[]
 commands_dict={}
 
-def register_command (args_string, example):
+def register_command (args_string, example,aliases=None):
     def wrap(m): 
         name=getattr(m,'__name__')
         doc=getattr(m,'__doc__',"-- missing doc --")
         doc=doc.strip(" \t\n")
         commands_list.append(name)
-        commands_dict[name]=(doc, args_string, example)
+        # last item is 'canonical' name, so we can know which commands are aliases
+        command_tuple=(doc, args_string, example,name)
+        commands_dict[name]=command_tuple
+        if aliases is not None:
+            for alias in aliases:
+                commands_list.append(alias)
+                commands_dict[alias]=command_tuple
         @wraps(m)
         def new_method (*args, **kwds): return m(*args, **kwds)
         return new_method
@@ -292,7 +298,8 @@ class Sfi:
     ### suitable if no reasonable command has been provided
     def print_commands_help (self, options):
         verbose=getattr(options,'verbose')
-        format3="%18s %-15s %s"
+        format3="%10s %-30s %s"
+        format3offset=42
         line=80*'-'
         if not verbose:
             print format3%("command","cmd_args","description")
@@ -302,19 +309,29 @@ class Sfi:
             self.create_parser_global().print_help()
         # preserve order from the code
         for command in commands_list:
-            (doc, args_string, example) = commands_dict[command]
+            try:
+                (doc, args_string, example, canonical) = commands_dict[command]
+            except:
+                print "Cannot find info on command %s - skipped"%command
+                continue
             if verbose:
                 print line
-            doc=doc.replace("\n","\n"+35*' ')
-            print format3%(command,args_string,doc)
-            if verbose:
-                self.create_parser_command(command).print_help()
+            if command==canonical:
+                doc=doc.replace("\n","\n"+format3offset*' ')
+                print format3%(command,args_string,doc)
+                if verbose:
+                    self.create_parser_command(command).print_help()
+            else:
+                print format3%(command,"<<alias for %s>>"%canonical,"")
             
     ### now if a known command was found we can be more verbose on that one
     def print_help (self):
         print "==================== Generic sfi usage"
         self.sfi_parser.print_help()
-        (doc,_,example)=commands_dict[self.command]
+        (doc,_,example,canonical)=commands_dict[self.command]
+        if canonical != self.command:
+            print "\n==================== NOTE: %s is an alias for genuine %s"%(self.command,canonical)
+            self.command=canonical
         print "\n==================== Purpose of %s"%self.command
         print doc
         print "\n==================== Specific usage for %s"%self.command
@@ -374,7 +391,7 @@ class Sfi:
             sys.exit(2)
 
         # retrieve args_string
-        (_, args_string, __) = commands_dict[command]
+        (_, args_string, __,___) = commands_dict[command]
 
         parser = OptionParser(add_help_option=False,
                               usage="sfi [sfi_options] %s [cmd_options] %s"
@@ -396,7 +413,7 @@ class Sfi:
                               action="store_true", dest="registry_interface", default=False,
                               help="target the registry interface instead of slice interface")
 
-        if command in ("add", "update"):
+        if command in ("register", "update"):
             parser.add_option('-x', '--xrn', dest='xrn', metavar='<xrn>', help='object hrn/urn (mandatory)')
             parser.add_option('-t', '--type', dest='type', metavar='<type>', help='object type', default=None)
             parser.add_option('-e', '--email', dest='email', default="",  help="email (mandatory for users)") 
@@ -422,7 +439,7 @@ class Sfi:
                                   "authority in set of credentials for this call")
 
         # show_credential option
-        if command in ("list","resources", "describe", "provision", "allocate", "add","update","remove","delete","status","renew"):
+        if command in ("list","resources", "describe", "provision", "allocate", "register","update","remove","delete","status","renew"):
             parser.add_option("-C","--credential",dest='show_credential',action='store_true',default=False,
                               help="show credential(s) used in human-readable form")
         # registy filter option
@@ -875,7 +892,7 @@ use this if you mean an authority instead""")
     def version(self, options, args):
         """
         display an SFA server version (GetVersion)
-  or version information about sfi itself
+    or version information about sfi itself
         """
         if options.version_local:
             version=version_core()
@@ -952,11 +969,12 @@ use this if you mean an authority instead""")
             save_records_to_file(options.file, record_dicts, options.fileformat)
         return
     
-    @register_command("[xml-filename]","")
-    def add(self, options, args):
-        """add record into registry (Register) 
-  from command line options (recommended) 
-  old-school method involving an xml file still supported"""
+    # this historically was named 'add', it is now 'register' with an alias for legacy
+    @register_command("[xml-filename]","",['add'])
+    def register(self, options, args):
+        """create new record in registry (Register) 
+    from command line options (recommended) 
+    old-school method involving an xml file still supported"""
 
         auth_cred = self.my_authority_credential_string()
         if options.show_credential:
@@ -991,8 +1009,8 @@ use this if you mean an authority instead""")
     @register_command("[xml-filename]","")
     def update(self, options, args):
         """update record into registry (Update) 
-  from command line options (recommended) 
-  old-school method involving an xml file still supported"""
+    from command line options (recommended) 
+    old-school method involving an xml file still supported"""
         record_dict = {}
         if len(args) > 0:
             record_filepath = args[0]
@@ -1107,7 +1125,7 @@ use this if you mean an authority instead""")
     def describe(self, options, args):
         """
         shows currently allocated/provisioned resources 
-        of the named slice or set of slivers (Describe) 
+    of the named slice or set of slivers (Describe) 
         """
         server = self.sliceapi()
 
@@ -1147,7 +1165,7 @@ use this if you mean an authority instead""")
 
         return 
 
-    @register_command("slice_hrn [<sliver_urn> ... <sliver_urn>]","")
+    @register_command("slice_hrn [<sliver_urn>...]","")
     def delete(self, options, args):
         """
         de-allocate and de-provision all or named slivers of the named slice (Delete)
@@ -1239,7 +1257,7 @@ use this if you mean an authority instead""")
         return value
         
 
-    @register_command("slice_hrn [<sliver_urn> ... <sliver_urn>]","")
+    @register_command("slice_hrn [<sliver_urn>...]","")
     def provision(self, options, args):
         """
         provision all or named already allocated slivers of the named slice (Provision)
@@ -1333,7 +1351,7 @@ use this if you mean an authority instead""")
         # Thierry: seemed to be missing
         return value
 
-    @register_command("slice_hrn [<sliver_urn> ... <sliver_urn>] action","")
+    @register_command("slice_hrn [<sliver_urn>...] action","")
     def action(self, options, args):
         """
         Perform the named operational action on all or named slivers of the named slice
@@ -1365,7 +1383,7 @@ use this if you mean an authority instead""")
             print value
         return value
 
-    @register_command("slice_hrn [<sliver_urn> ... <sliver_urn>] time","")
+    @register_command("slice_hrn [<sliver_urn>...] time","")
     def renew(self, options, args):
         """
         renew slice (Renew)
@@ -1459,8 +1477,8 @@ use this if you mean an authority instead""")
     def delegate (self, options, args):
         """
         (locally) create delegate credential for use by given hrn
-  make sure to check for 'sfi myslice' instead if you plan
-  on using MySlice
+    make sure to check for 'sfi myslice' instead if you plan
+    on using MySlice
         """
         if len(args) != 1:
             self.print_help()
@@ -1533,11 +1551,11 @@ $ sfi m -b http://mymanifold.foo.com:7080/
     def myslice (self, options, args):
 
         """ This helper is for refreshing your credentials at myslice; it will
-  * compute all the slices that you currently have credentials on
-  * refresh all your credentials (you as a user and pi, your slices)
-  * upload them to the manifold backend server
-  for last phase, sfi_config is read to look for the [myslice] section, 
-  and namely the 'backend', 'delegate' and 'user' settings"""
+    * compute all the slices that you currently have credentials on
+    * refresh all your credentials (you as a user and pi, your slices)
+    * upload them to the manifold backend server
+    for last phase, sfi_config is read to look for the [myslice] section, 
+    and namely the 'backend', 'delegate' and 'user' settings"""
 
         ##########
         if len(args)>0:
