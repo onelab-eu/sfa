@@ -3,7 +3,13 @@
 def optparse_listvalue_callback(option, opt, value, parser):
     former=getattr(parser.values,option.dest)
     if not former: former=[]
-    setattr(parser.values, option.dest, former+value.split(','))
+    # support for using e.g. sfi update -t slice -x the.slice.hrn -r none
+    # instead of -r '' which is painful and does not pass well through ssh
+    if value.lower()=='none':
+        newvalue=former
+    else:
+        newvalue=former+value.split(',')
+    setattr(parser.values, option.dest, newvalue)
 
 def optparse_dictvalue_callback (option, option_string, value, parser):
     try:

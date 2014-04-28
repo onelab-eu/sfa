@@ -203,7 +203,7 @@ def load_record_from_opts(options):
         record_dict['keys'] = [pubkey]
     if hasattr(options, 'slices') and options.slices:
         record_dict['slices'] = options.slices
-    if hasattr(options, 'researchers') and options.researchers:
+    if hasattr(options, 'researchers') and options.researchers is not None:
         record_dict['researcher'] = options.researchers
     if hasattr(options, 'email') and options.email:
         record_dict['email'] = options.email
@@ -422,7 +422,7 @@ class Sfi:
             parser.add_option('-s', '--slices', dest='slices', metavar='<slices>', help='Set/replace slice xrns',
                               default='', type="str", action='callback', callback=optparse_listvalue_callback)
             parser.add_option('-r', '--researchers', dest='researchers', metavar='<researchers>', 
-                              help='Set/replace slice researchers', default='', type="str", action='callback', 
+                              help='Set/replace slice researchers - use -r none to reset', default='', type="str", action='callback', 
                               callback=optparse_listvalue_callback)
             parser.add_option('-p', '--pis', dest='pis', metavar='<PIs>', help='Set/replace Principal Investigators/Project Managers',
                               default='', type="str", action='callback', callback=optparse_listvalue_callback)
