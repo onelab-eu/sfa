@@ -451,6 +451,8 @@ class Sfi:
         if command in ("show"):
             parser.add_option("-k","--key",dest="keys",action="append",default=[],
                               help="specify specific keys to be displayed from record")
+            parser.add_option("-n","--no-details",dest="no_details",action="store_true",default=False,
+                              help="call Resolve without the 'details' option")
         if command in ("resources", "describe"):
             # rspec version
             parser.add_option("-r", "--rspec-version", dest="rspec_version", default="GENI 3",
@@ -947,7 +949,9 @@ use this if you mean an authority instead""")
             sys.exit(1)
         hrn = args[0]
         # explicitly require Resolve to run in details mode
-        record_dicts = self.registry().Resolve(hrn, self.my_credential_string, {'details':True})
+        resolve_options={}
+        if not options.no_details: resolve_options['details']=True
+        record_dicts = self.registry().Resolve(hrn, self.my_credential_string, resolve_options)
         record_dicts = filter_records(options.type, record_dicts)
         if not record_dicts:
             self.logger.error("No record of type %s"% options.type)
