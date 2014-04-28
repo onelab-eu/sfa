@@ -150,7 +150,7 @@ SSHCOMMAND:=ssh root@$(PLC)
 else
 ifdef PLCHOSTLXC
 SSHURL:=root@$(PLCHOSTLXC):/vservers/$(GUESTNAME)
-SSHCOMMAND:=ssh root@$(PLCHOSTLXC) ssh $(GUESTHOSTNAME)
+SSHCOMMAND:=ssh root@$(PLCHOSTLXC) virsh -c lxc:/// lxc-enter-namespace $(GUESTNAME) -- /usr/bin/env
 else
 ifdef PLCHOSTVS
 SSHURL:=root@$(PLCHOSTVS):/vservers/$(GUESTNAME)
@@ -194,6 +194,7 @@ syncconfig:
 synctest: synccheck
 	+$(RSYNC) ./tests/ $(SSHURL)/root/tests-sfa
 syncrestart: synccheck
+	-$(SSHCOMMAND) systemctl --system daemon-reload
 	$(SSHCOMMAND) service sfa restart
 
 syncmig:
