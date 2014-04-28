@@ -241,7 +241,7 @@ from functools import wraps
 commands_list=[]
 commands_dict={}
 
-def register_command (args_string, example,aliases=None):
+def declare_command (args_string, example,aliases=None):
     def wrap(m): 
         name=getattr(m,'__name__')
         doc=getattr(m,'__doc__',"-- missing doc --")
@@ -866,7 +866,7 @@ use this if you mean an authority instead""")
     # Registry-related commands
     #==========================================================================
 
-    @register_command("","")
+    @declare_command("","")
     def config (self, options, args):
         "Display contents of current config"
         print "# From configuration file %s"%self.config_file
@@ -890,7 +890,7 @@ use this if you mean an authority instead""")
                     value=getattr(self.config_instance,varname)
                     print "%-20s = %s"%(name,value)
 
-    @register_command("","")
+    @declare_command("","")
     def version(self, options, args):
         """
         display an SFA server version (GetVersion)
@@ -911,7 +911,7 @@ use this if you mean an authority instead""")
             pprinter = PrettyPrinter(indent=4)
             pprinter.pprint(version)
 
-    @register_command("authority","")
+    @declare_command("authority","")
     def list(self, options, args):
         """
         list entries in named authority registry (List)
@@ -939,7 +939,7 @@ use this if you mean an authority instead""")
             save_records_to_file(options.file, list, options.fileformat)
         return
     
-    @register_command("name","")
+    @declare_command("name","")
     def show(self, options, args):
         """
         show details about named registry record (Resolve)
@@ -974,7 +974,7 @@ use this if you mean an authority instead""")
         return
     
     # this historically was named 'add', it is now 'register' with an alias for legacy
-    @register_command("[xml-filename]","",['add'])
+    @declare_command("[xml-filename]","",['add'])
     def register(self, options, args):
         """create new record in registry (Register) 
     from command line options (recommended) 
@@ -1010,7 +1010,7 @@ use this if you mean an authority instead""")
                 record_dict['last_name'] = record_dict['hrn'] 
         return self.registry().Register(record_dict, auth_cred)
     
-    @register_command("[xml-filename]","")
+    @declare_command("[xml-filename]","")
     def update(self, options, args):
         """update record into registry (Update) 
     from command line options (recommended) 
@@ -1054,7 +1054,7 @@ use this if you mean an authority instead""")
             show_credentials(cred)
         return self.registry().Update(record_dict, cred)
   
-    @register_command("hrn","")
+    @declare_command("hrn","")
     def remove(self, options, args):
         "remove registry record by name (Remove)"
         auth_cred = self.my_authority_credential_string()
@@ -1074,7 +1074,7 @@ use this if you mean an authority instead""")
     # ==================================================================
 
     # show rspec for named slice
-    @register_command("","")
+    @declare_command("","")
     def resources(self, options, args):
         """
         discover available resources (ListResources)
@@ -1125,7 +1125,7 @@ use this if you mean an authority instead""")
 
         return
 
-    @register_command("slice_hrn","")
+    @declare_command("slice_hrn","")
     def describe(self, options, args):
         """
         shows currently allocated/provisioned resources 
@@ -1169,7 +1169,7 @@ use this if you mean an authority instead""")
 
         return 
 
-    @register_command("slice_hrn [<sliver_urn>...]","")
+    @declare_command("slice_hrn [<sliver_urn>...]","")
     def delete(self, options, args):
         """
         de-allocate and de-provision all or named slivers of the named slice (Delete)
@@ -1204,7 +1204,7 @@ use this if you mean an authority instead""")
             print value
         return value
 
-    @register_command("slice_hrn rspec","")
+    @declare_command("slice_hrn rspec","")
     def allocate(self, options, args):
         """
          allocate resources to the named slice (Allocate)
@@ -1261,7 +1261,7 @@ use this if you mean an authority instead""")
         return value
         
 
-    @register_command("slice_hrn [<sliver_urn>...]","")
+    @declare_command("slice_hrn [<sliver_urn>...]","")
     def provision(self, options, args):
         """
         provision all or named already allocated slivers of the named slice (Provision)
@@ -1326,7 +1326,7 @@ use this if you mean an authority instead""")
             print value
         return value     
 
-    @register_command("slice_hrn","")
+    @declare_command("slice_hrn","")
     def status(self, options, args):
         """
         retrieve the status of the slivers belonging to the named slice (Status)
@@ -1355,7 +1355,7 @@ use this if you mean an authority instead""")
         # Thierry: seemed to be missing
         return value
 
-    @register_command("slice_hrn [<sliver_urn>...] action","")
+    @declare_command("slice_hrn [<sliver_urn>...] action","")
     def action(self, options, args):
         """
         Perform the named operational action on all or named slivers of the named slice
@@ -1387,7 +1387,7 @@ use this if you mean an authority instead""")
             print value
         return value
 
-    @register_command("slice_hrn [<sliver_urn>...] time","")
+    @declare_command("slice_hrn [<sliver_urn>...] time","")
     def renew(self, options, args):
         """
         renew slice (Renew)
@@ -1425,7 +1425,7 @@ use this if you mean an authority instead""")
         return value
 
 
-    @register_command("slice_hrn","")
+    @declare_command("slice_hrn","")
     def shutdown(self, options, args):
         """
         shutdown named slice (Shutdown)
@@ -1446,7 +1446,7 @@ use this if you mean an authority instead""")
         return value         
     
 
-    @register_command("[name]","")
+    @declare_command("[name]","")
     def gid(self, options, args):
         """
         Create a GID (CreateGid)
@@ -1465,7 +1465,7 @@ use this if you mean an authority instead""")
         GID(string=gid).save_to_file(filename)
          
     ####################
-    @register_command("to_hrn","""$ sfi delegate -u -p -s ple.inria.heartbeat -s ple.inria.omftest ple.upmc.slicebrowser
+    @declare_command("to_hrn","""$ sfi delegate -u -p -s ple.inria.heartbeat -s ple.inria.omftest ple.upmc.slicebrowser
 
   will locally create a set of delegated credentials for the benefit of ple.upmc.slicebrowser
   the set of credentials in the scope for this call would be
@@ -1527,7 +1527,7 @@ use this if you mean an authority instead""")
             self.logger.info("delegated credential for %s to %s and wrote to %s"%(message,to_hrn,filename))
     
     ####################
-    @register_command("","""$ less +/myslice sfi_config
+    @declare_command("","""$ less +/myslice sfi_config
 [myslice]
 backend  = http://manifold.pl.sophia.inria.fr:7080
 # the HRN that myslice uses, so that we are delegating to
@@ -1551,7 +1551,7 @@ $ sfi m -b http://mymanifold.foo.com:7080/
   is synonym to sfi myslice as no other command starts with an 'm'
   and uses a custom backend for this one call
 """
-) # register_command
+) # declare_command
     def myslice (self, options, args):
 
         """ This helper is for refreshing your credentials at myslice; it will
@@ -1665,7 +1665,7 @@ $ sfi m -b http://mymanifold.foo.com:7080/
         if count_success != count_all: sys.exit(1)
         return
 
-    @register_command("cred","")
+    @declare_command("cred","")
     def trusted(self, options, args):
         """
         return the trusted certs at this interface (get_trusted_certs)
