@@ -214,7 +214,7 @@ class IotlabDriver(Driver):
         """
         Get the slice record based on the slice hrn. Fetch the record of the
         user associated with the slice by using joinedload based on the
-        reg_researcher relationship.
+        reg_researchers relationship.
 
         :param slice_filter: the slice hrn we are looking for
         :type slice_filter: string
@@ -233,7 +233,7 @@ class IotlabDriver(Driver):
         raw_slicerec = self.api.dbsession().query(RegSlice).options(joinedload('reg_researchers')).filter_by(hrn=slice_filter).first()
         #raw_slicerec = self.api.dbsession().query(RegRecord).filter_by(hrn = slice_filter).first()
         if raw_slicerec:
-            #load_reg_researcher
+            #load_reg_researchers
             #raw_slicerec.reg_researchers
             raw_slicerec = raw_slicerec.__dict__
             logger.debug(" IOTLAB_API \t  _sql_get_slice_info slice_filter %s  \
@@ -711,7 +711,7 @@ class IotlabDriver(Driver):
         sfa_record.just_created()
         self.api.dbsession().add(sfa_record)
         self.api.dbsession().commit()
-        #Update the reg-researcher dependance table
+        #Update the reg-researchers dependency table
         sfa_record.reg_researchers = [user_record]
         self.api.dbsession().commit()
 
