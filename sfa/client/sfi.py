@@ -298,8 +298,8 @@ class Sfi:
     ### suitable if no reasonable command has been provided
     def print_commands_help (self, options):
         verbose=getattr(options,'verbose')
-        format3="%10s %-30s %s"
-        format3offset=42
+        format3="%10s %-35s %s"
+        format3offset=47
         line=80*'-'
         if not verbose:
             print format3%("command","cmd_args","description")
