@@ -391,7 +391,7 @@ class Sfi:
             sys.exit(2)
 
         # retrieve args_string
-        (_, args_string, __,___) = commands_dict[command]
+        (_, args_string, __,canonical) = commands_dict[command]
 
         parser = OptionParser(add_help_option=False,
                               usage="sfi [sfi_options] %s [cmd_options] %s"
@@ -399,21 +399,21 @@ class Sfi:
         parser.add_option ("-h","--help",dest='help',action='store_true',default=False,
                            help="Summary of one command usage")
 
-        if command in ("config"):
+        if canonical in ("config"):
             parser.add_option('-m', '--myslice', dest='myslice', action='store_true', default=False,
                               help='how myslice config variables as well')
 
-        if command in ("version"):
+        if canonical in ("version"):
             parser.add_option("-l","--local",
                               action="store_true", dest="version_local", default=False,
                               help="display version of the local client")
 
-        if command in ("version", "trusted"):
+        if canonical in ("version", "trusted"):
             parser.add_option("-R","--registry_interface",
                               action="store_true", dest="registry_interface", default=False,
                               help="target the registry interface instead of slice interface")
 
-        if command in ("register", "update"):
+        if canonical in ("register", "update"):
             parser.add_option('-x', '--xrn', dest='xrn', metavar='<xrn>', help='object hrn/urn (mandatory)')
             parser.add_option('-t', '--type', dest='type', metavar='<type>', help='object type', default=None)
             parser.add_option('-e', '--email', dest='email', default="",  help="email (mandatory for users)") 
@@ -431,7 +431,7 @@ class Sfi:
                                help="set extra/testbed-dependent flags, e.g. --extra enabled=true")
 
         # user specifies remote aggregate/sm/component                          
-        if command in ("resources", "describe", "allocate", "provision", "delete", "allocate", "provision", 
+        if canonical in ("resources", "describe", "allocate", "provision", "delete", "allocate", "provision", 
                        "action", "shutdown", "renew", "status"):
             parser.add_option("-d", "--delegate", dest="delegate", default=None, 
                              action="store_true",
@@ -439,21 +439,21 @@ class Sfi:
                                   "authority in set of credentials for this call")
 
         # show_credential option
-        if command in ("list","resources", "describe", "provision", "allocate", "register","update","remove","delete","status","renew"):
+        if canonical in ("list","resources", "describe", "provision", "allocate", "register","update","remove","delete","status","renew"):
             parser.add_option("-C","--credential",dest='show_credential',action='store_true',default=False,
                               help="show credential(s) used in human-readable form")
         # registy filter option
-        if command in ("list", "show", "remove"):
+        if canonical in ("list", "show", "remove"):
             parser.add_option("-t", "--type", dest="type", type="choice",
                             help="type filter ([all]|user|slice|authority|node|aggregate)",
                             choices=("all", "user", "slice", "authority", "node", "aggregate"),
                             default="all")
-        if command in ("show"):
+        if canonical in ("show"):
             parser.add_option("-k","--key",dest="keys",action="append",default=[],
                               help="specify specific keys to be displayed from record")
             parser.add_option("-n","--no-details",dest="no_details",action="store_true",default=False,
                               help="call Resolve without the 'details' option")
-        if command in ("resources", "describe"):
+        if canonical in ("resources", "describe"):
             # rspec version
             parser.add_option("-r", "--rspec-version", dest="rspec_version", default="GENI 3",
                               help="schema type and version of resulting RSpec")
@@ -474,11 +474,11 @@ class Sfi:
                                 choices=("all", "resources", "leases"), default="resources")
 
 
-        if command in ("resources", "describe", "allocate", "provision", "show", "list", "gid"):
+        if canonical in ("resources", "describe", "allocate", "provision", "show", "list", "gid"):
            parser.add_option("-o", "--output", dest="file",
                             help="output XML to file", metavar="FILE", default=None)
 
-        if command in ("show", "list"):
+        if canonical in ("show", "list"):
            parser.add_option("-f", "--format", dest="format", type="choice",
                              help="display format ([text]|xml)", default="text",
                              choices=("text", "xml"))
@@ -486,12 +486,12 @@ class Sfi:
            parser.add_option("-F", "--fileformat", dest="fileformat", type="choice",
                              help="output file format ([xml]|xmllist|hrnlist)", default="xml",
                              choices=("xml", "xmllist", "hrnlist"))
-        if command == 'list':
+        if canonical == 'list':
            parser.add_option("-r", "--recursive", dest="recursive", action='store_true',
                              help="list all child records", default=False)
            parser.add_option("-v", "--verbose", dest="verbose", action='store_true',
                              help="gives details, like user keys", default=False)
-        if command in ("delegate"):
+        if canonical in ("delegate"):
            parser.add_option("-u", "--user",
                              action="store_true", dest="delegate_user", default=False,
                              help="delegate your own credentials; default if no other option is provided")
@@ -506,7 +506,7 @@ class Sfi:
                              help="""by default the mandatory argument is expected to be a user, 
 use this if you mean an authority instead""")
 
-        if command in ("myslice"):
+        if canonical in ("myslice"):
             parser.add_option("-p","--password",dest='password',action='store',default=None,
                               help="specify mainfold password on the command line")
             parser.add_option("-s", "--slice", dest="delegate_slices",action='append',default=[],
