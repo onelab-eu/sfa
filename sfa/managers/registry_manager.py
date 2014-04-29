@@ -12,6 +12,8 @@ from sfa.util.xrn import Xrn, get_authority, hrn_to_urn, urn_to_hrn
 from sfa.util.version import version_core
 from sfa.util.sfalogging import logger
 
+from sfa.util.printable import printable
+
 from sfa.trust.gid import GID 
 from sfa.trust.credential import Credential
 from sfa.trust.certificate import Certificate, Keypair, convert_public_key
@@ -22,6 +24,43 @@ from sfa.storage.model import make_record, RegRecord, RegAuthority, RegUser, Reg
 ### the types that we need to exclude from sqlobjects before being able to dump
 # them on the xmlrpc wire
 from sqlalchemy.orm.collections import InstrumentedList
+
+### historical note -- april 2014
+# the myslice chaps rightfully complained about the following discrepency
+# they found that
+# * read operations (resolve) expose stuff like e.g. 'reg-researchers', but that
+# * write operations (register, update) need e.g. 'researcher' to be set - it ignores 'reg-researchers'
+#
+# the 'normalize' helper functions below aim at ironing this out
+# however in order to break as few as possible we essentially make sure that *both* fields are set
+# upon entering the write methods (so again register and update) because some driver code
+# might depend on the presence of, say, 'researcher'
+
+# registry calls this 'reg-researchers'
+# some drivers call this 'researcher'
+# this is even more confusing as people might use 'researchers'
+def normalize_input_researcher (record):
+    # this aims at detecting a mispelled input
+    if 'researchers' in record and 'researcher' not in record:
+        record['researcher']=record['researchers']
+        del record['researchers']
+    # this looks right, use this for both keys
+    if 'reg-researchers' in record:
+        # and issue a warning if they were both set as we're overwriting some user data here
+        if 'researcher' in record:
+            logger.warning ("normalize_input_researcher: incoming record has both values, using reg-researchers")
+        record['researcher']=record['reg-researchers']
+    # we only have one key set, duplicate for the other one
+    elif 'researcher' in record:
+        logger.warning ("normalize_input_researcher: you should use 'reg-researchers' instead ot 'researcher'")
+        record['reg-researchers']=record['researcher']
+    # if at this point we still have 'researchers' it's going to be ignored and that might be confusing
+    if 'researchers' in record:
+        logger.warning ("normalize_input_researcher: incoming record has confusing 'researchers' key - ignored - use 'reg-researchers' instead")
+
+def normalize_input_record (record):
+    normalize_input_researcher (record)
+    return record
 
 class RegistryManager:
 
@@ -293,6 +332,10 @@ class RegistryManager:
 
     def Register(self, api, record_dict):
     
+        logger.debug("Register: entering with record_dict=%s"%printable(record_dict))
+        normalize_input_record (record_dict)
+        logger.debug("Register: normalized record_dict=%s"%printable(record_dict))
+
         dbsession=api.dbsession()
         hrn, type = record_dict['hrn'], record_dict['type']
         urn = hrn_to_urn(hrn,type)
@@ -342,7 +385,7 @@ class RegistryManager:
             if pi_hrns is not None: record.update_pis (pi_hrns, dbsession)
 
         elif isinstance (record, RegSlice):
-            researcher_hrns = getattr(record,'researcher',None)
+            researcher_hrns = getattr(record,'reg-researchers',None)
             if researcher_hrns is not None: record.update_researchers (researcher_hrns, dbsession)
         
         elif isinstance (record, RegUser):
@@ -364,6 +407,11 @@ class RegistryManager:
         return record.get_gid_object().save_to_string(save_parents=True)
     
     def Update(self, api, record_dict):
+
+        logger.debug("Update: entering with record_dict=%s"%printable(record_dict))
+        normalize_input_record (record_dict)
+        logger.debug("Update: normalized record_dict=%s"%printable(record_dict))
+
         dbsession=api.dbsession()
         assert ('type' in record_dict)
         new_record=make_record(dict=record_dict)
@@ -402,7 +450,7 @@ class RegistryManager:
 
         # update native relations
         if isinstance (record, RegSlice):
-            researcher_hrns = getattr(new_record,'researcher',None)
+            researcher_hrns = getattr(new_record,'reg-researchers',None)
             if researcher_hrns is not None: record.update_researchers (researcher_hrns, dbsession)
 
         elif isinstance (record, RegAuthority):

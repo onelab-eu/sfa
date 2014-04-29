@@ -31,6 +31,7 @@ from sfa.util.xrn import get_leaf, get_authority, hrn_to_urn, Xrn
 from sfa.util.config import Config
 from sfa.util.version import version_core
 from sfa.util.cache import Cache
+from sfa.util.printable import printable
 
 from sfa.storage.record import Record
 
@@ -203,8 +204,8 @@ def load_record_from_opts(options):
         record_dict['keys'] = [pubkey]
     if hasattr(options, 'slices') and options.slices:
         record_dict['slices'] = options.slices
-    if hasattr(options, 'researchers') and options.researchers is not None:
-        record_dict['researcher'] = options.researchers
+    if hasattr(options, 'reg_researchers') and options.reg_researchers is not None:
+        record_dict['reg-researchers'] = options.reg_researchers
     if hasattr(options, 'email') and options.email:
         record_dict['email'] = options.email
     if hasattr(options, 'pis') and options.pis:
@@ -421,8 +422,8 @@ class Sfi:
                               default=None)
             parser.add_option('-s', '--slices', dest='slices', metavar='<slices>', help='Set/replace slice xrns',
                               default='', type="str", action='callback', callback=optparse_listvalue_callback)
-            parser.add_option('-r', '--researchers', dest='researchers', metavar='<researchers>', 
-                              help='Set/replace slice researchers - use -r none to reset', default='', type="str", action='callback', 
+            parser.add_option('-r', '--researchers', dest='reg_researchers', metavar='<researchers>', 
+                              help='Set/replace slice researchers - use -r none to reset', default=None, type="str", action='callback', 
                               callback=optparse_listvalue_callback)
             parser.add_option('-p', '--pis', dest='pis', metavar='<PIs>', help='Set/replace Principal Investigators/Project Managers',
                               default='', type="str", action='callback', callback=optparse_listvalue_callback)
