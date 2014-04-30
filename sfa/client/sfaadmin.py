@@ -81,9 +81,9 @@ class RegistryCommands(Commands):
             save_records_to_file(outfile, records)  
 
 
-    def _record_dict(self, xrn=None, type=None, email='', key=None, 
-                     slices=[], researchers=[], pis=[], 
-                     url=None, description=None, extras={}):
+    def _record_dict(self, xrn, type, email, key, 
+                     slices, researchers, pis, 
+                     url, description, extras):
         record_dict = {}
         if xrn:
             if type:
