@@ -8,14 +8,14 @@ from optparse import OptionParser
 from sfa.generic import Generic
 from sfa.util.xrn import Xrn
 from sfa.storage.record import Record 
-from sfa.client.sfi import save_records_to_file
+
 from sfa.trust.hierarchy import Hierarchy
 from sfa.trust.gid import GID
 from sfa.trust.certificate import convert_public_key
 
-from sfa.client.candidates import Candidates
-
 from sfa.client.common import optparse_listvalue_callback, optparse_dictvalue_callback, terminal_render, filter_records
+from sfa.client.candidates import Candidates
+from sfa.client.sfi import save_records_to_file
 
 pprinter = PrettyPrinter(indent=4)
 
