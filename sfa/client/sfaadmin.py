@@ -508,8 +508,9 @@ class SfaAdmin:
             #traceback.print_exc()
             print command.__doc__
             parser.print_help()
+            sys.exit(1)
             #raise
         except Exception:
             print "Command failed, please check log for more info"
             raise
-
+            sys.exit(1)
