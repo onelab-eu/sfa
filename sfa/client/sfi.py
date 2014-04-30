@@ -526,8 +526,8 @@ use this if you mean an authority instead""")
     def dispatch(self, command, command_options, command_args):
         method=getattr(self, command, None)
         if not method:
-            print "Unknown command %s"%command
-            return
+            print "sfi: unknown command %s"%command
+            raise SystemExit,"Unknown command %s"%command
         return method(command_options, command_args)
 
     def main(self):
