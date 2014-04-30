@@ -81,10 +81,9 @@ class RegistryCommands(Commands):
             save_records_to_file(outfile, records)  
 
 
-    def _record_dict(self, xrn=None, type=None, 
-                     url=None, description=None, email='', 
-                     key=None, 
-                     slices=[], researchers=[], pis=[], extras={}):
+    def _record_dict(self, xrn=None, type=None, email='', key=None, 
+                     slices=[], researchers=[], pis=[], 
+                     url=None, description=None, extras={}):
         record_dict = {}
         if xrn:
             if type:
@@ -202,11 +201,13 @@ Users having a GID/PubKey correpondence NOT OK: %s and are: \n%s\n\n"%(len(NOKEY
           help='Set/replace Principal Investigators/Project Managers', 
           default='', type="str", action='callback', callback=optparse_listvalue_callback)
     @add_options('-X','--extra',dest='extras',default={},type='str',metavar="<EXTRA_ASSIGNS>", action="callback", callback=optparse_dictvalue_callback, nargs=1, help="set extra/testbed-dependent flags, e.g. --extra enabled=true")
-    def register(self, xrn, type=None, url=None, description=None, key=None, slices='', 
-                 pis='', researchers='',email='', extras={}):
+    def register(self, xrn, type=None, email='', key=None, 
+                 slices='', pis='', researchers='',
+                 url=None, description=None, extras={}):
         """Create a new Registry record"""
-        record_dict = self._record_dict(xrn=xrn, type=type, url=url, key=key, 
-                                        slices=slices, researchers=researchers, email=email, pis=pis, extras=extras)
+        record_dict = self._record_dict(xrn=xrn, type=type, email=email, key=key, 
+                                        slices=slices, researchers=researchers, pis=pis,
+                                        url=url, description=description, extras=extras)
         self.api.manager.Register(self.api, record_dict)         
 
 
@@ -225,12 +226,13 @@ Users having a GID/PubKey correpondence NOT OK: %s and are: \n%s\n\n"%(len(NOKEY
           help='Set/replace Principal Investigators/Project Managers',
           default='', type="str", action='callback', callback=optparse_listvalue_callback)
     @add_options('-X','--extra',dest='extras',default={},type='str',metavar="<EXTRA_ASSIGNS>", action="callback", callback=optparse_dictvalue_callback, nargs=1, help="set extra/testbed-dependent flags, e.g. --extra enabled=true")
-    def update(self, xrn, type=None, url=None, description=None, key=None, slices='', 
-               pis='', researchers='', extras={}):
+    def update(self, xrn, type=None, email='', key=None, 
+               slices='', pis='', researchers='',
+               url=None, description=None, extras={}):
         """Update an existing Registry record""" 
-        print 'incoming PIS',pis
-        record_dict = self._record_dict(xrn=xrn, type=type, url=url, description=description, 
-                                        key=key, slices=slices, researchers=researchers, pis=pis, extras=extras)
+        record_dict = self._record_dict(xrn=xrn, type=type, email=email, key=key, 
+                                        slices=slices, researchers=researchers, pis=pis,
+                                        url=url, description=description, extras=extras)
         self.api.manager.Update(self.api, record_dict)
         
     @add_options('-x', '--xrn', dest='xrn', metavar='<xrn>', help='object hrn/urn (mandatory)') 
