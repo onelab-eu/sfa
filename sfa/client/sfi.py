@@ -524,7 +524,8 @@ use this if you mean an authority instead""")
     # Main: parse arguments and dispatch to command
     #
     def dispatch(self, command, command_options, command_args):
-        method=getattr(self, command, None)
+        (doc, args_string, example, canonical) = commands_dict[command]
+        method=getattr(self, canonical, None)
         if not method:
             print "sfi: unknown command %s"%command
             raise SystemExit,"Unknown command %s"%command
