@@ -107,7 +107,7 @@ class RegistryCommands(Commands):
         if slices:
             record_dict['slices'] = slices
         if researchers:
-            record_dict['researcher'] = researchers
+            record_dict['reg-researchers'] = researchers
         if email:
             record_dict['email'] = email
         if pis:
