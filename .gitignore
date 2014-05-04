@@ -16,3 +16,9 @@ sfa/client/*.version
 *.cert
 *.cred
 .DS_Store
+hide/
+AA-*
+*.log
+*.dbg
+*.hide
+*-sample
