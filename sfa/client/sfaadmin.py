@@ -51,7 +51,7 @@ class RegistryCommands(Commands):
     @add_options('-x', '--xrn', dest='xrn', metavar='<xrn>', help='authority to list (hrn/urn - mandatory)') 
     @add_options('-t', '--type', dest='type', metavar='<type>', help='object type', default='all') 
     @add_options('-r', '--recursive', dest='recursive', metavar='<recursive>', help='list all child records', 
-          action='store_true', default=False)
+                 action='store_true', default=False)
     @add_options('-v', '--verbose', dest='verbose', action='store_true', default=False)
     def list(self, xrn, type=None, recursive=False, verbose=False):
         """List names registered at a given authority - possibly filtered by type"""
@@ -70,7 +70,7 @@ class RegistryCommands(Commands):
     @add_options('-t', '--type', dest='type', metavar='<type>', help='object type', default=None) 
     @add_options('-o', '--outfile', dest='outfile', metavar='<outfile>', help='save record to file') 
     @add_options('-f', '--format', dest='format', metavar='<display>', type='choice', 
-          choices=('text', 'xml', 'simple'), help='display record in different formats') 
+                 choices=('text', 'xml', 'simple'), help='display record in different formats') 
     def show(self, xrn, type=None, format=None, outfile=None):
         """Display details for a registered object"""
         records = self.api.manager.Resolve(self.api, xrn, type, details=True)
@@ -186,21 +186,23 @@ Users having a GID/PubKey correpondence NOT OK: %s and are: \n%s\n\n"%(len(NOKEY
     @add_options('-x', '--xrn', dest='xrn', metavar='<xrn>', help='object hrn/urn (mandatory)') 
     @add_options('-t', '--type', dest='type', metavar='<type>', help='object type', default=None) 
     @add_options('-e', '--email', dest='email', default="",
-          help="email (mandatory for users)")
+                 help="email (mandatory for users)")
     @add_options('-u', '--url', dest='url', metavar='<url>', default=None,
-          help="URL, useful for slices")
+                 help="URL, useful for slices")
     @add_options('-d', '--description', dest='description', metavar='<description>', 
-          help='Description, useful for slices', default=None)
+                 help='Description, useful for slices', default=None)
     @add_options('-k', '--key', dest='key', metavar='<key>', help='public key string or file', 
-          default=None)
+                 default=None)
     @add_options('-s', '--slices', dest='slices', metavar='<slices>', help='Set/replace slice xrns', 
-          default='', type="str", action='callback', callback=optparse_listvalue_callback)
+                 default='', type="str", action='callback', callback=optparse_listvalue_callback)
     @add_options('-r', '--researchers', dest='researchers', metavar='<researchers>', help='Set/replace slice researchers', 
-          default='', type="str", action='callback', callback=optparse_listvalue_callback)
+                 default='', type="str", action='callback', callback=optparse_listvalue_callback)
     @add_options('-p', '--pis', dest='pis', metavar='<PIs>', 
-          help='Set/replace Principal Investigators/Project Managers', 
-          default='', type="str", action='callback', callback=optparse_listvalue_callback)
-    @add_options('-X','--extra',dest='extras',default={},type='str',metavar="<EXTRA_ASSIGNS>", action="callback", callback=optparse_dictvalue_callback, nargs=1, help="set extra/testbed-dependent flags, e.g. --extra enabled=true")
+                 help='Set/replace Principal Investigators/Project Managers', 
+                 default='', type="str", action='callback', callback=optparse_listvalue_callback)
+    @add_options('-X','--extra',dest='extras',default={},type='str',metavar="<EXTRA_ASSIGNS>", 
+                 action="callback", callback=optparse_dictvalue_callback, nargs=1, 
+                 help="set extra/testbed-dependent flags, e.g. --extra enabled=true")
     def register(self, xrn, type=None, email='', key=None, 
                  slices='', pis='', researchers='',
                  url=None, description=None, extras={}):
@@ -215,17 +217,19 @@ Users having a GID/PubKey correpondence NOT OK: %s and are: \n%s\n\n"%(len(NOKEY
     @add_options('-t', '--type', dest='type', metavar='<type>', help='object type', default=None)
     @add_options('-u', '--url', dest='url', metavar='<url>', help='URL', default=None)
     @add_options('-d', '--description', dest='description', metavar='<description>',
-          help='Description', default=None)
+                 help='Description', default=None)
     @add_options('-k', '--key', dest='key', metavar='<key>', help='public key string or file',
-          default=None)
+                 default=None)
     @add_options('-s', '--slices', dest='slices', metavar='<slices>', help='Set/replace slice xrns',
-          default='', type="str", action='callback', callback=optparse_listvalue_callback)
+                 default='', type="str", action='callback', callback=optparse_listvalue_callback)
     @add_options('-r', '--researchers', dest='researchers', metavar='<researchers>', help='Set/replace slice researchers',
-          default='', type="str", action='callback', callback=optparse_listvalue_callback)
+                 default='', type="str", action='callback', callback=optparse_listvalue_callback)
     @add_options('-p', '--pis', dest='pis', metavar='<PIs>',
-          help='Set/replace Principal Investigators/Project Managers',
-          default='', type="str", action='callback', callback=optparse_listvalue_callback)
-    @add_options('-X','--extra',dest='extras',default={},type='str',metavar="<EXTRA_ASSIGNS>", action="callback", callback=optparse_dictvalue_callback, nargs=1, help="set extra/testbed-dependent flags, e.g. --extra enabled=true")
+                 help='Set/replace Principal Investigators/Project Managers',
+                 default='', type="str", action='callback', callback=optparse_listvalue_callback)
+    @add_options('-X','--extra',dest='extras',default={},type='str',metavar="<EXTRA_ASSIGNS>", 
+                 action="callback", callback=optparse_dictvalue_callback, nargs=1, 
+                 help="set extra/testbed-dependent flags, e.g. --extra enabled=true")
     def update(self, xrn, type=None, email='', key=None, 
                slices='', pis='', researchers='',
                url=None, description=None, extras={}):
@@ -264,11 +268,11 @@ Users having a GID/PubKey correpondence NOT OK: %s and are: \n%s\n\n"%(len(NOKEY
         dbschema.init_or_upgrade()
     
     @add_options('-a', '--all', dest='all', metavar='<all>', action='store_true', default=False,
-          help='Remove all registry records and all files in %s area' % help_basedir)
+                 help='Remove all registry records and all files in %s area' % help_basedir)
     @add_options('-c', '--certs', dest='certs', metavar='<certs>', action='store_true', default=False,
-          help='Remove all cached certs/gids found in %s' % help_basedir )
+                 help='Remove all cached certs/gids found in %s' % help_basedir )
     @add_options('-0', '--no-reinit', dest='reinit', metavar='<reinit>', action='store_false', default=True,
-          help='Prevents new DB schema from being installed after cleanup')
+                 help='Prevents new DB schema from being installed after cleanup')
     def nuke(self, all=False, certs=False, reinit=True):
         """Cleanup local registry DB, plus various additional filesystem cleanups optionally"""
         from sfa.storage.dbschema import DBSchema
@@ -369,7 +373,7 @@ class AggregateCommands(Commands):
         pprinter.pprint(status)
  
     @add_options('-r', '--rspec-version', dest='rspec_version', metavar='<rspec_version>', 
-          default='GENI', help='version/format of the resulting rspec response')  
+                 default='GENI', help='version/format of the resulting rspec response')  
     def resources(self, rspec_version='GENI'):
         """Display the available resources at an aggregate"""  
         options = {'geni_rspec_version': rspec_version}
