@@ -40,15 +40,11 @@ from sqlalchemy.orm.collections import InstrumentedList
 
 # registry calls this 'reg-researchers'
 # some drivers call this 'researcher'
-# this is even more confusing as people might use 'researchers'
 def normalize_input_researcher (record):
-    # this aims at detecting a mispelled input
-    if 'researchers' in record and 'researcher' not in record:
-        record['researcher']=record['researchers']
-        del record['researchers']
     # this looks right, use this for both keys
     if 'reg-researchers' in record:
-        # and issue a warning if they were both set as we're overwriting some user data here
+        # and issue a warning if they were both set and different
+        # as we're overwriting some user data here
         if 'researcher' in record:
             logger.warning ("normalize_input_researcher: incoming record has both values, using reg-researchers")
         record['researcher']=record['reg-researchers']
@@ -56,9 +52,6 @@ def normalize_input_researcher (record):
     elif 'researcher' in record:
         logger.warning ("normalize_input_researcher: you should use 'reg-researchers' instead ot 'researcher'")
         record['reg-researchers']=record['researcher']
-    # if at this point we still have 'researchers' it's going to be ignored and that might be confusing
-    if 'researchers' in record:
-        logger.warning ("normalize_input_researcher: incoming record has confusing 'researchers' key - ignored - use 'reg-researchers' instead")
 
 def normalize_input_record (record):
     normalize_input_researcher (record)
