@@ -26,14 +26,16 @@ from sfa.storage.model import make_record, RegRecord, RegAuthority, RegUser, Reg
 from sqlalchemy.orm.collections import InstrumentedList
 
 ### historical note -- april 2014
-# the myslice chaps rightfully complained about the following discrepency
+# the myslice chaps rightfully complained about the following discrepancy
 # they found that
-# * read operations (resolve) expose stuff like e.g. 'reg-researchers', but that
-# * write operations (register, update) need e.g. 'researcher' to be set - it ignores 'reg-researchers'
+# * read operations (resolve) expose stuff like e.g. 
+#   'reg-researchers', or 'reg-pis', but that
+# * write operations (register, update) need e.g. 
+#   'researcher' or 'pi' to be set - reg-* are just ignored
 #
 # the 'normalize' helper functions below aim at ironing this out
-# however in order to break as few as possible we essentially make sure that *both* fields are set
-# upon entering the write methods (so again register and update) because some driver code
+# however in order to break as few code as possible we essentially make sure that *both* fields are set
+# upon entering the write methods (so again register and update) for legacy, as some driver code
 # might depend on the presence of, say, 'researcher'
 
 # registry calls this 'reg-researchers'
