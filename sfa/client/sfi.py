@@ -208,8 +208,8 @@ def load_record_from_opts(options):
         record_dict['reg-researchers'] = options.reg_researchers
     if hasattr(options, 'email') and options.email:
         record_dict['email'] = options.email
-    if hasattr(options, 'pis') and options.pis:
-        record_dict['reg-pis'] = options.pis
+    if hasattr(options, 'reg_pis') and options.reg_pis:
+        record_dict['reg-pis'] = options.reg_pis
 
     # handle extra settings
     record_dict.update(options.extras)
@@ -425,7 +425,7 @@ class Sfi:
             parser.add_option('-r', '--researchers', dest='reg_researchers', metavar='<researchers>', 
                               help='Set/replace slice researchers - use -r none to reset', default=None, type="str", action='callback', 
                               callback=optparse_listvalue_callback)
-            parser.add_option('-p', '--pis', dest='pis', metavar='<PIs>', help='Set/replace Principal Investigators/Project Managers',
+            parser.add_option('-p', '--pis', dest='reg_pis', metavar='<PIs>', help='Set/replace Principal Investigators/Project Managers',
                               default='', type="str", action='callback', callback=optparse_listvalue_callback)
             parser.add_option ('-X','--extra',dest='extras',default={},type='str',metavar="<EXTRA_ASSIGNS>",
                                action="callback", callback=optparse_dictvalue_callback, nargs=1,
