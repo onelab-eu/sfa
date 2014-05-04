@@ -38,23 +38,25 @@ from sqlalchemy.orm.collections import InstrumentedList
 # upon entering the write methods (so again register and update) for legacy, as some driver code
 # might depend on the presence of, say, 'researcher'
 
-# registry calls this 'reg-researchers'
-# some drivers call this 'researcher'
-def normalize_input_researcher (record):
+# normalize an input record to a write method - register or update
+# e.g. registry calls this 'reg-researchers'
+# while some drivers call this 'researcher'
+# we need to make sure that both keys appear and are the same
+def _normalize_input (record, reg_key, driver_key):
     # this looks right, use this for both keys
-    if 'reg-researchers' in record:
+    if reg_key in record:
         # and issue a warning if they were both set and different
         # as we're overwriting some user data here
-        if 'researcher' in record:
+        if driver_key in record:
             logger.warning ("normalize_input_researcher: incoming record has both values, using reg-researchers")
-        record['researcher']=record['reg-researchers']
+        record[driver_key]=record[reg_key]
     # we only have one key set, duplicate for the other one
-    elif 'researcher' in record:
-        logger.warning ("normalize_input_researcher: you should use 'reg-researchers' instead ot 'researcher'")
-        record['reg-researchers']=record['researcher']
+    elif driver_key in record:
+        logger.warning ("normalize_input_researcher: you should use '%s' instead ot '%s'"%(reg_key,driver_key))
+        record[reg_key]=record[driver_key]
 
 def normalize_input_record (record):
-    normalize_input_researcher (record)
+    _normalize_input (record, 'reg-researchers','researcher')
     return record
 
 class RegistryManager:
