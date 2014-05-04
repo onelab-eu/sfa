@@ -110,7 +110,7 @@ class RegistryCommands(Commands):
         if email:
             record_dict['email'] = email
         if pis:
-            record_dict['pi'] = pis
+            record_dict['reg-pis'] = pis
         if extras:
             record_dict.update(extras)
         return record_dict

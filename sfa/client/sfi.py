@@ -209,7 +209,7 @@ def load_record_from_opts(options):
     if hasattr(options, 'email') and options.email:
         record_dict['email'] = options.email
     if hasattr(options, 'pis') and options.pis:
-        record_dict['pi'] = options.pis
+        record_dict['reg-pis'] = options.pis
 
     # handle extra settings
     record_dict.update(options.extras)

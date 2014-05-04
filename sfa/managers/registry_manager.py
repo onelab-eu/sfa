@@ -57,6 +57,7 @@ def _normalize_input (record, reg_key, driver_key):
 
 def normalize_input_record (record):
     _normalize_input (record, 'reg-researchers','researcher')
+    _normalize_input (record, 'reg-pis','pi')
     return record
 
 class RegistryManager:
@@ -378,7 +379,7 @@ class RegistryManager:
             record.gid=gid.save_to_string(save_parents=True)
 
             # locate objects for relationships
-            pi_hrns = getattr(record,'pi',None)
+            pi_hrns = getattr(record,'reg-pis',None)
             if pi_hrns is not None: record.update_pis (pi_hrns, dbsession)
 
         elif isinstance (record, RegSlice):
@@ -451,7 +452,7 @@ class RegistryManager:
             if researcher_hrns is not None: record.update_researchers (researcher_hrns, dbsession)
 
         elif isinstance (record, RegAuthority):
-            pi_hrns = getattr(new_record,'pi',None)
+            pi_hrns = getattr(new_record,'reg-pis',None)
             if pi_hrns is not None: record.update_pis (pi_hrns, dbsession)
         
         # update the PLC information that was specified with the record
