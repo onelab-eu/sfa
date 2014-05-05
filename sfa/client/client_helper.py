@@ -5,7 +5,7 @@
 # it seems terribly wrong that the client should decide to use PG- or PL- related code
 # esp. in a context where we're trying to have more and more kinds of testbeds involved
 #
-# also, the 'users' filed that CreateSliver is expecting (the key point here is to get this right)
+# also, the 'users' field that CreateSliver is expecting (the key point here is to get this right)
 # is specified to have at least a urn and a list of keys, both of these being supported natively
 # in the sfa db
 # So long story short, it seems to me that we should have a common code that fills in 'urn' and 'keys'
