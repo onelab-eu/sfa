@@ -1,6 +1,6 @@
 %define name sfa
 %define version 3.1
-%define taglevel 3
+%define taglevel 4
 
 %define release %{taglevel}%{?pldistro:.%{pldistro}}%{?date:.%{date}}
 %global python_sitearch	%( python -c "from distutils.sysconfig import get_python_lib; print get_python_lib(1)" )
@@ -264,6 +264,17 @@ fi
 #[ "$1" -ge "1" ] && service sfa-cm restart || :
 
 %changelog
+* Tue May 06 2014 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-3.1-4
+- for register and update, client is expected to set
+- reg-researchers rather than researcher
+- reg-pis rather than pi
+- although the old forms are still supported
+- renamed sfi add into sfi register (add still works)
+- sfaadmin to return a meaningful exit code when fails
+- fix for sfadump
+- plimporter to report and ignore person or slice without a hrn
+- add support for stuff like sfi update -t slice -x the.slice.hrn -r none
+
 * Thu Apr 03 2014 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-3.1-3
 - fix for user hrn's that have a dash in their leaf
 - fix for names of GENI federates
