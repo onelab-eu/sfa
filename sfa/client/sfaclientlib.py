@@ -276,8 +276,14 @@ class SfaClientBootstrap:
         return self.fullpath ("%s.sscert"%self.hrn)
     def my_credential_filename (self):
         return self.credential_filename (self.hrn, "user")
+    # the tests use sfi -u <pi-user>; meaning that the slice credential filename
+    # needs to keep track of the user too
     def credential_filename (self, hrn, type): 
-        return self.fullpath ("%s.%s.cred"%(hrn,type))
+        if type in ['user']:
+            basename="%s.%s.cred"%(hrn,type)
+        else:
+            basename="%s-%s.%s.cred"%(self.hrn,hrn,type)
+        return self.fullpath (basename)
     def slice_credential_filename (self, hrn): 
         return self.credential_filename(hrn,'slice')
     def authority_credential_filename (self, hrn): 
