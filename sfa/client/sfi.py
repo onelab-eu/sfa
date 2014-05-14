@@ -500,9 +500,9 @@ class Sfi:
                              metavar="slice_hrn", help="delegate cred. for slice HRN")
            parser.add_option("-a", "--auths", dest='delegate_auths',action='append',default=[],
                              metavar='auth_hrn', help="delegate cred for auth HRN")
-           # this primarily is a shorthand for -a my_hrn
+           # this primarily is a shorthand for -A my_hrn^
            parser.add_option("-p", "--pi", dest='delegate_pi', default=None, action='store_true',
-                             help="delegate your PI credentials, so s.t. like -a your_hrn^")
+                             help="delegate your PI credentials, so s.t. like -A your_hrn^")
            parser.add_option("-A","--to-authority",dest='delegate_to_authority',action='store_true',default=False,
                              help="""by default the mandatory argument is expected to be a user, 
 use this if you mean an authority instead""")
@@ -1031,12 +1031,12 @@ use this if you mean an authority instead""")
 
         # don't translate into an object, as this would possibly distort
         # user-provided data; e.g. add an 'email' field to Users
-        if record_dict['type'] == "user":
+        if record_dict['type'] in ['user']:
             if record_dict['hrn'] == self.user:
                 cred = self.my_credential_string
             else:
                 cred = self.my_authority_credential_string()
-        elif record_dict['type'] in ["slice"]:
+        elif record_dict['type'] in ['slice']:
             try:
                 cred = self.slice_credential_string(record_dict['hrn'])
             except ServerException, e:
@@ -1046,9 +1046,9 @@ use this if you mean an authority instead""")
                    cred = self.my_authority_credential_string()
                else:
                    raise
-        elif record_dict['type'] in ["authority"]:
+        elif record_dict['type'] in ['authority']:
             cred = self.my_authority_credential_string()
-        elif record_dict['type'] == 'node':
+        elif record_dict['type'] in ['node']:
             cred = self.my_authority_credential_string()
         else:
             raise "unknown record type" + record_dict['type']

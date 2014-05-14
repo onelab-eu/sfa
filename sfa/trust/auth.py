@@ -67,6 +67,7 @@ class Auth:
         # won't work if either creds or hrns is empty - let's make it more explicit
         if not creds: raise Forbidden("no credential provided")
         if not hrns: hrns = [None]
+        error=[None,None]
         for cred in creds:
             for hrn in hrns:
                 try:
@@ -93,7 +94,7 @@ class Auth:
             check_sliver_callback(valid, sliver_xrns)
                 
         if not len(valid):
-            raise Forbidden("Invalid credential")
+            raise Forbidden("Invalid credential %s -- %s"%(error[0],error[1]))
         
         if speaking_for_hrn and not speaks_for_cred:
             raise InsufficientRights('Access denied: "geni_speaking_for" option specified but no valid speaks for credential found: %s -- %s' % (error[0],error[1]))
