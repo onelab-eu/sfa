@@ -260,6 +260,11 @@ def declare_command (args_string, example,aliases=None):
         return new_method
     return wrap
 
+
+def remove_none_fields (record):
+    none_fields=[ k for (k,v) in record.items() if v is None ]
+    for k in none_fields: del record[k]
+
 ##########
 
 class Sfi:
@@ -1144,7 +1149,7 @@ use this if you mean an authority instead""")
 
         api_options = {'call_id': unique_call_id(),
                        'cached': True,
-                       #'info': options.info,
+                       'info': options.info,
                        'list_leases': options.list_leases,
                        'geni_rspec_version': {'type': 'geni', 'version': '3'},
                       }
@@ -1159,7 +1164,8 @@ use this if you mean an authority instead""")
                 api_options['geni_rspec_version'] = version_manager.get_version(options.rspec_version).to_dict()
             else:
                 api_options['geni_rspec_version'] = {'type': 'geni', 'version': '3'}
-        urn = Xrn(args[0], type='slice').get_urn()        
+        urn = Xrn(args[0], type='slice').get_urn()
+        remove_none_fields(api_options) 
         result = server.Describe([urn], creds, api_options)
         value = ReturnValue.get_value(result)
         if self.options.raw:
@@ -1241,6 +1247,7 @@ use this if you mean an authority instead""")
         sfa_users = []
         geni_users = []
         slice_records = self.registry().Resolve(slice_urn, [self.my_credential_string])
+        remove_none_fields(slice_records[0])
         if slice_records and 'reg-researchers' in slice_records[0] and slice_records[0]['reg-researchers']!=[]:
             slice_record = slice_records[0]
             user_hrns = slice_record['reg-researchers']
