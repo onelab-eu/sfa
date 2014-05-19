@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 
 from sfa.util.xml import XML, XpathFilter
 from sfa.util.faults import InvalidRSpecElement, InvalidRSpec
+from sfa.util.sfatime import SFATIME_FORMAT
 
 from sfa.rspecs.rspec_elements import RSpecElement, RSpecElements 
 from sfa.rspecs.version_manager import VersionManager
@@ -35,11 +36,9 @@ class RSpec:
         self.version = self.version_manager.get_version(version)
         self.namespaces = self.version.namespaces
         self.parse_xml(self.version.template, self.version) 
-        # eg. 2011-03-23T19:53:28Z 
-        date_format = '%Y-%m-%dT%H:%M:%SZ'
         now = datetime.utcnow()
-        generated_ts = now.strftime(date_format)
-        expires_ts = (now + timedelta(hours=1)).strftime(date_format) 
+        generated_ts = now.strftime(SFATIME_FORMAT)
+        expires_ts = (now + timedelta(hours=1)).strftime(SFATIME_FORMAT) 
         self.xml.set('expires', expires_ts)
         self.xml.set('generated', generated_ts)
 

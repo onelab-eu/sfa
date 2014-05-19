@@ -4,6 +4,7 @@ import re
 
 #from sfa.util.faults import *
 from sfa.util.sfalogging import logger
+from sfa.util.sfatime import SFATIME_FORMAT
 from sfa.util.config import Config
 from sfa.util.callids import Callids
 from sfa.util.version import version_core
@@ -56,7 +57,7 @@ class AggregateManagerMax (AggregateManager):
     # save request RSpec xml content to a tmp file
     def save_rspec_to_file(self, rspec):
         path = AggregateManagerMax.RSPEC_TMP_FILE_PREFIX + "_" + \
-            time.strftime('%Y%m%dT%H:%M:%S', time.gmtime(time.time())) +".xml"
+            time.strftime(SFATIME_FORMAT, time.gmtime(time.time())) +".xml"
         file = open(path, "w")
         file.write(rspec)
         file.close()

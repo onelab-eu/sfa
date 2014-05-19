@@ -14,6 +14,7 @@ from sfa.util.sfalogging import logger
 
 #OAR imports
 from datetime import datetime
+from sfa.util.sfatime import SFATIME_FORMAT
 from sfa.iotlab.OARrestapi import OARrestapi
 
 #Test iotlabdriver
@@ -240,11 +241,9 @@ def TestOAR(job_id = None):
 
 
     message_and_wait("\r\n Get server's date and timezone")
-    time_format = "%Y-%m-%d %H:%M:%S"
     server_timestamp, server_tz = oar.parser.SendRequest("GET_timezone")
     print "\r\n OAR  GetTimezone ", server_timestamp, server_tz
-    print(datetime.fromtimestamp(int(server_timestamp)).strftime(
-                                                time_format))
+    print(datetime.fromtimestamp(int(server_timestamp)).strftime(SFATIME_FORMAT))
 
     message_and_wait("\r\n Get all the resources with details from OAR")
     uri = '/oarapi/resources/full.json'
