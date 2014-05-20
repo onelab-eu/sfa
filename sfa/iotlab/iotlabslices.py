@@ -501,8 +501,9 @@ class IotlabSlices:
             for k in k_list:
                 if k in added_user:
                     person[k] = added_user[k]
-
-            person['pkey'] = added_user['keys'][0]
+            # bug user without key
+            if added_user['keys']:
+                person['pkey'] = added_user['keys'][0]
             person['mail'] = added_user['email']
             person['email'] = added_user['email']
             person['key_ids'] = added_user.get('key_ids', [])

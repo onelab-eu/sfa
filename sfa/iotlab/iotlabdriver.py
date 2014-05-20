@@ -179,12 +179,12 @@ class IotlabDriver(Driver):
                                             " %(user_dict))
             hrn = user_dict['hrn']
             person_urn = hrn_to_urn(hrn, 'user')
-            pubkey = user_dict['pkey']
             try:
+                pubkey = user_dict['pkey']
                 pkey = convert_public_key(pubkey)
             except TypeError:
                 #key not good. create another pkey
-                logger.warn('__add_person_to_db: unable to convert public \
+                logger.warn('__add_person_to_db: no public key or unable to convert public \
                                     key for %s' %(hrn ))
                 pkey = Keypair(create=True)
 
@@ -202,7 +202,7 @@ class IotlabDriver(Driver):
             user_record = RegUser(hrn=hrn , pointer= '-1', \
                                     authority=get_authority(hrn), \
                                     email=user_dict['email'], gid = person_gid)
-            user_record.reg_keys = [RegKey(user_dict['pkey'])]
+            #user_record.reg_keys = [RegKey(user_dict['pkey'])]
             user_record.just_created()
             self.api.dbsession().add (user_record)
             self.api.dbsession().commit()
