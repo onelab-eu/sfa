@@ -34,10 +34,8 @@ class CreateSliver(Method):
 
         self.api.logger.info("interface: %s\ttarget-hrn: %s\tmethod-name: %s"%(self.api.interface, hrn, self.name))
 
-        (speaking_for, _) = urn_to_hrn(options.get('geni_speaking_for'))
-    
         # Find the valid credentials
-        valid_creds = self.api.auth.checkCredentials(creds, 'createsliver', hrn, speaking_for)
+        valid_creds = self.api.auth.checkCredentials(creds, 'createsliver', hrn, options=options)
         origin_hrn = Credential(string=valid_creds[0]).get_gid_caller().get_hrn()
 
         # make sure users info is specified
