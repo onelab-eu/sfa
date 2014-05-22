@@ -53,7 +53,7 @@ class Auth:
         speaks_for_gid = determine_speaks_for(logger, creds, self.peer_cert, \
                                               options, self.trusted_cert_list)
         if self.peer_cert and \
-           self.peer_cert.is_pubkey(speaks_for_gid.get_pubkey()):
+           not self.peer_cert.is_pubkey(speaks_for_gid.get_pubkey()):
             valid = creds
         else:
             for cred in creds:
