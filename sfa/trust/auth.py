@@ -69,6 +69,11 @@ class Auth:
         if not hrns: hrns = [None]
         error=[None,None]
 
+        # if speaks for gid matches caller cert then we've found a valid
+        # speaks for credential      
+        speaks_for_gid = determine_speaks_for(logger, creds, self.peer_cert, \
+                                              options, self.trusted_cert_list)
+
         if self.peer_cert and \
            not self.peer_cert.is_pubkey(speaks_for_gid.get_pubkey()):
             valid = creds
