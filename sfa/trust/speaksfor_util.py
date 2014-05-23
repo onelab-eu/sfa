@@ -124,8 +124,8 @@ def grab_toplevel_cert(cert):
 #   String user certificate of speaking_for user if the above tests succeed
 #      (None otherwise)
 #   Error message indicating why the speaks_for call failed ("" otherwise)
-def verify_speaks_for(cred, tool_gid, speaking_for_urn, \
-                          trusted_roots, schema=None, logger=None):
+def verify_speaks_for(cred, tool_gid, speaking_for_urn,
+                      trusted_roots, schema=None, logger=None):
 
     # Credential has not expired
     if cred.expiration and cred.expiration < datetime.datetime.utcnow():
@@ -239,8 +239,8 @@ def verify_speaks_for(cred, tool_gid, speaking_for_urn, \
 # trusted_roots is a list of Certificate objects from the system
 #   trusted_root directory
 # Optionally, provide an XML schema against which to validate the credential
-def determine_speaks_for(logger, credentials, caller_gid, options, \
-                             trusted_roots, schema=None):
+def determine_speaks_for(logger, credentials, caller_gid, options,
+                         trusted_roots, schema=None):
     logger.info(options)
     logger.info("geni speaking for:%s " % 'geni_speaking_for' in options)  
     if options and 'geni_speaking_for' in options:
