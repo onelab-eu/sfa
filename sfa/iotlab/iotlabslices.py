@@ -221,7 +221,9 @@ class IotlabSlices:
         #Deleted leases are the ones with lease id not declared in the Rspec
         if deleted_leases:
             self.driver.testbed_shell.DeleteLeases(deleted_leases,
-                                                sfa_slice['user']['uid'])
+                                                sfa_slice['login'])
+            #self.driver.testbed_shell.DeleteLeases(deleted_leases,
+            #                                    sfa_slice['user']['uid'])
             logger.debug("IOTLABSLICES \
                           verify_slice_leases slice %s deleted_leases %s"
                          % (sfa_slice, deleted_leases))
