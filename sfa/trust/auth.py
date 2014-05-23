@@ -17,6 +17,7 @@ from sfa.trust.credential import Credential
 from sfa.trust.trustedroots import TrustedRoots
 from sfa.trust.hierarchy import Hierarchy
 from sfa.trust.sfaticket import SfaTicket
+from sfa.trust.speaksfor_util import determine_speaks_for
 
 
 class Auth:
@@ -60,7 +61,6 @@ class Auth:
         # we make sure not to include sliver urns/hrns in the core validation loop
         hrns = [Xrn(xrn).hrn for xrn in xrns if xrn not in sliver_xrns] 
         valid = []
-        speaks_for_cred = None
         if not isinstance(creds, list):
             creds = [creds]
         logger.debug("Auth.checkCredentials with %d creds on hrns=%s"%(len(creds),hrns))
@@ -68,22 +68,18 @@ class Auth:
         if not creds: raise Forbidden("no credential provided")
         if not hrns: hrns = [None]
         error=[None,None]
-        for cred in creds:
-            for hrn in hrns:
-                try:
-                    self.check(cred, operation, hrn)
-                    valid.append(cred)
-                except:
-                    if speaking_for_hrn:
-                       try:
-                          self.check(cred, operation, speaking_for_hrn)
-                          speaks_for_cred = cred
-                          valid.append(cred)
-                       except:
-                          error = log_invalid_cred(cred)
-                    else:
-                       error = log_invalid_cred(cred)
-                    continue
+
+        if self.peer_cert and \
+           not self.peer_cert.is_pubkey(speaks_for_gid.get_pubkey()):
+            valid = creds
+        else:
+            for cred in creds:
+                for hrn in hrns:
+                    try:
+                        self.check(cred, operation, hrn)
+                        valid.append(cred)
+                    except:
+                        error = log_invalid_cred(cred)
         
         # make sure all sliver xrns are validated against the valid credentials
         if sliver_xrns:
