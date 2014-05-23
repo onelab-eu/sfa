@@ -158,16 +158,6 @@ def verify_speaks_for(cred, tool_gid, speaking_for_urn, \
     principal_keyid = head.get_principal_keyid()
     role = head.get_role()
 
-    logger.info('user keyid: %s' % user_keyid) 	
-    logger.info('principal keyid: %s' % principal_keyid) 	
-    logger.info('tool keyid: %s' % tool_keyid) 	
-    logger.info('subject keyid: %s' % subject_keyid) 
-    logger.info('role: %s' % role) 
-    logger.info('user gid: %s' % user_gid.dump_string())
-    f = open('/tmp/speaksfor/tool.gid', 'w')
-    f.write(tool_gid.dump_string())
-    f.close()	
-
     # Credential must pass xmlsec1 verify
     cred_file = write_to_tempfile(cred.save_to_string())
     cert_args = []
@@ -241,8 +231,6 @@ def verify_speaks_for(cred, tool_gid, speaking_for_urn, \
 # Optionally, provide an XML schema against which to validate the credential
 def determine_speaks_for(logger, credentials, caller_gid, options, \
                              trusted_roots, schema=None):
-    logger.info(options)
-    logger.info("geni speaking for:%s " % 'geni_speaking_for' in options)  
     if options and 'geni_speaking_for' in options:
         speaking_for_urn = options['geni_speaking_for'].strip()
         for cred in credentials:
@@ -266,10 +254,6 @@ def determine_speaks_for(logger, credentials, caller_gid, options, \
 #            print "Got a cred to check speaksfor for: %s" % cred.get_summary_tostring()
 #            #cred.dump(True, True)
 #            print "Caller: %s" % caller_gid.dump_string(2, True)
-            logger.info(cred.dump_string())
-            f = open('/tmp/speaksfor/%s.cred' % cred, 'w')
-            f.write(cred.xml)
-            f.close()
             # See if this is a valid speaks_for
             is_valid_speaks_for, user_gid, msg = \
                 verify_speaks_for(cred,
