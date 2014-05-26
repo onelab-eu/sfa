@@ -36,8 +36,11 @@ class Auth:
         self.trusted_cert_list = TrustedRoots(self.config.get_trustedroots_dir()).get_list()
         self.trusted_cert_file_list = TrustedRoots(self.config.get_trustedroots_dir()).get_file_list()
 
-    def checkCredentials(self, creds, operation, xrns=[], check_sliver_callback=None, speaking_for_hrn=None):
-
+    # do not use mutable as default argument 
+    # http://docs.python-guide.org/en/latest/writing/gotchas/#mutable-default-arguments
+    def checkCredentials(self, creds, operation, xrns=None, 
+                         check_sliver_callback=None, speaking_for_hrn=None):
+        if xrns is None: xrns=[]
         def log_invalid_cred(cred):
             cred_obj=Credential(string=cred)
             logger.debug("failed to validate credential - dump=%s"%cred_obj.dump_string(dump_parents=True))
