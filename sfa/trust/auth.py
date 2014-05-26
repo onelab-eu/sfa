@@ -70,7 +70,10 @@ class Auth:
         error=[None,None]
 
         # if speaks for gid matches caller cert then we've found a valid
-        # speaks for credential      
+        # speaks for credential
+        ### Thierry : we have no options to pass determine_speaks_for in this context
+        # so only as a workaround here:
+        options={}
         speaks_for_gid = determine_speaks_for(logger, creds, self.peer_cert, \
                                               options, self.trusted_cert_list)
 
