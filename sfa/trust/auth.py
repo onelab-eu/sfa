@@ -39,7 +39,7 @@ class Auth:
     # do not use mutable as default argument 
     # http://docs.python-guide.org/en/latest/writing/gotchas/#mutable-default-arguments
     def checkCredentials(self, creds, operation, xrns=None, 
-                         check_sliver_callback=None, speaking_for_hrn=None, options=None):
+                         check_sliver_callback=None, options=None):
         if xrns is None: xrns=[]
         def log_invalid_cred(cred):
             cred_obj=Credential(string=cred)
@@ -99,9 +99,6 @@ class Auth:
                 
         if not len(valid):
             raise Forbidden("Invalid credential %s -- %s"%(error[0],error[1]))
-        
-        if speaking_for_hrn and not speaks_for_cred:
-            raise InsufficientRights('Access denied: "geni_speaking_for" option specified but no valid speaks for credential found: %s -- %s' % (error[0],error[1]))
         
         return valid
         
