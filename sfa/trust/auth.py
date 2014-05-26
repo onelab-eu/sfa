@@ -39,7 +39,7 @@ class Auth:
     # do not use mutable as default argument 
     # http://docs.python-guide.org/en/latest/writing/gotchas/#mutable-default-arguments
     def checkCredentials(self, creds, operation, xrns=None, 
-                         check_sliver_callback=None, speaking_for_hrn=None):
+                         check_sliver_callback=None, speaking_for_hrn=None, options=None):
         if xrns is None: xrns=[]
         def log_invalid_cred(cred):
             cred_obj=Credential(string=cred)
