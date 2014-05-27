@@ -40,9 +40,11 @@ class Allocate(Method):
 
         # Find the valid credentials
         valid_creds = self.api.auth.checkCredentials(creds, 'createsliver', xrn.get_hrn(), options=options)
+        the_credential = Credential(cred=valid_creds[0])
+
         # use the expiration from the first valid credential to determine when 
         # the slivers should expire.
-        expiration = datetime_to_string(Credential(cred=valid_creds[0]).expiration)
+        expiration = datetime_to_string(the_credential.expiration)
         
         # make sure request is not empty
         slivers = RSpec(rspec).version.get_nodes_with_slivers()
@@ -55,7 +57,7 @@ class Allocate(Method):
         elif self.api.interface in ['slicemgr']:
             chain_name = 'FORWARD-INCOMING'
         self.api.logger.debug("Allocate: sfatables on chain %s"%chain_name)
-        actual_caller_hrn = Credential(cred=valid_creds[0]).actual_caller_hrn()
+        actual_caller_hrn = the_credential.actual_caller_hrn()
         self.api.logger.info("interface: %s\tcaller-hrn: %s\ttarget-hrn: %s\tmethod-name: %s"%(self.api.interface, actual_caller_hrn, xrn, self.name)) 
         rspec = run_sfatables(chain_name, xrn.get_hrn(), actual_caller_hrn, rspec)
         slivers = RSpec(rspec).version.get_nodes_with_slivers()
