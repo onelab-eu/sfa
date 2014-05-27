@@ -1049,6 +1049,24 @@ class Credential(object):
     def get_filename(self):
         return getattr(self,'filename',None)
 
+    # a helper function used by some methods to find out who really is the caller
+    # using a heuristic to identify a delegated credential
+    # this admittedly is a bit of a hack, please USE IN LAST RESORT
+    #
+    def actual_caller_hrn (self):
+        caller_hrn = self.get_gid_caller().get_hrn()
+        issuer_hrn = self.get_signature().get_issuer_gid().get_hrn()
+        subject_hrn = self.get_gid_object().get_hrn()
+        # if we find that the caller_hrn is an immediate descendant of the issuer, then
+        # this seems to be a 'regular' credential
+        if caller_hrn.startswith(issuer_hrn): 
+            actual_caller_hrn=caller_hrn
+        # else this looks like a delegated credential, and the real caller is the issuer
+        else:
+            actual_caller_hrn=issuer_hrn
+        logger.info("actual_caller_hrn: caller_hrn=%s, issuer_hrn=%s, returning %s"%(caller_hrn,issuer_hrn,actual_caller_hrn))
+        return actual_caller_hrn
+            
     ##
     # Dump the contents of a credential to stdout in human-readable format
     #
