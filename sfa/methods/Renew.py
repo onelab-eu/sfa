@@ -30,12 +30,16 @@ class Renew(Method):
 
     def call(self, urns, creds, expiration_time, options):
 
-        self.api.logger.info("interface: %s\ttarget-hrn: %s\tcaller-creds: %s\tmethod-name: %s"%(self.api.interface, urns, creds, self.name))
 
         # Find the valid credentials
         valid_creds = self.api.auth.checkCredentialsSpeaksFor(creds, 'renewsliver', urns,
                                                               check_sliver_callback = self.api.driver.check_sliver_credentials,
                                                               options=options)
+        the_credential = Credential(cred=valid_creds[0])
+        actual_caller_hrn = the_credential.actual_caller_hrn()
+        self.api.logger.info("interface: %s\tcaller-hrn: %s\ttarget-urns: %s\texp:%s\tmethod-name: %s"%\
+                             (self.api.interface, actual_caller_hrn, urns, expiration_time,self.name))
+
 
         # Validate that the time does not go beyond the credential's expiration time
         requested_time = utcparse(expiration_time)
