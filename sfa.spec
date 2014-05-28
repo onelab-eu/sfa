@@ -1,6 +1,6 @@
 %define name sfa
 %define version 3.1
-%define taglevel 4
+%define taglevel 5
 
 %define release %{taglevel}%{?pldistro:.%{pldistro}}%{?date:.%{date}}
 %global python_sitearch	%( python -c "from distutils.sysconfig import get_python_lib; print get_python_lib(1)" )
@@ -264,6 +264,18 @@ fi
 #[ "$1" -ge "1" ] && service sfa-cm restart || :
 
 %changelog
+* Thu May 29 2014 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-3.1-5
+- Slice Manager is down by default
+- sfi renew -l/--as-long-as-possible and e.g. sfi renew <> +2[d|w|m]
+- also renew tries to find a max date for renewal instead of bailing out
+- sfaclientlib file names scheme keeps track of user as well as object for credentials
+- none fields get removed before sending over xmlrpc - partially for now
+- cleanup on time formats and - hopefully timezones
+- cleanup on speaking_for
+- Allocate passes actual_caller_hrn as part of options to driver
+- iotlab driver and leases
+- new modules abac_credential, credential_factory and speaksfor_util
+
 * Tue May 06 2014 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-3.1-4
 - for register and update, client is expected to set
 - reg-researchers rather than researcher
