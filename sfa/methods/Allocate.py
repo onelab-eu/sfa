@@ -36,7 +36,6 @@ class Allocate(Method):
 
     def call(self, xrn, creds, rspec, options):
         xrn = Xrn(xrn, type='slice')
-        self.api.logger.info("interface: %s\ttarget-hrn: %s\tmethod-name: %s"%(self.api.interface, xrn.get_hrn(), self.name))
 
         # Find the valid credentials
         valid_creds = self.api.auth.checkCredentialsSpeaksFor(creds, 'createsliver', xrn.get_hrn(), options=options)
@@ -58,7 +57,7 @@ class Allocate(Method):
             chain_name = 'FORWARD-INCOMING'
         self.api.logger.debug("Allocate: sfatables on chain %s"%chain_name)
         actual_caller_hrn = the_credential.actual_caller_hrn()
-        self.api.logger.info("interface: %s\tcaller-hrn: %s\ttarget-hrn: %s\tmethod-name: %s"%(self.api.interface, actual_caller_hrn, xrn, self.name)) 
+        self.api.logger.info("interface: %s\tcaller-hrn: %s\ttarget-hrn: %s\tmethod-name: %s"%(self.api.interface, actual_caller_hrn, xrn.get_hrn(), self.name)) 
         rspec = run_sfatables(chain_name, xrn.get_hrn(), actual_caller_hrn, rspec)
         slivers = RSpec(rspec).version.get_nodes_with_slivers()
         if not slivers:
