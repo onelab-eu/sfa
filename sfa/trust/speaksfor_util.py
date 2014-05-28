@@ -348,7 +348,7 @@ def create_speaks_for(tool_gid, user_gid, ma_gid, \
 
 
     credential_duration = datetime.timedelta(days=dur_days)
-    expiration = datetime.datetime.now(du_tz.tzutc()) + credential_duration
+    expiration = datetime.datetime.utcnow() + credential_duration
     expiration_str = expiration.strftime('%Y-%m-%dT%H:%M:%SZ') # FIXME: libabac can't handle .isoformat()
     version = "1.1"
 

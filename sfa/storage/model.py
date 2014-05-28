@@ -143,12 +143,12 @@ class RegRecord (Base,AlchemyObj):
         else: return GID(string=self.gid)
 
     def just_created (self):
-        now=datetime.now()
+        now=datetime.utcnow()
         self.date_created=now
         self.last_updated=now
 
     def just_updated (self):
-        now=datetime.now()
+        now=datetime.utcnow()
         self.last_updated=now
 
 #################### cross-relations tables
