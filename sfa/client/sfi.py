@@ -1396,7 +1396,7 @@ use this if you mean an authority instead""")
             print value
         return value
 
-    @declare_command("slice_hrn [<sliver_urn>...] time","")
+    @declare_command("slice_hrn [<sliver_urn>...] time","sfi renew onelab.ple.heartbeat 2015-04-31")
     def renew(self, options, args):
         """
         renew slice (Renew)
