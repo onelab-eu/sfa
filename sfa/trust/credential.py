@@ -196,7 +196,6 @@ class Signature(object):
     def encode(self):
         self.xml = signature_template % (self.get_refid(), self.get_refid())
 
-
 ##
 # A credential provides a caller gid with privileges to an object gid.
 # A signed credential is signed by the object's authority.
@@ -456,19 +455,19 @@ class Credential(object):
         doc = Document()
         signed_cred = doc.createElement("signed-credential")
 
-# Declare namespaces
-# Note that credential/policy.xsd are really the PG schemas
-# in a PL namespace.
-# Note that delegation of credentials between the 2 only really works
-# cause those schemas are identical.
-# Also note these PG schemas talk about PG tickets and CM policies.
+        # Declare namespaces
+        # Note that credential/policy.xsd are really the PG schemas
+        # in a PL namespace.
+        # Note that delegation of credentials between the 2 only really works
+        # cause those schemas are identical.
+        # Also note these PG schemas talk about PG tickets and CM policies.
         signed_cred.setAttribute("xmlns:xsi", "http://www.w3.org/2001/XMLSchema-instance")
         signed_cred.setAttribute("xsi:noNamespaceSchemaLocation", "http://www.planet-lab.org/resources/sfa/credential.xsd")
         signed_cred.setAttribute("xsi:schemaLocation", "http://www.planet-lab.org/resources/sfa/ext/policy/1 http://www.planet-lab.org/resources/sfa/ext/policy/1/policy.xsd")
 
-# PG says for those last 2:
-#        signed_cred.setAttribute("xsi:noNamespaceSchemaLocation", "http://www.protogeni.net/resources/credential/credential.xsd")
-#        signed_cred.setAttribute("xsi:schemaLocation", "http://www.protogeni.net/resources/credential/ext/policy/1 http://www.protogeni.net/resources/credential/ext/policy/1/policy.xsd")
+        # PG says for those last 2:
+       #signed_cred.setAttribute("xsi:noNamespaceSchemaLocation", "http://www.protogeni.net/resources/credential/credential.xsd")
+       # signed_cred.setAttribute("xsi:schemaLocation", "http://www.protogeni.net/resources/credential/ext/policy/1 http://www.protogeni.net/resources/credential/ext/policy/1/policy.xsd")
 
         doc.appendChild(signed_cred)  
         
@@ -508,10 +507,10 @@ class Credential(object):
             # and we need to include those again here or else their signature
             # no longer matches on the credential.
             # We expect three of these, but here we copy them all:
-#        signed_cred.setAttribute("xmlns:xsi", "http://www.w3.org/2001/XMLSchema-instance")
-# and from PG (PL is equivalent, as shown above):
-#        signed_cred.setAttribute("xsi:noNamespaceSchemaLocation", "http://www.protogeni.net/resources/credential/credential.xsd")
-#        signed_cred.setAttribute("xsi:schemaLocation", "http://www.protogeni.net/resources/credential/ext/policy/1 http://www.protogeni.net/resources/credential/ext/policy/1/policy.xsd")
+            #  signed_cred.setAttribute("xmlns:xsi", "http://www.w3.org/2001/XMLSchema-instance")
+            # and from PG (PL is equivalent, as shown above):
+            #  signed_cred.setAttribute("xsi:noNamespaceSchemaLocation", "http://www.protogeni.net/resources/credential/credential.xsd")
+            #  signed_cred.setAttribute("xsi:schemaLocation", "http://www.protogeni.net/resources/credential/ext/policy/1 http://www.protogeni.net/resources/credential/ext/policy/1/policy.xsd")
 
             # HOWEVER!
             # PL now also declares these, with different URLs, so
@@ -1048,12 +1047,19 @@ class Credential(object):
     # only informative
     def get_filename(self):
         return getattr(self,'filename',None)
-
-    # a helper function used by some methods to find out who really is the caller
-    # using a heuristic to identify a delegated credential
-    # this admittedly is a bit of a hack, please USE IN LAST RESORT
-    #
+    
     def actual_caller_hrn (self):
+        """a helper method used by some API calls like e.g. Allocate
+        to try and find out who really is the original caller
+        
+        This admittedly is a bit of a hack, please USE IN LAST RESORT
+        
+        This code uses a heuristic to identify a delegated credential
+
+        A first known restriction if for traffic that gets through a slice manager
+        in this case the hrn reported is the one from the last SM in the call graph
+        which is not at all what is meant here"""
+
         caller_hrn = self.get_gid_caller().get_hrn()
         issuer_hrn = self.get_signature().get_issuer_gid().get_hrn()
         subject_hrn = self.get_gid_object().get_hrn()
