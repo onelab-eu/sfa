@@ -147,14 +147,6 @@ class AggregateManager:
         call_id = options.get('call_id')
         if Callids().already_handled(call_id): return True
 
-        # extend as long as possible
-        if options.get('geni_extend_alap'):
-            now = datetime.datetime.now()
-            requested = utcparse(expiration_time)
-            max = adjust_datetime(now, days=int(api.config.SFA_MAX_SLICE_RENEW))
-            if requested > max:
-                expiration_time = max
-
         return api.driver.renew(xrns, expiration_time, options)
 
     def PerformOperationalAction(self, api, xrns, creds, action, options={}):

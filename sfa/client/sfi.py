@@ -448,6 +448,9 @@ class Sfi:
         if canonical in ("list","resources", "describe", "provision", "allocate", "register","update","remove","delete","status","renew"):
             parser.add_option("-C","--credential",dest='show_credential',action='store_true',default=False,
                               help="show credential(s) used in human-readable form")
+        if canonical in ("renew"):
+            parser.add_option("-l","--as-long-as-possible",dest='alap',action='store_true',default=False,
+                              help="renew as long as possible")
         # registy filter option
         if canonical in ("list", "show", "remove"):
             parser.add_option("-t", "--type", dest="type", type="choice",
@@ -1396,7 +1399,12 @@ use this if you mean an authority instead""")
             print value
         return value
 
-    @declare_command("slice_hrn [<sliver_urn>...] time","sfi renew onelab.ple.heartbeat 2015-04-31")
+    @declare_command("slice_hrn [<sliver_urn>...] time",
+                     "\n".join(["sfi renew onelab.ple.heartbeat 2015-04-31",
+                                "sfi renew onelab.ple.heartbeat 2015-04-31T14:00:00Z",
+                                "sfi renew onelab.ple.heartbeat +5d",
+                                "sfi renew onelab.ple.heartbeat +3w",
+                                "sfi renew onelab.ple.heartbeat +2m",]))
     def renew(self, options, args):
         """
         renew slice (Renew)
@@ -1423,6 +1431,8 @@ use this if you mean an authority instead""")
         # options and call_id when supported
         api_options = {}
         api_options['call_id']=unique_call_id()
+        if options.alap:
+            api_options['geni_extend_alap']=True
         if options.show_credential:
             show_credentials(creds)
         result =  server.Renew(sliver_urns, creds, input_time, *self.ois(server,api_options))
