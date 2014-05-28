@@ -118,9 +118,10 @@ Thierry Parmentelat
       <variablelist>
 	<variable id="enabled" type="boolean">
 	  <name>Enable Slice Manager</name>
-	  <value>true</value>
+	  <value>false</value>
 	  <description>Allows this local SFA instance to run as a
-	  slice manager.</description>
+	  slice manager. Warning, this feature is not really supported
+	  any longer.</description>
 	</variable>
 
 	<variable id="host" type="hostname">
