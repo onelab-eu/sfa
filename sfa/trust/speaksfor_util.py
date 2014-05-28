@@ -229,10 +229,9 @@ def verify_speaks_for(cred, tool_gid, speaking_for_urn,
 # trusted_roots is a list of Certificate objects from the system
 #   trusted_root directory
 # Optionally, provide an XML schema against which to validate the credential
-def determine_speaks_for(logger, credentials, caller_gid, options,
-                         trusted_roots, schema=None):
-    if options and 'geni_speaking_for' in options:
-        speaking_for_urn = options['geni_speaking_for'].strip()
+def determine_speaks_for(logger, credentials, caller_gid, speaking_for_xrn, trusted_roots, schema=None):
+    if speaking_for_xrn:
+        speaking_for_urn = Xrn (speaking_for_xrn.strip()).get_urn()
         for cred in credentials:
             # Skip things that aren't ABAC credentials
             if type(cred) == dict:

@@ -36,10 +36,24 @@ class Auth:
         self.trusted_cert_list = TrustedRoots(self.config.get_trustedroots_dir()).get_list()
         self.trusted_cert_file_list = TrustedRoots(self.config.get_trustedroots_dir()).get_file_list()
 
+    # this convenience methods extracts speaking_for_xrn from the passed options using 'geni_speaking_for'
+    def checkCredentialsSpeaksFor (self, *args, **kwds):
+        if 'options' not in kwds:
+            logger.error ("checkCredentialsSpeaksFor was not passed options=options")
+            return
+        # remove the options arg
+        options=kwds['options']; del kwds['options']
+        # compute the speaking_for_xrn arg and pass it to checkCredentials
+        if options is None: speaking_for_xrn=None
+        else:               speaking_for_xrn=options.get('geni_speaking_for',None)
+        kwds['speaking_for_xrn']=speaking_for_xrn
+        return self.checkCredentials (*args, **kwds)
+
     # do not use mutable as default argument 
     # http://docs.python-guide.org/en/latest/writing/gotchas/#mutable-default-arguments
     def checkCredentials(self, creds, operation, xrns=None, 
-                         check_sliver_callback=None, options=None):
+                         check_sliver_callback=None, 
+                         speaking_for_xrn=None):
         if xrns is None: xrns=[]
         def log_invalid_cred(cred):
             cred_obj=Credential(string=cred)
@@ -72,10 +86,8 @@ class Auth:
         if not hrns: hrns = [None]
         error=[None,None]
 
-        # if speaks for gid matches caller cert then we've found a valid
-        # speaks for credential
-        speaks_for_gid = determine_speaks_for(logger, creds, self.peer_cert, \
-                                              options, self.trusted_cert_list)
+        speaks_for_gid = determine_speaks_for(logger, creds, self.peer_cert,
+                                              speaking_for_xrn, self.trusted_cert_list)
 
         if self.peer_cert and \
            not self.peer_cert.is_pubkey(speaks_for_gid.get_pubkey()):

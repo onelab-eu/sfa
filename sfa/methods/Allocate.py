@@ -39,7 +39,7 @@ class Allocate(Method):
         self.api.logger.info("interface: %s\ttarget-hrn: %s\tmethod-name: %s"%(self.api.interface, xrn.get_hrn(), self.name))
 
         # Find the valid credentials
-        valid_creds = self.api.auth.checkCredentials(creds, 'createsliver', xrn.get_hrn(), options=options)
+        valid_creds = self.api.auth.checkCredentialsSpeaksFor(creds, 'createsliver', xrn.get_hrn(), options=options)
         the_credential = Credential(cred=valid_creds[0])
 
         # use the expiration from the first valid credential to determine when 

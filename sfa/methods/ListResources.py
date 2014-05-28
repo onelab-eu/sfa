@@ -34,7 +34,7 @@ class ListResources(Method):
                 raise SfaInvalidArgument('Must specify an rspec version option. geni_rspec_version cannot be null')
 
         # Find the valid credentials
-        valid_creds = self.api.auth.checkCredentials(creds, 'listnodes', options=options)
+        valid_creds = self.api.auth.checkCredentialsSpeaksFor(creds, 'listnodes', options=options)
 
         # get hrn of the original caller 
         origin_hrn = options.get('origin_hrn', None)
