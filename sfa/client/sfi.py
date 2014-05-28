@@ -1173,7 +1173,7 @@ use this if you mean an authority instead""")
         if options.file is not None:
             save_rspec_to_file(value['geni_rspec'], options.file)
         if (self.options.raw is None) and (options.file is None):
-            display_rspec(value, options.format)
+            display_rspec(value['geni_rspec'], options.format)
 
         return 
 
