@@ -1423,20 +1423,36 @@ class IotlabDriver(Driver):
         peer = slices.get_peer(xrn.get_hrn())
         sfa_peer = slices.get_sfa_peer(xrn.get_hrn())
 
+        caller_hrn = options.get('actual_caller_hrn', [])
+        caller_xrn = Xrn(caller_hrn)
+        caller_urn = caller_xrn.get_urn()
+
+        logger.debug("IOTLABDRIVER.PY :: Allocate caller = %s" % (caller_urn))
 
         slice_record = {}
         users = options.get('geni_users', [])
-
         sfa_users = options.get('sfa_users', [])
+        
         if sfa_users:
-            # XXX Always empty ??? no slice_record in the Allocate call
-            #slice_record = sfa_users[0].get('slice_record', [])
-            user_xrn = Xrn(sfa_users[0]['urn'])
-            user_hrn = user_xrn.get_hrn()
+            user = None
+            # Looking for the user who actually called the Allocate function in the list of users of the slice
+            for u in sfa_users:
+                if 'urn' in u and u['urn'] == caller_urn:
+                    user = u
+                    logger.debug("user = %s" % u)
+            # If we find the user in the list we use it, else we take the 1st in the list as before
+            if user:
+                user_hrn = caller_hrn
+            else:
+                user = sfa_users[0]
+                # XXX Always empty ??? no slice_record in the Allocate call
+                #slice_record = sfa_users[0].get('slice_record', [])
+                user_xrn = Xrn(sfa_users[0]['urn'])
+                user_hrn = user_xrn.get_hrn()
 
-            slice_record = sfa_users[0].get('slice_record', {})
-            slice_record['user'] = {'keys': users[0]['keys'],
-                                    'email': users[0]['email'],
+            slice_record = user.get('slice_record', {})
+            slice_record['user'] = {'keys': user['keys'],
+                                    'email': user['email'],
                                     'hrn': user_hrn}
             slice_record['authority'] = xrn.get_authority_hrn() 
 
