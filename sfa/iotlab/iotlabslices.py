@@ -336,8 +336,8 @@ class IotlabSlices:
                          'authority': slice_record['authority'],
                          'gid': slice_record['gid'],
                          'slice_id': slice_record['record_id'],
-                         'reg-researchers': slice_record['reg-researchers'],
-                         'peer_authority': str(sfa_peer)
+                         #'reg-researchers': slice_record['reg-researchers'],
+                         #'peer_authority': str(sfa_peer)
                          }
 
             if ldap_user:

@@ -1424,15 +1424,21 @@ class IotlabDriver(Driver):
         sfa_peer = slices.get_sfa_peer(xrn.get_hrn())
 
 
-        slice_record = None
+        slice_record = {}
         users = options.get('geni_users', [])
 
         sfa_users = options.get('sfa_users', [])
         if sfa_users:
-            slice_record = sfa_users[0].get('slice_record', [])
+            # XXX Always empty ??? no slice_record in the Allocate call
+            #slice_record = sfa_users[0].get('slice_record', [])
+            user_xrn = Xrn(sfa_users[0]['urn'])
+            user_hrn = user_xrn.get_hrn()
+
+            slice_record = sfa_users[0].get('slice_record', {})
             slice_record['user'] = {'keys': users[0]['keys'],
                                     'email': users[0]['email'],
-                                    'hrn': slice_record['reg-researchers'][0]}
+                                    'hrn': user_hrn}
+            slice_record['authority'] = xrn.get_authority_hrn() 
 
         logger.debug("IOTLABDRIVER.PY \t urn %s allocate options  %s "
                      % (urn, options))
@@ -1453,8 +1459,10 @@ class IotlabDriver(Driver):
         # oui c'est degueulasse, le slice_record se retrouve modifie
         # dans la methode avec les infos du user, els infos sont propagees
         # dans verify_slice_leases
+        logger.debug("IOTLABDRIVER.PY  BEFORE slices.verify_persons")
         persons = slices.verify_persons(xrn.hrn, slice_record, users,
                                         options=options)
+        logger.debug("IOTLABDRIVER.PY  AFTER slices.verify_persons")
         # ensure slice attributes exists
         # slices.verify_slice_attributes(slice, requested_attributes,
                                     # options=options)
@@ -1487,7 +1495,10 @@ class IotlabDriver(Driver):
             client_id = hostname
             node_urn = xrn_object(self.testbed_shell.root_auth, hostname).urn
             component_id = node_urn
-            slice_urn = current_slice['reg-urn']
+            if 'reg-urn' in current_slice:
+                slice_urn = current_slice['reg-urn']
+            else:
+                slice_urn = current_slice['urn']
             for lease in leases:
                 if hostname in lease['reserved_nodes']:
                     index = lease['reserved_nodes'].index(hostname)

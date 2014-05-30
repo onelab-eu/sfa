@@ -560,10 +560,12 @@ class IotlabShell():
         #They will be set to None.
         if lease_dict['lease_start_time'] is not '0':
             #Readable time accepted by OAR
+            # converting timestamp to date in the local timezone tz = None 
             start_time = datetime.fromtimestamp( \
-                int(lease_dict['lease_start_time'])).\
+                int(lease_dict['lease_start_time']), tz=None).\
                 strftime(lease_dict['time_format'])
-            reqdict['reservation'] = start_time
+
+            reqdict['reservation'] = str(start_time)
         #If there is not start time, Immediate XP. No need to add special
         # OAR parameters
 
@@ -594,7 +596,11 @@ class IotlabShell():
         lease_dict['slice_name'] = slice_name
         lease_dict['slice_user'] = slice_user
         lease_dict['grain'] = self.GetLeaseGranularity()
-        lease_dict['time_format'] = self.time_format
+        # I don't know why the SFATIME_FORMAT has changed...
+        # from sfa.util.sfatime import SFATIME_FORMAT
+        # Let's use a fixed format %Y-%m-%d %H:%M:%S
+        #lease_dict['time_format'] = self.time_format
+        lease_dict['time_format'] = '%Y-%m-%d %H:%M:%S'
 
 
         logger.debug("IOTLAB_API.PY \tLaunchExperimentOnOAR slice_user %s\

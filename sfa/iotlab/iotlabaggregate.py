@@ -406,7 +406,7 @@ class IotlabAggregate:
            filter.update({'name':slice['slice_name']})
         #return_fields = ['lease_id', 'hostname', 'site_id', 'name', 't_from', 't_until']
         leases = self.driver.GetLeases(lease_filter_dict=filter)
-        grain = self.driver.GetLeaseGranularity()
+        grain = self.driver.testbed_shell.GetLeaseGranularity()
   
         rspec_leases = []
         for lease in leases:
