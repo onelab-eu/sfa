@@ -270,7 +270,7 @@ class Credential(object):
             # if this is a legacy credential, write error and bail out
             if str.strip().startswith("-----"):
                 logger.error("Legacy credentials not supported any more - giving up with %s..."%str[:10])
-                break
+                return
             else:
                 self.xml = str
                 self.decode()
