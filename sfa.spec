@@ -1,6 +1,6 @@
 %define name sfa
 %define version 3.1
-%define taglevel 5
+%define taglevel 6
 
 %define release %{taglevel}%{?pldistro:.%{pldistro}}%{?date:.%{date}}
 %global python_sitearch	%( python -c "from distutils.sysconfig import get_python_lib; print get_python_lib(1)" )
@@ -264,6 +264,10 @@ fi
 #[ "$1" -ge "1" ] && service sfa-cm restart || :
 
 %changelog
+* Mon Jun 02 2014 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-3.1-6
+- iotlab driver: Allocate uses OAR
+- iotlab driver: using actual_caller_hrn
+
 * Thu May 29 2014 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-3.1-5
 - Slice Manager is down by default
 - sfi renew -l/--as-long-as-possible and e.g. sfi renew <> +2[d|w|m]
