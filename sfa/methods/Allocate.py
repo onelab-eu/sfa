@@ -45,6 +45,8 @@ class Allocate(Method):
         # the slivers should expire.
         expiration = datetime_to_string(the_credential.expiration)
         
+        self.api.logger.debug("Allocate, received expiration from credential: %s"%expiration)
+
         # make sure request is not empty
         slivers = RSpec(rspec).version.get_nodes_with_slivers()
         if not slivers:
