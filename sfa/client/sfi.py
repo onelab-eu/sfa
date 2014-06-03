@@ -575,14 +575,13 @@ use this if you mean an authority instead""")
         self.logger.debug("Command=%s" % self.command)
 
         try:
-            self.dispatch(command, command_options, command_args)
+            retcod = self.dispatch(command, command_options, command_args)
         except SystemExit:
             return 1
         except:
             self.logger.log_exc ("sfi command %s failed"%command)
             return 1
-
-        return 0
+        return retcod
     
     ####################
     def read_config(self):
@@ -870,6 +869,18 @@ use this if you mean an authority instead""")
           sys.exit(1)
 
 
+    # helper function to analyze raw output
+    # for main : return 0 if everything is fine, something else otherwise (mostly 1 for now)
+    def success (self, raw):
+        return_value=ReturnValue (raw)
+        output=ReturnValue.get_output(return_value)
+        # means everything is fine
+        if not output: 
+            return 0
+        # something went wrong
+        print 'ERROR:',output
+        return 1
+
     #==========================================================================
     # Following functions implement the commands
     #
@@ -899,6 +910,8 @@ use this if you mean an authority instead""")
                     varname="%s_%s"%(section.upper(),name.upper())
                     value=getattr(self.config_instance,varname)
                     print "%-20s = %s"%(name,value)
+        # xxx should analyze result
+        return 0
 
     @declare_command("","")
     def version(self, options, args):
@@ -920,6 +933,8 @@ use this if you mean an authority instead""")
         else:
             pprinter = PrettyPrinter(indent=4)
             pprinter.pprint(version)
+        # xxx should analyze result
+        return 0
 
     @declare_command("authority","")
     def list(self, options, args):
@@ -947,7 +962,8 @@ use this if you mean an authority instead""")
         terminal_render (list, options)
         if options.file:
             save_records_to_file(options.file, list, options.fileformat)
-        return
+        # xxx should analyze result
+        return 0
     
     @declare_command("name","")
     def show(self, options, args):
@@ -981,7 +997,8 @@ use this if you mean an authority instead""")
             else:                               print record.save_as_xml() 
         if options.file:
             save_records_to_file(options.file, record_dicts, options.fileformat)
-        return
+        # xxx should analyze result
+        return 0
     
     # this historically was named 'add', it is now 'register' with an alias for legacy
     @declare_command("[xml-filename]","",['add'])
@@ -1018,7 +1035,11 @@ use this if you mean an authority instead""")
                 record_dict['first_name'] = record_dict['hrn']
             if 'last_name' not in record_dict:
                 record_dict['last_name'] = record_dict['hrn'] 
-        return self.registry().Register(record_dict, auth_cred)
+        register = self.registry().Register(record_dict, auth_cred)
+        # xxx looks like the result here is not ReturnValue-compatible
+        #return self.success (register)
+        # xxx should analyze result
+        return 0
     
     @declare_command("[xml-filename]","")
     def update(self, options, args):
@@ -1062,7 +1083,11 @@ use this if you mean an authority instead""")
             raise "unknown record type" + record_dict['type']
         if options.show_credential:
             show_credentials(cred)
-        return self.registry().Update(record_dict, cred)
+        update = self.registry().Update(record_dict, cred)
+        # xxx looks like the result here is not ReturnValue-compatible
+        #return self.success(update)
+        # xxx should analyze result
+        return 0
   
     @declare_command("hrn","")
     def remove(self, options, args):
@@ -1077,7 +1102,8 @@ use this if you mean an authority instead""")
             type = '*'
         if options.show_credential:
             show_credentials(auth_cred)
-        return self.registry().Remove(hrn, auth_cred, type)
+        remove = self.registry().Remove(hrn, auth_cred, type)
+        return self.success (remove)
     
     # ==================================================================
     # Slice-related commands
@@ -1124,16 +1150,15 @@ use this if you mean an authority instead""")
                 api_options['geni_rspec_version'] = {'type': 'geni', 'version': '3'}
         else:
             api_options['geni_rspec_version'] = {'type': 'geni', 'version': '3'}
-        result = server.ListResources (creds, api_options)
-        value = ReturnValue.get_value(result)
+        list_resources = server.ListResources (creds, api_options)
+        value = ReturnValue.get_value(list_resources)
         if self.options.raw:
-            save_raw_to_file(result, self.options.raw, self.options.rawformat, self.options.rawbanner)
+            save_raw_to_file(list_resources, self.options.raw, self.options.rawformat, self.options.rawbanner)
         if options.file is not None:
             save_rspec_to_file(value, options.file)
         if (self.options.raw is None) and (options.file is None):
             display_rspec(value, options.format)
-
-        return
+        return self.success(list_resources)
 
     @declare_command("slice_hrn","")
     def describe(self, options, args):
@@ -1169,16 +1194,15 @@ use this if you mean an authority instead""")
                 api_options['geni_rspec_version'] = {'type': 'geni', 'version': '3'}
         urn = Xrn(args[0], type='slice').get_urn()
         remove_none_fields(api_options) 
-        result = server.Describe([urn], creds, api_options)
-        value = ReturnValue.get_value(result)
+        describe = server.Describe([urn], creds, api_options)
+        value = ReturnValue.get_value(describe)
         if self.options.raw:
-            save_raw_to_file(result, self.options.raw, self.options.rawformat, self.options.rawbanner)
+            save_raw_to_file(describe, self.options.raw, self.options.rawformat, self.options.rawbanner)
         if options.file is not None:
             save_rspec_to_file(value['geni_rspec'], options.file)
         if (self.options.raw is None) and (options.file is None):
             display_rspec(value['geni_rspec'], options.format)
-
-        return 
+        return self.success (describe)
 
     @declare_command("slice_hrn [<sliver_urn>...]","")
     def delete(self, options, args):
@@ -1207,13 +1231,13 @@ use this if you mean an authority instead""")
         api_options ['call_id'] = unique_call_id()
         if options.show_credential:
             show_credentials(creds)
-        result = server.Delete(sliver_urns, creds, *self.ois(server, api_options ) )
-        value = ReturnValue.get_value(result)
+        delete = server.Delete(sliver_urns, creds, *self.ois(server, api_options ) )
+        value = ReturnValue.get_value(delete)
         if self.options.raw:
-            save_raw_to_file(result, self.options.raw, self.options.rawformat, self.options.rawbanner)
+            save_raw_to_file(delete, self.options.raw, self.options.rawformat, self.options.rawbanner)
         else:
             print value
-        return value
+        return self.success (delete)
 
     @declare_command("slice_hrn rspec","")
     def allocate(self, options, args):
@@ -1262,16 +1286,15 @@ use this if you mean an authority instead""")
         api_options['sfa_users'] = sfa_users
         api_options['geni_users'] = geni_users
 
-        result = server.Allocate(slice_urn, creds, rspec, api_options)
-        value = ReturnValue.get_value(result)
+        allocate = server.Allocate(slice_urn, creds, rspec, api_options)
+        value = ReturnValue.get_value(allocate)
         if self.options.raw:
-            save_raw_to_file(result, self.options.raw, self.options.rawformat, self.options.rawbanner)
+            save_raw_to_file(allocate, self.options.raw, self.options.rawformat, self.options.rawbanner)
         if options.file is not None:
             save_rspec_to_file (value['geni_rspec'], options.file)
         if (self.options.raw is None) and (options.file is None):
             print value
-        return value
-        
+        return self.success(allocate)
 
     @declare_command("slice_hrn [<sliver_urn>...]","")
     def provision(self, options, args):
@@ -1328,15 +1351,15 @@ use this if you mean an authority instead""")
             users = pg_users_arg(user_records)
         
         api_options['geni_users'] = users
-        result = server.Provision(sliver_urns, creds, api_options)
-        value = ReturnValue.get_value(result)
+        provision = server.Provision(sliver_urns, creds, api_options)
+        value = ReturnValue.get_value(provision)
         if self.options.raw:
-            save_raw_to_file(result, self.options.raw, self.options.rawformat, self.options.rawbanner)
+            save_raw_to_file(provision, self.options.raw, self.options.rawformat, self.options.rawbanner)
         if options.file is not None:
             save_rspec_to_file (value['geni_rspec'], options.file)
         if (self.options.raw is None) and (options.file is None):
             print value
-        return value     
+        return self.success(provision)
 
     @declare_command("slice_hrn","")
     def status(self, options, args):
@@ -1358,14 +1381,13 @@ use this if you mean an authority instead""")
         api_options['call_id']=unique_call_id()
         if options.show_credential:
             show_credentials(creds)
-        result = server.Status([slice_urn], creds, *self.ois(server,api_options))
-        value = ReturnValue.get_value(result)
+        status = server.Status([slice_urn], creds, *self.ois(server,api_options))
+        value = ReturnValue.get_value(status)
         if self.options.raw:
-            save_raw_to_file(result, self.options.raw, self.options.rawformat, self.options.rawbanner)
+            save_raw_to_file(status, self.options.raw, self.options.rawformat, self.options.rawbanner)
         else:
             print value
-        # Thierry: seemed to be missing
-        return value
+        return self.success (status)
 
     @declare_command("slice_hrn [<sliver_urn>...] action","")
     def action(self, options, args):
@@ -1391,13 +1413,13 @@ use this if you mean an authority instead""")
             delegated_cred = self.delegate_cred(slice_cred, get_authority(self.authority))
             creds.append(delegated_cred)
         
-        result = server.PerformOperationalAction(sliver_urns, creds, action , api_options)
-        value = ReturnValue.get_value(result)
+        perform_action = server.PerformOperationalAction(sliver_urns, creds, action , api_options)
+        value = ReturnValue.get_value(perform_action)
         if self.options.raw:
-            save_raw_to_file(result, self.options.raw, self.options.rawformat, self.options.rawbanner)
+            save_raw_to_file(perform_action, self.options.raw, self.options.rawformat, self.options.rawbanner)
         else:
             print value
-        return value
+        return self.success (perform_action)
 
     @declare_command("slice_hrn [<sliver_urn>...] time",
                      "\n".join(["sfi renew onelab.ple.heartbeat 2015-04-31",
@@ -1435,14 +1457,13 @@ use this if you mean an authority instead""")
             api_options['geni_extend_alap']=True
         if options.show_credential:
             show_credentials(creds)
-        result =  server.Renew(sliver_urns, creds, input_time, *self.ois(server,api_options))
-        value = ReturnValue.get_value(result)
+        renew =  server.Renew(sliver_urns, creds, input_time, *self.ois(server,api_options))
+        value = ReturnValue.get_value(renew)
         if self.options.raw:
-            save_raw_to_file(result, self.options.raw, self.options.rawformat, self.options.rawbanner)
+            save_raw_to_file(renew, self.options.raw, self.options.rawformat, self.options.rawbanner)
         else:
             print value
-        return value
-
+        return self.success(renew)
 
     @declare_command("slice_hrn","")
     def shutdown(self, options, args):
@@ -1456,14 +1477,13 @@ use this if you mean an authority instead""")
         # creds
         slice_cred = self.slice_credential(slice_hrn)
         creds = [slice_cred]
-        result = server.Shutdown(slice_urn, creds)
-        value = ReturnValue.get_value(result)
+        shutdown = server.Shutdown(slice_urn, creds)
+        value = ReturnValue.get_value(shutdown)
         if self.options.raw:
-            save_raw_to_file(result, self.options.raw, self.options.rawformat, self.options.rawbanner)
+            save_raw_to_file(shutdown, self.options.raw, self.options.rawformat, self.options.rawbanner)
         else:
             print value
-        return value         
-    
+        return self.success (shutdown)
 
     @declare_command("[name]","")
     def gid(self, options, args):
@@ -1482,6 +1502,8 @@ use this if you mean an authority instead""")
             filename = os.sep.join([self.options.sfi_dir, '%s.gid' % target_hrn])
         self.logger.info("writing %s gid to %s" % (target_hrn, filename))
         GID(string=gid).save_to_file(filename)
+        # xxx should analyze result
+        return 0
          
     ####################
     @declare_command("to_hrn","""$ sfi delegate -u -p -s ple.inria.heartbeat -s ple.inria.omftest ple.upmc.slicebrowser
@@ -1682,7 +1704,8 @@ $ sfi m -b http://mymanifold.foo.com:7080/
         # it is probably not helpful as people would not
         # need to run 'sfi delegate' at all anymore
         if count_success != count_all: sys.exit(1)
-        return
+        # xxx should analyze result
+        return 0
 
     @declare_command("cred","")
     def trusted(self, options, args):
@@ -1705,5 +1728,5 @@ $ sfi m -b http://mymanifold.foo.com:7080/
             cert = Certificate(string=trusted_cert)
             self.logger.debug('Sfi.trusted -> %r'%cert.get_subject())
             print "Certificate:\n%s\n\n"%trusted_cert
-        return 
-
+        # xxx should analyze result
+        return 0
