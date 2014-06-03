@@ -44,13 +44,14 @@ from xml.parsers.expat import ExpatError
 
 from sfa.util.faults import CredentialNotVerifiable, ChildRightsNotSubsetOfParent
 from sfa.util.sfalogging import logger
-from sfa.util.sfatime import utcparse
+from sfa.util.sfatime import utcparse, SFATIME_FORMAT
 from sfa.trust.rights import Right, Rights, determine_rights
 from sfa.trust.gid import GID
 from sfa.util.xrn import urn_to_hrn, hrn_authfor_hrn
 
 # 31 days, in seconds 
-DEFAULT_CREDENTIAL_LIFETIME = 86400 * 31
+DEFAULT_CREDENTIAL_LIFETIME = 2 * 3600
+#DEFAULT_CREDENTIAL_LIFETIME = 86400 * 31
 
 
 # TODO:
@@ -364,15 +365,11 @@ class Credential(object):
     # Expiration: an absolute UTC time of expiration (as either an int or string or datetime)
     # 
     def set_expiration(self, expiration):
-        if isinstance(expiration, (int, float)):
-            self.expiration = datetime.datetime.fromtimestamp(expiration)
-        elif isinstance (expiration, datetime.datetime):
-            self.expiration = expiration
-        elif isinstance (expiration, StringTypes):
-            self.expiration = utcparse (expiration)
+        expiration_datetime = utcparse (expiration)
+        if expiration_datetime is not None:
+            self.expiration = expiration_datetime
         else:
-            logger.error ("unexpected input type in Credential.set_expiration")
-
+            logger.error ("unexpected input %s in Credential.set_expiration"%expiration)
 
     ##
     # get the lifetime of the credential (always in datetime format)
@@ -461,7 +458,7 @@ class Credential(object):
             logger.debug("Creating credential valid for %s s"%DEFAULT_CREDENTIAL_LIFETIME)
             self.set_expiration(datetime.datetime.utcnow() + datetime.timedelta(seconds=DEFAULT_CREDENTIAL_LIFETIME))
         self.expiration = self.expiration.replace(microsecond=0)
-        append_sub(doc, cred, "expires", self.expiration.isoformat())
+        append_sub(doc, cred, "expires", self.expiration.strftime(SFATIME_FORMAT))
         privileges = doc.createElement("privileges")
         cred.appendChild(privileges)
 
@@ -802,7 +799,7 @@ class Credential(object):
 
         # make sure it is not expired
         if self.get_expiration() < datetime.datetime.utcnow():
-            raise CredentialNotVerifiable("Credential %s expired at %s" % (self.get_summary_tostring(), self.expiration.isoformat()))
+            raise CredentialNotVerifiable("Credential %s expired at %s" % (self.get_summary_tostring(), self.expiration.strftime(SFATIME_FORMAT)))
 
         # Verify the signatures
         filename = self.save_to_random_tmp_file()
@@ -1064,7 +1061,7 @@ class Credential(object):
             self.get_signature().get_issuer_gid().dump(8, dump_parents)
 
         if self.expiration:
-            print "  expiration:", self.expiration.isoformat()
+            print "  expiration:", self.expiration.strftime(SFATIME_FORMAT)
 
         gidObject = self.get_gid_object()
         if gidObject:

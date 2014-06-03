@@ -21,8 +21,9 @@
 # IN THE WORK.
 #----------------------------------------------------------------------
 
-from sfa.trust.credential import Credential, append_sub
+from sfa.trust.credential import Credential, append_sub, DEFAULT_CREDENTIAL_LIFETIME
 from sfa.util.sfalogging import logger
+from sfa.util.sfatime import SFATIME_FORMAT
 
 from StringIO import StringIO
 from xml.dom.minidom import Document, parseString
@@ -161,7 +162,7 @@ class ABACCredential(Credential):
         filename=self.get_filename()
         if filename: result += "Filename %s\n"%filename
         if self.expiration:
-            result +=  "\texpiration: %s \n" % self.expiration.isoformat()
+            result +=  "\texpiration: %s \n" % self.expiration.strftime(SFATIME_FORMAT)
 
         result += "\tHead: %s\n" % self.get_head() 
         for tail in self.get_tails():
@@ -257,7 +258,7 @@ class ABACCredential(Credential):
         if self.expiration.tzinfo is not None and self.expiration.tzinfo.utcoffset(self.expiration) is not None:
             # TZ aware. Make sure it is UTC
             self.expiration = self.expiration.astimezone(tz.tzutc())
-        append_sub(doc, cred, "expires", self.expiration.strftime('%Y-%m-%dT%H:%M:%SZ')) # RFC3339
+        append_sub(doc, cred, "expires", self.expiration.strftime(SFATIME_FORMAT)) # RFC3339
 
         abac = doc.createElement("abac")
         rt0 = doc.createElement("rt0")

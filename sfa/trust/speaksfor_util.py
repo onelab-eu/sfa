@@ -31,6 +31,8 @@ import tempfile
 from xml.dom.minidom import *
 from StringIO import StringIO
 
+from sfa.util.sfatime import SFATIME_FORMAT
+
 from sfa.trust.certificate import Certificate
 from sfa.trust.credential import Credential, signature_template, HAVELXML
 from sfa.trust.abac_credential import ABACCredential, ABACElement
@@ -129,7 +131,7 @@ def verify_speaks_for(cred, tool_gid, speaking_for_urn,
 
     # Credential has not expired
     if cred.expiration and cred.expiration < datetime.datetime.utcnow():
-        return False, None, "ABAC Credential expired at %s (%s)" % (cred.expiration.isoformat(), cred.get_summary_tostring())
+        return False, None, "ABAC Credential expired at %s (%s)" % (cred.expiration.strftime(SFATIME_FORMAT), cred.get_summary_tostring())
 
     # Must be ABAC
     if cred.get_cred_type() != ABACCredential.ABAC_CREDENTIAL_TYPE:
@@ -349,7 +351,7 @@ def create_speaks_for(tool_gid, user_gid, ma_gid, \
 
     credential_duration = datetime.timedelta(days=dur_days)
     expiration = datetime.datetime.utcnow() + credential_duration
-    expiration_str = expiration.strftime('%Y-%m-%dT%H:%M:%SZ') # FIXME: libabac can't handle .isoformat()
+    expiration_str = expiration.strftime(SFATIME_FORMAT)
     version = "1.1"
 
     user_keyid = get_cert_keyid(user_gid)
