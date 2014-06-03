@@ -268,7 +268,7 @@ class Credential(object):
                 str = file(filename).read()
                 
             # if this is a legacy credential, write error and bail out
-            if str.strip().startswith("-----"):
+            if isinstance (str, StringTypes) and str.strip().startswith("-----"):
                 logger.error("Legacy credentials not supported any more - giving up with %s..."%str[:10])
                 return
             else:

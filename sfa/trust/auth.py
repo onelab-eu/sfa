@@ -2,6 +2,7 @@
 # SfaAPI authentication 
 #
 import sys
+from types import StringTypes
 
 from sfa.util.faults import InsufficientRights, MissingCallerGID, MissingTrustedRoots, PermissionError, \
     BadRequestHash, ConnectionKeyGIDMismatch, SfaPermissionDenied, CredentialNotVerifiable, Forbidden, \
@@ -56,9 +57,13 @@ class Auth:
                          speaking_for_xrn=None):
         if xrns is None: xrns=[]
         def log_invalid_cred(cred):
-            cred_obj=Credential(string=cred)
-            logger.debug("failed to validate credential - dump=%s"%cred_obj.dump_string(dump_parents=True))
-            error = sys.exc_info()[:2]
+            if not isinstance (cred, StringTypes):
+                logger.info("cannot validate credential %s - expecting a string"%cred)
+                error="checkCredentials: expected a string, received %s"%(type(cred))
+            else:
+                cred_obj=Credential(string=cred)
+                logger.info("failed to validate credential - dump=%s"%cred_obj.dump_string(dump_parents=True))
+                error = sys.exc_info()[:2]
             return error
 
         # if xrns are specified they cannot be None or empty string
