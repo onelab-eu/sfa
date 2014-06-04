@@ -21,9 +21,10 @@
 # IN THE WORK.
 #----------------------------------------------------------------------
 from types import StringTypes
-import dateutil.parser
-import datetime
 import time
+import datetime
+import dateutil.parser
+import calendar
 import re
 
 from sfa.util.sfalogging import logger
@@ -83,8 +84,10 @@ def datetime_to_string(input):
 def datetime_to_utc(input):
     return time.gmtime(datetime_to_epoch(input))
 
+# see https://docs.python.org/2/library/time.html 
+# all timestamps are in UTC so time.mktime() would be *wrong*
 def datetime_to_epoch(input):
-    return int(time.mktime(input.timetuple()))
+    return int(calendar.timegm(input.timetuple()))
 
 def add_datetime(input, days=0, hours=0, minutes=0, seconds=0):
     """
@@ -94,6 +97,10 @@ def add_datetime(input, days=0, hours=0, minutes=0, seconds=0):
     return dt + datetime.timedelta(days=days, hours=hours, minutes=minutes, seconds=seconds)
 
 if __name__ == '__main__':
+        # checking consistency
+    print 20*'X'
+    print ("Should be close to zero: %s"%(datetime_to_epoch(datetime.datetime.utcnow())-time.time()))
+    print 20*'X'
     for input in [
             '+2d',
             '+3w',
