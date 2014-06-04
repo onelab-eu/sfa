@@ -8,7 +8,7 @@ import time
 from collections import defaultdict
 from nova.exception import ImageNotFound
 from nova.api.ec2.cloud import CloudController
-from sfa.util.faults import SfaAPIError, SliverDoesNotExist
+from sfa.util.faults import SliverDoesNotExist
 from sfa.util.sfatime import utcparse, datetime_to_string, datetime_to_epoch
 from sfa.rspecs.rspec import RSpec
 from sfa.rspecs.elements.hardware_type import HardwareType
