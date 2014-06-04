@@ -78,16 +78,16 @@ For safety this can also handle inputs that are either timestamps, or datetimes
     else:
         logger.error("Unexpected type in utcparse [%s]"%type(input))
 
-def datetime_to_string(input):
-    return datetime.datetime.strftime(input, SFATIME_FORMAT)
+def datetime_to_string(dt):
+    return datetime.datetime.strftime(dt, SFATIME_FORMAT)
 
-def datetime_to_utc(input):
-    return time.gmtime(datetime_to_epoch(input))
+def datetime_to_utc(dt):
+    return time.gmtime(datetime_to_epoch(dt))
 
 # see https://docs.python.org/2/library/time.html 
 # all timestamps are in UTC so time.mktime() would be *wrong*
-def datetime_to_epoch(input):
-    return int(calendar.timegm(input.timetuple()))
+def datetime_to_epoch(dt):
+    return int(calendar.timegm(dt.timetuple()))
 
 def add_datetime(input, days=0, hours=0, minutes=0, seconds=0):
     """
