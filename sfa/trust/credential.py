@@ -50,8 +50,7 @@ from sfa.trust.gid import GID
 from sfa.util.xrn import urn_to_hrn, hrn_authfor_hrn
 
 # 31 days, in seconds 
-DEFAULT_CREDENTIAL_LIFETIME = 2 * 3600
-#DEFAULT_CREDENTIAL_LIFETIME = 86400 * 31
+DEFAULT_CREDENTIAL_LIFETIME = 86400 * 28
 
 
 # TODO:
