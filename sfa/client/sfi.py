@@ -1103,7 +1103,10 @@ use this if you mean an authority instead""")
         if options.show_credential:
             show_credentials(auth_cred)
         remove = self.registry().Remove(hrn, auth_cred, type)
-        return self.success (remove)
+        # xxx looks like the result here is not ReturnValue-compatible
+        #return self.success (remove)
+        # xxx should analyze result
+        return 0
     
     # ==================================================================
     # Slice-related commands
