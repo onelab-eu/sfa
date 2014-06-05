@@ -1,6 +1,6 @@
 %define name sfa
 %define version 3.1
-%define taglevel 7
+%define taglevel 8
 
 %define release %{taglevel}%{?pldistro:.%{pldistro}}%{?date:.%{date}}
 %global python_sitearch	%( python -c "from distutils.sysconfig import get_python_lib; print get_python_lib(1)" )
@@ -264,6 +264,9 @@ fi
 #[ "$1" -ge "1" ] && service sfa-cm restart || :
 
 %changelog
+* Thu Jun 05 2014 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-3.1-8
+- bugfix, sfi remove was broken
+
 * Wed Jun 04 2014 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-3.1-7
 - sfi return code should be more meaningful - not yet for all commands though
 - DEFAULT_CREDENTIAL_LIFETIME now 28 days (was 31)
