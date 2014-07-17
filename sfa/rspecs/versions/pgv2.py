@@ -103,7 +103,8 @@ class PGv2(RSpecVersion):
     def add_default_sliver_attribute(self, name, value, network=None):
         pass
 
-    def add_slivers(self, hostnames, attributes=[], sliver_urn=None, append=False):
+    def add_slivers(self, hostnames, attributes=None, sliver_urn=None, append=False):
+        if attributes is None: attributes=[]
         # all nodes hould already be present in the rspec. Remove all
         # nodes that done have slivers
         for hostname in hostnames:

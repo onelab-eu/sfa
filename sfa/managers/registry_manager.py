@@ -237,7 +237,8 @@ class RegistryManager:
     
         return records
     
-    def List (self, api, xrn, origin_hrn=None, options={}):
+    def List (self, api, xrn, origin_hrn=None, options=None):
+        if options is None: options={}
         dbsession=api.dbsession()
         # load all know registry names into a prefix tree and attempt to find
         # the longest matching prefix

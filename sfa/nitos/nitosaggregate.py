@@ -68,7 +68,9 @@ class NitosAggregate:
        
 
 
-    def get_nodes(self, slice_xrn, slice=None,slivers={}, options={}):
+    def get_nodes(self, slice_xrn, slice=None,slivers=None, options=None):
+        if slivers is None: slivers={}
+        if options is None: options={}
         # if we are dealing with a slice that has no node just return 
         # and empty list    
         if slice_xrn:
@@ -126,8 +128,9 @@ class NitosAggregate:
             rspec_nodes.append(rspec_node)
         return rspec_nodes 
 
-    def get_leases_and_channels(self, slice=None, slice_xrn=None,  options={}):
-        
+    def get_leases_and_channels(self, slice=None, slice_xrn=None,  options=None):
+
+        if options is None: options={}
         slices = self.driver.shell.getSlices({}, [])
         nodes = self.driver.shell.getNodes({}, [])
         leases = self.driver.shell.getReservedNodes({}, [])
@@ -216,8 +219,9 @@ class NitosAggregate:
         return (rspec_leases, rspec_channels)
 
 
-    def get_channels(self, slice=None, options={}):
- 
+    def get_channels(self, slice=None, options=None):
+        if options is None: options={}
+
         all_channels = self.driver.shell.getChannels({}, [])
         channels = []
         if slice:
@@ -245,7 +249,8 @@ class NitosAggregate:
 
 
     
-    def get_rspec(self, slice_xrn=None, version = None, options={}):
+    def get_rspec(self, slice_xrn=None, version = None, options=None):
+        if options is None: options={}
 
         version_manager = VersionManager()
         version = version_manager.get_version(version)

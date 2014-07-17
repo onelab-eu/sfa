@@ -58,7 +58,8 @@ class OSAggregate:
             zones = [zone.name for zone in zones]
         return zones
 
-    def list_resources(self, version=None, options={}):
+    def list_resources(self, version=None, options=None):
+        if options is None: options={}
         version_manager = VersionManager()
         version = version_manager.get_version(version)
         rspec_version = version_manager._get_version(version.type, version.version, 'ad')
@@ -67,7 +68,8 @@ class OSAggregate:
         rspec.version.add_nodes(nodes)
         return rspec.toxml()
 
-    def describe(self, urns, version=None, options={}):
+    def describe(self, urns, version=None, options=None):
+        if options is None: options={}
         # update nova connection
         tenant_name = OSXrn(xrn=urns[0], type='slice').get_tenant_name()
         self.driver.shell.nova_manager.connect(tenant=tenant_name)
@@ -211,7 +213,8 @@ class OSAggregate:
                          'storage':  str(instance.disk)})
         return sliver   
 
-    def instance_to_geni_sliver(self, instance, sliver_allocations = {}):
+    def instance_to_geni_sliver(self, instance, sliver_allocations=None):
+        if sliver_allocations is None: sliver_allocations={}
         sliver_hrn = '%s.%s' % (self.driver.hrn, instance.id)
         sliver_id = Xrn(sliver_hrn, type='sliver').urn
  
@@ -302,7 +305,8 @@ class OSAggregate:
         return key_name       
         
 
-    def create_security_group(self, slicename, fw_rules=[]):
+    def create_security_group(self, slicename, fw_rules=None):
+        if fw_rules is None: fw_rules=[]
         # use default group by default
         group_name = 'default' 
         if isinstance(fw_rules, list) and fw_rules:

@@ -39,7 +39,8 @@ class SFAv1Sliver:
         return attribs 
                 
     @staticmethod
-    def get_slivers(xml, filter={}):
+    def get_slivers(xml, filter=None):
+        if filter is None: filter={}
         xpath = './default:sliver | ./sliver'
         sliver_elems = xml.xpath(xpath)
         slivers = []

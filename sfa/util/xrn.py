@@ -110,7 +110,8 @@ class Xrn:
         return Xrn.urn_meaningful(urn).split('+')
 
     @staticmethod
-    def filter_type(urns=[], type=None):
+    def filter_type(urns=None, type=None):
+        if urns is None: urns=[]
         urn_list = []
         if not type:
             return urns

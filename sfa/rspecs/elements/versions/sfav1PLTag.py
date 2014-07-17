@@ -9,7 +9,8 @@ class SFAv1PLTag:
             pl_tag_elem.set_text(value)
               
     @staticmethod
-    def get_pl_tags(xml, ignore=[]):
+    def get_pl_tags(xml, ignore=None):
+        if ignore is None: ignore=[]
         pl_tags = []
         for elem in xml.iterchildren():
             if elem.tag not in ignore:

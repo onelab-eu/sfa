@@ -306,7 +306,7 @@ class IotlabAggregate:
         return rspec_node
 
 
-    def rspec_node_to_geni_sliver(self, rspec_node, sliver_allocations = {}):
+    def rspec_node_to_geni_sliver(self, rspec_node, sliver_allocations = None):
         """Makes a geni sliver structure from all the nodes allocated
         to slivers in the sliver_allocations dictionary. Returns the states
         of the sliver.
@@ -326,6 +326,7 @@ class IotlabAggregate:
         .. seealso:: node_to_rspec_node
 
         """
+        if sliver_allocations is None: sliver_allocations={}
         if rspec_node['sliver_id'] in sliver_allocations:
             # set sliver allocation and operational status
             sliver_allocation = sliver_allocations[rspec_node['sliver_id']]
@@ -400,7 +401,8 @@ class IotlabAggregate:
         return rspec_node
 
 
-    def get_leases(self, slice=None, options={}):
+    def get_leases(self, slice=None, options=None):
+        if options is None: options={}
         filter={}
         if slice:
            filter.update({'name':slice['slice_name']})
@@ -598,7 +600,7 @@ class IotlabAggregate:
                        FINAL RSPEC %s \r\n" % (rspec.toxml()))
         return rspec.toxml()
 
-    def get_slivers(self, urns, options={}):
+    def get_slivers(self, urns, options=None):
         """Get slivers of the given slice urns. Slivers contains slice, node and
         user information.
 
@@ -613,7 +615,7 @@ class IotlabAggregate:
         .. seealso:: http://groups.geni.net/geni/wiki/GAPI_AM_API_V3/CommonConcepts#urns
         """
 
-
+        if options is None: options={}
         slice_ids = set()
         node_ids = []
         for urn in urns:
@@ -709,7 +711,7 @@ class IotlabAggregate:
                 slivers.append(node)
         return slivers
 
-    def list_resources(self, version = None, options={}):
+    def list_resources(self, version = None, options=None):
         """
         Returns an advertisement Rspec of available resources at this
         aggregate. This Rspec contains a resource listing along with their
@@ -730,6 +732,7 @@ class IotlabAggregate:
         .. seealso:: http://groups.geni.net/geni/wiki/GAPI_AM_API_V3#ListResources
         """
 
+        if options is None: options={}
         version_manager = VersionManager()
         version = version_manager.get_version(version)
         rspec_version = version_manager._get_version(version.type,
@@ -764,7 +767,7 @@ class IotlabAggregate:
         return rspec.toxml()
 
 
-    def describe(self, urns, version=None, options={}):
+    def describe(self, urns, version=None, options=None):
         """
         Retrieve a manifest RSpec describing the resources contained by the
         named entities, e.g. a single slice or a set of the slivers in a slice.
@@ -794,6 +797,7 @@ class IotlabAggregate:
         .. seealso:: http://groups.geni.net/geni/wiki/GAPI_AM_API_V3#Describe
         .. seealso:: http://groups.geni.net/geni/wiki/GAPI_AM_API_V3/CommonConcepts#urns
         """
+        if options is None: options={}
         version_manager = VersionManager()
         version = version_manager.get_version(version)
         rspec_version = version_manager._get_version(

@@ -110,7 +110,8 @@ class DummySlices:
         return resulting_nodes
         
 
-    def verify_slice(self, slice_hrn, slice_record, expiration, options={}):
+    def verify_slice(self, slice_hrn, slice_record, expiration, options=None):
+        if options is None: options={}
         slicename = hrn_to_dummy_slicename(slice_hrn)
         parts = slicename.split("_")
         login_base = parts[0]
@@ -130,7 +131,8 @@ class DummySlices:
        
         return slice
 
-    def verify_users(self, slice_hrn, slice_record, users, options={}):
+    def verify_users(self, slice_hrn, slice_record, users, options=None):
+        if options is None: options={}
         slice_name = hrn_to_dummy_slicename(slice_hrn)
         users_by_email = {}
         for user in users:
@@ -162,7 +164,8 @@ class DummySlices:
             pass
             
 
-    def verify_keys(self, old_users, new_users, options={}):
+    def verify_keys(self, old_users, new_users, options=None):
+        if options is None: options={}
         # existing keys 
         existing_keys = []
         for user in old_users:

@@ -35,7 +35,8 @@ class Iotlabv1Sliver:
                     for (key, value) in attrib_dict.items():
                         attrib_elem.set(key, value)
     @staticmethod
-    def get_slivers(xml, filter={}):
+    def get_slivers(xml, filter=None):
+        if filter is None: filter={}
         xpath = './default:sliver | ./sliver'
 
         sliver_elems = xml.xpath(xpath)
@@ -54,5 +55,6 @@ class Iotlabv1Sliver:
         return slivers
 
     @staticmethod
-    def get_sliver_attributes(xml, filter={}):
+    def get_sliver_attributes(xml, filter=None):
+        if filter is None: filter={}
         return []

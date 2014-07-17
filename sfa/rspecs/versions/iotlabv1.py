@@ -139,7 +139,8 @@ class Iotlabv1(RSpecVersion):
     def add_default_sliver_attribute(self, name, value, network=None):
         pass
 
-    def add_slivers(self, hostnames, attributes=[], sliver_urn=None, append=False):
+    def add_slivers(self, hostnames, attributes=None, sliver_urn=None, append=False):
+        if attributes is None: attributes=[]
         # all nodes hould already be present in the rspec. Remove all
         # nodes that done have slivers
         print>>sys.stderr, "\r\n \r\n \r\n \t\t\t Iotlabv1.PY add_slivers  ----->get_node "

@@ -125,7 +125,8 @@ class SFAv1Node:
                     node.element.remove(sliver.element)
         
     @staticmethod
-    def get_nodes(xml, filter={}):
+    def get_nodes(xml, filter=None):
+        if filter is None: filter={}
         xpath = '//node%s | //default:node%s' % (XpathFilter.xpath(filter), XpathFilter.xpath(filter))
         node_elems = xml.xpath(xpath)
         return SFAv1Node.get_node_objs(node_elems)

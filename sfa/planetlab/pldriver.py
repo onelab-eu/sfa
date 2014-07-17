@@ -627,23 +627,27 @@ class PlDriver (Driver):
         return {}
 
     # first 2 args are None in case of resource discovery
-    def list_resources (self, version=None, options={}):
+    def list_resources (self, version=None, options=None):
+        if options is None: options={}
         aggregate = PlAggregate(self)
         rspec =  aggregate.list_resources(version=version, options=options)
         return rspec
 
-    def describe(self, urns, version, options={}):
+    def describe(self, urns, version, options=None):
+        if options is None: options={}
         aggregate = PlAggregate(self)
         return aggregate.describe(urns, version=version, options=options)
     
-    def status (self, urns, options={}):
+    def status (self, urns, options=None):
+        if options is None: options={}
         aggregate = PlAggregate(self)
         desc =  aggregate.describe(urns, version='GENI 3')
         status = {'geni_urn': desc['geni_urn'],
                   'geni_slivers': desc['geni_slivers']}
         return status
 
-    def allocate (self, urn, rspec_string, expiration, options={}):
+    def allocate (self, urn, rspec_string, expiration, options=None):
+        if options is None: options={}
         xrn = Xrn(urn)
         aggregate = PlAggregate(self)
         slices = PlSlices(self)
@@ -680,7 +684,8 @@ class PlDriver (Driver):
 
         return aggregate.describe([xrn.get_urn()], version=rspec.version)
 
-    def provision(self, urns, options={}):
+    def provision(self, urns, options=None):
+        if options is None: options={}
         # update users
         slices = PlSlices(self)
         aggregate = PlAggregate(self)
@@ -715,7 +720,8 @@ class PlDriver (Driver):
         rspec_version = version_manager.get_version(options['geni_rspec_version']) 
         return self.describe(urns, rspec_version, options=options)
 
-    def delete(self, urns, options={}):
+    def delete(self, urns, options=None):
+        if options is None: options={}
         # collect sliver ids so we can update sliver allocation states after
         # we remove the slivers.
         aggregate = PlAggregate(self)
@@ -754,7 +760,8 @@ class PlDriver (Driver):
                  'geni_expires': datetime_to_string(utcparse(sliver['expires']))})  
         return geni_slivers
 
-    def renew (self, urns, expiration_time, options={}):
+    def renew (self, urns, expiration_time, options=None):
+        if options is None: options={}
         aggregate = PlAggregate(self)
         slivers = aggregate.get_slivers(urns)
         if not slivers:
@@ -767,7 +774,8 @@ class PlDriver (Driver):
         return description['geni_slivers']
             
 
-    def perform_operational_action (self, urns, action, options={}):
+    def perform_operational_action (self, urns, action, options=None):
+        if options is None: options={}
         # MyPLC doesn't support operational actions. Lets pretend like it
         # supports start, but reject everything else.
         action = action.lower()
@@ -787,7 +795,8 @@ class PlDriver (Driver):
         return geni_slivers
 
     # set the 'enabled' tag to 0
-    def shutdown (self, xrn, options={}):
+    def shutdown (self, xrn, options=None):
+        if options is None: options={}
         hrn, _ = urn_to_hrn(xrn)
         top_auth_hrn = top_auth(hrn)
         site_hrn = '.'.join(hrn.split('.')[:-1])

@@ -10,7 +10,8 @@ from sfa.rspecs.version_manager import VersionManager
 
 class RSpec:
  
-    def __init__(self, rspec="", version=None, user_options={}):
+    def __init__(self, rspec="", version=None, user_options=None):
+        if user_options is None: user_options={}
         self.header = '<?xml version="1.0"?>\n'
         self.template = """<RSpec></RSpec>"""
         self.version = None
@@ -72,15 +73,17 @@ class RSpec:
             raise InvalidRSpecElement(element_type, extra=msg)
         return self.elements[element_type]
 
-    def get(self, element_type, filter={}, depth=0):
+    def get(self, element_type, filter=None, depth=0):
+        if filter is None: filter={}
         elements = self.get_elements(element_type, filter)
         elements = [self.xml.get_element_attributes(elem, depth=depth) for elem in elements]
         return elements
 
-    def get_elements(self, element_type, filter={}):
+    def get_elements(self, element_type, filter=None):
         """
         search for a registered element
         """
+        if filter is None: filter={}
         if element_type not in self.elements:
             msg = "Unable to search for element %s in rspec, expath expression not found." % \
                    element_type

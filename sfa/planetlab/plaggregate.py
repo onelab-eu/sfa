@@ -31,7 +31,8 @@ class PlAggregate:
     def __init__(self, driver):
         self.driver = driver
 
-    def get_nodes(self, options={}):
+    def get_nodes(self, options=None):
+        if options is None: options={}
         filter = {'peer_id': None}
         geni_available = options.get('geni_available')    
         if geni_available == True:
@@ -40,13 +41,15 @@ class PlAggregate:
        
         return nodes  
  
-    def get_sites(self, filter={}):
+    def get_sites(self, filter=None):
+        if filter is None: filter={}
         sites = {}
         for site in self.driver.shell.GetSites(filter):
             sites[site['site_id']] = site
         return sites
 
-    def get_interfaces(self, filter={}):
+    def get_interfaces(self, filter=None):
+        if filter is None: filter={}
         interfaces = {}
         for interface in self.driver.shell.GetInterfaces(filter):
             iface = Interface()
@@ -98,20 +101,23 @@ class PlAggregate:
 
         return links
 
-    def get_node_tags(self, filter={}):
+    def get_node_tags(self, filter=None):
+        if filter is None: filter={}
         node_tags = {}
         for node_tag in self.driver.shell.GetNodeTags(filter):
             node_tags[node_tag['node_tag_id']] = node_tag
         return node_tags
 
-    def get_pl_initscripts(self, filter={}):
+    def get_pl_initscripts(self, filter=None):
+        if filter is None: filter={}
         pl_initscripts = {}
         filter.update({'enabled': True})
         for initscript in self.driver.shell.GetInitScripts(filter):
             pl_initscripts[initscript['initscript_id']] = initscript
         return pl_initscripts
 
-    def get_slivers(self, urns, options={}):
+    def get_slivers(self, urns, options=None):
+        if options is None: options={}
         names = set()
         slice_ids = set()
         node_ids = []
@@ -193,7 +199,9 @@ class PlAggregate:
             slivers.append(node)
         return slivers
 
-    def node_to_rspec_node(self, node, sites, interfaces, node_tags, pl_initscripts=[], grain=None, options={}):
+    def node_to_rspec_node(self, node, sites, interfaces, node_tags, pl_initscripts=None, grain=None, options=None):
+        if pl_initscripts is None: pl_initscripts=[]
+        if options is None: options={}
         rspec_node = NodeElement()
         # xxx how to retrieve site['login_base']
         site=sites[node['site_id']]
@@ -286,7 +294,8 @@ class PlAggregate:
             tags_dict[tag['node_id']] = tag
         return tags_dict
 
-    def get_slice_nodes(self, slice, options={}):
+    def get_slice_nodes(self, slice, options=None):
+        if options is None: options={}
         nodes_dict = {}
         filter = {'peer_id': None}
         tags_filter = {}
@@ -304,7 +313,8 @@ class PlAggregate:
             nodes_dict[node['node_id']] = node
         return nodes_dict
 
-    def rspec_node_to_geni_sliver(self, rspec_node, sliver_allocations = {}):
+    def rspec_node_to_geni_sliver(self, rspec_node, sliver_allocations=None):
+        if sliver_allocations is None: sliver_allocations={}
         if rspec_node['sliver_id'] in sliver_allocations:
             # set sliver allocation and operational status
             sliver_allocation = sliver_allocations[rspec_node['sliver_id']]
@@ -333,7 +343,8 @@ class PlAggregate:
                        }
         return geni_sliver        
 
-    def get_leases(self, slice=None, options={}):
+    def get_leases(self, slice=None, options=None):
+        if options is None: options={}
         
         now = int(time.time())
         filter={}
@@ -370,7 +381,8 @@ class PlAggregate:
         return rspec_leases
 
     
-    def list_resources(self, version = None, options={}):
+    def list_resources(self, version = None, options=None):
+        if options is None: options={}
 
         version_manager = VersionManager()
         version = version_manager.get_version(version)
@@ -410,7 +422,8 @@ class PlAggregate:
 
         return rspec.toxml()
 
-    def describe(self, urns, version=None, options={}):
+    def describe(self, urns, version=None, options=None):
+        if options is None: options={}
         version_manager = VersionManager()
         version = version_manager.get_version(version)
         rspec_version = version_manager._get_version(version.type, version.version, 'manifest')

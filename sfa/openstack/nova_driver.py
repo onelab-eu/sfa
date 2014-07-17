@@ -355,23 +355,27 @@ class NovaDriver(Driver):
         return {}
 
     # first 2 args are None in case of resource discovery
-    def list_resources (self, version=None, options={}):
+    def list_resources (self, version=None, options=None):
+        if options is None: options={}
         aggregate = OSAggregate(self)
         rspec =  aggregate.list_resources(version=version, options=options)
         return rspec
 
-    def describe(self, urns, version=None, options={}):
+    def describe(self, urns, version=None, options=None):
+        if options is None: options={}
         aggregate = OSAggregate(self)
         return aggregate.describe(urns, version=version, options=options)
     
-    def status (self, urns, options={}):
+    def status (self, urns, options=None):
+        if options is None: options={}
         aggregate = OSAggregate(self)
         desc =  aggregate.describe(urns)
         status = {'geni_urn': desc['geni_urn'],
                   'geni_slivers': desc['geni_slivers']}
         return status
 
-    def allocate (self, urn, rspec_string, expiration, options={}):
+    def allocate (self, urn, rspec_string, expiration, options=None):
+        if options is None: options={}
         xrn = Xrn(urn) 
         aggregate = OSAggregate(self)
 
@@ -401,7 +405,8 @@ class NovaDriver(Driver):
    
         return aggregate.describe(urns=[urn], version=rspec.version)
 
-    def provision(self, urns, options={}):
+    def provision(self, urns, options=None):
+        if options is None: options={}
         # update sliver allocation states and set them to geni_provisioned
         aggregate = OSAggregate(self)
         instances = aggregate.get_instances(urns)
@@ -415,7 +420,8 @@ class NovaDriver(Driver):
         rspec_version = version_manager.get_version(options['geni_rspec_version'])
         return self.describe(urns, rspec_version, options=options) 
 
-    def delete (self, urns, options={}):
+    def delete (self, urns, options=None):
+        if options is None: options={}
         # collect sliver ids so we can update sliver allocation states after
         # we remove the slivers.
         aggregate = OSAggregate(self)
@@ -441,11 +447,13 @@ class NovaDriver(Driver):
                  'geni_expires': None})        
         return geni_slivers
 
-    def renew (self, urns, expiration_time, options={}):
+    def renew (self, urns, expiration_time, options=None):
+        if options is None: options={}
         description = self.describe(urns, None, options)
         return description['geni_slivers']
 
-    def perform_operational_action  (self, urns, action, options={}):
+    def perform_operational_action  (self, urns, action, options=None):
+        if options is None: options={}
         aggregate = OSAggregate(self)
         action = action.lower() 
         if action == 'geni_start':
@@ -474,7 +482,8 @@ class NovaDriver(Driver):
         geni_slivers = self.describe(urns, None, options)['geni_slivers']
         return geni_slivers
 
-    def shutdown(self, xrn, options={}):
+    def shutdown(self, xrn, options=None):
+        if options is None: options={}
         xrn = OSXrn(xrn=xrn, type='slice')
         tenant_name = xrn.get_tenant_name()
         name = xrn.get_slicename()

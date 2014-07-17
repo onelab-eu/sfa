@@ -410,7 +410,8 @@ def drop_tables(engine):
 
 ##############################
 # create a record of the right type from either a dict or an xml string
-def make_record (dict={}, xml=""):
+def make_record (dict=None, xml=""):
+    if dict is None: dict={}
     if dict:    return make_record_dict (dict)
     elif xml:   return make_record_xml (xml)
     else:       raise Exception("make_record has no input")

@@ -39,7 +39,8 @@ class Ofeliav1Port:
         return attribs 
                 
     @staticmethod
-    def get_ports(xml, filter={}):
+    def get_ports(xml, filter=None):
+        if filter is None: filter={}
         xpath = './openflow:port | ./port'
         port_elems = xml.xpath(xpath)
         ports = []

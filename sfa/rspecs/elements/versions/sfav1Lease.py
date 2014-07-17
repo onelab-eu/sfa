@@ -72,7 +72,8 @@ class SFAv1Lease:
 
 
     @staticmethod
-    def get_leases(xml, filter={}):
+    def get_leases(xml, filter=None):
+        if filter is None: filter={}
         xpath = '//lease%s | //default:lease%s' % (XpathFilter.xpath(filter), XpathFilter.xpath(filter))
         lease_elems = xml.xpath(xpath)
         return SFAv1Lease.get_lease_objs(lease_elems)

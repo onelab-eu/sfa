@@ -52,12 +52,14 @@ class DummyAggregate:
 
         return (slice, slivers)
 
-    def get_nodes(self, options={}):
+    def get_nodes(self, options=None):
+        if options is None: options={}
         filter = {}
         nodes = self.driver.shell.GetNodes(filter)
         return nodes
 
-    def get_slivers(self, urns, options={}):
+    def get_slivers(self, urns, options=None):
+        if options is None: options={}
         slice_names = set()
         slice_ids = set()
         node_ids = []
@@ -122,7 +124,8 @@ class DummyAggregate:
             slivers.append(node)
         return slivers
 
-    def node_to_rspec_node(self, node, options={}):
+    def node_to_rspec_node(self, node, options=None):
+        if options is None: options={}
         rspec_node = NodeElement()
         site=self.driver.testbedInfo
         rspec_node['component_id'] = hostname_to_urn(self.driver.hrn, site['name'], node['hostname'])
@@ -163,7 +166,8 @@ class DummyAggregate:
                       })
         return rspec_node
 
-    def get_slice_nodes(self, slice, options={}):
+    def get_slice_nodes(self, slice, options=None):
+        if options is None: options={}
         nodes_dict = {}
         filter = {}
         if slice and slice.get('node_ids'):
@@ -176,7 +180,8 @@ class DummyAggregate:
             nodes_dict[node['node_id']] = node
         return nodes_dict
 
-    def rspec_node_to_geni_sliver(self, rspec_node, sliver_allocations = {}):
+    def rspec_node_to_geni_sliver(self, rspec_node, sliver_allocations = None):
+        if sliver_allocations is None: sliver_allocations={}
         if rspec_node['sliver_id'] in sliver_allocations:
             # set sliver allocation and operational status
             sliver_allocation = sliver_allocations[rspec_node['sliver_id']]
@@ -202,7 +207,8 @@ class DummyAggregate:
                        }
         return geni_sliver
 
-    def list_resources(self, version = None, options={}):
+    def list_resources(self, version = None, options=None):
+        if options is None: options={}
 
         version_manager = VersionManager()
         version = version_manager.get_version(version)
@@ -224,7 +230,8 @@ class DummyAggregate:
 
         return rspec.toxml()
 
-    def describe(self, urns, version=None, options={}):
+    def describe(self, urns, version=None, options=None):
+        if options is None: options={}
         version_manager = VersionManager()
         version = version_manager.get_version(version)
         rspec_version = version_manager._get_version(version.type, version.version, 'manifest')
