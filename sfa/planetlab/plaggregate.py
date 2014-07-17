@@ -16,6 +16,7 @@ from sfa.rspecs.elements.services import ServicesElement
 from sfa.rspecs.elements.pltag import PLTag
 from sfa.rspecs.elements.lease import Lease
 from sfa.rspecs.elements.granularity import Granularity
+from sfa.rspecs.elements.memory import Memory
 from sfa.rspecs.version_manager import VersionManager
 
 from sfa.planetlab.plxrn import PlXrn, hostname_to_urn, hrn_to_pl_slicename, slicename_to_hrn, top_auth, hash_loginbase
@@ -222,6 +223,23 @@ class PlAggregate:
         else:
             rspec_node['exclusive'] = 'false'
 
+        # this mostly is a sample code, not designed for production but more for
+        # illustrative purposes, that gives an example of how you can extend the node's
+        # rspec to expose their amount of memory
+        # in this example I chose to always expose a <memory> tag
+        # also by default the exposed amount will be 4 Gb
+        # but this value can be overridden by setting a 'memory' tag on the node
+        memory_in_gb='4'
+        # let's scan the node tags to find for any 'memory' tag
+        for id,node_tag in node_tags.items():
+            if node_tag['tagname']=='memory':
+                memory_in_gb = node_tag['value']
+                # note that in this case it would make sense to delete the node_tag
+                # so that the XML does not contain a duplicate information
+        # always add a 'memory' xml tag
+        # this will be rendered by pgv2node.py
+        rspec_node['memory'] = Memory({'Gb':memory_in_gb})
+        
         rspec_node['hardware_types'] = [HardwareType({'name': 'plab-pc'}),
                                         HardwareType({'name': 'pc'})]
         # only doing this because protogeni rspec needs

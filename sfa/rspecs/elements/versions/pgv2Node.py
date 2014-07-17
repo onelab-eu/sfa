@@ -15,6 +15,7 @@ from sfa.rspecs.elements.versions.pgv2Interface import PGv2Interface
 from sfa.rspecs.elements.versions.sfav1PLTag import SFAv1PLTag
 from sfa.rspecs.elements.granularity import Granularity
 from sfa.rspecs.elements.attribute import Attribute
+from sfa.rspecs.elements.memory import Memory
 
 
 class PGv2Node:
@@ -66,6 +67,10 @@ class PGv2Node:
                     for initscript in node.get('pl_initscripts', []):
                         slivers['tags'].append({'name': 'initscript', 'value': initscript['name']})
             PGv2SliverType.add_slivers(node_elem, slivers)
+
+            # render the memory tag; it will be placed at this point in the xml output
+            if node.get('memory'):
+                node_elem.add_instance('memory',node['memory'],Memory.fields)
 
             # advertise the node tags
             tags = node.get('tags', [])
