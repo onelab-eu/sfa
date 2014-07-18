@@ -362,7 +362,7 @@ class RegistryManager:
         if not record.gid:
             uuid = create_uuid()
             pkey = Keypair(create=True)
-            pub_key=record_dict.get('reg-keys',None)
+            pub_key=getattr(record,'reg-keys',None)
             if pub_key is not None:
                 # use only first key in record
                 if pub_key and isinstance(pub_key, types.ListType): pub_key = pub_key[0]
@@ -392,9 +392,10 @@ class RegistryManager:
         
         elif isinstance (record, RegUser):
             # create RegKey objects for incoming keys
-            if hasattr(record,'reg_keys'): 
-                logger.debug ("creating %d keys for user %s"%(len(record.reg_keys),record.hrn))
-                record.reg_keys = [ RegKey (key) for key in record.reg_keys ]
+            if hasattr(record,'reg-keys'):
+                keys=getattr(record,'reg-keys')
+                logger.debug ("creating %d keys for user %s"%(len(keys),record.hrn))
+                record.reg_keys = [ RegKey (key) for key in keys ]
             
         # update testbed-specific data if needed
         pointer = api.driver.register (record.__dict__, hrn, pub_key)
