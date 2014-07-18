@@ -201,7 +201,7 @@ def load_record_from_opts(options):
             pubkey = options.key
         if not check_ssh_key (pubkey):
             raise SfaInvalidArgument(name='key',msg="Could not find file, or wrong key format")
-        record_dict['keys'] = [pubkey]
+        record_dict['reg-keys'] = [pubkey]
     if hasattr(options, 'slices') and options.slices:
         record_dict['slices'] = options.slices
     if hasattr(options, 'reg_researchers') and options.reg_researchers is not None:

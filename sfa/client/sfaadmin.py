@@ -102,7 +102,7 @@ class RegistryCommands(Commands):
                 pubkey = open(key, 'r').read()
             except IOError:
                 pubkey = key
-            record_dict['keys'] = [pubkey]
+            record_dict['reg-keys'] = [pubkey]
         if slices:
             record_dict['slices'] = slices
         if researchers:
