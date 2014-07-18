@@ -394,6 +394,8 @@ class RegistryManager:
             # create RegKey objects for incoming keys
             if hasattr(record,'reg-keys'):
                 keys=getattr(record,'reg-keys')
+                # some people send the key as a string instead of a list of strings
+                if isinstance(keys,types.StringTypes): keys=[keys]
                 logger.debug ("creating %d keys for user %s"%(len(keys),record.hrn))
                 record.reg_keys = [ RegKey (key) for key in keys ]
             
