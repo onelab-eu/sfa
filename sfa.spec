@@ -1,6 +1,6 @@
 %define name sfa
 %define version 3.1
-%define taglevel 8
+%define taglevel 9
 
 %define release %{taglevel}%{?pldistro:.%{pldistro}}%{?date:.%{date}}
 %global python_sitearch	%( python -c "from distutils.sysconfig import get_python_lib; print get_python_lib(1)" )
@@ -264,6 +264,13 @@ fi
 #[ "$1" -ge "1" ] && service sfa-cm restart || :
 
 %changelog
+* Mon Jul 21 2014 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-3.1-9
+- Register can change the user keys using 'reg-keys' as well as 'keys'
+- also accept a single string rather than a list of keys
+- remove 'geni_api' from the registry GetVersion (which is not based on geni anymore)
+- bump the 'sfa' tag in the same registry GetVersion to 3
+- remove all mutable used as default arguments
+
 * Thu Jun 05 2014 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-3.1-8
 - bugfix, sfi remove was broken
 
