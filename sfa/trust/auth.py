@@ -2,6 +2,7 @@
 # SfaAPI authentication 
 #
 import sys
+from types import StringTypes
 
 from sfa.util.faults import InsufficientRights, MissingCallerGID, MissingTrustedRoots, PermissionError, \
     BadRequestHash, ConnectionKeyGIDMismatch, SfaPermissionDenied, CredentialNotVerifiable, Forbidden, \
@@ -17,6 +18,7 @@ from sfa.trust.credential import Credential
 from sfa.trust.trustedroots import TrustedRoots
 from sfa.trust.hierarchy import Hierarchy
 from sfa.trust.sfaticket import SfaTicket
+from sfa.trust.speaksfor_util import determine_speaks_for
 
 
 class Auth:
@@ -35,12 +37,33 @@ class Auth:
         self.trusted_cert_list = TrustedRoots(self.config.get_trustedroots_dir()).get_list()
         self.trusted_cert_file_list = TrustedRoots(self.config.get_trustedroots_dir()).get_file_list()
 
-    def checkCredentials(self, creds, operation, xrns=[], check_sliver_callback=None, speaking_for_hrn=None):
+    # this convenience methods extracts speaking_for_xrn from the passed options using 'geni_speaking_for'
+    def checkCredentialsSpeaksFor (self, *args, **kwds):
+        if 'options' not in kwds:
+            logger.error ("checkCredentialsSpeaksFor was not passed options=options")
+            return
+        # remove the options arg
+        options=kwds['options']; del kwds['options']
+        # compute the speaking_for_xrn arg and pass it to checkCredentials
+        if options is None: speaking_for_xrn=None
+        else:               speaking_for_xrn=options.get('geni_speaking_for',None)
+        kwds['speaking_for_xrn']=speaking_for_xrn
+        return self.checkCredentials (*args, **kwds)
 
+    # do not use mutable as default argument 
+    # http://docs.python-guide.org/en/latest/writing/gotchas/#mutable-default-arguments
+    def checkCredentials(self, creds, operation, xrns=None, 
+                         check_sliver_callback=None, 
+                         speaking_for_xrn=None):
+        if xrns is None: xrns=[]
         def log_invalid_cred(cred):
-            cred_obj=Credential(string=cred)
-            logger.debug("failed to validate credential - dump=%s"%cred_obj.dump_string(dump_parents=True))
-            error = sys.exc_info()[:2]
+            if not isinstance (cred, StringTypes):
+                logger.info("cannot validate credential %s - expecting a string"%cred)
+                error="checkCredentials: expected a string, received %s"%(type(cred))
+            else:
+                cred_obj=Credential(string=cred)
+                logger.info("failed to validate credential - dump=%s"%cred_obj.dump_string(dump_parents=True))
+                error = sys.exc_info()[:2]
             return error
 
         # if xrns are specified they cannot be None or empty string
@@ -60,7 +83,6 @@ class Auth:
         # we make sure not to include sliver urns/hrns in the core validation loop
         hrns = [Xrn(xrn).hrn for xrn in xrns if xrn not in sliver_xrns] 
         valid = []
-        speaks_for_cred = None
         if not isinstance(creds, list):
             creds = [creds]
         logger.debug("Auth.checkCredentials with %d creds on hrns=%s"%(len(creds),hrns))
@@ -68,22 +90,21 @@ class Auth:
         if not creds: raise Forbidden("no credential provided")
         if not hrns: hrns = [None]
         error=[None,None]
-        for cred in creds:
-            for hrn in hrns:
-                try:
-                    self.check(cred, operation, hrn)
-                    valid.append(cred)
-                except:
-                    if speaking_for_hrn:
-                       try:
-                          self.check(cred, operation, speaking_for_hrn)
-                          speaks_for_cred = cred
-                          valid.append(cred)
-                       except:
-                          error = log_invalid_cred(cred)
-                    else:
-                       error = log_invalid_cred(cred)
-                    continue
+
+        speaks_for_gid = determine_speaks_for(logger, creds, self.peer_cert,
+                                              speaking_for_xrn, self.trusted_cert_list)
+
+        if self.peer_cert and \
+           not self.peer_cert.is_pubkey(speaks_for_gid.get_pubkey()):
+            valid = creds
+        else:
+            for cred in creds:
+                for hrn in hrns:
+                    try:
+                        self.check(cred, operation, hrn)
+                        valid.append(cred)
+                    except:
+                        error = log_invalid_cred(cred)
         
         # make sure all sliver xrns are validated against the valid credentials
         if sliver_xrns:
@@ -95,9 +116,6 @@ class Auth:
                 
         if not len(valid):
             raise Forbidden("Invalid credential %s -- %s"%(error[0],error[1]))
-        
-        if speaking_for_hrn and not speaks_for_cred:
-            raise InsufficientRights('Access denied: "geni_speaking_for" option specified but no valid speaks for credential found: %s -- %s' % (error[0],error[1]))
         
         return valid
         

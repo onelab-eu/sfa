@@ -7,7 +7,7 @@ holding information about which slice is running which job.
 from datetime import datetime
 
 from sfa.util.sfalogging import logger
-
+from sfa.util.sfatime import SFATIME_FORMAT
 
 from sfa.iotlab.iotlabpostgres import LeaseTableXP
 from sfa.cortexlab.LDAPapi import LDAPapi
@@ -34,7 +34,7 @@ class CortexlabShell():
 
         self.query_sites = CortexlabQueryNodes()
         self.ldap = LDAPapi()
-        self.time_format = "%Y-%m-%d %H:%M:%S"
+        self.time_format = SFATIME_FORMAT
         self.root_auth = config.SFA_REGISTRY_ROOT_AUTH
         self.grain = 60  # 10 mins lease minimum, 60 sec granularity
         #import logging, logging.handlers

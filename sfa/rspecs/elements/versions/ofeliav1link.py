@@ -8,7 +8,8 @@ from sfa.rspecs.elements.link import Link
 class Ofeliav1Link:
 
     @staticmethod
-    def get_links(xml, filter={}):
+    def get_links(xml, filter=None):
+        if filter is None: filter={}
         xpath = '//link%s | //openflow:link%s' % (XpathFilter.xpath(filter), XpathFilter.xpath(filter))
         link_elems = xml.xpath(xpath)
         return Ofeliav1Link.get_link_objs(link_elems)

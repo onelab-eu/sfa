@@ -1081,7 +1081,7 @@ class CortexlabDriver(Driver):
 
 
 
-    def delete(self, slice_urns, options={}):
+    def delete(self, slice_urns, options=None):
         """
         Deletes the lease associated with the slice hrn and the credentials
             if the slice belongs to iotlab. Answer to DeleteSliver.
@@ -1099,6 +1099,7 @@ class CortexlabDriver(Driver):
         .. note:: creds are unused, and are not used either in the dummy driver
              delete_sliver .
         """
+        if options is None: options={}
         # collect sliver ids so we can update sliver allocation states after
         # we remove the slivers.
         aggregate = CortexlabAggregate(self)
@@ -1390,17 +1391,20 @@ class CortexlabDriver(Driver):
 
 
     # first 2 args are None in case of resource discovery
-    def list_resources (self, version=None, options={}):
+    def list_resources (self, version=None, options=None):
+        if options is None: options={}
         aggregate = CortexlabAggregate(self)
         rspec =  aggregate.list_resources(version=version, options=options)
         return rspec
 
 
-    def describe(self, urns, version, options={}):
+    def describe(self, urns, version, options=None):
+        if options is None: options={}
         aggregate = CortexlabAggregate(self)
         return aggregate.describe(urns, version=version, options=options)
 
-    def status (self, urns, options={}):
+    def status (self, urns, options=None):
+        if options is None: options={}
         aggregate = CortexlabAggregate(self)
         desc =  aggregate.describe(urns, version='GENI 3')
         status = {'geni_urn': desc['geni_urn'],
@@ -1408,7 +1412,8 @@ class CortexlabDriver(Driver):
         return status
 
 
-    def allocate (self, urn, rspec_string, expiration, options={}):
+    def allocate (self, urn, rspec_string, expiration, options=None):
+        if options is None: options={}
         xrn = Xrn(urn)
         aggregate = CortexlabAggregate(self)
 
@@ -1488,7 +1493,8 @@ class CortexlabDriver(Driver):
 
         return aggregate.describe([xrn.get_urn()], version=rspec.version)
 
-    def provision(self, urns, options={}):
+    def provision(self, urns, options=None):
+        if options is None: options={}
         # update users
         slices = CortexlabSlices(self)
         aggregate = CortexlabAggregate(self)

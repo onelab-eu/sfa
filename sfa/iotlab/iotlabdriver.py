@@ -179,12 +179,12 @@ class IotlabDriver(Driver):
                                             " %(user_dict))
             hrn = user_dict['hrn']
             person_urn = hrn_to_urn(hrn, 'user')
-            pubkey = user_dict['pkey']
             try:
+                pubkey = user_dict['pkey']
                 pkey = convert_public_key(pubkey)
             except TypeError:
                 #key not good. create another pkey
-                logger.warn('__add_person_to_db: unable to convert public \
+                logger.warn('__add_person_to_db: no public key or unable to convert public \
                                     key for %s' %(hrn ))
                 pkey = Keypair(create=True)
 
@@ -202,7 +202,7 @@ class IotlabDriver(Driver):
             user_record = RegUser(hrn=hrn , pointer= '-1', \
                                     authority=get_authority(hrn), \
                                     email=user_dict['email'], gid = person_gid)
-            user_record.reg_keys = [RegKey(user_dict['pkey'])]
+            #user_record.reg_keys = [RegKey(user_dict['pkey'])]
             user_record.just_created()
             self.api.dbsession().add (user_record)
             self.api.dbsession().commit()
@@ -1088,7 +1088,7 @@ class IotlabDriver(Driver):
 
 
 
-    def delete(self, slice_urns, options={}):
+    def delete(self, slice_urns, options=None):
         """
         Deletes the lease associated with the slice hrn and the credentials
             if the slice belongs to iotlab. Answer to DeleteSliver.
@@ -1106,6 +1106,7 @@ class IotlabDriver(Driver):
         .. note:: creds are unused, and are not used either in the dummy driver
              delete_sliver .
         """
+        if options is None: options={}
         # collect sliver ids so we can update sliver allocation states after
         # we remove the slivers.
         aggregate = IotlabAggregate(self)
@@ -1398,16 +1399,19 @@ class IotlabDriver(Driver):
             'geni_ad_rspec_versions': ad_rspec_versions}
 
     # first 2 args are None in case of resource discovery
-    def list_resources (self, version=None, options={}):
+    def list_resources (self, version=None, options=None):
+        if options is None: options={}
         aggregate = IotlabAggregate(self)
         rspec =  aggregate.list_resources(version=version, options=options)
         return rspec
 
-    def describe(self, urns, version, options={}):
+    def describe(self, urns, version, options=None):
+        if options is None: options={}
         aggregate = IotlabAggregate(self)
         return aggregate.describe(urns, version=version, options=options)
 
-    def status (self, urns, options={}):
+    def status (self, urns, options=None):
+        if options is None: options={}
         aggregate = IotlabAggregate(self)
         desc =  aggregate.describe(urns, version='GENI 3')
         status = {'geni_urn': desc['geni_urn'],
@@ -1415,7 +1419,8 @@ class IotlabDriver(Driver):
         return status
 
 
-    def allocate (self, urn, rspec_string, expiration, options={}):
+    def allocate (self, urn, rspec_string, expiration, options=None):
+        if options is None: options={}
         xrn = Xrn(urn)
         aggregate = IotlabAggregate(self)
 
@@ -1423,16 +1428,38 @@ class IotlabDriver(Driver):
         peer = slices.get_peer(xrn.get_hrn())
         sfa_peer = slices.get_sfa_peer(xrn.get_hrn())
 
+        caller_hrn = options.get('actual_caller_hrn', [])
+        caller_xrn = Xrn(caller_hrn)
+        caller_urn = caller_xrn.get_urn()
 
-        slice_record = None
+        logger.debug("IOTLABDRIVER.PY :: Allocate caller = %s" % (caller_urn))
+
+        slice_record = {}
         users = options.get('geni_users', [])
-
         sfa_users = options.get('sfa_users', [])
+        
         if sfa_users:
-            slice_record = sfa_users[0].get('slice_record', [])
-            slice_record['user'] = {'keys': users[0]['keys'],
-                                    'email': users[0]['email'],
-                                    'hrn': slice_record['reg-researchers'][0]}
+            user = None
+            # Looking for the user who actually called the Allocate function in the list of users of the slice
+            for u in sfa_users:
+                if 'urn' in u and u['urn'] == caller_urn:
+                    user = u
+                    logger.debug("user = %s" % u)
+            # If we find the user in the list we use it, else we take the 1st in the list as before
+            if user:
+                user_hrn = caller_hrn
+            else:
+                user = sfa_users[0]
+                # XXX Always empty ??? no slice_record in the Allocate call
+                #slice_record = sfa_users[0].get('slice_record', [])
+                user_xrn = Xrn(sfa_users[0]['urn'])
+                user_hrn = user_xrn.get_hrn()
+
+            slice_record = user.get('slice_record', {})
+            slice_record['user'] = {'keys': user['keys'],
+                                    'email': user['email'],
+                                    'hrn': user_hrn}
+            slice_record['authority'] = xrn.get_authority_hrn() 
 
         logger.debug("IOTLABDRIVER.PY \t urn %s allocate options  %s "
                      % (urn, options))
@@ -1453,8 +1480,10 @@ class IotlabDriver(Driver):
         # oui c'est degueulasse, le slice_record se retrouve modifie
         # dans la methode avec les infos du user, els infos sont propagees
         # dans verify_slice_leases
+        logger.debug("IOTLABDRIVER.PY  BEFORE slices.verify_persons")
         persons = slices.verify_persons(xrn.hrn, slice_record, users,
                                         options=options)
+        logger.debug("IOTLABDRIVER.PY  AFTER slices.verify_persons")
         # ensure slice attributes exists
         # slices.verify_slice_attributes(slice, requested_attributes,
                                     # options=options)
@@ -1487,7 +1516,10 @@ class IotlabDriver(Driver):
             client_id = hostname
             node_urn = xrn_object(self.testbed_shell.root_auth, hostname).urn
             component_id = node_urn
-            slice_urn = current_slice['reg-urn']
+            if 'reg-urn' in current_slice:
+                slice_urn = current_slice['reg-urn']
+            else:
+                slice_urn = current_slice['urn']
             for lease in leases:
                 if hostname in lease['reserved_nodes']:
                     index = lease['reserved_nodes'].index(hostname)
@@ -1502,7 +1534,8 @@ class IotlabDriver(Driver):
 
         return aggregate.describe([xrn.get_urn()], version=rspec.version)
 
-    def provision(self, urns, options={}):
+    def provision(self, urns, options=None):
+        if options is None: options={}
         # update users
         slices = IotlabSlices(self)
         aggregate = IotlabAggregate(self)

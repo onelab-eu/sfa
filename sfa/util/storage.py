@@ -9,8 +9,8 @@ class SimpleStorage(dict):
     db_filename = None
     type = 'dict'
     
-    def __init__(self, db_filename, db = {}):
-
+    def __init__(self, db_filename, db = None):
+        if db is None: db={}
         dict.__init__(self, db)
         self.db_filename = db_filename
     

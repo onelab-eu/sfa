@@ -292,7 +292,7 @@ class CortexlabAggregate:
         return rspec_node
 
 
-    def rspec_node_to_geni_sliver(self, rspec_node, sliver_allocations = {}):
+    def rspec_node_to_geni_sliver(self, rspec_node, sliver_allocations=None):
         """Makes a geni sliver structure from all the nodes allocated
         to slivers in the sliver_allocations dictionary. Returns the states
         of the sliver.
@@ -312,6 +312,8 @@ class CortexlabAggregate:
         .. seealso:: node_to_rspec_node
 
         """
+        if sliver_allocations is None: sliver_allocations={}
+
         if rspec_node['sliver_id'] in sliver_allocations:
             # set sliver allocation and operational status
             sliver_allocation = sliver_allocations[rspec_node['sliver_id']]
@@ -555,7 +557,7 @@ class CortexlabAggregate:
 
 
 
-    def get_slivers(self, urns, options={}):
+    def get_slivers(self, urns, options=None):
         """Get slivers of the given slice urns. Slivers contains slice, node and
         user information.
 
@@ -569,7 +571,7 @@ class CortexlabAggregate:
 
         .. seealso:: http://groups.geni.net/geni/wiki/GAPI_AM_API_V3/CommonConcepts#urns
         """
-
+        if options is None: options={}
 
         slice_ids = set()
         node_ids = []
@@ -667,7 +669,7 @@ class CortexlabAggregate:
         return slivers
 
 
-    def list_resources(self, version = None, options={}):
+    def list_resources(self, version = None, options=None):
         """
         Returns an advertisement Rspec of available resources at this
         aggregate. This Rspec contains a resource listing along with their
@@ -687,6 +689,8 @@ class CortexlabAggregate:
         .. seealso:: http://groups.geni.net/geni/wiki/GAPI_AM_API_V3/CommonConcepts#RSpecdatatype
         .. seealso:: http://groups.geni.net/geni/wiki/GAPI_AM_API_V3#ListResources
         """
+
+        if options is None: options={}
 
         version_manager = VersionManager()
         version = version_manager.get_version(version)
@@ -722,7 +726,7 @@ class CortexlabAggregate:
         return rspec.toxml()
 
 
-    def describe(self, urns, version=None, options={}):
+    def describe(self, urns, version=None, options=None):
         """
         Retrieve a manifest RSpec describing the resources contained by the
         named entities, e.g. a single slice or a set of the slivers in a slice.
@@ -752,6 +756,7 @@ class CortexlabAggregate:
         .. seealso:: http://groups.geni.net/geni/wiki/GAPI_AM_API_V3#Describe
         .. seealso:: http://groups.geni.net/geni/wiki/GAPI_AM_API_V3/CommonConcepts#urns
         """
+        if options is None: options={}
         version_manager = VersionManager()
         version = version_manager.get_version(version)
         rspec_version = version_manager._get_version(

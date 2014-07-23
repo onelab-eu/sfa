@@ -2,7 +2,8 @@ class Element(dict):
 
     fields = {}
 
-    def __init__(self, fields={}, element=None, keys=None):
+    def __init__(self, fields=None, element=None, keys=None):
+        if fields is None: fields={}
         self.element = element
         dict.__init__(self, dict.fromkeys(self.fields))
         if not keys:

@@ -221,7 +221,9 @@ class IotlabSlices:
         #Deleted leases are the ones with lease id not declared in the Rspec
         if deleted_leases:
             self.driver.testbed_shell.DeleteLeases(deleted_leases,
-                                                sfa_slice['user']['uid'])
+                                                sfa_slice['login'])
+            #self.driver.testbed_shell.DeleteLeases(deleted_leases,
+            #                                    sfa_slice['user']['uid'])
             logger.debug("IOTLABSLICES \
                           verify_slice_leases slice %s deleted_leases %s"
                          % (sfa_slice, deleted_leases))
@@ -334,8 +336,8 @@ class IotlabSlices:
                          'authority': slice_record['authority'],
                          'gid': slice_record['gid'],
                          'slice_id': slice_record['record_id'],
-                         'reg-researchers': slice_record['reg-researchers'],
-                         'peer_authority': str(sfa_peer)
+                         #'reg-researchers': slice_record['reg-researchers'],
+                         #'peer_authority': str(sfa_peer)
                          }
 
             if ldap_user:
@@ -354,7 +356,7 @@ class IotlabSlices:
         return sfa_slice
 
 
-    def verify_persons(self, slice_hrn, slice_record, users, options={}):
+    def verify_persons(self, slice_hrn, slice_record, users, options=None):
         """Ensures the users in users list exist and are enabled in LDAP. Adds
         person if needed (AddPerson).
 
@@ -380,7 +382,7 @@ class IotlabSlices:
 
 
         """
-
+        if options is None: options={}
         logger.debug("IOTLABSLICES \tverify_persons \tslice_hrn  %s  \
                     \t slice_record %s\r\n users %s \t  "
                      % (slice_hrn, slice_record, users))
@@ -501,8 +503,9 @@ class IotlabSlices:
             for k in k_list:
                 if k in added_user:
                     person[k] = added_user[k]
-
-            person['pkey'] = added_user['keys'][0]
+            # bug user without key
+            if added_user['keys']:
+                person['pkey'] = added_user['keys'][0]
             person['mail'] = added_user['email']
             person['email'] = added_user['email']
             person['key_ids'] = added_user.get('key_ids', [])
@@ -525,10 +528,11 @@ class IotlabSlices:
         return added_persons
 
 
-    def verify_keys(self, persons, users, peer, options={}):
+    def verify_keys(self, persons, users, peer, options=None):
         """
         .. warning:: unused
         """
+        if options is None: options={}
         # existing keys
         key_ids = []
         for person in persons:

@@ -25,7 +25,8 @@ class List(Method):
     # xxx used to be [SfaRecord]
     returns = [Parameter(dict, "registry record")]
     
-    def call(self, xrn, creds, options={}):
+    def call(self, xrn, creds, options=None):
+        if options is None: options={}
         hrn, type = urn_to_hrn(xrn)
         valid_creds = self.api.auth.checkCredentials(creds, 'list')
 

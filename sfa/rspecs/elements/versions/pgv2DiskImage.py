@@ -13,7 +13,8 @@ class PGv2DiskImage:
             xml.add_instance('disk_image', image, DiskImage.fields)
     
     @staticmethod
-    def get_images(xml, filter={}):
+    def get_images(xml, filter=None):
+        if filter is None: filter={}
         xpath = './default:disk_image | ./disk_image'
         image_elems = xml.xpath(xpath)
         images = []

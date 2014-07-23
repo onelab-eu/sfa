@@ -118,7 +118,7 @@ class Importer:
         generic=Generic.the_flavour()
         importer_class = generic.importer_class()
         if importer_class:
-            begin_time=datetime.now()
+            begin_time=datetime.utcnow()
             self.logger.info (30*'=')
             self.logger.info ("Starting import on %s, using class %s from flavour %s"%\
                          (begin_time,importer_class.__name__,generic.flavour))
@@ -126,7 +126,7 @@ class Importer:
             if testbed_importer:
                 testbed_importer.add_options(options)
                 testbed_importer.run (options)
-            end_time=datetime.now()
+            end_time=datetime.utcnow()
             duration=end_time-begin_time
             self.logger.info("Import took %s"%duration)
             self.logger.info (30*'=')

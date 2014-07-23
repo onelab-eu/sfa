@@ -1,6 +1,6 @@
 %define name sfa
 %define version 3.1
-%define taglevel 4
+%define taglevel 9
 
 %define release %{taglevel}%{?pldistro:.%{pldistro}}%{?date:.%{date}}
 %global python_sitearch	%( python -c "from distutils.sysconfig import get_python_lib; print get_python_lib(1)" )
@@ -264,6 +264,39 @@ fi
 #[ "$1" -ge "1" ] && service sfa-cm restart || :
 
 %changelog
+* Mon Jul 21 2014 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-3.1-9
+- Register can change the user keys using 'reg-keys' as well as 'keys'
+- also accept a single string rather than a list of keys
+- remove 'geni_api' from the registry GetVersion (which is not based on geni anymore)
+- bump the 'sfa' tag in the same registry GetVersion to 3
+- remove all mutable used as default arguments
+
+* Thu Jun 05 2014 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-3.1-8
+- bugfix, sfi remove was broken
+
+* Wed Jun 04 2014 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-3.1-7
+- sfi return code should be more meaningful - not yet for all commands though
+- DEFAULT_CREDENTIAL_LIFETIME now 28 days (was 31)
+- dropped support for legacy credentials
+- bugfix: short-lived credentials triggered a bug with UTC translated into localtime
+- further minor cleanup of timestamp formats
+
+* Mon Jun 02 2014 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-3.1-6
+- iotlab driver: Allocate uses OAR
+- iotlab driver: using actual_caller_hrn
+
+* Thu May 29 2014 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-3.1-5
+- Slice Manager is down by default
+- sfi renew -l/--as-long-as-possible and e.g. sfi renew <> +2[d|w|m]
+- also renew tries to find a max date for renewal instead of bailing out
+- sfaclientlib file names scheme keeps track of user as well as object for credentials
+- none fields get removed before sending over xmlrpc - partially for now
+- cleanup on time formats and - hopefully timezones
+- cleanup on speaking_for
+- Allocate passes actual_caller_hrn as part of options to driver
+- iotlab driver and leases
+- new modules abac_credential, credential_factory and speaksfor_util
+
 * Tue May 06 2014 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-3.1-4
 - for register and update, client is expected to set
 - reg-researchers rather than researcher

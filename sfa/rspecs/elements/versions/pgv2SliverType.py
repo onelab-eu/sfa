@@ -40,7 +40,8 @@ class PGv2SliverType:
                     for (key, value) in attrib_dict.items():
                         attrib_elem.set(key, value)                
     @staticmethod
-    def get_slivers(xml, filter={}):
+    def get_slivers(xml, filter=None):
+        if filter is None: filter={}
         xpath = './default:sliver_type | ./sliver_type'
         sliver_elems = xml.xpath(xpath)
         slivers = []
@@ -56,5 +57,6 @@ class PGv2SliverType:
         return slivers
 
     @staticmethod
-    def get_sliver_attributes(xml, filter={}):
+    def get_sliver_attributes(xml, filter=None):
+        if filter is None: filter={}
         return []             

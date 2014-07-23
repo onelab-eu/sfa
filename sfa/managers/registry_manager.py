@@ -33,7 +33,7 @@ from sqlalchemy.orm.collections import InstrumentedList
 # * write operations (register, update) need e.g. 
 #   'researcher' or 'pi' to be set - reg-* are just ignored
 #
-# the 'normalize' helper functions below aim at ironing this out
+# the '_normalize_input' helper functions below aim at ironing this out
 # however in order to break as few code as possible we essentially make sure that *both* fields are set
 # upon entering the write methods (so again register and update) for legacy, as some driver code
 # might depend on the presence of, say, 'researcher'
@@ -48,16 +48,21 @@ def _normalize_input (record, reg_key, driver_key):
         # and issue a warning if they were both set and different
         # as we're overwriting some user data here
         if driver_key in record:
-            logger.warning ("normalize_input_researcher: incoming record has both values, using reg-researchers")
+            logger.warning ("normalize_input: incoming record has both values, using %s"%reg_key)
         record[driver_key]=record[reg_key]
     # we only have one key set, duplicate for the other one
     elif driver_key in record:
-        logger.warning ("normalize_input_researcher: you should use '%s' instead ot '%s'"%(reg_key,driver_key))
+        logger.warning ("normalize_input: you should use '%s' instead of '%s'"%(reg_key,driver_key))
         record[reg_key]=record[driver_key]
 
 def normalize_input_record (record):
     _normalize_input (record, 'reg-researchers','researcher')
     _normalize_input (record, 'reg-pis','pi')
+    _normalize_input (record, 'reg-keys','keys')
+    # xxx the keys thing could use a little bit more attention:
+    # some parts of the code are using 'keys' while they should use 'reg-keys' 
+    # but I run out of time for now
+    if 'reg-keys' in record: record['keys']=record['reg-keys']
     return record
 
 class RegistryManager:
@@ -71,8 +76,7 @@ class RegistryManager:
                        if hrn != api.hrn])
         xrn=Xrn(api.hrn,type='authority')
         return version_core({'interface':'registry',
-                             'sfa': 2,
-                             'geni_api': 2,
+                             'sfa': 3,
                              'hrn':xrn.get_hrn(),
                              'urn':xrn.get_urn(),
                              'peers':peers})
@@ -237,7 +241,8 @@ class RegistryManager:
     
         return records
     
-    def List (self, api, xrn, origin_hrn=None, options={}):
+    def List (self, api, xrn, origin_hrn=None, options=None):
+        if options is None: options={}
         dbsession=api.dbsession()
         # load all know registry names into a prefix tree and attempt to find
         # the longest matching prefix
@@ -357,11 +362,10 @@ class RegistryManager:
         if not record.gid:
             uuid = create_uuid()
             pkey = Keypair(create=True)
-            if getattr(record,'keys',None):
-                pub_key=record.keys
+            pub_key=getattr(record,'reg-keys',None)
+            if pub_key is not None:
                 # use only first key in record
-                if isinstance(record.keys, types.ListType):
-                    pub_key = record.keys[0]
+                if pub_key and isinstance(pub_key, types.ListType): pub_key = pub_key[0]
                 pkey = convert_public_key(pub_key)
     
             gid_object = api.auth.hierarchy.create_gid(urn, uuid, pkey)
@@ -388,9 +392,12 @@ class RegistryManager:
         
         elif isinstance (record, RegUser):
             # create RegKey objects for incoming keys
-            if hasattr(record,'keys'): 
-                logger.debug ("creating %d keys for user %s"%(len(record.keys),record.hrn))
-                record.reg_keys = [ RegKey (key) for key in record.keys ]
+            if hasattr(record,'reg-keys'):
+                keys=getattr(record,'reg-keys')
+                # some people send the key as a string instead of a list of strings
+                if isinstance(keys,types.StringTypes): keys=[keys]
+                logger.debug ("creating %d keys for user %s"%(len(keys),record.hrn))
+                record.reg_keys = [ RegKey (key) for key in keys ]
             
         # update testbed-specific data if needed
         pointer = api.driver.register (record.__dict__, hrn, pub_key)

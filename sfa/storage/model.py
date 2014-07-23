@@ -143,12 +143,12 @@ class RegRecord (Base,AlchemyObj):
         else: return GID(string=self.gid)
 
     def just_created (self):
-        now=datetime.now()
+        now=datetime.utcnow()
         self.date_created=now
         self.last_updated=now
 
     def just_updated (self):
-        now=datetime.now()
+        now=datetime.utcnow()
         self.last_updated=now
 
 #################### cross-relations tables
@@ -410,7 +410,8 @@ def drop_tables(engine):
 
 ##############################
 # create a record of the right type from either a dict or an xml string
-def make_record (dict={}, xml=""):
+def make_record (dict=None, xml=""):
+    if dict is None: dict={}
     if dict:    return make_record_dict (dict)
     elif xml:   return make_record_xml (xml)
     else:       raise Exception("make_record has no input")

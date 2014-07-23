@@ -3,13 +3,15 @@ from datetime import datetime, timedelta
 
 from sfa.util.xml import XML, XpathFilter
 from sfa.util.faults import InvalidRSpecElement, InvalidRSpec
+from sfa.util.sfatime import SFATIME_FORMAT
 
 from sfa.rspecs.rspec_elements import RSpecElement, RSpecElements 
 from sfa.rspecs.version_manager import VersionManager
 
 class RSpec:
  
-    def __init__(self, rspec="", version=None, user_options={}, ttl=60):
+    def __init__(self, rspec="", version=None, user_options=None, ttl=60):
+        if user_options is None: user_options={}
         self.header = '<?xml version="1.0"?>\n'
         self.template = """<RSpec></RSpec>"""
         self.version = None
@@ -37,11 +39,9 @@ class RSpec:
         self.version = self.version_manager.get_version(version)
         self.namespaces = self.version.namespaces
         self.parse_xml(self.version.template, self.version) 
-        # eg. 2011-03-23T19:53:28Z 
-        date_format = '%Y-%m-%dT%H:%M:%SZ'
         now = datetime.utcnow()
-        generated_ts = now.strftime(date_format)
-        expires_ts = (now + timedelta(minutes=self.ttl)).strftime(date_format) 
+        generated_ts = now.strftime(SFATIME_FORMAT)
+        expires_ts = (now + timedelta(minutes=self.ttl)).strftime(SFATIME_FORMAT) 
         self.xml.set('expires', expires_ts)
         self.xml.set('generated', generated_ts)
 
@@ -75,15 +75,17 @@ class RSpec:
             raise InvalidRSpecElement(element_type, extra=msg)
         return self.elements[element_type]
 
-    def get(self, element_type, filter={}, depth=0):
+    def get(self, element_type, filter=None, depth=0):
+        if filter is None: filter={}
         elements = self.get_elements(element_type, filter)
         elements = [self.xml.get_element_attributes(elem, depth=depth) for elem in elements]
         return elements
 
-    def get_elements(self, element_type, filter={}):
+    def get_elements(self, element_type, filter=None):
         """
         search for a registered element
         """
+        if filter is None: filter={}
         if element_type not in self.elements:
             msg = "Unable to search for element %s in rspec, expath expression not found." % \
                    element_type

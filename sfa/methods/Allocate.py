@@ -36,15 +36,17 @@ class Allocate(Method):
 
     def call(self, xrn, creds, rspec, options):
         xrn = Xrn(xrn, type='slice')
-        self.api.logger.info("interface: %s\ttarget-hrn: %s\tmethod-name: %s"%(self.api.interface, xrn.get_hrn(), self.name))
-        (speaking_for, _) = urn_to_hrn(options.get('geni_speaking_for'))
 
         # Find the valid credentials
-        valid_creds = self.api.auth.checkCredentials(creds, 'createsliver', xrn.get_hrn(), speaking_for_hrn=speaking_for)
+        valid_creds = self.api.auth.checkCredentialsSpeaksFor(creds, 'createsliver', xrn.get_hrn(), options=options)
+        the_credential = Credential(cred=valid_creds[0])
+
         # use the expiration from the first valid credential to determine when 
         # the slivers should expire.
-        expiration = datetime_to_string(Credential(cred=valid_creds[0]).expiration)
+        expiration = datetime_to_string(the_credential.expiration)
         
+        self.api.logger.debug("Allocate, received expiration from credential: %s"%expiration)
+
         # make sure request is not empty
         slivers = RSpec(rspec).version.get_nodes_with_slivers()
         if not slivers:
@@ -56,12 +58,14 @@ class Allocate(Method):
         elif self.api.interface in ['slicemgr']:
             chain_name = 'FORWARD-INCOMING'
         self.api.logger.debug("Allocate: sfatables on chain %s"%chain_name)
-        origin_hrn = Credential(cred=valid_creds[0]).get_gid_caller().get_hrn()
-        self.api.logger.info("interface: %s\tcaller-hrn: %s\ttarget-hrn: %s\tmethod-name: %s"%(self.api.interface, origin_hrn, xrn, self.name)) 
-        rspec = run_sfatables(chain_name, xrn.get_hrn(), origin_hrn, rspec)
+        actual_caller_hrn = the_credential.actual_caller_hrn()
+        self.api.logger.info("interface: %s\tcaller-hrn: %s\ttarget-hrn: %s\tmethod-name: %s"%(self.api.interface, actual_caller_hrn, xrn.get_hrn(), self.name)) 
+        rspec = run_sfatables(chain_name, xrn.get_hrn(), actual_caller_hrn, rspec)
         slivers = RSpec(rspec).version.get_nodes_with_slivers()
         if not slivers:
             raise SfatablesRejected(slice_xrn)
 
+        # pass this to the driver code in case they need it
+        options['actual_caller_hrn'] = actual_caller_hrn
         result = self.api.manager.Allocate(self.api, xrn.get_urn(), creds, rspec, expiration, options)
         return result

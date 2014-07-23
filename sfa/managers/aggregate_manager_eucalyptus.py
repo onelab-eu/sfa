@@ -644,7 +644,7 @@ class AggregateManagerEucalyptus:
                                         ramdisk_id = instRamDisk,
                                         key_pair   = instKey,
                                         inst_type  = instType,
-                                        meta       = Meta(start_time=datetime.datetime.now()))
+                                        meta       = Meta(start_time=datetime.datetime.utcnow()))
                 eucaInst.reserveInstance(conn, pubKeys)
     
         # xxx - should return altered rspec 
