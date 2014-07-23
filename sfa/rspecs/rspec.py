@@ -9,13 +9,14 @@ from sfa.rspecs.version_manager import VersionManager
 
 class RSpec:
  
-    def __init__(self, rspec="", version=None, user_options={}):
+    def __init__(self, rspec="", version=None, user_options={}, ttl=60):
         self.header = '<?xml version="1.0"?>\n'
         self.template = """<RSpec></RSpec>"""
         self.version = None
         self.xml = XML()
         self.version_manager = VersionManager()
         self.user_options = user_options
+        self.ttl = ttl
         self.elements = {}
         if rspec:
             if version:
@@ -28,9 +29,10 @@ class RSpec:
         else:
             raise InvalidRSpec("No RSpec or version specified. Must specify a valid rspec string or a valid version") 
 
-    def create(self, version=None):
+    def create(self, version=None, ttl=60):
         """
         Create root element
+        ttl: time to live in minutes, this will determine the expires tag of the RSpec
         """
         self.version = self.version_manager.get_version(version)
         self.namespaces = self.version.namespaces
@@ -39,7 +41,7 @@ class RSpec:
         date_format = '%Y-%m-%dT%H:%M:%SZ'
         now = datetime.utcnow()
         generated_ts = now.strftime(date_format)
-        expires_ts = (now + timedelta(hours=1)).strftime(date_format) 
+        expires_ts = (now + timedelta(minutes=self.ttl)).strftime(date_format) 
         self.xml.set('expires', expires_ts)
         self.xml.set('generated', generated_ts)
 
