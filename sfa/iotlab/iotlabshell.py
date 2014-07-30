@@ -498,7 +498,9 @@ class IotlabShell():
             # Put the duration in seconds first
             #desired_walltime = duration * 60
             desired_walltime = duration
-            total_walltime = desired_walltime + 240 #+4 min Update SA 23/10/12
+            # JORDAN : removed the 4 minutes added by default in iotlab
+            # XXX total_walltime = desired_walltime + 240 #+4 min Update SA 23/10/12
+            total_walltime = desired_walltime # Needed to have slots aligned in MySlice (temp fix) # JA 11/07/2014
             sleep_walltime = desired_walltime  # 0 sec added Update SA 23/10/12
             walltime = []
             #Put the walltime back in str form
