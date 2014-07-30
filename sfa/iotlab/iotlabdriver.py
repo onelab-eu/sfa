@@ -1493,15 +1493,18 @@ class IotlabDriver(Driver):
 
         # XXX JORDAN XXX slice_record devrait recevoir le caller_xrn...
         # LOIC maintenant c'est fait au dessus
-        logger.debug("LOIC - slice_record[user] = %s" % slice_record['user'])
+        logger.debug("IOTLABDRIVER.PY - LOIC - slice_record[user][hrn] = %s" % slice_record['user']['hrn'])
+        logger.debug("IOTLABDRIVER.PY - LOIC - slice_record[reg-researchers] = %s" % slice_record['reg-researchers'])
         persons = slices.verify_persons(xrn.hrn, slice_record, users,
                                         options=options)
         logger.debug("IOTLABDRIVER.PY  AFTER slices.verify_persons")
         logger.debug("LOIC - slice_record[user] = %s" % slice_record['user'])
+        logger.debug("IOTLABDRIVER.PY - LOIC - slice_record[reg-researchers] = %s" % slice_record['reg-researchers'])
 
         # ensure slice record exists
         current_slice = slices.verify_slice(xrn.hrn, slice_record, sfa_peer)
         logger.debug("LOIC - AFTER verify_slice - slice_record[user] = %s" % slice_record['user'])
+        logger.debug("IOTLABDRIVER.PY - LOIC - slice_record[reg-researchers] = %s" % slice_record['reg-researchers'])
         logger.debug("IOTLABDRIVER.PY \t ===============allocate \t\
                             \r\n \r\n  current_slice %s" % (current_slice))
 

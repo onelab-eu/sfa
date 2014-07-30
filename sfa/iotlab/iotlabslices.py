@@ -316,17 +316,18 @@ class IotlabSlices:
         sfa_slice = None
 
         # check if slice belongs to Iotlab
-        slices_list = self.driver.GetSlices(slice_filter=slicename,
-                                            slice_filter_type='slice_hrn')
-
-        if slices_list:
-            for sl in slices_list:
-
-                logger.debug("IOTLABSLICES \t verify_slice slicename %s \
-                                slices_list %s sl %s \r slice_record %s"
-                             % (slicename, slices_list, sl, slice_record))
-                sfa_slice = sl
-                sfa_slice.update(slice_record)
+        if slicename.startswith("iotlab"):
+            slices_list = self.driver.GetSlices(slice_filter=slicename,
+                                                slice_filter_type='slice_hrn')
+    
+            if slices_list:
+                for sl in slices_list:
+    
+                    logger.debug("IOTLABSLICES \t verify_slice slicename %s \
+                                    slices_list %s sl %s \r slice_record %s"
+                                 % (slicename, slices_list, sl, slice_record))
+                    sfa_slice = sl
+                    sfa_slice.update(slice_record)
 
         else:
             #Search for user in ldap based on email SA 14/11/12
@@ -389,7 +390,7 @@ class IotlabSlices:
 
 
         """
-        slice_user = slice_record['user']
+        slice_user = slice_record['user']['hrn']
 
         if options is None: options={}
         logger.debug("IOTLABSLICES \tverify_persons \tslice_hrn  %s  \
@@ -400,7 +401,9 @@ class IotlabSlices:
         #users_dict : dict whose keys can either be the user's hrn or its id.
         #Values contains only id and hrn
         users_dict = {}
-
+        
+        # XXX LOIC !!! Fix: Only 1 user per slice in iotlab
+        users = [slice_record['user']]
         #First create dicts by hrn and id for each user in the user record list:
         for info in users:
             # if 'slice_record' in info:
@@ -412,9 +415,9 @@ class IotlabSlices:
                 users_by_email[info['email']] = info
                 users_dict[info['email']] = info
 
-        logger.debug("IOTLABSLICES.PY \t verify_person  \
-                        users_dict %s \r\n user_by_email %s \r\n  "
-                     % (users_dict, users_by_email))
+        #logger.debug("IOTLABSLICES.PY \t verify_person  \
+        #                users_dict %s \r\n user_by_email %s \r\n  "
+        #             % (users_dict, users_by_email))
 
         existing_user_ids = []
         existing_user_emails = []
@@ -441,9 +444,10 @@ class IotlabSlices:
             if existing_users:
                 for user in existing_users:
                     user['login'] = user['uid']
-                    users_dict[user['email']].update(user)
-                    existing_user_emails.append(
-                        users_dict[user['email']]['email'])
+                    # XXX LOIC Fix we already have all informations comming from Allocate
+                    #users_dict[user['email']].update(user)
+                    #existing_user_emails.append(
+                    #    users_dict[user['email']]['email'])
                 logger.debug("User is in iotlab LDAP slice_record[user] = %s" % slice_user)
 
             # User from another known trusted federated site. Check
@@ -501,7 +505,8 @@ class IotlabSlices:
         # add new users
         #requested_user_email is in existing_user_emails
         if len(added_user_emails) == 0:
-            slice_record['login'] = users_dict[requested_user_emails[0]]['uid']
+            slice_record['login'] = existing_users[0]['uid']
+            #slice_record['login'] = users_dict[requested_user_emails[0]]['uid']
             logger.debug(" IOTLABSLICES  \tverify_person QUICK DIRTY %s"
                          % (slice_record))
             # XXX JORDAN uid == 'register'

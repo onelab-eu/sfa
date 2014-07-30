@@ -228,7 +228,7 @@ class OARrestapi:
         #                    % (error))
             #raise ServerError("GET_OAR_SRVR : Could not reach OARserver")
         if resp.status >= 400:
-            raise ValueError ("Response Error %s, %s" %(resp.status,
+            raise ValueError ("Response Error %s, %s, %s" %(resp.status,
                 resp.reason, resp.read()))
         try:
             js_dict = json.loads(body)
@@ -286,7 +286,7 @@ class OARrestapi:
             conn.close()
 
         if resp.status >= 400:
-            raise ValueError ("Response Error %s, %s" %(resp.status,
+            raise ValueError ("Response Error %s, %s, %s" %(resp.status,
                 resp.reason, body))
 
 

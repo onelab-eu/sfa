@@ -69,8 +69,8 @@ class IotlabShell():
         :rtype: list of dicts
 
         """
-        logger.debug("IOTLAB_API \tGetPersons person_filter %s"
-                     % (person_filter))
+        logger.debug("IOTLAB_API \tGetPersons 1st person_filter %s"
+                     % (person_filter[0]['hrn']))
         person_list = []
         if person_filter and isinstance(person_filter, list):
         #If we are looking for a list of users (list of dict records)

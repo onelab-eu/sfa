@@ -960,6 +960,10 @@ class LDAPapi:
             #then the login is different from the one found in its hrn
             if tmpname != hrn.split('.')[1]:
                 hrn = None
+        else:
+            hrn = None
+
+        if hrn is None:
             results = {
                 'type': 'user',
                 'pkey': ldapentry['sshPublicKey'],
@@ -974,7 +978,6 @@ class LDAPapi:
                 'authority': parent_hrn,
                 'peer_authority': peer_authority,
                 'pointer': -1,
-                'hrn': hrn,
              }
         else:
             #hrn = None
@@ -992,6 +995,7 @@ class LDAPapi:
                 'authority': parent_hrn,
                 'peer_authority': peer_authority,
                 'pointer': -1,
+                'hrn': hrn,
             }
         return results
 
