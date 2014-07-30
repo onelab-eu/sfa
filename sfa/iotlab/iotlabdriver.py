@@ -135,7 +135,7 @@ class IotlabDriver(Driver):
 
 
 
-    def AddPerson(self, record, add_to_ldap = True):
+    def AddPerson(self, record):
         """
 
         Adds a new account. Any fields specified in records are used,
@@ -150,10 +150,6 @@ class IotlabDriver(Driver):
         :rtype: dict
 
         """
-        if not add_to_ldap:
-            ret = self.__add_person_to_db(record)
-            return ret
-
         ret = self.testbed_shell.ldap.LdapAddUser(record)
 
         if ret['bool'] is True:
@@ -177,7 +173,6 @@ class IotlabDriver(Driver):
         """
         query = self.api.dbsession().query(RegUser)
         check_if_exists = query.filter_by(email = user_dict['email']).first()
-        logger.debug("LOIC __add_person_to_db %s" % check_if_exists)
         #user doesn't exists
         if not check_if_exists:
             logger.debug("__add_person_to_db \t Adding %s \r\n \r\n \
@@ -310,7 +305,6 @@ class IotlabDriver(Driver):
         .. seealso::_sql_get_slice_info_from_user
         .. seealso:: _sql_get_slice_info
         """
-        logger.debug("JORDAN get_slice_records slice_filter=%r slice_filter_type=%r" % (slice_filter, slice_filter_type))
 
         #Get list of slices based on the slice hrn
         if slice_filter_type == 'slice_hrn':
@@ -369,10 +363,8 @@ class IotlabDriver(Driver):
 
         #First try to get information on the slice based on the filter provided
         if slice_filter_type in authorized_filter_types_list:
-            logger.debug("JORDAN GET SLICES 1")
             fixed_slicerec_dict = self._get_slice_records(slice_filter,
                                                     slice_filter_type)
-            logger.debug("JORDAN GET SLICE RECORDS %r" % fixed_slicerec_dict)
             # if the slice was not found in the sfa db
             if fixed_slicerec_dict is None:
                 return return_slicerec_dictlist
@@ -394,14 +386,12 @@ class IotlabDriver(Driver):
             #If no job is running or no job scheduled
             #return only the slice record
             if leases_list == [] and fixed_slicerec_dict:
-                logger.debug("JORDAN CASE 1")
                 return_slicerec_dictlist.append(fixed_slicerec_dict)
 
             # if the jobs running don't belong to the user/slice we are looking
             # for
             leases_hrn = [lease['slice_hrn'] for lease in leases_list]
             if slice_hrn not in leases_hrn:
-                logger.debug("JORDAN CASE 2")
                 return_slicerec_dictlist.append(fixed_slicerec_dict)
             #If several jobs for one slice , put the slice record into
             # each lease information dict
@@ -446,7 +436,6 @@ class IotlabDriver(Driver):
 
 
         else:
-            logger.debug("JORDAN GET SLICES 2")
             #Get all slices from the iotlab sfa database ,
             #put them in dict format
             #query_slice_list = dbsession.query(RegRecord).all()
@@ -723,10 +712,7 @@ class IotlabDriver(Driver):
         self.api.dbsession().add(sfa_record)
         self.api.dbsession().commit()
         #Update the reg-researchers dependency table
-        if user_record is not None:
-            sfa_record.reg_researchers = [user_record]
-        else:
-            sfa_record.reg_researchers = slice_record['reg-researchers']
+        sfa_record.reg_researchers = [user_record]
         self.api.dbsession().commit()
 
         return
@@ -1419,8 +1405,7 @@ class IotlabDriver(Driver):
         rspec =  aggregate.list_resources(version=version, options=options)
         return rspec
 
-    def describe(self, urns, version, options=None):
-        if options is None: options={}
+    def describe(self, urns, version, options={}):
         aggregate = IotlabAggregate(self)
         return aggregate.describe(urns, version=version, options=options)
 
@@ -1485,15 +1470,6 @@ class IotlabDriver(Driver):
         # ensure site record exists
 
         # ensure person records exists
-
-        # oui c'est degueulasse, le slice_record se retrouve modifie
-        # dans la methode avec les infos du user, els infos sont propagees
-        # dans verify_slice_leases
-        logger.debug("IOTLABDRIVER.PY  BEFORE slices.verify_persons")
-        # XXX JORDAN XXX slice_record devrait recevoir le caller_xrn...
-        logger.debug("LOIC users = %r" % users)
-        # XXX LOIC XXX Trying here to bypass the verify_persons function
-        # But it doesn't work, It seems we have to add users in LDAP anyway...
         for user in users:
             # XXX LOIC using hrn is a workaround because the function 
             # Xrn.get_urn returns 'urn:publicid:IDN+onelab:upmc+timur_friedman'
@@ -1510,23 +1486,28 @@ class IotlabDriver(Driver):
                 #slice_record['login'] = user['login']
                 slice_record['user']=user
 
-        # XXX LOIC XXX Need to re-activate this function and understand exactly what is required
+        # oui c'est degueulasse, le slice_record se retrouve modifie
+        # dans la methode avec les infos du user, els infos sont propagees
+        # dans verify_slice_leases
+        logger.debug("IOTLABDRIVER.PY  BEFORE slices.verify_persons")
 
-        persons = slices.verify_persons(xrn.hrn, slice_record, [slice_record['user']], options=options)
+        # XXX JORDAN XXX slice_record devrait recevoir le caller_xrn...
+        # LOIC maintenant c'est fait au dessus
+        logger.debug("LOIC - slice_record[user] = %s" % slice_record['user'])
+        persons = slices.verify_persons(xrn.hrn, slice_record, users,
+                                        options=options)
         logger.debug("IOTLABDRIVER.PY  AFTER slices.verify_persons")
-        logger.debug("LOIC - IOTLABDRIVER.PY - AFTER slices.verify_persons slice_record = %r" % slice_record)
-        # ensure slice attributes exists
-        # XXX LOIC XXX This method doesn't exist !!!
-        #slices.verify_slice_attributes(slice, requested_attributes, options=options)
+        logger.debug("LOIC - slice_record[user] = %s" % slice_record['user'])
 
-        # XXX LOIC !!! Essayons d'inverser : d'abord verify_persons ensuite verify_slice
-        
         # ensure slice record exists
-        # XXX LOIC !!! verify_slice uniquement pour iotlab - les slices externes ne doivent pas être vérifiés = Ils ne sont pas dans le registry IOTLAB
-        current_slice = None
-        #current_slice = slices.verify_slice(xrn.hrn, slice_record, sfa_peer)
-        #logger.debug("IOTLABDRIVER.PY \t ===============allocate \t\
-        #                    \r\n \r\n  current_slice %s" % (current_slice))
+        current_slice = slices.verify_slice(xrn.hrn, slice_record, sfa_peer)
+        logger.debug("LOIC - AFTER verify_slice - slice_record[user] = %s" % slice_record['user'])
+        logger.debug("IOTLABDRIVER.PY \t ===============allocate \t\
+                            \r\n \r\n  current_slice %s" % (current_slice))
+
+        # ensure slice attributes exists
+        # slices.verify_slice_attributes(slice, requested_attributes,
+                                    # options=options)
 
         # add/remove slice from nodes
         # XXX JORDAN ensure requested_xp_dict returns a dict with all new leases
@@ -1535,6 +1516,7 @@ class IotlabDriver(Driver):
         logger.debug("IOTLABDRIVER.PY \tallocate  requested_xp_dict %s "
                      % (requested_xp_dict))
         request_nodes = rspec.version.get_nodes_with_slivers()
+
 
         # JORDAN: nodes_list will contain a list of newly allocated nodes
         nodes_list = []
@@ -1557,43 +1539,28 @@ class IotlabDriver(Driver):
         logger.debug("IOTLABDRIVER.PY \tallocate leases  %s \
                         rspec_requested_leases %s" % (leases,
                         rspec_requested_leases))
-
-        # XXX LOIC !!! What is in the slice_record?
-        # Where is affected reg_researchers value???
-        logger.debug("LOIC - IOTLABDRIVER.PY - After verify_slice_leases slice_record = %r" %slice_record)
         # update sliver allocations
         # JORDAN Here we loop over newly allocated nodes
         for hostname in nodes_list:
-            logger.debug("FORLOOP JORDAN hostname=%r" % hostname)
             client_id = hostname
             node_urn = xrn_object(self.testbed_shell.root_auth, hostname).urn
             component_id = node_urn
-            if current_slice is not None:
-                if 'reg-urn' in current_slice:
-                    slice_urn = current_slice['reg-urn']
-                else:
-                    slice_urn = current_slice['urn']
+            if 'reg-urn' in current_slice:
+                slice_urn = current_slice['reg-urn']
             else:
-                slice_urn = slice_record['urn']
+                slice_urn = current_slice['urn']
+
             # JORDAN: We loop over leases previously in the slice
-            for lease in leases: # rspec_requested_leases ?????? XXX
-                logger.debug("FOR LEASE LOOP JORDAN lease=%r" % lease)
-                logger.debug("JORDAN hostname=%r lease['reserved_nodes']=%r, bool=%r" % (hostname, lease['reserved_nodes'], hostname in lease['reserved_nodes']))
+            for lease in leases:
                 if hostname in lease['reserved_nodes']:
-                    logger.debug("JORDAN IF OK")
                     index = lease['reserved_nodes'].index(hostname)
-                    logger.debug("JORDAN index=%r" % index)
                     sliver_hrn = '%s.%s-%s' % (self.hrn, lease['lease_id'],
                                    lease['resource_ids'][index] )
-
-                    logger.debug("LOIC sliver_hrn=%r" % sliver_hrn)
                     sliver_id = Xrn(sliver_hrn, type='sliver').urn
-
-                    logger.debug("LOIC sliver_id=%r" % sliver_id)
                     record = SliverAllocation(sliver_id=sliver_id, client_id=client_id,
-                                              component_id=component_id,
-                                              slice_urn = slice_urn,
-                                              allocation_state='geni_allocated')
+                                      component_id=component_id,
+                                      slice_urn = slice_urn,
+                                      allocation_state='geni_allocated')
                     record.sync(self.api.dbsession())
 
         # JORDAN : added describe_options which was not specified at all
@@ -1610,7 +1577,6 @@ class IotlabDriver(Driver):
         aggregate = IotlabAggregate(self)
         slivers = aggregate.get_slivers(urns)
         current_slice = slivers[0]
-        logger.debug("Provision current slice: %r" % (current_slice,))
         peer = slices.get_peer(current_slice['hrn'])
         sfa_peer = slices.get_sfa_peer(current_slice['hrn'])
         users = options.get('geni_users', [])

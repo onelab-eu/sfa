@@ -405,9 +405,8 @@ class IotlabAggregate:
         if options is None: options={}
         filter={}
         if slice:
-           #filter.update({'name':slice['slice_name']}) # JORDAN: this is = "upmc" !!!
            filter.update({'slice_hrn':slice['slice_hrn']}) # JORDAN: this is = "upmc" !!!
-            # slice_hrn = "ple.upmc.myslicedemo
+           #filter.update({'name':slice['slice_name']})
         #return_fields = ['lease_id', 'hostname', 'site_id', 'name', 't_from', 't_until']
         leases = self.driver.GetLeases(lease_filter_dict=filter)
         grain = self.driver.testbed_shell.GetLeaseGranularity()
@@ -616,7 +615,7 @@ class IotlabAggregate:
 
         .. seealso:: http://groups.geni.net/geni/wiki/GAPI_AM_API_V3/CommonConcepts#urns
         """
-
+        # JORDAN using SLICE_KEY for slice_hrn
         SLICE_KEY = 'slice_hrn' # slice_hrn
         if options is None: options={}
         slice_ids = set()
@@ -653,7 +652,7 @@ class IotlabAggregate:
         #     filter['slice_id'] = list(slice_ids)
         # # get slices
         if slice_hrn:
-            logger.debug("JORDAN SLICE_HRN=%r" % slice_hrn)
+            #logger.debug("JORDAN SLICE_HRN=%r" % slice_hrn)
             slices = self.driver.GetSlices(slice_hrn,
                 slice_filter_type)
             leases = self.driver.GetLeases({SLICE_KEY:slice_hrn})
@@ -662,16 +661,16 @@ class IotlabAggregate:
         if not slices:
             return []
 
-        logger.debug("LOIC SLICES = %r" % slices)
         single_slice = slices[0]
         # get sliver users
-
         # XXX LOIC !!! XXX QUICK AND DIRTY - Let's try...
         logger.debug("LOIC Number of reg_researchers = %s" % len(single_slice['reg_researchers']))
         if 'reg_researchers' in single_slice and len(single_slice['reg_researchers'])==0:
             user = {'uid':single_slice['user']}
         else:
             user = single_slice['reg_researchers'][0].__dict__
+
+        user = single_slice['reg_researchers'][0].__dict__
         logger.debug("IotlabAggregate \t get_slivers user %s \
                        \r\n" % (user))
 
@@ -681,7 +680,6 @@ class IotlabAggregate:
                        \r\n" % (person))
         # name = person['last_name']
         user['login'] = person['uid']
-
         # XXX LOIC !!! if we have more info, let's fill user
         if 'hrn' in user:
             user['user_urn'] = hrn_to_urn(user['hrn'], 'user')
@@ -722,7 +720,7 @@ class IotlabAggregate:
                 #    logger.debug("Ignored missing hostname for now one")
                 # oar_job_id is the slice_id (lease_id)
                 sliver_hrn = '%s.%s-%s' % (self.driver.hrn,
-                            current_lease['lease_id'], node_id)
+                             current_lease['lease_id'], node_id)
                 node['node_id'] = node_id
                 node['expires'] = current_lease['t_until']
                 node['sliver_id'] = Xrn(sliver_hrn, type='sliver').urn
@@ -828,7 +826,6 @@ class IotlabAggregate:
         # get slivers
         geni_slivers = []
         slivers = self.get_slivers(urns, options)
-        logger.debug("SLIVERS=%r" % slivers)
         if slivers:
             rspec_expires = datetime_to_string(utcparse(slivers[0]['expires']))
         else:
@@ -846,9 +843,10 @@ class IotlabAggregate:
             geni_urn = sliver_allocation.slice_urn
             sliver_allocation_dict[sliver_allocation.sliver_id] = \
                                                             sliver_allocation
+        # JORDAN get the option list_leases if we want to have the leases in describe 
         show_leases = options.get('list_leases')
         if show_leases in ['resources', 'all']:
-        #if not options.get('list_leases') or options['list_leases'] != 'leases':                                                    
+        #if not options.get('list_leases') or options['list_leases'] != 'leases': 
             # add slivers
             nodes_dict = {}
             for sliver in slivers:
@@ -863,7 +861,6 @@ class IotlabAggregate:
                 geni_slivers.append(geni_sliver)
             rspec.version.add_nodes(rspec_nodes)
 
-        logger.debug("SHOW LEASES = %r" % show_leases)
         if show_leases in ['leases', 'all']:
         #if not options.get('list_leases') or options['list_leases'] == 'resources':
             if slivers:
