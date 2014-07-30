@@ -2,7 +2,7 @@
 This file defines the IotlabSlices class by which all the slice checkings
 upon lease creation are done.
 """
-from sfa.util.xrn import get_authority, urn_to_hrn
+from sfa.util.xrn import get_authority, urn_to_hrn, hrn_to_urn
 from sfa.util.sfalogging import logger
 
 MAXINT = 2L**31-1
@@ -212,11 +212,13 @@ class IotlabSlices:
                     job['hostname'],
                     sfa_slice, int(job['start_time']),
                     int(job['duration']))
-                if job_id is not None:
-                    new_leases = self.driver.GetLeases(login=
-                        sfa_slice['login'])
-                    for new_lease in new_leases:
-                        leases.append(new_lease)
+
+                # Removed by jordan
+                #if job_id is not None:
+                #    new_leases = self.driver.GetLeases(login=
+                #        sfa_slice['login'])
+                #    for new_lease in new_leases:
+                #        leases.append(new_lease)
 
         #Deleted leases are the ones with lease id not declared in the Rspec
         if deleted_leases:
@@ -235,7 +237,10 @@ class IotlabSlices:
                     job['hostname'],
                     sfa_slice, int(job['start_time']),
                     int(job['duration']))
-        return leases
+
+        # Added by Jordan: until we find a better solution, always update the list of leases
+        return self.driver.GetLeases(login= sfa_slice['login'])
+        #return leases
 
     def verify_slice_nodes(self, sfa_slice, requested_slivers, peer):
         """Check for wanted and unwanted nodes in the slice.

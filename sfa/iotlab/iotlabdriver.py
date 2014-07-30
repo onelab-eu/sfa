@@ -1490,6 +1490,9 @@ class IotlabDriver(Driver):
         # dans la methode avec les infos du user, els infos sont propagees
         # dans verify_slice_leases
         logger.debug("IOTLABDRIVER.PY  BEFORE slices.verify_persons")
+
+        # XXX JORDAN XXX slice_record devrait recevoir le caller_xrn...
+        # LOIC maintenant c'est fait au dessus
         logger.debug("LOIC - slice_record[user] = %s" % slice_record['user'])
         persons = slices.verify_persons(xrn.hrn, slice_record, users,
                                         options=options)
@@ -1507,6 +1510,7 @@ class IotlabDriver(Driver):
                                     # options=options)
 
         # add/remove slice from nodes
+        # XXX JORDAN ensure requested_xp_dict returns a dict with all new leases
         requested_xp_dict = self._process_requested_xp_dict(rspec)
 
         logger.debug("IOTLABDRIVER.PY \tallocate  requested_xp_dict %s "
@@ -1529,10 +1533,14 @@ class IotlabDriver(Driver):
         rspec_requested_leases = rspec.version.get_leases()
         leases = slices.verify_slice_leases(slice_record,
                                                 requested_xp_dict, peer)
+        # JORDAN: 
+        #   leases = already in slice
+        #   rspec_requested_leases = newly requested
         logger.debug("IOTLABDRIVER.PY \tallocate leases  %s \
                         rspec_requested_leases %s" % (leases,
                         rspec_requested_leases))
-         # update sliver allocations
+        # update sliver allocations
+        # JORDAN Here we loop over newly allocated nodes
         for hostname in nodes_list:
             client_id = hostname
             node_urn = xrn_object(self.testbed_shell.root_auth, hostname).urn
@@ -1560,7 +1568,7 @@ class IotlabDriver(Driver):
             'geni_slice_urn': urn,
             'list_leases': 'all',
         }
-        return aggregate.describe([xrn.get_urn()], version=rspec.version)
+        return aggregate.describe([xrn.get_urn()], version=rspec.version, options=describe_options)
 
     def provision(self, urns, options=None):
         if options is None: options={}
@@ -1589,4 +1597,4 @@ class IotlabDriver(Driver):
             'geni_slice_urn': current_slice['urn'],
             'list_leases': 'all',
         }
-        return self.describe(urns, rspec_version, options=options)
+        return self.describe(urns, rspec_version, options=describe_options)
