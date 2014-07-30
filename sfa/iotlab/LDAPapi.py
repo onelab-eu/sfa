@@ -944,7 +944,10 @@ class LDAPapi:
 
         parent_hrn = None
         peer_authority = None
-        if 'hrn' in record:
+        # If the user is coming from External authority (e.g. OneLab)
+        # Then hrn is None, it should be filled in by the creation of Ldap User
+        # XXX LOIC !!! What if a user email is in 2 authorities? 
+        if 'hrn' in record and record['hrn'] is not None:
             hrn = record['hrn']
             parent_hrn = get_authority(hrn)
             if parent_hrn != self.authname:
@@ -955,25 +958,39 @@ class LDAPapi:
             #then the login is different from the one found in its hrn
             if tmpname != hrn.split('.')[1]:
                 hrn = None
+            results = {
+                'type': 'user',
+                'pkey': ldapentry['sshPublicKey'],
+                #'uid': ldapentry[1]['uid'][0],
+                'uid': tmpname,
+                'email': tmpemail,
+                #'email': ldapentry[1]['mail'][0],
+                'first_name': ldapentry['givenName'][0],
+                'last_name': ldapentry['sn'][0],
+                #'phone': 'none',
+                'serial': 'none',
+                'authority': parent_hrn,
+                'peer_authority': peer_authority,
+                'pointer': -1,
+                'hrn': hrn,
+             }
         else:
-            hrn = None
-
-        results = {
-            'type': 'user',
-            'pkey': ldapentry['sshPublicKey'],
-            #'uid': ldapentry[1]['uid'][0],
-            'uid': tmpname,
-            'email': tmpemail,
-            #'email': ldapentry[1]['mail'][0],
-            'first_name': ldapentry['givenName'][0],
-            'last_name': ldapentry['sn'][0],
-            #'phone': 'none',
-            'serial': 'none',
-            'authority': parent_hrn,
-            'peer_authority': peer_authority,
-            'pointer': -1,
-            'hrn': hrn,
-                    }
+            #hrn = None
+            results = {
+                'type': 'user',
+                'pkey': ldapentry['sshPublicKey'],
+                #'uid': ldapentry[1]['uid'][0],
+                'uid': tmpname,
+                'email': tmpemail,
+                #'email': ldapentry[1]['mail'][0],
+                'first_name': ldapentry['givenName'][0],
+                'last_name': ldapentry['sn'][0],
+                #'phone': 'none',
+                'serial': 'none',
+                'authority': parent_hrn,
+                'peer_authority': peer_authority,
+                'pointer': -1,
+            }
         return results
 
     def LdapFindUser(self, record=None, is_user_enabled=None,
@@ -1016,6 +1033,7 @@ class LDAPapi:
             return None
         #Asked for a specific user
         if record is not None:
+            logger.debug("LOIC - record = %s" % record)
             results = self._process_ldap_info_for_one_user(record, result_data)
 
         else:

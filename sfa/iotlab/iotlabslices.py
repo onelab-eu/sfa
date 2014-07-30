@@ -335,8 +335,9 @@ class IotlabSlices:
                          'node_list': [],
                          'authority': slice_record['authority'],
                          'gid': slice_record['gid'],
-                         'slice_id': slice_record['record_id'],
-                         #'reg-researchers': slice_record['reg-researchers'],
+                         #'slice_id': slice_record['record_id'],
+                         'reg-researchers': slice_record['reg-researchers'],
+                         'urn': hrn_to_urn(slicename,'slice'),
                          #'peer_authority': str(sfa_peer)
                          }
 
@@ -382,6 +383,8 @@ class IotlabSlices:
 
 
         """
+        slice_user = slice_record['user']
+
         if options is None: options={}
         logger.debug("IOTLABSLICES \tverify_persons \tslice_hrn  %s  \
                     \t slice_record %s\r\n users %s \t  "
@@ -422,6 +425,7 @@ class IotlabSlices:
             #Check user i in LDAP with GetPersons
             #Needed because what if the user has been deleted in LDAP but
             #is still in SFA?
+            # GetPersons -> LdapFindUser -> _process_ldap_info_for_one_user
             existing_users = self.driver.testbed_shell.GetPersons(filter_user)
             logger.debug(" \r\n IOTLABSLICES.PY \tverify_person  filter_user %s\
                        existing_users %s  "
@@ -433,7 +437,7 @@ class IotlabSlices:
                     users_dict[user['email']].update(user)
                     existing_user_emails.append(
                         users_dict[user['email']]['email'])
-
+                logger.debug("User is in iotlab LDAP slice_record[user] = %s" % slice_user)
 
             # User from another known trusted federated site. Check
             # if a iotlab account matching the email has already been created.
@@ -444,13 +448,13 @@ class IotlabSlices:
                 else:
                     req += users['email']
                 ldap_reslt = self.driver.testbed_shell.ldap.LdapSearch(req)
-
+                logger.debug("LdapSearch slice_record[user] = %s" % slice_user)
                 if ldap_reslt:
                     logger.debug(" IOTLABSLICES.PY \tverify_person users \
                                 USER already in Iotlab \t ldap_reslt %s \
                                 " % (ldap_reslt))
                     existing_users.append(ldap_reslt[1])
-
+                    logger.debug("ldap_reslt slice_record[user] = %s" % slice_user)
                 else:
                     #User not existing in LDAP
                     logger.debug("IOTLABSLICES.PY \tverify_person users \
