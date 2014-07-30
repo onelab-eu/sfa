@@ -403,7 +403,9 @@ class IotlabAggregate:
     def get_leases(self, slice=None, options={}):
         filter={}
         if slice:
-           filter.update({'name':slice['slice_name']})
+           #filter.update({'name':slice['slice_name']}) # JORDAN: this is = "upmc" !!!
+           filter.update({'slice_hrn':slice['slice_hrn']}) # JORDAN: this is = "upmc" !!!
+            # slice_hrn = "ple.upmc.myslicedemo
         #return_fields = ['lease_id', 'hostname', 'site_id', 'name', 't_from', 't_until']
         leases = self.driver.GetLeases(lease_filter_dict=filter)
         grain = self.driver.testbed_shell.GetLeaseGranularity()
@@ -613,7 +615,7 @@ class IotlabAggregate:
         .. seealso:: http://groups.geni.net/geni/wiki/GAPI_AM_API_V3/CommonConcepts#urns
         """
 
-
+        SLICE_KEY = 'slice_hrn' # slice_hrn
         slice_ids = set()
         node_ids = []
         for urn in urns:
@@ -639,26 +641,34 @@ class IotlabAggregate:
                        \r\n" % (xrn, slice_names))
         filter_sliver = {}
         if slice_names:
-            filter_sliver['slice_hrn'] = list(slice_names)
-            slice_hrn = filter_sliver['slice_hrn'][0]
+            filter_sliver[SLICE_KEY] = list(slice_names)
+            slice_hrn = filter_sliver[SLICE_KEY][0]
 
-            slice_filter_type = 'slice_hrn'
+            slice_filter_type = SLICE_KEY
 
         # if slice_ids:
         #     filter['slice_id'] = list(slice_ids)
         # # get slices
         if slice_hrn:
+            logger.debug("JORDAN SLICE_HRN=%r" % slice_hrn)
             slices = self.driver.GetSlices(slice_hrn,
                 slice_filter_type)
-            leases = self.driver.GetLeases({'slice_hrn':slice_hrn})
+            leases = self.driver.GetLeases({SLICE_KEY:slice_hrn})
         logger.debug("IotlabAggregate \t get_slivers \
                        slices %s leases %s\r\n" % (slices, leases ))
         if not slices:
             return []
 
+        logger.debug("LOIC SLICES = %r" % slices)
         single_slice = slices[0]
         # get sliver users
-        user = single_slice['reg_researchers'][0].__dict__
+
+        # XXX LOIC !!! XXX QUICK AND DIRTY - Let's try...
+        logger.debug("LOIC Number of reg_researchers = %s" % len(single_slice['reg_researchers']))
+        if 'reg_researchers' in single_slice and len(single_slice['reg_researchers'])==0:
+            user = {'uid':single_slice['user']}
+        else:
+            user = single_slice['reg_researchers'][0].__dict__
         logger.debug("IotlabAggregate \t get_slivers user %s \
                        \r\n" % (user))
 
@@ -668,14 +678,19 @@ class IotlabAggregate:
                        \r\n" % (person))
         # name = person['last_name']
         user['login'] = person['uid']
-        user['user_urn'] = hrn_to_urn(user['hrn'], 'user')
-        user['keys'] = person['pkey']
+
+        # XXX LOIC !!! if we have more info, let's fill user
+        if 'hrn' in user:
+            user['user_urn'] = hrn_to_urn(user['hrn'], 'user')
+        if 'keys' in user:
+            user['keys'] = person['pkey']
 
 
         try:
             node_ids = single_slice['node_ids']
-            node_list = self.driver.testbed_shell.GetNodes(
-                    {'hostname':single_slice['node_ids']})
+            node_list = self.driver.testbed_shell.GetNodes()
+# JORDAN REMOVED FILTER so that next check always succeed
+#                    {'hostname':single_slice['node_ids']})
             node_by_hostname = dict([(node['hostname'], node)
                                         for node in node_list])
         except KeyError:
@@ -695,8 +710,13 @@ class IotlabAggregate:
                 node_id = current_lease['resource_ids'][index]
                 # node['slice_name'] = user['login']
                 # node.update(single_slice)
+                # JORDAN XXX This fails sometimes when hostname not in the list
+                #if hostname in node_by_hostname:
                 more_info = node_by_hostname[hostname]
                 node.update(more_info)
+                #else:
+                #    # This can happen when specifying a lease without the resource, then all subsequent calls will fail
+                #    logger.debug("Ignored missing hostname for now one")
                 # oar_job_id is the slice_id (lease_id)
                 sliver_hrn = '%s.%s-%s' % (self.driver.hrn,
                             current_lease['lease_id'], node_id)
@@ -803,6 +823,7 @@ class IotlabAggregate:
         # get slivers
         geni_slivers = []
         slivers = self.get_slivers(urns, options)
+        logger.debug("SLIVERS=%r" % slivers)
         if slivers:
             rspec_expires = datetime_to_string(utcparse(slivers[0]['expires']))
         else:
@@ -820,7 +841,9 @@ class IotlabAggregate:
             geni_urn = sliver_allocation.slice_urn
             sliver_allocation_dict[sliver_allocation.sliver_id] = \
                                                             sliver_allocation
-        if not options.get('list_leases') or options['list_leases'] != 'leases':                                                    
+        show_leases = options.get('list_leases')
+        if show_leases in ['resources', 'all']:
+        #if not options.get('list_leases') or options['list_leases'] != 'leases':                                                    
             # add slivers
             nodes_dict = {}
             for sliver in slivers:
@@ -835,9 +858,12 @@ class IotlabAggregate:
                 geni_slivers.append(geni_sliver)
             rspec.version.add_nodes(rspec_nodes)
 
-        if not options.get('list_leases') or options['list_leases'] == 'resources':
+        logger.debug("SHOW LEASES = %r" % show_leases)
+        if show_leases in ['leases', 'all']:
+        #if not options.get('list_leases') or options['list_leases'] == 'resources':
             if slivers:
-                leases = self.get_leases(slivers[0])
+                leases = self.get_leases(slice=slivers[0])
+                logger.debug("JORDAN: getting leases from slice: %r" % slivers[0])
                 rspec.version.add_leases(leases)
 
         return {'geni_urn': geni_urn,

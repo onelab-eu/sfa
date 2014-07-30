@@ -2,7 +2,7 @@
 This file defines the IotlabSlices class by which all the slice checkings
 upon lease creation are done.
 """
-from sfa.util.xrn import get_authority, urn_to_hrn
+from sfa.util.xrn import get_authority, urn_to_hrn, hrn_to_urn
 from sfa.util.sfalogging import logger
 
 MAXINT = 2L**31-1
@@ -135,6 +135,7 @@ class IotlabSlices:
                 * self.driver.testbed_shell.GetLeaseGranularity())
             if job['duration'] < \
                     self.driver.testbed_shell.GetLeaseGranularity():
+                logger.debug("JORDAN removed too short lease !!!! %r" % (requested_jobs_dict[job['start_time']],))
                 del requested_jobs_dict[job['start_time']]
 
         #Requested jobs
@@ -165,6 +166,7 @@ class IotlabSlices:
                          "%( start_time))
             if start_time in current_nodes_reserved_by_start_time:
 
+                # JORDAN : if we request the same nodes: do nothing
                 if requested_nodes_by_start_time[start_time] == \
                     current_nodes_reserved_by_start_time[start_time]:
                     continue
@@ -212,11 +214,12 @@ class IotlabSlices:
                     job['hostname'],
                     sfa_slice, int(job['start_time']),
                     int(job['duration']))
-                if job_id is not None:
-                    new_leases = self.driver.GetLeases(login=
-                        sfa_slice['login'])
-                    for new_lease in new_leases:
-                        leases.append(new_lease)
+                # Removed by jordan
+                #if job_id is not None:
+                #    new_leases = self.driver.GetLeases(login=
+                #        sfa_slice['login'])
+                #    for new_lease in new_leases:
+                #        leases.append(new_lease)
 
         #Deleted leases are the ones with lease id not declared in the Rspec
         if deleted_leases:
@@ -229,13 +232,17 @@ class IotlabSlices:
                          % (sfa_slice, deleted_leases))
 
         if reschedule_jobs_dict:
+            logger.debug("JORDAN re-schedule jobs: %r" % (reschedule_jobs_dict,))
             for start_time in reschedule_jobs_dict:
                 job = reschedule_jobs_dict[start_time]
                 self.driver.AddLeases(
                     job['hostname'],
                     sfa_slice, int(job['start_time']),
                     int(job['duration']))
-        return leases
+
+        # Added by Jordan: until we find a better solution, always update the list of leases
+        return self.driver.GetLeases(login= sfa_slice['login'])
+        #return leases
 
     def verify_slice_nodes(self, sfa_slice, requested_slivers, peer):
         """Check for wanted and unwanted nodes in the slice.
@@ -307,52 +314,92 @@ class IotlabSlices:
         """
 
         slicename = slice_hrn
-        # check if slice belongs to Iotlab
-        slices_list = self.driver.GetSlices(slice_filter=slicename,
-                                            slice_filter_type='slice_hrn')
-
         sfa_slice = None
 
-        if slices_list:
-            for sl in slices_list:
+        # check if slice belongs to Iotlab
+        if slicename.startswith("iotlab"):
+            slices_list = self.driver.GetSlices(slice_filter=slicename,
+                                                slice_filter_type='slice_hrn')
 
-                logger.debug("IOTLABSLICES \t verify_slice slicename %s \
-                                slices_list %s sl %s \r slice_record %s"
-                             % (slicename, slices_list, sl, slice_record))
-                sfa_slice = sl
-                sfa_slice.update(slice_record)
 
+            if slices_list:
+                for sl in slices_list:
+
+                    logger.debug("IOTLABSLICES \t verify_slice slicename %s \
+                                    slices_list %s sl %s \r slice_record %s"
+                                 % (slicename, slices_list, sl, slice_record))
+                    sfa_slice = sl
+                    sfa_slice.update(slice_record)
+
+            else:
+                #Search for user in ldap based on email SA 14/11/12
+                ldap_user = self.driver.testbed_shell.ldap.LdapFindUser(\
+                                                        slice_record['user'])
+                logger.debug(" IOTLABSLICES \tverify_slice Oups \
+                            slice_record %s sfa_peer %s ldap_user %s"
+                            % (slice_record, sfa_peer, ldap_user))
+                #User already registered in ldap, meaning user should be in SFA db
+                #and hrn = sfa_auth+ uid
+                sfa_slice = {'hrn': slicename,
+                             'node_list': [],
+                             'authority': slice_record['authority'],
+                             'gid': slice_record['gid'],
+                             'slice_id': slice_record['record_id'],
+                             'urn': hrn_to_urn(slicename,'slice'),
+                             'reg-researchers': slice_record['reg-researchers'],
+                             #'peer_authority': str(sfa_peer)
+                             }
+
+                if ldap_user:
+                    hrn = self.driver.testbed_shell.root_auth + '.' \
+                                                    + ldap_user['uid']
+                    # Registry returns a user record from get_user_record 
+                    user = self.driver.get_user_record(hrn)
+
+                    logger.debug(" IOTLABSLICES \tverify_slice hrn %s USER %s"
+                                 % (hrn, user))
+
+                     # add the external slice to the local SFA iotlab DB
+                    if sfa_slice:
+                        self.driver.AddSlice(sfa_slice, user)
+
+                logger.debug("IOTLABSLICES \tverify_slice ADDSLICE OK")
         else:
-            #Search for user in ldap based on email SA 14/11/12
-            ldap_user = self.driver.testbed_shell.ldap.LdapFindUser(\
-                                                    slice_record['user'])
-            logger.debug(" IOTLABSLICES \tverify_slice Oups \
-                        slice_record %s sfa_peer %s ldap_user %s"
-                        % (slice_record, sfa_peer, ldap_user))
-            #User already registered in ldap, meaning user should be in SFA db
-            #and hrn = sfa_auth+ uid
             sfa_slice = {'hrn': slicename,
-                         'node_list': [],
-                         'authority': slice_record['authority'],
-                         'gid': slice_record['gid'],
-                         'slice_id': slice_record['record_id'],
-                         #'reg-researchers': slice_record['reg-researchers'],
-                         #'peer_authority': str(sfa_peer)
-                         }
+             'node_list': [],
+             'authority': slice_record['authority'],
+             'gid': slice_record['gid'],
+             'urn': hrn_to_urn(slicename,'slice'),
+             #'slice_id': slice_record['record_id'],
+             'reg-researchers': slice_record['reg-researchers'],
+             #'peer_authority': str(sfa_peer)
+            }
 
-            if ldap_user:
-                hrn = self.driver.testbed_shell.root_auth + '.' \
-                                                + ldap_user['uid']
-                user = self.driver.get_user_record(hrn)
 
-                logger.debug(" IOTLABSLICES \tverify_slice hrn %s USER %s"
-                             % (hrn, user))
+            # JORDAN
+            logger.debug("JORDAN ADDSLICE")
+            logger.debug("ADDSLICE user hrn = %s" % slice_record['user']['hrn'])
+            # XXX LOIC !!! searching in IOTLAB DB because has been added in verify_persons
+            user = self.driver.get_user_record(slice_record['user']['hrn'])
 
-                 # add the external slice to the local SFA iotlab DB
-                if sfa_slice:
-                    self.driver.AddSlice(sfa_slice, user)
+            logger.debug("LOIC ADDSLICE Search in IOTLAB DB for user = %s" % user)
+            # XXX LOIC !!! not searching in LDAP because this has been done in verify_persons
+            #ldap_user = self.driver.testbed_shell.ldap.LdapFindUser(\
+            #                                        slice_record['user'])
+            #if ldap_user:
+            #    hrn = self.driver.testbed_shell.root_auth + '.' \
+            #                                    + ldap_user['uid']
+            #    user = self.driver.get_user_record(hrn)
+            #    logger.debug(" IOTLAB SLICES JORDAN user: %r %r " % (user, hrn))
 
-            logger.debug("IOTLABSLICES \tverify_slice ADDSLICE OK")
+            #    logger.debug(" IOTLABSLICES \tverify_slice hrn %s USER %s"
+            #                 % (hrn, user))
+
+            # add the external slice to the local SFA iotlab DB
+            if sfa_slice:
+                self.driver.AddSlice(sfa_slice, user)
+                logger.debug("IOTLABSLICES \tverify_slice ADDSLICE OK")
+
         return sfa_slice
 
 
@@ -382,7 +429,6 @@ class IotlabSlices:
 
 
         """
-
         logger.debug("IOTLABSLICES \tverify_persons \tslice_hrn  %s  \
                     \t slice_record %s\r\n users %s \t  "
                      % (slice_hrn, slice_record, users))
@@ -426,14 +472,14 @@ class IotlabSlices:
             logger.debug(" \r\n IOTLABSLICES.PY \tverify_person  filter_user %s\
                        existing_users %s  "
                         % (filter_user, existing_users))
-            #User is in iotlab LDAP
-            if existing_users:
+            # User is in iotlab LDAP
+            # XXX LOIC !!! user is existing in iotlab LDAP but coming from OneLab portal
+            if existing_users and slice_hrn.startswith("iotlab"):
                 for user in existing_users:
                     user['login'] = user['uid']
                     users_dict[user['email']].update(user)
                     existing_user_emails.append(
                         users_dict[user['email']]['email'])
-
 
             # User from another known trusted federated site. Check
             # if a iotlab account matching the email has already been created.
@@ -441,22 +487,45 @@ class IotlabSlices:
                 req = 'mail='
                 if isinstance(users, list):
                     req += users[0]['email']
+                    user = users[0]
                 else:
                     req += users['email']
+                    user = users
                 ldap_reslt = self.driver.testbed_shell.ldap.LdapSearch(req)
 
                 if ldap_reslt:
                     logger.debug(" IOTLABSLICES.PY \tverify_person users \
                                 USER already in Iotlab \t ldap_reslt %s \
                                 " % (ldap_reslt))
-                    existing_users.append(ldap_reslt[1])
+                    
+                    #existing_users.append(ldap_reslt[1])
+                    # XXX LOIC !!! Not sure why we use to take the element 1
+                    if len(ldap_reslt)>0:
+                        ldap_reslt = ldap_reslt[0]
+                        logger.debug(ldap_reslt)
+                        if len(ldap_reslt)>1:
+                            ldap_reslt = ldap_reslt[1]
+                            logger.debug("LOIC - iotlabslices.py - ldap_reslt = %s" % (ldap_reslt))
+                            existing_users.append(ldap_reslt)
+                            existing_user_emails.append(ldap_reslt['mail'][0])
+                    
+                    # XXX LOIC !!! This login is required 
+                    # sfa/iotlab/iotlabdriver.py", line 523, in AddLeases 
+                    if 'uid' in ldap_reslt:
+                        # meaning that the Person was found in LDAP
+                        slice_record['login'] = ldap_reslt['uid'][0]
 
+                    # XXX LOIC !!! Add the user to IOTLAB DB Registry???
+                    #if 'keys' in user:
+                    #    user['pkey'] = user['keys'][0]
+
+                    #ret = self.driver.AddPerson(user,add_to_ldap=False)
+                    #logger.debug("LOIC verify_persons AddPerson ret = %s" % ret)
                 else:
                     #User not existing in LDAP
                     logger.debug("IOTLABSLICES.PY \tverify_person users \
                                 not in ldap ...NEW ACCOUNT NEEDED %s \r\n \t \
                                 ldap_reslt %s " % (users, ldap_reslt))
-
         requested_user_emails = users_by_email.keys()
         # requested_user_hrns = \
         #     [users_by_email[user]['hrn'] for user in users_by_email]
@@ -478,21 +547,63 @@ class IotlabSlices:
         #to remove/ add any user from/to a slice.
         #However a user from SFA which is not registered in Iotlab yet
         #should be added to the LDAP.
+        logger.debug("LOIC - iotlabslice.py - requested_user_emails = %r" % requested_user_emails)
+        logger.debug("LOIC - iotlabslice.py - existing_user_emails = %r" % existing_user_emails)
+
         added_user_emails = set(requested_user_emails).\
                                         difference(set(existing_user_emails))
-
-
+        logger.debug("LOIC - iotlabslice.py - added_user_emails = %r" % added_user_emails)
+        logger.debug("LOIC - iotlabslice.py - existing_user_emails = %r" % existing_user_emails)
         #self.verify_keys(existing_slice_users, updated_users_list, \
                                                             #peer, append)
+
+        # XXX JORDAN the uid of the user is put in slice_record['login']
 
         added_persons = []
         # add new users
         #requested_user_email is in existing_user_emails
         if len(added_user_emails) == 0:
-            slice_record['login'] = users_dict[requested_user_emails[0]]['uid']
+#            slice_record['login'] = users_dict[requested_user_emails[0]]['uid']
             logger.debug(" IOTLABSLICES  \tverify_person QUICK DIRTY %s"
                          % (slice_record))
 
+            # XXX JORDAN uid == 'register'
+#            new_hrn = slice_record['user']['hrn']
+#            new_user = self.driver.get_user_record(new_hrn)
+#            if not new_user:
+#                # XXX HERE WE SHOULD CREATE A SFA USER !!!!!!
+#                added_user = users_dict[requested_user_emails[0]]
+#                person = {}
+#                person['peer_person_id'] = None
+#                k_list = ['first_name', 'last_name', 'person_id']
+#                for k in k_list:
+#                    if k in added_user:
+#                        person[k] = added_user[k]
+#                # bug user without key
+#                if added_user['keys']:
+#                    person['pkey'] = added_user['keys'][0]
+#                person['mail'] = added_user['email']
+#                person['email'] = added_user['email']
+#                person['key_ids'] = added_user.get('key_ids', [])
+#                # LOIC !!! il faudrait transformer onelab.upmc.XXX en iotlab.XXX
+#                if new_hrn.startswith("iotlab"):
+#                    person['hrn'] = new_hrn                 
+#                else:
+#                    hrn_hierarchy = new_hrn.split(".")
+#                    person['hrn'] = "iotlab." + hrn_hierarchy[-1]
+#
+#                ret = self.driver.AddPerson(person, add_to_ldap=False)
+#                logger.debug("AddPerson return = %r type = %s" % (ret,type(ret)))
+#                # LOIC !!! XXX Dans un cas ça retourne un dict du LDAP dans l'autre cas pas de LDAP donc ça ne retourne rien
+#                if ret is None:
+#                    person['uid'] = slice_record['login']
+#                else:
+#                    if 'uid' in ret:
+#                        # meaning bool is True and the AddPerson was successful
+#                        person['uid'] = ret['uid']
+#                        slice_record['login'] = person['uid']
+
+        # XXX JORDAN i have no added_user_emails
         for added_user_email in added_user_emails:
             added_user = users_dict[added_user_email]
             logger.debug(" IOTLABSLICES \r\n \r\n  \t  verify_person \

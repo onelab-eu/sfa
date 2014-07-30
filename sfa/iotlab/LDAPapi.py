@@ -466,6 +466,8 @@ class LDAPapi:
                 if record['first_name'] != record['last_name']:
                     req_ldapdict['cn'] = str(record['first_name'])+" "\
                         + str(record['last_name'])
+            if 'uid' in record:
+                req_ldapdict['uid'] = record['uid']
             if 'email' in record:
                 req_ldapdict['mail'] = record['email']
             if 'mail' in record:

@@ -228,8 +228,8 @@ class OARrestapi:
         #                    % (error))
             #raise ServerError("GET_OAR_SRVR : Could not reach OARserver")
         if resp.status >= 400:
-            raise ValueError ("Response Error %s, %s" %(resp.status,
-                resp.reason))
+            raise ValueError ("Response Error %s, %s, %s" %(resp.status,
+                resp.reason, resp.read()))
         try:
             js_dict = json.loads(body)
             #print "\r\n \t\t\t js_dict keys" , js_dict.keys(), " \r\n", js_dict
@@ -261,6 +261,7 @@ class OARrestapi:
                                                 str(datadict['strval']))
             del datadict['strval']
 
+        logger.debug("JORDAN USERNAME FOR OAR QUERY: %r to server %r" % (username, self.oarserver))
         data = json.dumps(datadict)
         headers = {'X-REMOTE_IDENT':username, \
                 'content-type': self.POST_FORMAT['json']['content'], \
@@ -286,8 +287,8 @@ class OARrestapi:
             conn.close()
 
         if resp.status >= 400:
-            raise ValueError ("Response Error %s, %s" %(resp.status,
-                resp.reason))
+            raise ValueError ("Response Error %s, %s: %r" %(resp.status,
+                resp.reason, body))
 
 
         try:
