@@ -165,6 +165,7 @@ class IotlabSlices:
                          "%( start_time))
             if start_time in current_nodes_reserved_by_start_time:
 
+                # JORDAN : if we request the same nodes: do nothing
                 if requested_nodes_by_start_time[start_time] == \
                     current_nodes_reserved_by_start_time[start_time]:
                     continue
@@ -312,11 +313,11 @@ class IotlabSlices:
         """
 
         slicename = slice_hrn
+        sfa_slice = None
+
         # check if slice belongs to Iotlab
         slices_list = self.driver.GetSlices(slice_filter=slicename,
                                             slice_filter_type='slice_hrn')
-
-        sfa_slice = None
 
         if slices_list:
             for sl in slices_list:
@@ -431,6 +432,7 @@ class IotlabSlices:
             #Needed because what if the user has been deleted in LDAP but
             #is still in SFA?
             # GetPersons -> LdapFindUser -> _process_ldap_info_for_one_user
+            # XXX LOIC Fix in _process_ldap_info_for_one_user not to update user with hrn=None
             existing_users = self.driver.testbed_shell.GetPersons(filter_user)
             logger.debug(" \r\n IOTLABSLICES.PY \tverify_person  filter_user %s\
                        existing_users %s  "
@@ -494,6 +496,7 @@ class IotlabSlices:
         #self.verify_keys(existing_slice_users, updated_users_list, \
                                                             #peer, append)
 
+        # XXX JORDAN the uid of the user is put in slice_record['login']
         added_persons = []
         # add new users
         #requested_user_email is in existing_user_emails
@@ -501,7 +504,9 @@ class IotlabSlices:
             slice_record['login'] = users_dict[requested_user_emails[0]]['uid']
             logger.debug(" IOTLABSLICES  \tverify_person QUICK DIRTY %s"
                          % (slice_record))
+            # XXX JORDAN uid == 'register'
 
+        # XXX JORDAN i have no added_user_emails
         for added_user_email in added_user_emails:
             added_user = users_dict[added_user_email]
             logger.debug(" IOTLABSLICES \r\n \r\n  \t  verify_person \
