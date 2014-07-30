@@ -44,14 +44,13 @@ from xml.parsers.expat import ExpatError
 
 from sfa.util.faults import CredentialNotVerifiable, ChildRightsNotSubsetOfParent
 from sfa.util.sfalogging import logger
-from sfa.util.sfatime import utcparse
-from sfa.trust.credential_legacy import CredentialLegacy
+from sfa.util.sfatime import utcparse, SFATIME_FORMAT
 from sfa.trust.rights import Right, Rights, determine_rights
 from sfa.trust.gid import GID
 from sfa.util.xrn import urn_to_hrn, hrn_authfor_hrn
 
-# 2 weeks, in seconds 
-DEFAULT_CREDENTIAL_LIFETIME = 86400 * 31
+# 31 days, in seconds 
+DEFAULT_CREDENTIAL_LIFETIME = 86400 * 28
 
 
 # TODO:
@@ -200,9 +199,9 @@ class Signature(object):
 # A credential provides a caller gid with privileges to an object gid.
 # A signed credential is signed by the object's authority.
 #
-# Credentials are encoded in one of two ways.  The legacy style places
-# it in the subjectAltName of an X509 certificate.  The new credentials
-# are placed in signed XML.
+# Credentials are encoded in one of two ways. 
+# The legacy style (now unsupported) places it in the subjectAltName of an X509 certificate.
+# The new credentials are placed in signed XML.
 #
 # WARNING:
 # In general, a signed credential obtained externally should
@@ -248,7 +247,6 @@ class Credential(object):
         self.signature = None
         self.xml = None
         self.refid = None
-        self.legacy = None
         self.type = None
         self.version = None
 
@@ -263,16 +261,16 @@ class Credential(object):
                 self.version = cred['geni_version']
                 
 
-        # Check if this is a legacy credential, translate it if so
         if string or filename:
             if string:                
                 str = string
             elif filename:
                 str = file(filename).read()
                 
-            if str.strip().startswith("-----"):
-                self.legacy = CredentialLegacy(False,string=str)
-                self.translate_legacy(str)
+            # if this is a legacy credential, write error and bail out
+            if isinstance (str, StringTypes) and str.strip().startswith("-----"):
+                logger.error("Legacy credentials not supported any more - giving up with %s..."%str[:10])
+                return
             else:
                 self.xml = str
                 self.decode()
@@ -312,24 +310,6 @@ class Credential(object):
         self.signature = sig
 
         
-    ##
-    # Translate a legacy credential into a new one
-    #
-    # @param String of the legacy credential
-
-    def translate_legacy(self, str):
-        legacy = CredentialLegacy(False,string=str)
-        self.gidCaller = legacy.get_gid_caller()
-        self.gidObject = legacy.get_gid_object()
-        lifetime = legacy.get_lifetime()
-        if not lifetime:
-            self.set_expiration(datetime.datetime.utcnow() + datetime.timedelta(seconds=DEFAULT_CREDENTIAL_LIFETIME))
-        else:
-            self.set_expiration(int(lifetime))
-        self.lifeTime = legacy.get_lifetime()
-        self.set_privileges(legacy.get_privileges())
-        self.get_privileges().delegate_all_privileges(legacy.get_delegate())
-
     ##
     # Need the issuer's private key and name
     # @param key Keypair object containing the private key of the issuer
@@ -384,15 +364,11 @@ class Credential(object):
     # Expiration: an absolute UTC time of expiration (as either an int or string or datetime)
     # 
     def set_expiration(self, expiration):
-        if isinstance(expiration, (int, float)):
-            self.expiration = datetime.datetime.fromtimestamp(expiration)
-        elif isinstance (expiration, datetime.datetime):
-            self.expiration = expiration
-        elif isinstance (expiration, StringTypes):
-            self.expiration = utcparse (expiration)
+        expiration_datetime = utcparse (expiration)
+        if expiration_datetime is not None:
+            self.expiration = expiration_datetime
         else:
-            logger.error ("unexpected input type in Credential.set_expiration")
-
+            logger.error ("unexpected input %s in Credential.set_expiration"%expiration)
 
     ##
     # get the lifetime of the credential (always in datetime format)
@@ -403,11 +379,6 @@ class Credential(object):
         # at this point self.expiration is normalized as a datetime - DON'T call utcparse again
         return self.expiration
 
-    ##
-    # For legacy sake
-    def get_lifetime(self):
-        return self.get_expiration()
- 
     ##
     # set the privileges
     #
@@ -483,9 +454,10 @@ class Credential(object):
         append_sub(doc, cred, "target_urn", self.gidObject.get_urn())
         append_sub(doc, cred, "uuid", "")
         if not self.expiration:
+            logger.debug("Creating credential valid for %s s"%DEFAULT_CREDENTIAL_LIFETIME)
             self.set_expiration(datetime.datetime.utcnow() + datetime.timedelta(seconds=DEFAULT_CREDENTIAL_LIFETIME))
         self.expiration = self.expiration.replace(microsecond=0)
-        append_sub(doc, cred, "expires", self.expiration.isoformat())
+        append_sub(doc, cred, "expires", self.expiration.strftime(SFATIME_FORMAT))
         privileges = doc.createElement("privileges")
         cred.appendChild(privileges)
 
@@ -679,10 +651,6 @@ class Credential(object):
 
         self.xml = signed
 
-        # This is no longer a legacy credential
-        if self.legacy:
-            self.legacy = None
-
         # Update signatures
         self.decode()       
 
@@ -799,7 +767,7 @@ class Credential(object):
             self.decode()
 
         # validate against RelaxNG schema
-        if HAVELXML and not self.legacy:
+        if HAVELXML:
             if schema and os.path.exists(schema):
                 tree = etree.parse(StringIO(self.xml))
                 schema_doc = etree.parse(schema)
@@ -828,18 +796,9 @@ class Credential(object):
                     logger.error("Failed to load trusted cert from %s: %r"%( f, exc))
             trusted_certs = ok_trusted_certs
 
-        # Use legacy verification if this is a legacy credential
-        if self.legacy:
-            self.legacy.verify_chain(trusted_cert_objects)
-            if self.legacy.client_gid:
-                self.legacy.client_gid.verify_chain(trusted_cert_objects)
-            if self.legacy.object_gid:
-                self.legacy.object_gid.verify_chain(trusted_cert_objects)
-            return True
-        
         # make sure it is not expired
         if self.get_expiration() < datetime.datetime.utcnow():
-            raise CredentialNotVerifiable("Credential %s expired at %s" % (self.get_summary_tostring(), self.expiration.isoformat()))
+            raise CredentialNotVerifiable("Credential %s expired at %s" % (self.get_summary_tostring(), self.expiration.strftime(SFATIME_FORMAT)))
 
         # Verify the signatures
         filename = self.save_to_random_tmp_file()
@@ -1101,7 +1060,7 @@ class Credential(object):
             self.get_signature().get_issuer_gid().dump(8, dump_parents)
 
         if self.expiration:
-            print "  expiration:", self.expiration.isoformat()
+            print "  expiration:", self.expiration.strftime(SFATIME_FORMAT)
 
         gidObject = self.get_gid_object()
         if gidObject:

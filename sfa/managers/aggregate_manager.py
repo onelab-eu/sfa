@@ -29,7 +29,8 @@ class AggregateManager:
             'geni_ad_rspec_versions': ad_rspec_versions,
             }
 
-    def get_rspec_version_string(self, rspec_version, options={}):
+    def get_rspec_version_string(self, rspec_version, options=None):
+        if options is None: options={}
         version_string = "rspec_%s" % (rspec_version)
 
         #panos adding the info option to the caching key (can be improved)
@@ -149,12 +150,14 @@ class AggregateManager:
 
         return api.driver.renew(xrns, expiration_time, options)
 
-    def PerformOperationalAction(self, api, xrns, creds, action, options={}):
+    def PerformOperationalAction(self, api, xrns, creds, action, options=None):
+        if options is None: options={}
         call_id = options.get('call_id')
         if Callids().already_handled(call_id): return True
         return api.driver.perform_operational_action(xrns, action, options) 
 
-    def Shutdown(self, api, xrn, creds, options={}):
+    def Shutdown(self, api, xrn, creds, options=None):
+        if options is None: options={}
         call_id = options.get('call_id')
         if Callids().already_handled(call_id): return True
         return api.driver.shutdown(xrn, options) 

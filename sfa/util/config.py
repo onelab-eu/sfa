@@ -194,7 +194,8 @@ DO NOT EDIT. This file was automatically generated at
             return False
 
 
-    def dump(self, sections = []):
+    def dump(self, sections=None):
+        if sections is None: sections=[]
         sys.stdout.write(output_python())
 
     def output_python(self, encoding = "utf-8"):

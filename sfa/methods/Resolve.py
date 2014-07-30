@@ -30,7 +30,8 @@ class Resolve(Method):
     # xxx used to be [SfaRecord]
     returns = [Parameter(dict, "registry record")]
     
-    def call(self, xrns, creds, options={}):
+    def call(self, xrns, creds, options=None):
+        if options is None: options={}
         # use details=False by default, only when explicitly specified do we want 
         # to mess with the testbed details
         if 'details' in options: details=options['details']

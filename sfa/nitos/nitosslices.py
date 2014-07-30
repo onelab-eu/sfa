@@ -153,7 +153,8 @@ class NitosSlices:
 
                         
         
-    def verify_slice(self, slice_hrn, slice_record, sfa_peer, options={}):
+    def verify_slice(self, slice_hrn, slice_record, sfa_peer, options=None):
+        if options is None: options={}
         slicename = hrn_to_nitos_slicename(slice_hrn)
         slices = self.driver.shell.getSlices({}, []) 
         slices = self.driver.filter_nitos_results(slices, {'slice_name': slicename})
@@ -168,7 +169,8 @@ class NitosSlices:
        
         return slice
 
-    def verify_users(self, slice_hrn, slice_record, users, sfa_peer, options={}):
+    def verify_users(self, slice_hrn, slice_record, users, sfa_peer, options=None):
+        if options is None: options={}
         # get slice info
         slicename = hrn_to_nitos_slicename(slice_hrn)
         slices = self.driver.shell.getSlices({}, [])
@@ -204,7 +206,8 @@ class NitosSlices:
         return added_users
 
 
-    def verify_keys(self, persons, users, options={}):
+    def verify_keys(self, persons, users, options=None):
+        if options is None: options={}
         # existing keys 
         key_ids = []
         for person in persons:

@@ -20,7 +20,8 @@ class XpathFilter:
         return xpath
 
     @staticmethod
-    def xpath(filter={}):
+    def xpath(filter=None):
+        if filter is None: filter={}
         xpath = ""
         if filter:
             filter_list = []
@@ -78,11 +79,12 @@ class XmlElement:
     def getparent(self):
         return XmlElement(self.element.getparent(), self.namespaces)
 
-    def get_instance(self, instance_class=None, fields=[]):
+    def get_instance(self, instance_class=None, fields=None):
         """
         Returns an instance (dict) of this xml element. The instance
         holds a reference to this xml element.   
         """
+        if fields is None: fields=[]
         if not instance_class:
             instance_class = Element
         if not fields and hasattr(instance_class, 'fields'):
@@ -97,11 +99,12 @@ class XmlElement:
                    instance[field] = self.attrib[field]  
         return instance             
 
-    def add_instance(self, name, instance, fields=[]):
+    def add_instance(self, name, instance, fields=None):
         """
         Adds the specifed instance(s) as a child element of this xml 
         element. 
         """
+        if fields is None: fields=[]
         if not fields and hasattr(instance, 'keys'):
             fields = instance.keys()
         elem = self.add_element(name)

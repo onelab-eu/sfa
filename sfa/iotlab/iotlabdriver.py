@@ -1102,7 +1102,7 @@ class IotlabDriver(Driver):
 
 
 
-    def delete(self, slice_urns, options={}):
+    def delete(self, slice_urns, options=None):
         """
         Deletes the lease associated with the slice hrn and the credentials
             if the slice belongs to iotlab. Answer to DeleteSliver.
@@ -1120,6 +1120,7 @@ class IotlabDriver(Driver):
         .. note:: creds are unused, and are not used either in the dummy driver
              delete_sliver .
         """
+        if options is None: options={}
         # collect sliver ids so we can update sliver allocation states after
         # we remove the slivers.
         aggregate = IotlabAggregate(self)
@@ -1412,16 +1413,19 @@ class IotlabDriver(Driver):
             'geni_ad_rspec_versions': ad_rspec_versions}
 
     # first 2 args are None in case of resource discovery
-    def list_resources (self, version=None, options={}):
+    def list_resources (self, version=None, options=None):
+        if options is None: options={}
         aggregate = IotlabAggregate(self)
         rspec =  aggregate.list_resources(version=version, options=options)
         return rspec
 
-    def describe(self, urns, version, options={}):
+    def describe(self, urns, version, options=None):
+        if options is None: options={}
         aggregate = IotlabAggregate(self)
         return aggregate.describe(urns, version=version, options=options)
 
-    def status (self, urns, options={}):
+    def status (self, urns, options=None):
+        if options is None: options={}
         aggregate = IotlabAggregate(self)
         desc =  aggregate.describe(urns, version='GENI 3')
         status = {'geni_urn': desc['geni_urn'],
@@ -1429,7 +1433,8 @@ class IotlabDriver(Driver):
         return status
 
 
-    def allocate (self, urn, rspec_string, expiration, options={}):
+    def allocate (self, urn, rspec_string, expiration, options=None):
+        if options is None: options={}
         xrn = Xrn(urn)
         aggregate = IotlabAggregate(self)
 
@@ -1598,7 +1603,8 @@ class IotlabDriver(Driver):
         }
         return aggregate.describe([xrn.get_urn()], version=rspec.version, options=describe_options)
 
-    def provision(self, urns, options={}):
+    def provision(self, urns, options=None):
+        if options is None: options={}
         # update users
         slices = IotlabSlices(self)
         aggregate = IotlabAggregate(self)

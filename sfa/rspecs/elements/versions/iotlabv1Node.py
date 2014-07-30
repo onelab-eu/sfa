@@ -160,14 +160,16 @@ class Iotlabv1Node:
         return node_elems
 
     @staticmethod
-    def get_nodes(xml, filter={}):
+    def get_nodes(xml, filter=None):
+        if filter is None: filter={}
         xpath = '//node%s | //default:node%s' % (XpathFilter.xpath(filter), \
                                                     XpathFilter.xpath(filter))
         node_elems = xml.xpath(xpath)
         return Iotlabv1Node.get_node_objs(node_elems)
 
     @staticmethod
-    def get_nodes_with_slivers(xml, sliver_filter={}):
+    def get_nodes_with_slivers(xml, sliver_filter=None):
+        if sliver_filter is None: sliver_filter={}
 
         xpath = '//node[count(sliver)>0] | \
                                 //default:node[count(default:sliver) > 0]'

@@ -54,7 +54,8 @@ class NITOSv1Channel:
 
 
     @staticmethod
-    def get_channels(xml, filter={}):
+    def get_channels(xml, filter=None):
+        if filter is None: filter={}
         xpath = '//channel%s | //default:channel%s' % (XpathFilter.xpath(filter), XpathFilter.xpath(filter))
         channel_elems = xml.xpath(xpath)
         return NITOSv1Channel.get_channel_objs(channel_elems)

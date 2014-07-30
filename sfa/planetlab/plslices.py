@@ -322,7 +322,9 @@ class PlSlices:
                         
         
 
-    def verify_site(self, slice_xrn, slice_record={}, sfa_peer=None, options={}):
+    def verify_site(self, slice_xrn, slice_record=None, sfa_peer=None, options=None):
+        if slice_record is None: slice_record={}
+        if options is None: options={}
         (slice_hrn, type) = urn_to_hrn(slice_xrn)
         top_auth_hrn = top_auth(slice_hrn)
         site_hrn = '.'.join(slice_hrn.split('.')[:-1])
@@ -367,7 +369,8 @@ class PlSlices:
         return site
 
 
-    def verify_slice(self, slice_hrn, slice_record, sfa_peer, expiration, options={}):
+    def verify_slice(self, slice_hrn, slice_record, sfa_peer, expiration, options=None):
+        if options is None: options={}
         top_auth_hrn = top_auth(slice_hrn)
         site_hrn = '.'.join(slice_hrn.split('.')[:-1])
         slice_part = slice_hrn.split('.')[-1]
@@ -416,7 +419,8 @@ class PlSlices:
         return self.driver.shell.GetSlices(int(slice['slice_id']))[0]
 
 
-    def verify_persons(self, slice_hrn, slice_record, users, sfa_peer, options={}):
+    def verify_persons(self, slice_hrn, slice_record, users, sfa_peer, options=None):
+        if options is None: options={}
         top_auth_hrn = top_auth(slice_hrn)
         site_hrn = '.'.join(slice_hrn.split('.')[:-1])
         slice_part = slice_hrn.split('.')[-1]
@@ -504,7 +508,8 @@ class PlSlices:
         return persons_to_add
 
 
-    def verify_keys(self, persons_to_verify_keys, options={}):
+    def verify_keys(self, persons_to_verify_keys, options=None):
+        if options is None: options={}
         # we only add keys that comes from sfa to persons in PL
         for person_id in persons_to_verify_keys:
              person_sfa_keys = persons_to_verify_keys[person_id].get('keys', [])
@@ -518,7 +523,8 @@ class PlSlices:
                   self.driver.shell.AddPersonKey(int(person_id), key)
 
 
-    def verify_slice_attributes(self, slice, requested_slice_attributes, options={}, admin=False):
+    def verify_slice_attributes(self, slice, requested_slice_attributes, options=None, admin=False):
+        if options is None: options={}
         append = options.get('append', True)
         # get list of attributes users ar able to manage
         filter = {'category': '*slice*'}

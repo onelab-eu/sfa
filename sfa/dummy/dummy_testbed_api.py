@@ -12,7 +12,12 @@ for i in range(1,11):
 
 slices_list = []
 for i in range(1,3):
-    slice = {'slice_name': 'slice'+str(i), 'user_ids': range(i,4,2), 'slice_id': i, 'node_ids': range(i,10,2), 'enabled': True, 'expires': int(time.time())+60*60*24*30}
+    slice = {'slice_name': 'slice'+str(i), 
+             'user_ids': range(i,4,2), 
+             'slice_id': i, 
+             'node_ids': range(i,10,2),
+             'enabled': True,
+             'expires': int(time.time())+60*60*24*30}
     slices_list.append(slice)
 
 users_list = []
@@ -43,7 +48,8 @@ def FilterList(myfilter, mylist):
 def GetTestbedInfo():
     return {'name': 'dummy', 'longitude': 123456, 'latitude': 654321, 'domain':'dummy-testbed.org'}
 
-def GetNodes(filter={}):
+def GetNodes(filter=None):
+    if filter is None: filter={}
     global DB
     result = []
     result.extend(DB['nodes_list'])
@@ -55,7 +61,8 @@ def GetNodes(filter={}):
         result = FilterList(filter, result)
     return result
 
-def GetSlices(filter={}):
+def GetSlices(filter=None):
+    if filter is None: filter={}
     global DB
     result = []
     result.extend(DB['slices_list'])
@@ -69,7 +76,8 @@ def GetSlices(filter={}):
     return result
 
 
-def GetUsers(filter={}):
+def GetUsers(filter=None):
+    if filter is None: filter={}
     global DB
     result = []
     result.extend(DB['users_list'])

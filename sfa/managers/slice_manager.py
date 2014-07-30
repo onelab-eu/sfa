@@ -508,7 +508,8 @@ class SliceManager:
         multiclient.get_results()    
         return 1
      
-    def Shutdown(self, api, xrn, creds, options={}):
+    def Shutdown(self, api, xrn, creds, options=None):
+        if options is None: options={}
         xrn = Xrn(xrn)  
         # get the callers hrn
         valid_cred = api.auth.checkCredentials(creds, 'stopslice', xrn.hrn)[0]

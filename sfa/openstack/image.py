@@ -4,7 +4,8 @@ from sfa.rspecs.elements.disk_image import DiskImage
 
 class Image:
     
-    def __init__(self, image={}):
+    def __init__(self, image=None):
+        if image is None: image={}
         self.id = None
         self.container_format = None
         self.kernel_id = None

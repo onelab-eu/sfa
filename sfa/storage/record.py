@@ -35,7 +35,8 @@ class Record:
     
     # it may be important to exclude relationships, which fortunately
     # 
-    def todict (self, exclude_types=[]):
+    def todict (self, exclude_types=None):
+        if exclude_types is None: exclude_types=[]
         d=self.__dict__
         def exclude (k,v):
             if k.startswith('_'): return True

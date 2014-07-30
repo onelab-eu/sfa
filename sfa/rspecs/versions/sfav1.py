@@ -59,7 +59,8 @@ class SFAv1(RSpecVersion):
 
     # Slivers
    
-    def add_slivers(self, hostnames, attributes=[], sliver_urn=None, append=False):
+    def add_slivers(self, hostnames, attributes=None, sliver_urn=None, append=False):
+        if attributes is None: attributes=[]
         # add slice name to network tag
         network_tags = self.xml.xpath('//network')
         if network_tags:

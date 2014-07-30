@@ -78,7 +78,8 @@ class Driver:
 
     # answer to ListResources
     # returns : advertisment rspec (xml string)
-    def list_resources (self, version=None, options={}):
+    def list_resources (self, version=None, options=None):
+        if options is None: options={}
         return "dummy Driver.list_resources needs to be redefined"
 
     # the answer to Describe on a slice or a set of the slivers in a slice
@@ -97,40 +98,48 @@ class Driver:
     #              ...
     #                ]
     #}
-    def describe (self, urns, version, options={}):
+    def describe (self, urns, version, options=None):
+        if options is None: options={}
         return "dummy Driver.describe needs to be redefined"
 
     # the answer to Allocate on a given slicei or a set of the slivers in a slice
     # returns: same struct as for describe.
-    def allocate (self, urn, rspec_string, expiration, options={}):
+    def allocate (self, urn, rspec_string, expiration, options=None):
+        if options is None: options={}
         return "dummy Driver.allocate needs to be redefined"
 
     # the answer to Provision on a given slice or a set of the slivers in a slice
     # returns: same struct as for describe.
-    def provision(self, urns, options={}):
+    def provision(self, urns, options=None):
+        if options is None: options={}
         return "dummy Driver.provision needs to be redefined"
 
     # the answer to PerformOperationalAction on a given slice or a set of the slivers in a slice
     # returns: struct containing "geni_slivers" list of the struct returned by describe.
-    def perform_operational_action (self, urns, action, options={}):
+    def perform_operational_action (self, urns, action, options=None):
+        if options is None: options={}
         return "dummy Driver.perform_operational_action needs to be redefined"
 
     # the answer to Status on a given slice or a set of the slivers in a slice
     # returns: struct containing "geni_urn" and "geni_slivers" list of the struct returned by describe.
-    def status (self, urns, options={}): 
+    def status (self, urns, options=None): 
+        if options is None: options={}
         return "dummy Driver.status needs to be redefined"
 
     # the answer to Renew on a given slice or a set of the slivers in a slice
     # returns: struct containing "geni_slivers" list of the struct returned by describe.
-    def renew (self, urns, expiration_time, options={}):
+    def renew (self, urns, expiration_time, options=None):
+        if options is None: options={}
         return "dummy Driver.renew needs to be redefined"
 
     # the answer to Delete on a given slice
     # returns: struct containing "geni_slivers" list of the struct returned by describe.
-    def delete(self, urns, options={}):
+    def delete(self, urns, options=None):
+        if options is None: options={}
         return "dummy Driver.delete needs to be redefined"
 
     # the answer to Shutdown on a given slice
     # returns: boolean
-    def shutdown (self, xrn, options={}):
+    def shutdown (self, xrn, options=None):
+        if options is None: options={}
         return False

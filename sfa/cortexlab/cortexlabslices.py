@@ -351,7 +351,7 @@ class CortexlabSlices:
         return sfa_slice
 
 
-    def verify_persons(self, slice_hrn, slice_record, users, options={}):
+    def verify_persons(self, slice_hrn, slice_record, users, options=None):
         """Ensures the users in users list exist and are enabled in LDAP. Adds
         person if needed(AddPerson).
 
@@ -378,6 +378,7 @@ class CortexlabSlices:
 
         """
 
+        if options is None: options={}
 
         logger.debug("CortexlabSlices \tverify_persons \tslice_hrn  %s  \
                     \t slice_record %s\r\n users %s \t  "
@@ -525,10 +526,11 @@ class CortexlabSlices:
         return added_persons
 
 
-    def verify_keys(self, persons, users, peer, options={}):
+    def verify_keys(self, persons, users, peer, options=None):
         """
         .. warning:: unused
         """
+        if options is None: options={}
         # existing keys
         key_ids = []
         for person in persons:
