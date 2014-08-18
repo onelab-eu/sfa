@@ -460,13 +460,15 @@ class PlSlices:
 
         persons_to_verify_keys = {}
 
+        slice_id = slice['slice_id']
+
         # Add persons or add persons to slice
         for person_hrn in persons_to_add:
              person_email = users_by_hrn[person_hrn].get('email', "%s@geni.net"%person_hrn.split('.')[-1])
              if person_email and person_email in persons_by_email.keys():
                  # check if the user already exist in PL
                  person_id = persons_by_email[person_email]['person_id']
-                 self.driver.shell.AddPersonToSlice(person_id, slice['slice_id'])
+                 self.driver.shell.AddPersonToSlice(person_id, slice_id)
                  persons_to_verify_keys[person_id] = users_by_hrn[person_hrn]
 
              else:
@@ -482,7 +484,7 @@ class PlSlices:
                  self.driver.shell.UpdatePerson(int(person_id), {'enabled': True})
                  self.driver.shell.SetPersonSfaCreated(int(person_id), 'True')
                  self.driver.shell.AddPersonToSite(int(person_id), site['site_id'])
-                 self.driver.shell.AddPersonToSlice(int(person_id), slice['slice_id'])
+                 self.driver.shell.AddPersonToSlice(int(person_id), slice_id)
                  self.driver.shell.SetPersonHrn(int(person_id), person_hrn)
 
                  # Add keys
@@ -494,7 +496,6 @@ class PlSlices:
         # Delete persons from slice     
         for person_hrn in persons_to_delete:
              person_id = slice_persons_by_hrn[person_hrn].get('person_id')
-             slice_id = slice['slice_id']
              self.driver.shell.DeletePersonFromSlice(person_id, slice_id)
 
 
