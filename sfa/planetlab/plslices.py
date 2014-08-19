@@ -425,7 +425,7 @@ class PlSlices:
     #        'slice_record': it seems like the first of these 'users' also contains a 'slice_record' 
     #           key that holds stuff like 'hrn', 'slice_id', 'authority',...
     # 
-    def create_person (user, site_id):
+    def create_person (self, user, site_id):
         user_hrn = user['hrn']
         # the value to use if 'user' has no 'email' attached - xxx should be configurable
         default_email = "%s@geni.net"%user_hrn.split('.')[-1]
@@ -443,7 +443,7 @@ class PlSlices:
         # set hrn
         person_record.update({'hrn':user_hrn})
 
-        person_id = int (self.driver.shell.AddPerson(person))
+        person_id = int (self.driver.shell.AddPerson(person_record))
         self.driver.shell.AddRoleToPerson('user', person_id)
         self.driver.shell.AddPersonToSite(person_id, site['site_id'])
 
@@ -490,7 +490,7 @@ class PlSlices:
         existing_hrns = [ person['hrn'] for person in target_existing_persons ]
         tocreate_hrns = set (target_hrns) - set (existing_hrns)
         # create these
-        target_created_person_ids = [ create_person (users_by_hrn[hrn], site_id) for hrn in tocreate_hrns ]
+        target_created_person_ids = [ self.create_person (users_by_hrn[hrn], site_id) for hrn in tocreate_hrns ]
 
         # we can partition the persons of interest into one of these 3 classes
         add_person_ids  = set(target_created_person_ids) | set(target_existing_person_ids) - set(slice_person_ids)
