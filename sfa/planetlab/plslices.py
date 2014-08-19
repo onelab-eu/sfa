@@ -40,7 +40,8 @@ class PlSlices:
         person_ids = list(person_ids)
         all_slice_tag_ids = list(all_slice_tag_ids)
         # Get user information
-        all_persons_list = self.driver.shell.GetPersons({'person_id':person_ids,'enabled':True}, ['person_id', 'enabled', 'key_ids'])
+        all_persons_list = self.driver.shell.GetPersons({'person_id':person_ids,'enabled':True}, 
+                                                        ['person_id', 'enabled', 'key_ids'])
         all_persons = {}
         for person in all_persons_list:
             all_persons[person['person_id']] = person        
@@ -141,7 +142,8 @@ class PlSlices:
 
     def verify_slice_leases(self, slice, rspec_requested_leases):
 
-        leases = self.driver.shell.GetLeases({'name':slice['name'], 'clip':int(time.time())}, ['lease_id','name', 'hostname', 't_from', 't_until'])
+        leases = self.driver.shell.GetLeases({'name':slice['name'], 'clip':int(time.time())}, 
+                                             ['lease_id','name', 'hostname', 't_from', 't_until'])
         grain = self.driver.shell.GetLeaseGranularity()
 
         requested_leases = []
@@ -332,20 +334,15 @@ class PlSlices:
             login_base = slice_hrn.split('.')[-2][:12]
         else:
             login_base = hash_loginbase(site_hrn)
-        #plxrn = PlXrn(xrn=slice_xrn)
-        #slice_hrn = plxrn.get_hrn()
-        #type = plxrn.get_type()
-        #site_hrn = plxrn.get_authority_hrn()
-        #authority_name = plxrn.pl_authname()
-        #slicename = plxrn.pl_slicename()
-        #login_base = plxrn.pl_login_base()
-
-        sites = self.driver.shell.GetSites({'peer_id': None},['site_id','name','abbreviated_name','login_base','hrn'])
 
         # filter sites by hrn
-        site_exists = [site for site in sites if site['hrn'] == site_hrn]
+        sites = self.driver.shell.GetSites({'peer_id': None, 'hrn':site_hrn},
+                                           ['site_id','name','abbreviated_name','login_base','hrn'])
 
-        if not site_exists:
+        # alredy exists
+        if sites:
+            site = sites[0]
+        else:
             # create new site record
             site = {'name': 'sfa:%s' % site_hrn,
                     'abbreviated_name': site_hrn,
@@ -353,18 +350,14 @@ class PlSlices:
                     'max_slices': 100,
                     'max_slivers': 1000,
                     'enabled': True,
-                    'peer_site_id': None}
-
-            site['site_id'] = self.driver.shell.AddSite(site)
-            # Set site HRN
-            self.driver.shell.SetSiteHrn(int(site['site_id']), site_hrn)
-            # Tag this as created through SFA
-            self.driver.shell.SetSiteSfaCreated(int(site['site_id']), 'True')
+                    'peer_site_id': None,
+                    'hrn':site_hrn,
+                    'sfa_created': 'True',
+            }
+            site_id = self.driver.shell.AddSite(site)
+            site['site_id'] = site_id
             # exempt federated sites from monitor policies
-            self.driver.shell.AddSiteTag(int(site['site_id']), 'exempt_site_until', "20200101")
-
-        else:
-            site =  site_exists[0]
+            self.driver.shell.AddSiteTag(site_id, 'exempt_site_until', "20200101")
 
         return site
 
@@ -379,19 +372,19 @@ class PlSlices:
         else:
             login_base = hash_loginbase(site_hrn)
         slice_name = '_'.join([login_base, slice_part])
-        #plxrn = PlXrn(xrn=slice_hrn)
-        #slice_hrn = plxrn.get_hrn()
-        #type = plxrn.get_type()
-        #site_hrn = plxrn.get_authority_hrn()
-        #authority_name = plxrn.pl_authname()
-        #slicename = plxrn.pl_slicename()
-        #login_base = plxrn.pl_login_base()
 
-        slices = self.driver.shell.GetSlices({'peer_id': None},['slice_id','name','hrn'])
-        # Filter slices by HRN
-        slice_exists = [slice for slice in slices if slice['hrn'] == slice_hrn]
         expires = int(datetime_to_epoch(utcparse(expiration)))
-        if not slice_exists:
+        # Filter slices by HRN
+        slices = self.driver.shell.GetSlices({'peer_id': None, 'hrn':slice_hrn},
+                                             ['slice_id','name','hrn','expires'])
+        
+        if slices:
+            slice = slices[0]
+            slice_id = slice['slice_id']
+            #Update expiration if necessary
+            if slice.get('expires', None) != expires:
+                self.driver.shell.UpdateSlice( slice_id, {'expires' : expires})
+        else:
             if slice_record:
                 url = slice_record.get('url', slice_hrn)
                 description = slice_record.get('description', slice_hrn)
@@ -400,23 +393,15 @@ class PlSlices:
                 description = slice_hrn
             slice = {'name': slice_name,
                      'url': url,
-                     'description': description}
-            # add the slice                          
-            slice['slice_id'] = self.driver.shell.AddSlice(slice)
-            # set the slice HRN
-            self.driver.shell.SetSliceHrn(int(slice['slice_id']), slice_hrn)       
-            # Tag this as created through SFA
-            self.driver.shell.SetSliceSfaCreated(int(slice['slice_id']), 'True')
-            # set the expiration
-            self.driver.shell.UpdateSlice(int(slice['slice_id']), {'expires': expires})
+                     'description': description,
+                     'hrn': slice_hrn,
+                     'sfa_created': 'True',
+                     'expires': expires,
+            }
+            # add the slice
+            slice_id = self.driver.shell.AddSlice(slice)
 
-        else:
-            slice = slice_exists[0]
-            #Update expiration if necessary
-            if slice.get('expires', None) != expires:
-                self.driver.shell.UpdateSlice( int(slice['slice_id']), {'expires' : expires})
-
-        return self.driver.shell.GetSlices(int(slice['slice_id']))[0]
+        return self.driver.shell.GetSlices(slice_id)[0]
 
 
     # in the following code, we use
@@ -435,13 +420,10 @@ class PlSlices:
             'first_name': user.get('first_name',user_hrn),
             'last_name': user.get('last_name',user_hrn),
             'email': user.get('email', default_email),
+            'enabled': True,
+            'sfa_created': 'True',
+            'hrn': user_hrn,
         }
-        # make it enabled
-        person_record.update({'enabled': True})
-        # mark it sfa_created; a string is required here, sfa_created is a tag
-        person_record.update({'sfa_created':'True'})
-        # set hrn
-        person_record.update({'hrn':user_hrn})
 
         person_id = int (self.driver.shell.AddPerson(person_record))
         self.driver.shell.AddRoleToPerson('user', person_id)
@@ -606,7 +588,8 @@ class PlSlices:
         # add requested_attributes
         for attribute in added_slice_attributes:
             try:
-                self.driver.shell.AddSliceTag(slice['name'], attribute['name'], attribute['value'], attribute.get('node_id', None))
+                self.driver.shell.AddSliceTag(slice['name'], attribute['name'], 
+                                              attribute['value'], attribute.get('node_id', None))
             except Exception, e:
                 logger.warn('Failed to add sliver attribute. name: %s, value: %s, node_id: %s\nCause:%s'\
                                 % (slice['name'], attribute['value'],  attribute.get('node_id'), str(e)))
