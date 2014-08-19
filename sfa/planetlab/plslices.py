@@ -503,8 +503,12 @@ class PlSlices:
 
         # about the last 2 sets, for managing keys, we need to trace back person_id -> user
         # and for this we need all the Person objects; we already have the target_existing ones
-        target_created_persons = self.driver.shell.GetPersons ({'peer_id':None, 'person_id':target_created_person_ids},person_fields)
-        persons_by_person_id = { person['person_id'] : person for person in target_existing_persons + target_created_persons }
+        # also we avoid issuing a call if possible
+        target_created_persons = [] if not target_created_person_ids \
+                                 else driver.shell.GetPersons ({'peer_id':None, 'person_id':target_created_person_ids},
+                                                               person_fields)
+        persons_by_person_id = { person['person_id'] : person \
+                                 for person in target_existing_persons + target_created_persons }
 
         def user_by_person_id (person_id):
             person = persons_by_person_id [person_id]
