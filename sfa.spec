@@ -1,6 +1,6 @@
 %define name sfa
 %define version 3.1
-%define taglevel 9
+%define taglevel 10
 
 %define release %{taglevel}%{?pldistro:.%{pldistro}}%{?date:.%{date}}
 %global python_sitearch	%( python -c "from distutils.sysconfig import get_python_lib; print get_python_lib(1)" )
@@ -264,6 +264,15 @@ fi
 #[ "$1" -ge "1" ] && service sfa-cm restart || :
 
 %changelog
+* Wed Aug 20 2014 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-3.1-10
+- rewrote an optimized version of verify_persons in the PL driver:
+- Allocate and Provision should now perform much faster
+- in the bargain, changed the way dummy persons are created by SFA:
+- the sfa email is used when free, otherwise a fake email is made up from hrn
+- e.g. hrn=onelab.inria.thierry_parmentelat -> email=thierry_parmentelat@onelab.inria.stub
+- verify_chain debug flow does not up any more by default
+- various fixes in the iotlab driver
+
 * Mon Jul 21 2014 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-3.1-9
 - Register can change the user keys using 'reg-keys' as well as 'keys'
 - also accept a single string rather than a list of keys
