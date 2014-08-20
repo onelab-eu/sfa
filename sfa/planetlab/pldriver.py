@@ -692,17 +692,19 @@ class PlDriver (Driver):
         slivers = aggregate.get_slivers(urns)
         if not slivers:
             sliver_id_parts = Xrn(urns[0]).get_sliver_id_parts()
-            filter = {}
-            try:
-                filter['slice_id'] = int(sliver_id_parts[0])
-            except ValueError:
-                filter['name'] = sliver_id_parts[0]
-            slices = self.shell.GetSlices(filter,['hrn'])
-            if not slices:
-                raise Forbidden("Unable to locate slice record for sliver:  %s" % xrn)
-            slice = slices[0]
-            slice_urn = hrn_to_urn(slice['hrn'], type='slice')
-            urns = [slice_urn]          
+            # allow to be called with an empty rspec, meaning flush reservations
+            if sliver_id_parts:
+                filter = {}
+                try:
+                    filter['slice_id'] = int(sliver_id_parts[0])
+                except ValueError:
+                    filter['name'] = sliver_id_parts[0]
+                slices = self.shell.GetSlices(filter,['hrn'])
+                if not slices:
+                    raise Forbidden("Unable to locate slice record for sliver:  %s" % xrn)
+                slice = slices[0]
+                slice_urn = hrn_to_urn(slice['hrn'], type='slice')
+                urns = [slice_urn]          
         else:    
             slice_id = slivers[0]['slice_id']
             slice_hrn = self.shell.GetSliceHrn(slice_id)
