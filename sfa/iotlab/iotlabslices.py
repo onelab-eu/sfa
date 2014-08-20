@@ -349,9 +349,12 @@ class IotlabSlices:
                          }
 
             if ldap_user:
-                hrn = self.driver.testbed_shell.root_auth + '.' \
-                                                + ldap_user['uid']
-                user = self.driver.get_user_record(hrn)
+#                hrn = self.driver.testbed_shell.root_auth + '.' \
+#                                                + ldap_user['uid']
+                for hrn in slice_record['reg-researchers']:
+                    user = self.driver.get_user_record(hrn)
+                    if user:
+                        break
 
                 logger.debug(" IOTLABSLICES \tverify_slice hrn %s USER %s"
                              % (hrn, user))
@@ -420,7 +423,7 @@ class IotlabSlices:
         #             % (users_dict, users_by_email))
 
         existing_user_ids = []
-        existing_user_emails = []
+        existing_users_by_email = dict()
         existing_users = []
         # Check if user is in Iotlab LDAP using its hrn.
         # Assuming Iotlab is centralised :  one LDAP for all sites,
@@ -446,8 +449,7 @@ class IotlabSlices:
                     user['login'] = user['uid']
                     # XXX LOIC Fix we already have all informations comming from Allocate
                     #users_dict[user['email']].update(user)
-                    #existing_user_emails.append(
-                    #    users_dict[user['email']]['email'])
+                    existing_users_by_email[user['email']] = user
                 logger.debug("User is in iotlab LDAP slice_record[user] = %s" % slice_user)
 
             # User from another known trusted federated site. Check
@@ -488,63 +490,121 @@ class IotlabSlices:
         # except KeyError:
         #     pass
 
-        # users to be added, removed or updated
-        #One user in one iotlab slice : there should be no need
-        #to remove/ add any user from/to a slice.
-        #However a user from SFA which is not registered in Iotlab yet
-        #should be added to the LDAP.
-        added_user_emails = set(requested_user_emails).\
-                                        difference(set(existing_user_emails))
+        # The function returns a list of added persons (to the LDAP ?)
+        added_persons = list()
 
+        # We go though each requested user and make sure it exists both in the
+        # LDAP and in the local DB
+        for user_email in requested_user_emails:
+            user = users_by_email[user_email]
 
-        #self.verify_keys(existing_slice_users, updated_users_list, \
-                                                            #peer, append)
+            person = {
+                'peer_person_id': None,
+                'mail'      : user['email'],
+                'email'     : user['email'],
+                'key_ids'   : user.get('key_ids', []),
+                'hrn'       : users_by_email[user['email']]['hrn'],
+            }
+            if 'first_name' in user:
+                person['first_name'] = user['first_name']
+            if 'last_name' in user:
+                person['last_name'] = user['last_name']
+            if 'person_id' in user:
+                person['person_id'] = user['person_id']
+            if user['keys']:
+                # XXX Only one key is kept for IoTLAB
+                person['pkey'] = user['keys'][0]
 
-        # XXX JORDAN the uid of the user is put in slice_record['login']
-        added_persons = []
-        # add new users
-        #requested_user_email is in existing_user_emails
-        if len(added_user_emails) == 0:
-            slice_record['login'] = existing_users[0]['uid']
-            #slice_record['login'] = users_dict[requested_user_emails[0]]['uid']
-            logger.debug(" IOTLABSLICES  \tverify_person QUICK DIRTY %s"
-                         % (slice_record))
-            # XXX JORDAN uid == 'register'
-
-        # XXX JORDAN i have no added_user_emails
-        for added_user_email in added_user_emails:
-            added_user = users_dict[added_user_email]
-            logger.debug(" IOTLABSLICES \r\n \r\n  \t  verify_person \
-                         added_user %s" % (added_user))
-            person = {}
-            person['peer_person_id'] = None
-            k_list = ['first_name', 'last_name', 'person_id']
-            for k in k_list:
-                if k in added_user:
-                    person[k] = added_user[k]
-            # bug user without key
-            if added_user['keys']:
-                person['pkey'] = added_user['keys'][0]
-            person['mail'] = added_user['email']
-            person['email'] = added_user['email']
-            person['key_ids'] = added_user.get('key_ids', [])
-
-            ret = self.driver.AddPerson(person)
-            if 'uid' in ret:
-                # meaning bool is True and the AddPerson was successful
-                person['uid'] = ret['uid']
-                slice_record['login'] = person['uid']
+            # LDAP 
+            if users_by_email not in existing_users_by_email.keys():
+                ret = self.driver.AddPerson(person)
+                if 'uid' in ret:
+                    person['uid'] = ret['uid']
+                    added_persons.append(person)
+                else:
+                    logger.debug(" IOTLABSLICES ret message %s" %(ret))
             else:
-                # error message in ret
-                logger.debug(" IOTLABSLICES ret message %s" %(ret))
+                person['uid'] = existing_users_by_email[user['email']]['uid']
 
-            logger.debug(" IOTLABSLICES \r\n \r\n  \t THE SECOND verify_person\
-                           person %s" % (person))
-            #Update slice_Record with the id now known to LDAP
+            # Local DB
+            self.driver.add_person_to_db(person)
 
+            
+        # Set the login in the slice_record XXX
+        slice_record['login'] = existing_users[0]['uid']
 
-            added_persons.append(person)
         return added_persons
+
+#DEPRECATED|        # users to be added, removed or updated
+#DEPRECATED|        #One user in one iotlab slice : there should be no need
+#DEPRECATED|        #to remove/ add any user from/to a slice.
+#DEPRECATED|        #However a user from SFA which is not registered in Iotlab yet
+#DEPRECATED|        #should be added to the LDAP.
+#DEPRECATED|        added_user_emails = set(requested_user_emails).\
+#DEPRECATED|                                        difference(set(existing_user_emails))
+#DEPRECATED|
+#DEPRECATED|
+#DEPRECATED|        #self.verify_keys(existing_slice_users, updated_users_list, \
+#DEPRECATED|                                                            #peer, append)
+#DEPRECATED|
+#DEPRECATED|        # XXX JORDAN the uid of the user is put in slice_record['login']
+#DEPRECATED|        added_persons = []
+#DEPRECATED|        # add new users
+#DEPRECATED|        #requested_user_email is in existing_user_emails
+#DEPRECATED|        if len(added_user_emails) == 0:
+#DEPRECATED|            slice_record['login'] = existing_users[0]['uid']
+#DEPRECATED|            #slice_record['login'] = users_dict[requested_user_emails[0]]['uid']
+#DEPRECATED|            logger.debug(" IOTLABSLICES  \tverify_person QUICK DIRTY %s"
+#DEPRECATED|                         % (slice_record))
+#DEPRECATED|            # XXX JORDAN uid == 'register'
+#DEPRECATED|        logger.debug("JORDAN USERS BY EMAIL: %r" % users_by_email)
+#DEPRECATED|
+#DEPRECATED|        # XXX JORDAN i have no added_user_emails
+#DEPRECATED|        logger.debug("JORDAN: added_user_emails: %r" % added_user_emails)
+#DEPRECATED|        for added_user_email in added_user_emails:
+#DEPRECATED|            added_user = users_dict[added_user_email]
+#DEPRECATED|            logger.debug(" IOTLABSLICES \r\n \r\n  \t  verify_person \
+#DEPRECATED|                         added_user %s" % (added_user))
+#DEPRECATED|            person = {}
+#DEPRECATED|            person['peer_person_id'] = None
+#DEPRECATED|            k_list = ['first_name', 'last_name', 'person_id']
+#DEPRECATED|            for k in k_list:
+#DEPRECATED|                if k in added_user:
+#DEPRECATED|                    person[k] = added_user[k]
+#DEPRECATED|            # bug user without key
+#DEPRECATED|            if added_user['keys']:
+#DEPRECATED|                person['pkey'] = added_user['keys'][0]
+#DEPRECATED|            person['mail'] = added_user['email']
+#DEPRECATED|            person['email'] = added_user['email']
+#DEPRECATED|            person['key_ids'] = added_user.get('key_ids', [])
+#DEPRECATED|
+#DEPRECATED|            # JORDAN
+#DEPRECATED|            # This is the only call to AddPerson. We need to be sure to provide
+#DEPRECATED|            # the right hrn, by default it used to be done in the function like
+#DEPRECATED|            # this:
+#DEPRECATED|            # person['hrn'] = self.testbed_shell.root_auth + '.' + ret['uid']
+#DEPRECATED|            person['hrn'] = users_by_email[added_user['email']]['hrn']
+#DEPRECATED|
+#DEPRECATED|            # This only deals with the LDAP (now)
+#DEPRECATED|            ret = self.driver.AddPerson(person)
+#DEPRECATED|            # This will check if we have a record in the local DB and add it if necessary
+#DEPRECATED|            self.__add_person_to_db(person)
+#DEPRECATED|
+#DEPRECATED|            if 'uid' in ret:
+#DEPRECATED|                # meaning bool is True and the AddPerson was successful
+#DEPRECATED|                person['uid'] = ret['uid']
+#DEPRECATED|                slice_record['login'] = person['uid']
+#DEPRECATED|            else:
+#DEPRECATED|                # error message in ret
+#DEPRECATED|                logger.debug(" IOTLABSLICES ret message %s" %(ret))
+#DEPRECATED|
+#DEPRECATED|            logger.debug(" IOTLABSLICES \r\n \r\n  \t THE SECOND verify_person\
+#DEPRECATED|                           person %s" % (person))
+#DEPRECATED|            #Update slice_Record with the id now known to LDAP
+#DEPRECATED|
+#DEPRECATED|
+#DEPRECATED|            added_persons.append(person)
+#DEPRECATED|        return added_persons
 
 
     def verify_keys(self, persons, users, peer, options=None):

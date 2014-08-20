@@ -153,13 +153,13 @@ class IotlabDriver(Driver):
         ret = self.testbed_shell.ldap.LdapAddUser(record)
 
         if ret['bool'] is True:
-            record['hrn'] = self.testbed_shell.root_auth + '.' + ret['uid']
+            #record['hrn'] = self.testbed_shell.root_auth + '.' + ret['uid']
             logger.debug("IOTLAB_API AddPerson return code %s record %s  "
                          % (ret, record))
-            self.__add_person_to_db(record)
+            #self.__add_person_to_db(record)
         return ret
 
-    def __add_person_to_db(self, user_dict):
+    def add_person_to_db(self, user_dict):
         """
         Add a federated user straight to db when the user issues a lease
         request with iotlab nodes and that he has not registered with iotlab
@@ -191,8 +191,9 @@ class IotlabDriver(Driver):
 
             if pubkey is not None and pkey is not None :
                 hierarchy = Hierarchy()
+                # We fake the parent in order to be able to create a valid GID
                 person_gid = hierarchy.create_gid(person_urn, create_uuid(), \
-                                pkey)
+                                pkey, force_parent='iotlab')
                 if user_dict['email']:
                     logger.debug("__add_person_to_db \r\n \r\n \
                         IOTLAB IMPORTER PERSON EMAIL OK email %s "\

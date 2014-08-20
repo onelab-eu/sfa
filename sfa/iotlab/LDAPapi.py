@@ -249,6 +249,7 @@ class LoginPassword():
 
         return lower_first_name, lower_last_name
 
+    # XXX JORDAN: This function writes an error in the log but returns normally :))
     def choose_sets_chars_for_login(self, lower_first_name, lower_last_name):
         """
 
@@ -293,6 +294,7 @@ class LoginPassword():
             logger.error("LDAP LdapGenerateUniqueLogin failed : \
                         impossible to generate unique login for %s %s"
                          % (lower_first_name, lower_last_name))
+        logger.debug("JORDAN choose_sets_chars_for_login %d %s" % (index, login))
         return index, login
 
     def generate_password(self):
@@ -391,6 +393,7 @@ class LDAPapi:
                 if index >= 9:
                     logger.error("LoginException : Generation login error \
                                     with minimum four characters")
+                    break
                 else:
                     try:
                         login = \
@@ -398,6 +401,7 @@ class LDAPapi:
                             lower_last_name[0:
                                             self.login_pwd.login_max_length
                                             - index]
+                        logger.debug("JORDAN trying login: %r" % login)
                         login_filter = '(uid=' + login + ')'
                     except KeyError:
                         print "lower_first_name - lower_last_name too short"
@@ -459,6 +463,7 @@ class LDAPapi:
         :rtype: string
 
         """
+        logger.debug("JORDAN make_ldap_filters_from_record: %r" % record)
         req_ldap = ''
         req_ldapdict = {}
         if record :
@@ -514,6 +519,7 @@ class LDAPapi:
         :rtype: dict
 
         """
+        logger.debug("JORDAN make_ldap_attributes_from_record:  %r" % record)
 
         attrs = {}
         attrs['objectClass'] = ["top", "person", "inetOrgPerson",
@@ -570,7 +576,6 @@ class LDAPapi:
         return attrs
 
 
-
     def LdapAddUser(self, record) :
         """Add SFA user to LDAP if it is not in LDAP  yet.
 
@@ -586,10 +591,13 @@ class LDAPapi:
         """
         logger.debug(" \r\n \t LDAP LdapAddUser \r\n\r\n ================\r\n ")
         user_ldap_attrs = self.make_ldap_attributes_from_record(record)
+        logger.debug("JORDAN LdapAddUser (ctd) user_ldap_attrs=%r" % user_ldap_attrs)
 
         #Check if user already in LDAP wih email, first name and last name
         filter_by = self.make_ldap_filters_from_record(user_ldap_attrs)
+        logger.debug("JORDAN LdapAddUser (ctd) filter_by = %r" % filter_by)
         user_exist = self.LdapSearch(filter_by)
+        logger.debug("JORDAN LdapAddUser (ctd) user_exist = %r" % user_exist)
         if user_exist:
             logger.warning(" \r\n \t LDAP LdapAddUser user %s %s \
                         already exists" % (user_ldap_attrs['sn'],
@@ -598,6 +606,7 @@ class LDAPapi:
 
         #Bind to the server
         result = self.conn.connect()
+        logger.debug("JORDAN LdapAddUser (ctd) result = %r" % result)
 
         if(result['bool']):
 
@@ -830,6 +839,7 @@ class LDAPapi:
         .. seealso:: make_ldap_filters_from_record for req_ldap format.
 
         """
+        logger.debug("JORDAN LdapSearch, req_ldap=%r, expected_fields=%r" % (req_ldap, expected_fields))
         result = self.conn.connect(bind=False)
         if (result['bool']):
 
@@ -1018,6 +1028,8 @@ class LDAPapi:
         :rtype:  dict or list
 
         """
+        logger.debug("JORDAN LdapFindUser record=%r, is_user_enabled=%r, expected_fields=%r" % (record, is_user_enabled, expected_fields))
+
         custom_record = {}
         if is_user_enabled:
             custom_record['enabled'] = is_user_enabled

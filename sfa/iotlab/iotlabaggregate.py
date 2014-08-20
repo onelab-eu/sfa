@@ -688,8 +688,10 @@ class IotlabAggregate:
 
 
         try:
+            logger.debug("############################################ iotlab AM : single_slice = %s" % single_slice)
             node_ids = single_slice['node_ids']
             node_list = self.driver.testbed_shell.GetNodes()
+            logger.debug("############################################ iotlab AM : node_list = %s" % node_list)
 # JORDAN REMOVED FILTER so that next check always succeed
 #                    {'hostname':single_slice['node_ids']})
             node_by_hostname = dict([(node['hostname'], node)

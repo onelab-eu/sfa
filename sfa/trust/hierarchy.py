@@ -226,11 +226,11 @@ class Hierarchy:
     # @param uuid the unique identifier to store in the GID
     # @param pkey the public key to store in the GID
 
-    def create_gid(self, xrn, uuid, pkey, CA=False, email=None):
+    def create_gid(self, xrn, uuid, pkey, CA=False, email=None, force_parent=None):
         hrn, type = urn_to_hrn(xrn)
         if not type:
             type = 'authority'
-        parent_hrn = get_authority(hrn)
+        parent_hrn = force_parent if force_parent else get_authority(hrn)
         # Using hrn_to_urn() here to make sure the urn is in the right format
         # If xrn was a hrn instead of a urn, then the gid's urn will be
         # of type None 
