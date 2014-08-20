@@ -355,6 +355,8 @@ class PlSlices:
                     'sfa_created': 'True',
             }
             site_id = self.driver.shell.AddSite(site)
+            # plcapi tends to mess with the incoming hrn so let's make sure
+            self.driver.shell.SetSiteHrn (site_id, site_hrn)
             site['site_id'] = site_id
             # exempt federated sites from monitor policies
             self.driver.shell.AddSiteTag(site_id, 'exempt_site_until', "20200101")
@@ -400,6 +402,8 @@ class PlSlices:
             }
             # add the slice
             slice_id = self.driver.shell.AddSlice(slice)
+            # plcapi tends to mess with the incoming hrn so let's make sure
+            self.driver.shell.SetSliceHrn (slice_id, slice_hrn)
 
         return self.driver.shell.GetSlices(slice_id)[0]
 
@@ -410,24 +414,40 @@ class PlSlices:
     #        'slice_record': it seems like the first of these 'users' also contains a 'slice_record' 
     #           key that holds stuff like 'hrn', 'slice_id', 'authority',...
     # 
-    def create_person (self, user, site_id):
+    def create_person_from_user (self, user, site_id):
         user_hrn = user['hrn']
-        # the value to use if 'user' has no 'email' attached - xxx should be configurable
-        default_email = "%s@geni.net"%user_hrn.split('.')[-1]
-        # PLCAPI requires at least these to be set
+        # the value to use if 'user' has no 'email' attached - or if the attached email already exists
+        # typically 
+        ( auth_hrn, _ , leaf ) = user_hrn.rpartition('.')
+        default_email = "%s@%s.stub"%(leaf,auth_hrn)
 
         person_record = { 
+            # required
             'first_name': user.get('first_name',user_hrn),
             'last_name': user.get('last_name',user_hrn),
             'email': user.get('email', default_email),
+            # our additions
             'enabled': True,
             'sfa_created': 'True',
             'hrn': user_hrn,
         }
 
-        person_id = int (self.driver.shell.AddPerson(person_record))
+        logger.debug ("about to attempt to AddPerson with %s"%person_record)
+        try:
+            # the thing is, the PLE db has a limitation on re-using the same e-mail
+            # in the case where people have an account on ple.upmc and then then come 
+            # again from onelab.upmc, they will most likely have the same e-mail, and so kaboom..
+            # so we first try with the accurate email
+            person_id = int (self.driver.shell.AddPerson(person_record))
+        except:
+            person_record['email']=default_email
+            logger.debug ("second chance with email=%s"%person_record['email'])
+            # and if that fails we start again with the email based on the hrn, which this time is unique..
+            person_id = int (self.driver.shell.AddPerson(person_record))
         self.driver.shell.AddRoleToPerson('user', person_id)
-        self.driver.shell.AddPersonToSite(person_id, site['site_id'])
+        self.driver.shell.AddPersonToSite(person_id, site_id)
+        # plcapi tends to mess with the incoming hrn so let's make sure
+        self.driver.shell.SetPersonHrn (person_id, user_hrn)
 
         return person_id
 
@@ -439,6 +459,8 @@ class PlSlices:
            user['hrn'], _ = urn_to_hrn(user['urn'])
         # this is for retrieving users from a hrn
         users_by_hrn = { user['hrn'] : user for user in users }
+
+        for user in users: logger.debug("incoming user %s"%user)
 
         # compute the hrn's for the authority and site
         top_auth_hrn = top_auth(slice_hrn)
@@ -472,7 +494,7 @@ class PlSlices:
         existing_hrns = [ person['hrn'] for person in target_existing_persons ]
         tocreate_hrns = set (target_hrns) - set (existing_hrns)
         # create these
-        target_created_person_ids = [ self.create_person (users_by_hrn[hrn], site_id) for hrn in tocreate_hrns ]
+        target_created_person_ids = [ self.create_person_from_user (users_by_hrn[hrn], site_id) for hrn in tocreate_hrns ]
 
         # we can partition the persons of interest into one of these 3 classes
         add_person_ids  = set(target_created_person_ids) | set(target_existing_person_ids) - set(slice_person_ids)
@@ -487,8 +509,8 @@ class PlSlices:
         # and for this we need all the Person objects; we already have the target_existing ones
         # also we avoid issuing a call if possible
         target_created_persons = [] if not target_created_person_ids \
-                                 else driver.shell.GetPersons ({'peer_id':None, 'person_id':target_created_person_ids},
-                                                               person_fields)
+                                 else self.driver.shell.GetPersons \
+                                      ({'peer_id':None, 'person_id':target_created_person_ids}, person_fields)
         persons_by_person_id = { person['person_id'] : person \
                                  for person in target_existing_persons + target_created_persons }
 
