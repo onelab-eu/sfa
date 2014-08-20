@@ -47,10 +47,11 @@ class Allocate(Method):
         
         self.api.logger.debug("Allocate, received expiration from credential: %s"%expiration)
 
-        # make sure request is not empty
-        slivers = RSpec(rspec).version.get_nodes_with_slivers()
-        if not slivers:
-            raise InvalidRSpec("Missing <sliver_type> or <sliver> element. Request rspec must explicitly allocate slivers")    
+# turned off, as passing an empty rspec is indeed useful for cleaning up the slice
+#        # make sure request is not empty
+#        slivers = RSpec(rspec).version.get_nodes_with_slivers()
+#        if not slivers:
+#            raise InvalidRSpec("Missing <sliver_type> or <sliver> element. Request rspec must explicitly allocate slivers")    
 
         # flter rspec through sfatables
         if self.api.interface in ['aggregate']:
@@ -61,9 +62,10 @@ class Allocate(Method):
         actual_caller_hrn = the_credential.actual_caller_hrn()
         self.api.logger.info("interface: %s\tcaller-hrn: %s\ttarget-hrn: %s\tmethod-name: %s"%(self.api.interface, actual_caller_hrn, xrn.get_hrn(), self.name)) 
         rspec = run_sfatables(chain_name, xrn.get_hrn(), actual_caller_hrn, rspec)
-        slivers = RSpec(rspec).version.get_nodes_with_slivers()
-        if not slivers:
-            raise SfatablesRejected(slice_xrn)
+# turned off, as passing an empty rspec is indeed useful for cleaning up the slice
+#        slivers = RSpec(rspec).version.get_nodes_with_slivers()
+#        if not slivers:
+#            raise SfatablesRejected(slice_xrn)
 
         # pass this to the driver code in case they need it
         options['actual_caller_hrn'] = actual_caller_hrn
