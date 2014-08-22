@@ -440,14 +440,16 @@ class PlSlices:
             # so we first try with the accurate email
             person_id = int (self.driver.shell.AddPerson(person_record))
         except:
+            # and if that fails we start again with the email based on the hrn, which this time is unique..
             person_record['email']=default_email
             logger.debug ("second chance with email=%s"%person_record['email'])
-            # and if that fails we start again with the email based on the hrn, which this time is unique..
             person_id = int (self.driver.shell.AddPerson(person_record))
         self.driver.shell.AddRoleToPerson('user', person_id)
         self.driver.shell.AddPersonToSite(person_id, site_id)
         # plcapi tends to mess with the incoming hrn so let's make sure
         self.driver.shell.SetPersonHrn (person_id, user_hrn)
+        # also 'enabled':True does not seem to pass through with AddPerson
+        self.driver.shell.UpdatePerson (person_id, {'enabled': True})
 
         return person_id
 
