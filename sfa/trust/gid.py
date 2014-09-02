@@ -82,6 +82,7 @@ class GID(Certificate):
         self.urn = None
         self.email = None # for adding to the SubjectAltName             
         Certificate.__init__(self, lifeDays, create, subject, string, filename)
+
         if subject:
             logger.debug("Creating GID for subject: %s" % subject)
         if uuid:
@@ -92,7 +93,9 @@ class GID(Certificate):
         if urn:
             self.urn = urn
             self.hrn, type = urn_to_hrn(urn)
+
         if email:
+            logger.debug("Creating GID for subject using email: %s" % email)
             self.set_email(email)
 
     def set_uuid(self, uuid):

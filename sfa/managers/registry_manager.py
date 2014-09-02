@@ -292,7 +292,6 @@ class RegistryManager:
     
         return record_dicts
     
-    
     def CreateGid(self, api, xrn, cert):
         # get the authority
         authority = Xrn(xrn=xrn).get_authority_hrn()
@@ -302,7 +301,15 @@ class RegistryManager:
         else:
             certificate = Certificate(string=cert)
             pkey = certificate.get_pubkey()    
-        gid = api.auth.hierarchy.create_gid(xrn, create_uuid(), pkey) 
+
+        # Add the email of the user to SubjectAltName in the GID
+        email = None
+        hrn = Xrn(xrn).get_hrn()
+        dbsession=api.dbsession()
+        record=dbsession.query(RegUser).filter_by(hrn=hrn).first()
+        if record:
+            email=getattr(record,'email',None)
+        gid = api.auth.hierarchy.create_gid(xrn, create_uuid(), pkey, email = email)
         return gid.save_to_string(save_parents=True)
     
     ####################
@@ -368,7 +375,8 @@ class RegistryManager:
                 if pub_key and isinstance(pub_key, types.ListType): pub_key = pub_key[0]
                 pkey = convert_public_key(pub_key)
     
-            gid_object = api.auth.hierarchy.create_gid(urn, uuid, pkey)
+            email=getattr(record,'email',None)
+            gid_object = api.auth.hierarchy.create_gid(urn, uuid, pkey, email = email)
             gid = gid_object.save_to_string(save_parents=True)
             record.gid = gid
     
@@ -431,7 +439,7 @@ class RegistryManager:
         # Use the pointer from the existing record, not the one that the user
         # gave us. This prevents the user from inserting a forged pointer
         pointer = record.pointer
-    
+
         # is there a change in keys ?
         new_key=None
         if type=='user':
@@ -446,7 +454,11 @@ class RegistryManager:
             pkey = convert_public_key(new_key)
             uuid = create_uuid()
             urn = hrn_to_urn(hrn,type)
-            gid_object = api.auth.hierarchy.create_gid(urn, uuid, pkey)
+
+            email=getattr(new_record,'email',None)
+            if email is None:
+                email=getattr(record,'email',None)
+            gid_object = api.auth.hierarchy.create_gid(urn, uuid, pkey, email = email)
             gid = gid_object.save_to_string(save_parents=True)
         
         # xxx should do side effects from new_record to record
@@ -549,7 +561,9 @@ class RegistryManager:
         uuid = create_uuid()
         pkey = Keypair(create=True)
         urn = hrn_to_urn(record.hrn, record.type)
-        gid_object = api.auth.hierarchy.create_gid(urn, uuid, pkey)
+
+        email=getattr(record,'email',None)
+        gid_object = api.auth.hierarchy.create_gid(urn, uuid, pkey, email)
         gid = gid_object.save_to_string(save_parents=True)
         record.gid = gid
 
