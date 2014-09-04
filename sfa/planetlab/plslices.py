@@ -398,12 +398,15 @@ class PlSlices:
                      'description': description,
                      'hrn': slice_hrn,
                      'sfa_created': 'True',
-                     'expires': expires,
+                     #'expires': expires,
             }
             # add the slice
             slice_id = self.driver.shell.AddSlice(slice)
             # plcapi tends to mess with the incoming hrn so let's make sure
             self.driver.shell.SetSliceHrn (slice_id, slice_hrn)
+            # cannot be set with AddSlice
+            # set the expiration
+            self.driver.shell.UpdateSlice(slice_id, {'expires': expires})
 
         return self.driver.shell.GetSlices(slice_id)[0]
 
