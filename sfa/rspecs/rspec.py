@@ -10,7 +10,7 @@ from sfa.rspecs.version_manager import VersionManager
 
 class RSpec:
  
-    def __init__(self, rspec="", version=None, user_options=None, ttl=None):
+    def __init__(self, rspec="", version=None, user_options=None, ttl=None, expires=None):
         if user_options is None: user_options={}
         self.header = '<?xml version="1.0"?>\n'
         self.template = """<RSpec></RSpec>"""
@@ -19,6 +19,7 @@ class RSpec:
         self.version_manager = VersionManager()
         self.user_options = user_options
         self.ttl = ttl
+        self.expires = expires
         self.elements = {}
         if rspec:
             if version:
@@ -27,11 +28,11 @@ class RSpec:
             else:
                 self.parse_xml(rspec)
         elif version:
-            self.create(version, ttl)
+            self.create(version, ttl, expires)
         else:
             raise InvalidRSpec("No RSpec or version specified. Must specify a valid rspec string or a valid version") 
 
-    def create(self, version=None, ttl=None):
+    def create(self, version=None, ttl=None, expires=None):
         """
         Create root element
         ttl: time to live in minutes, this will determine the expires tag of the RSpec
@@ -43,7 +44,14 @@ class RSpec:
         generated_ts = now.strftime(SFATIME_FORMAT)
         if ttl is None:
             ttl = 60
-        expires_ts = (now + timedelta(minutes=ttl)).strftime(SFATIME_FORMAT)
+        if expires is None:
+            expires_ts = (now + timedelta(minutes=ttl)).strftime(SFATIME_FORMAT)
+        else:
+            if isinstance(expires,int):
+                expires_date = datetime.fromtimestamp(expires)
+            else:
+                expires_date = expires
+            expires_ts = expires_date.strftime(SFATIME_FORMAT)
         self.xml.set('expires', expires_ts)
         self.xml.set('generated', generated_ts)
 
