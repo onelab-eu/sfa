@@ -1,6 +1,6 @@
 %define name sfa
 %define version 3.1
-%define taglevel 10
+%define taglevel 11
 
 %define release %{taglevel}%{?pldistro:.%{pldistro}}%{?date:.%{date}}
 %global python_sitearch	%( python -c "from distutils.sysconfig import get_python_lib; print get_python_lib(1)" )
@@ -264,6 +264,10 @@ fi
 #[ "$1" -ge "1" ] && service sfa-cm restart || :
 
 %changelog
+* Mon Sep 15 2014 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-3.1-11
+- various tweaks for the openlab demo
+- first stab at uploading onto a pypi (for pip install sfa)
+
 * Wed Aug 20 2014 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-3.1-10
 - rewrote an optimized version of verify_persons in the PL driver:
 - Allocate and Provision should now perform much faster
