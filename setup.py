@@ -4,6 +4,10 @@
 Installation script for the sfa module
 """
 
+# as fas as pushing onto pypi, I have been using this page
+# http://peterdowns.com/posts/first-time-with-pypi.html
+# for setting up the whole business
+
 import sys, os, os.path
 from glob import glob
 import shutil
@@ -115,9 +119,12 @@ else:
     setup(name='sfa',
           packages = packages,
           data_files = data_files,
-          scripts = scripts,
+          version=version_tag,
+          keywords = ['federation','testbeds','SFA','SfaWrap'],
           url="http://svn.planet-lab.org/wiki/SFATutorial",
           author="Thierry Parmentelat, Tony Mack, Scott Baker",
           author_email="thierry.parmentelat@inria.fr, tmack@princeton.cs.edu, smbaker@gmail.com",
-          version=version_tag)
+          download_url = "http://build.onelab.eu/sfa/{v}/sfa-{v}.tar.gz".format(v=version_tag),
+          scripts = scripts,
+)
 

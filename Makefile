@@ -22,6 +22,10 @@ rpmtaglevel:=$(shell rpm -q --specfile sfa.spec --queryformat="%{release}\n" 2> 
 VERSIONTAG=$(rpmversion)-$(rpmtaglevel)
 # this used to be 'should-be-redefined-by-specfile' and it indeed should be
 SCMURL=git://git.onelab.eu/sfa.git
+TARBALL_HOST=root@build.onelab.eu
+TARBALL_TOPDIR=/build/sfa
+# I have an alternate pypitest entry defined in my .pypirc
+PYPI_ARGS= -r pypi
 
 python: version
 
@@ -136,6 +140,32 @@ tags:
 signatures:
 	(cd sfa/methods; grep 'def.*call' *.py > SIGNATURES)
 .PHONY: signatures
+
+########## for uploading onto pypi
+# a quick attempt on pypitest did not quite work as expected
+# I was hoping to register the project using "setup.py register"
+# but somehow most of my meta data did not make it up there
+# and I could not find out why
+# so I went for the manual method instead
+# there also was a web dialog prompting for a zip file that would
+# be used to initialize the project's home dir but this too 
+# did not seem to work the way I was trying to use it, so ...
+
+# this target is still helpful to produce the readme in html from README.md
+index.zip: README.md
+	python readme.py
+
+# I need to run this on my mac as my pypi
+pypi: version
+	setup.py sdist upload $(PYPI_ARGS)
+	ssh $(TARBALL_HOST) mkdir -p $(TARBALL_TOPDIR)/$(VERSIONTAG)
+	rsync -av dist/sfa-$(VERSIONTAG).tar.gz $(TARBALL_HOST):$(TARBALL_TOPDIR)/$(VERSIONTAG)
+
+# cleanup
+clean: readme-clean
+
+readme-clean:
+	rm -f index.html index.zip
 
 ########## sync
 # 2 forms are supported

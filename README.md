@@ -3,7 +3,7 @@ Purpose
 
 This software implements a wrapper for the SFA (Slice-based Federation
 Architecture) that allows networking testbeds to interoperate in terms
-of exposing and provisioning resources. It comes with some drivers for
+of exposing and provisioning resources. It comes with drivers for
 a few testbeds, notably PlanetLab and IotLab.
 
 References
