@@ -25,7 +25,7 @@ SCMURL=git://git.onelab.eu/sfa.git
 TARBALL_HOST=root@build.onelab.eu
 TARBALL_TOPDIR=/build/sfa
 # I have an alternate pypitest entry defined in my .pypirc
-PYPI_ARGS= -r pypi
+PYPI_TARGET=pypi
 
 python: version
 
@@ -156,8 +156,15 @@ index.zip: README.md
 	python readme.py
 
 # I need to run this on my mac as my pypi
-pypi: version
-	setup.py sdist upload $(PYPI_ARGS)
+# run git pull first as this often comes afet a module-tag
+# we need to re-run make so the version is right
+git_pypi: 
+	git pull
+	$(MAKE) pypi
+
+# run this only once the sources are in on the right tag
+pypi:
+	setup.py sdist upload -r $(PYPI_TARGET)
 	ssh $(TARBALL_HOST) mkdir -p $(TARBALL_TOPDIR)/$(VERSIONTAG)
 	rsync -av dist/sfa-$(VERSIONTAG).tar.gz $(TARBALL_HOST):$(TARBALL_TOPDIR)/$(VERSIONTAG)
 

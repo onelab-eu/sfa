@@ -1,4 +1,6 @@
-#!/usr/bin/python
+#!/usr/bin/env python
+
+from __future__ import print_function
 
 """
 Installation script for the sfa module
@@ -101,21 +103,28 @@ if sys.argv[1] in ['uninstall', 'remove', 'delete', 'clean']:
     remove_files = remove_bins + [ "/etc/init.d/%s"%x for x in initscripts ]
 
     # remove files
+    def feedback (file, msg): print ("removing", file, "...",msg)
     for filepath in remove_files:
-        print "removing", filepath, "...",
         try:
             os.remove(filepath)
-            print "success"
-        except: print "failed"
+            feedback(filepath,"success")
+        except: 
+            feedback(filepath,"failed")
     # remove directories
     for directory in remove_dirs:
-        print "removing", directory, "...",
         try:
             shutil.rmtree(directory)
-            print "success"
-        except: print "failed"
+            feedback (directory,"success")
+        except: 
+            feedback (directory, "failed")
 else:
     # avoid repeating what's in the specfile already
+    with open("LICENSE.txt") as l:
+        license = l.read()
+    long_description = "Could not open README.html"
+    with open("readme.html") as r:
+        long_description = r.read()
+
     setup(name='sfa',
           packages = packages,
           data_files = data_files,
@@ -125,6 +134,9 @@ else:
           author="Thierry Parmentelat, Tony Mack, Scott Baker",
           author_email="thierry.parmentelat@inria.fr, tmack@princeton.cs.edu, smbaker@gmail.com",
           download_url = "http://build.onelab.eu/sfa/{v}/sfa-{v}.tar.gz".format(v=version_tag),
+          description="SFA Wrapper with drivers for PlanetLab and IotLab and others",
+          license = license,
+          long_description = long_description,
           scripts = scripts,
 )
 
