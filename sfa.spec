@@ -1,6 +1,6 @@
 %define name sfa
 %define version 3.1
-%define taglevel 11
+%define taglevel 12
 
 %define release %{taglevel}%{?pldistro:.%{pldistro}}%{?date:.%{date}}
 %global python_sitearch	%( python -c "from distutils.sysconfig import get_python_lib; print get_python_lib(1)" )
@@ -264,6 +264,9 @@ fi
 #[ "$1" -ge "1" ] && service sfa-cm restart || :
 
 %changelog
+* Mon Sep 15 2014 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-3.1-12
+- getting closer with the pip/pypi packaging
+
 * Mon Sep 15 2014 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-3.1-11
 - various tweaks for the openlab demo
 - first stab at uploading onto a pypi (for pip install sfa)
