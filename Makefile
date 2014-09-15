@@ -20,7 +20,8 @@ rpmversion:=$(shell rpm -q --specfile sfa.spec --queryformat="%{version}\n" | he
 # somehow %{taglevel} is empty, turns out %{release} has what we want
 rpmtaglevel:=$(shell rpm -q --specfile sfa.spec --queryformat="%{release}\n" 2> /dev/null | head -1)
 VERSIONTAG=$(rpmversion)-$(rpmtaglevel)
-SCMURL=should-be-redefined-by-specfile
+# this used to be 'should-be-redefined-by-specfile' and it indeed should be
+SCMURL=git://git.onelab.eu/sfa.git
 
 python: version
 
