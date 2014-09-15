@@ -152,18 +152,20 @@ signatures:
 # did not seem to work the way I was trying to use it, so ...
 
 # this target is still helpful to produce the readme in html from README.md
-index.zip: README.md
+index.zip index.html: README.md
 	python readme.py
 
 # I need to run this on my mac as my pypi
 # run git pull first as this often comes afet a module-tag
 # we need to re-run make so the version is right
-git_pypi: 
+git_pypi: git pypi
+
+git: 
 	git pull
-	$(MAKE) pypi
+	$(MAKE) version
 
 # run this only once the sources are in on the right tag
-pypi:
+pypi: index.html
 	setup.py sdist upload -r $(PYPI_TARGET)
 	ssh $(TARBALL_HOST) mkdir -p $(TARBALL_TOPDIR)/$(VERSIONTAG)
 	rsync -av dist/sfa-$(VERSIONTAG).tar.gz $(TARBALL_HOST):$(TARBALL_TOPDIR)/$(VERSIONTAG)

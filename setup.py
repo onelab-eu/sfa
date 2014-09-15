@@ -119,11 +119,16 @@ if sys.argv[1] in ['uninstall', 'remove', 'delete', 'clean']:
             feedback (directory, "failed")
 else:
     # avoid repeating what's in the specfile already
-    with open("LICENSE.txt") as l:
-        license = l.read()
-    long_description = "Could not open README.html"
-    with open("readme.html") as r:
-        long_description = r.read()
+    try:
+        with open("LICENSE.txt") as l:
+            license = l.read()
+    except:
+        license = "Could not open file LICENSE.txt"
+    try:
+        with open("index.html") as r:
+            long_description = r.read()
+    except:
+        long_description = "Unable to read index.html"
 
     setup(name='sfa',
           packages = packages,
