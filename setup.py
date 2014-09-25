@@ -15,6 +15,13 @@ from glob import glob
 import shutil
 from distutils.core import setup
 
+# check for the correct version of python
+major,minor = sys.version_info [0:2]
+if (major,minor) != (2,7):
+    print ("Sorry, the SFA package is currently available only with python-2.7")
+    exit(1)
+
+
 # while cleaning up we might not have this..
 try:
     from sfa.util.version import version_tag
