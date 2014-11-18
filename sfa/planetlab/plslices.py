@@ -422,6 +422,8 @@ class PlSlices:
         # the value to use if 'user' has no 'email' attached - or if the attached email already exists
         # typically 
         ( auth_hrn, _ , leaf ) = user_hrn.rpartition('.')
+        # somehow this has backslashes, get rid of them
+        auth_hrn = auth_hrn.replace('\\','')
         default_email = "%s@%s.stub"%(leaf,auth_hrn)
 
         person_record = { 
@@ -443,6 +445,7 @@ class PlSlices:
             # so we first try with the accurate email
             person_id = int (self.driver.shell.AddPerson(person_record))
         except:
+            logger.log_exc("caught during first attempt at AddPerson")
             # and if that fails we start again with the email based on the hrn, which this time is unique..
             person_record['email']=default_email
             logger.debug ("second chance with email=%s"%person_record['email'])
