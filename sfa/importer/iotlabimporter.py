@@ -552,7 +552,7 @@ class IotlabImporter:
         # import site and node records in site into the SFA db.
         self.import_sites_and_nodes(testbed_shell)
         #import users and slice into the SFA DB.
-        self.import_persons_and_slices(testbed_shell)
+        #self.import_persons_and_slices(testbed_shell)
 
          ### remove stale records
         # special records must be preserved

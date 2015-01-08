@@ -589,51 +589,28 @@ class LDAPapi:
         .. seealso:: make_ldap_filters_from_record
 
         """
-        logger.debug(" \r\n \t LDAP LdapAddUser \r\n\r\n ================\r\n ")
-        user_ldap_attrs = self.make_ldap_attributes_from_record(record)
-        logger.debug("JORDAN LdapAddUser (ctd) user_ldap_attrs=%r" % user_ldap_attrs)
-
-        #Check if user already in LDAP wih email, first name and last name
-        filter_by = self.make_ldap_filters_from_record(user_ldap_attrs)
-        logger.debug("JORDAN LdapAddUser (ctd) filter_by = %r" % filter_by)
-        user_exist = self.LdapSearch(filter_by)
-        logger.debug("JORDAN LdapAddUser (ctd) user_exist = %r" % user_exist)
-        if user_exist:
-            logger.warning(" \r\n \t LDAP LdapAddUser user %s %s \
-                        already exists" % (user_ldap_attrs['sn'],
-                           user_ldap_attrs['mail']))
-            return {'bool': False}
-
-        #Bind to the server
-        result = self.conn.connect()
-        logger.debug("JORDAN LdapAddUser (ctd) result = %r" % result)
-
-        if(result['bool']):
-
-            # A dict to help build the "body" of the object
-            logger.debug(" \r\n \t LDAP LdapAddUser attrs %s "
-                         % user_ldap_attrs)
-
+        filter_by = self.make_ldap_filters_from_record({'email' : record['email']})
+        user = self.LdapSearch(filter_by)
+        if user:
+            logger.debug("LDAPapi.py user ldap exist \t%s" % user)
+            # user = [('uid=saint,ou=People,dc=senslab,dc=info', {'uid': ['saint'], 'givenName': ['Fred'], ...})]
+            return {'bool': True, 'uid': user[0][1]['uid'][0]}
+        else:
+            self.conn.connect()
+            user_ldap_attrs = self.make_ldap_attributes_from_record(record)
+            logger.debug("LDAPapi.py user ldap doesn't exist \t%s" % user_ldap_attrs)
             # The dn of our new entry/object
             dn = 'uid=' + user_ldap_attrs['uid'] + "," + self.baseDN
-
             try:
                 ldif = modlist.addModlist(user_ldap_attrs)
-                logger.debug("LDAPapi.py add attrs %s \r\n  ldif %s"
-                             % (user_ldap_attrs, ldif))
                 self.conn.ldapserv.add_s(dn, ldif)
-
-                logger.info("Adding user %s login %s in LDAP"
-                            % (user_ldap_attrs['cn'], user_ldap_attrs['uid']))
             except ldap.LDAPError, error:
                 logger.log_exc("LDAP Add Error %s" % error)
                 return {'bool': False, 'message': error}
-
             self.conn.close()
             return {'bool': True, 'uid': user_ldap_attrs['uid']}
-        else:
-            return result
-
+        
+        
     def LdapDelete(self, person_dn):
         """Deletes a person in LDAP. Uses the dn of the user.
 
