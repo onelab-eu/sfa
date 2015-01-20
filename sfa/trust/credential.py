@@ -798,7 +798,9 @@ class Credential(object):
 
         # make sure it is not expired
         if self.get_expiration() < datetime.datetime.utcnow():
-            raise CredentialNotVerifiable("Credential %s expired at %s" % (self.get_summary_tostring(), self.expiration.strftime(SFATIME_FORMAT)))
+            raise CredentialNotVerifiable("Credential %s expired at %s" % \
+                                          (self.get_summary_tostring(),
+                                           self.expiration.strftime(SFATIME_FORMAT)))
 
         # Verify the signatures
         filename = self.save_to_random_tmp_file()
@@ -826,10 +828,11 @@ class Credential(object):
             if trusted_certs is None:
                 break
 
-#            print "Doing %s --verify --node-id '%s' %s %s 2>&1" % \
-#                (self.xmlsec_path, ref, cert_args, filename)
-            verified = os.popen('%s --verify --node-id "%s" %s %s 2>&1' \
-                            % (self.xmlsec_path, ref, cert_args, filename)).read()
+            command = '{} --verify --node-id "{}" {} {} 2>&1'.\
+                      format(self.xmlsec_path, ref, cert_args, filename)
+            logger.debug("Running '{}'".format(command))
+            verified = os.popen(command).read()
+            logger.debug("xmlsec command returned {}".format(verified))
             if not verified.strip().startswith("OK"):
                 # xmlsec errors have a msg= which is the interesting bit.
                 mstart = verified.find("msg=")
@@ -838,7 +841,10 @@ class Credential(object):
                     mstart = mstart + 4
                     mend = verified.find('\\', mstart)
                     msg = verified[mstart:mend]
-                raise CredentialNotVerifiable("xmlsec1 error verifying cred %s using Signature ID %s: %s %s" % (self.get_summary_tostring(), ref, msg, verified.strip()))
+                raise CredentialNotVerifiable("xmlsec1 error verifying cred %s"
+                                              "using Signature ID %s: %s %s" % \
+                                              (self.get_summary_tostring(),
+                                               ref, msg, verified.strip()))
         os.remove(filename)
 
         # Verify the parents (delegation)
