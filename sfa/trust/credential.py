@@ -26,7 +26,8 @@
 # Credentials are signed XML files that assign a subject gid privileges to an object gid
 ##
 
-import os
+import os, os.path
+import subprocess
 from types import StringTypes
 import datetime
 from StringIO import StringIO
@@ -805,8 +806,6 @@ class Credential(object):
 
         # Verify the signatures
         filename = self.save_to_random_tmp_file()
-        if trusted_certs is not None:
-            cert_args = " ".join(['--trusted-pem %s' % x for x in trusted_certs])
 
         # If caller explicitly passed in None that means skip cert chain validation.
         # - Strange and not typical
@@ -829,12 +828,25 @@ class Credential(object):
             if trusted_certs is None:
                 break
 
-            command = '{} --verify --node-id "{}" {} {} 2>&1'.\
-                      format(self.xmlsec_path, ref, cert_args, filename)
-            logger.debug("Running '{}'".format(command))
-            verified = os.popen(command).read()
-            logger.debug("xmlsec command returned {}".format(verified))
-            if not verified.strip().startswith("OK"):
+            # Thierry - jan 2015
+            # up to fedora20 we used os.popen and checked that the output begins with OK
+            # turns out, with fedora21, there is extra input before this 'OK' thing
+            # looks like we're better off just using the exit code - that's what it is made for
+            #cert_args = " ".join(['--trusted-pem %s' % x for x in trusted_certs])
+            #command = '{} --verify --node-id "{}" {} {} 2>&1'.\
+            #          format(self.xmlsec_path, ref, cert_args, filename)
+            command = [ self.xmlsec_path, '--verify', '--node-id', ref ]
+            for trusted in trusted_certs:
+                command += ["--trusted-pem", trusted ]
+            command += [ filename ]
+            logger.debug("Running " + " ".join(command))
+            try:
+                verified = subprocess.check_output(command, stderr=subprocess.STDOUT)
+                logger.debug("xmlsec command returned {}".format(verified))
+                if "OK\n" not in verified:
+                    logger.warning("WARNING: xmlsec1 seemed to return fine but without a OK in its output")
+            except subprocess.CalledProcessError as e:
+                verified = e.output
                 # xmlsec errors have a msg= which is the interesting bit.
                 mstart = verified.find("msg=")
                 msg = ""
@@ -842,10 +854,9 @@ class Credential(object):
                     mstart = mstart + 4
                     mend = verified.find('\\', mstart)
                     msg = verified[mstart:mend]
-                raise CredentialNotVerifiable("xmlsec1 error verifying cred %s"
-                                              "using Signature ID %s: %s %s" % \
-                                              (self.get_summary_tostring(),
-                                               ref, msg, verified.strip()))
+                logger.warning("Credential.verify - failed - xmlsec1 returned {}".format(verified.strip()))
+                raise CredentialNotVerifiable("xmlsec1 error verifying cred %s using Signature ID %s: %s" % \
+                                              (self.get_summary_tostring(), ref, msg))
         os.remove(filename)
 
         # Verify the parents (delegation)
