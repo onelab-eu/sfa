@@ -145,11 +145,13 @@ class SecureXMLRpcRequestHandler(SimpleXMLRPCServer.SimpleXMLRPCRequestHandler):
 class SecureXMLRPCServer(BaseHTTPServer.HTTPServer,SimpleXMLRPCServer.SimpleXMLRPCDispatcher):
 
     def __init__(self, server_address, HandlerClass, key_file, cert_file, logRequests=True):
-        """Secure XML-RPC server.
+        """
+        Secure XML-RPC server.
 
         It it very similar to SimpleXMLRPCServer but it uses HTTPS for transporting XML data.
         """
-        logger.debug("SecureXMLRPCServer.__init__, server_address=%s, cert_file=%s, key_file=%s"%(server_address,cert_file,key_file))
+        logger.debug("SecureXMLRPCServer.__init__, server_address=%s, 
+                     cert_file=%s, key_file=%s"%(server_address,cert_file,key_file))
         self.logRequests = logRequests
         self.interface = None
         self.key_file = key_file
