@@ -18,7 +18,7 @@ from sfa.rspecs.elements.lease import Lease
 from sfa.rspecs.elements.granularity import Granularity
 from sfa.rspecs.version_manager import VersionManager
 
-from sfa.planetlab.plxrn import PlXrn, hostname_to_urn, hrn_to_pl_slicename, slicename_to_hrn, top_auth, hash_loginbase
+from sfa.planetlab.plxrn import PlXrn, hostname_to_urn
 from sfa.planetlab.vlink import get_tc_rate
 from sfa.planetlab.topology import Topology
 from sfa.storage.model import SliverAllocation
