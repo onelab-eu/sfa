@@ -23,7 +23,7 @@ from sfa.managers.driver import Driver
 from sfa.planetlab.plshell import PlShell
 from sfa.planetlab.plaggregate import PlAggregate
 from sfa.planetlab.plslices import PlSlices
-from sfa.planetlab.plxrn import PlXrn, slicename_to_hrn, hostname_to_hrn, hrn_to_pl_slicename, xrn_to_hostname, top_auth, hash_loginbase
+from sfa.planetlab.plxrn import PlXrn, slicename_to_hrn, hostname_to_hrn, hrn_to_pl_slicename, top_auth, hash_loginbase
 
 
 def list_to_dict(recs, key):

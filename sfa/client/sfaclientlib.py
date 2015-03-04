@@ -121,7 +121,7 @@ class SfaClientBootstrap:
     ######################################## *_produce methods
     ### step1
     # unconditionnally create a self-signed certificate
-    def self_signed_cert_produce (self,output):
+    def self_signed_cert_produce (self, output):
         self.assert_private_key()
         private_key_filename = self.private_key_filename()
         keypair=Keypair(filename=private_key_filename)
@@ -131,7 +131,7 @@ class SfaClientBootstrap:
         self_signed.sign ()
         self_signed.save_to_file (output)
         self.logger.debug("SfaClientBootstrap: Created self-signed certificate for %s in %s"%\
-                              (self.hrn,output))
+                              (self.hrn, output))
         return output
 
     ### step2 
@@ -142,7 +142,8 @@ class SfaClientBootstrap:
         certificate_filename = self.self_signed_cert_filename()
         certificate_string = self.plain_read (certificate_filename)
         self.assert_private_key()
-        registry_proxy = SfaServerProxy (self.registry_url, self.private_key_filename(),
+        registry_proxy = SfaServerProxy (self.registry_url,
+                                         self.private_key_filename(),
                                          certificate_filename)
         try:
             credential_string=registry_proxy.GetSelfCredential (certificate_string, self.hrn, "user")
@@ -316,10 +317,14 @@ class SfaClientBootstrap:
             raise IOError,"Missing %s file %s"%(kind,filename)
         return True
         
-    def assert_private_key (self): return self.assert_filename (self.private_key_filename(),"private key")
-    def assert_self_signed_cert (self): return self.assert_filename (self.self_signed_cert_filename(),"self-signed certificate")
-    def assert_my_credential (self): return self.assert_filename (self.my_credential_filename(),"user's credential")
-    def assert_my_gid (self): return self.assert_filename (self.my_gid_filename(),"user's GID")
+    def assert_private_key (self):
+        return self.assert_filename (self.private_key_filename(),"private key")
+    def assert_self_signed_cert (self):
+        return self.assert_filename (self.self_signed_cert_filename(),"self-signed certificate")
+    def assert_my_credential (self):
+        return self.assert_filename (self.my_credential_filename(),"user's credential")
+    def assert_my_gid (self):
+        return self.assert_filename (self.my_gid_filename(),"user's GID")
 
 
     # decorator to make up the other methods

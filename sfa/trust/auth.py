@@ -4,9 +4,10 @@
 import sys
 from types import StringTypes
 
-from sfa.util.faults import InsufficientRights, MissingCallerGID, MissingTrustedRoots, PermissionError, \
-    BadRequestHash, ConnectionKeyGIDMismatch, SfaPermissionDenied, CredentialNotVerifiable, Forbidden, \
-    BadArgs
+from sfa.util.faults import InsufficientRights, MissingCallerGID, \
+    MissingTrustedRoots, PermissionError, BadRequestHash, \
+    ConnectionKeyGIDMismatch, SfaPermissionDenied, CredentialNotVerifiable, \
+    Forbidden, BadArgs
 from sfa.util.sfalogging import logger
 from sfa.util.config import Config
 from sfa.util.xrn import Xrn, get_authority
@@ -34,10 +35,13 @@ class Auth:
         self.load_trusted_certs()
 
     def load_trusted_certs(self):
-        self.trusted_cert_list = TrustedRoots(self.config.get_trustedroots_dir()).get_list()
-        self.trusted_cert_file_list = TrustedRoots(self.config.get_trustedroots_dir()).get_file_list()
+        self.trusted_cert_list = \
+            TrustedRoots(self.config.get_trustedroots_dir()).get_list()
+        self.trusted_cert_file_list = \
+            TrustedRoots(self.config.get_trustedroots_dir()).get_file_list()
 
-    # this convenience methods extracts speaking_for_xrn from the passed options using 'geni_speaking_for'
+    # this convenience methods extracts speaking_for_xrn
+    # from the passed options using 'geni_speaking_for'
     def checkCredentialsSpeaksFor (self, *args, **kwds):
         if 'options' not in kwds:
             logger.error ("checkCredentialsSpeaksFor was not passed options=options")
@@ -62,7 +66,8 @@ class Auth:
                 error="checkCredentials: expected a string, received %s"%(type(cred))
             else:
                 cred_obj=Credential(string=cred)
-                logger.info("failed to validate credential - dump=%s"%cred_obj.dump_string(dump_parents=True))
+                logger.info("failed to validate credential - dump=%s"%\
+                            cred_obj.dump_string(dump_parents=True))
                 error = sys.exc_info()[:2]
             return error
 
@@ -76,7 +81,7 @@ class Auth:
         if not isinstance(xrns, list):
             xrns = [xrns]
 
-        slice_xrns = Xrn.filter_type(xrns, 'slice')
+        slice_xrns  = Xrn.filter_type(xrns, 'slice')
         sliver_xrns = Xrn.filter_type(xrns, 'sliver')
 
         # we are not able to validate slivers in the traditional way so 
@@ -122,7 +127,7 @@ class Auth:
         
     def check(self, credential, operation, hrn = None):
         """
-        Check the credential against the peer cert (callerGID included 
+        Check the credential against the peer cert (callerGID) included 
         in the credential matches the caller that is connected to the 
         HTTPS connection, check if the credential was signed by a 
         trusted cert and check if the credential is allowed to perform 
@@ -152,7 +157,8 @@ class Auth:
                 raise InsufficientRights(operation)
 
         if self.trusted_cert_list:
-            self.client_cred.verify(self.trusted_cert_file_list, self.config.SFA_CREDENTIAL_SCHEMA)
+            self.client_cred.verify(self.trusted_cert_file_list,
+                                    self.config.SFA_CREDENTIAL_SCHEMA)
         else:
            raise MissingTrustedRoots(self.config.get_trustedroots_dir())
        
@@ -168,7 +174,7 @@ class Auth:
 
     def check_ticket(self, ticket):
         """
-        Check if the tickt was signed by a trusted cert
+        Check if the ticket was signed by a trusted cert
         """
         if self.trusted_cert_list:
             client_ticket = SfaTicket(string=ticket)
@@ -315,7 +321,8 @@ class Auth:
         rl = Rights()
         type = reg_record.type
 
-        logger.debug("entering determine_user_rights with record %s and caller_hrn %s"%(reg_record, caller_hrn))
+        logger.debug("entering determine_user_rights with record %s and caller_hrn %s"%\
+                     (reg_record, caller_hrn))
 
         if type == 'slice':
             # researchers in the slice are in the DB as-is
