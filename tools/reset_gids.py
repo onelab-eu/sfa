@@ -20,7 +20,6 @@ def fix_users():
             uuid = create_uuid()
             pkey = Keypair(create=True)
             pub_key=getattr(record,'reg_keys',None)
-            print pub_key
             if len(pub_key) > 0:
                 # use only first key in record
                 if pub_key and isinstance(pub_key, types.ListType): pub_key = pub_key[0]
