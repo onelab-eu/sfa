@@ -674,6 +674,8 @@ use this if you mean an authority instead""")
     
     # init self-signed cert, user credentials and gid
     def bootstrap (self):
+        if self.options.verbose:
+            self.logger.info("Initializing SfaClientBootstrap with {}".format(self.reg_url))
         client_bootstrap = SfaClientBootstrap (self.user, self.reg_url, self.options.sfi_dir,
                                                logger=self.logger)
         # if -k is provided, use this to initialize private key

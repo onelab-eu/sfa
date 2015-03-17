@@ -32,6 +32,10 @@ if [ $PPID -ne 1 -a -z "$SYSTEMCTL_SKIP_REDIRECT" ] && \
 	esac
 fi
 
+# ubuntu does not have /bin/systemctl
+[ -f /bin/systemctl ] || _use_systemctl=0
+
+
 systemctl_redirect () {
 	local s
 	local prog=${1##*/}
