@@ -1,5 +1,9 @@
 # XMLRPC-specific code for SFA Client
 
+# starting with 2.7.9 we need to turn off server verification
+import ssl
+ssl_needs_unverified_context = hasattr(ssl, '_create_unverified_context')
+
 import xmlrpclib
 from httplib import HTTPS, HTTPSConnection
 
@@ -51,7 +55,13 @@ class XMLRPCTransport(xmlrpclib.Transport):
         # host may be a string, or a (host, x509-dict) tuple
         host, extra_headers, x509 = self.get_host_info(host)
         if need_HTTPSConnection:
-            conn = HTTPSConnection(host, None, key_file=self.key_file, cert_file=self.cert_file)
+            if not ssl_needs_unverified_context:
+                conn = HTTPSConnection(host, None, key_file = self.key_file,
+                                       cert_file = self.cert_file)
+            else:
+                conn = HTTPSConnection(host, None, key_file = self.key_file,
+                                       cert_file = self.cert_file,
+                                       context = ssl._create_unverified_context())
         else:
             conn = HTTPS(host, None, key_file=self.key_file, cert_file=self.cert_file)
 
@@ -84,10 +94,16 @@ class XMLRPCServerProxy(xmlrpclib.ServerProxy):
         # remember url for GetVersion
         # xxx not sure this is still needed as SfaServerProxy has this too
         self.url=url
-        xmlrpclib.ServerProxy.__init__(self, url, transport, allow_none=allow_none, verbose=verbose)
+        if not ssl_needs_unverified_context:
+            xmlrpclib.ServerProxy.__init__(self, url, transport, allow_none=allow_none,
+                                           verbose=verbose)
+        else:
+            xmlrpclib.ServerProxy.__init__(self, url, transport, allow_none=allow_none,
+                                           verbose=verbose,
+                                           context=ssl._create_unverified_context())
 
     def __getattr__(self, attr):
-        logger.debug ("xml-rpc %s method:%s"%(self.url,attr))
+        logger.debug ("xml-rpc %s method:%s" % (self.url, attr))
         return xmlrpclib.ServerProxy.__getattr__(self, attr)
 
 ########## the object on which we can send methods that get sent over xmlrpc

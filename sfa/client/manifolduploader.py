@@ -25,6 +25,10 @@
 DEFAULT_URL = "http://myslice.onelab.eu:7080"
 DEFAULT_PLATFORM = 'ple'
 
+# starting with 2.7.9 we need to turn off server verification
+import ssl
+ssl_needs_unverified_context = hasattr(ssl, '_create_unverified_context')
+
 import xmlrpclib
 import getpass
 
@@ -78,7 +82,12 @@ class ManifoldUploader:
 #        return self._proxy
         url=self.url()
         self.logger.debug("Connecting manifold url %s"%url)
-        return xmlrpclib.ServerProxy(url, allow_none = True)
+        if not ssl_needs_unverified_context:
+            proxy = xmlrpclib.ServerProxy(url, allow_none = True)
+        else:
+            proxy = xmlrpclib.ServerProxy(url, allow_none = True,
+                                          context=ssl._create_unverified_context())
+        return proxy
 
     # does the job for one credential
     # expects the credential (string) and an optional message (e.g. hrn) for reporting
