@@ -108,11 +108,12 @@ class ldap_co:
             #rights to add objects
             self.ldapserv.simple_bind_s(self.ldapAdminDN,
                                         self.ldapAdminPassword)
+            return {'bool': True}
 
         except ldap.LDAPError, error:
             return {'bool': False, 'message': error}
 
-        return {'bool': True}
+        
 
     def close(self):
         """Close the LDAP connection.
@@ -596,19 +597,22 @@ class LDAPapi:
             # user = [('uid=saint,ou=People,dc=senslab,dc=info', {'uid': ['saint'], 'givenName': ['Fred'], ...})]
             return {'bool': True, 'uid': user[0][1]['uid'][0]}
         else:
-            self.conn.connect()
             user_ldap_attrs = self.make_ldap_attributes_from_record(record)
-            logger.debug("LDAPapi.py user ldap doesn't exist \t%s" % user_ldap_attrs)
-            # The dn of our new entry/object
-            dn = 'uid=' + user_ldap_attrs['uid'] + "," + self.baseDN
-            try:
-                ldif = modlist.addModlist(user_ldap_attrs)
-                self.conn.ldapserv.add_s(dn, ldif)
-            except ldap.LDAPError, error:
-                logger.log_exc("LDAP Add Error %s" % error)
-                return {'bool': False, 'message': error}
-            self.conn.close()
-            return {'bool': True, 'uid': user_ldap_attrs['uid']}
+            result = self.conn.connect()
+            if(result['bool']):
+                logger.debug("LDAPapi.py user ldap doesn't exist \t%s" % user_ldap_attrs)
+                # The dn of our new entry/object
+                dn = 'uid=' + user_ldap_attrs['uid'] + "," + self.baseDN
+                try:
+                    ldif = modlist.addModlist(user_ldap_attrs)
+                    self.conn.ldapserv.add_s(dn, ldif)
+                    self.conn.close()
+                    return {'bool': True, 'uid': user_ldap_attrs['uid']}
+                except ldap.LDAPError, error:
+                    logger.log_exc("LDAP Add Error %s" % error)
+                    return {'bool': False, 'message': error}
+               
+                
         
         
     def LdapDelete(self, person_dn):
@@ -854,9 +858,9 @@ class LDAPapi:
                 logger.log_exc("LDAP LdapSearch Error %s" % error)
                 return []
 
-            else:
-                logger.error("LDAP.PY \t Connection Failed")
-                return
+        else:
+            logger.error("LDAP.PY \t Connection Failed")
+            return []
 
     def _process_ldap_info_for_all_users(self, result_data):
         """Process the data of all enabled users in LDAP.
