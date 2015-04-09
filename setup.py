@@ -137,18 +137,19 @@ else:
     except:
         long_description = "Unable to read index.html"
 
-    setup(name='sfa',
-          packages = packages,
-          data_files = data_files,
-          version=version_tag,
-          keywords = ['federation','testbeds','SFA','SfaWrap'],
-          url="http://svn.planet-lab.org/wiki/SFATutorial",
-          author="Thierry Parmentelat, Tony Mack, Scott Baker",
-          author_email="thierry.parmentelat@inria.fr, tmack@princeton.cs.edu, smbaker@gmail.com",
-          download_url = "http://build.onelab.eu/sfa/{v}/sfa-{v}.tar.gz".format(v=version_tag),
-          description="SFA Wrapper with drivers for PlanetLab and IotLab and others",
-          license = license,
-          long_description = long_description,
-          scripts = scripts,
+    setup(
+        name             = 'sfa',
+        packages         = packages,
+        data_files       = data_files,
+        version          = version_tag,
+        keywords         = ['federation','testbeds','SFA','SfaWrap'],
+        url              = "http://svn.planet-lab.org/wiki/SFATutorial",
+        author           = "Thierry Parmentelat, Tony Mack, Scott Baker",
+        author_email     = "thierry.parmentelat@inria.fr, tmack@princeton.cs.edu, smbaker@gmail.com",
+        download_url     = "http://build.onelab.eu/sfa/{v}/sfa-{v}.tar.gz".format(v=version_tag),
+        description      = "SFA Wrapper with drivers for PlanetLab and IotLab and others",
+        license          = license,
+        long_description = long_description,
+        scripts          = scripts,
 )
 
