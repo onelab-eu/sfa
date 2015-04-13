@@ -1,6 +1,6 @@
 %define name sfa
 %define version 3.1
-%define taglevel 13
+%define taglevel 14
 
 %define release %{taglevel}%{?pldistro:.%{pldistro}}%{?date:.%{date}}
 %global python_sitearch	%( python -c "from distutils.sysconfig import get_python_lib; print get_python_lib(1)" )
@@ -264,6 +264,14 @@ fi
 #[ "$1" -ge "1" ] && service sfa-cm restart || :
 
 %changelog
+* Thu Apr 09 2015 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-3.1-14
+- for SSL & python-2.7.9: ignore server verification
+- assume 2.7: remove compat code - always use HTTPSConnection (not HTTPS anymore)
+- fix: Reset GIDs works even if user has no pub_key
+- tweak for ubuntu (that does not have systemctl)
+- iotlab driver:  fix ldap account creation at each lease
+- miscell cosmetic & layout
+
 * Mon Dec 01 2014 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-3.1-13
 - bugfix - was adding extraneous backslashes in email address when attempting to AddPerson
 

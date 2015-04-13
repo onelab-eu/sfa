@@ -22,10 +22,6 @@ rpmtaglevel:=$(shell rpm -q --specfile sfa.spec --queryformat="%{release}\n" 2> 
 VERSIONTAG=$(rpmversion)-$(rpmtaglevel)
 # this used to be 'should-be-redefined-by-specfile' and it indeed should be
 SCMURL=git://git.onelab.eu/sfa.git
-TARBALL_HOST=root@build.onelab.eu
-TARBALL_TOPDIR=/build/sfa
-# I have an alternate pypitest entry defined in my .pypirc
-PYPI_TARGET=pypi
 
 python: version
 
@@ -142,6 +138,11 @@ signatures:
 .PHONY: signatures
 
 ########## for uploading onto pypi
+# use pypitest instead for tests (both entries need to be defined in your .pypirc)
+PYPI_TARGET=pypi
+PYPI_TARBALL_HOST=root@build.onelab.eu
+PYPI_TARBALL_TOPDIR=/build/sfa
+
 # a quick attempt on pypitest did not quite work as expected
 # I was hoping to register the project using "setup.py register"
 # but somehow most of my meta data did not make it up there
@@ -167,8 +168,8 @@ git:
 # run this only once the sources are in on the right tag
 pypi: index.html
 	setup.py sdist upload -r $(PYPI_TARGET)
-	ssh $(TARBALL_HOST) mkdir -p $(TARBALL_TOPDIR)/$(VERSIONTAG)
-	rsync -av dist/sfa-$(VERSIONTAG).tar.gz $(TARBALL_HOST):$(TARBALL_TOPDIR)/$(VERSIONTAG)
+	ssh $(PYPI_TARBALL_HOST) mkdir -p $(PYPI_TARBALL_TOPDIR)/$(VERSIONTAG)
+	rsync -av dist/sfa-$(VERSIONTAG).tar.gz $(PYPI_TARBALL_HOST):$(PYPI_TARBALL_TOPDIR)/$(VERSIONTAG)
 
 # cleanup
 clean: readme-clean
