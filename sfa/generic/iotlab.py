@@ -13,7 +13,7 @@ class iotlab (Generic):
     # the importer class
     def importer_class (self):
         import sfa.importer.iotlabimporter
-        return sfa.importer.iotlabimporter.IotlabImporter
+        return sfa.importer.iotlabimporter.IotLabImporter
 
     # the manager classes for the server-side services
     def registry_manager_class (self) :
@@ -28,13 +28,10 @@ class iotlab (Generic):
         import sfa.managers.aggregate_manager
         return sfa.managers.aggregate_manager.AggregateManager
 
-    # driver class for server-side services, talk to the whole testbed
     def driver_class (self):
         import sfa.iotlab.iotlabdriver
-        return sfa.iotlab.iotlabdriver.IotlabDriver
+        return sfa.iotlab.iotlabdriver.IotLabDriver
 
-    # iotlab does not have a component manager yet
-    # manager class
     def component_manager_class (self):
         return None
     # driver_class

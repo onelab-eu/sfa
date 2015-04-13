@@ -18,7 +18,7 @@ class IotlabNode(NodeElement):
 
 
 class IotlabPosition(Element):
-    fields = ['posx', 'posy','posz']
+    fields = ['x', 'y','z']
 
 class IotlabLocation(Location):
     fields = list(Location.fields)
