@@ -16,6 +16,10 @@ class IotLabImporter:
         self.logger = loc_logger
         self.logger.setLevelDebug()
 
+    def add_options (self, parser):
+        """ Not used and need by SFA """
+        pass
+    
     def _exists(self, tablename):
         """
         Checks if the table exists in SFA database.

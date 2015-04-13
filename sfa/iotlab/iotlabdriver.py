@@ -24,6 +24,10 @@ class IotLabDriver(Driver):
         # need by sfa driver
         self.cache = None
 
+    def check_sliver_credentials(self, creds, urns):
+        """ Not used and need by SFA """
+        pass
+
     ########################################
     ########## registry oriented
     ########################################
@@ -32,6 +36,7 @@ class IotLabDriver(Driver):
     def register(self, sfa_record, hrn, pub_key):
         logger.warning("iotlabdriver register : not implemented")
         return -1
+
 
     ##########
     def update(self, old_sfa_record, new_sfa_record, hrn, new_key):
