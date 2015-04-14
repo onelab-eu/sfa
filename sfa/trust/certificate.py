@@ -497,10 +497,31 @@ class Certificate:
 
     ##
     # Get a pretty-print subject name of the certificate
+    # let's try to make this a little more usable as is makes logs hairy
+    pretty_fields = ['email']
+    def filter_chunk(self, chunk):
+        for field in self.pretty_fields:
+            if field in chunk:
+                return " "+chunk
 
     def pretty_cert(self):
         x = self.x509.get_subject()
-        return "[ OU: %s, CN: %s, SubjectAltName: %s ]" % (getattr(x, "OU"), getattr(x, "CN"), self.get_data())
+        ou = getattr(x, "OU")
+        cn = getattr(x, "CN")
+        data = self.get_data(field='subjectAltName')
+        message = "[Cert."
+        if ou: message += " OU: {}".format(ou)
+        if cn: message += " CN: {}".format(cn)
+        if data:
+            message += " SubjectAltName:"
+            counter = 0
+            filtered = [self.filter_chunk(chunk) for chunk in data.split()]
+            message += " ".join( [f for f in filtered if f])
+            omitted = len ([f for f in filtered if not f])
+            if omitted:
+                message += "..+{} omitted".format(omitted)
+        message += "]"
+        return message
 
     ##
     # Get the public key of the certificate.

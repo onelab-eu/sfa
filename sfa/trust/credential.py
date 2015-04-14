@@ -300,7 +300,7 @@ class Credential(object):
         caller = self.gidCaller.pretty_cert()
         exp = self.get_expiration()
         # Summarize the rights too? The issuer?
-        return "[ Grant {caller} rights on {obj} until {exp} ]".format(**locals())
+        return "[Cred. for {caller} rights on {obj} until {exp} ]".format(**locals())
 
     def get_signature(self):
         if not self.signature:
