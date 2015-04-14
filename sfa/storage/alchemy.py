@@ -14,7 +14,7 @@ from sfa.util.sfalogging import logger
 class Alchemy:
 
     def __init__ (self, config):
-        dbname="sfa"
+        dbname = "sfa"
         # will be created lazily on-demand
         self._session = None
         # the former PostgreSQL.py used the psycopg2 directly and was doing
@@ -66,11 +66,11 @@ class Alchemy:
     def session (self):
         Session=sessionmaker()
         session=Session (bind=self.engine)
-        logger.info('alchemy.session created session %s'%session)
+        logger.debug('alchemy.session created session %s'%session)
         return session
 
     def close_session (self, session):
-        logger.info('alchemy.close_session closed session %s'%session)
+        logger.debug('alchemy.close_session closed session %s'%session)
         session.close()
 
 ####################
