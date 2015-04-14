@@ -492,7 +492,7 @@ class Certificate:
     ##
     # Get a pretty-print subject name of the certificate
 
-    def get_printable_subject(self):
+    def pretty_cert(self):
         x = self.cert.get_subject()
         return "[ OU: %s, CN: %s, SubjectAltName: %s ]" % (getattr(x, "OU"), getattr(x, "CN"), self.get_data())
 
@@ -699,8 +699,8 @@ class Certificate:
         # verify expiration time
         if self.cert.has_expired():
             if debug_verify_chain:
-                logger.debug("verify_chain: NO, Certificate %s has expired" % self.get_printable_subject())
-            raise CertExpired(self.get_printable_subject(), "client cert")
+                logger.debug("verify_chain: NO, Certificate %s has expired" % self.pretty_cert())
+            raise CertExpired(self.pretty_cert(), "client cert")
 
         # if this cert is signed by a trusted_cert, then we are set
         for trusted_cert in trusted_certs:
@@ -709,20 +709,20 @@ class Certificate:
                 if not trusted_cert.cert.has_expired():
                     if debug_verify_chain: 
                         logger.debug("verify_chain: YES. Cert %s signed by trusted cert %s"%(
-                            self.get_printable_subject(), trusted_cert.get_printable_subject()))
+                            self.pretty_cert(), trusted_cert.pretty_cert()))
                     return trusted_cert
                 else:
                     if debug_verify_chain:
                         logger.debug("verify_chain: NO. Cert %s is signed by trusted_cert %s, but that signer is expired..."%(
-                            self.get_printable_subject(),trusted_cert.get_printable_subject()))
-                    raise CertExpired(self.get_printable_subject()," signer trusted_cert %s"%trusted_cert.get_printable_subject())
+                            self.pretty_cert(),trusted_cert.pretty_cert()))
+                    raise CertExpired(self.pretty_cert()," signer trusted_cert %s"%trusted_cert.pretty_cert())
 
         # if there is no parent, then no way to verify the chain
         if not self.parent:
             if debug_verify_chain:
                 logger.debug("verify_chain: NO. %s has no parent and issuer %s is not in %d trusted roots"%\
-                             (self.get_printable_subject(), self.get_issuer(), len(trusted_certs)))
-            raise CertMissingParent(self.get_printable_subject() + \
+                             (self.pretty_cert(), self.get_issuer(), len(trusted_certs)))
+            raise CertMissingParent(self.pretty_cert() + \
                                     ": Issuer %s is not one of the %d trusted roots, and cert has no parent." %\
                                     (self.get_issuer(), len(trusted_certs)))
 
@@ -730,12 +730,12 @@ class Certificate:
         if not self.is_signed_by_cert(self.parent):
             if debug_verify_chain:
                 logger.debug("verify_chain: NO. %s is not signed by parent %s, but by %s"%\
-                             (self.get_printable_subject(), 
-                              self.parent.get_printable_subject(), 
+                             (self.pretty_cert(), 
+                              self.parent.pretty_cert(), 
                               self.get_issuer()))
             raise CertNotSignedByParent("%s: Parent %s, issuer %s"\
-                                            % (self.get_printable_subject(), 
-                                               self.parent.get_printable_subject(),
+                                            % (self.pretty_cert(), 
+                                               self.parent.pretty_cert(),
                                                self.get_issuer()))
 
         # Confirm that the parent is a CA. Only CAs can be trusted as
@@ -746,14 +746,14 @@ class Certificate:
         # extension and hope there are no other basicConstraints
         if not self.parent.isCA and not (self.parent.get_extension('basicConstraints') == 'CA:TRUE'):
             logger.warn("verify_chain: cert %s's parent %s is not a CA" % \
-                            (self.get_printable_subject(), self.parent.get_printable_subject()))
-            raise CertNotSignedByParent("%s: Parent %s not a CA" % (self.get_printable_subject(),
-                                                                    self.parent.get_printable_subject()))
+                            (self.pretty_cert(), self.parent.pretty_cert()))
+            raise CertNotSignedByParent("%s: Parent %s not a CA" % (self.pretty_cert(),
+                                                                    self.parent.pretty_cert()))
 
         # if the parent isn't verified...
         if debug_verify_chain:
             logger.debug("verify_chain: .. %s, -> verifying parent %s"%\
-                         (self.get_printable_subject(),self.parent.get_printable_subject()))
+                         (self.pretty_cert(),self.parent.pretty_cert()))
         self.parent.verify_chain(trusted_certs)
 
         return
@@ -788,7 +788,7 @@ class Certificate:
 
     def dump_string (self,show_extensions=False):
         result = ""
-        result += "CERTIFICATE for %s\n"%self.get_printable_subject()
+        result += "CERTIFICATE for %s\n"%self.pretty_cert()
         result += "Issued by %s\n"%self.get_issuer()
         filename=self.get_filename()
         if filename: result += "Filename %s\n"%filename

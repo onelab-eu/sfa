@@ -289,15 +289,15 @@ class Credential(object):
         if not self.gidObject:
             self.decode()
         if self.gidObject:
-            subject = self.gidObject.get_printable_subject()
+            subject = self.gidObject.pretty_cert()
         return subject
 
     # sounds like this should be __repr__ instead ??
     def pretty_cred(self):
         if not self.gidObject:
             self.decode()
-        obj = self.gidObject.get_printable_subject()
-        caller = self.gidCaller.get_printable_subject()
+        obj = self.gidObject.pretty_cert()
+        caller = self.gidCaller.pretty_cert()
         exp = self.get_expiration()
         # Summarize the rights too? The issuer?
         return "[ Grant {caller} rights on {obj} until {exp} ]".format(**locals())
