@@ -142,13 +142,18 @@ class PlAggregate:
         if slice_ids:
             filter['slice_id'] = list(slice_ids)
         # get all slices
-        all_slices = self.driver.shell.GetSlices(filter, ['slice_id', 'name', 'hrn', 'person_ids', 'node_ids', 'slice_tag_ids', 'expires'])
+        fields = ['slice_id', 'name', 'hrn', 'person_ids', 'node_ids', 'slice_tag_ids', 'expires']
+        all_slices = self.driver.shell.GetSlices(filter, fields)
         if slice_hrn:
             slices = [slice for slice in all_slices if slice['hrn'] == slice_hrn]
         else:
             slices = all_slices
       
         if not slices:
+            if slice_hrn:
+                logger.error("PlAggregate.get_slivers : no slice found with hrn {}".format(slice_hrn))
+            else:
+                logger.error("PlAggregate.get_slivers : no sliver found with urns {}".format(urns))
             return []
         slice = slices[0]     
         slice['hrn'] = slice_hrn   
@@ -197,6 +202,8 @@ class PlAggregate:
             node['urn'] = node['sliver_id'] 
             node['services_user'] = users
             slivers.append(node)
+        if not slivers:
+            logger.warning("PlAggregate.get_slivers : slice(s) found but with no sliver {}".format(urns))
         return slivers
 
     def node_to_rspec_node(self, node, sites, interfaces, node_tags, pl_initscripts=None, grain=None, options=None):
