@@ -505,13 +505,13 @@ class Certificate:
                 return " "+chunk
 
     def pretty_cert(self):
+        message = "[Cert."
         x = self.x509.get_subject()
         ou = getattr(x, "OU")
-        cn = getattr(x, "CN")
-        data = self.get_data(field='subjectAltName')
-        message = "[Cert."
         if ou: message += " OU: {}".format(ou)
+        cn = getattr(x, "CN")
         if cn: message += " CN: {}".format(cn)
+        data = self.get_data(field='subjectAltName')
         if data:
             message += " SubjectAltName:"
             counter = 0

@@ -284,7 +284,7 @@ class Credential(object):
                 self.xmlsec_path = path + '/' + 'xmlsec1'
                 break
 
-    def get_subject(self):
+    def pretty_subject(self):
         subject = ""
         if not self.gidObject:
             self.decode()
@@ -1078,7 +1078,7 @@ class Credential(object):
     # show_xml is ignored
     def dump_string(self, dump_parents=False, show_xml=None):
         result=""
-        result += "CREDENTIAL %s\n" % self.get_subject()
+        result += "CREDENTIAL %s\n" % self.pretty_subject()
         filename=self.get_filename()
         if filename: result += "Filename %s\n"%filename
         privileges = self.get_privileges()
