@@ -273,3 +273,5 @@ class Rights:
                 return False
         return True
 
+    def pretty_rights(self):
+        return "<Rights{}>".format(";".join(["{}".format(r) for r in self.rights]))

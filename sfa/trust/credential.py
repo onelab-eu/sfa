@@ -972,20 +972,28 @@ class Credential(object):
         # make sure the rights given to the child are a subset of the
         # parents rights (and check delegate bits)
         if not parent_cred.get_privileges().is_superset(self.get_privileges()):
-            raise ChildRightsNotSubsetOfParent(
-                "Parent cred (ref {}) rights {} "
-                .format(parent_cred.get_refid(),
-                        self.parent.get_privileges().save_to_string())
-                + " not superset of delegated cred %s (ref %s) rights {}"
-                .format(self.pretty_cred(), self.get_refid(),
-                        self.get_privileges().save_to_string()))
+            message = (
+                "Parent cred {} (ref {}) rights {} "
+                " not superset of delegated cred {} (ref {}) rights {}"
+                .format(parent_cred.pretty_cred(),parent_cred.get_refid(),
+                        parent_cred.get_privileges().pretty_rights(),
+                        self.pretty_cred(), self.get_refid(),
+                        self.get_privileges().pretty_rights()))
+            logger.error(message)
+            logger.error("parent details {}".format(parent_cred.get_privileges().save_to_string()))
+            logger.error("self details {}".format(self.get_privileges().save_to_string()))
+            raise ChildRightsNotSubsetOfParent(message)
 
         # make sure my target gid is the same as the parent's
         if not parent_cred.get_gid_object().save_to_string() == \
            self.get_gid_object().save_to_string():
-            raise CredentialNotVerifiable(
+            message = (
                 "Delegated cred {}: Target gid not equal between parent and child. Parent {}"
                 .format(self.pretty_cred(), parent_cred.pretty_cred()))
+            logger.error(message)
+            logger.error("parent details {}".format(parent_cred.save_to_string()))
+            logger.error("self details {}".format(self.save_to_string()))
+            raise CredentialNotVerifiable(message)
 
         # make sure my expiry time is <= my parent's
         if not parent_cred.get_expiration() >= self.get_expiration():
@@ -999,8 +1007,10 @@ class Credential(object):
             message = "Delegated credential {} not signed by parent {}'s caller"\
                 .format(self.pretty_cred(), parent_cred.pretty_cred())
             logger.error(message)
-            logger.error("compare1 parent {}".format(parent_cred.get_gid_caller().save_to_string()))
-            logger.error("compare2 self {}".format(self.get_signature().get_issuer_gid().save_to_string()))
+            logger.error("compare1 parent {}".format(parent_cred.get_gid_caller().pretty_cred()))
+            logger.error("compare1 parent details {}".format(parent_cred.get_gid_caller().save_to_string()))
+            logger.error("compare2 self {}".format(self.get_signature().get_issuer_gid().pretty_cred()))
+            logger.error("compare2 self details {}".format(self.get_signature().get_issuer_gid().save_to_string()))
             raise CredentialNotVerifiable(message)
                 
         # Recurse
