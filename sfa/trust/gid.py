@@ -235,12 +235,16 @@ class GID(Certificate):
         if self.parent:
             # make sure the parent's hrn is a prefix of the child's hrn
             if not hrn_authfor_hrn(self.parent.get_hrn(), self.get_hrn()):
-                raise GidParentHrn("This cert HRN %s isn't in the namespace for parent HRN %s" % (self.get_hrn(), self.parent.get_hrn()))
+                raise GidParentHrn(
+                    "This cert HRN {} isn't in the namespace for parent HRN {}"
+                    .format(self.get_hrn(), self.parent.get_hrn()))
 
             # Parent must also be an authority (of some type) to sign a GID
             # There are multiple types of authority - accept them all here
             if not self.parent.get_type().find('authority') == 0:
-                raise GidInvalidParentHrn("This cert %s's parent %s is not an authority (is a %s)" % (self.get_hrn(), self.parent.get_hrn(), self.parent.get_type()))
+                raise GidInvalidParentHrn(
+                    "This cert {}'s parent {} is not an authority (is a %{})"
+                    .format(self.get_hrn(), self.parent.get_hrn(), self.parent.get_type()))
 
             # Then recurse up the chain - ensure the parent is a trusted
             # root or is in the namespace of a trusted root
@@ -254,10 +258,12 @@ class GID(Certificate):
             #    trusted_hrn = trusted_hrn[:trusted_hrn.rindex('.')]
             cur_hrn = self.get_hrn()
             if not hrn_authfor_hrn(trusted_hrn, cur_hrn):
-                raise GidParentHrn("Trusted root with HRN %s isn't a namespace authority for this cert: %s" % (trusted_hrn, cur_hrn))
+                raise GidParentHrn(
+                    "Trusted root with HRN {} isn't a namespace authority for this cert: {}"
+                    .format(trusted_hrn, cur_hrn))
 
             # There are multiple types of authority - accept them all here
             if not trusted_type.find('authority') == 0:
-                raise GidInvalidParentHrn("This cert %s's trusted root signer %s is not an authority (is a %s)" % (self.get_hrn(), trusted_hrn, trusted_type))
-
-        return
+                raise GidInvalidParentHrn(
+                    "This cert {}'s trusted root signer {} is not an authority (is a {})"
+                    .format(self.get_hrn(), trusted_hrn, trusted_type))
