@@ -53,12 +53,12 @@ class Alchemy:
         if self._session is None:
             Session=sessionmaker ()
             self._session=Session(bind=self.engine)
-            logger.info('alchemy.global_session created session %s'%self._session)
+            logger.debug('alchemy.global_session created session %s'%self._session)
         return self._session
 
     def close_global_session (self):
         if self._session is None: return
-        logger.info('alchemy.close_global_session %s'%self._session)
+        logger.debug('alchemy.close_global_session %s'%self._session)
         self._session.close()
         self._session=None
 
