@@ -84,11 +84,6 @@ Summary: the SFA layer around IotLab
 Group: Applications/System
 Requires: sfa
 
-%package cortexlab
-Summary: the SFA layer around CortexLab
-Group: Applications/System
-Requires: sfa
-
 %package dummy
 Summary: the SFA layer around a Dummy Testbed 
 Group: Applications/System
@@ -131,9 +126,6 @@ The SFA driver for NITOS.
 
 %description iotlab
 The SFA driver for IotLab.
-
-%description cortexlab
-The SFA driver for CortexLab.
 
 %description dummy
 The SFA driver for a Dummy Testbed.
@@ -222,9 +214,6 @@ rm -rf $RPM_BUILD_ROOT
 
 %files iotlab
 %{python_sitelib}/sfa/iotlab
-
-%files cortexlab
-%{python_sitelib}/sfa/cortexlab
 
 %files dummy
 %{python_sitelib}/sfa/dummy
