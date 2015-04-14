@@ -933,13 +933,14 @@ class Credential(object):
         if trusted_gids and len(trusted_gids) > 0:
             root_cred_signer.verify_chain(trusted_gids)
         else:
-            logger.debug("No trusted gids. Cannot verify that cred signer is signed by a trusted authority. Skipping that check.")
+            logger.debug("Cannot verify that cred signer is signed by a trusted authority. "
+                         "No trusted gids. Skipping that check.")
 
         # See if the signer is an authority over the domain of the target.
         # There are multiple types of authority - accept them all here
         # Maybe should be (hrn, type) = urn_to_hrn(root_cred_signer.get_urn())
         root_cred_signer_type = root_cred_signer.get_type()
-        if (root_cred_signer_type.find('authority') == 0):
+        if root_cred_signer_type.find('authority') == 0:
             #logger.debug('Cred signer is an authority')
             # signer is an authority, see if target is in authority's domain
             signerhrn = root_cred_signer.get_hrn()
@@ -954,9 +955,11 @@ class Credential(object):
 
         # Give up, credential does not pass issuer verification
 
-        raise CredentialNotVerifiable("Could not verify credential owned by %s for object %s. Cred signer %s not the trusted authority for Cred target %s" % \
-                                      (self.gidCaller.get_urn(), self.gidObject.get_urn(), root_cred_signer.get_hrn(), root_target_gid.get_hrn()))
-
+        raise CredentialNotVerifiable(
+            "Could not verify credential owned by {} for object {}. "
+            "Cred signer {} not the trusted authority for Cred target {}"
+            .format(self.gidCaller.get_hrn(), self.gidObject.get_hrn(),
+                    root_cred_signer.get_hrn(), root_target_gid.get_hrn()))
 
     ##
     # -- For Delegates (credentials with parents) verify that:
@@ -969,27 +972,36 @@ class Credential(object):
         # make sure the rights given to the child are a subset of the
         # parents rights (and check delegate bits)
         if not parent_cred.get_privileges().is_superset(self.get_privileges()):
-            raise ChildRightsNotSubsetOfParent(("Parent cred ref %s rights " % parent_cred.get_refid()) +
-                self.parent.get_privileges().save_to_string() + (" not superset of delegated cred %s ref %s rights " % \
-                                                                 (self.get_summary_tostring(), self.get_refid())) +
-                self.get_privileges().save_to_string())
+            raise ChildRightsNotSubsetOfParent(
+                "Parent cred (ref {}) rights {} "
+                .format(parent_cred.get_refid(),
+                        self.parent.get_privileges().save_to_string())
+                + " not superset of delegated cred %s (ref %s) rights {}"
+                .format(self.pretty_cred(), self.get_refid(),
+                        self.get_privileges().save_to_string()))
 
         # make sure my target gid is the same as the parent's
         if not parent_cred.get_gid_object().save_to_string() == \
            self.get_gid_object().save_to_string():
-            raise CredentialNotVerifiable("Delegated cred %s: Target gid not equal between parent and child. Parent %s" % \
-                                          (self.get_summary_tostring(), parent_cred.get_summary_tostring()))
+            raise CredentialNotVerifiable(
+                "Delegated cred {}: Target gid not equal between parent and child. Parent {}"
+                .format(self.pretty_cred(), parent_cred.pretty_cred()))
 
         # make sure my expiry time is <= my parent's
         if not parent_cred.get_expiration() >= self.get_expiration():
-            raise CredentialNotVerifiable("Delegated credential %s expires after parent %s" % \
-                                          (self.pretty_cred(), parent_cred.pretty_cred()))
+            raise CredentialNotVerifiable(
+                "Delegated credential {} expires after parent {}"
+                .format(self.pretty_cred(), parent_cred.pretty_cred()))
 
         # make sure my signer is the parent's caller
         if not parent_cred.get_gid_caller().save_to_string(False) == \
            self.get_signature().get_issuer_gid().save_to_string(False):
-            raise CredentialNotVerifiable("Delegated credential %s not signed by parent %s's caller" % \
-                                          (self.pretty_cred(), parent_cred.pretty_cred()))
+            message = "Delegated credential {} not signed by parent {}'s caller"\
+                .format(self.pretty_cred(), parent_cred.pretty_cred())
+            logger.error(message)
+            logger.error("compare1 parent {}".format(parent_cred.get_gid_caller().save_to_string()))
+            logger.error("compare2 self {}".format(self.get_signature().get_issuer_gid().save_to_string()))
+            raise CredentialNotVerifiable(message)
                 
         # Recurse
         if parent_cred.parent:
