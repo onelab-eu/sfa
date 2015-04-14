@@ -761,9 +761,9 @@ class Certificate:
     ### more introspection
     def get_extensions(self):
         # pyOpenSSL does not have a way to get extensions
-        triples=[]
+        triples = []
         m2x509 = X509.load_cert_string(self.save_to_string())
-        nb_extensions=m2x509.get_ext_count()
+        nb_extensions = m2x509.get_ext_count()
         logger.debug("X509 had %d extensions"%nb_extensions)
         for i in range(nb_extensions):
             ext=m2x509.get_ext_at(i)
@@ -774,7 +774,7 @@ class Certificate:
         return self.data.keys()
 
     def get_all_datas (self):
-        triples=self.get_extensions()
+        triples = self.get_extensions()
         for name in self.get_data_names():
             triples.append( (name,self.get_data(name),'data',) )
         return triples
@@ -793,9 +793,9 @@ class Certificate:
         filename=self.get_filename()
         if filename: result += "Filename %s\n"%filename
         if show_extensions:
-            all_datas=self.get_all_datas()
+            all_datas = self.get_all_datas()
             result += " has %d extensions/data attached"%len(all_datas)
-            for (n,v,c) in all_datas:
+            for (n, v, c) in all_datas:
                 if c=='data':
                     result += "   data: %s=%s\n"%(n,v)
                 else:

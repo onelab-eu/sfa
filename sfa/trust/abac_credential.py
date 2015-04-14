@@ -185,7 +185,7 @@ class ABACCredential(Credential):
 
     # sounds like this should be __repr__ instead ??
     # Produce the ABAC assertion. Something like [ABAC cred: Me.role<-You] or similar
-    def get_summary_tostring(self):
+    def pretty_cred(self):
         result = "[ABAC cred: " + str(self.get_head())
         for tail in self.get_tails():
             result += "<-%s" % str(tail)

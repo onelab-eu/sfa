@@ -136,7 +136,7 @@ class Auth:
         cred = Credential(cred=credential)    
         self.client_cred = cred
         logger.debug("Auth.check: handling hrn=%s and credential=%s"%\
-                         (hrn,cred.get_summary_tostring()))
+                         (hrn,cred.pretty_cred()))
 
         if cred.type not in ['geni_sfa']:
             raise CredentialNotVerifiable(cred.type, "%s not supported" % cred.type)

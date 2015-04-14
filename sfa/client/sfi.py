@@ -96,14 +96,14 @@ def filter_records(type, records):
 
 
 def credential_printable (cred):
-    credential=Credential(cred=cred)
+    credential = Credential(cred=cred)
     result=""
-    result += credential.get_summary_tostring()
+    result += credential.pretty_cred()
     result += "\n"
     rights = credential.get_privileges()
     result += "type=%s\n" % credential.type    
     result += "version=%s\n" % credential.version    
-    result += "rights=%s\n"%rights
+    result += "rights=%s\n" % rights
     return result
 
 def show_credentials (cred_s):
