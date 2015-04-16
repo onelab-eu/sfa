@@ -36,6 +36,7 @@ function debian_get_postgresql_versions () {
 }
 
 ####################
+POSTGRESQL_STARTED=/etc/sfa/postgresql-started
 if [ -f /etc/redhat-release ] ; then
     # source function library
     . /etc/init.d/functions
@@ -233,9 +234,13 @@ function db_start () {
 
     ######## Start up the server
     # not too nice, but.. when co-located with myplc we'll let it start/stop postgresql
-    if [ ! -f /etc/myplc-release ] ; then
-	echo STARTING...
+    if [ ! postgresql_check ] ; then
 	service postgresql start >& /dev/null
+	MESSAGE=$"Starting PostgreSQL server"
+	echo -n "$MESSAGE"
+	[ "$ERRORS" == 0 ] && success "$MESSAGE" || failure "$MESSAGE" ; echo
+	# best-effort to make sure we turn it back off when running stop
+	touch $POSTGRESQL_STARTED
     fi
     postgresql_check
     check
@@ -270,12 +275,13 @@ function db_stop () {
     [ "$SFA_DB_ENABLED" == 1 -o "$SFA_DB_ENABLED" == True ] || return
 
     # not too nice, but.. when co-located with myplc we'll let it start/stop postgresql
-    if [ ! -f /etc/myplc-release ] ; then
+    if [ -f $POSTGRESQL_STARTED ] ; then
 	service postgresql stop >& /dev/null
 	check
 	MESSAGE=$"Stopping PostgreSQL server"
 	echo -n "$MESSAGE"
 	[ "$ERRORS" == 0 ] && success "$MESSAGE" || failure "$MESSAGE" ; echo
+	rm -f $POSTGRESQL_STARTED
     fi
 }
 
