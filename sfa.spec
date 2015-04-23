@@ -1,6 +1,6 @@
 %define name sfa
 %define version 3.1
-%define taglevel 14
+%define taglevel 15
 
 %define release %{taglevel}%{?pldistro:.%{pldistro}}%{?date:.%{date}}
 %global python_sitearch	%( python -c "from distutils.sysconfig import get_python_lib; print get_python_lib(1)" )
@@ -253,6 +253,15 @@ fi
 #[ "$1" -ge "1" ] && service sfa-cm restart || :
 
 %changelog
+* Thu Apr 23 2015 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-3.1-15
+- major rework of the iotlab driver, that uses an IoT-lab REST API
+- and so does not need to interact with LDAP and OAR directly
+- deprecated cortexlab driver altogether
+- cosmetic changes in displaying credentials, rights and certificates
+- for hopefully more readable error messages
+- always start postgresql if not running (ignore /etc/myplc-release)
+- does not need lxc=enter-namespace anymore for make sync
+
 * Thu Apr 09 2015 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - sfa-3.1-14
 - for SSL & python-2.7.9: ignore server verification
 - assume 2.7: remove compat code - always use HTTPSConnection (not HTTPS anymore)
