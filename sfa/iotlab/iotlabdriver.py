@@ -157,7 +157,7 @@ class IotLabDriver(Driver):
         start_time = min([int(lease['start_time'])
                          for lease in leases])
         end_time = max([int(lease['start_time']) +
-                       int(lease['duration'])
+                       int(lease['duration'])*60
                        for lease in leases])
         nodes_list = [Xrn.unescape(Xrn(lease['component_id'].strip(),
                       type='node').get_leaf())
