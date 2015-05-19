@@ -20,6 +20,10 @@ class V2ToV3Adapter:
         elif flavour == "fd":
             from sfa.federica.fddriver import FdDriver
             self.driver = FdDriver(api)
+        #KOREN
+        elif flavour == "openstack":
+            from sfa.openstack.osdriver import OpenstackDriver
+            self.driver = OpenstackDriver(api)
         else:
           logger.error("V2ToV3Adapter: Unknown Flavour !!!\n Supported Flavours: nitos, fd")
          

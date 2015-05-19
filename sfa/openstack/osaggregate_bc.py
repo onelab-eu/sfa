@@ -7,29 +7,23 @@ import time
 from collections import defaultdict
 from sfa.util.faults import SliverDoesNotExist
 from sfa.util.sfatime import utcparse, datetime_to_string, datetime_to_epoch
-from sfa.util.xrn import Xrn, get_leaf, hrn_to_urn
-from sfa.util.sfalogging import logger
-
-# cwkim: It will be changed by KORENv1
 from sfa.rspecs.rspec import RSpec
-from sfa.rspecs.elements.openstack import *
-from sfa.rspecs.version_manager import VersionManager
-
-from sfa.rspecs.elements.node import NodeElement
 from sfa.rspecs.elements.hardware_type import HardwareType
+from sfa.rspecs.elements.node import NodeElement
 from sfa.rspecs.elements.sliver import Sliver
 from sfa.rspecs.elements.login import Login
+from sfa.rspecs.elements.os_glance import DiskImage
 from sfa.rspecs.elements.services import ServicesElement
 from sfa.rspecs.elements.interface import Interface
 from sfa.rspecs.elements.fw_rule import FWRule
-
-from sfa.client.multiclient import MultiClient
-from sfa.openstack.osxrn import OSXrn, hrn_to_os_slicename
-from sfa.openstack.security_group import SecurityGroup
+from sfa.util.xrn import Xrn, get_leaf, hrn_to_urn
 from sfa.planetlab.plxrn import PlXrn 
-
-# for exception
-from novaclient import exceptions
+from sfa.openstack.osxrn import OSXrn, hrn_to_os_slicename
+from sfa.rspecs.version_manager import VersionManager
+from sfa.openstack.security_group import SecurityGroup
+from sfa.client.multiclient import MultiClient
+from sfa.util.sfalogging import logger
+from sfa.storage.model import RegRecord, SliverAllocation
 
 def pubkeys_to_user_data(pubkeys):
     user_data = "#!/bin/bash\n\n"
@@ -42,38 +36,47 @@ def pubkeys_to_user_data(pubkeys):
     return user_data
 
 def os_image_to_rspec_disk_image(image):
-    img = OSImage()
-    img['name']    = image.name
-    img['minDisk'] = str(image.minDisk)
-    img['minRam']  = str(image.minRam)
-    img['imgSize'] = str(image._info['OS-EXT-IMG-SIZE:size'])
-    img['status']  = image.status
+    img = DiskImage()
+    img['name'] = image.name
+    img['minDisk'] = image.minDisk
+    img['minRam'] = image.minRam
+    img['imgSize'] = image._info['OS-EXT-IMG-SIZE:size']
+    img['status'] = image.status   
     return img
-    
+
 class OSAggregate:
 
     def __init__(self, driver):
         self.driver = driver
 
     def get_availability_zones(self, zones=None):
-        # Update inital connection info
+        #KOREN: Reset the connection of admin
         self.driver.init_compute_manager_conn()
-        zone_list=[]
+#        import sfa.openstack.client as os_client
+#        from sfa.util.config import Config as os_config
+#        os_opts = os_client.parse_accrc(os_config().SFA_NOVA_NOVARC)
+#        self.driver.shell.compute_manager.connect( username=os_opts.get('OS_USERNAME'), \
+#                                                   tenant=os_opts.get('OS_TENANT_NAME'),\
+#                                                   password=os_opts.get('OS_PASSWORD') )
+        zone_list = []
         if not zones:
             availability_zones = self.driver.shell.compute_manager.availability_zones.list()
             for zone in availability_zones:
                 if (zone.zoneState.get('available') == True) and \
-                   (zone.zoneName != 'internal'):
-                    zone_list.append(zone.zoneName)
+                                                    (zone.zoneName != 'internal'):
+                    zone_list.append(zone.zoneName)    
+#            zones = ['nova']
         else:
             availability_zones = self.driver.shell.compute_manager.availability_zones.list()
             for a_zone in availability_zones:
                 for i_zone in zones:
-                    if a_zone.zoneName == i_zone: 
+                    if a_zone.zoneName == i_zone:
                         if (a_zone.zoneState.get('available') == True) and \
-                           (a_zone.zoneName != 'internal'):
+                                                              (a_zone.zoneName != 'internal'):
                             zone_list.append(a_zone.zoneName)
         return zone_list
+#            zones = [zone.name for zone in zones]
+#        return zones
 
     def list_resources(self, version=None, options=None):
         if options is None: options={}
@@ -83,71 +86,93 @@ class OSAggregate:
         rspec = RSpec(version=version, user_options=options)
         nodes = self.get_aggregate_nodes()
         rspec.version.add_nodes(nodes)
-        import pdb; pdb.set_trace()
         return rspec.toxml()
 
-    def describe(self, urns, version=None, options=None, sliver_allocation_status=None):
+    def describe(self, urns, version=None, options=None):
         if options is None: options={}
         version_manager = VersionManager()
         version = version_manager.get_version(version)
         rspec_version = version_manager._get_version(version.type, version.version, 'manifest')
-        rspec = RSpec(version=rspec_version, user_options=options)
+        rspec = RSpec(version=rspec_version, user_options=options)        
 
-        # Update connection for the current user
-        xrn = Xrn(urns[0], type='slice')
-        user_name = xrn.get_authority_hrn() + '.' + xrn.leaf.split('-')[0]
-        tenant_name = OSXrn(xrn=urns[0], type='slice').get_hrn()
-        self.driver.shell.compute_manager.connect(username=user_name, tenant=tenant_name, password=user_name)
-
-        # For delay to collect instance info 
+        # Update OpenStack connection info.
+        user_name, tenant_name = self.driver.find_slice_info(slice_urn=urns[0])
+#        slice_hrn = OSXrn(xrn=urns[0], type='slice').get_hrn()
+#        local_slices = self.driver.api.dbsession().query(RegRecord).filter_by(type='slice').all()
+#        for slice in local_slices:
+#            if slice_hrn == slice.os_slice_nm:
+#                tenant_name = slice.os_slice_nm
+#                user_name = slice.os_user_nm
+#                break
+#        else:
+#            xrn = Xrn(urns[0])
+#            tenant_name = slice_hrn
+#            user_name = xrn.get_authority_hrn() + '.' + xrn.leaf.split('-')[0]
+        auth_name, pwd = self.driver.find_user_info(user_name=user_name)
+#        local_users = self.driver.api.dbsession().query(RegRecord).filter_by(type='user').all()
+#        for user in local_users:
+#            if user_name == user.os_user_nm:
+#                pwd = user.os_user_pw
+#                break
+#        else:
+#            pwd = user_name
+        self.driver.shell.compute_manager.connect(username=user_name, tenant=tenant_name, password=pwd)
+#        tenant_name = OSXrn(xrn=urns[0], type='slice').get_tenant_name()
+#        self.driver.shell.compute_manager.connect(username=Xrn(tenant_name).get_leaf(),tenant=tenant_name)
+        # For delay to collect instance info
         time.sleep(3)
-
-        # Get instances from the Openstack
-        instances = self.get_instances(xrn)
-
-        # Add sliver(s) from instance(s)
+        # get instances from internal database
+        instances = self.get_instances(urns)
+        # lookup the sliver allocations using instances
+        sliver_ids = [instance.id for instance in instances]
+        constraint = SliverAllocation.sliver_id.in_(sliver_ids)
+        sliver_allocations = self.driver.api.dbsession().query(SliverAllocation).filter(constraint)
+        sliver_allocation_dict = {}
+        for sliver_allocation in sliver_allocations:
+            sliver_allocation_dict[sliver_allocation.sliver_id] = sliver_allocation
+        
         geni_slivers = []
-        rspec.xml.set( 'expires',  datetime_to_string(utcparse(time.time())) )
+        rspec.xml.set('expires',  datetime_to_string(utcparse(time.time())))
+
+        # add slivers
         rspec_nodes = []
         for instance in instances:
             rspec_nodes.append(self.instance_to_rspec_node(instance))
-            geni_sliver = self.instance_to_geni_sliver(instance, sliver_allocation_status)
+            geni_sliver = self.instance_to_geni_sliver(instance, sliver_allocation_dict)
             geni_slivers.append(geni_sliver)
-        import pdb; pdb.set_trace()
         rspec.version.add_nodes(rspec_nodes)
 
-        result = { 'geni_urn': xrn.get_urn(),
-                   'geni_rspec': rspec.toxml(), 
-                   'geni_slivers': geni_slivers }
+        result = {'geni_urn': Xrn(urns[0]).get_urn(),
+                  'geni_rspec': rspec.toxml(), 
+                  'geni_slivers': geni_slivers}
+        
         return result
 
-    def get_instances(self, xrn):
+    def get_instances(self, urns):
         # parse slice names and sliver ids
         slice_names=[]
         sliver_ids=[]
         instances=[]
-        if xrn.type == 'slice':
-            slice_names.append(xrn.get_hrn())
-        elif xrn.type == 'sliver':
-            #TODO: in case of slivers, we can change it properly
-            import pdb; pdb.set_trace()
-            sliver_ids.append(xrn.leaf)
-        else:
-            print "[WARN] We don't know the xrn[%s]" % xrn.type
-            logger.warn("[WARN] We don't know the xrn[%s], Check it!" % xrn.type)
-            
+        filter={}
+
+        for urn in urns:
+            xrn = OSXrn(xrn=urn)
+            if xrn.type == 'slice':
+                slice_names.append(xrn.get_slicename())
+            elif xrn.type == 'sliver':
+                sliver_ids.append(xrn.leaf) 
+        
         # look up instances
-        try:
-            for slice_name in slice_names:
-                servers = self.driver.shell.compute_manager.servers.findall()
-                instances.extend(servers)
-            for sliver_id in sliver_ids:
-                servers = self.driver.shell.compute_manager.servers.findall()
-                instances.extend(servers)
-        except(exceptions.Unauthorized):
-            print "[WARN] The instance(s) in Openstack is/are not permitted."
-            logger.warn("The instance(s) in Openstack is/are not permitted.")
-        return list( set(instances) )
+        for slice_name in slice_names:
+            filter['name'] = slice_name
+            servers = self.driver.shell.compute_manager.servers.findall(**filter)
+            instances.extend(servers)
+        for sliver_id in sliver_ids:
+            filter['id'] = sliver_id
+            servers = self.driver.shell.compute_manager.servers.findall(**filter)
+            instances.extend(servers)
+        
+        return list(set(instances))
 
     def instance_to_rspec_node(self, instance):
         # determine node urn
@@ -167,18 +192,16 @@ class OSAggregate:
 
         # get sliver details
         flavor = self.driver.shell.compute_manager.flavors.find(id=instance.flavor['id'])
-        import pdb; pdb.set_trace()
-        sliver = self.flavor_to_sliver(flavor)
-#        sliver = self.instance_to_sliver(flavor)
+        sliver = self.instance_to_sliver(flavor)
         # get firewall rules
         fw_rules = []
         group_name = instance.metadata.get('security_groups')
         if group_name:
             group = self.driver.shell.compute_manager.security_groups.find(name=group_name)
             for rule in group.rules:
-                #TODO: This fw_rule is used by plos namespace for now.
-                port_range ="%s:%s" % ( rule['from_port'], rule['to_port'] )
-                if not rule['ip_protocol']:
+                # The fw_rule is used by plos namespace
+                port_range ="%s:%s" % (rule['from_port'], rule['to_port'])
+                if rule['ip_protocol'] is None:
                     rule['ip_protocol'] = 'Any'
                 if not rule['ip_range']:
                     rule['ip_range'] = '0.0.0.0/0'
@@ -186,15 +209,15 @@ class OSAggregate:
                     ip_range = rule['ip_range']
                     for key in ip_range:
                         rule['ip_range'] = ip_range[key]
-                fw_rule = FWRule({ 'protocol': rule['ip_protocol'],
-                                   'port_range': port_range,
-                                   'cidr_ip': rule['ip_range'] })
+                fw_rule = FWRule({'protocol': rule['ip_protocol'],
+                                  'port_range': port_range,
+                                  'cidr_ip': rule['ip_range']})
                 fw_rules.append(fw_rule)
         sliver['fw_rules'] = fw_rules 
         rspec_node['slivers'] = [sliver]
-
-        # get disk image from the Nova service
-        image = self.driver.shell.compute_manager.images.get( image=instance.image['id'] )
+        
+        # get disk image
+        image = self.driver.shell.compute_manager.images.get(image=instance.image['id'])
         if isinstance(image, list) and len(image) > 0:
             image = image[0]
         disk_image = os_image_to_rspec_disk_image(image)
@@ -204,10 +227,11 @@ class OSAggregate:
         rspec_node['services'] = []
         rspec_node['interfaces'] = []
         addresses = instance.addresses
+        
         if addresses.get('private'):
-            login = Login({ 'authentication': 'ssh-keys',
-                            'hostname': addresses.get('private')[-1]['addr'],
-                            'port':'22', 'username': 'root' })
+            login = Login({'authentication': 'ssh-keys',
+                           'hostname': addresses.get('private')[-1]['addr'],
+                           'port':'22', 'username': 'root'})
             service = ServicesElement({'login': login})
             rspec_node['services'].append(service)    
         
@@ -216,58 +240,25 @@ class OSAggregate:
                            interface='node%s' % (instance.hostId)) 
             if_client_id = Xrn(if_xrn.urn, type='interface').urn
             if_sliver_id = Xrn(rspec_node['sliver_id'], type='slice').urn
-            interface = Interface({ 'component_id': if_xrn.urn,
-                                    'client_id': if_client_id,
-                                    'sliver_id': if_sliver_id })
+            interface = Interface({'component_id': if_xrn.urn,
+                                   'client_id': if_client_id,
+                                   'sliver_id': if_sliver_id})
             interface['ipv4'] = private_ip['addr']
-            interface['mac_address'] = private_ip['OS-EXT-IPS-MAC:mac_addr']
-            rspec_node['interfaces'].append(interface)
-
-        """ 
+            interface['mac_address'] = private_ip['OS-EXT-IPS-MAC:mac_addr'] 
+            rspec_node['interfaces'].append(interface) 
+       
         # slivers always provide the ssh service
-        for public_ip in addresses.get('public', []):
-            login = Login({'authentication': 'ssh-keys', 
-                           'hostname': public_ip['addr'], 
-                           'port':'22', 'username': 'root'})
-            service = Services({'login': login})
-            rspec_node['services'].append(service)
-        """
+#        for public_ip in addresses.get('public', []):
+#            login = Login({'authentication': 'ssh-keys', 
+#                           'hostname': public_ip['addr'], 
+#                           'port':'22', 'username': 'root'})
+#            service = Services({'login': login})
+#            rspec_node['services'].append(service)
         return rspec_node
 
-    def flavor_to_sliver(self, flavor, xrn=None):
-        sliver_id = OSXrn(name='koren.sliver', type='node+openstack').get_urn()
-        if xrn:
-            component_id = xrn.urn
-            sliver_id = None 
-        sliver = OSSliver({ 'component_id': component_id,
-                            'sliver_id': sliver_id,
-                            'sliver_type': 'virtual machine',
-                            'flavor': \
-                                     OSFlavor({ 'name': flavor.name,
-                                                'id': flavor.id,
-                                                'vcpus': str(flavor.vcpus),
-                                                'ram': str(flavor.ram),
-                                                'storage': str(flavor.disk)
-                                              }) })
-        return sliver
-    """   
-    def flavor_to_sliver(self, flavor, xrn=None):
-        sliver_id = OSXrn(name=flavor.name, type='sliver', id=flavor.id).get_urn()
-        if xrn:
-            sliver_id = OSXrn(name=xrn.hrn, type='sliver').get_urn()
-        sliver = OSSliver({ 'sliver_id': sliver_id,
-                            'flavors': OSFlavor({
-                                      'name': flavor.name,
-                                      'id': flavor.id,
-                                      'vcpus': str(flavor.vcpus),
-                                      'ram': str(flavor.ram),
-                                      'storage': str(flavor.disk)
-                                      })
-                          })
-        return sliver
-    """ 
+
     def instance_to_sliver(self, instance, xrn=None):
-        sliver_id = OSXrn(name=instance.name, type='sliver', id=instance.id).get_urn()
+        sliver_id = OSXrn(name = instance.name, type  = 'sliver', id=instance.id).get_urn()
         if xrn:
             sliver_hrn = '%s.%s' % (self.driver.hrn, instance.id)
             sliver_id = Xrn(sliver_hrn, type='sliver').urn
@@ -280,76 +271,83 @@ class OSAggregate:
                          'storage':  str(instance.disk)})
         return sliver   
 
-    def instance_to_geni_sliver(self, instance, sliver_allocation_status=None):
+    def instance_to_geni_sliver(self, instance, sliver_allocations=None):
+        if sliver_allocations is None: sliver_allocations={}
         sliver_hrn = '%s.%s' % (self.driver.hrn, instance.id)
         sliver_id = Xrn(sliver_hrn, type='sliver').urn
+        
+        # set sliver allocation and operational status
+        sliver_allocation = sliver_allocations[instance.id]
+        expires = sliver_allocation.expiration
 
-        error = 'None'
-        op_status = 'geni_unknown'
-        if sliver_allocation_status:
-            if sliver_allocation_status == 'geni_allocated':
-                op_status = 'geni_pending_allocation'
-            elif sliver_allocation_status == 'geni_provisioned':
+        error = ''
+        if sliver_allocation:
+            allocation_status = sliver_allocation.allocation_state
+            if allocation_status == 'geni_allocated':
+                op_status =  'geni_pending_allocation'
+            elif allocation_status == 'geni_provisioned':
                 state = instance.status.lower()
                 if state == 'active':
                     op_status = 'geni_ready'
                 elif state == 'build':
-                    op_status = 'geni_not_ready'
+                    op_status = 'geni_notready'
                 elif state == 'error':
-                    op_status = 'geni_failed'
-                    error = "Retry to provisioning them!"
+#                elif state == 'failed':
+                    op_status =' geni_failed'
+                    error = "The sliver(s) is/are in error"
                 else:
                     op_status = 'geni_unknown'
-            elif sliver_allocation_status == 'geni_unallocated':
-                op_status = 'geni_not_ready'
-        else:
-            sliver_allocation_status = 'geni_unknown'
-
+            else:
+                allocation_status = 'geni_unallocated'    
+       
         instance_created_time = datetime_to_epoch(utcparse(instance.created))
-        geni_sliver = { 'geni_sliver_urn': sliver_id, 
-                        'geni_expires': None,
-                        'geni_allocation_status': sliver_allocation_status,
-                        'geni_operational_status': op_status,
-                        'geni_error': error,
-                        'os_sliver_created_time': \
-                            datetime_to_string(utcparse(instance_created_time)),
-                        'os_sliver_type': \
-                            self.driver.shell.compute_manager.flavors.find(id=instance.flavor['id']).name 
-                      }
+        geni_sliver = {'geni_sliver_urn': sliver_id, 
+                       'geni_expires': expires,
+                       'geni_allocation_status': allocation_status,
+                       'geni_operational_status': op_status,
+                       'geni_error': error,
+#                       'geni_error': '',
+                       'koren_os_created_time': datetime_to_string(utcparse(instance_created_time)),
+                       'koren_os_sliver_type': self.driver.shell.compute_manager.flavors.find(id=instance.flavor['id']).name
+                        }
         return geni_sliver
                         
     def get_aggregate_nodes(self):
-        # Get the list of available zones
         zones = self.get_availability_zones()
-        # Get the list of available instance types 
-        flavors = self.driver.shell.compute_manager.flavors.list() 
-        # Get the list of available instance images
+
+        # available sliver/instance/vm types
+        instances = self.driver.shell.compute_manager.flavors.list()
+        if isinstance(instances, dict):
+            instances = instances.values()
+
+        # available images
         images = self.driver.shell.compute_manager.images.list()
-        available_images=[]
+        disk_images = []
         for image in images:
             if ((image.name.find('ramdisk') == -1) and (image.name.find('kernel') == -1)):
-                available_images.append(os_image_to_rspec_disk_image(image))
-       
-        rspec_nodes=[]
+                disk_images.append(os_image_to_rspec_disk_image(image))
+
+        rspec_nodes = []
         for zone in zones:
             rspec_node = NodeElement()
-            xrn = Xrn(self.driver.hrn+'.'+'openstack', type='node')
+            xrn = OSXrn(self.driver.hrn+'.'+zone, type='node')
+#            xrn = OSXrn(zone, type='node')
             rspec_node['component_id'] = xrn.urn
-            rspec_node['component_manager_id'] = Xrn(self.driver.hrn, type='authority+am').get_urn()
+            rspec_node['component_name'] = xrn.name
+            rspec_node['component_manager_id'] = Xrn(self.driver.hrn, 'authority+cm').get_urn()
             rspec_node['exclusive'] = 'false'
-
-            slivers=[]
-            for flavor in flavors:
-                sliver = self.flavor_to_sliver(flavor, xrn)
-                sliver['images'] = available_images
-                sliver['availability_zone'] = zone
-                sliver['security_groups'] = ['default']
+#            rspec_node['hardware_types'] = [HardwareType({'name': 'plos-pc'}),
+#                                                HardwareType({'name': 'pc'})]
+            slivers = []
+            for instance in instances:
+                sliver = self.instance_to_sliver(instance,xrn)
+                sliver['disk_image'] = disk_images
                 slivers.append(sliver)
-            rspec_node['slivers'] = slivers
             rspec_node['available'] = 'true'
-            rspec_nodes.append(rspec_node)
+            rspec_node['slivers'] = slivers
+            rspec_nodes.append(rspec_node) 
 
-        return rspec_nodes
+        return rspec_nodes 
 
     def create_network(self, tenant_id):
         is_network = True
@@ -368,10 +366,9 @@ class OSAggregate:
 #            seg_id = 100
             # create a new network
             n_body = {'network': {'name': 'private', 'tenant_id': tenant_id, 
-#                                  'provider:network_type': 'vlan', 
-#                                  'provider:physical_network': ph_int, 
+#                                  'provider:network_type': 'vlan','provider:physical_network': ph_int, 
 #                                  'provider:segmentation_id': seg_id
-                                 }}  
+                                 }}
             new_net = self.driver.shell.network_manager.create_network(body=n_body)
             net_dict = new_net['network']
             logger.info("Created a network [%s] as below" % net_dict['name'])
@@ -384,17 +381,17 @@ class OSAggregate:
             alloc_start = '10.0.0.10'
             alloc_end = '10.0.0.20'
             # create a new subnet for network
-            sn_body = {'subnets': [{ 'name': 'private-subnet', 'cidr': cidr,
-                                     'tenant_id': tenant_id, 'network_id': network_id,
-                                     'ip_version': 4, 'enable_dhcp': True,
-                                     'gateway_ip': gw_ip, 'dns_nameservers': dns_server_ips,
-                                     'allocation_pools': [{'start': alloc_start, 'end': alloc_end}] }]}
+            sn_body = {'subnets': [{'name': 'private-subnet', 'cidr': cidr, 
+                                    'tenant_id': tenant_id, 'network_id': network_id, 
+                                    'ip_version': 4, 'enable_dhcp': True,
+                                    'gateway_ip': gw_ip, 'dns_nameservers': dns_server_ips,
+                                    'allocation_pools': [{'start': alloc_start, 'end': alloc_end}]}]}
             new_subnet = self.driver.shell.network_manager.create_subnet(body=sn_body)
             logger.info("Created a subnet of network [%s] as below" % net_dict['name'])
             logger.info(new_subnet)
 
         return net_dict
-
+    
     def create_router(self, tenant_id):
         is_router = True
         # checking whether the created router exist
@@ -405,7 +402,7 @@ class OSAggregate:
                 router_id = router.get('id')
                 router = self.driver.shell.network_manager.show_router(router_id)
                 is_router = False
-
+        
         if is_router:
             # find the network information related with a new interface
             networks = self.driver.shell.network_manager.list_networks()
@@ -417,15 +414,14 @@ class OSAggregate:
             subnets = self.driver.shell.network_manager.list_subnets()
             subnets = subnets['subnets']
             for subnet in subnets:
-                if (subnet.get('name') == 'private-subnet') and \
-                   (subnet.get('tenant_id') == tenant_id):
+                if (subnet.get('name') == 'private-subnet') and (subnet.get('tenant_id') == tenant_id):
                     pri_sbnet_id = subnet.get('id')
 
             # create a router and connect external gateway related with public network
             r_body = {'router': {'name': 'router', 'admin_state_up': True,
                                  'external_gateway_info':{'network_id': pub_net_id}}}
             router = self.driver.shell.network_manager.create_router(body=r_body)
-
+            
             # create a internal port of the router
             router_id = router['router']['id']
             int_pt_body = {'subnet_id': pri_sbnet_id}
@@ -443,7 +439,6 @@ class OSAggregate:
             tenant = tenants[0]
         return tenant
 
-
     def create_user(self, user_name, password, tenant_id, email=None, enabled=True):
         if password is None:
             logger.warning("If you want to make a user, you should include your password!!")
@@ -457,10 +452,10 @@ class OSAggregate:
                 break
         else:
             user_info = self.driver.shell.auth_manager.users.create(user_name, password, \
-                                                             email, tenant_id, enabled)
+                                                                    email, tenant_id, enabled)
         return user_info
-    
-    """ NOTUSED: We don't need this function        
+
+    """ KOREN: We don't need this function
     def create_instance_key(self, slice_hrn, user):
         slice_name = Xrn(slice_hrn).leaf
         user_name = Xrn(user['urn']).leaf
@@ -473,11 +468,10 @@ class OSAggregate:
                 self.driver.shell.compute_manager.keypairs.delete(key=existing_key)
             elif existing_key.public_key == pubkey:
                 key_found = True
-
         if not key_found:
             self.driver.shell.compute_manager.keypairs.create(name=key_name, public_key=pubkey)
         return key_name       
-    """    
+    """ 
 
     def create_security_group(self, slicename, fw_rules=None):
         if fw_rules is None: fw_rules=[]
@@ -565,21 +559,33 @@ class OSAggregate:
             server = self.driver.shell.compute_manager.servers.findall(id=server.id)[0]
         return server
 
-    #cwkim
-    def run_instances(self, tenant_name, user_name, rspec, key_name, pubkeys):
-#    def run_instances(self, instance_name, tenant_name, user_name, rspec, expiration, key_name, pubkeys):
+    def run_instances(self, instance_name, tenant_name, user_name, rspec, expiration, key_name, pubkeys):
+        #logger.debug('Reserving an instance: image: %s, flavor: ' \
+        #            '%s, key: %s, name: %s' % \
+        #            (image_id, flavor_id, key_name, slicename))
+        # make sure a tenant exists for this slice
+
         # It'll use Openstack admin info. as authoirty
         zones = self.get_availability_zones()
         zone = zones[0]
-    
-        # add the sfa admin user to this tenant and update our Openstack client connection
+
+        # add the sfa admin user to this tenant and update your OpenStack client connection
         # to use these credentials for the rest of this session. This emsures that the instances
         # we create will be assigned to the correct tenant.
-        self.driver.shell.compute_manager.connect(username=user_name, tenant=tenant_name, password=user_name)
-        self.driver.shell.network_manager.connect(username=user_name, tenant=tenant_name, password=user_name)
-        logger.info( "Checking if the created tenant[%s] or not ..." % tenant_name )
-        tenant = self.driver.shell.auth_manager.tenants.find(name=tenant_name)
+        auth_name, pwd = self.driver.find_user_info(user_name=user_name)
+#        local_users = self.driver.api.dbsession().query(RegRecord).filter_by(type='user').all()
+#        for user in local_users:
+#            if user_name == user.os_user_nm:
+#                pwd = user.os_user_pw
+#                break
+#        else:
+#            pwd = user_name
+        self.driver.shell.compute_manager.connect(username=user_name, tenant=tenant_name, password=pwd)
+        self.driver.shell.network_manager.connect(username=user_name, tenant=tenant_name, password=pwd)
 
+        logger.info("Checking if the created tenant[%s] or not ..." % tenant_name)
+        tenant = self.driver.shell.auth_manager.tenants.find(name=tenant_name)
+        
         if len(pubkeys):
             files = None
         else:
@@ -589,63 +595,53 @@ class OSAggregate:
         router = self.create_router(tenant_id=tenant.id)
         nics=[{'net-id': net_dict['id']}]
 
-        # Iterate over clouds/zones/nodes
+        # iterate over clouds/zones/nodes
+        dbsession=self.driver.api.dbsession()
         slivers = []
         rspec = RSpec(rspec)
         for node in rspec.version.get_nodes_with_slivers():
-            import pdb; pdb.set_trace()
             instances = node.get('slivers', [])
+            if not instances:
+                continue
             for instance in instances:
-                server_name = instance['params']['name']['name']
-                # Check if instance exists or not
-                checksum = self.driver.shell.compute_manager.servers.findall(name=server_name)
-                if len(checksum) != 0:
-                    logger.info("The server[%s] already existed ..." % server_name)
-                    continue
-
                 try: 
-                    flavor_id = self.driver.shell.compute_manager.flavors.find(name=instance['params']['flavor']['name'])
-                    image_id = self.driver.shell.compute_manager.images.find(name=instance['params']['image']['name'])
-                    #TODO: security_groups will be supported as multiple groups.
-                    group_name = [instance['params']['security_groups']['name']]
-#                    metadata = {}
-#                    flavor_id = self.driver.shell.compute_manager.flavors.find(name=instance['name'])
-#                    image = instance.get('disk_image')
-#                    if image and isinstance(image, list):
-#                        image = image[0]
-#                    else:
-#                        raise InvalidRSpec("Must specify a disk_image for each VM")
-#                    image_id = self.driver.shell.compute_manager.images.find(name=image['name'])
-#                    fw_rules = instance.get('fw_rules', [])
-#                    group_name = self.create_security_group(instance_name, fw_rules)
-#                    metadata['security_groups'] = group_name
-#                    if node.get('component_id'):
-#                        metadata['component_id'] = node['component_id']
-#                    if node.get('client_id'):
-#                        metadata['client_id'] = node['client_id']
-
-                    # Create a server for the user
+                    metadata = {}
+                    flavor_id = self.driver.shell.compute_manager.flavors.find(name=instance['name'])
+                    image = instance.get('disk_image')
+                    if image and isinstance(image, list):
+                        image = image[0]
+                    else:
+                        raise InvalidRSpec("Must specify a disk_image for each VM")
+                    image_id = self.driver.shell.compute_manager.images.find(name=image['name'])
+                    fw_rules = instance.get('fw_rules', [])
+                    group_name = self.create_security_group(instance_name, fw_rules)
+                    metadata['security_groups'] = group_name
+                    if node.get('component_id'):
+                        metadata['component_id'] = node['component_id']
+                    if node.get('client_id'):
+                        metadata['client_id'] = node['client_id'] 
+                   
                     server = self.driver.shell.compute_manager.servers.create(
                                                                flavor=flavor_id,
                                                                image=image_id,
                                                                nics=nics,
                                                                availability_zone=zone,
                                                                key_name=key_name,
-                                                               security_groups=group_name,
-                                                               name=server_name)
-#                                                               security_groups=[group_name],
-#                                                               files=files,
-#                                                               meta=metadata, 
-#                                                               name=instance_name)
+                                                               security_groups=[group_name],
+                                                               files=files,
+                                                               meta=metadata, 
+                                                               name=instance_name)
                     server = self.check_server_status(server)
                     slivers.append(server)
-                    logger.info("Created Openstack instance [%s]" % server_name)
+                    SliverAllocation.set_allocates_expires(server, 'geni_allocated', \
+                                                           expiration, dbsession)
+                    logger.info("Created Openstack instance [%s]" % instance_name)
 
-                except Exception, err:
+                except Exception, err:    
                     logger.log_exc(err)
-
-        logger.info("Completed slivers: %s" % slivers)                           
-        return slivers 
+        
+        logger.info("Completed slivers: %s" % slivers)                    
+        return slivers        
 
     def delete_instance(self, instance):
     
@@ -662,17 +658,33 @@ class OSAggregate:
                         instance_deleted = True
                     time.sleep(.5)
                 manager.delete_security_group(security_group)
-
+        
         multiclient = MultiClient()
         tenant = self.driver.shell.auth_manager.tenants.find(id=instance.tenant_id)
-        
-        # Update connection for the current client
-        xrn = Xrn(tenant.name)
-        user_name = xrn.get_authority_hrn() + '.' + xrn.leaf.split('-')[0]
-        self.driver.shell.compute_manager.connect(username=user_name, tenant=tenant.name, password=user_name)
 
-        args = { 'name': instance.name,
-                 'id': instance.id }
+        # Update Openstack connection info.
+        user_name, tenant_name = self.driver.find_slice_info(slice_urn=tenant.name)
+#        local_slices = self.driver.api.dbsession().query(RegRecord).filter_by(type='slice').all()
+#        for slice in local_slices:
+#            if tenant.name == slice.os_slice_nm:
+#                tenant_name = tenant.name       
+#                user_name = slice.os_user_nm
+#                break
+#        else:
+#            slice_xrn = Xrn(hrn_to_urn(tenant.name, 'slice'))
+#            tenant_name = slice_xrn.get_hrn()
+#            user_name = slice_xrn.get_authority_hrn() + '.' + slice_xrn.leaf.split('-')[0]
+        auth_name, pwd = self.driver.find_user_info(user_name=user_name)
+#        local_users = self.driver.api.dbsession().query(RegRecord).filter_by(type='user').all()
+#        for user in local_users:
+#            if user_name == user.os_user_nm:
+#                pwd = user.os_user_pw
+#                break
+#        else:
+#            pwd = user_name
+        self.driver.shell.compute_manager.connect(username=user_name, tenant=tenant_name, password=pwd)
+        args = {'name': instance.name,
+                'id': instance.id}
         instances = self.driver.shell.compute_manager.servers.findall(**args)
         security_group_manager = SecurityGroup(self.driver)
         for instance in instances:
@@ -702,7 +714,7 @@ class OSAggregate:
                 if port_net_id == net_id:
                     sbnet_ids = network.get('subnets')
                     is_router = True
-
+        
         if is_router:
             # remove the router's interface which is related with private network
             if sbnet_ids:
@@ -714,6 +726,7 @@ class OSAggregate:
             # delete the router
             self.driver.shell.network_manager.delete_router(router=router_id)
             logger.info("Deleted the router: Router ID [%s]" % router_id)
+
         return 1
 
     def delete_network(self, tenant_id):
@@ -727,22 +740,35 @@ class OSAggregate:
                 net_id = network.get('id')
                 sbnet_ids = network.get('subnets')
                 is_network = True
-
+                
         time.sleep(5)  # This reason for waiting is that OS can't quickly handle "delete API". 
         if is_network:
             # delete the subnetwork and then finally delete the network related with tenant
             self.driver.shell.network_manager.delete_subnet(subnet=sbnet_ids[0])
             self.driver.shell.network_manager.delete_network(network=net_id)
             logger.info("Deleted the network: Network ID [%s]" % net_id)
+
         return 1
 
     def stop_instances(self, instance_name, tenant_name, id=None):
-        # Update connection for the current client
-        xrn = Xrn(tenant_name)
-        user_name = xrn.get_authority_hrn() + '.' + xrn.leaf.split('-')[0]
-        self.driver.shell.compute_manager.connect(username=user_name, tenant=tenant_name, password=user_name)
-
-        args = { 'name': instance_name }
+        # Update OpenStack connection
+        slices = self.driver.api.dbsession().query(RegRecord).filter_by(type='slice').all()
+        for slice in slices:
+            if tenant_name == slice.os_slice_nm:
+                user_name = slice.os_user_nm
+                break
+        else:
+            slice_xrn = Xrn(hrn_to_urn(tenant_name, 'slice'))
+            user_name = slice_xrn.get_authority_hrn() + '.' + slice_xrn.leaf.split('-')[0]
+        users = self.driver.api.dbsession().query(RegRecord).filter_by(type='user').all()
+        for user in users:
+            if user_name == user.os_user_nm:
+                pwd = user.os_user_pw
+                break
+        else:
+            pwd = user_name
+        self.driver.shell.compute_manager.connect(username=user_name, tenant=tenant_name, password=pwd)
+        args = {'name': instance_name}
         if id:
             args['id'] = id
         instances = self.driver.shell.compute_manager.servers.findall(**args)
@@ -751,12 +777,26 @@ class OSAggregate:
         return 1
 
     def start_instances(self, instance_name, tenant_name, id=None):
-        # Update connection for the current client
-        xrn = Xrn(tenant_name)
-        user_name = xrn.get_authority_hrn() + '.' + xrn.leaf.split('-')[0]
-        self.driver.shell.compute_manager.connect(username=user_name, tenant=tenant_name, password=user_name)
-
-        args = { 'name': instance_name }
+        # Update OpenStack connection
+        user_name, tenant_name = self.driver.find_slice_info(slice_urn=tenant_name)
+#        local_slices = self.driver.api.dbsession().query(RegRecord).filter_by(type='slice').all()
+#        for slice in local_slices:
+#            if tenant_name == slice.os_slice_nm:
+#                user_name = slice.os_user_nm
+#                break
+#        else:
+#            slice_xrn = Xrn(hrn_to_urn(tenant_name, 'slice'))
+#            user_name = slice_xrn.get_authority_hrn() + '.' + slice_xrn.leaf.split('-')[0]
+        auth_name, pwd = self.driver.find_user_info(user_name=user_name)
+#        local_users = self.driver.api.dbsession().query(RegRecord).filter_by(type='user').all()
+#        for user in local_users:
+#            if user_name == user.os_user_nm:
+#                pwd = user.os_user_pw
+#                break
+#        else:
+#            pwd = user_name
+        self.driver.shell.compute_manager.connect(username=user_name, tenant=tenant_name, password=pwd)
+        args = {'name': instance_name}
         if id:
             args['id'] = id
         instances = self.driver.shell.compute_manager.servers.findall(**args)
@@ -765,11 +805,6 @@ class OSAggregate:
         return 1
 
     def restart_instances(self, instacne_name, tenant_name, id=None):
-        # Update connection for the current client
-        xrn = Xrn(tenant_name)
-        user_name = xrn.get_authority_hrn() + '.' + xrn.leaf.split('-')[0]
-        self.driver.shell.compute_manager.connect(username=user_name, tenant=tenant_name, password=user_name)
-
         self.stop_instances(instance_name, tenant_name, id)
         self.start_instances(instance_name, tenant_name, id)
         return 1 

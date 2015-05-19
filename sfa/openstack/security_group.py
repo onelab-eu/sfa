@@ -3,7 +3,7 @@ from sfa.util.sfalogging import logger
 class SecurityGroup:
 
     def __init__(self, driver):
-        self.client = driver.shell.nova_manager
+        self.client = driver.shell.compute_manager
 
         
     def create_security_group(self, name):
@@ -16,7 +16,8 @@ class SecurityGroup:
     def delete_security_group(self, name):
         try:
             security_group = self.client.security_groups.find(name=name)
-            self.client.security_groups.delete(security_group.id)
+            if not security_group.name == 'default':
+                self.client.security_groups.delete(security_group.id)
         except Exception, ex:
             logger.log_exc("Failed to delete security group")
 
