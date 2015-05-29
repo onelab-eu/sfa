@@ -2,7 +2,7 @@ import time
 import datetime
 
 from sfa.util.faults import MissingSfaInfo, UnknownSfaType, \
-    RecordNotFound, SfaNotImplemented, SfaInvalidArgument, UnsupportedOperation
+     RecordNotFound, SfaNotImplemented, SfaInvalidArgument, UnsupportedOperation
 
 from sfa.util.sfalogging import logger
 from sfa.util.defaultdict import defaultdict
@@ -21,7 +21,6 @@ from sfa.managers.driver import Driver
 from sfa.openstack.shell import Shell
 from sfa.openstack.osaggregate import OSAggregate
 from sfa.openstack.osxrn import OSXrn, hrn_to_os_slicename, hrn_to_os_tenant_name
-from sfa.planetlab.plslices import PlSlices
 
 # for exception
 from keystoneclient import exceptions
@@ -33,11 +32,7 @@ def list_to_dict(recs, key):
     """
     return dict( [ (rec[key],rec) for rec in recs ] )
 
-#
-# PlShell is just an xmlrpc serverproxy where methods
-# can be sent as-is; it takes care of authentication
-# from the global config
-# 
+
 class OpenstackDriver(Driver):
 
     # the cache instance is a class member so it survives across incoming requests
