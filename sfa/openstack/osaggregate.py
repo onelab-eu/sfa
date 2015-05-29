@@ -10,23 +10,19 @@ from sfa.util.sfatime import utcparse, datetime_to_string, datetime_to_epoch
 from sfa.util.xrn import Xrn, get_leaf, hrn_to_urn
 from sfa.util.sfalogging import logger
 
-# cwkim: It will be changed by KORENv1
 from sfa.rspecs.rspec import RSpec
 from sfa.rspecs.elements.openstack import *
 from sfa.rspecs.version_manager import VersionManager
-
 from sfa.rspecs.elements.node import NodeElement
+
 from sfa.rspecs.elements.hardware_type import HardwareType
 from sfa.rspecs.elements.sliver import Sliver
 from sfa.rspecs.elements.login import Login
 from sfa.rspecs.elements.services import ServicesElement
-from sfa.rspecs.elements.interface import Interface
-from sfa.rspecs.elements.fw_rule import FWRule
 
 from sfa.client.multiclient import MultiClient
 from sfa.openstack.osxrn import OSXrn, hrn_to_os_slicename
 from sfa.openstack.security_group import SecurityGroup
-from sfa.planetlab.plxrn import PlXrn 
 
 # for exception
 from novaclient import exceptions
@@ -43,11 +39,11 @@ def pubkeys_to_user_data(pubkeys):
 
 def os_image_to_rspec_disk_image(image):
     img = OSImage()
-    img['name']    = image.name
+    img['name']    = str(image.name)
     img['minDisk'] = str(image.minDisk)
     img['minRam']  = str(image.minRam)
     img['imgSize'] = str(image._info['OS-EXT-IMG-SIZE:size'])
-    img['status']  = image.status
+    img['status']  = str(image.status)
     return img
     
 class OSAggregate:
@@ -83,7 +79,6 @@ class OSAggregate:
         rspec = RSpec(version=version, user_options=options)
         nodes = self.get_aggregate_nodes()
         rspec.version.add_nodes(nodes)
-        import pdb; pdb.set_trace()
         return rspec.toxml()
 
     def describe(self, urns, version=None, options=None, sliver_allocation_status=None):
@@ -113,7 +108,6 @@ class OSAggregate:
             rspec_nodes.append(self.instance_to_rspec_node(instance))
             geni_sliver = self.instance_to_geni_sliver(instance, sliver_allocation_status)
             geni_slivers.append(geni_sliver)
-        import pdb; pdb.set_trace()
         rspec.version.add_nodes(rspec_nodes)
 
         result = { 'geni_urn': xrn.get_urn(),
@@ -130,7 +124,7 @@ class OSAggregate:
             slice_names.append(xrn.get_hrn())
         elif xrn.type == 'sliver':
             #TODO: in case of slivers, we can change it properly
-            import pdb; pdb.set_trace()
+            import pdb; #pdb.set_trace()
             sliver_ids.append(xrn.leaf)
         else:
             print "[WARN] We don't know the xrn[%s]" % xrn.type
@@ -153,136 +147,96 @@ class OSAggregate:
         # determine node urn
         node_xrn = instance.metadata.get('component_id')
         if not node_xrn:
-            node_xrn = OSXrn('cloud', type='node')
+            node_xrn = OSXrn(self.driver.hrn+'.'+'openstack', type='node')
         else:
             node_xrn = OSXrn(xrn=node_xrn, type='node')
 
         rspec_node = NodeElement()
+        if not instance.metadata.get('component_manager_id'):
+            rspec_node['component_manager_id'] = Xrn(self.driver.hrn, type='authority+am').get_urn()
+        else:
+            rspec_node['component_manager_id'] = instance.metadata.get('component_manager_id')
         rspec_node['component_id'] = node_xrn.urn
         rspec_node['component_name'] = node_xrn.name
-        rspec_node['component_manager_id'] = Xrn(self.driver.hrn, 'authority+cm').get_urn()
-        rspec_node['sliver_id'] = OSXrn(name=instance.name, type='slice', id=instance.id).get_urn() 
-        if instance.metadata.get('client_id'):
-            rspec_node['client_id'] = instance.metadata.get('client_id')
+        rspec_node['sliver_id'] = OSXrn(name=('koren'+'.'+ instance.name), id=instance.id, \
+                                        type='node+openstack').get_urn()
 
-        # get sliver details
+        # get sliver details about quotas of resource
         flavor = self.driver.shell.compute_manager.flavors.find(id=instance.flavor['id'])
-        import pdb; pdb.set_trace()
-        sliver = self.flavor_to_sliver(flavor)
-#        sliver = self.instance_to_sliver(flavor)
+        sliver = self.flavor_to_sliver(flavor=flavor, instance=instance, xrn=None)
+   
+        # get availability zone
+        zone_name = instance.to_dict().get('OS-EXT-AZ:availability_zone')    
+        sliver['availability_zone'] = OSZone({ 'name': zone_name })
+
         # get firewall rules
-        fw_rules = []
-        group_name = instance.metadata.get('security_groups')
-        if group_name:
-            group = self.driver.shell.compute_manager.security_groups.find(name=group_name)
-            for rule in group.rules:
-                #TODO: This fw_rule is used by plos namespace for now.
-                port_range ="%s:%s" % ( rule['from_port'], rule['to_port'] )
-                if not rule['ip_protocol']:
-                    rule['ip_protocol'] = 'Any'
-                if not rule['ip_range']:
-                    rule['ip_range'] = '0.0.0.0/0'
-                else:
-                    ip_range = rule['ip_range']
-                    for key in ip_range:
-                        rule['ip_range'] = ip_range[key]
-                fw_rule = FWRule({ 'protocol': rule['ip_protocol'],
-                                   'port_range': port_range,
-                                   'cidr_ip': rule['ip_range'] })
-                fw_rules.append(fw_rule)
-        sliver['fw_rules'] = fw_rules 
-        rspec_node['slivers'] = [sliver]
+        group_names = instance.security_groups
+        sec_groups=[]
+        if group_names and isinstance(group_names, list):
+            for group in group_names:
+                group = self.driver.shell.compute_manager.security_groups.find(name=group.get('name'))
+                sec_groups.append(self.secgroup_to_rspec(group))
+        sliver['security_groups'] = sec_groups
 
         # get disk image from the Nova service
-        image = self.driver.shell.compute_manager.images.get( image=instance.image['id'] )
-        if isinstance(image, list) and len(image) > 0:
-            image = image[0]
-        disk_image = os_image_to_rspec_disk_image(image)
-        sliver['disk_image'] = [disk_image]
+        image = self.driver.shell.compute_manager.images.get(image=instance.image['id'])
+        boot_image = os_image_to_rspec_disk_image(image)
+        sliver['boot_image'] = boot_image
+        rspec_node['slivers'] = [sliver]
 
-        # get interfaces            
+        """ TODO: SSH Services
+        # get interfaces
         rspec_node['services'] = []
-        rspec_node['interfaces'] = []
         addresses = instance.addresses
         if addresses.get('private'):
             login = Login({ 'authentication': 'ssh-keys',
-                            'hostname': addresses.get('private')[-1]['addr'],
+                            'hostname': addresses.get('private')[0]['addr'],
                             'port':'22', 'username': 'root' })
             service = ServicesElement({'login': login})
-            rspec_node['services'].append(service)    
-        
-        for private_ip in addresses.get('private', []):
-            if_xrn = PlXrn(auth=self.driver.hrn, 
-                           interface='node%s' % (instance.hostId)) 
-            if_client_id = Xrn(if_xrn.urn, type='interface').urn
-            if_sliver_id = Xrn(rspec_node['sliver_id'], type='slice').urn
-            interface = Interface({ 'component_id': if_xrn.urn,
-                                    'client_id': if_client_id,
-                                    'sliver_id': if_sliver_id })
-            interface['ipv4'] = private_ip['addr']
-            interface['mac_address'] = private_ip['OS-EXT-IPS-MAC:mac_addr']
-            rspec_node['interfaces'].append(interface)
-
-        """ 
-        # slivers always provide the ssh service
-        for public_ip in addresses.get('public', []):
-            login = Login({'authentication': 'ssh-keys', 
-                           'hostname': public_ip['addr'], 
-                           'port':'22', 'username': 'root'})
-            service = Services({'login': login})
             rspec_node['services'].append(service)
         """
         return rspec_node
 
-    def flavor_to_sliver(self, flavor, xrn=None):
-        sliver_id = OSXrn(name='koren.sliver', type='node+openstack').get_urn()
+    def secgroup_to_rspec(self, group):
+        rspec_rules=[]
+        for rule in group.rules:
+            rspec_rule =  OSSecGroupRule({ 'ip_protocol': str(rule['ip_protocol']),
+                                           'from_port': str(rule['from_port']),
+                                           'to_port': str(rule['to_port']),
+                                           'ip_range': str(rule['ip_range'])
+                                         })
+            rspec_rules.append(rspec_rule)
+
+        rspec = OSSecGroup({ 'id': str(group.id),
+                             'name': str(group.name),
+                             'description': str(group.description),
+                             'rules': rspec_rules
+                           })
+        return rspec
+
+    def flavor_to_sliver(self, flavor, instance=None, xrn=None):
         if xrn:
-            component_id = xrn.urn
-            sliver_id = None 
-        sliver = OSSliver({ 'component_id': component_id,
-                            'sliver_id': sliver_id,
+            sliver_id = OSXrn(name='koren.sliver', type='node+openstack').get_urn()
+            sliver_name = None
+        if instance:
+            sliver_id = OSXrn(name=('koren'+'.'+ instance.name), id=instance.id, \
+                              type='node+openstack').get_urn()
+            sliver_name = instance.name
+        sliver = OSSliver({ 'sliver_id': str(sliver_id),
+                            'sliver_name': str(sliver_name),
                             'sliver_type': 'virtual machine',
                             'flavor': \
-                                     OSFlavor({ 'name': flavor.name,
-                                                'id': flavor.id,
+                                     OSFlavor({ 'name': str(flavor.name),
+                                                'id': str(flavor.id),
                                                 'vcpus': str(flavor.vcpus),
                                                 'ram': str(flavor.ram),
                                                 'storage': str(flavor.disk)
                                               }) })
         return sliver
-    """   
-    def flavor_to_sliver(self, flavor, xrn=None):
-        sliver_id = OSXrn(name=flavor.name, type='sliver', id=flavor.id).get_urn()
-        if xrn:
-            sliver_id = OSXrn(name=xrn.hrn, type='sliver').get_urn()
-        sliver = OSSliver({ 'sliver_id': sliver_id,
-                            'flavors': OSFlavor({
-                                      'name': flavor.name,
-                                      'id': flavor.id,
-                                      'vcpus': str(flavor.vcpus),
-                                      'ram': str(flavor.ram),
-                                      'storage': str(flavor.disk)
-                                      })
-                          })
-        return sliver
-    """ 
-    def instance_to_sliver(self, instance, xrn=None):
-        sliver_id = OSXrn(name=instance.name, type='sliver', id=instance.id).get_urn()
-        if xrn:
-            sliver_hrn = '%s.%s' % (self.driver.hrn, instance.id)
-            sliver_id = Xrn(sliver_hrn, type='sliver').urn
-
-        sliver = Sliver({'sliver_id': sliver_id,
-                         'name': instance.name,
-                         'type': instance.name,
-                         'cpus': str(instance.vcpus),
-                         'memory': str(instance.ram),
-                         'storage':  str(instance.disk)})
-        return sliver   
 
     def instance_to_geni_sliver(self, instance, sliver_allocation_status=None):
-        sliver_hrn = '%s.%s' % (self.driver.hrn, instance.id)
-        sliver_id = Xrn(sliver_hrn, type='sliver').urn
+        sliver_id = OSXrn(name=('koren'+'.'+ instance.name), id=instance.id, \
+                          type='node+openstack').get_urn()
 
         error = 'None'
         op_status = 'geni_unknown'
@@ -305,16 +259,12 @@ class OSAggregate:
         else:
             sliver_allocation_status = 'geni_unknown'
 
-        instance_created_time = datetime_to_epoch(utcparse(instance.created))
         geni_sliver = { 'geni_sliver_urn': sliver_id, 
                         'geni_expires': None,
                         'geni_allocation_status': sliver_allocation_status,
                         'geni_operational_status': op_status,
                         'geni_error': error,
-                        'os_sliver_created_time': \
-                            datetime_to_string(utcparse(instance_created_time)),
-                        'os_sliver_type': \
-                            self.driver.shell.compute_manager.flavors.find(id=instance.flavor['id']).name 
+                        'os_sliver_created_time': instance.created
                       }
         return geni_sliver
                         
@@ -329,7 +279,12 @@ class OSAggregate:
         for image in images:
             if ((image.name.find('ramdisk') == -1) and (image.name.find('kernel') == -1)):
                 available_images.append(os_image_to_rspec_disk_image(image))
-       
+      
+        security_groups=[]
+        groups = self.driver.shell.compute_manager.security_groups.list()
+        for group in groups:
+            security_groups.append(self.secgroup_to_rspec(group))
+
         rspec_nodes=[]
         for zone in zones:
             rspec_node = NodeElement()
@@ -340,15 +295,16 @@ class OSAggregate:
 
             slivers=[]
             for flavor in flavors:
-                sliver = self.flavor_to_sliver(flavor, xrn)
+                sliver = self.flavor_to_sliver(flavor=flavor, instance=None, xrn=xrn)
+                sliver['component_id'] = xrn.urn
                 sliver['images'] = available_images
-                sliver['availability_zone'] = zone
-                sliver['security_groups'] = ['default']
+                sliver['availability_zone'] = OSZone({ 'name': zone })
+                sliver['security_groups'] = security_groups
                 slivers.append(sliver)
             rspec_node['slivers'] = slivers
             rspec_node['available'] = 'true'
             rspec_nodes.append(rspec_node)
-
+        
         return rspec_nodes
 
     def create_network(self, tenant_id):
@@ -460,25 +416,6 @@ class OSAggregate:
                                                              email, tenant_id, enabled)
         return user_info
     
-    """ NOTUSED: We don't need this function        
-    def create_instance_key(self, slice_hrn, user):
-        slice_name = Xrn(slice_hrn).leaf
-        user_name = Xrn(user['urn']).leaf
-        key_name = "%s_%s" % (slice_name, user_name)
-        pubkey = user['keys'][0]
-        key_found = False
-        existing_keys = self.driver.shell.compute_manager.keypairs.findall(name=key_name)
-        for existing_key in existing_keys:
-            if existing_key.public_key != pubkey:
-                self.driver.shell.compute_manager.keypairs.delete(key=existing_key)
-            elif existing_key.public_key == pubkey:
-                key_found = True
-
-        if not key_found:
-            self.driver.shell.compute_manager.keypairs.create(name=key_name, public_key=pubkey)
-        return key_name       
-    """    
-
     def create_security_group(self, slicename, fw_rules=None):
         if fw_rules is None: fw_rules=[]
         # use default group by default
@@ -570,7 +507,6 @@ class OSAggregate:
 #    def run_instances(self, instance_name, tenant_name, user_name, rspec, expiration, key_name, pubkeys):
         # It'll use Openstack admin info. as authoirty
         zones = self.get_availability_zones()
-        zone = zones[0]
     
         # add the sfa admin user to this tenant and update our Openstack client connection
         # to use these credentials for the rest of this session. This emsures that the instances
@@ -593,10 +529,9 @@ class OSAggregate:
         slivers = []
         rspec = RSpec(rspec)
         for node in rspec.version.get_nodes_with_slivers():
-            import pdb; pdb.set_trace()
             instances = node.get('slivers', [])
             for instance in instances:
-                server_name = instance['params']['name']['name']
+                server_name = instance['sliver_name']
                 # Check if instance exists or not
                 checksum = self.driver.shell.compute_manager.servers.findall(name=server_name)
                 if len(checksum) != 0:
@@ -604,39 +539,39 @@ class OSAggregate:
                     continue
 
                 try: 
-                    flavor_id = self.driver.shell.compute_manager.flavors.find(name=instance['params']['flavor']['name'])
-                    image_id = self.driver.shell.compute_manager.images.find(name=instance['params']['image']['name'])
-                    #TODO: security_groups will be supported as multiple groups.
-                    group_name = [instance['params']['security_groups']['name']]
-#                    metadata = {}
-#                    flavor_id = self.driver.shell.compute_manager.flavors.find(name=instance['name'])
-#                    image = instance.get('disk_image')
-#                    if image and isinstance(image, list):
-#                        image = image[0]
-#                    else:
-#                        raise InvalidRSpec("Must specify a disk_image for each VM")
-#                    image_id = self.driver.shell.compute_manager.images.find(name=image['name'])
-#                    fw_rules = instance.get('fw_rules', [])
-#                    group_name = self.create_security_group(instance_name, fw_rules)
-#                    metadata['security_groups'] = group_name
-#                    if node.get('component_id'):
-#                        metadata['component_id'] = node['component_id']
-#                    if node.get('client_id'):
-#                        metadata['client_id'] = node['client_id']
+                    flavor = self.driver.shell.compute_manager.flavors.find(name=instance['flavor']['name'])
+                    image = self.driver.shell.compute_manager.images.find(name=instance['boot_image']['name'])
+                    zone_name = instance['availability_zone']['name']
+                    for zone in zones:
+                        if zone == zone_name:
+                            break
+                    else:
+                        logger.warn("The requested zone_name[%s] is invalid ... So it's changed " % zone_name)
+                        zone_name = zone
+
+                    sec_groups = instance['security_groups']
+                    groups=[]
+                    for sec_group in sec_groups:
+                        group_name = sec_group['name']
+                        groups.append(group_name)
+
+                    metadata = {}
+                    if node.get('component_id'):
+                        metadata['component_id'] = node['component_id']
+                    if node.get('component_manager_id'):
+                        metadata['component_manager_id'] = node['component_manager_id']
 
                     # Create a server for the user
                     server = self.driver.shell.compute_manager.servers.create(
-                                                               flavor=flavor_id,
-                                                               image=image_id,
+                                                               flavor=flavor.id,
+                                                               image=image.id,
                                                                nics=nics,
-                                                               availability_zone=zone,
+                                                               availability_zone=zone_name,
                                                                key_name=key_name,
-                                                               security_groups=group_name,
+                                                               security_groups=groups,
+                                                               meta=metadata,
                                                                name=server_name)
-#                                                               security_groups=[group_name],
 #                                                               files=files,
-#                                                               meta=metadata, 
-#                                                               name=instance_name)
                     server = self.check_server_status(server)
                     slivers.append(server)
                     logger.info("Created Openstack instance [%s]" % server_name)
@@ -644,7 +579,6 @@ class OSAggregate:
                 except Exception, err:
                     logger.log_exc(err)
 
-        logger.info("Completed slivers: %s" % slivers)                           
         return slivers 
 
     def delete_instance(self, instance):

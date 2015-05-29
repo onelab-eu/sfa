@@ -9,6 +9,7 @@ class OSSliver(Element):
         'availability_zone',
         'security_groups',
         'flavor',
+        'boot_image',
         'images',
         'tags',
     ]
@@ -33,3 +34,25 @@ class OSImage(Element):
         'imgSize',
         'status',
     ]
+
+class OSZone(Element):
+    fields = [
+        'name',
+    ]
+
+class OSSecGroup(Element):
+    fields = [
+        'id',
+        'name',
+        'description',
+        'rules'
+    ]
+
+class OSSecGroupRule(Element):
+    fields = [
+        'ip_protocol',
+        'from_port',
+        'to_port',
+        'ip_range',
+    ]
+
