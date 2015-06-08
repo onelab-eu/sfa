@@ -14,7 +14,7 @@ class KORENv1(RSpecVersion):
     schema = 'http://www.geni.net/resources/rspec/3/ad.xsd'
     namespace = 'openstack'
     extensions = {
-        'openstack': "http://203.255.254.100:8888/resources/sfa/rspecs/openstack",
+#        'openstack': "http://203.255.254.100:8888/resources/sfa/rspecs/openstack",
 #        'flack': "http://www.protogeni.net/resources/rspec/ext/flack/1",
 #        'planetlab': "http://www.planet-lab.org/resources/sfa/ext/planetlab/1",
 #        'plos': "http://www.planet-lab.org/resources/sfa/ext/plos/1"
@@ -63,7 +63,8 @@ class KORENv1Request(KORENv1):
 class KORENv1Manifest(KORENv1):
     enabled = True
     content_type = 'manifest'
-    schema = 'http://www.geni.net/resources/rspec/3/manifest.xsd'
+    schema = 'http://203.255.254.100:8888/resources/sfa/rspecs/openstack/openstack.xsd'
+#    schema = 'http://www.geni.net/resources/rspec/3/manifest.xsd'
     template = '<rspec type="manifest" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://www.geni.net/resources/rspec/3" xmlns:openstack="http://203.255.254.100:8888/resources/sfa/rspecs/openstack" xsi:schemaLocation="http://www.geni.net/resources/rspec/3/manifest.xsd http://203.255.254.100:8888/resources/sfa/rspecs/openstack/openstack.xsd"/>'
 #    template = '<rspec type="manifest" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://www.geni.net/resources/rspec/3" xmlns:openstack="http://203.255.254.100:8888/resources/sfa/rspecs/openstack/" xmlns:plos="http://www.planet-lab.org/resources/sfa/ext/plos/1" xmlns:flack="http://www.protogeni.net/resources/rspec/ext/flack/1" xmlns:planetlab="http://www.planet-lab.org/resources/sfa/ext/planetlab/1" xmlns:ssh-user="http://www.geni.net/resources/rspec/ext/user/1" xsi:schemaLocation="http://www.geni.net/resources/rspec/3 http://www.geni.net/resources/rspec/3/manifest.xsd http://www.planet-lab.org/resources/sfa/ext/planetlab/1 http://www.planet-lab.org/resources/sfa/ext/planetlab/1/planetlab.xsd http://www.planet-lab.org/resources/sfa/ext/plos/1 http://www.planet-lab.org/resources/sfa/ext/plos/1/plos.xsd http://www.geni.net/resources/rspec/ext/user/1 http://www.geni.net/resources/rspec/ext/user/1/manifest.xsd http://203.255.254.100:8888/resources/sfa/rspecs/openstack/openstack.xsd"/>'
 

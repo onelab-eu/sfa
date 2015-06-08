@@ -15,6 +15,7 @@ from sfa.trust.credential import Credential
 #from sfa.trust.sfaticket import SfaTicket
 from sfa.rspecs.version_manager import VersionManager
 from sfa.rspecs.rspec import RSpec
+from sfa.storage.model import SliverAllocation
 
 # the driver interface, mostly provides default behaviours
 from sfa.managers.driver import Driver
@@ -23,7 +24,8 @@ from sfa.openstack.osaggregate import OSAggregate
 from sfa.openstack.osxrn import OSXrn, hrn_to_os_slicename, hrn_to_os_tenant_name
 
 # for exception
-from keystoneclient import exceptions
+from keystoneclient import exceptions as KeystoneExceptions
+from novaclient import exceptions as NovaExceptions
 
 def list_to_dict(recs, key):
     """
@@ -280,7 +282,7 @@ class OpenstackDriver(Driver):
             try:
                 user = self.shell.auth_manager.users.find(name=hrn)
                 keyname = OSXrn(xrn=hrn, type='user').get_slicename()
-            except(exceptions.NotFound):
+            except(KeystoneExceptions.NotFound):
                 print "This user[%s] isn't exist in Openstack" % hrn
                 logger.warn("The user[%s] isn't exist in Openstack" % hrn)
             if user:
@@ -447,11 +449,10 @@ class OpenstackDriver(Driver):
         rspec =  aggregate.list_resources(version=version, options=options)
         return rspec
 
-    def describe(self, urns, version=None, options=None, sliver_allocation_status=None):
+    def describe(self, urns, version=None, options=None):
         if options is None: options={}
         aggregate = OSAggregate(self)
-        return aggregate.describe(urns, version=version, options=options, \
-                                  sliver_allocation_status=sliver_allocation_status)
+        return aggregate.describe(urns, version=version, options=options)
     
     def status (self, urns, options=None):
         if options is None: options={}
@@ -459,14 +460,99 @@ class OpenstackDriver(Driver):
   
         # TODO: Change to more dynamic
         version_manager = VersionManager()
-        version_dict = {'type':'KOREN', 'version':'3', 'content_type':'manifest'}
+        version_dict = {'type':'KOREN', 'version':'1', 'content_type':'manifest'}
         version = version_manager.get_version(version_dict)
-        sliver_allocation_status = 'geni_allocated/provisioned'
-        desc = aggregate.describe(urns, version=version, options=options, \
-                                  sliver_allocation_status=sliver_allocation_status)
+        desc = aggregate.describe(urns, version=version, options=options)
         status = {'geni_urn': desc['geni_urn'],
                   'geni_slivers': desc['geni_slivers']}
         return status
+
+    def secgroups_with_rules(self, rspec_groups):
+        sec_groups=[]
+        for rspec_group in rspec_groups:
+            rspec_group_name = rspec_group.get('name')
+            try:
+                # Check if the security group exists
+                group = self.shell.compute_manager.security_groups.find(name=rspec_group_name)
+                # Check if the security rules of the group exist 
+                rspec_rules = rspec_group.get('rules')
+                if rspec_rules:
+                    ori_rules = group.rules
+                    for rspec_rule in rspec_rules:
+                        for ori_rule in ori_rules:
+                            if (rspec_rule.get('ip_protocol') == str(ori_rule.get('ip_protocol'))) and \
+                               (rspec_rule.get('from_port') == str(ori_rule.get('from_port'))) and \
+                               (rspec_rule.get('to_port') == str(ori_rule.get('to_port'))) and \
+                               (rspec_rule.get('ip_range') == str(ori_rule.get('ip_range'))):
+                                break
+                        else:
+                            # New security rules of the group
+                            parent_group_id = group.id
+                            if rspec_rule.get('ip_protocol').lower() is 'none':
+                                logger.error("ip_protocol should be one of 'tcp', 'udp' or 'icmp'")
+                                break
+                            else:
+                                ip_protocol = rspec_rule.get('ip_protocol')
+                            if rspec_rule.get('from_port').lower() is 'none':
+                                from_port = 0
+                            elif rspec_rule.get('from_port').lower() is 'any':
+                                from_port = -1
+                            else:
+                                from_port = int(rspec_rule.get('from_port'))
+                            if rspec_rule.get('to_port').lower() is 'none':
+                                to_port = 0
+                            elif rspec_rule.get('to_port').lower() is 'any':
+                                to_port = -1
+                            else:    
+                                to_port = int(rspec_rule.get('to_port'))
+                            if (rspec_rule.get('ip_range') is '{}') or (rspec_rule.get('ip_range') is 'none'):
+                                cidr = None
+                            else:
+                                cidr = rspec_rule.get('ip_range')
+                            self.shell.compute_manager.security_group_rules.create(parent_group_id, \
+                                                                            ip_protocol, from_port, to_port, cidr)
+                    group = self.shell.compute_manager.security_groups.find(id=group.id)
+                    sec_groups.append(group)
+                else:
+                    sec_groups.append(group)
+                        
+            except(NovaExceptions.NotFound):
+                # New security group
+                description = rspec_group.get('description')
+                if not description:
+                    description = None
+                group = self.shell.compute_manager.security_groups.create(name=rspec_group_name, description=description)
+                # New security rules of the group
+                rspec_rules = rspec_group.get('rules')
+                for rspec_rule in rspec_rules:
+                    parent_group_id = group.id
+                    if rspec_rule.get('ip_protocol').lower() is 'none':
+                        logger.error("ip_protocol should be one of 'tcp', 'udp' or 'icmp'")
+                        break
+                    else:
+                        ip_protocol = rspec_rule.get('ip_protocol')
+                    if rspec_rule.get('from_port').lower() is 'none':
+                        from_port = 0
+                    elif rspec_rule.get('from_port').lower() is 'any':
+                        from_port = -1
+                    else:
+                        from_port = int(rspec_rule.get('from_port'))
+                    if rspec_rule.get('to_port').lower() is 'none':
+                        to_port = 0
+                    elif rspec_rule.get('to_port').lower() is 'any':
+                        to_port = -1
+                    else: 
+                        to_port = int(rspec_rule.get('to_port'))
+                    if (rspec_rule.get('ip_range') is '{}') or (rspec_rule.get('ip_range') is 'none'):
+                        cidr = None
+                    else:
+                        cidr = rspec_rule.get('ip_range')
+                    self.shell.compute_manager.security_group_rules.create(parent_group_id, \
+                                                                    ip_protocol, from_port, to_port, cidr)
+                group = self.shell.compute_manager.security_groups.find(id=group.id)
+                sec_groups.append(group)
+                continue
+        return sec_groups
 
     def allocate (self, urn, rspec_string, expiration, options=None):
         if options is None: options={}
@@ -541,9 +627,15 @@ class OpenstackDriver(Driver):
             raise SfaNotImplemented("No handle!")
 
         slivers = aggregate.run_instances(tenant_name, user_name, rspec_string, key_name, pubkeys)
-        sliver_allocation_status = 'geni_allocated'
-        return aggregate.describe(urns=[urn], version=rspec.version, \
-                                  sliver_allocation_status=sliver_allocation_status)
+        # Update sliver allocations
+        for sliver in slivers:
+            component_id = sliver.metadata.get('component_id')
+            sliver_id = OSXrn(name=('koren'+'.'+ sliver.name), id=sliver.id, type='node+openstack').get_urn()
+            record = SliverAllocation( sliver_id=sliver_id,
+                                       component_id=component_id,
+                                       allocation_state='geni_allocated')
+            record.sync(self.api.dbsession())
+        return aggregate.describe(urns=[urn], version=rspec.version)
 
     def provision(self, urns, options=None):
         if options is None: options={}
@@ -560,12 +652,16 @@ class OpenstackDriver(Driver):
         # Allocate new floating IP per the instance
         servers = aggregate.check_floatingip(instances, True)
         aggregate.create_floatingip(tenant_name, servers)
-        
+
+        sliver_ids=[]
+        for instance in instances:
+            sliver_id = OSXrn(name=('koren'+'.'+ instance.name), id=instance.id, type='node+openstack').get_urn()
+            sliver_ids.append(sliver_id)
+        dbsession=self.api.dbsession()
+        SliverAllocation.set_allocations(sliver_ids, 'geni_provisioned', dbsession)
         version_manager = VersionManager()
         rspec_version = version_manager.get_version(options['geni_rspec_version'])
-        sliver_allocation_status = 'geni_provisioned'
-        return self.describe(urns, rspec_version, options=options, \
-                             sliver_allocation_status=sliver_allocation_status) 
+        return self.describe(urns, rspec_version, options=options)
 
     def delete(self, urns, options=None):
         if options is None: options={}
@@ -587,26 +683,29 @@ class OpenstackDriver(Driver):
         sliver_ids = []
         id_set = set()
         for instance in instances:
-            sliver_hrn = "%s.%s" % (self.hrn, instance.id)
-            sliver_ids.append(Xrn(sliver_hrn, type='sliver').urn)
+            sliver_id = OSXrn(name=('koren'+'.'+ instance.name), id=instance.id, type='node+openstack').get_urn()
+            sliver_ids.append(sliver_id)
             # delete the instance related with requested tenant
             aggregate.delete_instance(instance)
             id_set.add(instance.tenant_id)       
 
         tenant_ids = list(id_set)
         for tenant_id in tenant_ids:
-            # delete both the router(s) and interfaces related with requested tenant
+            # Delete both the router(s) and interfaces related with requested tenant
             aggregate.delete_router(tenant_id=tenant_id)
-            # delete both the network and subnet related with requested tenant
+            # Delete both the network and subnet related with requested tenant
             aggregate.delete_network(tenant_id=tenant_id)
 
-        sliver_allocation_status = 'geni_unallocated' 
-        # return geni_slivers
+        # Delete sliver allocation states
+        dbsession=self.api.dbsession()
+        SliverAllocation.delete_allocations(sliver_ids, dbsession)
+
+        # Return geni_slivers
         geni_slivers = []
         for sliver_id in sliver_ids:
             geni_slivers.append(
                 { 'geni_sliver_urn': sliver_id,
-                  'geni_allocation_status': sliver_allocation_status,
+                  'geni_allocation_status': 'geni_unallocated',
 #                  'geni_expires': datetime_to_string(utcparse(time.time())) })
                   'geni_expires': None })
         return geni_slivers

@@ -9,6 +9,7 @@ from sfa.util.faults import SliverDoesNotExist
 from sfa.util.sfatime import utcparse, datetime_to_string, datetime_to_epoch
 from sfa.util.xrn import Xrn, get_leaf, hrn_to_urn
 from sfa.util.sfalogging import logger
+from sfa.storage.model import SliverAllocation
 
 from sfa.rspecs.rspec import RSpec
 from sfa.rspecs.elements.openstack import *
@@ -81,7 +82,7 @@ class OSAggregate:
         rspec.version.add_nodes(nodes)
         return rspec.toxml()
 
-    def describe(self, urns, version=None, options=None, sliver_allocation_status=None):
+    def describe(self, urns, version=None, options=None):
         if options is None: options={}
         version_manager = VersionManager()
         version = version_manager.get_version(version)
@@ -96,7 +97,6 @@ class OSAggregate:
 
         # For delay to collect instance info 
         time.sleep(3)
-
         # Get instances from the Openstack
         instances = self.get_instances(xrn)
 
@@ -106,7 +106,7 @@ class OSAggregate:
         rspec_nodes = []
         for instance in instances:
             rspec_nodes.append(self.instance_to_rspec_node(instance))
-            geni_sliver = self.instance_to_geni_sliver(instance, sliver_allocation_status)
+            geni_sliver = self.instance_to_geni_sliver(instance)
             geni_slivers.append(geni_sliver)
         rspec.version.add_nodes(rspec_nodes)
 
@@ -122,10 +122,6 @@ class OSAggregate:
         instances=[]
         if xrn.type == 'slice':
             slice_names.append(xrn.get_hrn())
-        elif xrn.type == 'sliver':
-            #TODO: in case of slivers, we can change it properly
-            import pdb; #pdb.set_trace()
-            sliver_ids.append(xrn.leaf)
         else:
             print "[WARN] We don't know the xrn[%s]" % xrn.type
             logger.warn("[WARN] We don't know the xrn[%s], Check it!" % xrn.type)
@@ -171,30 +167,37 @@ class OSAggregate:
 
         # get firewall rules
         group_names = instance.security_groups
-        sec_groups=[]
+        sliver['security_groups']=[]
         if group_names and isinstance(group_names, list):
             for group in group_names:
                 group = self.driver.shell.compute_manager.security_groups.find(name=group.get('name'))
-                sec_groups.append(self.secgroup_to_rspec(group))
-        sliver['security_groups'] = sec_groups
+                sliver['security_groups'].append(self.secgroup_to_rspec(group))
 
         # get disk image from the Nova service
         image = self.driver.shell.compute_manager.images.get(image=instance.image['id'])
         boot_image = os_image_to_rspec_disk_image(image)
         sliver['boot_image'] = boot_image
-        rspec_node['slivers'] = [sliver]
 
-        """ TODO: SSH Services
-        # get interfaces
-        rspec_node['services'] = []
+        # Get addresses of the sliver
+        sliver['addresses']=[]
         addresses = instance.addresses
-        if addresses.get('private'):
-            login = Login({ 'authentication': 'ssh-keys',
-                            'hostname': addresses.get('private')[0]['addr'],
-                            'port':'22', 'username': 'root' })
-            service = ServicesElement({'login': login})
-            rspec_node['services'].append(service)
-        """
+        if addresses:
+            from netaddr import IPAddress
+            for addr in addresses.get('private'):
+                fields = OSSliverAddr({ 'mac_address': addr.get('OS-EXT-IPS-MAC:mac_addr'),
+                                        'version': str(addr.get('version')),
+                                        'address': addr.get('addr'),
+                                        'type': addr.get('OS-EXT-IPS:type') })
+                # Check if ip address is local
+                ipaddr = IPAddress(addr.get('addr'))
+                if (ipaddr.words[0] == 10) or (ipaddr.words[0] == 172 and ipaddr.words[1] == 16) or \
+                   (ipaddr.words[0] == 192 and ipaddr.words[1] == 168):
+                    type = { 'private': fields }
+                else:
+                    type = { 'public': fields }
+                sliver['addresses'].append(type)
+
+        rspec_node['slivers'] = [sliver]
         return rspec_node
 
     def secgroup_to_rspec(self, group):
@@ -234,9 +237,13 @@ class OSAggregate:
                                               }) })
         return sliver
 
-    def instance_to_geni_sliver(self, instance, sliver_allocation_status=None):
+    def instance_to_geni_sliver(self, instance):
         sliver_id = OSXrn(name=('koren'+'.'+ instance.name), id=instance.id, \
                           type='node+openstack').get_urn()
+
+        constraint = SliverAllocation.sliver_id.in_([sliver_id])
+        sliver_allocations = self.driver.api.dbsession().query(SliverAllocation).filter(constraint)
+        sliver_allocation_status = sliver_allocations[0].allocation_state
 
         error = 'None'
         op_status = 'geni_unknown'
@@ -502,9 +509,7 @@ class OSAggregate:
             server = self.driver.shell.compute_manager.servers.findall(id=server.id)[0]
         return server
 
-    #cwkim
     def run_instances(self, tenant_name, user_name, rspec, key_name, pubkeys):
-#    def run_instances(self, instance_name, tenant_name, user_name, rspec, expiration, key_name, pubkeys):
         # It'll use Openstack admin info. as authoirty
         zones = self.get_availability_zones()
     
@@ -533,9 +538,11 @@ class OSAggregate:
             for instance in instances:
                 server_name = instance['sliver_name']
                 # Check if instance exists or not
-                checksum = self.driver.shell.compute_manager.servers.findall(name=server_name)
-                if len(checksum) != 0:
-                    logger.info("The server[%s] already existed ..." % server_name)
+                servers = self.driver.shell.compute_manager.servers.findall(name=server_name)
+                if len(servers) != 0:
+                    for server in servers:
+                        slivers.append(server)
+                        logger.info("The server[%s] already existed ..." % server.name)
                     continue
 
                 try: 
@@ -549,11 +556,9 @@ class OSAggregate:
                         logger.warn("The requested zone_name[%s] is invalid ... So it's changed " % zone_name)
                         zone_name = zone
 
-                    sec_groups = instance['security_groups']
-                    groups=[]
-                    for sec_group in sec_groups:
-                        group_name = sec_group['name']
-                        groups.append(group_name)
+                    group_names=[]   
+                    for sec_group in self.driver.secgroups_with_rules(instance['security_groups']):
+                        group_names.append(sec_group.name)
 
                     metadata = {}
                     if node.get('component_id'):
@@ -568,7 +573,7 @@ class OSAggregate:
                                                                nics=nics,
                                                                availability_zone=zone_name,
                                                                key_name=key_name,
-                                                               security_groups=groups,
+                                                               security_groups=group_names,
                                                                meta=metadata,
                                                                name=server_name)
 #                                                               files=files,
