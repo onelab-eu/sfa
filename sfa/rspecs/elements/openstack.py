@@ -11,6 +11,7 @@ class OSSliver(Element):
         'flavor',
         'boot_image',
         'images',
+        'addresses',
         'tags',
     ]
 
@@ -56,3 +57,10 @@ class OSSecGroupRule(Element):
         'ip_range',
     ]
 
+class OSSliverAddr(Element):
+    fields = [
+        'mac_address',
+        'version',
+        'address',
+        'type',
+    ]

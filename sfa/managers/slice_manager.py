@@ -302,7 +302,9 @@ class SliceManager:
             multiclient.run(_Provision, aggregate, server, xrn, [cred], options)
 
         results = multiclient.get_results()
-        manifest_version = version_manager._get_version('GENI', '3', 'manifest')
+        # Set the manifest of KOREN
+        manifest_version = version_manager._get_version('KOREN', '1', 'manifest')
+#        manifest_version = version_manager._get_version('GENI', '3', 'manifest')
         result_rspec = RSpec(version=manifest_version)
         geni_slivers = []
         geni_urn  = None  

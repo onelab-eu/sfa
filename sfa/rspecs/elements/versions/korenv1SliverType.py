@@ -56,6 +56,18 @@ class Korenv1SliverType:
                         flavor_sliver_elem.add_instance('{%s}image' % xml.namespaces['openstack'], \
                                                         image, OSImage.fields)
 
+            addresses = sliver['addresses']
+            if addresses and isinstance(addresses, list):
+                for address in addresses:
+                    # Check if the type of the address
+                    if address.get('private'):
+                        sliver_elem.add_instance('{%s}address' % xml.namespaces['openstack'], \
+                                                 address.get('private'), OSSliverAddr.fields)
+                    elif address.get('public'):
+                        sliver_elem.add_instance('{%s}address' % xml.namespaces['openstack'], \
+                                                 address.get('public'), OSSliverAddr.fields)
+
+                        
     @staticmethod
     def get_os_slivers(xml, filter=None):
         if filter is None: filter={}
@@ -64,7 +76,7 @@ class Korenv1SliverType:
         slivers = []
         for sliver_elem in sliver_elems:
             sliver = OSSliver(sliver_elem.attrib, sliver_elem)
-            # cwkim: Get the information of the requested sliver
+            # Get the information of the requested sliver
             sliver_with_fields = Korenv1SliverType.get_os_sliver_attributes(sliver_elem)
             for k,v in sliver.items():
                 if sliver[k] == None:
@@ -81,6 +93,7 @@ class Korenv1SliverType:
         c = 0
         for sliver_attrib_elem in sliver_attrib_elems:
             tag = sliver_attrib_elem.tag.split('}')[-1]
+
             if tag == 'availability_zone':
                 sliver['availability_zone'] = OSZone(sliver_attrib_elem.attrib, sliver_attrib_elem)
 
@@ -100,6 +113,10 @@ class Korenv1SliverType:
                 sub_tags = sliver_attrib_elem.xpath('./openstack:image')
                 if sub_tags and isinstance(sub_tags, list):
                     sliver['boot_image'] = OSImage(sub_tags[0].attrib, sub_tags[0])
+            
+            elif tag == 'address':
+                pass
+
             else:
-               logger.error("Not supported Openstack tag...") 
+               logger.error("You should include essential information of Openstack sliver") 
         return sliver
