@@ -464,8 +464,11 @@ class Sfi:
                               help="call Resolve without the 'details' option")
         if canonical in ("resources", "describe"):
             # rspec version
-            parser.add_option("-r", "--rspec-version", dest="rspec_version", default="GENI 3",
+            # Set the KOREN type by inserting static configuration
+            parser.add_option("-r", "--rspec-version", dest="rspec_version", default="KOREN 1",
                               help="schema type and version of resulting RSpec")
+#            parser.add_option("-r", "--rspec-version", dest="rspec_version", default="GENI 3",
+#                              help="schema type and version of resulting RSpec")
             # disable/enable cached rspecs
             parser.add_option("-c", "--current", dest="current", default=False,
                               action="store_true",  
@@ -1337,7 +1340,9 @@ use this if you mean an authority instead""")
 
         # set the requtested rspec version
         version_manager = VersionManager()
-        rspec_version = version_manager._get_version('geni', '3').to_dict()
+        # Set the KOREN type by inserting static configuration
+        rspec_version = version_manager._get_version('koren', 1).to_dict()
+#        rspec_version = version_manager._get_version('geni', '3').to_dict()
         api_options['geni_rspec_version'] = rspec_version
 
         # users

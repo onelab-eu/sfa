@@ -1,30 +1,41 @@
 from sfa.generic import Generic
 
-import sfa.server.sfaapi
-import sfa.openstack.nova_driver
-import sfa.managers.registry_manager_openstack
-import sfa.managers.aggregate_manager
-import sfa.managers.slice_manager
-
-# use pl as a model so we only redefine what's different
-from sfa.generic.pl import pl
-
-class openstack (pl):
+class openstack (Generic):
     
     # the importer class
     def importer_class (self): 
         import sfa.importer.openstackimporter
         return sfa.importer.openstackimporter.OpenstackImporter
-        
+    
+    # use the standard api class
+    def api_class (self):
+       import sfa.server.sfaapi
+       return sfa.server.sfaapi.SfaApi
+
     # the manager classes for the server-side services
     def registry_manager_class (self) : 
+        import sfa.managers.registry_manager_openstack
         return sfa.managers.registry_manager_openstack.RegistryManager
+    def slicemgr_manager_class (self) :
+        import sfa.managers.slice_manager
+        return sfa.managers.slice_manager.SliceManager
     def aggregate_manager_class (self) :
+        import sfa.managers.aggregate_manager
         return sfa.managers.aggregate_manager.AggregateManager
 
     # driver class for server-side services, talk to the whole testbed
     def driver_class (self):
-        return sfa.openstack.nova_driver.NovaDriver
+        import sfa.openstack.osdriver
+        return sfa.openstack.osdriver.OpenstackDriver
 
-
-
+    # for the component mode, to be run on board KOREN nodes
+    # manager class
+    def component_manager_class (self):
+        # import sfa.managers
+        # return sfa.managers.component_manager_default
+        return None
+    # driver_class
+    def component_driver_class (self):
+        #import sfa.planetlab.plcomponentdriver
+        #return sfa.planetlab.plcomponentdriver.PlComponentDriver
+        return None

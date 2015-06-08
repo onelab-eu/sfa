@@ -18,7 +18,9 @@ from sfa.trust.certificate import Certificate, Keypair, convert_public_key
 from sfa.trust.gid import create_uuid
 
 from sfa.storage.model import make_record,RegRecord
-from sfa.storage.alchemy import dbsession
+#from sfa.storage.alchemy import dbsession
+from sfa.storage.alchemy import global_dbsession
+dbsession = global_dbsession
 
 from sfa.managers.registry_manager import RegistryManager
 
@@ -47,9 +49,9 @@ class RegistryManager(RegistryManager):
         # verify_cancreate_credential requires that the member lists
         # (researchers, pis, etc) be filled in
         logger.debug("get credential before augment dict, keys=%s"%record.__dict__.keys())
-        self.driver.augment_records_with_testbed_info (record.__dict__)
+        api.driver.augment_records_with_testbed_info (record.__dict__)
         logger.debug("get credential after augment dict, keys=%s"%record.__dict__.keys())
-        if not self.driver.is_enabled (record.__dict__):
+        if not api.driver.is_enabled (record.__dict__):
               raise AccountNotEnabled(": PlanetLab account %s is not enabled. Please contact your site PI" %(record.email))
     
         # get the callers gid
@@ -69,7 +71,7 @@ class RegistryManager(RegistryManager):
             caller_gid = GID(string=caller_record.gid) 
         
         object_hrn = record.get_gid_object().get_hrn()
-        rights = api.auth.determine_user_rights(caller_hrn, record.todict())
+        rights = api.auth.determine_user_rights(caller_hrn, record)
         # make sure caller has rights to this object
         if rights.is_empty():
             raise PermissionError(caller_hrn + " has no rights to " + record.hrn)
@@ -93,26 +95,3 @@ class RegistryManager(RegistryManager):
         new_cred.sign()
     
         return new_cred.save_to_string(save_parents=True)
-    
-    
-    # subject_record describes the subject of the relationships
-    # ref_record contains the target values for the various relationships we need to manage
-    # (to begin with, this is just the slice x person relationship)
-    def update_relations (self, subject_obj, ref_obj):
-        type=subject_obj.type
-        if type=='slice':
-            self.update_relation(subject_obj, 'researcher', ref_obj.researcher, 'user')
-        
-    # field_key is the name of one field in the record, typically 'researcher' for a 'slice' record
-    # hrns is the list of hrns that should be linked to the subject from now on
-    # target_type would be e.g. 'user' in the 'slice' x 'researcher' example
-    def update_relation (self, record_obj, field_key, hrns, target_type):
-        # locate the linked objects in our db
-        subject_type=record_obj.type
-        subject_id=record_obj.pointer
-        # get the 'pointer' field of all matching records
-        link_id_tuples = dbsession.query(RegRecord.pointer).filter_by(type=target_type).filter(RegRecord.hrn.in_(hrns)).all()
-        # sqlalchemy returns named tuples for columns
-        link_ids = [ tuple.pointer for tuple in link_id_tuples ]
-        self.driver.update_relation (subject_type, target_type, subject_id, link_ids)
-

@@ -373,8 +373,8 @@ class AggregateCommands(Commands):
         pprinter.pprint(status)
  
     @add_options('-r', '--rspec-version', dest='rspec_version', metavar='<rspec_version>', 
-                 default='GENI', help='version/format of the resulting rspec response')  
-    def resources(self, rspec_version='GENI'):
+                 default='KOREN', help='version/format of the resulting rspec response')  
+    def resources(self, rspec_version='KOREN'):
         """Display the available resources at an aggregate"""  
         options = {'geni_rspec_version': rspec_version}
         print options
@@ -390,7 +390,8 @@ class AggregateCommands(Commands):
         slice_urn=xrn.get_urn()
         rspec_string = open(rspec).read()
         options={}
-        manifest = self.api.manager.Allocate(self.api, slice_urn, [], rspec_string, options)
+        expiration = None
+        manifest = self.api.manager.Allocate(self.api, slice_urn, [], rspec_string, expiration, options)
         print manifest
 
 
@@ -399,8 +400,8 @@ class AggregateCommands(Commands):
         """Provision slivers"""
         xrn = Xrn(xrn, 'slice')
         slice_urn=xrn.get_urn()
-        options={}
-        manifest = self.api.manager.provision(self.api, [slice_urn], [], options)
+        options = {'geni_rspec_version': 'KOREN'}
+        manifest = self.api.manager.Provision(self.api, [slice_urn], [], options)
         print manifest
 
 

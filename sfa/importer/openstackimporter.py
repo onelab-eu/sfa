@@ -7,7 +7,7 @@ from sfa.trust.certificate import convert_public_key, Keypair
 # using global alchemy.session() here is fine 
 # as importer is on standalone one-shot process
 from sfa.storage.alchemy import global_dbsession
-from sfa.storage.model import RegRecord, RegAuthority, RegUser, RegSlice, RegNode
+from sfa.storage.model import RegRecord, RegAuthority, RegUser, RegSlice
 from sfa.openstack.osxrn import OSXrn
 from sfa.openstack.shell import Shell    
 
@@ -32,10 +32,10 @@ class OpenstackImporter:
     def __init__ (self, auth_hierarchy, logger):
         self.auth_hierarchy = auth_hierarchy
         self.logger=logger
-        self.config = Config ()
+        self.config = Config()
         self.interface_hrn = self.config.SFA_INTERFACE_HRN
         self.root_auth = self.config.SFA_REGISTRY_ROOT_AUTH
-        self.shell = Shell (self.config)
+        self.shell = Shell(self.config)
 
     def add_options (self, parser):
         self.logger.debug ("OpenstackImporter: no options yet")
@@ -50,14 +50,21 @@ class OpenstackImporter:
         user_keys = {}
         for user in users:
             auth_hrn = self.config.SFA_INTERFACE_HRN
-            if user.tenantId is not None:
-                tenant = self.shell.auth_manager.tenants.find(id=user.tenantId)
+            try:
+                user_tenantId = user.tenantId
+                user_email = user.email
+            except AttributeError, e:
+                user_tenantId = None
+                user_email = None
+
+            if user_tenantId is not None:
+                tenant = self.shell.auth_manager.tenants.find(id=user_tenantId)
                 auth_hrn = OSXrn(name=tenant.name, auth=self.config.SFA_INTERFACE_HRN, type='authority').get_hrn()
             hrn = OSXrn(name=user.name, auth=auth_hrn, type='user').get_hrn()
             users_dict[hrn] = user
             old_keys = old_user_keys.get(hrn, [])
             keyname = OSXrn(xrn=hrn, type='user').get_slicename()
-            keys = [k.public_key for k in self.shell.nova_manager.keypairs.findall(name=keyname)]
+            keys = [k.public_key for k in self.shell.compute_manager.keypairs.findall(name=keyname)]
             user_keys[hrn] = keys
             update_record = False
             if old_keys != keys:
@@ -65,7 +72,6 @@ class OpenstackImporter:
             if hrn not in existing_hrns or \
                    (hrn, 'user') not in existing_records or update_record:
                 urn = OSXrn(xrn=hrn, type='user').get_urn()
-
                 if keys:
                     try:
                         pkey = convert_public_key(keys[0])
@@ -75,16 +81,14 @@ class OpenstackImporter:
                 else:
                     self.logger.warn("OpenstackImporter: person %s does not have a PL public key"%hrn)
                     pkey = Keypair(create=True)
-                user_gid = self.auth_hierarchy.create_gid(urn, create_uuid(), pkey, email=user.email)
-                user_record = RegUser ()
-                user_record.type='user'
-                user_record.hrn=hrn
-                user_record.gid=user_gid
-                user_record.authority=get_authority(hrn)
+                user_gid = self.auth_hierarchy.create_gid(urn, create_uuid(), pkey, email=user_email)
+                user_record = RegUser(type='user', 
+                                      hrn=hrn, 
+                                      gid=user_gid, 
+                                      authority=get_authority(hrn))
                 global_dbsession.add(user_record)
                 global_dbsession.commit()
-                self.logger.info("OpenstackImporter: imported person %s" % user_record)   
-
+                self.logger.info("OpenstackImporter: imported person %s" % user_record)
         return users_dict, user_keys
 
     def import_tenants(self, existing_hrns, existing_records):
@@ -98,38 +102,36 @@ class OpenstackImporter:
             hrn = self.config.SFA_INTERFACE_HRN + '.' + tenant.name
             tenants_dict[hrn] = tenant
             authority_hrn = OSXrn(xrn=hrn, type='authority').get_authority_hrn()
-
+        
             if hrn in existing_hrns:
                 continue
 
             if authority_hrn == self.config.SFA_INTERFACE_HRN:
                 # import group/site
-                record = RegAuthority()
                 urn = OSXrn(xrn=hrn, type='authority').get_urn()
                 if not self.auth_hierarchy.auth_exists(urn):
                     self.auth_hierarchy.create_auth(urn)
                 auth_info = self.auth_hierarchy.get_auth_info(urn)
                 gid = auth_info.get_gid_object()
-                record.type='authority'
-                record.hrn=hrn
-                record.gid=gid
-                record.authority=get_authority(hrn)
-                global_dbsession.add(record)
+                auth_record = RegAuthority(type='authority',
+                                           hrn=hrn,
+                                           gid=gid,
+                                           authority=get_authority(hrn))
+                global_dbsession.add(auth_record)
                 global_dbsession.commit()
-                self.logger.info("OpenstackImporter: imported authority: %s" % record)
+                self.logger.info("OpenstackImporter: imported authority: %s" % auth_record)
 
             else:
-                record = RegSlice ()
                 urn = OSXrn(xrn=hrn, type='slice').get_urn()
                 pkey = Keypair(create=True)
                 gid = self.auth_hierarchy.create_gid(urn, create_uuid(), pkey)
-                record.type='slice'
-                record.hrn=hrn
-                record.gid=gid
-                record.authority=get_authority(hrn)
-                global_dbsession.add(record)
+                slice_record = RegSlice(type='slice',
+                                        hrn=hrn,
+                                        gid=gid,
+                                        authority=get_authority(hrn))
+                global_dbsession.add(slice_record)
                 global_dbsession.commit()
-                self.logger.info("OpenstackImporter: imported slice: %s" % record) 
+                self.logger.info("OpenstackImporter: imported slice: %s" % slice_record) 
 
         return tenants_dict
 
@@ -142,13 +144,12 @@ class OpenstackImporter:
         existing_hrns = []
         key_ids = []
         for record in global_dbsession.query(RegRecord):
-            existing_records[ (record.hrn, record.type,) ] = record
+            existing_records[ (record.hrn, record.type) ] = record
             existing_hrns.append(record.hrn) 
-            
 
         tenants_dict = self.import_tenants(existing_hrns, existing_records)
         users_dict, user_keys = self.import_users(existing_hrns, existing_records)
-                
+      
         # remove stale records    
         system_records = [self.interface_hrn, self.root_auth, self.interface_hrn + '.slicemanager']
         for (record_hrn, type) in existing_records.keys():

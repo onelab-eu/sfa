@@ -1,4 +1,3 @@
-from nova.exception import ImageNotFound
 from sfa.rspecs.elements.disk_image import DiskImage
 
 
@@ -62,13 +61,8 @@ class ImageManager:
         Look up a image bundle using the specifeid id or name
         """
         disk_image = None
-        try:
-            if id:
-                image = self.driver.shell.nova_manager.images.find(id=id)
-            elif name:
-                image = self.driver.shell.nova_manager.images.find(name=name)
-        except ImageNotFound:
-                pass
+        if id:
+            image = self.driver.shell.compute_manager.images.find(id=id)
+        elif name:
+            image = self.driver.shell.compute_manager.images.find(name=name)
         return Image(image)
-
-    
