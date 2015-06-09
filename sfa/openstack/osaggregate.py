@@ -24,6 +24,7 @@ from sfa.rspecs.elements.services import ServicesElement
 from sfa.client.multiclient import MultiClient
 from sfa.openstack.osxrn import OSXrn, hrn_to_os_slicename
 from sfa.openstack.security_group import SecurityGroup
+from sfa.openstack.osconfig import OSConfig
 
 # for exception
 from novaclient import exceptions
@@ -327,30 +328,53 @@ class OSAggregate:
 
         time.sleep(5)  # This reason for waiting is that OS can't quickly handle "create API". 
         if is_network:
-#            ph_int = 'ph-eth1'
-#            seg_id = 100
+            config = OSConfig()
+            # Check type of tenant network in Openstack
+            type = config.get('network', 'type').lower()
+            #TODO: To support both local and l3
+#            import pdb; pdb.set_trace()
+            if type == 'flat':
+                n_body = { 'network': {'name': 'private', 'tenant_id': tenant_id} }
+            elif type == 'local':
+                pass
+            elif type == 'vlan':
+                phy_int = config.get('network:vlan', 'physical_network')
+                seg_id = int(config.get('network:vlan', 'segmentation_id'))
+                n_body = {'network': {'name': 'private', 'tenant_id': tenant_id,
+                                      'provider:network_type': 'vlan',
+                                      'provider:physical_network': phy_int,
+                                      'provider:segmentation_id': seg_id} }
+            elif type == 'vxlan_gre':
+                pass
+            else:
+                logger.error('You need to write the information in /etc/sfa/network.ini')
+
             # create a new network
-            n_body = {'network': {'name': 'private', 'tenant_id': tenant_id, 
-#                                  'provider:network_type': 'vlan', 
-#                                  'provider:physical_network': ph_int, 
-#                                  'provider:segmentation_id': seg_id
-                                 }}  
             new_net = self.driver.shell.network_manager.create_network(body=n_body)
             net_dict = new_net['network']
             logger.info("Created a network [%s] as below" % net_dict['name'])
             logger.info(net_dict)
 
+            # Information of subnet from configuration file
+            sub_name = config.get('subnet', 'name')
+            version = int(config.get('subnet', 'version'))
+            cidr = config.get('subnet', 'cidr')
+            gw_ip = config.get('subnet', 'gateway_ip')
+            dns_servers = config.get('subnet', 'dns_nameservers').split()
+            is_dhcp = bool(config.get('subnet', 'enable_dhcp'))
+            if is_dhcp is True:
+                alloc_start = config.get('subnet', 'allocation_start')
+                alloc_end = config.get('subnet', 'allocation_end')
+            else:
+                alloc_start = None
+                alloc_end = None
             network_id = net_dict['id']
-            cidr = '10.0.0.0/24'
-            gw_ip = '10.0.0.1'
-            dns_server_ips = ['163.126.63.1', '8.8.8.8']
-            alloc_start = '10.0.0.10'
-            alloc_end = '10.0.0.20'
+
             # create a new subnet for network
-            sn_body = {'subnets': [{ 'name': 'private-subnet', 'cidr': cidr,
+            sn_body = {'subnets': [{ 'name': sub_name, 'cidr': cidr,
                                      'tenant_id': tenant_id, 'network_id': network_id,
-                                     'ip_version': 4, 'enable_dhcp': True,
-                                     'gateway_ip': gw_ip, 'dns_nameservers': dns_server_ips,
+                                     'ip_version': version, 'enable_dhcp': is_dhcp,
+                                     'gateway_ip': gw_ip, 'dns_nameservers': dns_servers,
                                      'allocation_pools': [{'start': alloc_start, 'end': alloc_end}] }]}
             new_subnet = self.driver.shell.network_manager.create_subnet(body=sn_body)
             logger.info("Created a subnet of network [%s] as below" % net_dict['name'])
