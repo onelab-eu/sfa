@@ -29,14 +29,14 @@ class Korenv1SliverType:
             security_groups = sliver['security_groups']
             if security_groups and isinstance(security_groups, list):
                 for security_group in security_groups:
-                    if security_group.get('rules'):
-                        rules = security_group.pop('rules')
                     group_sliver_elem = sliver_elem.add_instance('{%s}security_group' % xml.namespaces['openstack'], \
                                                                  security_group, OSSecGroup.fields)
-                    if rules and isinstance(rules, list):
-                        for rule in rules:
-                            group_sliver_elem.add_instance('{%s}rule' % xml.namespaces['openstack'], \
-                                                           rule, OSSecGroupRule.fields)
+                    if security_group.get('rules'):
+                        rules = security_group.pop('rules')
+                        if rules and isinstance(rules, list):
+                            for rule in rules:
+                                group_sliver_elem.add_instance('{%s}rule' % xml.namespaces['openstack'], \
+                                                               rule, OSSecGroupRule.fields)
 
             flavor = sliver['flavor']
             if flavor and isinstance(flavor, dict):
