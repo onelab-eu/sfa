@@ -5,10 +5,15 @@ import gettext
 from urlparse import urlparse
 from sfa.util.sfalogging import logger
 from sfa.util.config import Config
+from sfa.util.faults import SfaNotImplemented
+
 try:
     from sfa.openstack.client import NovaClient, KeystoneClient, NeutronClient
     has_osclients = True
 except:
+    logger.error("Please check import of python clients for openstack in sfa/openstack/client.py")
+    logger.error("Or install python clients for openstack")
+    logger.error("apt-get install python-novaclient python-keystoneclient python-neutronclient python-openstackclient")
     has_osclients = False
 
 class Shell:

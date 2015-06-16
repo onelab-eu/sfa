@@ -1,6 +1,9 @@
 from sfa.util.sfalogging import logger
 from keystoneclient.v2_0 import client as keystone_client
-from novaclient.v1_1 import client as nova_client
+try:
+    from novaclient.v2 import client as nova_client
+except:
+    from novaclient.v1_1 import client as nova_client
 from sfa.util.config import Config
 from neutronclient.v2_0 import client as neutron_client
 
