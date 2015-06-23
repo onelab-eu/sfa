@@ -1,3 +1,12 @@
+######################################################################################################
+# Edited on Jun 20, 2015                                                                             #
+# Code modified by Chaima Ghribi.                                                                    #
+# The original code is available on github at https://github.com/onelab-eu/sfa/tree/openstack-driver.#
+# Modifications are noted as comments in the code itself.                                            #
+# @contact: chaima.ghribi@it-sudparis.eu                                                             #
+# @organization: Institut Mines-Telecom - Telecom SudParis                                           #
+######################################################################################################
+
 import os
 import socket
 import base64
@@ -397,9 +406,16 @@ class OSAggregate:
             # find the network information related with a new interface
             networks = self.driver.shell.network_manager.list_networks()
             networks = networks['networks']
+
+            # Code modified by Chaima Ghribi
+            config = OSConfig()
+            # Information of public network from configuration file
+            public_net_name = config.get('public', 'name')
+
             for network in networks:
-                if network.get('name') == 'public':
+                if network.get('name') == public_net_name:
                     pub_net_id = network.get('id')
+            ###
 
             subnets = self.driver.shell.network_manager.list_subnets()
             subnets = subnets['subnets']
@@ -501,10 +517,16 @@ class OSAggregate:
     def create_floatingip(self, tenant_name, instances):
         tenant = self.driver.shell.auth_manager.tenants.find(name=tenant_name)
         networks = self.driver.shell.network_manager.list_networks().get('networks')
+
+        # Code modified by Chaima Ghribi
+        config = OSConfig()
+        # Information of public network from configuration file
+        public_net_name = config.get('public', 'name')
         for network in networks:
-            if network.get('name') == 'public':
+            if network.get('name') == public_net_name:
                 pub_net_id = network.get('id')
                 break
+        ###
         else:
             logger.warning("We shoud need the public network ID for floating IPs!")
             raise ValueError("The public network ID was not found!")
@@ -631,7 +653,11 @@ class OSAggregate:
         
         # Update connection for the current client
         xrn = Xrn(tenant.name)
-        user_name = xrn.get_authority_hrn() + '.' + xrn.leaf.split('-')[0]
+
+        # Code modified by Chaima Ghribi
+        user_name = tenant.description
+        ###
+
         self.driver.shell.compute_manager.connect(username=user_name, tenant=tenant.name, password=user_name)
 
         args = { 'name': instance.name,
