@@ -700,8 +700,6 @@ class OpenstackDriver(Driver):
         # collect sliver ids so we can update sliver allocation states after
         # we remove the slivers.
         instances = aggregate.get_instances(xrn)
-        logger.info('--------------------osdriver-------------------------------')
-        logger.info(instances)
         # Release the floating IPs of instances
         servers = aggregate.check_floatingip(instances, False)
         aggregate.delete_floatingip(servers)

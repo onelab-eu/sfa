@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<rspec xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://www.geni.net/resources/rspec/3" xmlns:openstack="http://203.255.254.100:8888/resources/sfa/rspecs/openstack" type="request" xsi:schemaLocation="http://www.geni.net/resources/rspec/3/ad.xsd http://203.255.254.100:8888/resources/sfa/rspecs/openstack/openstack.xsd" expires="2015-06-11T11:25:16Z" generated="2015-06-10T10:25:16Z">
+  <node component_manager_id="urn:publicid:IDN+onelab-cloud+authority+am" component_id="urn:publicid:IDN+onelab-cloud+node+openstack" exclusive="false" client_id="VM4">
+    <available now="true"/>
+    <openstack:sliver component_id="urn:publicid:IDN+onelab-cloud+node+openstack" sliver_id="urn:publicid:IDN+koren+node+openstack+sliver" sliver_name="OS_Controller1" sliver_type="virtual machine">
+      <openstack:availability_zone name="nova"/>
+      <openstack:security_group id="cf93feca-5880-4b8b-bdf3-227eb6e5b3d4" name="default" description="default">
+        <openstack:rule ip_protocol="icmp" from_port="-1" to_port="-1" ip_range="0.0.0.0/0"/>
+        <openstack:rule ip_protocol="tcp" from_port="22" to_port="22" ip_range="0.0.0.0/0"/>
+      </openstack:security_group>
+      <openstack:flavor name="m1.small" id="2">
+        <openstack:image name="ubuntu-12.04.4-x86_64"/>
+      </openstack:flavor>
+    </openstack:sliver>
+  </node>
+</rspec>
