@@ -1,3 +1,12 @@
+######################################################################################################
+# Edited on Jun 20, 2015                                                                             #
+# Code modified by Chaima Ghribi.                                                                    #
+# The original code is available on github at https://github.com/onelab-eu/sfa/tree/openstack-driver.#
+# Modifications are noted as comments in the code itself.                                            #
+# @contact: chaima.ghribi@it-sudparis.eu                                                             #
+# @organization: Institut Mines-Telecom - Telecom SudParis                                           #
+######################################################################################################
+
 import time
 import datetime
 
