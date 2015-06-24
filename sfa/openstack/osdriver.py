@@ -154,7 +154,7 @@ class OpenstackDriver(Driver):
 
         # Add suitable roles to the user
         admin_role = self.shell.auth_manager.roles.find(name='admin')
-        member_role = self.shell.auth_manager.roles.find(name='Member')
+        member_role = self.shell.auth_manager.roles.find(name='_member_')
         if len(researchers):
             for researcher in researchers:
                 researcher_name = OSXrn(xrn=researcher, type='user').get_hrn()
