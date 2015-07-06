@@ -1,3 +1,12 @@
+######################################################################################################
+# Edited on Jun 20, 2015                                                                             #
+# Code modified by Chaima Ghribi.                                                                    #
+# The original code is available on github at https://github.com/onelab-eu/sfa/tree/openstack-driver.#
+# Modifications are noted as comments in the code itself.                                            #
+# @contact: chaima.ghribi@it-sudparis.eu                                                             #
+# @organization: Institut Mines-Telecom - Telecom SudParis                                           #
+######################################################################################################
+
 import time
 import datetime
 
@@ -214,7 +223,11 @@ class OpenstackDriver(Driver):
                                      tenant_id=tenant.id, email=email, enabled=True)
 
         # Check if the user has roles or not 
-        member_role = self.shell.auth_manager.roles.find(name='Member')
+
+        # Code modified by Chaima Ghribi
+        member_role = self.shell.auth_manager.roles.find(name='_member_')
+        ###
+
         if self.shell.auth_manager.roles.roles_for_user(user, tenant).count(member_role) == 0:
             self.shell.auth_manager.roles.add_user_role(user, member_role, tenant)
         
@@ -226,7 +239,6 @@ class OpenstackDriver(Driver):
             else:
                 key = keys[0]
             keyname = OSXrn(xrn=user_hrn, type='user').get_slicename()
-
             # Update connection for the current client 
             self.shell.compute_manager.connect(username=user.name, tenant=tenant.name, password=user_hrn)
             keypair_list = self.shell.compute_manager.keypairs.list()
@@ -583,9 +595,11 @@ class OpenstackDriver(Driver):
                                     slice_hrn=tenant_name, keys=pubkeys, email=None)
                     break
             else:
+                # Code modified by Chaima Ghribi
                 user = self.register_federation(user_hrn=user_name, \
-                            slice_hrn=tenant_name, keys=None, email=None)
-            
+                            slice_hrn=tenant_name, keys=pubkeys, email=None)
+                ###
+  
             # Update connection for the current client
             self.shell.compute_manager.connect(username=user_name, tenant=tenant_name, password=user_name)
             keypair_list = self.shell.compute_manager.keypairs.list()
@@ -644,8 +658,13 @@ class OpenstackDriver(Driver):
 
         # Update connection for the current client
         xrn = Xrn(urns[0], type='slice')
-        user_name = xrn.get_authority_hrn() + '.' + xrn.leaf.split('-')[0]
         tenant_name = OSXrn(xrn=urns[0], type='slice').get_hrn() 
+
+        # Code modified by Chaima Ghribi
+        tenant_info = self.shell.auth_manager.tenants.find(name=tenant_name)
+        user_name = tenant_info.description
+        ###
+
         self.shell.compute_manager.connect(username=user_name, tenant=tenant_name, password=user_name)
         
         instances = aggregate.get_instances(xrn)
@@ -669,8 +688,13 @@ class OpenstackDriver(Driver):
 
         # Update connection for the current client
         xrn = Xrn(urns[0], type='slice')
-        user_name = xrn.get_authority_hrn() + '.' + xrn.leaf.split('-')[0]
         tenant_name = OSXrn(xrn=urns[0], type='slice').get_hrn()
+
+        # Code modified by Chaima Ghribi
+        tenant_info = self.shell.auth_manager.tenants.find(name=tenant_name)
+        user_name = tenant_info.description
+        ###
+
         self.shell.compute_manager.connect(username=user_name, tenant=tenant_name, password=user_name)
 
         # collect sliver ids so we can update sliver allocation states after
@@ -754,11 +778,19 @@ class OpenstackDriver(Driver):
         # Update connection for the current client
         xrn = Xrn(urn)
         osxrn = OSXrn(xrn=urn, type='slice')
-        user_name = xrn.get_authority_hrn() + '.' + xrn.leaf.split('-')[0]
+
+        # Code modified by Chaima Ghribi
         tenant_name = osxrn.get_hrn()
+        tenant_info = self.shell.auth_manager.tenants.find(name=tenant_name)
+        user_name = tenant_info.description
+        ###
+
         self.shell.compute_manager.connect(username=user_name, tenant=tenant_name, password=user_name)
 
-        instances = self.shell.compute_manager.servers.findall(name=osxrn.get_slicename())
+        # Code modified by Chaima Ghribi
+        aggregate = OSAggregate(self)
+        instances = aggregate.get_instances(xrn)
         for instance in instances:
-            self.shell.compute_manager.servers.shutdown(instance.id)
+            self.shell.compute_manager.servers.delete(instance.id)
         return True
+        ###
