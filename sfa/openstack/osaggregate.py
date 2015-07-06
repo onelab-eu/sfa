@@ -335,26 +335,24 @@ class OSAggregate:
                 net_dict = net_info['network']
                 is_network = False
 
-        time.sleep(5)  # This reason for waiting is that OS can't quickly handle "create API". 
+        time.sleep(5)  # This reason for waiting is that OS can't quickly handle "create API".
         if is_network:
             config = OSConfig()
             # Check type of tenant network in Openstack
             type = config.get('network', 'type').lower()
-            #TODO: To support both local and l3
-#            import pdb; pdb.set_trace()
-            if type == 'flat':
-                n_body = { 'network': {'name': 'private', 'tenant_id': tenant_id} }
-            elif type == 'local':
-                pass
-            elif type == 'vlan':
+            if type == 'vlan':
                 phy_int = config.get('network:vlan', 'physical_network')
                 seg_id = int(config.get('network:vlan', 'segmentation_id'))
                 n_body = {'network': {'name': 'private', 'tenant_id': tenant_id,
                                       'provider:network_type': 'vlan',
                                       'provider:physical_network': phy_int,
                                       'provider:segmentation_id': seg_id} }
+            elif type == 'flat':
+                n_body = { 'network': {'name': 'private', 'tenant_id': tenant_id} }
+            elif type == 'local':
+                n_body = { 'network': {'name': 'private', 'tenant_id': tenant_id} }
             elif type == 'vxlan_gre':
-                pass
+                n_body = { 'network': {'name': 'private', 'tenant_id': tenant_id} }
             else:
                 logger.error('You need to write the information in /etc/sfa/network.ini')
 
@@ -417,10 +415,12 @@ class OSAggregate:
                     pub_net_id = network.get('id')
             ###
 
+            # Information of subnet network name from configuration file
+            subnet_name = config.get('subnet', 'name')
             subnets = self.driver.shell.network_manager.list_subnets()
             subnets = subnets['subnets']
             for subnet in subnets:
-                if (subnet.get('name') == 'private-subnet') and \
+                if ((subnet.get('name') == subnet_name) or (subnet.get('name') == 'private-subnet')) and \
                    (subnet.get('tenant_id') == tenant_id):
                     pri_sbnet_id = subnet.get('id')
 
