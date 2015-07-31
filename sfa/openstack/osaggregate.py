@@ -60,6 +60,7 @@ def os_image_to_rspec_disk_image(image):
 class OSAggregate:
 
     def __init__(self, driver):
+        logger.debug("start OS DRIVER")
         self.driver = driver
 
     def get_availability_zones(self, zones=None):
@@ -325,6 +326,7 @@ class OSAggregate:
         return rspec_nodes
 
     def create_network(self, tenant_id):
+        logger.info("Enter create_network")
         is_network = True
         networks = self.driver.shell.network_manager.list_networks()
         networks = networks['networks']
@@ -390,7 +392,9 @@ class OSAggregate:
         return net_dict
 
     def create_router(self, tenant_id):
+        logger.info("Enter create_router function")
         is_router = True
+        pub_net_id = None
         # checking whether the created router exist
         routers = self.driver.shell.network_manager.list_routers()
         routers = routers['routers']
@@ -409,16 +413,20 @@ class OSAggregate:
             config = OSConfig()
             # Information of public network from configuration file
             public_net_name = config.get('public', 'name')
-
+            logger.info("public_net_name = %s" % public_net_name)
+            logger.info("networks = %s" % networks)
             for network in networks:
+                logger.info(network.get('name'))
                 if network.get('name') == public_net_name:
                     pub_net_id = network.get('id')
             ###
-
+            if pub_net_id is None:
+                logger.error("Public network %s not found, Please check /etc/sfa/network.ini configuration of public network" % public_net_name)
             # Information of subnet network name from configuration file
             subnet_name = config.get('subnet', 'name')
             subnets = self.driver.shell.network_manager.list_subnets()
             subnets = subnets['subnets']
+            logger.info("subnets = %s" % subnets)
             for subnet in subnets:
                 if ((subnet.get('name') == subnet_name) or (subnet.get('name') == 'private-subnet')) and \
                    (subnet.get('tenant_id') == tenant_id):
@@ -556,42 +564,50 @@ class OSAggregate:
         return server
 
     def run_instances(self, tenant_name, user_name, rspec, key_name, pubkeys):
-        # It'll use Openstack admin info. as authoirty
-        zones = self.get_availability_zones()
-    
-        # add the sfa admin user to this tenant and update our Openstack client connection
-        # to use these credentials for the rest of this session. This emsures that the instances
-        # we create will be assigned to the correct tenant.
-        self.driver.shell.compute_manager.connect(username=user_name, tenant=tenant_name, password=user_name)
-        self.driver.shell.network_manager.connect(username=user_name, tenant=tenant_name, password=user_name)
-        logger.info( "Checking if the created tenant[%s] or not ..." % tenant_name )
-        tenant = self.driver.shell.auth_manager.tenants.find(name=tenant_name)
-
-        if len(pubkeys):
-            files = None
-        else:
-            authorized_keys = "\n".join(pubkeys)
-            files = {'/root/.ssh/authorized_keys': authorized_keys}
-        net_dict = self.create_network(tenant_id=tenant.id)
-        router = self.create_router(tenant_id=tenant.id)
-        nics=[{'net-id': net_dict['id']}]
-
-        # Iterate over clouds/zones/nodes
+        logger.info("Enter run_instances")
         slivers = []
-        rspec = RSpec(rspec)
-        for node in rspec.version.get_nodes_with_slivers():
-            instances = node.get('slivers', [])
-            for instance in instances:
-                server_name = instance['sliver_name']
-                # Check if instance exists or not
-                servers = self.driver.shell.compute_manager.servers.findall(name=server_name)
-                if len(servers) != 0:
-                    for server in servers:
-                        slivers.append(server)
-                        logger.info("The server[%s] already existed ..." % server.name)
-                    continue
+        try:
+            # It'll use Openstack admin info. as authoirty
+            zones = self.get_availability_zones()
+    
+            # add the sfa admin user to this tenant and update our Openstack client connection
+            # to use these credentials for the rest of this session. This emsures that the instances
+            # we create will be assigned to the correct tenant.
+            self.driver.shell.compute_manager.connect(username=user_name, tenant=tenant_name, password=user_name)
+            self.driver.shell.network_manager.connect(username=user_name, tenant=tenant_name, password=user_name)
+            logger.info( "Checking if the created tenant[%s] or not ..." % tenant_name )
+            tenant = self.driver.shell.auth_manager.tenants.find(name=tenant_name)
 
-                try: 
+            if len(pubkeys):
+                files = None
+            else:
+                authorized_keys = "\n".join(pubkeys)
+                files = {'/root/.ssh/authorized_keys': authorized_keys}
+            net_dict = self.create_network(tenant_id=tenant.id)
+            router = self.create_router(tenant_id=tenant.id)
+            nics=[{'net-id': net_dict['id']}]
+
+            # Iterate over clouds/zones/nodes
+            rspec = RSpec(rspec)
+            l_rspec_servers = list()
+            os_all_instances = self.driver.shell.compute_manager.servers.findall()
+            l_os_servers = [server.name for server in os_all_instances]
+            logger.info("Openstack existing instances %s" % l_os_servers)
+            for node in rspec.version.get_nodes_with_slivers():
+                instances = node.get('slivers', [])
+                for instance in instances:
+                    server_name = instance['sliver_name']
+                    l_rspec_servers.append(server_name)
+
+                    # Check if instance exists or not
+                    if server_name in l_os_servers:
+                        logger.info("VM sliver_name = %s already existed in Openstack" % server_name)
+                        servers = self.driver.shell.compute_manager.servers.findall(name=server_name)
+                        if len(servers) != 0:
+                            for server in servers:
+                                slivers.append(server)
+                            continue
+
                     flavor = self.driver.shell.compute_manager.flavors.find(name=instance['flavor']['name'])
                     image = self.driver.shell.compute_manager.images.find(name=instance['boot_image']['name'])
                     zone_name = instance['availability_zone']['name']
@@ -627,8 +643,17 @@ class OSAggregate:
                     slivers.append(server)
                     logger.info("Created Openstack instance [%s]" % server_name)
 
-                except Exception, err:
-                    logger.log_exc(err)
+            # Delete instances that are not in the RSpec but are still exsiting in Openstack
+            l_delete_servers = set(l_os_servers).difference(l_rspec_servers)
+            for server_name in l_delete_servers:
+                for server in os_all_instances:
+                    if server.name == server_name:
+                        server_instance = server
+                        break
+                logger.info("Delete Openstack instance [%s]" % server_name)
+                self.driver.shell.compute_manager.servers.delete(server_instance)
+        except Exception, err:
+            logger.log_exc(err)
 
         return slivers 
 
@@ -667,6 +692,7 @@ class OSAggregate:
         for instance in instances:
             # destroy instance
             self.driver.shell.compute_manager.servers.delete(instance)
+            logger.info("Deleted instance = %s" % instance)
             # deleate this instance's security groups
             multiclient.run(_delete_security_group, instance)
         return 1
@@ -725,6 +751,17 @@ class OSAggregate:
             logger.info("Deleted the network: Network ID [%s]" % net_id)
         return 1
 
+    def delete_tenant(self, tenant_id):
+        try:
+            tenants = self.driver.shell.auth_manager.tenants.findall(id=tenant_id)
+            logger.info("Deleting tenants = [%s]" % tenants)
+            if len(tenants) != 0:
+                for tenant in tenants:
+                    self.driver.shell.auth_manager.tenants.delete(tenant)
+                    logger.info("Deleted tenant = %s" % tenant)
+        except Exception, err:
+            logger.log_exc(err)
+        
     def stop_instances(self, instance_name, tenant_name, id=None):
         # Update connection for the current client
         xrn = Xrn(tenant_name)
