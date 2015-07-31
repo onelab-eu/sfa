@@ -719,6 +719,8 @@ class OpenstackDriver(Driver):
             aggregate.delete_router(tenant_id=tenant_id)
             # Delete both the network and subnet related with requested tenant
             aggregate.delete_network(tenant_id=tenant_id)
+            # Delete tenant
+            aggregate.delete_tenant(tenant_id=tenant_id)
 
         # Delete sliver allocation states
         dbsession=self.api.dbsession()
