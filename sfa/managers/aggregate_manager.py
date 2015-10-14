@@ -6,7 +6,7 @@ from sfa.util.callids import Callids
 from sfa.util.sfalogging import logger
 from sfa.util.faults import SfaInvalidArgument, InvalidRSpecVersion
 from sfa.server.api_versions import ApiVersions
-
+from sfa.trust.credential import Credential
 
 class AggregateManager:
 
@@ -73,6 +73,9 @@ class AggregateManager:
         return version
     
     def ListResources(self, api, creds, options):
+        if options is None: options={}
+        if 'actual_caller_hrn' not in options:
+            options['actual_caller_hrn'] = self.get_actual_caller(creds, options)
         call_id = options.get('call_id')
         if Callids().already_handled(call_id): return ""
 
@@ -96,6 +99,9 @@ class AggregateManager:
         return rspec
     
     def Describe(self, api, creds, urns, options):
+        if options is None: options={}
+        if 'actual_caller_hrn' not in options:
+            options['actual_caller_hrn'] = self.get_actual_caller(creds, options)
         call_id = options.get('call_id')
         if Callids().already_handled(call_id): return ""
 
@@ -105,6 +111,9 @@ class AggregateManager:
         
     
     def Status (self, api, urns, creds, options):
+        if options is None: options={}
+        if 'actual_caller_hrn' not in options:
+            options['actual_caller_hrn'] = self.get_actual_caller(creds, options)
         call_id = options.get('call_id')
         if Callids().already_handled(call_id): return {}
         return api.driver.status (urns, options=options)
@@ -115,6 +124,9 @@ class AggregateManager:
         Allocate resources as described in a request RSpec argument 
         to a slice with the named URN.
         """
+        if options is None: options={}
+        if 'actual_caller_hrn' not in options:
+            options['actual_caller_hrn'] = self.get_actual_caller(creds, options)
         call_id = options.get('call_id')
         if Callids().already_handled(call_id): return ""
         return api.driver.allocate(xrn, rspec_string, expiration, options)
@@ -124,6 +136,9 @@ class AggregateManager:
         Create the sliver[s] (slice) at this aggregate.    
         Verify HRN and initialize the slice record in PLC if necessary.
         """
+        if options is None: options={}
+        if 'actual_caller_hrn' not in options:
+            options['actual_caller_hrn'] = self.get_actual_caller(creds, options)
         call_id = options.get('call_id')
         if Callids().already_handled(call_id): return ""
 
@@ -140,11 +155,17 @@ class AggregateManager:
         return api.driver.provision(xrns, options)
     
     def Delete(self, api, xrns, creds, options):
+        if options is None: options={}
+        if 'actual_caller_hrn' not in options:
+            options['actual_caller_hrn'] = self.get_actual_caller(creds, options)
         call_id = options.get('call_id')
         if Callids().already_handled(call_id): return True
         return api.driver.delete(xrns, options)
 
     def Renew(self, api, xrns, creds, expiration_time, options):
+        if options is None: options={}
+        if 'actual_caller_hrn' not in options:
+            options['actual_caller_hrn'] = self.get_actual_caller(creds, options)
         call_id = options.get('call_id')
         if Callids().already_handled(call_id): return True
 
@@ -152,13 +173,24 @@ class AggregateManager:
 
     def PerformOperationalAction(self, api, xrns, creds, action, options=None):
         if options is None: options={}
+        if 'actual_caller_hrn' not in options:
+            options['actual_caller_hrn'] = self.get_actual_caller(creds, options)
         call_id = options.get('call_id')
         if Callids().already_handled(call_id): return True
         return api.driver.perform_operational_action(xrns, action, options) 
 
     def Shutdown(self, api, xrn, creds, options=None):
         if options is None: options={}
+        if 'actual_caller_hrn' not in options:
+            options['actual_caller_hrn'] = self.get_actual_caller(creds, options)
         call_id = options.get('call_id')
         if Callids().already_handled(call_id): return True
         return api.driver.shutdown(xrn, options) 
-    
+
+    def get_actual_caller(self, creds, options):
+        if isinstance(creds, list): 
+            cred = creds[0]
+        else:
+            cred = creds
+        return Credential(cred=cred).actual_caller_hrn()
+
