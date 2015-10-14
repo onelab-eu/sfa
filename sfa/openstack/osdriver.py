@@ -223,7 +223,6 @@ class OpenstackDriver(Driver):
                                      tenant_id=tenant.id, email=email, enabled=True)
 
         # Check if the user has roles or not 
-
         # Code modified by Chaima Ghribi
         member_role = self.shell.auth_manager.roles.find(name='_member_')
         ###
@@ -568,88 +567,104 @@ class OpenstackDriver(Driver):
 
     def allocate (self, urn, rspec_string, expiration, options=None):
         if options is None: options={}
+        caller = options.get('actual_caller_hrn',None)
         aggregate = OSAggregate(self)
         rspec = RSpec(rspec_string)
         xrn = Xrn(urn)
         slice_hrn = xrn.get_hrn()
         tenant_name = OSXrn(xrn=slice_hrn, type='slice').get_hrn()
-        instance_name = hrn_to_os_slicename(slice_hrn)
-        tenants = self.shell.auth_manager.tenants.findall()
+        # Check if the slice (tenant project) exists
+        try:
+            tenant = self.shell.auth_manager.tenants.find(name=tenant_name)
+        # if not create it
+        except:
+            tenant = aggregate.create_tenant(tenant_name=slice_hrn, description=slice_hrn)
+
         # collect public keys & get the user name
         users = options.get('geni_users', [])
         pubkeys = []
         key_name = None
 
-        if len(users) >= 1:
-            for user in users:
-                # TODO: We currently support one user name.
-                user_name = Xrn(user.get('urn')).get_hrn()
-                pubkeys.extend(user['keys'])
-            for tenant in tenants:
-                # Check if the tenant of the user exists in local OS or not
-                if tenant_name == tenant.name:
-                    try:
-                        self.shell.auth_manager.users.find(name=user_name)
-                    except:
-                        user = self.register_federation(user_hrn=user_name, \
-                                    slice_hrn=tenant_name, keys=pubkeys, email=None)
-                    break
+        # If no users are listed for this slice, try slicename or use actual_caller_hrn option
+        if len(users) == 0:
+            if options.get('actual_caller_hrn') is None:
+                users.append(xrn.get_authority_hrn() + '.' + xrn.leaf.split('-')[0])
             else:
-                # Code modified by Chaima Ghribi
+                users.append(options.get('actual_caller_hrn'))
+
+        for user in users:
+            # TODO: We currently support one user name.
+            user_name = Xrn(user.get('urn')).get_hrn()
+            if 'keys' in user and len(user['keys'])>0:
+                user_key = user['keys'][0]
+            else:
+                user_key = None
+            pubkeys.extend(user['keys'])
+            user_email = user.get('email', None)
+            # check if user exists
+            try:
+                user = self.shell.auth_manager.users.find(name=user_name)
+            # if not create it
+            except:
+            # Create a user of the federation user
+                user = aggregate.create_user(user_name=user_name,  password=user_name, \
+                                 tenant_id=tenant.id, email=user_email, enabled=True)
+
+            # Check if the user has roles or not 
+            # Code modified by Chaima Ghribi
+            member_role = self.shell.auth_manager.roles.find(name='_member_')
+            ###
+
+            if self.shell.auth_manager.roles.roles_for_user(user, tenant).count(member_role) == 0:
+                self.shell.auth_manager.roles.add_user_role(user, member_role, tenant)
+
+
                 user = self.register_federation(user_hrn=user_name, \
-                            slice_hrn=tenant_name, keys=pubkeys, email=None)
-                ###
+                            slice_hrn=tenant_name, keys=pubkeys, email=user_email)
   
-            # Update connection for the current client
+        # Update connection for the current client
             self.shell.compute_manager.connect(username=user_name, tenant=tenant_name, password=user_name)
-            keypair_list = self.shell.compute_manager.keypairs.list()
             keyname = OSXrn(xrn=user_name, type='user').get_slicename()
-            for keypair in keypair_list:
-                if keyname == keypair.name:
-                    key_name = keypair.name
-                    break
+            #for keypair in keypair_list:
+            #    if keyname == keypair.name:
+            #        key_name = keypair.name
+            #        break
+            #else:
+            #nova keypair-add [--pub-key <pub-key>] <name>
+            if user_key is not None:
+                try:
+                    self.shell.compute_manager.keypairs.create(keyname, user_key)
+                except:
+                    logger.debug("key already exist, let's update it, just to be sure...")
+                    keypair_list = self.shell.compute_manager.keypairs.list()
+                    for keypair in keypair_list:
+                        if keyname == keypair.name:
+                            self.shell.compute_manager.keypairs.delete(keypair)
+                    self.shell.compute_manager.keypairs.create(keyname, user_key)
             else:
-                raise SfaNotImplemented("No handle!")
+                logger.warning("no pub key for user %s" % user_name)
+            #else:
+            #    raise SfaNotImplemented("No handle!")
             
             # Update initial connection info
-            self.init_compute_manager_conn()
-#            key_name = aggregate.create_instance_key(slice_hrn, users[0])
+        # key_name = aggregate.create_instance_key(slice_hrn, users[0])
 
-        # In case of federation or non-options
-        elif len(users) < 1:
-            if options.get('actual_caller_hrn') is None:
-                user_name = xrn.get_authority_hrn() + '.' + xrn.leaf.split('-')[0]
-            else:
-                user_name = options.get('actual_caller_hrn')
-            for tenant in tenants:
-                # Check if the tenant of the user in local OS or not
-                if tenant_name == tenant.name:
-                    try:
-                        self.shell.auth_manager.users.find(name=user_name)
-                    except:
-                        user = self.register_federation(user_hrn=user_name, \
-                                    slice_hrn=tenant_name, keys=pubkeys, email=None)
-                    break
-            else:
-                user = self.register_federation(user_hrn=user_name, \
-                            slice_hrn=tenant_name, keys=None, email=None)
-            # TODO: Wrapper for federation needs at least one pubkey of the user extracted by 'options'!!
-#            name = OSXrn(xrn=user_name, type='user').get_slicename()
-#            key_name = self.shell.compute_manager.keypairs.get(name).name
+        # In order to add the key of the caller on VM Creation, see run_instances
+        self.shell.compute_manager.connect(username=caller, tenant=tenant_name, password=caller)
+        key_name = OSXrn(xrn=caller, type='user').get_slicename()
+        slivers = aggregate.run_instances(tenant_name, caller, rspec_string, key_name, pubkeys)
 
-        else:
-            raise SfaNotImplemented("No handle!")
-
-        slivers = aggregate.run_instances(tenant_name, user_name, rspec_string, key_name, pubkeys)
+        # Admin connection
+        #self.init_compute_manager_conn()
         # Update sliver allocations
         for sliver in slivers:
             component_id = sliver.metadata.get('component_id')
-            sliver_id = OSXrn(name=('koren'+'.'+ sliver.name), id=sliver.id, type='node+openstack').get_urn()
+            sliver_id = OSXrn(name=(self.api.hrn+'.'+ sliver.name), id=sliver.id, type='node+openstack').get_urn()
             record = SliverAllocation( sliver_id=sliver_id,
                                        component_id=component_id,
                                        allocation_state='geni_allocated')
             record.sync(self.api.dbsession())
-        return aggregate.describe(urns=[urn], version=rspec.version)
+        return aggregate.describe(urns=[urn], version=rspec.version, options=options)
 
     def provision(self, urns, options=None):
         if options is None: options={}
@@ -662,8 +677,8 @@ class OpenstackDriver(Driver):
 
         # Code modified by Chaima Ghribi
         tenant_info = self.shell.auth_manager.tenants.find(name=tenant_name)
-        user_name = tenant_info.description
         ###
+        user_name = options.get('actual_caller_hrn')
 
         self.shell.compute_manager.connect(username=user_name, tenant=tenant_name, password=user_name)
         
@@ -674,7 +689,7 @@ class OpenstackDriver(Driver):
 
         sliver_ids=[]
         for instance in instances:
-            sliver_id = OSXrn(name=('koren'+'.'+ instance.name), id=instance.id, type='node+openstack').get_urn()
+            sliver_id = OSXrn(name=(self.api.hrn+'.'+ instance.name), id=instance.id, type='node+openstack').get_urn()
             sliver_ids.append(sliver_id)
         dbsession=self.api.dbsession()
         SliverAllocation.set_allocations(sliver_ids, 'geni_provisioned', dbsession)
@@ -692,7 +707,8 @@ class OpenstackDriver(Driver):
 
         # Code modified by Chaima Ghribi
         tenant_info = self.shell.auth_manager.tenants.find(name=tenant_name)
-        user_name = tenant_info.description
+        #user_name = tenant_info.description
+        user_name = options.get('actual_caller_hrn')
         ###
 
         self.shell.compute_manager.connect(username=user_name, tenant=tenant_name, password=user_name)
@@ -707,7 +723,7 @@ class OpenstackDriver(Driver):
         sliver_ids = []
         id_set = set()
         for instance in instances:
-            sliver_id = OSXrn(name=('koren'+'.'+ instance.name), id=instance.id, type='node+openstack').get_urn()
+            sliver_id = OSXrn(name=(self.api.hrn+'.'+ instance.name), id=instance.id, type='node+openstack').get_urn()
             sliver_ids.append(sliver_id)
             # delete the instance related with requested tenant
             aggregate.delete_instance(instance)
@@ -719,8 +735,9 @@ class OpenstackDriver(Driver):
             aggregate.delete_router(tenant_id=tenant_id)
             # Delete both the network and subnet related with requested tenant
             aggregate.delete_network(tenant_id=tenant_id)
-            # Delete tenant
-            aggregate.delete_tenant(tenant_id=tenant_id)
+
+        # Delete tenant
+        aggregate.delete_tenant(tenant_id=tenant_info.id)
 
         # Delete sliver allocation states
         dbsession=self.api.dbsession()

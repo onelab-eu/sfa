@@ -102,8 +102,9 @@ class OSAggregate:
 
         # Update connection for the current user
         xrn = Xrn(urns[0], type='slice')
-        user_name = xrn.get_authority_hrn() + '.' + xrn.leaf.split('-')[0]
+        #user_name = xrn.get_authority_hrn() + '.' + xrn.leaf.split('-')[0]
         tenant_name = OSXrn(xrn=urns[0], type='slice').get_hrn()
+        user_name = options['actual_caller_hrn']
         self.driver.shell.compute_manager.connect(username=user_name, tenant=tenant_name, password=user_name)
 
         # For delay to collect instance info 
@@ -138,6 +139,7 @@ class OSAggregate:
             logger.warn("[WARN] We don't know the xrn[%s], Check it!" % xrn.type)
             
         # look up instances
+        servers = self.driver.shell.compute_manager.servers.findall()
         try:
             for slice_name in slice_names:
                 servers = self.driver.shell.compute_manager.servers.findall()
@@ -165,7 +167,7 @@ class OSAggregate:
             rspec_node['component_manager_id'] = instance.metadata.get('component_manager_id')
         rspec_node['component_id'] = node_xrn.urn
         rspec_node['component_name'] = node_xrn.name
-        rspec_node['sliver_id'] = OSXrn(name=('koren'+'.'+ instance.name), id=instance.id, \
+        rspec_node['sliver_id'] = OSXrn(name=(self.driver.api.hrn+'.'+ instance.name), id=instance.id, \
                                         type='node+openstack').get_urn()
 
         # get sliver details about quotas of resource
@@ -233,7 +235,7 @@ class OSAggregate:
             sliver_id = OSXrn(name='koren.sliver', type='node+openstack').get_urn()
             sliver_name = None
         if instance:
-            sliver_id = OSXrn(name=('koren'+'.'+ instance.name), id=instance.id, \
+            sliver_id = OSXrn(name=(self.driver.api.hrn+'.'+ instance.name), id=instance.id, \
                               type='node+openstack').get_urn()
             sliver_name = instance.name
         sliver = OSSliver({ 'sliver_id': str(sliver_id),
@@ -249,7 +251,7 @@ class OSAggregate:
         return sliver
 
     def instance_to_geni_sliver(self, instance):
-        sliver_id = OSXrn(name=('koren'+'.'+ instance.name), id=instance.id, \
+        sliver_id = OSXrn(name=(self.driver.api.hrn+'.'+ instance.name), id=instance.id, \
                           type='node+openstack').get_urn()
 
         constraint = SliverAllocation.sliver_id.in_([sliver_id])
@@ -572,9 +574,9 @@ class OSAggregate:
     
             # add the sfa admin user to this tenant and update our Openstack client connection
             # to use these credentials for the rest of this session. This emsures that the instances
-            # we create will be assigned to the correct tenant.
+            # VM we create will be assigned to the correct tenant.
+
             self.driver.shell.compute_manager.connect(username=user_name, tenant=tenant_name, password=user_name)
-            self.driver.shell.network_manager.connect(username=user_name, tenant=tenant_name, password=user_name)
             logger.info( "Checking if the created tenant[%s] or not ..." % tenant_name )
             tenant = self.driver.shell.auth_manager.tenants.find(name=tenant_name)
 
@@ -590,7 +592,8 @@ class OSAggregate:
             # Iterate over clouds/zones/nodes
             rspec = RSpec(rspec)
             l_rspec_servers = list()
-            os_all_instances = self.driver.shell.compute_manager.servers.findall()
+            os_all_instances = self.driver.shell.compute_manager.servers.list()
+
             l_os_servers = [server.name for server in os_all_instances]
             logger.info("Openstack existing instances %s" % l_os_servers)
             for node in rspec.version.get_nodes_with_slivers():
@@ -637,8 +640,8 @@ class OSAggregate:
                                                                key_name=key_name,
                                                                security_groups=group_names,
                                                                meta=metadata,
-                                                               name=server_name)
-#                                                               files=files,
+                                                               name=server_name,
+                                                               files=files)
                     server = self.check_server_status(server)
                     slivers.append(server)
                     logger.info("Created Openstack instance [%s]" % server_name)
@@ -683,8 +686,6 @@ class OSAggregate:
         user_name = tenant.description
         ###
 
-        self.driver.shell.compute_manager.connect(username=user_name, tenant=tenant.name, password=user_name)
-
         args = { 'name': instance.name,
                  'id': instance.id }
         instances = self.driver.shell.compute_manager.servers.findall(**args)
@@ -703,7 +704,7 @@ class OSAggregate:
         ports = ports['ports']
         networks = self.driver.shell.network_manager.list_networks()
         networks = networks['networks']
-
+        
         # find the subnetwork ID for removing the interface related with private network
         # TOPOLOGY: Public Network -- Router -- Private Network -- VM Instance(s)
         for port in ports:
@@ -711,6 +712,8 @@ class OSAggregate:
                (port.get('device_owner') == 'network:router_interface'):
                 router_id = port.get('device_id')
                 port_net_id = port.get('network_id')
+                port_id = port.get('id')
+
         for network in networks:
             if network.get('tenant_id') == tenant_id:
                 net_id = network.get('id')
