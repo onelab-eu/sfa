@@ -574,8 +574,8 @@ class OSAggregate:
     
             # add the sfa admin user to this tenant and update our Openstack client connection
             # to use these credentials for the rest of this session. This emsures that the instances
+            # XXX Connect Nova client with user and tenant
             # VM we create will be assigned to the correct tenant.
-
             self.driver.shell.compute_manager.connect(username=user_name, tenant=tenant_name, password=user_name)
             logger.info( "Checking if the created tenant[%s] or not ..." % tenant_name )
             tenant = self.driver.shell.auth_manager.tenants.find(name=tenant_name)
@@ -585,6 +585,9 @@ class OSAggregate:
             else:
                 authorized_keys = "\n".join(pubkeys)
                 files = {'/root/.ssh/authorized_keys': authorized_keys}
+
+            # XXX Connect Neutron client with user and tenant
+            self.driver.shell.network_manager.connect(username=user_name, tenant=tenant_name, password=user_name)
             net_dict = self.create_network(tenant_id=tenant.id)
             router = self.create_router(tenant_id=tenant.id)
             nics=[{'net-id': net_dict['id']}]
