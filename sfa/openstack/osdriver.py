@@ -686,6 +686,19 @@ class OpenstackDriver(Driver):
         # Allocate new floating IP per the instance
         servers = aggregate.check_floatingip(instances, True)
         aggregate.create_floatingip(tenant_name, servers)
+       
+        # Add rules to security group to open SSH and PING
+        # Allow ping
+        aggregate.add_rule_to_security_group('default',
+                protocol = "icmp",      
+                cidr_ip = "0.0.0.0/0",  
+                icmp_type_code = "-1:-1")
+
+        # Allow ssh
+        aggregate.add_rule_to_security_group('default',
+                protocol = "tcp",      
+                cidr_ip = "0.0.0.0/0",  
+                icmp_type_code = "22:22")
 
         sliver_ids=[]
         for instance in instances:

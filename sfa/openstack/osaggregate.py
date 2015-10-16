@@ -544,7 +544,8 @@ class OSAggregate:
         for port in ports:
             device_id = port.get('device_id')
             for instance in instances:
-                if device_id == instance.id:
+                # public ip only if external_ip is set to true
+                if 'external_ip' in instance.metadata and instance.metadata['external_ip']=='true' and device_id == instance.id:
                     body = { "floatingip":
                              { "floating_network_id": pub_net_id,
                                "tenant_id": tenant.id,
@@ -553,6 +554,8 @@ class OSAggregate:
 
     def delete_floatingip(self, instances):
         floating_ips = self.driver.shell.network_manager.list_floatingips().get('floatingips')
+        logger.debug("--- delete_floatingip ---")
+        logger.debug(floating_ips)
         for ip in floating_ips:
             ip_tenant_id = ip.get('tenant_id')
             for instance in instances:
@@ -633,6 +636,12 @@ class OSAggregate:
                         metadata['component_id'] = node['component_id']
                     if node.get('component_manager_id'):
                         metadata['component_manager_id'] = node['component_manager_id']
+
+                    # If external_ip = true this VM will get a public IP with Provision
+                    if node.get('external_ip'):
+                        metadata['external_ip'] = node['external_ip']
+                    else:
+                        metadata['external_ip'] = "false"
 
                     # Create a server for the user
                     server = self.driver.shell.compute_manager.servers.create(
