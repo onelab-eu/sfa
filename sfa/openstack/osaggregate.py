@@ -138,9 +138,10 @@ class OSAggregate:
             print "[WARN] We don't know the xrn[%s]" % xrn.type
             logger.warn("[WARN] We don't know the xrn[%s], Check it!" % xrn.type)
             
-        # look up instances
-        servers = self.driver.shell.compute_manager.servers.findall()
         try:
+            # look up instances
+            servers = self.driver.shell.compute_manager.servers.findall()
+
             for slice_name in slice_names:
                 servers = self.driver.shell.compute_manager.servers.findall()
                 instances.extend(servers)
@@ -150,6 +151,7 @@ class OSAggregate:
         except(exceptions.Unauthorized):
             print "[WARN] The instance(s) in Openstack is/are not permitted."
             logger.warn("The instance(s) in Openstack is/are not permitted.")
+            return []
         return list( set(instances) )
 
     def instance_to_rspec_node(self, instance):
