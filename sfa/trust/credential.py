@@ -1072,8 +1072,11 @@ class Credential(object):
         if caller_hrn.startswith(issuer_hrn): 
             actual_caller_hrn=caller_hrn
         # else this looks like a delegated credential, and the real caller is the issuer
-        else:
+        elif self.get_signature().get_issuer_gid().get_type() == "user":
             actual_caller_hrn=issuer_hrn
+        else:
+            actual_caller_hrn = caller_hrn
+
         logger.info("actual_caller_hrn: caller_hrn=%s, issuer_hrn=%s, returning %s"
                     %(caller_hrn,issuer_hrn,actual_caller_hrn))
         return actual_caller_hrn
