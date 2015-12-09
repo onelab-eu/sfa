@@ -591,18 +591,19 @@ class OpenstackDriver(Driver):
                 users.append(xrn.get_authority_hrn() + '.' + xrn.leaf.split('-')[0])
             else:
                 users.append(options.get('actual_caller_hrn'))
-
+        logger.debug(users)
         for user in users:
             # TODO: We currently support one user name.
             user_name = Xrn(user.get('urn')).get_hrn()
             if 'keys' in user and len(user['keys'])>0:
                 user_key = user['keys'][0]
+                pubkeys.extend(user['keys'])
             else:
                 user_key = None
-            pubkeys.extend(user['keys'])
             user_email = user.get('email', None)
             # check if user exists
             try:
+                logger.debug("---- Find user_name = %s" % user_name)
                 user = self.shell.auth_manager.users.find(name=user_name)
             # if not create it
             except:
@@ -651,6 +652,7 @@ class OpenstackDriver(Driver):
 
         # In order to add the key of the caller on VM Creation, see run_instances
         self.shell.compute_manager.connect(username=caller, tenant=tenant_name, password=caller)
+        logger.debug("Connect Nova using username = %s - tenant = %s" % (caller, tenant_name))
         key_name = OSXrn(xrn=caller, type='user').get_slicename()
         slivers = aggregate.run_instances(tenant_name, caller, rspec_string, key_name, pubkeys)
 

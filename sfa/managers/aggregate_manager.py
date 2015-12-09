@@ -188,6 +188,8 @@ class AggregateManager:
         return api.driver.shutdown(xrn, options) 
 
     def get_actual_caller(self, creds, options):
+        if len(creds)==0:
+            return None
         if isinstance(creds, list): 
             cred = creds[0]
         else:

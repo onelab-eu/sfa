@@ -593,6 +593,7 @@ class OSAggregate:
 
             # XXX Connect Neutron client with user and tenant
             self.driver.shell.network_manager.connect(username=user_name, tenant=tenant_name, password=user_name)
+            logger.info("Connect Neutron using username = %s - tenant = %s" % (user_name,tenant_name))
             net_dict = self.create_network(tenant_id=tenant.id)
             router = self.create_router(tenant_id=tenant.id)
             nics=[{'net-id': net_dict['id']}]
