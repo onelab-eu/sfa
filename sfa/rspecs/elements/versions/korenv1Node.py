@@ -1,5 +1,6 @@
 from sfa.util.xrn import Xrn, get_leaf
 from sfa.util.xml import XpathFilter
+from sfa.util.sfalogging import logger
 
 from sfa.rspecs.elements.node import NodeElement
 from sfa.rspecs.elements.versions.korenv1SliverType import Korenv1SliverType
@@ -13,6 +14,10 @@ class Korenv1Node:
         for node in nodes:
             node_fields = ['component_manager_id', 'component_id', 'exclusive']
             node_elem = xml.add_instance('node', node, node_fields)
+
+            # set external_ip element
+            if node.get('external_ip'):
+                node_elem.add_element('external_ip', node['external_ip'])
 
             # set granularity
             if node.get('exclusive') == "true":
@@ -41,7 +46,7 @@ class Korenv1Node:
     def get_nodes_with_slivers(xml, filter=None):
         if filter is None: filter={}
         xpath = '//node[count(sliver)>0] | //default:node[count(openstack:sliver) > 0]' 
-        node_elems = xml.xpath(xpath)        
+        node_elems = xml.xpath(xpath)
         return Korenv1Node.get_node_objs(node_elems) 
 
     @staticmethod
@@ -49,6 +54,8 @@ class Korenv1Node:
         nodes=[]
         for node_elem in node_elems:
             node = NodeElement(node_elem.attrib, node_elem)
+            for external_ip in node_elem.xpath('./default:external_ip'):
+                node['external_ip'] = external_ip.text
             # Get the Openstack node objects from the requested rspec
             node['slivers'] = Korenv1SliverType.get_os_slivers(node_elem)
             nodes.append(node)

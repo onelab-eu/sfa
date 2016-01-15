@@ -606,7 +606,14 @@ class OSAggregate:
             nics=[{'net-id': net_dict['id']}]
 
             # Iterate over clouds/zones/nodes
-            rspec = RSpec(rspec)
+            version_manager = VersionManager()
+            version_dict = {'type':'KOREN', 'version':'1', 'content_type':'request'}
+            version = version_manager.get_version(version_dict)
+            logger.info(version)
+            rspec_version = version_manager._get_version(version.type, version.version, 'request')
+            rspec = RSpec(rspec, version=rspec_version)
+
+            #rspec = RSpec(rspec)
             l_rspec_servers = list()
             os_all_instances = self.driver.shell.compute_manager.servers.list()
 
@@ -648,6 +655,8 @@ class OSAggregate:
                         metadata['component_manager_id'] = node['component_manager_id']
 
                     # If external_ip = true this VM will get a public IP with Provision
+                    logger.info("EXTERNAL IP = %s" % node.get('external_ip'))
+                    logger.info(node.keys())
                     if node.get('external_ip'):
                         metadata['external_ip'] = node['external_ip']
                     else:
