@@ -117,6 +117,8 @@ class OSAggregate:
         rspec.xml.set( 'expires',  datetime_to_string(utcparse(time.time())) )
         rspec_nodes = []
         for instance in instances:
+            # Display what all attributs of the instance
+            #logger.info(instance.__dict__)
             rspec_nodes.append(self.instance_to_rspec_node(instance))
             geni_sliver = self.instance_to_geni_sliver(instance)
             geni_slivers.append(geni_sliver)
@@ -171,6 +173,8 @@ class OSAggregate:
         rspec_node['component_name'] = node_xrn.name
         rspec_node['sliver_id'] = OSXrn(name=(self.driver.api.hrn+'.'+ instance.name), id=instance.id, \
                                         type='node+openstack').get_urn()
+        # XXX to be taken into account in the result of Allocate if the instance is in ERROR
+        rspec_node['status'] = instance.status
 
         # get sliver details about quotas of resource
         flavor = self.driver.shell.compute_manager.flavors.find(id=instance.flavor['id'])
@@ -180,13 +184,14 @@ class OSAggregate:
         zone_name = instance.to_dict().get('OS-EXT-AZ:availability_zone')    
         sliver['availability_zone'] = OSZone({ 'name': zone_name })
 
-        # get firewall rules
-        group_names = instance.security_groups
         sliver['security_groups']=[]
-        if group_names and isinstance(group_names, list):
-            for group in group_names:
-                group = self.driver.shell.compute_manager.security_groups.find(name=group.get('name'))
-                sliver['security_groups'].append(self.secgroup_to_rspec(group))
+        # get firewall rules
+        if hasattr(instance, 'security_group'):
+            group_names = instance.security_groups
+            if group_names and isinstance(group_names, list):
+                for group in group_names:
+                    group = self.driver.shell.compute_manager.security_groups.find(name=group.get('name'))
+                    sliver['security_groups'].append(self.secgroup_to_rspec(group))
 
         # get disk image from the Nova service
         image = self.driver.shell.compute_manager.images.get(image=instance.image['id'])
@@ -592,8 +597,10 @@ class OSAggregate:
                 files = {'/root/.ssh/authorized_keys': authorized_keys}
 
             # XXX Connect Neutron client with user and tenant
-            self.driver.shell.network_manager.connect(username=user_name, tenant=tenant_name, password=user_name)
             logger.info("Connect Neutron using username = %s - tenant = %s" % (user_name,tenant_name))
+            self.driver.shell.network_manager.connect(username=user_name, tenant=tenant_name, password=user_name)
+            networks = self.driver.shell.network_manager.list_networks()
+
             net_dict = self.create_network(tenant_id=tenant.id)
             router = self.create_router(tenant_id=tenant.id)
             nics=[{'net-id': net_dict['id']}]

@@ -485,6 +485,7 @@ class OpenstackDriver(Driver):
             try:
                 # Check if the security group exists
                 group = self.shell.compute_manager.security_groups.find(name=rspec_group_name)
+                logger.info(group)
                 # Check if the security rules of the group exist 
                 rspec_rules = rspec_group.get('rules')
                 if rspec_rules:
@@ -493,8 +494,8 @@ class OpenstackDriver(Driver):
                         for ori_rule in ori_rules:
                             if (rspec_rule.get('ip_protocol') == str(ori_rule.get('ip_protocol'))) and \
                                (rspec_rule.get('from_port') == str(ori_rule.get('from_port'))) and \
-                               (rspec_rule.get('to_port') == str(ori_rule.get('to_port'))) and \
-                               (rspec_rule.get('ip_range') == str(ori_rule.get('ip_range'))):
+                               (rspec_rule.get('to_port') == str(ori_rule.get('to_port'))): #and \
+                               #(rspec_rule.get('ip_range') == str(ori_rule.get('ip_range'))):
                                 break
                         else:
                             # New security rules of the group
@@ -516,10 +517,11 @@ class OpenstackDriver(Driver):
                                 to_port = -1
                             else:    
                                 to_port = int(rspec_rule.get('to_port'))
-                            if (rspec_rule.get('ip_range') is '{}') or (rspec_rule.get('ip_range') is 'none'):
+                            if (rspec_rule.get('ip_range') == '{}') or (rspec_rule.get('ip_range') is 'none') or (rspec_rule.get('ip_range')=={}):
                                 cidr = None
                             else:
                                 cidr = rspec_rule.get('ip_range')
+                            logger.info("ip_protocol = %s, from_port = %s, to_port = %s, cidr = %s" % (ip_protocol, from_port, to_port, cidr))
                             self.shell.compute_manager.security_group_rules.create(parent_group_id, \
                                                                             ip_protocol, from_port, to_port, cidr)
                     group = self.shell.compute_manager.security_groups.find(id=group.id)
@@ -566,6 +568,7 @@ class OpenstackDriver(Driver):
         return sec_groups
 
     def allocate (self, urn, rspec_string, expiration, options=None):
+        logger.info(rspec_string)
         if options is None: options={}
         caller = options.get('actual_caller_hrn',None)
         aggregate = OSAggregate(self)

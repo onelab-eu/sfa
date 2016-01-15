@@ -91,11 +91,15 @@ class NeutronClient:
             opts['OS_TENANT_NAME'] = tenant
         if url:
             opts['OS_AUTH_URL'] = url 
+        if 'OS_ENDPOINT_URL' not in opts:
+            opts['OS_ENDPOINT_URL'] = opts['OS_AUTH_URL'].split(':')[0]+':'+opts['OS_AUTH_URL'].split(':')[1]+':9696'
+
         self.opts = opts
         self.client = neutron_client.Client(username=opts.get('OS_USERNAME'),
                                             password=opts.get('OS_PASSWORD'),
                                             tenant_name=opts.get('OS_TENANT_NAME'),
-                                            auth_url=opts.get('OS_AUTH_URL'))
+                                            auth_url=opts.get('OS_AUTH_URL'),
+                                            endpoint_url=opts.get('OS_ENDPOINT_URL'))
 
     def connect(self, *args, **kwds):
         self.__init__(*args, **kwds)
